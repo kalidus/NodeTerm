@@ -28,6 +28,7 @@ import '../styles/components/ai-chat.css';
 
 const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTerminal }) => {
   const [messages, setMessages] = useState([]);
+  const [reasoningUpdateTrigger, setReasoningUpdateTrigger] = useState(0);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentModel, setCurrentModel] = useState(null);
@@ -49,6 +50,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
   
   // Estado persistente para tarjetas de herramientas expandidas (por messageId)
   const expandedToolCardsRef = useRef(new Set());
+  
+  // ✅ Estado para reasoning (razonamiento del modelo)
+  const reasoningByMessageIdRef = useRef(new Map()); // messageId -> reasoning content
+  const [expandedReasoningIds, setExpandedReasoningIds] = useState(new Set()); // messageIds con reasoning expandido (estado compartido)
   
   // Estados para historial de conversaciones
   const [currentConversationId, setCurrentConversationId] = useState(null);
@@ -1386,6 +1391,32 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
             setCurrentStatus({ status: 'streaming', message: 'Recibiendo respuesta...', model: streamData.model, provider: streamData.provider });
           }
         },
+        onReasoning: (reasoningData) => {
+          // ✅ CAPTURAR REASONING: Guardar en el mensaje actual del asistente
+          if (reasoningData.reasoning) {
+            setMessages(prev => prev.map(msg => {
+              if (msg.id === assistantMessageId) {
+                // Actualizar reasoning en el mensaje
+                const currentReasoning = reasoningByMessageIdRef.current.get(assistantMessageId) || '';
+                const newReasoning = reasoningData.isComplete 
+                  ? reasoningData.reasoning 
+                  : (currentReasoning + reasoningData.reasoning);
+                
+                reasoningByMessageIdRef.current.set(assistantMessageId, newReasoning);
+                
+                return {
+                  ...msg,
+                  metadata: {
+                    ...msg.metadata,
+                    reasoning: newReasoning,
+                    hasReasoning: true
+                  }
+                };
+              }
+              return msg;
+            }));
+          }
+        },
         onToolResult: (toolData) => {
           logConversation('info', 'Resultado de herramienta recibido (stream)', {
             toolName: toolData.toolName,
@@ -1555,6 +1586,100 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
           };
 
           let normalizedResp = extractPlainResponse(data.response);
+          
+          // ✅ FILTRAR REASONING DEL CONTENIDO: Si hay reasoning capturado, removerlo del contenido normal
+          const reasoning = reasoningByMessageIdRef.current.get(assistantMessageId);
+          if (reasoning && normalizedResp) {
+            // Estrategia 1: Si el contenido comienza con el reasoning completo, removerlo
+            const reasoningTrimmed = reasoning.trim();
+            const respTrimmed = normalizedResp.trim();
+            
+            // Si el contenido comienza exactamente con el reasoning
+            if (respTrimmed.startsWith(reasoningTrimmed)) {
+              normalizedResp = respTrimmed.substring(reasoningTrimmed.length).trim();
+            }
+            // Si el contenido contiene el reasoning al principio (con variaciones de espacios)
+            else if (respTrimmed.toLowerCase().includes(reasoningTrimmed.toLowerCase().substring(0, Math.min(100, reasoningTrimmed.length)))) {
+              // Buscar dónde termina el reasoning en el contenido
+              const reasoningStart = respTrimmed.toLowerCase().indexOf(reasoningTrimmed.toLowerCase().substring(0, 50));
+              if (reasoningStart >= 0 && reasoningStart < 300) {
+                // Estimar dónde termina el reasoning (aproximadamente su longitud)
+                const estimatedEnd = reasoningStart + reasoningTrimmed.length + 50; // Margen de error
+                const afterReasoning = respTrimmed.substring(Math.min(estimatedEnd, respTrimmed.length)).trim();
+                
+                // Si lo que queda después parece una respuesta real (no solo espacios/puntuación)
+                if (afterReasoning.length > 10 && /[a-zA-Z]/.test(afterReasoning)) {
+                  normalizedResp = afterReasoning;
+                } else {
+                  // Si no hay contenido después del reasoning, usar fallback
+                  normalizedResp = null;
+                }
+              }
+            }
+            
+            // Estrategia 2: Remover líneas individuales del reasoning que aparecen al inicio
+            if (normalizedResp) {
+              const reasoningLines = reasoningTrimmed.split('\n')
+                .map(l => l.trim())
+                .filter(l => l.length > 20); // Solo líneas significativas
+              
+              let cleanedResp = normalizedResp;
+              let removedLines = 0;
+              
+              // Remover hasta 5 líneas del reasoning si aparecen al inicio
+              for (const line of reasoningLines.slice(0, 5)) {
+                if (line.length > 30) {
+                  // Buscar la línea al inicio del contenido (con flexibilidad)
+                  const lineLower = line.toLowerCase();
+                  const respLower = cleanedResp.toLowerCase();
+                  
+                  // Buscar coincidencia aproximada (primeros 100 caracteres de la línea)
+                  const linePrefix = lineLower.substring(0, Math.min(50, line.length));
+                  const index = respLower.indexOf(linePrefix);
+                  
+                  if (index >= 0 && index < 200) {
+                    // Encontrar el final de la línea (hasta el siguiente salto de línea o punto)
+                    let endIndex = cleanedResp.indexOf('\n', index);
+                    if (endIndex < 0) endIndex = cleanedResp.indexOf('.', index);
+                    if (endIndex < 0) endIndex = index + line.length;
+                    
+                    // Remover esta línea
+                    cleanedResp = (cleanedResp.substring(0, index) + cleanedResp.substring(endIndex + 1)).trim();
+                    removedLines++;
+                  }
+                }
+              }
+              
+              // Si removimos varias líneas, usar el contenido limpio
+              if (removedLines >= 2) {
+                normalizedResp = cleanedResp.trim();
+              }
+            }
+            
+            // Estrategia 3: Remover patrones comunes de reasoning al inicio
+            if (normalizedResp) {
+              const reasoningPatterns = [
+                /^El usuario (está|quiere|solicita|pide|solicitó).*?\.\s*/i,
+                /^Debo usar.*?herramienta.*?\.\s*/i,
+                /^La herramienta.*?busca.*?\.\s*/i,
+                /^Como el usuario.*?\.\s*/i,
+                /^Respuesta:.*?\.\s*/i,
+                /^No hay necesidad.*?\.\s*/i
+              ];
+              
+              let cleanedResp = normalizedResp;
+              for (const pattern of reasoningPatterns) {
+                cleanedResp = cleanedResp.replace(pattern, '').trim();
+              }
+              
+              normalizedResp = cleanedResp;
+            }
+            
+            // Si después de limpiar el contenido está muy corto o vacío, usar fallback
+            if (!normalizedResp || normalizedResp.length < 20) {
+              normalizedResp = null; // Forzar usar fallback
+            }
+          }
           
           // Heurística: si el modelo solo explica que "ya se listó" o repite el resultado, colapsar
           const isMetaResponse = (() => {
@@ -1746,13 +1871,22 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
               conversationId: conversationService.currentConversationId
             });
             
+              // ✅ GUARDAR REASONING en metadatos si existe
+              const reasoning = reasoningByMessageIdRef.current.get(assistantMessageId) || null;
               const assistantMessageObj = conversationService.addMessage('assistant', safeResponse, {
                 latency: data.latency,
                 model: data.model,
                 provider: data.provider,
-                tokens: Math.ceil(safeResponse.length / 4)
+                tokens: Math.ceil(safeResponse.length / 4),
+                reasoning: reasoning || undefined, // Guardar reasoning si existe
+                hasReasoning: !!reasoning
                 // files: files.length > 0 ? files : undefined // DESHABILITADO: No generar archivos descargables
               });
+              
+              // Limpiar reasoning del ref después de guardar
+              if (reasoning) {
+                reasoningByMessageIdRef.current.delete(assistantMessageId);
+              }
               
               
               // Calcular tokens reales de la respuesta
@@ -3090,6 +3224,253 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
     );
   };
 
+  // 🧠 Componente compacto para mostrar Reasoning (icono desplegable al lado)
+  const ReasoningIcon = ({ messageId, reasoning, showIconOnly = false, showPanelOnly = false }) => {
+    const [showTooltip, setShowTooltip] = useState(false);
+    
+    // Leer del estado compartido directamente
+    const isExpanded = expandedReasoningIds.has(messageId);
+    
+    const handleToggle = (e) => {
+      if (e) e.stopPropagation();
+      const newExpanded = !isExpanded;
+      
+      // Actualizar estado compartido (esto fuerza re-render automático)
+      setExpandedReasoningIds(prev => {
+        const newSet = new Set(prev);
+        if (newExpanded) {
+          newSet.add(messageId);
+        } else {
+          newSet.delete(messageId);
+        }
+        return newSet;
+      });
+    };
+    
+    if (!reasoning || !reasoning.trim()) return null;
+    
+    const tokenCount = Math.ceil(reasoning.length / 4);
+    
+    // Solo mostrar el icono (dentro de la burbuja)
+    if (showIconOnly) {
+      return (
+        <div style={{ position: 'relative', display: 'inline-block', flexShrink: 0 }}>
+          <button
+            onClick={handleToggle}
+            onMouseEnter={() => setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '24px',
+              height: '24px',
+              borderRadius: '6px',
+              border: '1px solid rgba(100, 150, 255, 0.3)',
+              background: isExpanded 
+                ? 'rgba(100, 150, 255, 0.15)' 
+                : 'rgba(100, 150, 255, 0.08)',
+              color: '#64b5f6',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              padding: 0
+            }}
+            title={`Razonamiento (${tokenCount} tokens)`}
+          >
+            <i className="pi pi-brain" style={{ fontSize: '0.75rem' }} />
+          </button>
+          
+          {/* Tooltip compacto */}
+          {showTooltip && !isExpanded && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: '100%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                marginBottom: '0.4rem',
+                padding: '0.3rem 0.5rem',
+                background: 'rgba(0, 0, 0, 0.9)',
+                color: '#fff',
+                borderRadius: '4px',
+                fontSize: '0.7rem',
+                whiteSpace: 'nowrap',
+                zIndex: 1000,
+                pointerEvents: 'none',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+              }}
+            >
+              Ver razonamiento
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    // Solo mostrar el panel expandible (arriba de la burbuja)
+    if (showPanelOnly) {
+      if (!isExpanded) return null;
+      
+      return (
+        <div
+          style={{
+            marginBottom: '0.5rem',
+            width: '100%',
+            background: 'rgba(100, 150, 255, 0.06)',
+            border: '1px solid rgba(100, 150, 255, 0.2)',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            transition: 'all 0.3s ease',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}
+        >
+          <div
+            onClick={handleToggle}
+            style={{
+              padding: '0.5rem 0.75rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.5rem',
+              background: 'rgba(100, 150, 255, 0.08)',
+              transition: 'background 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(100, 150, 255, 0.12)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(100, 150, 255, 0.08)';
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <i className="pi pi-brain" style={{ color: '#64b5f6', fontSize: '0.85rem' }} />
+              <span style={{ fontWeight: '500', color: themeColors.textPrimary, fontSize: '0.8rem' }}>
+                Razonamiento
+              </span>
+              <span style={{ fontSize: '0.65rem', color: themeColors.textSecondary }}>
+                {tokenCount} tokens
+              </span>
+            </div>
+            <i 
+              className="pi pi-chevron-up" 
+              style={{ 
+                fontSize: '0.7rem', 
+                color: themeColors.textSecondary
+              }} 
+            />
+          </div>
+          
+          <div
+            style={{
+              padding: '0.75rem',
+              borderTop: '1px solid rgba(100, 150, 255, 0.1)',
+              maxHeight: '250px',
+              overflowY: 'auto'
+            }}
+          >
+            <div
+              className="ai-md"
+              dangerouslySetInnerHTML={{
+                __html: renderMarkdown(reasoning)
+              }}
+              style={{
+                fontSize: '0.75rem',
+                lineHeight: '1.5',
+                color: themeColors.textPrimary,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                opacity: 0.9
+              }}
+            />
+          </div>
+        </div>
+      );
+    }
+    
+    // Modo completo (icono + panel)
+    return (
+      <>
+        {/* Panel desplegable que aparece arriba */}
+        {isExpanded && (
+          <div
+            style={{
+              marginBottom: '0.5rem',
+              width: '100%',
+              background: 'rgba(100, 150, 255, 0.06)',
+              border: '1px solid rgba(100, 150, 255, 0.2)',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}
+          >
+            <div
+              onClick={handleToggle}
+              style={{
+                padding: '0.5rem 0.75rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.5rem',
+                background: 'rgba(100, 150, 255, 0.08)',
+                transition: 'background 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(100, 150, 255, 0.12)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(100, 150, 255, 0.08)';
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <i className="pi pi-brain" style={{ color: '#64b5f6', fontSize: '0.85rem' }} />
+                <span style={{ fontWeight: '500', color: themeColors.textPrimary, fontSize: '0.8rem' }}>
+                  Razonamiento
+                </span>
+                <span style={{ fontSize: '0.65rem', color: themeColors.textSecondary }}>
+                  {tokenCount} tokens
+                </span>
+              </div>
+              <i 
+                className="pi pi-chevron-up" 
+                style={{ 
+                  fontSize: '0.7rem', 
+                  color: themeColors.textSecondary
+                }} 
+              />
+            </div>
+            
+            <div
+              style={{
+                padding: '0.75rem',
+                borderTop: '1px solid rgba(100, 150, 255, 0.1)',
+                maxHeight: '250px',
+                overflowY: 'auto'
+              }}
+            >
+              <div
+                className="ai-md"
+                dangerouslySetInnerHTML={{
+                  __html: renderMarkdown(reasoning)
+                }}
+                style={{
+                  fontSize: '0.75rem',
+                  lineHeight: '1.5',
+                  color: themeColors.textPrimary,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  opacity: 0.9
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
+
   const renderMessage = (message, index) => {
     const isUser = message.role === 'user';
     const isSystem = message.role === 'system';
@@ -3277,6 +3658,15 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
           flex: 1,
           minWidth: 0
         }}>
+          {/* ✅ MOSTRAR PANEL DE REASONING ARRIBA (si está expandido) */}
+          {!isUser && !isSystem && message.metadata?.hasReasoning && message.metadata?.reasoning && expandedReasoningIds.has(message.id || `msg-${index}`) && (
+            <ReasoningIcon 
+              messageId={message.id || `msg-${index}`}
+              reasoning={message.metadata.reasoning}
+              showPanelOnly={true}
+            />
+          )}
+          
           {/* Burbuja de mensaje con contenido */}
           <div
             className={`ai-bubble ${isUser ? 'user' : isSystem ? 'system' : 'assistant'} ${isStreaming ? 'streaming' : ''} ${message.subtle ? 'subtle' : ''}`}
@@ -3307,7 +3697,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
               fontSize: message.subtle ? '0.8rem' : undefined,
               fontStyle: isToolResult ? 'normal' : (message.subtle ? 'italic' : undefined),
               opacity: message.subtle ? '0.8' : '1',
-              boxShadow: message.subtle ? 'none' : (isUser ? '0 2px 8px rgba(59, 130, 246, 0.15)' : '0 2px 8px rgba(0,0,0,0.1)')
+              boxShadow: message.subtle ? 'none' : (isUser ? '0 2px 8px rgba(59, 130, 246, 0.15)' : '0 2px 8px rgba(0,0,0,0.1)'),
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '0.5rem',
+              position: 'relative'
             }}
           >
           <div 
@@ -3320,8 +3714,17 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
                 highlightCodeBlocks(el);
               }
             }}
-            style={{ width: '100%' }}
+            style={{ flex: 1, minWidth: 0 }}
           />
+          
+          {/* ✅ Icono de reasoning compacto al lado de la respuesta (solo el botón) */}
+          {!isUser && !isSystem && message.metadata?.hasReasoning && message.metadata?.reasoning && (
+            <ReasoningIcon 
+              messageId={message.id || `msg-${index}`}
+              reasoning={message.metadata.reasoning}
+              showIconOnly={true}
+            />
+          )}
           
           {/* Indicador simple si el mensaje tenía archivos adjuntos */}
           {isUser && message.attachedFiles && message.attachedFiles.length > 0 && (

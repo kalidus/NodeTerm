@@ -4914,11 +4914,49 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
     debugLogger.debug('AIService.LocalModel', 'Respuesta cruda de Ollama', {
       resumida: JSON.stringify(data).substring(0, 200),
       message: data.message,
-      contentLength: data.message?.content?.length || 0
+      contentLength: data.message?.content?.length || 0,
+      hasReasoning: !!(data.message?.reasoning_content || data.reasoning_content)
     });
+    
+    // ✅ CAPTURAR REASONING UNIVERSAL: Buscar reasoning en TODOS los modelos
+    // Ollama puede devolver reasoning en diferentes campos según el modelo
+    const reasoningContent = data.message?.reasoning_content || 
+                             data.reasoning_content || 
+                             data.message?.reasoning ||
+                             data.reasoning ||
+                             data.message?.thinking ||
+                             data.thinking ||
+                             data.message?.chain_of_thought ||
+                             data.chain_of_thought ||
+                             null;
+    
+    // 🔍 DEBUG: Log solo para modelos reasoning conocidos o cuando se detecta reasoning
+    const isReasoningModel = modelId && (modelId.includes('deepseek-r1') || modelId.includes('o1') || modelId.includes('reasoning'));
+    if (isReasoningModel || reasoningContent) {
+      if (data.message) {
+        const messageKeys = Object.keys(data.message);
+        debugLogger.debug('AIService.Reasoning', 'Respuesta completa de Ollama (non-streaming)', {
+          model: modelId,
+          messageKeys: messageKeys,
+          hasReasoning: !!reasoningContent,
+          reasoningLength: reasoningContent ? reasoningContent.length : 0,
+          allKeys: Object.keys(data),
+          preview: JSON.stringify(data).substring(0, 500)
+        });
+      }
+    }
     
     // La respuesta de Ollama viene en data.message.content
     if (data.message && data.message.content) {
+      // Si hay callbacks y hay reasoning, notificarlo
+      if (callbacks && callbacks.onReasoning && reasoningContent) {
+        callbacks.onReasoning({
+          reasoning: reasoningContent,
+          model: modelId,
+          provider: 'local',
+          isComplete: true
+        });
+      }
       return data.message.content;
     } else {
       debugLogger.error('AIService.LocalModel', 'Respuesta vacía o inválida de Ollama', {
@@ -5022,6 +5060,14 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
       repeat_penalty: options.repeat_penalty ?? 1.1
     };
     
+    // 🔍 DEBUG: Verificar si es un modelo reasoning
+    const isReasoningModel = modelId && (modelId.includes('deepseek-r1') || modelId.includes('o1') || modelId.includes('reasoning'));
+    if (isReasoningModel) {
+      debugLogger.debug('AIService.Reasoning', 'Modelo reasoning detectado en streaming, esperando reasoning_content', {
+        model: modelId
+      });
+    }
+    
     // Preparar el body completo que se enviará a Ollama
     const requestBody = {
       model: modelId,
@@ -5061,6 +5107,7 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let fullResponse = '';
+    let reasoningContent = ''; // ✅ ACUMULAR REASONING durante streaming
 
     try {
       while (true) {
@@ -5074,6 +5121,47 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
         for (const line of lines) {
           try {
             const data = JSON.parse(line);
+            
+            // ✅ CAPTURAR REASONING UNIVERSAL: Buscar reasoning en TODOS los modelos
+            // Ollama puede devolver reasoning en diferentes campos según el modelo
+            const reasoningChunk = data.message?.reasoning_content || 
+                                   data.reasoning_content || 
+                                   data.message?.reasoning ||
+                                   data.reasoning ||
+                                   data.message?.thinking ||
+                                   data.thinking ||
+                                   data.message?.chain_of_thought ||
+                                   data.chain_of_thought ||
+                                   null;
+            
+            if (reasoningChunk && typeof reasoningChunk === 'string' && reasoningChunk.trim().length > 0) {
+              reasoningContent += reasoningChunk;
+              // Notificar reasoning incremental si hay callback
+              if (callbacks.onReasoning) {
+                callbacks.onReasoning({
+                  reasoning: reasoningContent,
+                  model: modelId,
+                  provider: 'local',
+                  isComplete: false
+                });
+              }
+            }
+            
+            // 🔍 DEBUG: Log solo para modelos reasoning conocidos o cuando se detecta reasoning
+            const isReasoningModel = modelId && (modelId.includes('deepseek-r1') || modelId.includes('o1') || modelId.includes('reasoning'));
+            if (isReasoningModel || reasoningChunk) {
+              if (data.message && Object.keys(data.message).length > 0) {
+                const messageKeys = Object.keys(data.message);
+                debugLogger.debug('AIService.Reasoning', 'Campos detectados en streaming', {
+                  model: modelId,
+                  keys: messageKeys,
+                  hasReasoning: !!reasoningChunk,
+                  reasoningLength: reasoningChunk ? reasoningChunk.length : 0,
+                  preview: JSON.stringify(data.message).substring(0, 200)
+                });
+              }
+            }
+            
             if (data.message && data.message.content) {
               fullResponse += data.message.content;
               
@@ -5091,6 +5179,16 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
             // Ignorar líneas que no sean JSON válido
           }
         }
+      }
+      
+      // ✅ NOTIFICAR REASONING COMPLETO al finalizar streaming
+      if (reasoningContent && callbacks.onReasoning) {
+        callbacks.onReasoning({
+          reasoning: reasoningContent,
+          model: modelId,
+          provider: 'local',
+          isComplete: true
+        });
       }
     } finally {
       reader.releaseLock();
@@ -5151,6 +5249,44 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
     }
 
     const data = await response.json();
+    
+    // ✅ CAPTURAR REASONING UNIVERSAL: Buscar reasoning en TODOS los modelos
+    // Ollama puede devolver reasoning en diferentes campos según el modelo
+    const reasoningContent = data.message?.reasoning_content || 
+                             data.reasoning_content || 
+                             data.message?.reasoning ||
+                             data.reasoning ||
+                             data.message?.thinking ||
+                             data.thinking ||
+                             data.message?.chain_of_thought ||
+                             data.chain_of_thought ||
+                             null;
+    
+    // 🔍 DEBUG: Log solo para modelos reasoning conocidos o cuando se detecta reasoning
+    const isReasoningModel = modelId && (modelId.includes('deepseek-r1') || modelId.includes('o1') || modelId.includes('reasoning'));
+    if (isReasoningModel || reasoningContent) {
+      if (data.message) {
+        const messageKeys = Object.keys(data.message);
+        debugLogger.debug('AIService.Reasoning', 'Respuesta completa de Ollama (non-streaming with callbacks)', {
+          model: modelId,
+          messageKeys: messageKeys,
+          hasReasoning: !!reasoningContent,
+          reasoningLength: reasoningContent ? reasoningContent.length : 0,
+          allKeys: Object.keys(data),
+          preview: JSON.stringify(data).substring(0, 500)
+        });
+      }
+    }
+    
+    // Si hay callbacks y hay reasoning, notificarlo
+    if (callbacks && callbacks.onReasoning && reasoningContent) {
+      callbacks.onReasoning({
+        reasoning: reasoningContent,
+        model: modelId,
+        provider: 'local',
+        isComplete: true
+      });
+    }
     
     // La respuesta de Ollama viene en data.message.content
     if (data.message && data.message.content) {
