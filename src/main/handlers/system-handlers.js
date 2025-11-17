@@ -144,6 +144,111 @@ function registerSystemHandlers() {
     }
   });
 
+  // === FILE DROP HANDLERS ===
+  
+  // Handler para obtener el path de un archivo usando webUtils.getPathForFile
+  // En Electron con contextIsolation, necesitamos usar webUtils desde el main process
+  ipcMain.handle('file:get-path-for-file', async (event, fileIndex) => {
+    try {
+      const { webContents } = require('electron');
+      const sender = webContents.fromId(event.sender.id);
+      
+      if (!sender || !sender.webUtils) {
+        return { ok: false, error: 'webUtils not available' };
+      }
+      
+      // Ejecutar código en el renderer para obtener el objeto File y usar webUtils
+      // webUtils.getPathForFile solo está disponible en el main process
+      const pathResult = await sender.executeJavaScript(`
+        (async () => {
+          try {
+            const files = window.__lastDroppedFiles || [];
+            if (files.length <= ${fileIndex} || !files[${fileIndex}]) {
+              return { ok: false, error: 'File not found' };
+            }
+            
+            const file = files[${fileIndex}];
+            
+            // Intentar múltiples formas de obtener el path
+            // En Electron, los archivos del sistema deberían tener path
+            if (file.path) {
+              return { ok: true, path: file.path };
+            }
+            
+            // Intentar mediante descriptor
+            try {
+              const desc = Object.getOwnPropertyDescriptor(file, 'path');
+              if (desc && desc.value) {
+                return { ok: true, path: desc.value };
+              }
+            } catch (e) {}
+            
+            // Intentar mediante Reflect
+            try {
+              const path = Reflect.get(file, 'path');
+              if (path && typeof path === 'string') {
+                return { ok: true, path: path };
+              }
+            } catch (e) {}
+            
+            // Intentar acceder a todas las propiedades no enumerables
+            try {
+              const allProps = Object.getOwnPropertyNames(file);
+              for (const prop of allProps) {
+                if (prop === 'path' || prop.toLowerCase().includes('path')) {
+                  const value = file[prop];
+                  if (typeof value === 'string' && value.length > 0) {
+                    return { ok: true, path: value };
+                  }
+                }
+              }
+            } catch (e) {}
+            
+            // Último intento: buscar en el prototipo
+            try {
+              const proto = Object.getPrototypeOf(file);
+              if (proto) {
+                const protoDesc = Object.getOwnPropertyDescriptor(proto, 'path');
+                if (protoDesc && protoDesc.value) {
+                  return { ok: true, path: protoDesc.value };
+                }
+              }
+            } catch (e) {}
+            
+            return { ok: false, error: 'Path not found in file object' };
+          } catch (e) {
+            return { ok: false, error: e.message };
+          }
+        })()
+      `);
+      
+      return pathResult;
+    } catch (e) {
+      return { ok: false, error: e?.message };
+    }
+  });
+  
+  // Handler para guardar archivo temporalmente desde ArrayBuffer
+  // Esto permite subir archivos arrastrados sin necesidad de tener el path
+  ipcMain.handle('file:save-temp-file', async (event, { fileName, arrayBuffer }) => {
+    try {
+      const path = require('path');
+      const os = require('os');
+      const fs = require('fs').promises;
+      
+      const tempDir = os.tmpdir();
+      const tempFilePath = path.join(tempDir, `nodeterm-upload-${Date.now()}-${fileName}`);
+      
+      // Convertir ArrayBuffer a Buffer y escribir
+      const buffer = Buffer.from(arrayBuffer);
+      await fs.writeFile(tempFilePath, buffer);
+      
+      return { ok: true, path: tempFilePath };
+    } catch (e) {
+      return { ok: false, error: e?.message };
+    }
+  });
+
   // === SYSTEM MEMORY HANDLERS ===
 
   // Handler para obtener estadísticas reales de memoria del sistema
