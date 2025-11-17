@@ -30,11 +30,13 @@ class MCPService {
     this.pendingRequests = new Map(); // Map<messageId, {resolve, reject, timeout}>
     this.initialized = false;
     // Keepalive y logging
-    this.keepaliveIntervalMs = 30000;
+    this.keepaliveIntervalMs = 30000; // 30 segundos para heartbeat básico
     this.keepaliveTimeoutMs = 5000;
     this.keepaliveMaxFailures = 2;
     this.keepaliveTimers = new Map();
     this.verboseLogs = false;
+    // 🔧 FIX: Rastrear última actividad para evitar refrescos innecesarios
+    this.lastActivityByServer = new Map(); // Map<serverId, timestamp>
   }
 
   registerNativeFactories() {
@@ -225,6 +227,20 @@ class MCPService {
         });
       }
       
+      // 🔒 DEBUG: Log de variables de entorno para debugging (sin mostrar valores completos)
+      if (config.env && Object.keys(config.env).length > 0) {
+        const envSummary = Object.keys(config.env).map(key => {
+          const value = config.env[key];
+          const displayValue = value && value.length > 0 
+            ? `${value.substring(0, 4)}...${value.length} chars` 
+            : 'VACÍO';
+          return `${key}=${displayValue}`;
+        }).join(', ');
+        console.log(`🔑 [MCP ${serverId}] Variables de entorno configuradas: ${envSummary}`);
+      } else {
+        console.log(`⚠️ [MCP ${serverId}] No hay variables de entorno configuradas en config.env`);
+      }
+
       const childProcess = spawn(config.command, spawnArgs, {
         stdio: ['pipe', 'pipe', 'pipe'],
         shell: isWindows,
@@ -616,22 +632,34 @@ class MCPService {
       if (shouldListTools) {
         try {
           const toolsResult = await this.sendRequest(serverId, 'tools/list');
-          mcpProcess.tools = toolsResult.tools || [];
-          console.log(`🔧 [MCP ${serverId}] Tools disponibles: ${mcpProcess.tools.length}`);
+          const newTools = toolsResult.tools || [];
+          const previousToolsCount = mcpProcess.tools?.length || 0;
+          const toolsChanged = previousToolsCount !== newTools.length || 
+            JSON.stringify(mcpProcess.tools?.map(t => t.name).sort()) !== JSON.stringify(newTools.map(t => t.name).sort());
           
-          // Log de nombres de herramientas para debugging
-          if (mcpProcess.tools.length > 0) {
-            const toolNames = mcpProcess.tools.map(t => t.name).join(', ');
-            console.log(`   Herramientas: ${toolNames}`);
-          } else {
-            console.warn(`⚠️ [MCP ${serverId}] Servidor reporta 0 herramientas`);
+          mcpProcess.tools = newTools;
+          
+          // 🔧 FIX: Solo loguear cuando hay cambios o es la primera vez
+          if (toolsChanged || previousToolsCount === 0) {
+            console.log(`🔧 [MCP ${serverId}] Tools disponibles: ${mcpProcess.tools.length}`);
+            
+            // Log de nombres de herramientas solo si hay cambios o es primera vez
+            if (mcpProcess.tools.length > 0) {
+              const toolNames = mcpProcess.tools.map(t => t.name).join(', ');
+              console.log(`   Herramientas: ${toolNames}`);
+            } else {
+              console.warn(`⚠️ [MCP ${serverId}] Servidor reporta 0 herramientas`);
+            }
           }
         } catch (error) {
           console.error(`❌ [MCP ${serverId}] Error obteniendo tools:`, error.message);
           // No fallar completamente, continuar con resources y prompts
         }
       } else {
-        console.log(`ℹ️ [MCP ${serverId}] Servidor no reporta soporte para tools`);
+        // Solo loguear si verboseLogs está activo
+        if (this.verboseLogs) {
+          console.log(`ℹ️ [MCP ${serverId}] Servidor no reporta soporte para tools`);
+        }
       }
 
       // Listar resources
@@ -738,17 +766,29 @@ class MCPService {
     if (!proc) return;
     if (proc.keepaliveTimer || this.keepaliveTimers.has(serverId)) return;
 
-    const tick = async () => {
+      const tick = async () => {
       const m = this.mcpProcesses.get(serverId);
       if (!m || m.state !== 'ready') return;
       if (m.keepaliveInFlight) return;
       m.keepaliveInFlight = true;
       try {
+        // 🔧 FIX: Solo hacer heartbeat básico, sin refrescar capabilities constantemente
         await this.sendRequest(serverId, 'tools/list', {}, this.keepaliveTimeoutMs);
         m.keepaliveFailures = 0;
         m.lastHeartbeatAt = Date.now();
+        
+        // 🔧 FIX: Solo refrescar capabilities si:
+        // 1. Es la primera vez (no hay timestamp)
+        // 2. Ha pasado más de 5 minutos desde el último refresh
+        // 3. Ha habido actividad reciente (últimos 2 minutos)
         const now = Date.now();
-        if (!m.lastCapabilitiesRefreshAt || now - m.lastCapabilitiesRefreshAt > 20000) {
+        const lastActivity = this.lastActivityByServer.get(serverId) || 0;
+        const timeSinceLastActivity = now - lastActivity;
+        const timeSinceLastRefresh = now - (m.lastCapabilitiesRefreshAt || 0);
+        const shouldRefresh = !m.lastCapabilitiesRefreshAt || 
+          (timeSinceLastRefresh > 300000 && timeSinceLastActivity < 120000); // 5 min sin refresh Y actividad reciente
+        
+        if (shouldRefresh) {
           m.lastCapabilitiesRefreshAt = now;
           this.refreshServerCapabilities(serverId).catch(() => {});
         }
@@ -1048,6 +1088,9 @@ class MCPService {
    * Llamar a una tool específica
    */
   async callTool(serverId, toolName, args = {}) {
+    // 🔧 FIX: Marcar actividad cuando se usa una herramienta
+    this.lastActivityByServer.set(serverId, Date.now());
+    
     const mcpProcess = this.mcpProcesses.get(serverId);
     if (!mcpProcess) {
       throw new Error(`MCP ${serverId} no está en ejecución`);
