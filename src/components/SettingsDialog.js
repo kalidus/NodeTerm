@@ -29,6 +29,7 @@ import FontPreview, { MonospaceFontPreview } from './FontPreview';
 import { STORAGE_KEYS } from '../utils/constants';
 import { homeTabIcons, setHomeTabIcon, getHomeTabIconGroups } from '../themes/home-tab-icons';
 import { groupTabIcons, setGroupTabIcon } from '../themes/group-tab-icons';
+import AIClientsTab from './AIClientsTab';
 
 const STATUSBAR_HEIGHT_STORAGE_KEY = 'basicapp_statusbar_height';
 const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
@@ -2436,6 +2437,10 @@ const SettingsDialog = ({
               </div>
             </div>
           </div>
+        </TabPanel>
+
+        <TabPanel header="Clientes de IA" leftIcon="pi pi-comments">
+          <AIClientsTab themeColors={{ primary: 'var(--primary-color)' }} />
         </TabPanel>
 
         <TabPanel header="Actualizaciones" leftIcon="pi pi-refresh">
