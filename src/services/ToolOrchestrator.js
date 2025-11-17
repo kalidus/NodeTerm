@@ -119,7 +119,7 @@ class ToolOrchestrator {
       // Extraer el texto del resultado
       if (typeof result === 'object' && Array.isArray(result.content)) {
         const textItems = result.content
-          .filter(it => typeof it?.text === 'string' && it.text.trim().length > 0)
+          .filter(it => it && typeof it.text === 'string' && it.text.trim().length > 0)
           .map(it => it.text.trim());
         text = textItems.join('\n');
       } else if (typeof result === 'string') {
