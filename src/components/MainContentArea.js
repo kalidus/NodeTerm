@@ -159,6 +159,20 @@ const MainContentArea = ({
       detail: { tab: newTab }
     }));
   }, []);
+
+  const dispatchOpenWebUITab = useCallback(() => {
+    const tabId = `openwebui-${Date.now()}`;
+    const newTab = {
+      key: tabId,
+      label: 'Open WebUI',
+      type: 'openwebui',
+      createdAt: Date.now(),
+      groupId: null
+    };
+    window.dispatchEvent(new CustomEvent('create-openwebui-tab', {
+      detail: { tab: newTab }
+    }));
+  }, []);
   
   // Contador para IDs de terminales locales - iniciar desde 1000 para evitar colisiones con Home
   const localTerminalCounterRef = useRef(1000);
@@ -210,6 +224,52 @@ const MainContentArea = ({
   }, []);
   
   
+  // Estado para controlar la visibilidad de las opciones de clientes de IA
+  const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
+    nodeterm: true,
+    anythingllm: false,
+    openwebui: false
+  });
+
+  // Cargar configuración de clientes de IA desde localStorage
+  React.useEffect(() => {
+    const loadAIClientsConfig = () => {
+      try {
+        const config = localStorage.getItem('ai_clients_enabled');
+        if (config) {
+          const parsed = JSON.parse(config);
+          setAiClientsEnabled({
+            nodeterm: parsed.nodeterm !== false, // Por defecto true si no existe
+            anythingllm: parsed.anythingllm === true,
+            openwebui: parsed.openwebui === true
+          });
+        } else {
+          // Si no hay configuración, NodeTerm activo por defecto
+          setAiClientsEnabled({
+            nodeterm: true,
+            anythingllm: false,
+            openwebui: false
+          });
+        }
+      } catch (error) {
+        console.error('[MainContentArea] Error al cargar configuración de clientes IA:', error);
+      }
+    };
+
+    // Cargar al montar
+    loadAIClientsConfig();
+
+    // Escuchar cambios
+    const handleConfigChange = () => {
+      loadAIClientsConfig();
+    };
+    window.addEventListener('ai-clients-config-changed', handleConfigChange);
+
+    return () => {
+      window.removeEventListener('ai-clients-config-changed', handleConfigChange);
+    };
+  }, []);
+
   // Generar opciones del menú de terminales
   useEffect(() => {
     const platform = window.electron?.platform || 'unknown';
@@ -256,35 +316,49 @@ const MainContentArea = ({
         });
       }
       
-      // Agregar AI Chat al final
-      menuItems.push({
-        label: 'AI Chat',
-        icon: 'pi pi-comments',
-        command: () => {
-          // Crear nueva pestaña de IA
-          const tabId = `ai-chat-${Date.now()}`;
-          const newAITab = {
-            key: tabId,
-            label: 'Chat IA',
-            type: 'ai-chat',
-            createdAt: Date.now(),
-            groupId: null
-          };
+      // Agregar AI Chat al final - Solo si está activado
+      if (aiClientsEnabled.nodeterm) {
+        menuItems.push({
+          label: 'AI Chat',
+          icon: 'pi pi-comments',
+          command: () => {
+            // Crear nueva pestaña de IA
+            const tabId = `ai-chat-${Date.now()}`;
+            const newAITab = {
+              key: tabId,
+              label: 'Chat IA',
+              type: 'ai-chat',
+              createdAt: Date.now(),
+              groupId: null
+            };
 
-          // Disparar evento para crear la pestaña
-          window.dispatchEvent(new CustomEvent('create-ai-tab', {
-            detail: { tab: newAITab }
-          }));
-        }
-      });
-      // AnythingLLM
-      menuItems.push({
-        label: 'AnythingLLM',
-        icon: 'pi pi-box',
-        command: () => {
-          dispatchAnythingLLMTab();
-        }
-      });
+            // Disparar evento para crear la pestaña
+            window.dispatchEvent(new CustomEvent('create-ai-tab', {
+              detail: { tab: newAITab }
+            }));
+          }
+        });
+      }
+      // AnythingLLM - Solo si está activado
+      if (aiClientsEnabled.anythingllm) {
+        menuItems.push({
+          label: 'AnythingLLM',
+          icon: 'pi pi-box',
+          command: () => {
+            dispatchAnythingLLMTab();
+          }
+        });
+      }
+      // OpenWebUI - Solo si está activado
+      if (aiClientsEnabled.openwebui) {
+        menuItems.push({
+          label: 'Open WebUI',
+          icon: 'pi pi-globe',
+          command: () => {
+            dispatchOpenWebUITab();
+          }
+        });
+      }
       
       setTerminalMenuItems(menuItems);
     } else {
@@ -299,38 +373,53 @@ const MainContentArea = ({
         }
       ];
       
-      // Agregar AI Chat al final
-      linuxMenuItems.push({
-        label: 'AI Chat',
-        icon: 'pi pi-comments',
-        command: () => {
-          // Crear nueva pestaña de IA
-          const tabId = `ai-chat-${Date.now()}`;
-          const newAITab = {
-            key: tabId,
-            label: 'Chat IA',
-            type: 'ai-chat',
-            createdAt: Date.now(),
-            groupId: null
-          };
+      // Agregar AI Chat al final - Solo si está activado
+      if (aiClientsEnabled.nodeterm) {
+        linuxMenuItems.push({
+          label: 'AI Chat',
+          icon: 'pi pi-comments',
+          command: () => {
+            // Crear nueva pestaña de IA
+            const tabId = `ai-chat-${Date.now()}`;
+            const newAITab = {
+              key: tabId,
+              label: 'Chat IA',
+              type: 'ai-chat',
+              createdAt: Date.now(),
+              groupId: null
+            };
 
-          // Disparar evento para crear la pestaña
-          window.dispatchEvent(new CustomEvent('create-ai-tab', {
-            detail: { tab: newAITab }
-          }));
-        }
-      });
-      linuxMenuItems.push({
-        label: 'AnythingLLM',
-        icon: 'pi pi-box',
-        command: () => {
-          dispatchAnythingLLMTab();
-        }
-      });
+            // Disparar evento para crear la pestaña
+            window.dispatchEvent(new CustomEvent('create-ai-tab', {
+              detail: { tab: newAITab }
+            }));
+          }
+        });
+      }
+      // AnythingLLM - Solo si está activado
+      if (aiClientsEnabled.anythingllm) {
+        linuxMenuItems.push({
+          label: 'AnythingLLM',
+          icon: 'pi pi-box',
+          command: () => {
+            dispatchAnythingLLMTab();
+          }
+        });
+      }
+      // OpenWebUI - Solo si está activado
+      if (aiClientsEnabled.openwebui) {
+        linuxMenuItems.push({
+          label: 'Open WebUI',
+          icon: 'pi pi-globe',
+          command: () => {
+            dispatchOpenWebUITab();
+          }
+        });
+      }
       
       setTerminalMenuItems(linuxMenuItems);
     }
-  }, [wslDistributions, dispatchAnythingLLMTab]);
+  }, [wslDistributions, dispatchAnythingLLMTab, dispatchOpenWebUITab, aiClientsEnabled]);
   
   // Detectar distribuciones WSL disponibles al montar el componente
   useEffect(() => {

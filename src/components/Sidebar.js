@@ -308,6 +308,62 @@ const Sidebar = React.memo(({
     
   }, [iconTheme, setNodes]);
   
+  // Estado para controlar la visibilidad de los botones de clientes de IA
+  const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
+    nodeterm: true,
+    anythingllm: false,
+    openwebui: false
+  });
+
+  // Cargar configuración de clientes de IA desde localStorage
+  React.useEffect(() => {
+    const loadAIClientsConfig = () => {
+      try {
+        const config = localStorage.getItem('ai_clients_enabled');
+        if (config) {
+          const parsed = JSON.parse(config);
+          setAiClientsEnabled({
+            nodeterm: parsed.nodeterm !== false, // Por defecto true si no existe
+            anythingllm: parsed.anythingllm === true,
+            openwebui: parsed.openwebui === true
+          });
+        } else {
+          // Si no hay configuración, NodeTerm activo por defecto
+          setAiClientsEnabled({
+            nodeterm: true,
+            anythingllm: false,
+            openwebui: false
+          });
+        }
+      } catch (error) {
+        console.error('[Sidebar] Error al cargar configuración de clientes IA:', error);
+      }
+    };
+
+    // Cargar al montar
+    loadAIClientsConfig();
+
+    // Escuchar cambios en localStorage
+    const handleStorageChange = (e) => {
+      if (e.key === 'ai_clients_enabled') {
+        loadAIClientsConfig();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // También escuchar evento personalizado para cambios en la misma pestaña
+    const handleConfigChange = () => {
+      loadAIClientsConfig();
+    };
+    window.addEventListener('ai-clients-config-changed', handleConfigChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('ai-clients-config-changed', handleConfigChange);
+    };
+  }, []);
+  
   // Ref para el contenedor de la sidebar
   const sidebarRef = useRef(null);
   const openAnythingLLMTab = () => {
@@ -1750,90 +1806,96 @@ const Sidebar = React.memo(({
                 }} 
               />
               
-              {/* Botón de Chat de IA */}
+              {/* Botón de Chat de IA - Solo visible si está activado */}
+              {aiClientsEnabled.nodeterm && (
+                <Button 
+                  icon="pi pi-comments" 
+                  className="p-button-rounded p-button-text sidebar-action-button" 
+                  onClick={() => {
+                    // Crear pestaña de IA
+                    const newAITab = {
+                      key: `ai-chat-${Date.now()}`,
+                      label: 'Chat IA',
+                      type: 'ai-chat',
+                      createdAt: Date.now(),
+                      groupId: null
+                    };
+
+                  // Disparar evento para crear la pestaña
+                  window.dispatchEvent(new CustomEvent('create-ai-tab', {
+                    detail: { tab: newAITab }
+                  }));
+                }} 
+                tooltip="Chat de IA" 
+                tooltipOptions={{ position: 'right' }} 
+                style={{ 
+                  margin: 0, 
+                  width: 40, 
+                  height: 40, 
+                  minWidth: 40, 
+                  minHeight: 40, 
+                  fontSize: 18,
+                  border: 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important'
+                }} 
+              />
+            )}
+
+            {/* Botón de AnythingLLM - Solo visible si está activado */}
+            {aiClientsEnabled.anythingllm && (
               <Button 
-                icon="pi pi-comments" 
+                icon="pi pi-box" 
                 className="p-button-rounded p-button-text sidebar-action-button" 
-                onClick={() => {
-                  // Crear pestaña de IA
-                  const newAITab = {
-                    key: `ai-chat-${Date.now()}`,
-                    label: 'Chat IA',
-                    type: 'ai-chat',
-                    createdAt: Date.now(),
-                    groupId: null
-                  };
+                onClick={openAnythingLLMTab} 
+                tooltip="AnythingLLM" 
+                tooltipOptions={{ position: 'right' }} 
+                style={{ 
+                  margin: 0, 
+                  width: 40, 
+                  height: 40, 
+                  minWidth: 40, 
+                  minHeight: 40, 
+                  fontSize: 18,
+                  border: 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important',
+                  color: '#9c27b0'
+                }} 
+              />
+            )}
 
-                // Disparar evento para crear la pestaña
-                window.dispatchEvent(new CustomEvent('create-ai-tab', {
-                  detail: { tab: newAITab }
-                }));
-              }} 
-              tooltip="Chat de IA" 
-              tooltipOptions={{ position: 'right' }} 
-              style={{ 
-                margin: 0, 
-                width: 40, 
-                height: 40, 
-                minWidth: 40, 
-                minHeight: 40, 
-                fontSize: 18,
-                border: 'none',
-                display: 'flex !important',
-                alignItems: 'center',
-                justifyContent: 'center',
-                visibility: 'visible !important',
-                opacity: '1 !important'
-              }} 
-            />
-
-            {/* Botón de AnythingLLM */}
-            <Button 
-              icon="pi pi-box" 
-              className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={openAnythingLLMTab} 
-              tooltip="AnythingLLM" 
-              tooltipOptions={{ position: 'right' }} 
-              style={{ 
-                margin: 0, 
-                width: 40, 
-                height: 40, 
-                minWidth: 40, 
-                minHeight: 40, 
-                fontSize: 18,
-                border: 'none',
-                display: 'flex !important',
-                alignItems: 'center',
-                justifyContent: 'center',
-                visibility: 'visible !important',
-                opacity: '1 !important',
-                color: '#9c27b0'
-              }} 
-            />
-
-            {/* Botón de Open WebUI */}
-            <Button 
-              icon="pi pi-globe" 
-              className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={openOpenWebUITab} 
-              tooltip="Open WebUI" 
-              tooltipOptions={{ position: 'right' }} 
-              style={{ 
-                margin: 0, 
-                width: 40, 
-                height: 40, 
-                minWidth: 40, 
-                minHeight: 40, 
-                fontSize: 18,
-                border: 'none',
-                display: 'flex !important',
-                alignItems: 'center',
-                justifyContent: 'center',
-                visibility: 'visible !important',
-                opacity: '1 !important',
-                color: '#2196F3'
-              }} 
-            />
+            {/* Botón de Open WebUI - Solo visible si está activado */}
+            {aiClientsEnabled.openwebui && (
+              <Button 
+                icon="pi pi-globe" 
+                className="p-button-rounded p-button-text sidebar-action-button" 
+                onClick={openOpenWebUITab} 
+                tooltip="Open WebUI" 
+                tooltipOptions={{ position: 'right' }} 
+                style={{ 
+                  margin: 0, 
+                  width: 40, 
+                  height: 40, 
+                  minWidth: 40, 
+                  minHeight: 40, 
+                  fontSize: 18,
+                  border: 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important',
+                  color: '#2196F3'
+                }} 
+              />
+            )}
             
             {/* Botón de nuevo grupo */}
             <Button 

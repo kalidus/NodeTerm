@@ -53,6 +53,11 @@ const AIClientsTab = ({ themeColors }) => {
   const saveClientsConfig = (newClients) => {
     setClients(newClients);
     localStorage.setItem(AI_CLIENTS_STORAGE_KEY, JSON.stringify(newClients));
+    
+    // Emitir evento para que otros componentes se actualicen inmediatamente
+    window.dispatchEvent(new CustomEvent('ai-clients-config-changed', {
+      detail: { config: newClients }
+    }));
   };
 
   // Handler para cambiar el estado de un cliente

@@ -47,6 +47,11 @@ const QuickAccessSidebar = ({
       setIsGlobalTransition(isTransitioning);
     };
     
+    // Limpiar estado de transición al montar (por si quedó atascado)
+    localStorage.removeItem('quickaccess_transition');
+    setIsGlobalTransition(false);
+    setIsToggling(false);
+    
     checkTransitionState();
     
     // Verificar cada 100ms durante la transición
@@ -54,7 +59,13 @@ const QuickAccessSidebar = ({
       checkTransitionState();
     }, 100);
     
-    return () => clearInterval(interval);
+    // Cleanup al desmontar
+    return () => {
+      clearInterval(interval);
+      localStorage.removeItem('quickaccess_transition');
+      setIsGlobalTransition(false);
+      setIsToggling(false);
+    };
   }, []);
 
   // Obtener el tema actual y colores
