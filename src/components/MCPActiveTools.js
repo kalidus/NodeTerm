@@ -35,8 +35,10 @@ const MCPActiveTools = ({ themeColors, onExpandedChange }) => {
     setStats(mcpClient.getStats());
   };
 
-  if (servers.length === 0) {
-    return null; // No mostrar si no hay servidores activos
+  // 🔒 MEJORADO: Mostrar si hay herramientas disponibles O servidores activos
+  // Esto asegura que las herramientas sean visibles incluso si el servidor está iniciando
+  if (tools.length === 0 && servers.length === 0) {
+    return null; // No mostrar si no hay herramientas ni servidores
   }
 
   return (
@@ -113,45 +115,63 @@ const MCPActiveTools = ({ themeColors, onExpandedChange }) => {
           overflow: 'auto'
         }}>
           {/* Servidores activos */}
-          <div>
+          {servers.length > 0 && (
+            <div>
+              <div style={{
+                fontSize: '0.75rem',
+                color: themeColors.textSecondary,
+                marginBottom: '0.5rem',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                Servidores Activos ({servers.length})
+              </div>
+              
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {servers.map(server => (
+                  <div
+                    key={server.id}
+                    style={{
+                      padding: '0.3rem 0.6rem',
+                      background: `rgba(100, 200, 100, 0.15)`,
+                      border: `1px solid rgba(100, 200, 100, 0.3)`,
+                      borderRadius: '12px',
+                      fontSize: '0.75rem',
+                      color: themeColors.textPrimary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.3rem'
+                    }}
+                  >
+                    <div style={{
+                      width: '4px',
+                      height: '4px',
+                      borderRadius: '50%',
+                      background: '#66bb6a'
+                    }} />
+                    {server.id}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Mensaje si hay herramientas pero no servidores activos */}
+          {tools.length > 0 && servers.length === 0 && (
             <div style={{
+              padding: '0.5rem',
+              background: 'rgba(255, 193, 7, 0.1)',
+              border: '1px solid rgba(255, 193, 7, 0.3)',
+              borderRadius: '6px',
               fontSize: '0.75rem',
-              color: themeColors.textSecondary,
-              marginBottom: '0.5rem',
-              fontWeight: '600',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
+              color: themeColors.textPrimary,
+              marginBottom: '0.5rem'
             }}>
-              Servidores Activos ({servers.length})
+              <i className="pi pi-info-circle" style={{ marginRight: '0.3rem' }} />
+              Herramientas disponibles pero servidores no activos. Las herramientas se activarán automáticamente cuando sean necesarias.
             </div>
-            
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-              {servers.map(server => (
-                <div
-                  key={server.id}
-                  style={{
-                    padding: '0.3rem 0.6rem',
-                    background: `rgba(100, 200, 100, 0.15)`,
-                    border: `1px solid rgba(100, 200, 100, 0.3)`,
-                    borderRadius: '12px',
-                    fontSize: '0.75rem',
-                    color: themeColors.textPrimary,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.3rem'
-                  }}
-                >
-                  <div style={{
-                    width: '4px',
-                    height: '4px',
-                    borderRadius: '50%',
-                    background: '#66bb6a'
-                  }} />
-                  {server.id}
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
 
           {/* Tools disponibles */}
           <div>
