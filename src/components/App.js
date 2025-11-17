@@ -1881,6 +1881,14 @@ const App = () => {
     nodes,
     localFontFamily,
     localFontSize,
+    // Tab activation props
+    setActiveTabIndex,
+    setLastOpenedTabKey,
+    setOnCreateActivateTabKey,
+    setGroupActiveIndices,
+    setOpenTabOrder,
+    activeGroupId,
+    activeTabIndex,
     localLinuxTerminalTheme,
     localPowerShellTheme,
     // FileExplorer props
