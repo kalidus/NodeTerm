@@ -27,11 +27,9 @@ function setMainWindow(window) {
  */
 function isDockerAvailable() {
   try {
-    const version = execSync('docker --version', { encoding: 'utf8', stdio: 'pipe', shell: true });
-    console.log('🐳 Docker disponible:', version.trim());
+    execSync('docker --version', { encoding: 'utf8', stdio: 'pipe', shell: true });
     return true;
   } catch (error) {
-    console.warn('⚠️ Docker no disponible:', error.message);
     return false;
   }
 }
@@ -42,10 +40,7 @@ function isDockerAvailable() {
  */
 function getRunningContainers() {
   try {
-    console.log('🐳 Iniciando detección de contenedores Docker...');
-    
     if (!isDockerAvailable()) {
-      console.warn('⚠️ Docker no disponible para listar contenedores');
       return [];
     }
 
@@ -55,14 +50,12 @@ function getRunningContainers() {
     
     try {
       // Intento 1: Formato JSON (más confiable)
-      console.log('  Intento 1: Usando formato JSON...');
       const jsonOutput = execSync(
         'docker ps --format "table{{json .}}"',
         { encoding: 'utf8', stdio: 'pipe', shell: true, maxBuffer: 1024 * 1024 * 10 }
       );
       
       if (jsonOutput.trim()) {
-        // Procesar salida JSON
         const lines = jsonOutput.trim().split('\n');
         containers = lines
           .map(line => {
@@ -80,18 +73,16 @@ function getRunningContainers() {
           .filter(c => c && c.id);
         
         if (containers.length > 0) {
-          console.log(`✅ JSON parsing exitoso: ${containers.length} contenedor(es)`);
           logContainers(containers);
           return containers;
         }
       }
     } catch (jsonError) {
-      console.warn('  ⚠️ Intento JSON falló, probando alternativa...');
+      // Intento 1 falló, continuar
     }
     
     try {
       // Intento 2: Formato simple con separadores
-      console.log('  Intento 2: Usando formato simple...');
       output = execSync(
         'docker ps --no-trunc --format "{{.Names}} {{.ID}}"',
         { encoding: 'utf8', stdio: 'pipe', shell: true, maxBuffer: 1024 * 1024 * 10 }
@@ -116,18 +107,16 @@ function getRunningContainers() {
           .filter(c => c && c.id);
         
         if (containers.length > 0) {
-          console.log(`✅ Formato simple exitoso: ${containers.length} contenedor(es)`);
           logContainers(containers);
           return containers;
         }
       }
     } catch (simpleError) {
-      console.warn('  ⚠️ Intento simple falló, probando alternativa...');
+      // Intento 2 falló, continuar
     }
 
     try {
       // Intento 3: Comando básico sin formato
-      console.log('  Intento 3: Usando comando básico...');
       output = execSync(
         'docker ps',
         { encoding: 'utf8', stdio: 'pipe', shell: true, maxBuffer: 1024 * 1024 * 10 }
@@ -135,17 +124,14 @@ function getRunningContainers() {
 
       if (output.trim()) {
         const lines = output.trim().split('\n');
-        // Saltar encabezado
         containers = lines
           .slice(1)
           .filter(line => line.trim())
           .map(line => {
-            // Formato: CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
-            // Estrategia: El ID es el primer token, el NAMES es el último token
             const tokens = line.trim().split(/\s+/);
             if (tokens.length >= 2) {
-              const id = tokens[0];      // CONTAINER ID es el primer token
-              const name = tokens[tokens.length - 1];  // NAMES es el último token
+              const id = tokens[0];
+              const name = tokens[tokens.length - 1];
               if (id && name && id !== 'CONTAINER' && name !== 'NAMES') {
                 return {
                   name: name,
@@ -159,20 +145,17 @@ function getRunningContainers() {
           .filter(c => c && c.id && c.name);
         
         if (containers.length > 0) {
-          console.log(`✅ Comando básico exitoso: ${containers.length} contenedor(es)`);
           logContainers(containers);
           return containers;
         }
       }
     } catch (basicError) {
-      console.error('  ❌ Intento básico también falló:', basicError.message);
+      console.error('❌ Error detectando contenedores Docker:', basicError.message);
     }
 
-    console.warn('⚠️ No se pudieron detectar contenedores con ningún método');
     return [];
   } catch (error) {
     console.error('❌ Error obteniendo contenedores Docker:', error.message);
-    console.error('   Stack:', error.stack);
     return [];
   }
 }
@@ -195,40 +178,29 @@ function logContainers(containers) {
  */
 async function startDockerSession(tabId, containerName, { cols, rows }) {
   try {
-    console.log(`🐳 [START] Iniciando sesión Docker: tabId=${tabId}, container=${containerName}`);
-    
     // Verificar si ya hay un proceso activo
     if (dockerProcesses[tabId]) {
-      console.log(`✅ Docker ${containerName} ${tabId}: Reutilizando`);
       return;
     }
 
     // Validar que el contenedor existe
     try {
-      console.log(`🐳 [VALIDATE] Validando contenedor ${containerName}...`);
       execSync(`docker ps --filter "name=${containerName}" --format "{{.Names}}"`, {
         encoding: 'utf8',
         stdio: 'pipe',
         shell: true
       });
-      console.log(`🐳 [VALIDATE] Validación exitosa, contenedor encontrado`);
     } catch (e) {
-      console.error(`🐳 [VALIDATE] Error en validación:`, e.message);
-      throw new Error(`Contenedor '${containerName}' no encontrado o no está corriendo: ${e.message}`);
+      throw new Error(`Contenedor '${containerName}' no encontrado o no está corriendo`);
     }
 
-    console.log(`🐳 [SPAWN] Creando proceso PTY para Docker ${containerName}...`);
-
     // Comando para entrar al contenedor
-    // En Windows, node-pty necesita usar powershell.exe como shell, luego ejecutar docker desde allí
     let cmd, args;
     
     if (os.platform() === 'win32') {
-      // En Windows: usar PowerShell como shell que ejecutará docker
       cmd = 'powershell.exe';
       args = ['-Command', `docker exec -it ${containerName} /bin/bash`];
     } else {
-      // En Linux/macOS, docker exec directo
       cmd = 'docker';
       args = ['exec', '-it', containerName, '/bin/bash'];
     }
@@ -246,20 +218,15 @@ async function startDockerSession(tabId, containerName, { cols, rows }) {
       windowsHide: false
     };
 
-    // Configuración específica para Windows
     if (os.platform() === 'win32') {
       spawnOptions.useConpty = false;
       spawnOptions.backend = 'winpty';
     }
 
-    console.log(`🐳 [SPAWN] Opciones:`, { cmd, args, cols, rows, platform: os.platform() });
-
     // Spawn del proceso Docker
     try {
       dockerProcesses[tabId] = pty.spawn(cmd, args, spawnOptions);
-      console.log(`✅ [SPAWN] Docker ${containerName} ${tabId}: Proceso creado exitosamente`);
     } catch (spawnError) {
-      console.error(`❌ [SPAWN] Error spawning Docker proceso:`, spawnError.message);
       throw new Error(`Error spawning docker process: ${spawnError.message}`);
     }
 
@@ -279,7 +246,6 @@ async function startDockerSession(tabId, containerName, { cols, rows }) {
 
     // Handle exit
     dockerProcesses[tabId].onExit(({ exitCode, signal }) => {
-      console.log(`🔚 Docker ${containerName} ${tabId}: Terminado`);
       delete dockerProcesses[tabId];
 
       if (mainWindow && mainWindow.webContents) {
@@ -289,16 +255,15 @@ async function startDockerSession(tabId, containerName, { cols, rows }) {
 
     // Handle errors
     dockerProcesses[tabId].on('error', (error) => {
-      console.error(`❌ Docker ${containerName} ${tabId}: Error`);
       if (mainWindow && mainWindow.webContents) {
         mainWindow.webContents.send(`docker:error:${tabId}`, error.message);
       }
     });
   } catch (error) {
-    console.error(`❌ Docker ${containerName} ${tabId}: Error de inicio`, error.message);
+    console.error(`❌ Error iniciando Docker en '${containerName}': ${error.message}`);
     if (mainWindow && mainWindow.webContents) {
       mainWindow.webContents.send(`docker:error:${tabId}`, 
-        `No se pudo iniciar sesión en '${containerName}':\n${error.message}`
+        `No se pudo iniciar sesión en '${containerName}': ${error.message}`
       );
     }
   }
@@ -361,10 +326,8 @@ const DockerHandlers = {
       try {
         dockerProcesses[tabId].write(data);
       } catch (error) {
-        console.error(`❌ Docker ${tabId}: Error de escritura`);
+        console.error(`❌ Docker ${tabId}: Error escribiendo datos`);
       }
-    } else {
-      console.warn(`⚠️ Docker ${tabId}: Proceso no encontrado`);
     }
   },
 
@@ -374,7 +337,7 @@ const DockerHandlers = {
       try {
         dockerProcesses[tabId].resize(cols, rows);
       } catch (error) {
-        console.error(`❌ Docker ${tabId}: Error de redimensionado`);
+        console.error(`❌ Docker ${tabId}: Error redimensionando`);
       }
     }
   },
@@ -383,20 +346,18 @@ const DockerHandlers = {
   stop: (tabId) => {
     if (dockerProcesses[tabId]) {
       try {
-        console.log(`🛑 Docker ${tabId}: Deteniendo`);
         const process = dockerProcesses[tabId];
         process.removeAllListeners();
         process.kill();
         delete dockerProcesses[tabId];
       } catch (error) {
-        console.error(`❌ Docker ${tabId}: Error al detener`);
+        console.error(`❌ Docker ${tabId}: Error deteniendo`);
       }
     }
   },
 
   // Limpiar todos los procesos
   cleanup: () => {
-    console.log(`🧹 Docker: Limpiando ${Object.keys(dockerProcesses).length} procesos`);
     Object.keys(dockerProcesses).forEach(tabId => {
       DockerHandlers.stop(tabId);
     });
