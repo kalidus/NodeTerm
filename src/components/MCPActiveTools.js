@@ -29,10 +29,45 @@ const MCPActiveTools = ({ themeColors, onExpandedChange }) => {
     }
   }, [expanded, onExpandedChange]);
 
-  const loadData = () => {
-    setTools(mcpClient.getAvailableTools());
-    setServers(mcpClient.getActiveServers());
+  const loadData = async () => {
+    // Forzar refresh de herramientas antes de cargar
+    try {
+      await mcpClient.refreshTools();
+      await mcpClient.refreshServers();
+    } catch (error) {
+      console.error('[MCPActiveTools] Error refrescando:', error);
+    }
+    
+    const allTools = mcpClient.getAvailableTools();
+    const allServers = mcpClient.getActiveServers();
+    
+    // 🔒 DEBUG: Log de herramientas de Tenable
+    const tenableTools = allTools.filter(t => t.serverId === 'tenable');
+    if (tenableTools.length > 0) {
+      console.log(`🔒 [MCPActiveTools] Herramientas de Tenable encontradas: ${tenableTools.length}`, 
+        tenableTools.map(t => t.name));
+    } else {
+      console.warn(`⚠️ [MCPActiveTools] NO se encontraron herramientas de Tenable. Total herramientas: ${allTools.length}`);
+      // Log de todas las herramientas para debugging
+      const toolsByServer = allTools.reduce((acc, t) => {
+        acc[t.serverId] = (acc[t.serverId] || 0) + 1;
+        return acc;
+      }, {});
+      console.log('   Herramientas por servidor:', toolsByServer);
+    }
+    
+    setTools(allTools);
+    setServers(allServers);
     setStats(mcpClient.getStats());
+  };
+  
+  const handleRefresh = async () => {
+    try {
+      await mcpClient.refreshAll();
+      loadData();
+    } catch (error) {
+      console.error('[MCPActiveTools] Error en refresh manual:', error);
+    }
   };
 
   // 🔒 MEJORADO: Mostrar si hay herramientas disponibles O servidores activos
@@ -176,15 +211,62 @@ const MCPActiveTools = ({ themeColors, onExpandedChange }) => {
           {/* Tools disponibles */}
           <div>
             <div style={{
-              fontSize: '0.75rem',
-              color: themeColors.textSecondary,
-              marginBottom: '0.5rem',
-              fontWeight: '600',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '0.5rem'
             }}>
-              Herramientas ({tools.length})
+              <div style={{
+                fontSize: '0.75rem',
+                color: themeColors.textSecondary,
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                Herramientas ({tools.length})
+              </div>
+              <button
+                onClick={handleRefresh}
+                style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  border: `1px solid ${themeColors.borderColor}`,
+                  borderRadius: '4px',
+                  padding: '0.2rem 0.4rem',
+                  color: themeColors.textPrimary,
+                  cursor: 'pointer',
+                  fontSize: '0.7rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                }}
+                title="Actualizar herramientas"
+              >
+                <i className="pi pi-refresh" style={{ fontSize: '0.7rem' }} />
+                Actualizar
+              </button>
             </div>
+            
+            {tools.length === 0 && servers.length > 0 && (
+              <div style={{
+                padding: '0.75rem',
+                background: 'rgba(255, 193, 7, 0.1)',
+                border: '1px solid rgba(255, 193, 7, 0.3)',
+                borderRadius: '6px',
+                fontSize: '0.75rem',
+                color: themeColors.textPrimary,
+                marginBottom: '0.5rem'
+              }}>
+                <i className="pi pi-exclamation-triangle" style={{ marginRight: '0.3rem' }} />
+                No se encontraron herramientas. Los servidores pueden estar iniciando. Haz clic en "Actualizar" para refrescar.
+              </div>
+            )}
 
             <div style={{
               display: 'grid',

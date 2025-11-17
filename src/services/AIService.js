@@ -2131,21 +2131,32 @@ class AIService {
       topTools.push(...tools.filter(t => defaultNames.some(dn => t.name.includes(dn))).slice(0, 3));
     }
     
-    // 🔒 CRÍTICO: Si hay herramientas de Tenable disponibles y el mensaje menciona Tenable/vulnerabilidades,
-    // asegurar que al menos una herramienta de Tenable esté incluida
+    // 🔒 CRÍTICO: SIEMPRE incluir herramientas de Tenable si están disponibles
+    // Esto asegura que el modelo las conozca y pueda usarlas cuando sea necesario
     const tenableTools = tools.filter(t => t.serverId === 'tenable');
-    const hasTenableKeywords = message.toLowerCase().match(/tenable|vulnerabilidad|vulnerabilidades|activo|activos|asset|assets|seguridad|security|scanner|scan|escaneo/i);
     const hasTenableInTop = topTools.some(t => t.serverId === 'tenable');
     
-    if (tenableTools.length > 0 && hasTenableKeywords && !hasTenableInTop) {
-      // Agregar la herramienta más relevante de Tenable
-      const mostRelevantTenable = tenableTools.find(t => t.name.includes('get_assets')) || tenableTools[0];
-      if (mostRelevantTenable) {
-        topTools.unshift(mostRelevantTenable); // Agregar al inicio
-        debugLogger.debug('AIService.ToolsFilter', 'Herramienta de Tenable agregada forzosamente', {
-          herramienta: mostRelevantTenable.name
-        });
-      }
+    if (tenableTools.length > 0 && !hasTenableInTop) {
+      // Agregar TODAS las herramientas de Tenable (son solo 4, no afecta mucho el límite)
+      // Priorizar get_assets primero, luego las demás
+      const sortedTenable = [
+        tenableTools.find(t => t.name === 'get_assets'),
+        tenableTools.find(t => t.name === 'search_assets'),
+        tenableTools.find(t => t.name === 'get_asset_details'),
+        tenableTools.find(t => t.name === 'get_asset_vulnerabilities')
+      ].filter(Boolean);
+      
+      // Agregar las que no están ya en topTools
+      sortedTenable.forEach(tool => {
+        if (!topTools.some(t => t.serverId === tool.serverId && t.name === tool.name)) {
+          topTools.unshift(tool); // Agregar al inicio para máxima prioridad
+        }
+      });
+      
+      debugLogger.debug('AIService.ToolsFilter', 'Herramientas de Tenable agregadas forzosamente', {
+        cantidad: sortedTenable.length,
+        herramientas: sortedTenable.map(t => t.name)
+      });
     }
 
     debugLogger.debug('AIService.ToolsFilter', 'Tools filtrados con scoring', {
@@ -2172,8 +2183,27 @@ class AIService {
       const resources = mcpClient.getAvailableResources();
       const prompts = mcpClient.getAvailablePrompts();
 
+      // 🔒 DEBUG: Log de herramientas disponibles antes del filtro
+      const tenableToolsBefore = tools.filter(t => t.serverId === 'tenable');
+      if (tenableToolsBefore.length > 0) {
+        debugLogger.debug('AIService.MCP', 'Herramientas de Tenable disponibles antes del filtro', {
+          cantidad: tenableToolsBefore.length,
+          herramientas: tenableToolsBefore.map(t => t.name)
+        });
+      }
+
       // 🔍 FILTRAR TOOLS (contextual)
       tools = this.filterToolsByContext(tools, message);
+      
+      // 🔒 DEBUG: Log de herramientas después del filtro
+      const tenableToolsAfter = tools.filter(t => t.serverId === 'tenable');
+      if (tenableToolsBefore.length > 0 && tenableToolsAfter.length === 0) {
+        debugLogger.warn('AIService.MCP', '⚠️ Herramientas de Tenable fueron filtradas completamente', {
+          antes: tenableToolsBefore.length,
+          despues: 0,
+          mensaje: message.substring(0, 100)
+        });
+      }
 
       debugLogger.debug('AIService.MCP', 'Contexto MCP generado', {
         tools: tools.length,
@@ -3078,7 +3108,23 @@ class AIService {
   }
 
   _resolveToolInfo(toolName, serverIdHint = null) {
+    // 🔒 DEBUG: Validar entrada
+    if (!toolName) {
+      debugLogger.warn('AIService.MCP', '_resolveToolInfo recibió toolName vacío', { toolName, serverIdHint });
+      return { serverId: null, toolName: toolName || '' };
+    }
+    
     const tools = mcpClient.getAvailableTools() || [];
+    
+    // 🔒 ESPECIAL: Si serverIdHint es 'tenable', buscar específicamente en Tenable primero
+    if (serverIdHint === 'tenable') {
+      const tenableMatch = tools.find(t => t.serverId === 'tenable' && t.name === toolName);
+      if (tenableMatch) {
+        debugLogger.debug('AIService.MCP', 'Herramienta de Tenable encontrada', { toolName, serverId: 'tenable' });
+        return { serverId: 'tenable', toolName: tenableMatch.name };
+      }
+    }
+    
     if (serverIdHint) {
       const match = tools.find(t => t.serverId === serverIdHint && t.name === toolName);
       if (match) {
@@ -3092,6 +3138,11 @@ class AIService {
     }
 
     if (exactMatches.length > 1) {
+      // 🔒 MEJORADO: Priorizar Tenable si hay múltiples matches
+      const tenableMatch = exactMatches.find(t => t.serverId === 'tenable');
+      if (tenableMatch) {
+        return { serverId: tenableMatch.serverId, toolName: tenableMatch.name };
+      }
       return { serverId: exactMatches[0].serverId, toolName: exactMatches[0].name };
     }
 
@@ -3103,6 +3154,21 @@ class AIService {
     const filesystemMatch = tools.find(t => t.serverId === 'filesystem' && t.name === toolName);
     if (filesystemMatch) {
       return { serverId: filesystemMatch.serverId, toolName: filesystemMatch.name };
+    }
+    
+    // 🔒 ESPECIAL: Buscar en Tenable si el nombre contiene palabras relacionadas
+    if (toolName.includes('asset') || toolName.includes('vulnerability') || toolName.includes('tenable')) {
+      const tenableTools = tools.filter(t => t.serverId === 'tenable');
+      const tenableMatch = tenableTools.find(t => 
+        t.name.includes(toolName) || toolName.includes(t.name)
+      );
+      if (tenableMatch) {
+        debugLogger.debug('AIService.MCP', 'Herramienta de Tenable encontrada por nombre relacionado', { 
+          toolName, 
+          encontrada: tenableMatch.name 
+        });
+        return { serverId: 'tenable', toolName: tenableMatch.name };
+      }
     }
 
     // 🔧 NUEVO: Fuzzy matching para nombres similares (corrección automática)
@@ -4609,6 +4675,28 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
                 const serverId = normalized.serverId;
                 const toolName = normalized.toolName;
                 const callArgs = normalized.arguments;
+                
+                // 🔒 DEBUG: Validar que toolName y serverId estén definidos
+                if (!toolName || toolName === 'undefined') {
+                  console.error(`❌ [AIService] ERROR: toolName es undefined después de normalizar`, {
+                    fullName,
+                    args,
+                    normalized
+                  });
+                  executionSummaries.push(`• ERROR: Nombre de herramienta inválido (undefined)`);
+                  continue;
+                }
+                
+                if (!serverId) {
+                  console.error(`❌ [AIService] ERROR: serverId es undefined después de normalizar`, {
+                    fullName,
+                    args,
+                    normalized
+                  });
+                  executionSummaries.push(`• ERROR: Servidor MCP no identificado para herramienta ${toolName}`);
+                  continue;
+                }
+                
                 const cachedExecution = getRecentToolExecution(conversationService.currentConversationId, toolName, callArgs);
                 if (cachedExecution && !cachedExecution.isError) {
                   executionSummaries.push(`• ${toolName}: ${cachedExecution.summary || cachedExecution.rawText}`);
@@ -4725,13 +4813,40 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
             const candidate = (data.candidates && data.candidates[0]) || {};
             const parts = candidate.content?.parts || candidate.content || [];
             const calls = Array.isArray(parts) ? parts.filter(p => p.functionCall) : [];
+            
+            // 🔒 DEBUG: Log de function calls de Google
+            if (calls.length > 0) {
+              console.log(`🔧 [AIService] Google function calls detectados:`, calls.length);
+              calls.forEach((call, idx) => {
+                console.log(`   Call ${idx}:`, JSON.stringify(call.functionCall || call, null, 2));
+              });
+            }
+            
             if (mcpContext.hasTools && calls.length > 0) {
               // Usar toolOrchestrator para ejecutar herramientas en loop
               if (this.toolOrchestrator && calls.length === 1) {
                 const firstCall = calls[0];
                 const fc = firstCall.functionCall || {};
                 const fullName = fc.name || '';
+                
+                // 🔒 DEBUG: Validar que fullName no esté vacío
+                if (!fullName) {
+                  console.error(`❌ [AIService] Google functionCall sin nombre:`, JSON.stringify(fc, null, 2));
+                  console.error(`   firstCall completo:`, JSON.stringify(firstCall, null, 2));
+                  return `Error: El modelo no proporcionó un nombre de función válido. Function call recibido: ${JSON.stringify(fc)}`;
+                }
+                
                 const normalized = this._normalizeFunctionCall(fullName, fc.args || {});
+                
+                // 🔒 DEBUG: Validar resultado de normalización
+                if (!normalized.toolName || !normalized.serverId) {
+                  console.error(`❌ [AIService] Error normalizando function call de Google`, {
+                    fullName,
+                    fcArgs: fc.args,
+                    normalized
+                  });
+                  return `Error: No se pudo resolver la herramienta "${fullName}". Verifica que el servidor MCP esté activo.`;
+                }
                 
                 const initialToolCall = {
                   toolName: normalized.toolName,

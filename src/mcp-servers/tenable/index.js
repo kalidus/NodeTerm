@@ -10,16 +10,24 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
+  InitializeRequestSchema,
   ListToolsRequestSchema,
   CallToolRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import axios from "axios";
 
-// Initialize MCP Server
-const server = new Server({
-  name: "tenable-mcp-server",
-  version: "1.0.0",
-});
+// Initialize MCP Server con capabilities declaradas
+const server = new Server(
+  {
+    name: "tenable-mcp-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {
+      tools: {},
+    },
+  }
+);
 
 // Tenable API Configuration
 const TENABLE_API_URL = "https://cloud.tenable.com/api/v2";
@@ -268,7 +276,23 @@ const tools = [
   },
 ];
 
-// Handle list_tools request
+// CRÍTICO: Registrar initialize ANTES de otros handlers para declarar capabilities
+server.setRequestHandler(InitializeRequestSchema, async (request) => {
+  return {
+    protocolVersion: "2024-11-05",
+    capabilities: {
+      tools: {
+        listChanged: true,
+      },
+    },
+    serverInfo: {
+      name: "tenable-mcp-server",
+      version: "1.0.0",
+    },
+  };
+});
+
+// Handle list_tools request - Registrar DESPUÉS de initialize
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return { tools };
 });
@@ -277,7 +301,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request;
 
-  console.log(`[Tenable MCP] Calling tool: ${name}`, args);
+  // 🔒 DEBUG: Log completo del request para debugging
+  console.error(`[Tenable MCP] CallTool request completo:`, JSON.stringify(request, null, 2));
+  console.error(`[Tenable MCP] Calling tool: name="${name}", args=`, args);
+
+  if (!name) {
+    console.error(`[Tenable MCP] ERROR: name es undefined o null`);
+    return {
+      type: "text",
+      text: `Error: nombre de herramienta no proporcionado. Request recibido: ${JSON.stringify(request)}`,
+      isError: true,
+    };
+  }
 
   switch (name) {
     case "get_assets":

@@ -455,8 +455,19 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
       setConfigValues({});
       return;
     }
-    const cmd = selectedMCP.runCommand || 'npx';
-    const args = cmd === 'uvx' ? [selectedMCP.package] : ['-y', selectedMCP.package];
+    // 🔒 ESPECIAL: Para Tenable, ejecutar desde archivo local en lugar de npx
+    let cmd, args, cwdForTenable;
+    if (selectedMCP.id === 'tenable') {
+      // Ejecutar el servidor Tenable desde el directorio donde están las dependencias
+      cmd = 'node';
+      args = ['index.js'];
+      // CRÍTICO: Establecer el directorio de trabajo como el directorio de tenable
+      // donde están instaladas las dependencias (node_modules)
+      cwdForTenable = 'src/mcp-servers/tenable';
+    } else {
+      cmd = selectedMCP.runCommand || 'npx';
+      args = cmd === 'uvx' ? [selectedMCP.package] : ['-y', selectedMCP.package];
+    }
     const env = {};
     
     // Función helper para agregar flags de PowerShell por defecto a ALLOWED_FLAGS
@@ -514,7 +525,9 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
     }
     // Ajuste para servidores Python/CLI: usar ALLOWED_DIR como cwd si está disponible
     let cwd;
-    if ((selectedMCP.id === 'cli-mcp-server' || selectedMCP.runtime === 'python') && env && env.ALLOWED_DIR) {
+    if (selectedMCP.id === 'tenable' && cwdForTenable) {
+      cwd = cwdForTenable;
+    } else if ((selectedMCP.id === 'cli-mcp-server' || selectedMCP.runtime === 'python') && env && env.ALLOWED_DIR) {
       cwd = env.ALLOWED_DIR;
     }
     const config = { command: cmd, args, enabled: true, autostart: false, autoRestart: true, configValues: processedConfigValues, env, ...(cwd ? { cwd } : {}) };
