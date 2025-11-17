@@ -114,10 +114,8 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
             };
         });
         
-        setBreadcrumbItems([
-            { label: 'Root', command: () => navigateToPath('/') },
-            ...items
-        ]);
+        // Sin "Root", solo las carpetas del path
+        setBreadcrumbItems(items);
     };
 
     const navigateToPath = async (path) => {
@@ -516,13 +514,32 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                     <h2 className="file-explorer-title">
                         Explorador <FaChevronRight className="header-separator" /> {sshConfig.host}
                     </h2>
-                    <div className="file-explorer-header-divider"></div>
                 </div>
 
-                {/* Path Navigation Bar */}
-                <div className="file-explorer-path-bar">
-                    <div className="path-input-wrapper">
-                        <FaFolder className="path-icon" />
+                {/* Breadcrumb con Path Input en la misma fila */}
+                <div className="file-explorer-breadcrumb-row">
+                    <div className="breadcrumb-container">
+                        {breadcrumbItems.length === 0 ? (
+                            <span className="breadcrumb-empty">/</span>
+                        ) : (
+                            breadcrumbItems.map((item, index) => (
+                                <React.Fragment key={index}>
+                                    <button
+                                        className="breadcrumb-link"
+                                        onClick={item.command}
+                                        title={item.label}
+                                    >
+                                        <FaFolder className="breadcrumb-icon" />
+                                        <span>{item.label}</span>
+                                    </button>
+                                    {index < breadcrumbItems.length - 1 && (
+                                        <span className="breadcrumb-sep">></span>
+                                    )}
+                                </React.Fragment>
+                            ))
+                        )}
+                    </div>
+                    <div className="breadcrumb-path-input">
                         <InputText 
                             value={pathInput}
                             onChange={(e) => setPathInput(e.target.value)}
@@ -531,36 +548,18 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                                     handleNavigateFromInput();
                                 }
                             }}
-                            placeholder="Pega aquí la ruta completa (ej: /home/user/documents)"
+                            placeholder="/ruta..."
                             disabled={!sshReady || loading}
-                            className="path-input"
+                            className="breadcrumb-path-field"
                         />
                         <Button 
-                            label="IR" 
                             icon={<FaArrowRight />}
                             onClick={handleNavigateFromInput}
                             disabled={!sshReady || loading}
-                            className="path-go-button"
+                            className="breadcrumb-path-button"
+                            tooltip="Ir a ruta"
                         />
                     </div>
-                </div>
-
-                {/* Breadcrumb Simple */}
-                <div className="file-explorer-breadcrumb-simple">
-                    {breadcrumbItems.map((item, index) => (
-                        <React.Fragment key={index}>
-                            <button
-                                className="breadcrumb-link"
-                                onClick={item.command}
-                                title={item.label}
-                            >
-                                {item.label}
-                            </button>
-                            {index < breadcrumbItems.length - 1 && (
-                                <span className="breadcrumb-sep">/</span>
-                            )}
-                        </React.Fragment>
-                    ))}
                 </div>
 
                 {/* Toolbar */}
