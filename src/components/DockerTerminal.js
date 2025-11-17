@@ -148,9 +148,8 @@ const DockerTerminal = forwardRef(({
             console.error('Error en fit inicial de Docker:', e);
         }
 
-        // Definir handlers - Sin 'event' como primer parámetro
+        // Definir handlers
         const handleDockerOutput = (outputData) => {
-            console.log(`🐳 DockerTerminal recibiendo data para ${tabId}:`, outputData ? outputData.length : 0, 'bytes');
             if (term.current && outputData) {
                 term.current.write(outputData);
             }

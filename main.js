@@ -52,54 +52,22 @@ const url = require('url');
 const os = require('os');
 const fs = require('fs');
 
-// Helper para escribir debug log a archivo
-const debugLogPath = './docker-init-debug.log';
-function writeDebugLog(msg) {
-  const timestamp = new Date().toISOString();
-  const entry = `[${timestamp}] ${msg}\n`;
-  console.log(msg);
-  try {
-    fs.appendFileSync(debugLogPath, entry);
-  } catch (e) {
-    console.error('Error writing debug log:', e.message);
-  }
-}
+// Inicializar Docker
 
-// Limpiar archivo de debug anterior
-try {
-  fs.writeFileSync(debugLogPath, '=== Docker Init Debug Log ===\n');
-} catch (e) {}
-
-writeDebugLog('🐳 [INIT] Starting Docker service initialization...');
-
-// Inicializar Docker después de que fs esté disponible
 try {
   // Intento 1: Importar directamente
-  writeDebugLog('🐳 [INIT] Step 1: Importing DockerService directly...');
   const DockerServiceImport = require('./src/main/services/DockerService');
-  writeDebugLog('🐳 [INIT] Step 1 result: ' + (DockerServiceImport ? '✅ Success' : '❌ Failed'));
-  writeDebugLog('🐳 [INIT] DockerService.DockerHandlers exists: ' + (DockerServiceImport?.DockerHandlers ? '✅' : '❌'));
   
   // Intento 2: Importar desde index
-  writeDebugLog('🐳 [INIT] Step 2: Importing from services/index...');
   const services = require('./src/main/services');
   Docker = services.Docker;
-  writeDebugLog('🐳 [INIT] Step 2 result: ' + (Docker ? '✅ Success' : '❌ Undefined'));
-  writeDebugLog('🐳 [INIT] Docker.DockerHandlers exists: ' + (Docker?.DockerHandlers ? '✅' : '❌'));
   
   // Fallback: Usar importación directa
   if (!Docker || !Docker.DockerHandlers) {
-    writeDebugLog('⚠️ [INIT] Docker from index is incomplete, using direct import...');
     Docker = DockerServiceImport;
-    writeDebugLog('🐳 [INIT] After fallback - Docker exists: ' + (Docker ? '✅' : '❌'));
   }
-  
-  writeDebugLog('🐳 [INIT] Docker initialization complete. Final state: ' + (Docker && Docker.DockerHandlers ? '✅ READY' : '❌ FAILED'));
 } catch (importError) {
-  writeDebugLog('❌ [INIT] Critical error importing Docker service:');
-  writeDebugLog('❌ [INIT] Error type: ' + importError.constructor.name);
-  writeDebugLog('❌ [INIT] Error message: ' + importError.message);
-  writeDebugLog('❌ [INIT] Error stack: ' + (importError.stack ? importError.stack.split('\n').slice(0, 5).join('\n') : 'N/A'));
+  console.error('❌ Error importing Docker service:', importError.message);
   Docker = null;
 }
 
@@ -689,7 +657,6 @@ ipcMain.handle('cygwin:detect', async () => {
 });
 
 // Handler para listar contenedores Docker
-writeDebugLog('🐳 Registering docker:list handler. Docker: ' + (Docker ? '✅ Loaded' : '❌ Null') + ', DockerHandlers: ' + (Docker?.DockerHandlers ? '✅' : '❌'));
 
 ipcMain.handle('docker:list', async () => {
   try {
@@ -704,7 +671,6 @@ ipcMain.handle('docker:list', async () => {
   }
 });
 
-writeDebugLog('✅ docker:list handler registered successfully');
 
 // Variable global para controlar instalación de Cygwin
 let cygwinInstalling = false;

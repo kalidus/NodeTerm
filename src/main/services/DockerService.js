@@ -267,15 +267,11 @@ async function startDockerSession(tabId, containerName, { cols, rows }) {
     let outputBuffer = [];
     let listenerReady = false;
 
-    // Handle output - mostrar de inmediato
+    // Handle output
     dockerProcesses[tabId].onData((data) => {
       const dataStr = data.toString('utf8');
-      console.log(`🐳 [DATA] Recibido en onData: ${data.length} bytes, convertido a ${dataStr.length} chars:`, dataStr.substring(0, 100));
       if (mainWindow && mainWindow.webContents) {
-        console.log(`🐳 [SEND] Enviando datos a frontend para ${tabId}:`, dataStr.length, 'chars');
         mainWindow.webContents.send(`docker:data:${tabId}`, dataStr);
-      } else {
-        console.error(`❌ [SEND] mainWindow no disponible para ${tabId}`);
       }
     });
 
