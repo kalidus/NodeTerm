@@ -344,7 +344,10 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       webviewTag: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      // 🛡️ PROTECCIÓN: Configuración para manejar mejor respuestas largas de IA
+      v8CacheOptions: 'code', // Optimizar caché de código compilado
+      enableBlinkFeatures: 'PreciseMemoryInfo' // Habilitar info de memoria precisa
     }
   });
 
@@ -391,6 +394,27 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+  });
+
+  // 🛡️ PROTECCIÓN: Capturar errores de renderer para evitar crashes silenciosos
+  mainWindow.webContents.on('render-process-gone', (event, details) => {
+    console.error('🔴 Renderer process crashed:', details);
+    
+    // Si el crash fue por memoria, mostrar mensaje al usuario
+    if (details.reason === 'oom' || details.reason === 'killed') {
+      const { dialog } = require('electron');
+      dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        title: 'Error de Memoria',
+        message: 'La aplicación se quedó sin memoria',
+        detail: 'Esto puede ocurrir cuando el modelo de IA genera respuestas muy largas. La aplicación se recargará automáticamente.\n\nConsejo: Intenta hacer preguntas más específicas o divide las tareas grandes en partes más pequeñas.',
+        buttons: ['Recargar']
+      }).then(() => {
+        if (mainWindow) {
+          mainWindow.reload();
+        }
+      });
+    }
   });
 
   mainWindow.removeMenu();
