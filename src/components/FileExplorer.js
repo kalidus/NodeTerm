@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from 'primereact/card';
-import { Toolbar } from 'primereact/toolbar';
 import { Button } from 'primereact/button';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
 import { BreadCrumb } from 'primereact/breadcrumb';
 import { InputText } from 'primereact/inputtext';
 import { ProgressBar } from 'primereact/progressbar';
@@ -11,137 +8,44 @@ import { Message } from 'primereact/message';
 import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
-import { iconThemes } from '../themes/icon-themes';
 import { uiThemes } from '../themes/ui-themes';
 
+// React Icons - Iconos que SÍ funcionan
+import { 
+    FaFolder, FaFolderOpen, FaFile, FaFilePdf, FaFileWord, FaFileExcel, 
+    FaImage, FaVideo, FaMusic, FaCode, FaGlobe, FaArchive, FaCog, 
+    FaDatabase, FaFileAlt, FaArrowUp, FaLink, FaPython, FaJs, FaHtml5,
+    FaCss3Alt, FaFileCode, FaChevronRight, FaUpload, FaDownload, FaTrash,
+    FaPlus, FaHome, FaSync, FaEye, FaEyeSlash, FaArrowRight
+} from 'react-icons/fa';
+
 const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont = 'Segoe UI', explorerColorTheme = 'Light', explorerFontSize = 15 }) => {
-    const [currentPath, setCurrentPath] = useState(null); // null indica que aún no hemos cargado el path inicial
+    const [currentPath, setCurrentPath] = useState(null);
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [breadcrumbItems, setBreadcrumbItems] = useState([]);
     const [error, setError] = useState(null);
-    const [uploadDialog, setUploadDialog] = useState(false);
     const [newFolderDialog, setNewFolderDialog] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
     const [transferProgress, setTransferProgress] = useState(null);
     const [sshReady, setSshReady] = useState(false);
-    const [showDotfiles, setShowDotfiles] = useState(false); // Por defecto, ocultar dotfiles
+    const [showDotfiles, setShowDotfiles] = useState(false);
     const toast = React.useRef(null);
     const [isDragActive, setIsDragActive] = useState(false);
     const [homeDir, setHomeDir] = useState(null);
-    const [forceUpdate, setForceUpdate] = useState(0);
+    const [pathInput, setPathInput] = useState('');
 
-    // Para FileExplorer, no necesitamos esperar conexión SSH propia
-    // Usaremos las conexiones del pool directamente
     useEffect(() => {
-        // Marcar como SSH listo inmediatamente - usaremos el pool de conexiones
         setSshReady(true);
     }, []);
 
-    // Forzar actualización cuando cambia el tema de iconos, la fuente o el tema de colores
-    useEffect(() => {
-        setForceUpdate(prev => prev + 1);
-    }, [iconTheme, explorerFont, explorerColorTheme]);
-
-    // Aplicar tema de colores del explorador
-    useEffect(() => {
-        const theme = uiThemes[explorerColorTheme];
-        if (!theme) return;
-
-        const colors = theme.colors;
-        const styleId = `explorer-color-theme-${tabId}`;
-        
-        // Remover estilo previo si existe
-        const existingStyle = document.getElementById(styleId);
-        if (existingStyle) {
-            existingStyle.remove();
-        }
-
-        // Crear nuevo estilo
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.textContent = `
-            .file-explorer-container[data-tab-id="${tabId}"] {
-                background: ${colors.contentBackground} !important;
-                color: ${colors.dialogText} !important;
-            }
-            .file-explorer-container[data-tab-id="${tabId}"] .p-card {
-                background: ${colors.contentBackground} !important;
-                color: ${colors.dialogText} !important;
-                border: 1px solid ${colors.contentBorder} !important;
-            }
-            .file-explorer-container[data-tab-id="${tabId}"] .p-card .p-card-header {
-                background: ${colors.tabBackground} !important;
-                color: ${colors.dialogText} !important;
-                border-bottom: 1px solid ${colors.contentBorder} !important;
-            }
-            .file-explorer-container[data-tab-id="${tabId}"] .p-card .p-card-title {
-                color: ${colors.dialogText} !important;
-            }
-            .file-explorer-container[data-tab-id="${tabId}"] .p-toolbar {
-                background: ${colors.tabBackground} !important;
-                border: 1px solid ${colors.contentBorder} !important;
-            }
-            .file-explorer-container[data-tab-id="${tabId}"] .p-datatable {
-                background: ${colors.contentBackground} !important;
-                color: ${colors.dialogText} !important;
-            }
-            .file-explorer-container[data-tab-id="${tabId}"] .p-datatable .p-datatable-thead > tr > th {
-                background: ${colors.tabBackground} !important;
-                color: ${colors.dialogText} !important;
-                border-color: ${colors.contentBorder} !important;
-            }
-            .file-explorer-container[data-tab-id="${tabId}"] .p-datatable .p-datatable-tbody > tr > td {
-                background: ${colors.contentBackground} !important;
-                color: ${colors.dialogText} !important;
-                border-color: ${colors.contentBorder} !important;
-            }
-            .file-explorer-container[data-tab-id="${tabId}"] .p-datatable .p-datatable-tbody > tr:hover > td {
-                background: ${colors.sidebarHover} !important;
-            }
-            .file-explorer-container[data-tab-id="${tabId}"] .p-datatable .p-datatable-tbody > tr.p-highlight > td {
-                background: ${colors.sidebarSelected} !important;
-            }
-            .file-explorer-container[data-tab-id="${tabId}"] .p-breadcrumb {
-                background: ${colors.tabBackground} !important;
-                border: 1px solid ${colors.contentBorder} !important;
-            }
-            .file-explorer-container[data-tab-id="${tabId}"] .p-breadcrumb .p-breadcrumb-list li .p-menuitem-link {
-                color: ${colors.dialogText} !important;
-            }
-            .file-explorer-container[data-tab-id="${tabId}"] .p-breadcrumb .p-breadcrumb-list li .p-menuitem-link:hover {
-                background: ${colors.sidebarHover} !important;
-            }
-            .file-explorer-container[data-tab-id="${tabId}"] .p-progressbar {
-                background: ${colors.tabBackground} !important;
-            }
-            .file-explorer-container[data-tab-id="${tabId}"] .p-message {
-                background: ${colors.tabBackground} !important;
-                color: ${colors.dialogText} !important;
-                border: 1px solid ${colors.contentBorder} !important;
-            }
-        `;
-        
-        document.head.appendChild(style);
-
-        // Cleanup function
-        return () => {
-            const styleElement = document.getElementById(styleId);
-            if (styleElement) {
-                styleElement.remove();
-            }
-        };
-    }, [explorerColorTheme, tabId]);
-
-    // Cargar directorio inicial cuando SSH esté listo
     useEffect(() => {
         const initializeExplorer = async () => {
             if (!window.electron || !tabId || !sshReady) return;
             setLoading(true);
             setError(null);
             try {
-                // Obtener el directorio home del usuario
                 const homeResult = await window.electron.fileExplorer.getHomeDirectory(tabId, sshConfig);
                 const homeDir = (homeResult && homeResult.success && typeof homeResult.home === 'string') ? homeResult.home : '/';
                 setHomeDir(homeDir);
@@ -150,7 +54,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 console.error('Error getting home directory:', err);
                 setError('No se pudo obtener el directorio home del usuario.');
                 setHomeDir('/');
-                setCurrentPath('/'); // Fallback al root
+                setCurrentPath('/');
             } finally {
                 setLoading(false);
             }
@@ -160,10 +64,10 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         }
     }, [tabId, sshReady]);
 
-    // Cargar archivos cuando cambia el path
     useEffect(() => {
         if (currentPath !== null) {
             loadFiles(currentPath);
+            setPathInput(currentPath);
         }
     }, [currentPath]);
 
@@ -194,7 +98,6 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
 
     const updateBreadcrumb = (path) => {
         if (typeof path !== 'string') {
-            console.warn('updateBreadcrumb: path no es string:', path);
             path = '/';
         }
         const pathParts = path.split('/').filter(part => part !== '');
@@ -216,7 +119,6 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         if (!window.electron || !tabId) return;
         
         try {
-            // Verificar que el directorio existe antes de navegar
             const exists = await window.electron.fileExplorer.checkDirectory(tabId, path, sshConfig);
             if (exists) {
                 setCurrentPath(path);
@@ -229,14 +131,28 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         }
     };
 
+    const handleNavigateFromInput = () => {
+        const trimmedPath = pathInput.trim();
+        if (!trimmedPath) {
+            toast.current?.show({
+                severity: 'warn',
+                summary: 'Ruta vacía',
+                detail: 'Por favor ingresa una ruta válida',
+                life: 3000
+            });
+            return;
+        }
+        
+        const normalizedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`;
+        navigateToPath(normalizedPath);
+    };
+
     const onFileDoubleClick = (file) => {
         if (file.type === 'directory' || (file.type === 'symlink' && file.permissions.startsWith('l') && file.permissions.includes('d'))) {
             if (file.name === '..') {
-                // Navegar al directorio padre
                 const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
                 navigateToPath(parentPath);
             } else {
-                // Navegar al subdirectorio
                 const newPath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
                 navigateToPath(newPath);
             }
@@ -252,42 +168,108 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     };
 
     const getFileIcon = (file) => {
-        // Asegurar que tenemos el tema correcto y que existe
-        const theme = (iconThemes && iconThemes[iconTheme]) ? iconThemes[iconTheme] : iconThemes['nord'];
-        
         if (file.type === 'directory') {
-            return file.name === '..'
-                ? <i className="pi pi-arrow-up file-icon directory-icon"></i>
-                : (theme?.icons?.folder || <i className="pi pi-folder file-icon directory-icon"></i>);
+            return file.name === '..' 
+                ? <FaArrowUp className="file-icon directory-icon" />
+                : <FaFolder className="file-icon directory-icon" />;
         }
         if (file.type === 'symlink') {
-            return <i className="pi pi-link file-icon symlink-icon"></i>;
+            return <FaLink className="file-icon symlink-icon" />;
         }
-        // Para archivos, usar icono de archivo del tema
-        return theme?.icons?.file || <i className="pi pi-file file-icon"></i>;
+        
+        const extension = file.name.split('.').pop()?.toLowerCase();
+        
+        // Documentos
+        if (['pdf'].includes(extension)) {
+            return <FaFilePdf className="file-icon file-pdf-icon" />;
+        }
+        if (['doc', 'docx', 'odt', 'txt', 'rtf'].includes(extension)) {
+            return <FaFileWord className="file-icon file-doc-icon" />;
+        }
+        if (['xls', 'xlsx', 'ods', 'csv'].includes(extension)) {
+            return <FaFileExcel className="file-icon file-excel-icon" />;
+        }
+        
+        // Imágenes
+        if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'ico'].includes(extension)) {
+            return <FaImage className="file-icon file-image-icon" />;
+        }
+        
+        // Video
+        if (['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm'].includes(extension)) {
+            return <FaVideo className="file-icon file-video-icon" />;
+        }
+        
+        // Audio
+        if (['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'].includes(extension)) {
+            return <FaMusic className="file-icon file-audio-icon" />;
+        }
+        
+        // Código específico
+        if (['py'].includes(extension)) {
+            return <FaPython className="file-icon file-code-icon" />;
+        }
+        if (['js', 'jsx'].includes(extension)) {
+            return <FaJs className="file-icon file-code-icon" />;
+        }
+        if (['html', 'htm'].includes(extension)) {
+            return <FaHtml5 className="file-icon file-web-icon" />;
+        }
+        if (['css', 'scss', 'sass', 'less'].includes(extension)) {
+            return <FaCss3Alt className="file-icon file-web-icon" />;
+        }
+        
+        // Código genérico
+        if (['ts', 'tsx', 'java', 'cpp', 'c', 'cs', 'go', 'rs', 'php', 'rb', 'swift'].includes(extension)) {
+            return <FaCode className="file-icon file-code-icon" />;
+        }
+        
+        // Web
+        if (['json', 'yaml', 'yml', 'xml', 'toml', 'ini', 'cfg', 'conf'].includes(extension)) {
+            return <FaFileCode className="file-icon file-config-icon" />;
+        }
+        
+        // Comprimidos
+        if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'].includes(extension)) {
+            return <FaArchive className="file-icon file-archive-icon" />;
+        }
+        
+        // Ejecutables
+        if (['exe', 'msi', 'deb', 'rpm', 'dmg', 'app', 'sh', 'bat', 'cmd'].includes(extension)) {
+            return <FaCog className="file-icon file-executable-icon" />;
+        }
+        
+        // Base de datos
+        if (['sql', 'db', 'sqlite', 'mdb'].includes(extension)) {
+            return <FaDatabase className="file-icon file-database-icon" />;
+        }
+        
+        // Genérico
+        return <FaFile className="file-icon file-generic-icon" />;
     };
 
-    const nameBodyTemplate = (file) => {
-        const isPrimeIcon = file.type === 'directory' && file.name === '..' || file.type === 'symlink';
-        return (
-            <div className="flex align-items-center">
-                {isPrimeIcon
-                    ? getFileIcon(file)
-                    : <span style={{ display: 'inline-flex', alignItems: 'center', width: 20 }}>{getFileIcon(file)}</span>
-                }
-                <span className={file.type === 'symlink' ? 'symlink-name' : ''} style={{ marginLeft: 8 }}>{file.name}</span>
-            </div>
-        );
+    const getFileType = (file) => {
+        if (file.type === 'directory') return 'Carpeta';
+        if (file.type === 'symlink') return 'Enlace simbólico';
+        
+        const extension = file.name.split('.').pop()?.toLowerCase();
+        const typeMap = {
+            'pdf': 'PDF',
+            'doc': 'Word', 'docx': 'Word', 'odt': 'Word', 'txt': 'Texto', 'rtf': 'Texto',
+            'xls': 'Excel', 'xlsx': 'Excel', 'csv': 'CSV',
+            'jpg': 'Imagen', 'jpeg': 'Imagen', 'png': 'Imagen', 'gif': 'Imagen', 'svg': 'SVG',
+            'mp4': 'Video', 'avi': 'Video', 'mkv': 'Video',
+            'mp3': 'Audio', 'wav': 'Audio',
+            'py': 'Python', 'js': 'JavaScript', 'html': 'HTML', 'css': 'CSS',
+            'zip': 'Archivo comprimido', 'rar': 'Archivo comprimido',
+            'json': 'JSON', 'xml': 'XML', 'yaml': 'YAML'
+        };
+        
+        return typeMap[extension] || 'Archivo';
     };
 
-    const sizeBodyTemplate = (file) => {
-        return file.type === 'directory' ? '-' : formatFileSize(file.size);
-    };
-
-    // Filtrar archivos según showDotfiles
     const visibleFiles = showDotfiles ? files : files.filter(f => !f.name.startsWith('.') || f.name === '..');
 
-    // Funciones para manejo de archivos
     const handleUploadFiles = async () => {
         try {
             const result = await window.electron.dialog.showOpenDialog({
@@ -328,17 +310,11 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 }
                 
                 setTransferProgress(null);
-                loadFiles(currentPath); // Recargar archivos
+                loadFiles(currentPath);
             }
         } catch (err) {
             console.error('Error in upload dialog:', err);
             setTransferProgress(null);
-            toast.current?.show({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Error al abrir selector de archivos',
-                life: 5000
-            });
         }
     };
 
@@ -371,39 +347,25 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         } catch (err) {
             console.error('Error downloading file:', err);
             setTransferProgress(null);
-            toast.current?.show({
-                severity: 'error',
-                summary: 'Error al descargar',
-                detail: `Error descargando ${file.name}: ${err.message}`,
-                life: 5000
-            });
         }
     };
 
     const handleDeleteFiles = (filesToDelete) => {
-        console.log('🔥🔥🔥 [FRONTEND] handleDeleteFiles llamado con:', filesToDelete);
         const filesTarget = filesToDelete || selectedFiles;
-        console.log('🔥🔥🔥 [FRONTEND] filesTarget:', filesTarget);
-        if (filesTarget.length === 0) {
-            console.log('🔥🔥🔥 [FRONTEND] No hay archivos para eliminar');
-            return;
-        }
+        if (filesTarget.length === 0) return;
+        
         const fileNames = filesTarget.map(f => f.name).join(', ');
-        console.log('🔥🔥🔥 [FRONTEND] Mostrando confirmDialog para:', fileNames);
         confirmDialog({
             message: `¿Estás seguro de eliminar ${filesTarget.length} archivo(s)? Esta acción no se puede deshacer.\n\nArchivos: ${fileNames}`,
             header: 'Confirmar eliminación',
             icon: 'pi pi-exclamation-triangle',
             accept: async () => {
-                console.log('🔥🔥🔥 [FRONTEND] Usuario confirmó eliminación, iniciando proceso...');
                 setTransferProgress({ type: 'delete', current: 0, total: filesTarget.length });
                 for (let i = 0; i < filesTarget.length; i++) {
                     const file = filesTarget[i];
                     const remotePath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
-                    console.log('🔥🔥🔥 [FRONTEND] Llamando deleteFile con:', { tabId, remotePath, isDirectory: file.type === 'directory' });
                     try {
                         const deleteResult = await window.electron.fileExplorer.deleteFile(tabId, remotePath, file.type === 'directory', sshConfig);
-                        console.log('🔥🔥🔥 [FRONTEND] Resultado deleteFile:', deleteResult);
                         if (deleteResult.success) {
                             toast.current?.show({
                                 severity: 'success',
@@ -426,7 +388,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 }
                 setTransferProgress(null);
                 setSelectedFiles([]);
-                loadFiles(currentPath); // Recargar archivos
+                loadFiles(currentPath);
             }
         });
     };
@@ -447,7 +409,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 });
                 setNewFolderName('');
                 setNewFolderDialog(false);
-                loadFiles(currentPath); // Recargar archivos
+                loadFiles(currentPath);
             } else {
                 throw new Error(result.error);
             }
@@ -461,15 +423,13 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         }
     };
 
-    // Handler para drop de archivos
     const handleDrop = async (event) => {
         event.preventDefault();
         setIsDragActive(false);
         if (!sshReady || !currentPath || loading) return;
         const files = Array.from(event.dataTransfer.files);
-        // Solo archivos, no carpetas
         const filePaths = files
-            .filter(f => f.type !== '' || f.name) // f.type vacío puede ser binario, pero si tiene nombre lo aceptamos
+            .filter(f => f.type !== '' || f.name)
             .map(f => f.path)
             .filter(Boolean);
         if (filePaths.length === 0) return;
@@ -501,137 +461,140 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
             setTransferProgress({ type: 'upload', current: i + 1, total: filePaths.length });
         }
         setTransferProgress(null);
-        loadFiles(currentPath); // Recargar archivos
+        loadFiles(currentPath);
     };
+
     const handleDragOver = (event) => {
         event.preventDefault();
         if (!isDragActive) setIsDragActive(true);
     };
+
     const handleDragLeave = (event) => {
         event.preventDefault();
         setIsDragActive(false);
     };
 
-    const toolbarLeft = (
-        <div className="flex align-items-center gap-2 flex-wrap">
-            <Button 
-                label="⬅" 
-                onClick={() => {
-                    const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
-                    navigateToPath(parentPath);
-                }}
-                disabled={!sshReady || !currentPath || currentPath === '/'}
-                tooltip="Ir al directorio padre"
-                size="small"
-                text
-            />
-            <Button 
-                label="⟲" 
-                onClick={() => currentPath && loadFiles(currentPath)}
-                disabled={!sshReady || !currentPath}
-                tooltip="Actualizar contenido del directorio"
-                size="small"
-                text
-            />
-            <Button 
-                label="⌂" 
-                onClick={() => homeDir && navigateToPath(homeDir)}
-                disabled={!sshReady || !currentPath}
-                tooltip="Ir al directorio home"
-                size="small"
-                text
-            />
-            <Button 
-                label={showDotfiles ? "◉" : "○"}
-                onClick={() => setShowDotfiles(v => !v)}
-                tooltip={showDotfiles ? "Ocultar archivos y carpetas ocultos" : "Mostrar archivos y carpetas ocultos"}
-                size="small"
-                text
-            />
-            <Button 
-                label="↑" 
-                onClick={handleUploadFiles}
-                disabled={!sshReady || !currentPath || loading}
-                tooltip="Subir archivos desde el equipo local"
-                size="small"
-                text
-            />
-            <Button
-                label="↓"
-                onClick={async () => {
-                    for (const file of selectedFiles) {
-                        if (file.type === 'file') {
-                            await handleDownloadFile(file);
-                        }
-                    }
-                }}
-                disabled={!sshReady || !currentPath || loading || selectedFiles.length === 0}
-                tooltip="Descargar archivos seleccionados al equipo local"
-                size="small"
-                text
-            />
-            <Button 
-                label="+" 
-                onClick={() => setNewFolderDialog(true)}
-                disabled={!sshReady || !currentPath || loading}
-                tooltip="Crear nueva carpeta en el directorio actual"
-                size="small"
-                text
-            />
-            <Button 
-                label="×" 
-                className="p-button-danger" 
-                onClick={() => handleDeleteFiles(selectedFiles)}
-                disabled={!sshReady || !currentPath || loading || selectedFiles.length === 0}
-                tooltip="Eliminar permanentemente archivos seleccionados"
-                size="small"
-                text
-            />
-        </div>
-    );
-
-    const toolbarRight = (
-        <div className="flex align-items-center">
-            <span className="mr-2">Archivos: {files.length}</span>
-            {selectedFiles.length > 0 && (
-                <span className="mr-2">Seleccionados: {selectedFiles.length}</span>
-            )}
-        </div>
-    );
+    const toggleFileSelection = (file) => {
+        const isSelected = selectedFiles.some(f => f.name === file.name);
+        if (isSelected) {
+            setSelectedFiles(selectedFiles.filter(f => f.name !== file.name));
+        } else {
+            setSelectedFiles([...selectedFiles, file]);
+        }
+    };
 
     return (
         <div 
-            key={`file-explorer-${iconTheme}-${explorerFont}-${explorerColorTheme}-${forceUpdate}`} 
-            className="file-explorer-container" 
+            className="file-explorer-container material-design" 
             data-tab-id={tabId}
-            style={{ fontFamily: explorerFont, fontSize: explorerFontSize, '--explorer-font': explorerFont }}
+            style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
         >
-            <Card 
-                title={`Explorador de Archivos - ${sshConfig.host}`}
-                className="file-explorer-card"
-                style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
-            >
-                <Toolbar 
-                    start={toolbarLeft} 
-                    end={toolbarRight}
-                    className="file-explorer-toolbar"
-                    style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
-                />
-                
+            <Card className="file-explorer-card">
+                {/* Header */}
+                <div className="file-explorer-header">
+                    <h2 className="file-explorer-title">
+                        Explorador <FaChevronRight className="header-separator" /> {sshConfig.host}
+                    </h2>
+                    <div className="file-explorer-header-divider"></div>
+                </div>
+
+                {/* Path Navigation Bar */}
+                <div className="file-explorer-path-bar">
+                    <div className="path-input-wrapper">
+                        <FaFolder className="path-icon" />
+                        <InputText 
+                            value={pathInput}
+                            onChange={(e) => setPathInput(e.target.value)}
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                    handleNavigateFromInput();
+                                }
+                            }}
+                            placeholder="Pega aquí la ruta completa (ej: /home/user/documents)"
+                            disabled={!sshReady || loading}
+                            className="path-input"
+                        />
+                        <Button 
+                            label="IR" 
+                            icon={<FaArrowRight />}
+                            onClick={handleNavigateFromInput}
+                            disabled={!sshReady || loading}
+                            className="path-go-button"
+                        />
+                    </div>
+                </div>
+
+                {/* Breadcrumb */}
                 <BreadCrumb 
                     model={breadcrumbItems} 
                     className="file-explorer-breadcrumb"
-                    style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
                 />
-                
-                {!sshReady && (
-                    <div className="mb-3">
-                        <Message 
-                            severity="info" 
-                            text="Estableciendo conexión SSH..." 
-                            icon="pi pi-spin pi-spinner" 
+
+                {/* Toolbar */}
+                <div className="file-explorer-toolbar">
+                    <div className="toolbar-left">
+                        <Button 
+                            icon={<FaArrowUp />}
+                            onClick={() => {
+                                const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
+                                navigateToPath(parentPath);
+                            }}
+                            disabled={!sshReady || !currentPath || currentPath === '/'}
+                            tooltip="Ir al directorio padre"
+                            className="toolbar-button"
+                        />
+                        <Button 
+                            icon={<FaSync />}
+                            onClick={() => currentPath && loadFiles(currentPath)}
+                            disabled={!sshReady || !currentPath}
+                            tooltip="Actualizar"
+                            className="toolbar-button"
+                        />
+                        <Button 
+                            icon={<FaHome />}
+                            onClick={() => homeDir && navigateToPath(homeDir)}
+                            disabled={!sshReady || !currentPath}
+                            tooltip="Ir al home"
+                            className="toolbar-button"
+                        />
+                        <Button 
+                            icon={showDotfiles ? <FaEyeSlash /> : <FaEye />}
+                            onClick={() => setShowDotfiles(v => !v)}
+                            tooltip={showDotfiles ? "Ocultar archivos ocultos" : "Mostrar archivos ocultos"}
+                            className="toolbar-button"
                         />
                     </div>
+                    <div className="toolbar-right">
+                        <Button 
+                            label="↑ Subir"
+                            icon={<FaUpload />}
+                            onClick={handleUploadFiles}
+                            disabled={!sshReady || !currentPath || loading}
+                            className="toolbar-button-action"
+                        />
+                        <Button 
+                            label="+ Nueva"
+                            icon={<FaPlus />}
+                            onClick={() => setNewFolderDialog(true)}
+                            disabled={!sshReady || !currentPath || loading}
+                            className="toolbar-button-action"
+                        />
+                        <Button 
+                            label="🗑 Borrar"
+                            icon={<FaTrash />}
+                            onClick={() => handleDeleteFiles(selectedFiles)}
+                            disabled={!sshReady || !currentPath || loading || selectedFiles.length === 0}
+                            className="toolbar-button-action toolbar-button-danger"
+                        />
+                    </div>
+                </div>
+
+                {/* Status Messages */}
+                {!sshReady && (
+                    <Message 
+                        severity="info" 
+                        text="Estableciendo conexión SSH..." 
+                    />
                 )}
                 
                 {loading && (
@@ -639,95 +602,76 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 )}
                 
                 {error && (
-                    <Message severity="error" text={error} className="mb-3" />
+                    <Message severity="error" text={error} />
                 )}
-                
+
+                {/* Files List - Material Design Cards */}
                 {sshReady && (
                     <div 
-                        className={`file-explorer-table-container${isDragActive ? ' drag-active' : ''}`}
+                        className={`file-explorer-files-container${isDragActive ? ' drag-active' : ''}`}
                         onDrop={handleDrop}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
-                        style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
                     >
-                        <DataTable 
-                            value={visibleFiles}
-                            selectionMode="multiple"
-                            selection={selectedFiles}
-                            onSelectionChange={(e) => setSelectedFiles(e.value)}
-                            onRowDoubleClick={(e) => onFileDoubleClick(e.data)}
-                            rowHover={true}
-                            className="file-explorer-datatable"
-                            style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
-                            tableStyle={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
-                        >
-                        <Column 
-                            field="name" 
-                            header="Nombre" 
-                            body={nameBodyTemplate}
-                            sortable
-                            style={{ minWidth: '200px', fontFamily: explorerFont, fontSize: explorerFontSize }}
-                            bodyStyle={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
-                        />
-                        <Column 
-                            field="size" 
-                            header="Tamaño" 
-                            body={sizeBodyTemplate}
-                            sortable
-                            style={{ width: '120px' }}
-                        />
-                        <Column 
-                            field="permissions" 
-                            header="Permisos" 
-                            sortable
-                            style={{ width: '120px' }}
-                        />
-                        <Column 
-                            field="owner" 
-                            header="Propietario" 
-                            sortable
-                            style={{ width: '120px' }}
-                        />
-                        <Column 
-                            field="modified" 
-                            header="Modificado" 
-                            sortable
-                            style={{ width: '150px' }}
-                        />
-                        <Column 
-                            header="Acciones" 
-                            body={(file) => (
-                                <div className="flex gap-2">
-                                    {file.type === 'file' && (
-                                        <>
-                                            <Button 
-                                                label="↓" 
-                                                size="small"
-                                                className="p-button-text" 
-                                                onClick={() => handleDownloadFile(file)}
-                                                tooltip="Descargar archivo"
-                                            />
-                                            <Button
-                                                label="×"
-                                                size="small"
-                                                className="p-button-text p-button-danger"
-                                                onClick={() => handleDeleteFiles([file])}
-                                                tooltip="Eliminar archivo"
-                                            />
-                                        </>
-                                    )}
-                                </div>
-                            )}
-                            style={{ width: '100px' }}
-                        />
-                    </DataTable>
+                        {visibleFiles.length === 0 ? (
+                            <div className="empty-state">
+                                <FaFolder className="empty-icon" />
+                                <p>No hay archivos en este directorio</p>
+                            </div>
+                        ) : (
+                            visibleFiles.map((file, index) => {
+                                const isSelected = selectedFiles.some(f => f.name === file.name);
+                                return (
+                                    <div
+                                        key={`${file.name}-${index}`}
+                                        className={`file-card ${isSelected ? 'selected' : ''}`}
+                                        onClick={() => toggleFileSelection(file)}
+                                        onDoubleClick={() => onFileDoubleClick(file)}
+                                    >
+                                        <div className="file-card-icon">
+                                            {getFileIcon(file)}
+                                        </div>
+                                        <div className="file-card-content">
+                                            <div className="file-card-name">{file.name}</div>
+                                            <div className="file-card-meta">
+                                                <span className="file-type">{getFileType(file)}</span>
+                                                {file.type !== 'directory' && (
+                                                    <>
+                                                        <span className="file-separator">•</span>
+                                                        <span className="file-size">{formatFileSize(file.size)}</span>
+                                                    </>
+                                                )}
+                                                <span className="file-separator">•</span>
+                                                <span className="file-modified">{file.modified}</span>
+                                            </div>
+                                        </div>
+                                        {file.type === 'file' && (
+                                            <div className="file-card-actions" onClick={(e) => e.stopPropagation()}>
+                                                <Button 
+                                                    icon={<FaDownload />}
+                                                    onClick={() => handleDownloadFile(file)}
+                                                    tooltip="Descargar"
+                                                    className="file-action-button"
+                                                />
+                                                <Button
+                                                    icon={<FaTrash />}
+                                                    onClick={() => handleDeleteFiles([file])}
+                                                    tooltip="Eliminar"
+                                                    className="file-action-button file-action-danger"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
                     </div>
                 )}
-                
-                {/* Progreso de transferencia */}
+
+                {/* Transfer Progress */}
                 {transferProgress && (
-                    <div className="mt-3">
-                        <div className="flex justify-content-between align-items-center mb-2">
+                    <div className="transfer-progress-container">
+                        <div className="transfer-progress-header">
                             <span>
                                 {transferProgress.type === 'upload' && 'Subiendo archivos...'}
                                 {transferProgress.type === 'download' && `Descargando ${transferProgress.fileName}...`}
@@ -743,7 +687,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 )}
             </Card>
             
-            {/* Dialog para crear nueva carpeta */}
+            {/* Create Folder Dialog */}
             <Dialog 
                 header="Crear Nueva Carpeta" 
                 visible={newFolderDialog} 
@@ -756,7 +700,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                     <div>
                         <Button 
                             label="Cancelar" 
-                            icon="pi pi-times" 
+                            icon={<FaArrowUp />}
                             className="p-button-text" 
                             onClick={() => {
                                 setNewFolderDialog(false);
@@ -765,7 +709,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                         />
                         <Button 
                             label="Crear" 
-                            icon="pi pi-check" 
+                            icon={<FaPlus />}
                             className="p-button-primary" 
                             onClick={handleCreateFolder}
                             disabled={!newFolderName.trim()}
@@ -791,13 +735,10 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 </div>
             </Dialog>
             
-            {/* Toast para notificaciones */}
             <Toast ref={toast} />
-            
-            {/* ConfirmDialog para confirmaciones */}
             <ConfirmDialog />
         </div>
     );
 };
 
-export default FileExplorer; 
+export default FileExplorer;
