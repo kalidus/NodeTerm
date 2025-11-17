@@ -5,6 +5,9 @@ let alternativePtyConfig, SafeWindowsTerminal, registerAllHandlers;
 const { parseDfOutput, parseNetDev, getGuacdPrefPath, sendToRenderer, cleanupOrphanedConnections } = require('./src/main/utils');
 
 // Importar servicios centralizados (fuera del try-catch para acceso global)
+// Nota: Docker se importará después de que se carguen fs y path
+let Docker = null;
+
 const { WSL, PowerShell, Cygwin } = require('./src/main/services');
 
 // Importar procesador de PDFs
@@ -48,6 +51,58 @@ const url = require('url');
 // ============================================
 const os = require('os');
 const fs = require('fs');
+
+// Helper para escribir debug log a archivo
+const debugLogPath = './docker-init-debug.log';
+function writeDebugLog(msg) {
+  const timestamp = new Date().toISOString();
+  const entry = `[${timestamp}] ${msg}\n`;
+  console.log(msg);
+  try {
+    fs.appendFileSync(debugLogPath, entry);
+  } catch (e) {
+    console.error('Error writing debug log:', e.message);
+  }
+}
+
+// Limpiar archivo de debug anterior
+try {
+  fs.writeFileSync(debugLogPath, '=== Docker Init Debug Log ===\n');
+} catch (e) {}
+
+writeDebugLog('🐳 [INIT] Starting Docker service initialization...');
+
+// Inicializar Docker después de que fs esté disponible
+try {
+  // Intento 1: Importar directamente
+  writeDebugLog('🐳 [INIT] Step 1: Importing DockerService directly...');
+  const DockerServiceImport = require('./src/main/services/DockerService');
+  writeDebugLog('🐳 [INIT] Step 1 result: ' + (DockerServiceImport ? '✅ Success' : '❌ Failed'));
+  writeDebugLog('🐳 [INIT] DockerService.DockerHandlers exists: ' + (DockerServiceImport?.DockerHandlers ? '✅' : '❌'));
+  
+  // Intento 2: Importar desde index
+  writeDebugLog('🐳 [INIT] Step 2: Importing from services/index...');
+  const services = require('./src/main/services');
+  Docker = services.Docker;
+  writeDebugLog('🐳 [INIT] Step 2 result: ' + (Docker ? '✅ Success' : '❌ Undefined'));
+  writeDebugLog('🐳 [INIT] Docker.DockerHandlers exists: ' + (Docker?.DockerHandlers ? '✅' : '❌'));
+  
+  // Fallback: Usar importación directa
+  if (!Docker || !Docker.DockerHandlers) {
+    writeDebugLog('⚠️ [INIT] Docker from index is incomplete, using direct import...');
+    Docker = DockerServiceImport;
+    writeDebugLog('🐳 [INIT] After fallback - Docker exists: ' + (Docker ? '✅' : '❌'));
+  }
+  
+  writeDebugLog('🐳 [INIT] Docker initialization complete. Final state: ' + (Docker && Docker.DockerHandlers ? '✅ READY' : '❌ FAILED'));
+} catch (importError) {
+  writeDebugLog('❌ [INIT] Critical error importing Docker service:');
+  writeDebugLog('❌ [INIT] Error type: ' + importError.constructor.name);
+  writeDebugLog('❌ [INIT] Error message: ' + importError.message);
+  writeDebugLog('❌ [INIT] Error stack: ' + (importError.stack ? importError.stack.split('\n').slice(0, 5).join('\n') : 'N/A'));
+  Docker = null;
+}
+
 const SSH2Promise = require('ssh2-promise');
 const { NodeSSH } = require('node-ssh');
 const packageJson = require('./package.json');
@@ -451,6 +506,12 @@ function createWindow() {
       isAppQuitting
     });
     Cygwin.setMainWindow(mainWindow);
+    if (Docker && Docker.setMainWindow) {
+      Docker.setMainWindow(mainWindow);
+      console.log('✅ Docker main window set successfully');
+    } else {
+      console.warn('⚠️ Docker.setMainWindow not available');
+    }
     
     // Inicializar servicio de actualizaciones
     const updateService = getUpdateService();
@@ -626,6 +687,24 @@ ipcMain.handle('cygwin:detect', async () => {
     return { available: false, path: null, error: error.message };
   }
 });
+
+// Handler para listar contenedores Docker
+writeDebugLog('🐳 Registering docker:list handler. Docker: ' + (Docker ? '✅ Loaded' : '❌ Null') + ', DockerHandlers: ' + (Docker?.DockerHandlers ? '✅' : '❌'));
+
+ipcMain.handle('docker:list', async () => {
+  try {
+    if (!Docker || !Docker.DockerHandlers) {
+      return { success: false, available: false, containers: [], error: 'Docker service not initialized' };
+    }
+    const result = Docker.DockerHandlers.list();
+    return result;
+  } catch (error) {
+    console.error('❌ Error listing Docker containers:', error.message);
+    return { success: false, available: false, containers: [], error: error.message };
+  }
+});
+
+writeDebugLog('✅ docker:list handler registered successfully');
 
 // Variable global para controlar instalación de Cygwin
 let cygwinInstalling = false;
@@ -1715,7 +1794,16 @@ app.on('before-quit', () => {
     try {
       Cygwin.CygwinHandlers.cleanup();
     } catch (error) {
-      console.error('Error cleaning up Cygwin processes:', error);
+      console.error('Error cleaning up Cygwin:', error);
+    }
+  }
+
+  // Cleanup Docker processes
+  if (Docker && Docker.DockerHandlers) {
+    try {
+      Docker.DockerHandlers.cleanup();
+    } catch (error) {
+      console.error('Error cleaning up Docker processes:', error);
     }
   }
 });
@@ -3374,6 +3462,30 @@ function registerTabEvents(tabId) {
   ipcMain.on(`cygwin:stop:${tabId}`, (event) => {
     Cygwin.CygwinHandlers.stop(tabId);
   });
+
+  // Handlers para Docker
+  if (Docker && Docker.DockerHandlers) {
+    ipcMain.removeAllListeners(`docker:start:${tabId}`);
+    ipcMain.removeAllListeners(`docker:data:${tabId}`);
+    ipcMain.removeAllListeners(`docker:resize:${tabId}`);
+    ipcMain.removeAllListeners(`docker:stop:${tabId}`);
+    
+    ipcMain.on(`docker:start:${tabId}`, (event, data) => {
+      Docker.DockerHandlers.start(tabId, data.containerName, data);
+    });
+    
+    ipcMain.on(`docker:data:${tabId}`, (event, data) => {
+      Docker.DockerHandlers.data(tabId, data);
+    });
+    
+    ipcMain.on(`docker:resize:${tabId}`, (event, data) => {
+      Docker.DockerHandlers.resize(tabId, data);
+    });
+    
+    ipcMain.on(`docker:stop:${tabId}`, (event) => {
+      Docker.DockerHandlers.stop(tabId);
+    });
+  }
 }
 
 

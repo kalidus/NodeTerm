@@ -70,3 +70,4 @@ Host: C:\Users\kalid\Documents → Container: /mnt/host/documents
 **Archivo de configuración:** `/app/server/storage/plugins/anythingllm_mcp_servers.json`
 
 
+

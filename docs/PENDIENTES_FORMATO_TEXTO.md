@@ -349,3 +349,4 @@ LaTeX
 **Prioridad Media**: 4 funcionalidades  
 **Prioridad Baja**: 7 funcionalidades
 
+
