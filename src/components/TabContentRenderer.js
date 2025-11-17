@@ -10,6 +10,7 @@ import PowerShellTerminal from './PowerShellTerminal';
 import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
 import CygwinTerminal from './CygwinTerminal';
+import DockerTerminal from './DockerTerminal';
 import AuditTab from './AuditTab';
 import RecordingPlayerTab from './RecordingPlayerTab';
 import GlobalAuditTab from './GlobalAuditTab';
@@ -960,6 +961,22 @@ const TabContentRenderer = React.memo(({
   }
 
   // Terminal local independiente
+  // Docker Terminal
+  if (tab.type === 'docker') {
+    const linuxTheme = themes[localLinuxTerminalTheme]?.theme || themes['Default Dark']?.theme;
+    
+    return (
+      <DockerTerminal
+        ref={el => terminalRefs.current[tab.key] = el}
+        tabId={tab.key}
+        fontFamily={localFontFamily}
+        fontSize={localFontSize}
+        theme={linuxTheme}
+        dockerInfo={tab.distroInfo}
+      />
+    );
+  }
+
   if (tab.type === 'local-terminal') {
     const terminalType = tab.terminalType || 'powershell';
     
