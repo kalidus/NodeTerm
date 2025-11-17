@@ -392,8 +392,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             try {
                 if (window.electron && window.electronAPI && mounted) {
                     const result = await window.electronAPI.invoke('docker:list');
+                    console.log(`🐳 [TABBEDTERMINAL] docker:list result:`, result);
                     if (mounted && result && result.success && Array.isArray(result.containers)) {
-                        console.log(`🐳 Docker detectado: ${result.containers.length} contenedor(es)`);
+                        console.log(`🐳 Docker detectado: ${result.containers.length} contenedor(es)`, result.containers);
                         setDockerContainers(result.containers);
                     } else {
                         setDockerContainers([]);
@@ -687,6 +688,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     // Opciones para el selector de tipo de terminal (dinámicas basadas en SO y distribuciones disponibles)
     const getTerminalOptions = () => {
         const platform = window.electron?.platform || 'unknown';
+        console.log(`🐳 getTerminalOptions: dockerContainers=${dockerContainers.length}, platform=${platform}`);
         
         if (platform === 'win32') {
             // En Windows: mostrar PowerShell, WSL, Cygwin y cada distribución WSL detectada
@@ -715,6 +717,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
             // Agregar contenedores Docker si están disponibles
             if (dockerContainers.length > 0) {
+                console.log(`🐳 Agregando ${dockerContainers.length} contenedores Docker al menú`);
                 options.push(...dockerContainers.map(container => ({
                     label: `Docker: ${container.name}`,
                     value: `docker-${container.name}`,
@@ -722,6 +725,8 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     color: '#2496ED',
                     dockerContainer: container
                 })));
+            } else {
+                console.log(`🐳 No hay contenedores Docker para agregar`);
             }
             
             return options;
@@ -1304,6 +1309,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     e.preventDefault();
                                     e.stopPropagation();
                                     
+                                    // Recalcular terminalOptions en el momento del click para asegurar que Docker esté incluido
+                                    const currentTerminalOptions = getTerminalOptions();
+                                    
                                     // Crear un menú desplegable temporal
                                     const menu = document.createElement('div');
                                     menu.style.position = 'absolute';
@@ -1317,9 +1325,40 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     menu.style.zIndex = '1000';
                                     menu.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
                                     
-                                    terminalOptions.forEach(option => {
+                                    // Agrupar opciones por categoría
+                                    let lastCategory = null;
+                                    
+                                    currentTerminalOptions.forEach((option, index) => {
+                                        // Detectar si es Docker (por el valor o si tiene dockerContainer)
+                                        const isDocker = option.value.startsWith('docker-') || option.dockerContainer;
+                                        const currentCategory = isDocker ? 'Docker' : 'Local';
+                                        
+                                        // Si cambió de categoría, agregar encabezado
+                                        if (currentCategory !== lastCategory && lastCategory !== null) {
+                                            const divider = document.createElement('div');
+                                            divider.style.height = '1px';
+                                            divider.style.background = 'rgba(255, 255, 255, 0.1)';
+                                            divider.style.margin = '4px 0';
+                                            menu.appendChild(divider);
+                                        }
+                                        
+                                        if (currentCategory !== lastCategory) {
+                                            const header = document.createElement('div');
+                                            header.style.padding = '8px 12px';
+                                            header.style.color = '#888888';
+                                            header.style.fontSize = '11px';
+                                            header.style.fontWeight = 'bold';
+                                            header.style.textTransform = 'uppercase';
+                                            header.style.textAlign = 'left';
+                                            header.style.cursor = 'default';
+                                            header.textContent = currentCategory;
+                                            menu.appendChild(header);
+                                            lastCategory = currentCategory;
+                                        }
+                                        
                                         const item = document.createElement('div');
                                         item.style.padding = '8px 12px';
+                                        item.style.marginLeft = '8px'; // Indentar items bajo el header
                                         item.style.cursor = 'pointer';
                                         item.style.display = 'flex';
                                         item.style.alignItems = 'center';
@@ -1333,7 +1372,8 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                                 option.value === 'powershell' ? '#4fc3f7' : 
                                                 option.value === 'wsl' ? '#8ae234' : 
                                                 option.value === 'cygwin' ? '#00FF00' :
-                                                option.value === 'rdp-guacamole' ? '#ff6b35' : '#e95420'
+                                                option.value === 'rdp-guacamole' ? '#ff6b35' : 
+                                                isDocker ? '#2496ED' : '#e95420'
                                             }; font-size: 12px;"></i>
                                             <span>${option.label}</span>
                                         `;

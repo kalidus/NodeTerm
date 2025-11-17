@@ -180,11 +180,42 @@ const MainContentArea = ({
   // Estado para distribuciones WSL disponibles
   const [wslDistributions, setWslDistributions] = useState([]);
   
+  // Estado para contenedores Docker disponibles
+  const [dockerContainers, setDockerContainers] = useState([]);
+  
   // Estado para forzar re-render cuando cambie lock_home_button
   const [homeButtonLocked, setHomeButtonLocked] = useState(() => {
     return localStorage.getItem('lock_home_button') === 'true';
   });
   
+  // Detectar contenedores Docker disponibles
+  useEffect(() => {
+    let mounted = true;
+    
+    const detectDocker = async () => {
+      try {
+        if (window.electron && window.electronAPI && mounted) {
+          const result = await window.electronAPI.invoke('docker:list');
+          if (mounted && result && result.success && Array.isArray(result.containers)) {
+            console.log(`🐳 [MainContentArea] Docker detectado: ${result.containers.length} contenedor(es)`);
+            setDockerContainers(result.containers);
+          } else {
+            setDockerContainers([]);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error detectando Docker en MainContentArea:', error);
+        setDockerContainers([]);
+      }
+    };
+    
+    detectDocker();
+    
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // Escuchar cambios en el localStorage para lock_home_button
   useEffect(() => {
     const handleStorageChange = (e) => {
@@ -316,6 +347,24 @@ const MainContentArea = ({
         });
       }
       
+      // Agregar contenedores Docker si están disponibles como submenu
+      if (dockerContainers && dockerContainers.length > 0) {
+        const dockerSubItems = dockerContainers.map(container => ({
+          label: container.name,
+          icon: 'pi pi-box',
+          command: () => {
+            setLastLocalTerminalType(`docker-${container.name}`);
+            createLocalTerminalTab(`docker-${container.name}`, { dockerContainer: container });
+          }
+        }));
+        
+        menuItems.push({
+          label: '🐳 Docker',
+          icon: 'pi pi-box',
+          items: dockerSubItems
+        });
+      }
+      
       // Agregar AI Chat al final - Solo si está activado
       if (aiClientsEnabled.nodeterm) {
         menuItems.push({
@@ -419,7 +468,7 @@ const MainContentArea = ({
       
       setTerminalMenuItems(linuxMenuItems);
     }
-  }, [wslDistributions, dispatchAnythingLLMTab, dispatchOpenWebUITab, aiClientsEnabled]);
+  }, [wslDistributions, dockerContainers, dispatchAnythingLLMTab, dispatchOpenWebUITab, aiClientsEnabled]);
   
   // Detectar distribuciones WSL disponibles al montar el componente
   useEffect(() => {
@@ -601,9 +650,23 @@ const MainContentArea = ({
       // Determinar el label según el tipo de terminal
       let label = 'Terminal';
       let finalTerminalType = terminalType;
+      let tabType = 'local-terminal';
+      let finalDistroInfo = distroInfo;
       
-      // Si hay distroInfo, usamos sus datos
-      if (distroInfo) {
+      // PRIMERO: Comprobar si es Docker (ANTES de distroInfo)
+      if (terminalType.startsWith('docker-')) {
+        // Es un contenedor Docker
+        const containerName = terminalType.substring(7); // Quitar 'docker-' del inicio
+        label = `🐳 ${containerName}`;
+        tabType = 'docker';
+        finalTerminalType = 'docker';
+        finalDistroInfo = {
+          containerName: containerName,
+          containerId: distroInfo?.dockerContainer?.id,
+          shortId: distroInfo?.dockerContainer?.shortId
+        };
+      } else if (distroInfo) {
+        // Si hay distroInfo, usamos sus datos
         label = distroInfo.label;
         finalTerminalType = distroInfo.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
       } else {
@@ -645,12 +708,20 @@ const MainContentArea = ({
       const newTab = {
         key: tabId,
         label: label,
-        type: 'local-terminal',
+        type: tabType,
         terminalType: finalTerminalType,
-        distroInfo: distroInfo, // Información completa de la distribución
+        distroInfo: finalDistroInfo, // Información completa de la distribución o Docker
         createdAt: nowTs,
         groupId: null
       };
+      
+      console.log(`🐳 [createLocalTerminalTab] Creado tab:`, { 
+        terminalType: terminalType,
+        tabType: tabType, 
+        label: label,
+        containerName: finalDistroInfo?.containerName,
+        newTab: newTab 
+      });
       
       // Activar como última abierta (índice 1) y registrar orden de apertura
       setLastOpenedTabKey(tabId);

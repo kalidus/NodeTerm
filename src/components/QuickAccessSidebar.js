@@ -281,6 +281,13 @@ const QuickAccessSidebar = ({
 
       // Agregar contenedores Docker si están disponibles
       if (dockerContainers.length > 0) {
+        // Agregar separador/encabezado de Docker
+        terminals.push({
+          isDivider: true,
+          label: 'DOCKER',
+          isHeader: true
+        });
+        
         dockerContainers.forEach(container => {
           terminals.push({
             label: `Docker: ${container.name}`,
@@ -288,7 +295,8 @@ const QuickAccessSidebar = ({
             icon: 'pi pi-box',
             color: '#2496ED',
             action: () => handleOpenTerminal(`docker-${container.name}`, { dockerContainer: container }),
-            dockerContainer: container
+            dockerContainer: container,
+            category: 'docker'
           });
         });
       }
@@ -484,6 +492,29 @@ const QuickAccessSidebar = ({
 
   // Renderizar botón de terminal
   const renderTerminalButton = (terminal, index) => {
+    // Si es un encabezado de categoría, renderizarlo diferente
+    if (terminal.isHeader) {
+      return (
+        <div
+          key={index}
+          style={{
+            padding: '0.75rem 0.5rem',
+            color: '#666666',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            marginTop: '0.5rem',
+            marginBottom: '0.25rem',
+            textAlign: 'left',
+            borderBottom: '1px solid rgba(255,255,255,0.1)'
+          }}
+        >
+          {terminal.label}
+        </div>
+      );
+    }
+    
     return (
       <div
         key={index}
