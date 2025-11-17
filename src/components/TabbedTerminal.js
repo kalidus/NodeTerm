@@ -392,9 +392,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             try {
                 if (window.electron && window.electronAPI && mounted) {
                     const result = await window.electronAPI.invoke('docker:list');
-                    console.log(`🐳 [TABBEDTERMINAL] docker:list result:`, result);
                     if (mounted && result && result.success && Array.isArray(result.containers)) {
-                        console.log(`🐳 Docker detectado: ${result.containers.length} contenedor(es)`, result.containers);
                         setDockerContainers(result.containers);
                     } else {
                         setDockerContainers([]);
@@ -688,7 +686,6 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     // Opciones para el selector de tipo de terminal (dinámicas basadas en SO y distribuciones disponibles)
     const getTerminalOptions = () => {
         const platform = window.electron?.platform || 'unknown';
-        console.log(`🐳 getTerminalOptions: dockerContainers=${dockerContainers.length}, platform=${platform}`);
         
         if (platform === 'win32') {
             // En Windows: mostrar PowerShell, WSL, Cygwin y cada distribución WSL detectada
@@ -717,7 +714,6 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
             // Agregar contenedores Docker si están disponibles
             if (dockerContainers.length > 0) {
-                console.log(`🐳 Agregando ${dockerContainers.length} contenedores Docker al menú`);
                 options.push(...dockerContainers.map(container => ({
                     label: `Docker: ${container.name}`,
                     value: `docker-${container.name}`,
@@ -725,8 +721,6 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     color: '#2496ED',
                     dockerContainer: container
                 })));
-            } else {
-                console.log(`🐳 No hay contenedores Docker para agregar`);
             }
             
             return options;

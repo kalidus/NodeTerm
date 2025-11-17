@@ -194,10 +194,9 @@ const MainContentArea = ({
     
     const detectDocker = async () => {
       try {
-        if (window.electron && window.electronAPI && mounted) {
+          if (window.electron && window.electronAPI && mounted) {
           const result = await window.electronAPI.invoke('docker:list');
           if (mounted && result && result.success && Array.isArray(result.containers)) {
-            console.log(`🐳 [MainContentArea] Docker detectado: ${result.containers.length} contenedor(es)`);
             setDockerContainers(result.containers);
           } else {
             setDockerContainers([]);
@@ -714,14 +713,6 @@ const MainContentArea = ({
         createdAt: nowTs,
         groupId: null
       };
-      
-      console.log(`🐳 [createLocalTerminalTab] Creado tab:`, { 
-        terminalType: terminalType,
-        tabType: tabType, 
-        label: label,
-        containerName: finalDistroInfo?.containerName,
-        newTab: newTab 
-      });
       
       // Activar como última abierta (índice 1) y registrar orden de apertura
       setLastOpenedTabKey(tabId);
