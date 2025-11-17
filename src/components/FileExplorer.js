@@ -428,19 +428,123 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
 
     const handleDrop = async (event) => {
         event.preventDefault();
+        event.stopPropagation();
         setIsDragActive(false);
-        if (!sshReady || !currentPath || loading) return;
+        
+        if (!sshReady || !currentPath || loading) {
+            console.warn('Drop rejected: sshReady=', sshReady, 'currentPath=', currentPath, 'loading=', loading);
+            return;
+        }
+        
+        // En Electron, usar dataTransfer.files directamente
+        // Los archivos arrastrados desde el sistema tienen la propiedad 'path'
         const files = Array.from(event.dataTransfer.files);
-        const filePaths = files
-            .filter(f => f.type !== '' || f.name)
-            .map(f => f.path)
-            .filter(Boolean);
-        if (filePaths.length === 0) return;
-        setTransferProgress({ type: 'upload', current: 0, total: filePaths.length });
-        for (let i = 0; i < filePaths.length; i++) {
-            const localPath = filePaths[i];
-            const fileName = localPath.split(/[\\/]/).pop();
+        const filePaths = [];
+        
+        console.log('Files dropped:', files.length);
+        
+        if (files.length === 0) {
+            console.warn('No files in drop event');
+            return;
+        }
+        
+        // Almacenar archivos temporalmente en window para que el handler IPC pueda acceder
+        window.__lastDroppedFiles = files;
+        
+        // Procesar cada archivo
+        const fileInfo = []; // Guardar información de cada archivo (path, nombre original)
+        
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const originalFileName = file.name; // Guardar nombre original
+            console.log(`Processing file ${i + 1}/${files.length}:`, {
+                name: originalFileName,
+                type: file.type,
+                size: file.size,
+                hasPath: 'path' in file,
+                pathValue: file.path
+            });
+            
+            let filePath = null;
+            
+            // Método 1: Intentar obtener path directamente
+            if (file.path) {
+                filePath = file.path;
+            }
+            
+            // Método 2: Usar handler IPC para obtener path desde el main process
+            if (!filePath && window.electron?.fileUtils) {
+                try {
+                    const result = await window.electron.fileUtils.getPathForFile(file);
+                    if (result && typeof result === 'string') {
+                        filePath = result;
+                    }
+                } catch (e) {
+                    console.warn('Error using fileUtils.getPathForFile:', e);
+                }
+            }
+            
+            // Método 3: Usar handler IPC que ejecuta código en el renderer
+            if (!filePath) {
+                try {
+                    const result = await window.electron.fileUtils.getPathForFileIndex(i);
+                    if (result.ok && result.path) {
+                        filePath = result.path;
+                        console.log(`✓ File path found via IPC: ${filePath}`);
+                    }
+                } catch (e) {
+                    console.warn('Error using IPC handler:', e);
+                }
+            }
+            
+            // Método 4: Fallback - leer archivo y guardarlo temporalmente
+            if (!filePath) {
+                try {
+                    console.log(`No path found for ${originalFileName}, reading file content...`);
+                    const arrayBuffer = await file.arrayBuffer();
+                    const result = await window.electron.fileUtils.saveTempFile(originalFileName, arrayBuffer);
+                    if (result.ok) {
+                        filePath = result.path;
+                        console.log(`✓ File saved to temp path: ${filePath}`);
+                    }
+                } catch (e) {
+                    console.error(`✗ Error processing file ${originalFileName}:`, e);
+                }
+            }
+            
+            if (filePath && typeof filePath === 'string' && filePath.length > 0) {
+                fileInfo.push({ path: filePath, originalName: originalFileName });
+                console.log(`✓ File path ready: ${filePath} (original: ${originalFileName})`);
+            } else {
+                console.error(`✗ No path found for file: ${originalFileName}`);
+            }
+        }
+        
+        // Limpiar archivos temporales
+        delete window.__lastDroppedFiles;
+        
+        if (fileInfo.length === 0) {
+            console.error('No valid file paths found');
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error al obtener rutas',
+                detail: 'No se pudieron obtener las rutas de los archivos. Intenta usar el botón "Subir" en su lugar.',
+                life: 5000
+            });
+            return;
+        }
+        
+        console.log('Uploading files:', fileInfo);
+        setTransferProgress({ type: 'upload', current: 0, total: fileInfo.length });
+        
+        for (let i = 0; i < fileInfo.length; i++) {
+            const { path: localPath, originalName } = fileInfo[i];
+            // Usar el nombre original del archivo, no el del path temporal
+            const fileName = originalName;
             const remotePath = currentPath === '/' ? `/${fileName}` : `${currentPath}/${fileName}`;
+            
+            console.log(`Uploading ${i + 1}/${fileInfo.length}: ${localPath} -> ${remotePath} (original: ${originalName})`);
+            
             try {
                 const uploadResult = await window.electron.fileExplorer.uploadFile(tabId, localPath, remotePath, sshConfig);
                 if (uploadResult.success) {
@@ -451,9 +555,10 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                         life: 3000
                     });
                 } else {
-                    throw new Error(uploadResult.error);
+                    throw new Error(uploadResult.error || 'Error desconocido');
                 }
             } catch (err) {
+                console.error('Error uploading file:', err);
                 toast.current?.show({
                     severity: 'error',
                     summary: 'Error al subir',
@@ -461,20 +566,40 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                     life: 5000
                 });
             }
-            setTransferProgress({ type: 'upload', current: i + 1, total: filePaths.length });
+            setTransferProgress({ type: 'upload', current: i + 1, total: fileInfo.length });
         }
+        
         setTransferProgress(null);
         loadFiles(currentPath);
     };
 
+    const handleDragEnter = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.dataTransfer.types.includes('Files')) {
+            setIsDragActive(true);
+        }
+    };
+
     const handleDragOver = (event) => {
         event.preventDefault();
-        if (!isDragActive) setIsDragActive(true);
+        event.stopPropagation();
+        if (event.dataTransfer.types.includes('Files')) {
+            event.dataTransfer.dropEffect = 'copy';
+            if (!isDragActive) setIsDragActive(true);
+        }
     };
 
     const handleDragLeave = (event) => {
         event.preventDefault();
-        setIsDragActive(false);
+        event.stopPropagation();
+        // Solo desactivar si realmente salimos del contenedor (no de un hijo)
+        const rect = event.currentTarget.getBoundingClientRect();
+        const x = event.clientX;
+        const y = event.clientY;
+        if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+            setIsDragActive(false);
+        }
     };
 
     const toggleFileSelection = (file) => {
@@ -651,6 +776,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                     <div 
                         className={`file-explorer-files-container${isDragActive ? ' drag-active' : ''}`}
                         onDrop={handleDrop}
+                        onDragEnter={handleDragEnter}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                     >

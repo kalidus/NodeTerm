@@ -78,6 +78,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^import:.*$/,
         /^updater:.*$/,
         /^system:.*$/,
+        /^file:.*$/,
         'process-pdf',
         'process-pdf-buffer',
         'create-temp-file',
@@ -199,6 +200,20 @@ contextBridge.exposeInMainWorld('electron', {
     openExternal: (url) => ipcRenderer.invoke('import:open-external', url),
     getDownloadsPath: () => ipcRenderer.invoke('import:get-downloads-path'),
     findLatestXmlDownload: (params) => ipcRenderer.invoke('import:find-latest-xml-download', params)
+  },
+  // File utilities for drag and drop
+  fileUtils: {
+    getPathForFile: (file) => {
+      // En Electron, los archivos del sistema tienen la propiedad path
+      // Intentar acceder directamente
+      return file?.path || null;
+    },
+    saveTempFile: async (fileName, arrayBuffer) => {
+      return ipcRenderer.invoke('file:save-temp-file', { fileName, arrayBuffer });
+    },
+    getPathForFileIndex: async (fileIndex) => {
+      return ipcRenderer.invoke('file:get-path-for-file', fileIndex);
+    }
   },
   // Update system APIs
   updater: {
