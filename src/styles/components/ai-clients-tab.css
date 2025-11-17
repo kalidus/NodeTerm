@@ -1,0 +1,279 @@
+/* ===================================
+   Estilos para AIClientsTab
+   Gestión visual de clientes de IA
+   =================================== */
+
+.ai-clients-tab {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Header de la pestaña */
+.ai-clients-header {
+  margin-bottom: 2rem;
+}
+
+.ai-clients-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.ai-clients-title h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.ai-clients-subtitle {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.9rem;
+  color: var(--text-color-secondary);
+  line-height: 1.5;
+}
+
+/* Grid de cards */
+.ai-clients-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* Card de cliente */
+.ai-client-card {
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ai-client-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.ai-client-card.enabled {
+  background: var(--surface-card);
+}
+
+.ai-client-card.disabled {
+  background: var(--surface-ground);
+  filter: grayscale(0.3);
+}
+
+/* Header de la card */
+.ai-client-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 4px 4px 0 0;
+}
+
+.ai-client-icon-wrapper {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.ai-client-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-client-name {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.ai-client-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.ai-client-toggle {
+  display: flex;
+  align-items: center;
+}
+
+/* Body de la card */
+.ai-client-card-body {
+  padding: 1.25rem;
+}
+
+.ai-client-description {
+  margin: 0 0 1rem 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-color-secondary);
+}
+
+.ai-client-features {
+  margin-bottom: 1rem;
+}
+
+.ai-client-features h4 {
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+}
+
+.ai-client-features ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ai-client-features li {
+  padding: 0.4rem 0;
+  font-size: 0.9rem;
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+}
+
+/* Información de Docker */
+.ai-client-docker-info {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--surface-border);
+}
+
+.docker-info-item {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0;
+  font-size: 0.9rem;
+  color: var(--text-color);
+}
+
+.docker-info-item code {
+  margin-left: 0.5rem;
+  padding: 0.2rem 0.5rem;
+  background: var(--surface-ground);
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+}
+
+.docker-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.docker-error {
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* Nota informativa */
+.ai-client-note {
+  line-height: 1.6;
+}
+
+/* Footer con información adicional */
+.ai-clients-footer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.info-card {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.info-card strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  color: var(--text-color);
+}
+
+.info-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-color-secondary);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .ai-clients-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .ai-clients-tab {
+    padding: 1rem;
+  }
+
+  .ai-client-card-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .ai-client-toggle {
+    margin-top: 1rem;
+  }
+
+  .ai-clients-footer {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-client-card {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Badge personalizado */
+.p-badge.p-badge-warning {
+  background-color: #ff9800;
+}
+
+.p-badge.p-badge-info {
+  background-color: #2196F3;
+}
+
+.p-badge.p-badge-success {
+  background-color: #4CAF50;
+}
+
+.p-badge.p-badge-danger {
+  background-color: #f44336;
+}
+
+.p-badge.p-badge-secondary {
+  background-color: #9E9E9E;
+}
+

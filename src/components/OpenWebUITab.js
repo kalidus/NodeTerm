@@ -67,7 +67,44 @@ const OpenWebUITab = () => {
   }, [invokeOpenWebUI]);
 
   useEffect(() => {
-    startService();
+    // Verificar si el servicio está activado en la configuración
+    const checkAndStartIfEnabled = () => {
+      try {
+        const aiClientsConfig = localStorage.getItem('ai_clients_enabled');
+        if (aiClientsConfig) {
+          const config = JSON.parse(aiClientsConfig);
+          if (config.openwebui === true) {
+            console.log('[OpenWebUI] Servicio activado en configuración, iniciando...');
+            startService();
+          } else {
+            console.log('[OpenWebUI] Servicio desactivado en configuración, no se iniciará automáticamente');
+            setStatus({
+              phase: 'disabled',
+              message: 'Open WebUI está desactivado. Actívalo en Configuración → Clientes de IA',
+              isRunning: false
+            });
+          }
+        } else {
+          // Si no hay configuración, asumir que está desactivado por defecto
+          console.log('[OpenWebUI] Sin configuración, servicio desactivado por defecto');
+          setStatus({
+            phase: 'disabled',
+            message: 'Open WebUI está desactivado. Actívalo en Configuración → Clientes de IA',
+            isRunning: false
+          });
+        }
+      } catch (error) {
+        console.error('[OpenWebUI] Error al verificar configuración:', error);
+        // En caso de error, no iniciar el servicio
+        setStatus({
+          phase: 'error',
+          message: 'Error al verificar configuración de clientes de IA',
+          isRunning: false
+        });
+      }
+    };
+    
+    checkAndStartIfEnabled();
   }, [startService]);
 
   useEffect(() => {
@@ -175,6 +212,35 @@ const OpenWebUITab = () => {
     </div>
   );
 
+  const renderDisabled = () => (
+    <div className="openwebui-disabled-card" style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100%',
+      padding: '2rem',
+      textAlign: 'center'
+    }}>
+      <i className="pi pi-power-off" style={{ fontSize: '4rem', color: '#9E9E9E', marginBottom: '1.5rem' }} />
+      <h3 style={{ marginBottom: '1rem', color: 'var(--text-color)' }}>Open WebUI Desactivado</h3>
+      <p style={{ marginBottom: '2rem', color: 'var(--text-color-secondary)', maxWidth: '500px' }}>
+        Este servicio está desactivado en la configuración. Para usarlo, actívalo primero en la gestión de clientes de IA.
+      </p>
+      <Button
+        label="Ir a Configuración"
+        icon="pi pi-cog"
+        severity="info"
+        onClick={() => {
+          // Emitir evento para abrir el diálogo de configuración
+          window.dispatchEvent(new CustomEvent('open-settings-dialog', { 
+            detail: { tab: 'ai-clients' } 
+          }));
+        }}
+      />
+    </div>
+  );
+
   const renderWebView = () => {
     if (!url) return null;
     
@@ -202,9 +268,10 @@ const OpenWebUITab = () => {
 
   return (
     <div className="openwebui-tab">
-      {error && renderError()}
-      {!error && (!isReady || !url) && renderStatusCard()}
-      {!error && isReady && url && renderWebView()}
+      {status.phase === 'disabled' && renderDisabled()}
+      {status.phase !== 'disabled' && error && renderError()}
+      {status.phase !== 'disabled' && !error && (!isReady || !url) && renderStatusCard()}
+      {status.phase !== 'disabled' && !error && isReady && url && renderWebView()}
       
       <div className="openwebui-toolbar">
         <div className="openwebui-status-pill">
