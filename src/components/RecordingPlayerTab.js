@@ -276,6 +276,58 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
     setPlaybackState(prev => ({ ...prev, speed: newSpeed }));
   };
 
+  /**
+   * Salta a un tiempo específico en la grabación
+   * @param {number} targetTime - Tiempo objetivo en segundos
+   */
+  const seekTo = (targetTime) => {
+    if (!terminalInstance.current || playbackData.current.events.length === 0) return;
+    
+    // Limpiar timeout actual
+    if (playbackData.current.timeout) {
+      clearTimeout(playbackData.current.timeout);
+      playbackData.current.timeout = null;
+    }
+    
+    // Asegurar que el tiempo está dentro del rango válido
+    const clampedTime = Math.max(0, Math.min(targetTime, playbackState.duration));
+    
+    // Encontrar el índice del evento más cercano al tiempo objetivo
+    let targetIndex = 0;
+    for (let i = 0; i < playbackData.current.events.length; i++) {
+      const [eventTime] = playbackData.current.events[i];
+      if (eventTime <= clampedTime) {
+        targetIndex = i;
+      } else {
+        break;
+      }
+    }
+    
+    // Limpiar terminal y reconstruir estado hasta el punto objetivo
+    terminalInstance.current.clear();
+    
+    // Reproducir todos los eventos hasta el índice objetivo
+    for (let i = 0; i < targetIndex; i++) {
+      const [eventTime, eventType, eventData] = playbackData.current.events[i];
+      if (eventType === 'o' && terminalInstance.current) {
+        terminalInstance.current.write(eventData);
+      }
+    }
+    
+    // Actualizar estado
+    playbackData.current.currentEventIndex = targetIndex;
+    playbackData.current.isPaused = false;
+    
+    // Si estaba reproduciendo, continuar desde aquí
+    if (playbackState.isPlaying) {
+      playbackData.current.startTime = Date.now() - (clampedTime * 1000 / playbackState.speed);
+      setPlaybackState(prev => ({ ...prev, currentTime: clampedTime }));
+      scheduleNextEvent();
+    } else {
+      setPlaybackState(prev => ({ ...prev, currentTime: clampedTime }));
+    }
+  };
+
   const scheduleNextEvent = () => {
     const { events, currentEventIndex, startTime, isPaused } = playbackData.current;
     
@@ -519,18 +571,61 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
         </div>
       </div>
 
-      {/* Barra de progreso */}
-      <div style={{
-        height: '4px',
-        background: 'var(--ui-content-bg)',
-        position: 'relative'
-      }}>
+      {/* Barra de progreso interactiva */}
+      <div 
+        style={{
+          height: '12px',
+          background: 'var(--ui-content-bg)',
+          position: 'relative',
+          cursor: 'pointer',
+          userSelect: 'none'
+        }}
+        onMouseDown={(e) => {
+          if (!playbackState.duration) return;
+          
+          const rect = e.currentTarget.getBoundingClientRect();
+          const clickX = e.clientX - rect.left;
+          const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+          const targetTime = percentage * playbackState.duration;
+          
+          seekTo(targetTime);
+        }}
+        onMouseMove={(e) => {
+          // Mostrar preview del tiempo al pasar el mouse
+          if (e.buttons === 1 && playbackState.duration) { // Solo si está arrastrando
+            const rect = e.currentTarget.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const percentage = Math.max(0, Math.min(1, mouseX / rect.width));
+            const previewTime = percentage * playbackState.duration;
+            
+            // Actualizar tiempo mientras se arrastra
+            if (Math.abs(previewTime - playbackState.currentTime) > 0.5) {
+              seekTo(previewTime);
+            }
+          }
+        }}
+        title={`Click para saltar a un punto específico. Tiempo actual: ${formatDuration(playbackState.currentTime)} / ${formatDuration(playbackState.duration)}`}
+      >
         <div style={{
           height: '100%',
-          width: `${(playbackState.currentTime / playbackState.duration) * 100}%`,
+          width: `${playbackState.duration > 0 ? (playbackState.currentTime / playbackState.duration) * 100 : 0}%`,
           background: 'var(--ui-button-primary)',
-          transition: 'width 0.1s linear'
-        }}></div>
+          transition: playbackState.isPlaying ? 'width 0.1s linear' : 'none',
+          position: 'relative'
+        }}>
+          {/* Indicador de posición */}
+          <div style={{
+            position: 'absolute',
+            right: 0,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            background: 'var(--ui-button-primary-text)',
+            boxShadow: '0 0 4px rgba(0,0,0,0.3)'
+          }}></div>
+        </div>
       </div>
 
       {/* Terminal */}

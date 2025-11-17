@@ -89,6 +89,38 @@ const { registerRecordingHandlers, setSessionRecorder } = require('./src/main/ha
 // Importar y crear instancia de SessionRecorder para grabaciones
 const SessionRecorder = require('./src/services/SessionRecorder');
 const sessionRecorder = new SessionRecorder();
+
+// Helper para obtener directorio de grabaciones (misma lógica que recording-handlers.js)
+async function getRecordingsDirectory() {
+  try {
+    const fsPromises = require('fs').promises;
+    const userDataPath = app.getPath('userData');
+    const configPath = path.join(userDataPath, 'recording-config.json');
+    
+    try {
+      const configContent = await fsPromises.readFile(configPath, 'utf-8');
+      const config = JSON.parse(configContent);
+      
+      if (config.customPath && config.customPath.trim()) {
+        try {
+          await fsPromises.access(config.customPath);
+          return config.customPath;
+        } catch {
+          console.warn(`⚠️ Ruta personalizada de grabaciones no existe: ${config.customPath}, usando ruta por defecto`);
+        }
+      }
+    } catch {
+      // Config no existe, usar ruta por defecto
+    }
+    
+    const defaultPath = path.join(userDataPath, 'recordings');
+    return defaultPath;
+  } catch (error) {
+    console.error('Error obteniendo directorio de grabaciones:', error);
+    const userDataPath = app.getPath('userData');
+    return path.join(userDataPath, 'recordings');
+  }
+}
 const anythingLLMService = new AnythingLLMService();
 const openWebUIService = new OpenWebUIService();
 
@@ -1469,11 +1501,11 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           const autoRecordingEnabled = true; // Asumir que si hay grabación activa, debe guardarse
           if (autoRecordingEnabled) {
             // Guardar archivo en disco
-            const userDataPath = app.getPath('userData');
-            const recordingsDir = path.join(userDataPath, 'recordings');
+            const fsPromises = require('fs').promises;
+            const recordingsDir = await getRecordingsDirectory();
             
             // Crear directorio si no existe
-            await fs.mkdir(recordingsDir, { recursive: true });
+            await fsPromises.mkdir(recordingsDir, { recursive: true });
             
             // Generar formato asciicast
             const asciicastContent = sessionRecorder.toAsciicast(recording);
@@ -1481,7 +1513,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
             const filepath = path.join(recordingsDir, filename);
             
             // Guardar archivo
-            await fs.writeFile(filepath, asciicastContent, 'utf-8');
+            await fsPromises.writeFile(filepath, asciicastContent, 'utf-8');
             
             // Guardar metadata en archivo separado para índice rápido
             const metadataPath = path.join(recordingsDir, `${recording.id}.meta.json`);
@@ -1497,7 +1529,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
               createdAt: Date.now()
             };
             
-            await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
+            await fsPromises.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
             
             console.log(`💾 Grabación automática guardada: ${filename}`);
           }

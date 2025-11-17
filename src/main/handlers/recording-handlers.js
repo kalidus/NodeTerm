@@ -19,6 +19,44 @@ function setSessionRecorder(recorder) {
 }
 
 /**
+ * Obtiene la ruta del directorio de grabaciones (personalizada o por defecto)
+ * @returns {Promise<string>} Ruta del directorio de grabaciones
+ */
+async function getRecordingsDirectory() {
+  try {
+    // Leer configuración desde archivo de preferencias
+    const userDataPath = app.getPath('userData');
+    const configPath = path.join(userDataPath, 'recording-config.json');
+    
+    try {
+      const configContent = await fs.readFile(configPath, 'utf-8');
+      const config = JSON.parse(configContent);
+      
+      // Si hay una ruta personalizada y existe, usarla
+      if (config.customPath && config.customPath.trim()) {
+        try {
+          await fs.access(config.customPath);
+          return config.customPath;
+        } catch {
+          console.warn(`⚠️ Ruta personalizada de grabaciones no existe: ${config.customPath}, usando ruta por defecto`);
+        }
+      }
+    } catch {
+      // Archivo de configuración no existe o es inválido, usar ruta por defecto
+    }
+    
+    // Ruta por defecto: AppData/NodeTerm/recordings
+    const defaultPath = path.join(userDataPath, 'recordings');
+    return defaultPath;
+  } catch (error) {
+    console.error('Error obteniendo directorio de grabaciones:', error);
+    // Fallback a ruta por defecto
+    const userDataPath = app.getPath('userData');
+    return path.join(userDataPath, 'recordings');
+  }
+}
+
+/**
  * Registra todos los manejadores IPC relacionados con grabaciones
  */
 function registerRecordingHandlers() {
@@ -46,6 +84,92 @@ function registerRecordingHandlers() {
     }
   });
 
+  // RECORDING: Obtener ubicación de grabaciones
+  ipcMain.handle('recording:get-path', async () => {
+    try {
+      const recordingsDir = await getRecordingsDirectory();
+      const userDataPath = app.getPath('userData');
+      const configPath = path.join(userDataPath, 'recording-config.json');
+      
+      let customPath = null;
+      try {
+        const configContent = await fs.readFile(configPath, 'utf-8');
+        const config = JSON.parse(configContent);
+        customPath = config.customPath || null;
+      } catch {
+        // Config no existe
+      }
+      
+      return {
+        success: true,
+        currentPath: recordingsDir,
+        customPath: customPath,
+        isDefault: !customPath || recordingsDir === path.join(userDataPath, 'recordings')
+      };
+    } catch (error) {
+      console.error('Error obteniendo ruta de grabaciones:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  });
+
+  // RECORDING: Establecer ubicación personalizada de grabaciones
+  ipcMain.handle('recording:set-path', async (event, { customPath }) => {
+    try {
+      const userDataPath = app.getPath('userData');
+      const configPath = path.join(userDataPath, 'recording-config.json');
+      
+      // Si customPath es null o vacío, usar ruta por defecto
+      if (!customPath || !customPath.trim()) {
+        // Eliminar configuración para usar ruta por defecto
+        try {
+          await fs.unlink(configPath);
+        } catch {
+          // Archivo no existe, está bien
+        }
+        
+        const defaultPath = path.join(userDataPath, 'recordings');
+        return {
+          success: true,
+          currentPath: defaultPath,
+          message: 'Ruta restaurada a ubicación por defecto'
+        };
+      }
+      
+      // Verificar que la ruta existe y es accesible
+      try {
+        await fs.access(customPath);
+      } catch {
+        // Intentar crear el directorio si no existe
+        await fs.mkdir(customPath, { recursive: true });
+      }
+      
+      // Guardar configuración
+      const config = {
+        customPath: customPath.trim(),
+        updatedAt: Date.now()
+      };
+      
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
+      
+      console.log(`📁 Ruta personalizada de grabaciones configurada: ${customPath}`);
+      
+      return {
+        success: true,
+        currentPath: customPath,
+        message: 'Ruta personalizada configurada correctamente'
+      };
+    } catch (error) {
+      console.error('Error estableciendo ruta de grabaciones:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  });
+
   // RECORDING: Detener grabación y guardar
   ipcMain.handle('recording:stop', async (event, { tabId }) => {
     try {
@@ -58,8 +182,7 @@ function registerRecordingHandlers() {
       
       // Guardar archivo en disco
       const recordingId = recording.id;
-      const userDataPath = app.getPath('userData');
-      const recordingsDir = path.join(userDataPath, 'recordings');
+      const recordingsDir = await getRecordingsDirectory();
       
       // Crear directorio si no existe
       await fs.mkdir(recordingsDir, { recursive: true });
@@ -186,8 +309,7 @@ function registerRecordingHandlers() {
   ipcMain.handle('recording:list', async (event, filters = {}) => {
     try {
       console.log('🔍 recording:list - Filtros recibidos:', JSON.stringify(filters, null, 2));
-      const userDataPath = app.getPath('userData');
-      const recordingsDir = path.join(userDataPath, 'recordings');
+      const recordingsDir = await getRecordingsDirectory();
       
       // Verificar si existe el directorio
       try {
@@ -272,8 +394,7 @@ function registerRecordingHandlers() {
   // RECORDING: Cargar grabación específica
   ipcMain.handle('recording:load', async (event, { recordingId }) => {
     try {
-      const userDataPath = app.getPath('userData');
-      const recordingsDir = path.join(userDataPath, 'recordings');
+      const recordingsDir = await getRecordingsDirectory();
       
       // Leer metadata
       const metaPath = path.join(recordingsDir, `${recordingId}.meta.json`);
@@ -303,8 +424,7 @@ function registerRecordingHandlers() {
   // RECORDING: Eliminar grabación
   ipcMain.handle('recording:delete', async (event, { recordingId }) => {
     try {
-      const userDataPath = app.getPath('userData');
-      const recordingsDir = path.join(userDataPath, 'recordings');
+      const recordingsDir = await getRecordingsDirectory();
       
       // Eliminar archivos
       const castPath = path.join(recordingsDir, `${recordingId}.cast`);
@@ -333,8 +453,7 @@ function registerRecordingHandlers() {
   // RECORDING: Exportar grabación
   ipcMain.handle('recording:export', async (event, { recordingId, exportPath }) => {
     try {
-      const userDataPath = app.getPath('userData');
-      const recordingsDir = path.join(userDataPath, 'recordings');
+      const recordingsDir = await getRecordingsDirectory();
       
       const castPath = path.join(recordingsDir, `${recordingId}.cast`);
       const castContent = await fs.readFile(castPath, 'utf-8');
@@ -361,8 +480,7 @@ function registerRecordingHandlers() {
   // RECORDING: Obtener estadísticas
   ipcMain.handle('recording:stats', async () => {
     try {
-      const userDataPath = app.getPath('userData');
-      const recordingsDir = path.join(userDataPath, 'recordings');
+      const recordingsDir = await getRecordingsDirectory();
       
       try {
         await fs.access(recordingsDir);
@@ -429,8 +547,7 @@ function registerRecordingHandlers() {
   // AUDIT: Obtener estadísticas de auditoría
   ipcMain.handle('audit:get-stats', async () => {
     try {
-      const userDataPath = app.getPath('userData');
-      const recordingsDir = path.join(userDataPath, 'recordings');
+      const recordingsDir = await getRecordingsDirectory();
       
       try {
         await fs.access(recordingsDir);
@@ -500,8 +617,7 @@ function registerRecordingHandlers() {
   // AUDIT: Ejecutar limpieza de archivos
   ipcMain.handle('audit:cleanup', async (event, { retentionDays, maxStorageSize, force = false }) => {
     try {
-      const userDataPath = app.getPath('userData');
-      const recordingsDir = path.join(userDataPath, 'recordings');
+      const recordingsDir = await getRecordingsDirectory();
       
       try {
         await fs.access(recordingsDir);
@@ -629,8 +745,7 @@ function registerRecordingHandlers() {
   // AUDIT: Abrir carpeta de auditoría
   ipcMain.handle('audit:open-folder', async () => {
     try {
-      const userDataPath = app.getPath('userData');
-      const recordingsDir = path.join(userDataPath, 'recordings');
+      const recordingsDir = await getRecordingsDirectory();
       
       // Crear directorio si no existe
       await fs.mkdir(recordingsDir, { recursive: true });

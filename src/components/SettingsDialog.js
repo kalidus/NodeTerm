@@ -169,6 +169,9 @@ const SettingsDialog = ({
   const [encryptRecordings, setEncryptRecordings] = useState(() => {
     return localStorage.getItem('audit_encrypt_recordings') === 'true';
   });
+  const [recordingPath, setRecordingPath] = useState(null);
+  const [isDefaultPath, setIsDefaultPath] = useState(true);
+  const [loadingPath, setLoadingPath] = useState(false);
   const [autoCleanupEnabled, setAutoCleanupEnabled] = useState(() => {
     return localStorage.getItem('audit_auto_cleanup') === 'true';
   });
@@ -534,6 +537,30 @@ const SettingsDialog = ({
   useEffect(() => {
     localStorage.setItem('audit_cleanup_frequency', cleanupFrequency);
   }, [cleanupFrequency]);
+
+  // Cargar ruta de grabaciones
+  useEffect(() => {
+    const loadRecordingPath = async () => {
+      try {
+        if (window?.electron?.ipcRenderer) {
+          setLoadingPath(true);
+          const result = await window.electron.ipcRenderer.invoke('recording:get-path');
+          if (result && result.success) {
+            setRecordingPath(result.currentPath);
+            setIsDefaultPath(result.isDefault);
+          }
+          setLoadingPath(false);
+        }
+      } catch (error) {
+        console.error('Error cargando ruta de grabaciones:', error);
+        setLoadingPath(false);
+      }
+    };
+    
+    if (visible && activeIndex === 3) { // Tab de Auditoría
+      loadRecordingPath();
+    }
+  }, [visible, activeIndex]);
 
   // Cargar estadísticas de auditoría
   useEffect(() => {
@@ -1362,6 +1389,128 @@ const SettingsDialog = ({
                               </div>
                               <small style={{ color: 'var(--text-color-secondary)', marginLeft: '2rem' }}>
                                 Las grabaciones se cifrarán automáticamente si tienes una clave maestra configurada
+                              </small>
+                            </div>
+
+                            {/* Ubicación de grabaciones */}
+                            <div style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>
+                              <label style={{
+                                display: 'block',
+                                marginBottom: '0.5rem',
+                                color: 'var(--text-color)',
+                                fontWeight: '500'
+                              }}>
+                                Ubicación de grabaciones
+                              </label>
+                              <div style={{
+                                display: 'flex',
+                                gap: '0.5rem',
+                                alignItems: 'center',
+                                marginBottom: '0.5rem'
+                              }}>
+                                <InputText
+                                  value={recordingPath || ''}
+                                  readOnly
+                                  style={{
+                                    flex: 1,
+                                    fontFamily: 'monospace',
+                                    fontSize: '0.85rem'
+                                  }}
+                                  placeholder={loadingPath ? 'Cargando...' : 'Ruta de grabaciones'}
+                                />
+                                <Button
+                                  icon="pi pi-folder-open"
+                                  label="Cambiar"
+                                  onClick={async () => {
+                                    try {
+                                      if (!window?.electron?.dialog?.showOpenDialog) {
+                                        toast?.show({
+                                          severity: 'warn',
+                                          summary: 'No disponible',
+                                          detail: 'El selector de directorios requiere la app de escritorio'
+                                        });
+                                        return;
+                                      }
+                                      
+                                      const result = await window.electron.dialog.showOpenDialog({
+                                        properties: ['openDirectory'],
+                                        title: 'Seleccionar carpeta para guardar grabaciones'
+                                      });
+                                      
+                                      if (result && !result.canceled && result.filePaths && result.filePaths.length > 0) {
+                                        const selectedPath = result.filePaths[0];
+                                        setLoadingPath(true);
+                                        
+                                        const setResult = await window.electron.ipcRenderer.invoke('recording:set-path', {
+                                          customPath: selectedPath
+                                        });
+                                        
+                                        if (setResult && setResult.success) {
+                                          setRecordingPath(setResult.currentPath);
+                                          setIsDefaultPath(false);
+                                          toast?.show({
+                                            severity: 'success',
+                                            summary: 'Ubicación actualizada',
+                                            detail: `Las grabaciones se guardarán en: ${setResult.currentPath}`
+                                          });
+                                        } else {
+                                          toast?.show({
+                                            severity: 'error',
+                                            summary: 'Error',
+                                            detail: setResult?.error || 'No se pudo cambiar la ubicación'
+                                          });
+                                        }
+                                        setLoadingPath(false);
+                                      }
+                                    } catch (error) {
+                                      console.error('Error seleccionando carpeta:', error);
+                                      toast?.show({
+                                        severity: 'error',
+                                        summary: 'Error',
+                                        detail: 'No se pudo abrir el selector de carpeta'
+                                      });
+                                      setLoadingPath(false);
+                                    }
+                                  }}
+                                  disabled={loadingPath}
+                                  style={{ minWidth: '100px' }}
+                                />
+                                {!isDefaultPath && (
+                                  <Button
+                                    icon="pi pi-refresh"
+                                    label="Restaurar"
+                                    onClick={async () => {
+                                      try {
+                                        setLoadingPath(true);
+                                        const result = await window.electron.ipcRenderer.invoke('recording:set-path', {
+                                          customPath: null
+                                        });
+                                        
+                                        if (result && result.success) {
+                                          setRecordingPath(result.currentPath);
+                                          setIsDefaultPath(true);
+                                          toast?.show({
+                                            severity: 'success',
+                                            summary: 'Ubicación restaurada',
+                                            detail: 'Se usará la ubicación por defecto'
+                                          });
+                                        }
+                                        setLoadingPath(false);
+                                      } catch (error) {
+                                        console.error('Error restaurando ruta:', error);
+                                        setLoadingPath(false);
+                                      }
+                                    }}
+                                    disabled={loadingPath}
+                                    style={{ minWidth: '100px' }}
+                                  />
+                                )}
+                              </div>
+                              <small style={{ color: 'var(--text-color-secondary)' }}>
+                                {isDefaultPath 
+                                  ? 'Usando ubicación por defecto: AppData/NodeTerm/recordings'
+                                  : `Ubicación personalizada: ${recordingPath}`
+                                }
                               </small>
                             </div>
                           </>
