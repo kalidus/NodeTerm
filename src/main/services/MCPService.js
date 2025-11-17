@@ -84,6 +84,25 @@ class MCPService {
         console.log(`📄 [MCP] Configuración cargada: ${Object.keys(this.mcpConfig.mcpServers || {}).length} servidores`);
         this.verboseLogs = !!this.mcpConfig.verbose || !!process.env.MCP_VERBOSE;
         
+        // 🔒 AUTO-FIX: Corregir configuración de Tenable si está usando npx incorrecto
+        const tenableConfig = this.mcpConfig.mcpServers?.tenable;
+        if (tenableConfig && (tenableConfig.command === 'npx' || !tenableConfig.cwd || tenableConfig.cwd !== path.join(app.getAppPath(), 'src', 'mcp-servers', 'tenable'))) {
+          console.log(`🔧 [MCP] Auto-corrigiendo configuración de Tenable al cargar...`);
+          const projectRoot = app.getAppPath();
+          const tenableDir = path.join(projectRoot, 'src', 'mcp-servers', 'tenable');
+          const tenablePath = path.join(tenableDir, 'index.js');
+          
+          tenableConfig.command = 'node';
+          tenableConfig.args = ['index.js'];
+          tenableConfig.cwd = tenableDir; // CRÍTICO: Ejecutar desde el directorio donde están las dependencias
+          
+          // Guardar la configuración corregida
+          await this.saveConfig();
+          console.log(`   ✅ Configuración de Tenable corregida y guardada`);
+          console.log(`   Comando: node index.js`);
+          console.log(`   CWD: ${tenableDir}`);
+        }
+        
         // Migración/auto-fix: si cli-mcp-server no tiene cwd pero sí ALLOWED_DIR, usarlo como cwd
         // También asegurar que ALLOWED_FLAGS incluye flags de PowerShell por defecto
         try {
@@ -319,14 +338,27 @@ class MCPService {
     // stderr: logs y errores
     process.stderr.on('data', (data) => {
       const message = data.toString().trim();
-      if (message && this.verboseLogs) {
-        console.log(`📝 [MCP ${serverId}] stderr:`, message);
+      // 🔒 CRÍTICO: Siempre mostrar stderr para servidores que fallan
+      if (message) {
+        if (serverId === 'tenable' || this.verboseLogs) {
+          console.error(`📝 [MCP ${serverId}] stderr:`, message);
+        } else if (this.verboseLogs) {
+          console.log(`📝 [MCP ${serverId}] stderr:`, message);
+        }
       }
     });
 
     // exit: proceso terminado
     process.on('exit', (code, signal) => {
-      console.log(`🛑 [MCP ${serverId}] Proceso terminado (código: ${code}, señal: ${signal})`);
+      if (code !== 0) {
+        console.error(`❌ [MCP ${serverId}] Proceso terminado con ERROR (código: ${code}, señal: ${signal})`);
+        console.error(`   Comando: ${mcpProcess.config.command} ${(mcpProcess.config.args || []).join(' ')}`);
+        if (mcpProcess.config.cwd) {
+          console.error(`   Directorio: ${mcpProcess.config.cwd}`);
+        }
+      } else {
+        console.log(`🛑 [MCP ${serverId}] Proceso terminado (código: ${code}, señal: ${signal})`);
+      }
       this.handleProcessExit(serverId, code, signal);
     });
 
@@ -522,6 +554,11 @@ class MCPService {
       mcpProcess.capabilities = result.capabilities;
       mcpProcess.state = 'ready';
       console.log(`✅ [MCP ${serverId}] Handshake completado`);
+      console.log(`   Capabilities:`, JSON.stringify({
+        tools: result.capabilities?.tools ? 'soportado' : 'no soportado',
+        resources: result.capabilities?.resources ? 'soportado' : 'no soportado',
+        prompts: result.capabilities?.prompts ? 'soportado' : 'no soportado'
+      }));
     }
 
     // Enviar initialized notification
@@ -561,18 +598,40 @@ class MCPService {
    */
   async refreshServerCapabilities(serverId) {
     const mcpProcess = this.mcpProcesses.get(serverId);
-    if (!mcpProcess || mcpProcess.state !== 'ready') {
+    if (!mcpProcess) {
+      console.warn(`⚠️ [MCP ${serverId}] No se puede refrescar capabilities: proceso no existe`);
+      return;
+    }
+    
+    if (mcpProcess.state !== 'ready') {
+      console.warn(`⚠️ [MCP ${serverId}] No se puede refrescar capabilities: estado es '${mcpProcess.state}' (necesita 'ready')`);
       return;
     }
 
     try {
-      // Listar tools
-      if (mcpProcess.capabilities?.tools) {
-        const toolsResult = await this.sendRequest(serverId, 'tools/list');
-        mcpProcess.tools = toolsResult.tools || [];
-        if (this.verboseLogs) {
+      // Listar tools - SIEMPRE intentar si el servidor está ready, incluso si capabilities no lo indica explícitamente
+      // Algunos servidores MCP pueden no reportar capabilities.tools pero sí tener tools
+      const shouldListTools = mcpProcess.capabilities?.tools !== false; // true si no está explícitamente en false
+      
+      if (shouldListTools) {
+        try {
+          const toolsResult = await this.sendRequest(serverId, 'tools/list');
+          mcpProcess.tools = toolsResult.tools || [];
           console.log(`🔧 [MCP ${serverId}] Tools disponibles: ${mcpProcess.tools.length}`);
+          
+          // Log de nombres de herramientas para debugging
+          if (mcpProcess.tools.length > 0) {
+            const toolNames = mcpProcess.tools.map(t => t.name).join(', ');
+            console.log(`   Herramientas: ${toolNames}`);
+          } else {
+            console.warn(`⚠️ [MCP ${serverId}] Servidor reporta 0 herramientas`);
+          }
+        } catch (error) {
+          console.error(`❌ [MCP ${serverId}] Error obteniendo tools:`, error.message);
+          // No fallar completamente, continuar con resources y prompts
         }
+      } else {
+        console.log(`ℹ️ [MCP ${serverId}] Servidor no reporta soporte para tools`);
       }
 
       // Listar resources
@@ -801,6 +860,23 @@ class MCPService {
     if (!existing) {
       return { success: false, error: `MCP ${serverId} no encontrado` };
     }
+    
+    // 🔒 AUTO-FIX: Si Tenable está usando npx con paquete inexistente, corregir automáticamente
+    if (serverId === 'tenable') {
+      const projectRoot = app.getAppPath();
+      const tenableDir = path.join(projectRoot, 'src', 'mcp-servers', 'tenable');
+      const correctCwd = tenableDir;
+      
+      if (existing.command === 'npx' || existing.cwd !== correctCwd) {
+        console.log(`🔧 [MCP Service] Auto-corrigiendo configuración de Tenable...`);
+        
+        existing.command = 'node';
+        existing.args = ['index.js'];
+        existing.cwd = correctCwd; // CRÍTICO: Ejecutar desde el directorio donde están las dependencias
+        console.log(`   Comando corregido: node index.js`);
+        console.log(`   CWD: ${correctCwd}`);
+      }
+    }
 
     let merged;
 
@@ -983,12 +1059,24 @@ class MCPService {
 
     console.log(`🔧 [MCP ${serverId}] Llamando tool: ${toolName}`);
     console.log(`   Argumentos:`, JSON.stringify(args, null, 2));
+    
+    // 🔒 DEBUG: Validar que toolName no sea undefined
+    if (!toolName || toolName === 'undefined') {
+      console.error(`❌ [MCP ${serverId}] ERROR: toolName es undefined o inválido`);
+      console.error(`   Tipo: ${typeof toolName}`);
+      console.error(`   Valor: ${toolName}`);
+      throw new Error(`Nombre de herramienta inválido: ${toolName}`);
+    }
 
     try {
-      const result = await this.sendRequest(serverId, 'tools/call', {
+      const requestParams = {
         name: toolName,
-        arguments: args
-      }, 60000); // 60s timeout para tools
+        arguments: args || {}
+      };
+      
+      console.log(`📤 [MCP ${serverId}] Enviando request tools/call con:`, JSON.stringify(requestParams, null, 2));
+      
+      const result = await this.sendRequest(serverId, 'tools/call', requestParams, 60000); // 60s timeout para tools
 
       console.log(`✅ [MCP ${serverId}] Tool ${toolName} ejecutada correctamente`);
       
