@@ -58,7 +58,15 @@ const TabContentRenderer = React.memo(({
   sshStatsByTabId: terminalSshStatsByTabId,
   // Recording props
   onOpenRecordingPlayer,
-  setSshTabs
+  setSshTabs,
+  // Tab activation props
+  setActiveTabIndex,
+  setLastOpenedTabKey,
+  setOnCreateActivateTabKey,
+  setGroupActiveIndices,
+  setOpenTabOrder,
+  activeGroupId,
+  activeTabIndex
 }) => {
   if (tab.type === 'home') {
     return (
@@ -1066,18 +1074,38 @@ const TabContentRenderer = React.memo(({
         onPlayRecording={(recording) => {
           // Crear nueva pestaña para reproducir la grabación
           if (setSshTabs) {
-            setSshTabs(prevTabs => {
-              const tabId = `player_${recording.id}_${Date.now()}`;
-              const newTab = {
-                key: tabId,
-                label: `▶️ ${recording.title || recording.metadata?.title || 'Reproducción'}`,
-                type: 'recording-player',
-                recording: recording,
-                createdAt: Date.now(),
-                groupId: null
-              };
-              return [newTab, ...prevTabs];
-            });
+            const tabId = `player_${recording.id}_${Date.now()}`;
+            const newTab = {
+              key: tabId,
+              label: `▶️ ${recording.title || recording.metadata?.title || 'Reproducción'}`,
+              type: 'recording-player',
+              recording: recording,
+              createdAt: Date.now(),
+              groupId: null
+            };
+            
+            // Guardar estado del grupo actual antes de cambiar
+            if (activeGroupId !== null && setGroupActiveIndices) {
+              const currentGroupKey = activeGroupId || 'no-group';
+              setGroupActiveIndices(prev => ({
+                ...prev,
+                [currentGroupKey]: activeTabIndex
+              }));
+            }
+            
+            // Crear la pestaña y activarla
+            setSshTabs(prevTabs => [newTab, ...prevTabs]);
+            
+            // Activar la nueva pestaña
+            if (setLastOpenedTabKey) setLastOpenedTabKey(tabId);
+            if (setOnCreateActivateTabKey) setOnCreateActivateTabKey(tabId);
+            if (setActiveTabIndex) setActiveTabIndex(1);
+            if (setGroupActiveIndices) {
+              setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+            }
+            if (setOpenTabOrder) {
+              setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
+            }
           }
         }}
       />
@@ -1092,18 +1120,38 @@ const TabContentRenderer = React.memo(({
         onPlayRecording={(recording) => {
           // Crear nueva pestaña para reproducir la grabación
           if (setSshTabs) {
-            setSshTabs(prevTabs => {
-              const tabId = `player_${recording.id}_${Date.now()}`;
-              const newTab = {
-                key: tabId,
-                label: `▶️ ${recording.title || recording.metadata?.title || 'Reproducción'}`,
-                type: 'recording-player',
-                recording: recording,
-                createdAt: Date.now(),
-                groupId: null
-              };
-              return [newTab, ...prevTabs];
-            });
+            const tabId = `player_${recording.id}_${Date.now()}`;
+            const newTab = {
+              key: tabId,
+              label: `▶️ ${recording.title || recording.metadata?.title || 'Reproducción'}`,
+              type: 'recording-player',
+              recording: recording,
+              createdAt: Date.now(),
+              groupId: null
+            };
+            
+            // Guardar estado del grupo actual antes de cambiar
+            if (activeGroupId !== null && setGroupActiveIndices) {
+              const currentGroupKey = activeGroupId || 'no-group';
+              setGroupActiveIndices(prev => ({
+                ...prev,
+                [currentGroupKey]: activeTabIndex
+              }));
+            }
+            
+            // Crear la pestaña y activarla
+            setSshTabs(prevTabs => [newTab, ...prevTabs]);
+            
+            // Activar la nueva pestaña
+            if (setLastOpenedTabKey) setLastOpenedTabKey(tabId);
+            if (setOnCreateActivateTabKey) setOnCreateActivateTabKey(tabId);
+            if (setActiveTabIndex) setActiveTabIndex(1);
+            if (setGroupActiveIndices) {
+              setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+            }
+            if (setOpenTabOrder) {
+              setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
+            }
           }
         }}
       />
