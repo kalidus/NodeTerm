@@ -24,6 +24,7 @@ export const useDialogManagement = () => {
   const [sshRemoteFolder, setSSHRemoteFolder] = useState('');
   const [sshPort, setSSHPort] = useState(22);
   const [sshTargetFolder, setSSHTargetFolder] = useState(null);
+  const [sshAutoCopyPassword, setSSHAutoCopyPassword] = useState(false);
 
   // Editar SSH
   const [editSSHNode, setEditSSHNode] = useState(null);
@@ -33,6 +34,7 @@ export const useDialogManagement = () => {
   const [editSSHPassword, setEditSSHPassword] = useState('');
   const [editSSHRemoteFolder, setEditSSHRemoteFolder] = useState('');
   const [editSSHPort, setEditSSHPort] = useState(22);
+  const [editSSHAutoCopyPassword, setEditSSHAutoCopyPassword] = useState(false);
 
   // ============ ESTADOS DE FORMULARIOS RDP ============
   
@@ -65,6 +67,7 @@ export const useDialogManagement = () => {
     setSSHRemoteFolder('');
     setSSHPort(22);
     setSSHTargetFolder(null);
+    setSSHAutoCopyPassword(false);
   };
 
   // Resetear todos los campos RDP
@@ -94,6 +97,7 @@ export const useDialogManagement = () => {
     setEditSSHPassword('');
     setEditSSHRemoteFolder('');
     setEditSSHPort(22);
+    setEditSSHAutoCopyPassword(false);
   };
 
   // Resetear todos los campos Edit Folder
@@ -173,6 +177,7 @@ export const useDialogManagement = () => {
     sshRemoteFolder, setSSHRemoteFolder,
     sshPort, setSSHPort,
     sshTargetFolder, setSSHTargetFolder,
+    sshAutoCopyPassword, setSSHAutoCopyPassword,
 
     // Estados de formularios Edit SSH
     editSSHNode, setEditSSHNode,
@@ -182,6 +187,7 @@ export const useDialogManagement = () => {
     editSSHPassword, setEditSSHPassword,
     editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort,
+    editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
 
     // Estados de formularios RDP
     rdpName, setRdpName,

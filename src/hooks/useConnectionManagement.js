@@ -159,6 +159,33 @@ export const useConnectionManagement = ({
       return;
     }
 
+    // Obtener password y verificar si debe copiarse automáticamente
+    const password = isSidebarNode ? nodeOrConn.data.password : (nodeOrConn.password || matchedSidebarNode?.data?.password || '');
+    const autoCopyPassword = isSidebarNode ? (nodeOrConn.data.autoCopyPassword || false) : (matchedSidebarNode?.data?.autoCopyPassword || false);
+    
+    // Copiar password automáticamente si está configurado
+    if (autoCopyPassword && password) {
+      try {
+        if (window.electron?.clipboard?.writeText) {
+          window.electron.clipboard.writeText(password);
+        } else {
+          navigator.clipboard.writeText(password);
+        }
+        
+        // Mostrar notificación si está disponible
+        if (window.toast?.current?.show) {
+          window.toast.current.show({ 
+            severity: 'success', 
+            summary: 'Password copiado', 
+            detail: 'Contraseña copiada al portapapeles automáticamente', 
+            life: 2000 
+          });
+        }
+      } catch (err) {
+        console.error('Error copiando password automáticamente:', err);
+      }
+    }
+    
     // Registrar como reciente (SSH) - incluir todas las credenciales y configuración
     try {
       connectionStore.recordRecent({
@@ -167,7 +194,7 @@ export const useConnectionManagement = ({
         host: conn.host,
         username: conn.username,
         port: conn.port,
-        password: isSidebarNode ? nodeOrConn.data.password : (nodeOrConn.password || matchedSidebarNode?.data?.password || ''),
+        password: password,
         useBastionWallix: isSidebarNode ? (nodeOrConn.data.useBastionWallix || false) : (nodeOrConn.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false),
         bastionHost: isSidebarNode ? (nodeOrConn.data.bastionHost || '') : (nodeOrConn.bastionHost || matchedSidebarNode?.data?.bastionHost || ''),
         bastionUser: isSidebarNode ? (nodeOrConn.data.bastionUser || '') : (nodeOrConn.bastionUser || matchedSidebarNode?.data?.bastionUser || ''),
@@ -190,7 +217,7 @@ export const useConnectionManagement = ({
       const sshConfig = {
         host: conn.host,
         username: conn.username,
-        password: isSidebarNode ? nodeOrConn.data.password : (nodeOrConn.password || matchedSidebarNode?.data?.password || ''),
+        password: password,
         port: conn.port,
         originalKey: conn.originalKey,
         useBastionWallix: isSidebarNode ? (nodeOrConn.data.useBastionWallix || false) : (nodeOrConn.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false),

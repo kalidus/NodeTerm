@@ -17,7 +17,7 @@ export const useFormHandlers = ({
   setShowUnifiedConnectionDialog,
   
   // Estados de formularios SSH
-  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder,
+  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword,
   closeSSHDialogWithReset,
   
   // Estados de formularios Edit SSH  
@@ -28,6 +28,7 @@ export const useFormHandlers = ({
   editSSHPassword, setEditSSHPassword,
   editSSHRemoteFolder, setEditSSHRemoteFolder,
   editSSHPort, setEditSSHPort,
+  editSSHAutoCopyPassword,
   closeEditSSHDialogWithReset,
   
   // Estados de formularios RDP
@@ -193,7 +194,9 @@ export const useFormHandlers = ({
         useBastionWallix: userInfo.isWallix,
         bastionHost: userInfo.isWallix ? sshHost.trim() : '', // En Wallix, el host es el bastión
         bastionUser: userInfo.isWallix ? userInfo.bastionUser : '',
-        targetServer: userInfo.isWallix ? userInfo.targetServer : ''
+        targetServer: userInfo.isWallix ? userInfo.targetServer : '',
+        // Opción de copiar password automáticamente
+        autoCopyPassword: sshAutoCopyPassword || false
       },
       draggable: true,
       droppable: false, // Las sesiones SSH NO pueden contener otros elementos
@@ -224,7 +227,7 @@ export const useFormHandlers = ({
       detail: `Conexión SSH "${sshName}" añadida al árbol`,
       life: 3000
     });
-  }, [sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
+  }, [sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
 
   /**
    * Crear nueva conexión RDP
@@ -381,7 +384,9 @@ export const useFormHandlers = ({
         useBastionWallix: userInfo.isWallix,
         bastionHost: userInfo.isWallix ? editSSHHost.trim() : '', // En Wallix, el host ingresado es el bastión
         bastionUser: userInfo.isWallix ? userInfo.bastionUser : '',
-        targetServer: userInfo.isWallix ? userInfo.targetServer : ''
+        targetServer: userInfo.isWallix ? userInfo.targetServer : '',
+        // Opción de copiar password automáticamente
+        autoCopyPassword: editSSHAutoCopyPassword || false
       };
       nodeToEdit.droppable = false; // Asegurar que las sesiones SSH no sean droppable
     }
@@ -403,7 +408,7 @@ export const useFormHandlers = ({
       detail: `Sesión SSH actualizada`,
       life: 3000
     });
-  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHRemoteFolder, editSSHPort, editSSHNode, nodes, setNodes, findNodeByKey, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, toast]);
+  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHNode, nodes, setNodes, findNodeByKey, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, toast]);
 
   /**
    * Guardar edición de carpeta
