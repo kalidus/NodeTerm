@@ -164,13 +164,13 @@
 }
 
 .breadcrumb-path-input:focus-within {
-  border-color: var(--theme-primary, #667eea);
-  background: var(--theme-bg, white);
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+  border-color: var(--theme-border, rgba(0, 0, 0, 0.1));
+  background: var(--theme-secondary, rgba(0, 0, 0, 0.03));
+  box-shadow: none;
 }
 
 .breadcrumb-path-field {
-  width: 180px;
+  width: 300px;
   border: none !important;
   outline: none !important;
   background: transparent !important;
@@ -179,6 +179,18 @@
   font-weight: 500 !important;
   padding: 0.125rem 0.25rem !important;
   font-family: 'Consolas', 'Monaco', monospace !important;
+}
+
+.breadcrumb-path-field:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.breadcrumb-path-field.p-inputtext:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 
 .breadcrumb-path-field::placeholder {
