@@ -4183,6 +4183,133 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
   }
 
   /**
+   * Validar y leer JSON de forma segura con límites de tamaño
+   * Evita que respuestas muy largas causen crash de memoria
+   */
+  async _safeReadJSON(response, modelId) {
+    // Límite de seguridad: 10MB para respuesta JSON
+    const MAX_RESPONSE_SIZE = 10 * 1024 * 1024; // 10MB
+    
+    try {
+      // Verificar Content-Length si está disponible
+      const contentLength = response.headers.get('content-length');
+      if (contentLength) {
+        const size = parseInt(contentLength, 10);
+        if (size > MAX_RESPONSE_SIZE) {
+          debugLogger.warn('AIService.RemoteModel', 'Respuesta excede límite de tamaño', {
+            modelId,
+            contentLength: size,
+            maxAllowed: MAX_RESPONSE_SIZE
+          });
+          throw new Error(`La respuesta del modelo es demasiado grande (${Math.round(size / 1024 / 1024)}MB). Intenta con una pregunta más específica.`);
+        }
+      }
+      
+      // Leer respuesta con timeout de 30 segundos
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout al procesar respuesta del modelo (30s)')), 30000)
+      );
+      
+      const data = await Promise.race([
+        response.json(),
+        timeoutPromise
+      ]);
+      
+      return data;
+      
+    } catch (error) {
+      // Capturar errores de memoria específicos
+      if (error.message.includes('out of memory') || 
+          error.message.includes('allocation failed') ||
+          error.message.includes('JavaScript heap')) {
+        debugLogger.error('AIService.RemoteModel', 'Error de memoria al leer JSON', {
+          modelId,
+          error: error.message
+        });
+        throw new Error('La respuesta del modelo es demasiado grande y causó un error de memoria. Por favor, intenta con una pregunta más específica o divide tu solicitud en partes más pequeñas.');
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Procesar respuesta de forma segura con límites de tamaño
+   * Evita que respuestas muy largas causen crash de memoria
+   */
+  async _safeProcessResponse(response, modelProvider, modelId) {
+    const MAX_CONTENT_LENGTH = 500000; // ~500k caracteres para el contenido de texto
+    
+    try {
+      // Leer JSON de forma segura
+      const data = await this._safeReadJSON(response, modelId);
+      
+      // Extraer contenido según el proveedor
+      let content = '';
+      if (modelProvider === 'openai') {
+        content = data.choices?.[0]?.message?.content || '';
+      } else if (modelProvider === 'anthropic') {
+        content = data.content?.[0]?.text || '';
+      } else if (modelProvider === 'google') {
+        content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      }
+      
+      // Verificar tamaño del contenido extraído
+      if (content.length > MAX_CONTENT_LENGTH) {
+        debugLogger.warn('AIService.RemoteModel', 'Contenido de respuesta muy largo, truncando', {
+          modelId,
+          originalLength: content.length,
+          maxAllowed: MAX_CONTENT_LENGTH
+        });
+        
+        // Truncar de forma inteligente en el último punto o salto de línea antes del límite
+        let truncated = content.substring(0, MAX_CONTENT_LENGTH);
+        const lastPeriod = truncated.lastIndexOf('.');
+        const lastNewline = truncated.lastIndexOf('\n');
+        const cutPoint = Math.max(lastPeriod, lastNewline);
+        
+        if (cutPoint > MAX_CONTENT_LENGTH * 0.8) { // Si el punto está en el último 20%
+          truncated = truncated.substring(0, cutPoint + 1);
+        }
+        
+        content = truncated + '\n\n[⚠️ Respuesta truncada por exceder el límite de tamaño. La respuesta original era muy larga.]';
+      }
+      
+      return content;
+      
+    } catch (error) {
+      // Propagar errores ya formateados
+      throw error;
+    }
+  }
+  
+  /**
+   * Truncar contenido de texto si excede límites
+   */
+  _truncateContent(content, maxLength = 500000) {
+    if (!content || content.length <= maxLength) {
+      return content;
+    }
+    
+    debugLogger.warn('AIService.RemoteModel', 'Truncando contenido largo', {
+      originalLength: content.length,
+      maxAllowed: maxLength
+    });
+    
+    // Truncar de forma inteligente
+    let truncated = content.substring(0, maxLength);
+    const lastPeriod = truncated.lastIndexOf('.');
+    const lastNewline = truncated.lastIndexOf('\n');
+    const cutPoint = Math.max(lastPeriod, lastNewline);
+    
+    if (cutPoint > maxLength * 0.8) {
+      truncated = truncated.substring(0, cutPoint + 1);
+    }
+    
+    return truncated + '\n\n[⚠️ Respuesta truncada por exceder el límite de tamaño. La respuesta original era muy larga.]';
+  }
+
+  /**
    * Enviar mensaje a modelo remoto
    */
   async sendToRemoteModel(message, options = {}) {
@@ -4288,16 +4415,9 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
             throw new Error(errorMessage);
       }
 
-      const data = await response.json();
-      
-      // Extraer respuesta según el proveedor
-      if (model.provider === 'openai') {
-        return data.choices[0].message.content;
-      } else if (model.provider === 'anthropic') {
-        return data.content[0].text;
-          } else if (model.provider === 'google') {
-            return data.candidates[0].content.parts[0].text;
-          }
+      // 🛡️ USAR PROCESAMIENTO SEGURO para evitar crashes de memoria con respuestas largas
+      const content = await this._safeProcessResponse(response, model.provider, model.id);
+      return content;
         } catch (error) {
           lastError = error;
           
@@ -4656,7 +4776,8 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
             throw new Error(errorMessage);
           }
 
-          const data = await response.json();
+          // 🛡️ LEER JSON DE FORMA SEGURA para evitar crashes de memoria
+          const data = await this._safeReadJSON(response, model.id);
           
           // Extraer respuesta y manejar tool-calls cuando aplique
           if (model.provider === 'openai') {
@@ -4738,11 +4859,13 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
                 const e2 = await response2.text();
                 throw new Error(e2 || 'Error tras tool calls');
               }
-              const data2 = await response2.json();
-              const finalText = data2.choices?.[0]?.message?.content || '';
+              const data2 = await this._safeReadJSON(response2, model.id);
+              let finalText = data2.choices?.[0]?.message?.content || '';
+              finalText = this._truncateContent(finalText);
               return await this._handleRemotePostResponse(finalText, conversationMessages, mcpContext, callbacks, options, model);
             }
-            const finalText = choice.content || '';
+            let finalText = choice.content || '';
+            finalText = this._truncateContent(finalText);
             return await this._handleRemotePostResponse(finalText, conversationMessages, mcpContext, callbacks, options, model);
           } else if (model.provider === 'anthropic') {
             // Búsqueda simple de tool_use en contenido (aprox)
@@ -4766,8 +4889,9 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
                   const e2 = await response2.text();
                   throw new Error(e2 || 'Error tras tool calls (Anthropic)');
                 }
-                const data2 = await response2.json();
-                const finalText = data2.content?.[0]?.text || '';
+                const data2 = await this._safeReadJSON(response2, model.id);
+                let finalText = data2.content?.[0]?.text || '';
+                finalText = this._truncateContent(finalText);
                 return await this._handleRemotePostResponse(finalText, conversationMessages, mcpContext, callbacks, options, model);
               }
               
@@ -4794,8 +4918,9 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
                   const e2 = await response2.text();
                   throw new Error(e2 || 'Error tras tool calls (Anthropic)');
                 }
-                const data2 = await response2.json();
-                const finalText = data2.content?.[0]?.text || '';
+                const data2 = await this._safeReadJSON(response2, model.id);
+                let finalText = data2.content?.[0]?.text || '';
+                finalText = this._truncateContent(finalText);
                 return await this._handleRemotePostResponse(finalText, conversationMessages, mcpContext, callbacks, options, model);
               } catch (e) {
                 rememberToolExecution(conversationService.currentConversationId, toolName, callArgs, {
@@ -4806,7 +4931,8 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
                 return `Error ejecutando herramienta: ${e.message}`;
               }
             }
-            const finalText = data.content?.[0]?.text || '';
+            let finalText = data.content?.[0]?.text || '';
+            finalText = this._truncateContent(finalText);
             return await this._handleRemotePostResponse(finalText, conversationMessages, mcpContext, callbacks, options, model);
           } else if (model.provider === 'google') {
             // Detectar functionCall y ejecutar tools si aplica
