@@ -320,15 +320,6 @@ const AIClientsTab = ({ themeColors }) => {
                     style={{ marginRight: '0.5rem' }}
                   />
                 )}
-                {status.running && (
-                  <Button
-                    label="Abrir en Navegador"
-                    icon="pi pi-external-link"
-                    onClick={() => window.electron.ipcRenderer.invoke('app:open-external', client.url)}
-                    className="p-button-info p-button-sm"
-                    style={{ marginRight: '0.5rem' }}
-                  />
-                )}
                 <Button
                   label="Verificar Estado"
                   icon="pi pi-refresh"

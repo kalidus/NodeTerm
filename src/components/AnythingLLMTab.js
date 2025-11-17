@@ -260,15 +260,6 @@ const AnythingLLMTab = () => {
     setReloadKey((prev) => prev + 1);
   };
 
-  const handleOpenExternal = useCallback(() => {
-    if (!url) return;
-    if (window.electron?.import?.openExternal) {
-      window.electron.import.openExternal(url);
-    } else {
-      window.open(url, '_blank');
-    }
-  }, [url]);
-
   const handleOpenMCPDialog = useCallback(async () => {
     setShowMCPDialog(true);
     setMcpConfigError(null);
@@ -741,15 +732,6 @@ const AnythingLLMTab = () => {
             disabled={!isReady}
             onClick={handleReloadWebView}
             tooltip="Recargar UI"
-            tooltipOptions={{ position: 'top' }}
-          />
-          <Button
-            icon="pi pi-external-link"
-            size="small"
-            className="anythingllm-action-btn"
-            disabled={!isReady || !url}
-            onClick={handleOpenExternal}
-            tooltip="Abrir en navegador"
             tooltipOptions={{ position: 'top' }}
           />
           <Button

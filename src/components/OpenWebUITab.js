@@ -167,15 +167,6 @@ const OpenWebUITab = () => {
     setReloadKey((prev) => prev + 1);
   };
 
-  const handleOpenExternal = useCallback(() => {
-    if (!url) return;
-    if (window.electron?.import?.openExternal) {
-      window.electron.import.openExternal(url);
-    } else {
-      window.open(url, '_blank');
-    }
-  }, [url]);
-
   const renderStatusCard = () => (
     <div className="openwebui-status-card">
       <ProgressSpinner style={{ width: '40px', height: '40px' }} />
@@ -295,15 +286,6 @@ const OpenWebUITab = () => {
             disabled={!isReady}
             onClick={handleReloadWebView}
             tooltip="Recargar UI"
-            tooltipOptions={{ position: 'top' }}
-          />
-          <Button
-            icon="pi pi-external-link"
-            size="small"
-            className="openwebui-action-btn"
-            disabled={!isReady || !url}
-            onClick={handleOpenExternal}
-            tooltip="Abrir en navegador"
             tooltipOptions={{ position: 'top' }}
           />
         </div>
