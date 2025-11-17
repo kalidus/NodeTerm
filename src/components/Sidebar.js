@@ -87,6 +87,7 @@ const Sidebar = React.memo(({
   sshPort, setSSHPort,
   sshRemoteFolder, setSSHRemoteFolder,
   sshTargetFolder, setSSHTargetFolder,
+  sshAutoCopyPassword, setSSHAutoCopyPassword,
   
   // Estados de formularios Edit SSH
   editSSHName, setEditSSHName,
@@ -95,6 +96,7 @@ const Sidebar = React.memo(({
   editSSHPassword, setEditSSHPassword,
   editSSHRemoteFolder, setEditSSHRemoteFolder,
   editSSHPort, setEditSSHPort,
+  editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
   
   // Estados para modo edición
   editSSHNode, setEditSSHNode,
@@ -2211,6 +2213,8 @@ const Sidebar = React.memo(({
         setSSHRemoteFolder={editSSHNode ? setEditSSHRemoteFolder : setSSHRemoteFolder}
         sshTargetFolder={sshTargetFolder}
         setSSHTargetFolder={setSSHTargetFolder}
+        sshAutoCopyPassword={editSSHNode ? editSSHAutoCopyPassword : sshAutoCopyPassword}
+        setSSHAutoCopyPassword={editSSHNode ? setEditSSHAutoCopyPassword : setSSHAutoCopyPassword}
         onSSHConfirm={editSSHNode ? saveEditSSH : createNewSSH}
         allowPasswordTab={viewMode === 'passwords'}
       />

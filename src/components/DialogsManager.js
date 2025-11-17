@@ -55,6 +55,8 @@ const DialogsManager = ({
   setSSHPort,
   sshTargetFolder,
   setSSHTargetFolder,
+  sshAutoCopyPassword,
+  setSSHAutoCopyPassword,
   
   // Estados de formularios Edit SSH
   editSSHName,
@@ -69,6 +71,8 @@ const DialogsManager = ({
   setEditSSHRemoteFolder,
   editSSHPort,
   setEditSSHPort,
+  editSSHAutoCopyPassword,
+  setEditSSHAutoCopyPassword,
   
   // Estados de formularios RDP
   rdpName,
@@ -468,6 +472,8 @@ const DialogsManager = ({
         setSSHRemoteFolder={editSSHNode ? setEditSSHRemoteFolder : setSSHRemoteFolder}
         sshTargetFolder={sshTargetFolder}
         setSSHTargetFolder={setSSHTargetFolder}
+        sshAutoCopyPassword={editSSHNode ? editSSHAutoCopyPassword : sshAutoCopyPassword}
+        setSSHAutoCopyPassword={editSSHNode ? setEditSSHAutoCopyPassword : setSSHAutoCopyPassword}
         foldersOptions={getAllFolders(nodes)}
         onSSHConfirm={editSSHNode ? saveEditSSH : createNewSSH}
         sshLoading={false}

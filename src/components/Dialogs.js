@@ -301,6 +301,7 @@ export function UnifiedConnectionDialog({
   sshPort, setSSHPort,
   sshRemoteFolder, setSSHRemoteFolder,
   sshTargetFolder, setSSHTargetFolder,
+  sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
   foldersOptions = [],
   onSSHConfirm,
   sshLoading = false,
@@ -427,6 +428,9 @@ export function UnifiedConnectionDialog({
         setSSHPassword(editNodeData.data?.password || '');
         setSSHRemoteFolder(editNodeData.data?.remoteFolder || '');
         setSSHPort(editNodeData.data?.port || 22);
+        if (setSSHAutoCopyPassword && typeof setSSHAutoCopyPassword === 'function') {
+          setSSHAutoCopyPassword(editNodeData.data?.autoCopyPassword || false);
+        }
         setActiveTabIndex(0); // Tab SSH
       } else if (editConnectionType === 'rdp') {
         // Precargar datos RDP
@@ -473,7 +477,7 @@ export function UnifiedConnectionDialog({
         setActiveTabIndex(1); // Tab RDP
       }
     }
-  }, [isEditMode, editNodeData, editConnectionType, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHRemoteFolder, setSSHPort]);
+  }, [isEditMode, editNodeData, editConnectionType, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword]);
 
   // Header personalizado con botón de expansión
   const customHeader = (
@@ -519,6 +523,8 @@ export function UnifiedConnectionDialog({
             setSSHRemoteFolder={setSSHRemoteFolder}
             sshTargetFolder={sshTargetFolder}
             setSSHTargetFolder={setSSHTargetFolder}
+            sshAutoCopyPassword={sshAutoCopyPassword}
+            setSSHAutoCopyPassword={setSSHAutoCopyPassword}
             foldersOptions={foldersOptions}
             onSSHConfirm={onSSHConfirm}
             onHide={onHide}
@@ -823,6 +829,8 @@ export function UnifiedConnectionDialog({
             setSSHRemoteFolder={setSSHRemoteFolder}
             sshTargetFolder={sshTargetFolder}
             setSSHTargetFolder={setSSHTargetFolder}
+            sshAutoCopyPassword={sshAutoCopyPassword}
+            setSSHAutoCopyPassword={setSSHAutoCopyPassword}
             foldersOptions={foldersOptions}
             onSSHConfirm={onSSHConfirm}
             onHide={onHide}
@@ -1202,6 +1210,7 @@ export function EnhancedSSHForm({
   sshPort, setSSHPort,
   sshRemoteFolder, setSSHRemoteFolder,
   sshTargetFolder, setSSHTargetFolder,
+  sshAutoCopyPassword, setSSHAutoCopyPassword,
   foldersOptions,
   onSSHConfirm,
   onHide,
@@ -1211,6 +1220,18 @@ export function EnhancedSSHForm({
   const [sshPrivateKey, setSSHPrivateKey] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const [autoCopyPassword, setAutoCopyPassword] = useState(!!sshAutoCopyPassword);
+
+  useEffect(() => {
+    setAutoCopyPassword(!!sshAutoCopyPassword);
+  }, [sshAutoCopyPassword]);
+
+  const handleAutoCopyToggle = (checked) => {
+    setAutoCopyPassword(!!checked);
+    if (typeof setSSHAutoCopyPassword === 'function') {
+      setSSHAutoCopyPassword(!!checked);
+    }
+  };
 
   // Validación solo al intentar crear la conexión
   const validateForm = () => {
@@ -1339,28 +1360,40 @@ export function EnhancedSSHForm({
                 </div>
 
                 {authMethod === 'password' && (
-                  <div className="field col-12">
-                    <label htmlFor="sshPassword">Contraseña *</label>
-                    <div className="p-inputgroup">
-                      <InputText 
-                        id="sshPassword"
-                        type={showPassword ? "text" : "password"} 
-                        value={sshPassword} 
-                        onChange={(e) => setSSHPassword(e.target.value)}
-                        placeholder="Ingresa tu contraseña"
-                        className={validationErrors.auth ? 'p-invalid' : ''}
-                      />
-                      <Button 
-                        type="button" 
-                        icon={showPassword ? "pi pi-eye-slash" : "pi pi-eye"} 
-                        className="p-button-outlined"
-                        onClick={() => setShowPassword(!showPassword)}
-                        tooltip={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                        tooltipOptions={{ position: 'top' }}
-                      />
+                  <>
+                    <div className="field col-12">
+                      <label htmlFor="sshPassword">Contraseña *</label>
+                      <div className="p-inputgroup">
+                        <InputText 
+                          id="sshPassword"
+                          type={showPassword ? "text" : "password"} 
+                          value={sshPassword} 
+                          onChange={(e) => setSSHPassword(e.target.value)}
+                          placeholder="Ingresa tu contraseña"
+                          className={validationErrors.auth ? 'p-invalid' : ''}
+                        />
+                        <Button 
+                          type="button" 
+                          icon={showPassword ? "pi pi-eye-slash" : "pi pi-eye"} 
+                          className="p-button-outlined"
+                          onClick={() => setShowPassword(!showPassword)}
+                          tooltip={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                          tooltipOptions={{ position: 'top' }}
+                        />
+                      </div>
+                      {validationErrors.auth && <small className="p-error">{validationErrors.auth}</small>}
                     </div>
-                    {validationErrors.auth && <small className="p-error">{validationErrors.auth}</small>}
-                  </div>
+                    <div className="field-checkbox col-12" style={{ marginTop: '8px' }}>
+                      <Checkbox 
+                        inputId="sshAutoCopyPassword" 
+                        checked={autoCopyPassword} 
+                        onChange={(e) => handleAutoCopyToggle(e.checked)}
+                      />
+                      <label htmlFor="sshAutoCopyPassword" style={{ cursor: 'pointer', marginLeft: '8px' }}>
+                        Copiar contraseña automáticamente al conectar
+                      </label>
+                    </div>
+                  </>
                 )}
 
                 {authMethod === 'key' && (
