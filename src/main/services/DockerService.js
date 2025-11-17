@@ -199,14 +199,7 @@ async function startDockerSession(tabId, containerName, { cols, rows }) {
     
     // Verificar si ya hay un proceso activo
     if (dockerProcesses[tabId]) {
-      console.log(`✅ Docker ${containerName} ${tabId}: Reutilizando - enviando prompt`);
-      // Enviar un Enter para generar output y mostrar prompt
-      setTimeout(() => {
-        if (dockerProcesses[tabId]) {
-          console.log(`🐳 [REUSE] Enviando Enter en proceso reutilizado`);
-          dockerProcesses[tabId].write('\r\n');
-        }
-      }, 200);
+      console.log(`✅ Docker ${containerName} ${tabId}: Reutilizando`);
       return;
     }
 
@@ -286,14 +279,7 @@ async function startDockerSession(tabId, containerName, { cols, rows }) {
       }
     });
 
-    // Enviar comando para que bash muestre el prompt
-    // Esperar más tiempo para que el listener esté listo
-    setTimeout(() => {
-      console.log(`🐳 [OUTPUT] Enviando Enter para activar bash en ${tabId}`);
-      if (dockerProcesses[tabId]) {
-        dockerProcesses[tabId].write('\r\n');
-      }
-    }, 1000);
+    // El prompt ya se envía automáticamente, no es necesario enviar Enter
 
     // Handle exit
     dockerProcesses[tabId].onExit(({ exitCode, signal }) => {
