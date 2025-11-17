@@ -2083,6 +2083,32 @@ class AIService {
         if (toolName.includes('query') || toolName.includes('sql')) score += 10;
       }
       
+      // 🔒 TENABLE.IO - Detección de intenciones relacionadas con seguridad/vulnerabilidades/activos
+      const tenableKeywords = /tenable|vulnerabilidad|vulnerabilidades|activo|activos|asset|assets|seguridad|security|scanner|scan|escaneo|escaneado|cve|exploit|parche|patch|riesgo|risk|severidad|severity|crítico|critical|alto|high|medio|medium|bajo|low|hostname|ip address|dirección ip/i;
+      const isTenableTool = tool.serverId === 'tenable' || toolName.includes('asset') || toolName.includes('vulnerability');
+      
+      if (lowerMsg.match(tenableKeywords) || isTenableTool) {
+        // Alta prioridad para herramientas de Tenable cuando se menciona
+        if (isTenableTool) {
+          if (lowerMsg.match(/lista|listar|muestra|mostrar|obtén|obtener|get|busca|buscar|search|find/i)) {
+            if (toolName.includes('get_assets') || toolName.includes('list')) score += 25;
+            if (toolName.includes('search_assets')) score += 23;
+            if (toolName.includes('get_asset_details')) score += 22;
+          }
+          if (lowerMsg.match(/vulnerabilidad|vulnerabilidades|vulnerability|cve|exploit|riesgo|risk|severidad|severity/i)) {
+            if (toolName.includes('vulnerability') || toolName.includes('vulnerabilities')) score += 25;
+            if (toolName.includes('get_asset_details')) score += 20; // Los detalles pueden incluir vulnerabilidades
+          }
+          if (lowerMsg.match(/detalle|detalles|detail|información|info|específico|specific/i)) {
+            if (toolName.includes('get_asset_details')) score += 24;
+          }
+          // Si es herramienta de Tenable pero no hay keywords específicos, dar score base
+          if (isTenableTool && score === 0) {
+            score += 15; // Score base para herramientas de Tenable
+          }
+        }
+      }
+      
       // Penalizar tools genéricas si hay específicas
       if (toolName === 'write_file' && lowerMsg.includes('edit')) score -= 3;
       if (toolName === 'read_file' && lowerMsg.includes('list')) score -= 3;
@@ -2103,6 +2129,23 @@ class AIService {
     if (topTools.length === 0) {
       const defaultNames = ['read_file', 'list_directory', 'write_file'];
       topTools.push(...tools.filter(t => defaultNames.some(dn => t.name.includes(dn))).slice(0, 3));
+    }
+    
+    // 🔒 CRÍTICO: Si hay herramientas de Tenable disponibles y el mensaje menciona Tenable/vulnerabilidades,
+    // asegurar que al menos una herramienta de Tenable esté incluida
+    const tenableTools = tools.filter(t => t.serverId === 'tenable');
+    const hasTenableKeywords = message.toLowerCase().match(/tenable|vulnerabilidad|vulnerabilidades|activo|activos|asset|assets|seguridad|security|scanner|scan|escaneo/i);
+    const hasTenableInTop = topTools.some(t => t.serverId === 'tenable');
+    
+    if (tenableTools.length > 0 && hasTenableKeywords && !hasTenableInTop) {
+      // Agregar la herramienta más relevante de Tenable
+      const mostRelevantTenable = tenableTools.find(t => t.name.includes('get_assets')) || tenableTools[0];
+      if (mostRelevantTenable) {
+        topTools.unshift(mostRelevantTenable); // Agregar al inicio
+        debugLogger.debug('AIService.ToolsFilter', 'Herramienta de Tenable agregada forzosamente', {
+          herramienta: mostRelevantTenable.name
+        });
+      }
     }
 
     debugLogger.debug('AIService.ToolsFilter', 'Tools filtrados con scoring', {
@@ -2482,6 +2525,17 @@ class AIService {
       out += `Listar todos SSH: {"tool":"ssh-terminal__search_nodeterm","arguments":{}}\n`;
       out += '⚠️ IMPORTANTE: El nombre correcto es "search_nodeterm" (NO "search_noderm", NO "search_nodeterms").\n';
       out += '🚫 CRÍTICO: search_nodeterm SOLO debe usarse cuando el usuario EXPLÍCITAMENTE pide buscar, listar o conectar a una conexión SSH. NO lo uses proactivamente ni para sugerencias.\n';
+    }
+    
+    // 🔒 Ejemplos específicos para Tenable.io
+    const hasTenableTools = tools.some(t => t.serverId === 'tenable');
+    if (hasTenableTools) {
+      out += '\n🔒 EJEMPLOS TENABLE.IO:\n';
+      out += `Listar activos: {"tool":"tenable__get_assets","arguments":{"limit":"50","offset":"0"}}\n`;
+      out += `Buscar activo: {"tool":"tenable__search_assets","arguments":{"search_term":"servidor01","limit":"50"}}\n`;
+      out += `Detalles de activo: {"tool":"tenable__get_asset_details","arguments":{"asset_id":"uuid-del-activo"}}\n`;
+      out += `Vulnerabilidades: {"tool":"tenable__get_asset_vulnerabilities","arguments":{"asset_id":"uuid-del-activo","severity":"critical","limit":"100"}}\n`;
+      out += '⚠️ IMPORTANTE: Cuando el usuario mencione Tenable, vulnerabilidades, activos o seguridad, usa estas herramientas automáticamente.\n';
     }
     
     out += '\nCRÍTICO: USA SIEMPRE RUTAS ABSOLUTAS. NO uses rutas relativas.\n';

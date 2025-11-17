@@ -88,7 +88,9 @@ export const hideContextMenu = (hideTerminalContextMenu) => {
 export const createTerminalActionWrapper = (action, hideContextMenuFn) => {
   return (tabKey) => {
     action(tabKey);
-    hideContextMenuFn();
+    if (typeof hideContextMenuFn === 'function') {
+      hideContextMenuFn();
+    }
   };
 };
 
