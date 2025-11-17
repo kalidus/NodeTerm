@@ -168,6 +168,31 @@ const App = () => {
     setNeedsUnlock(false);
   }, []);
 
+  // Inicializar window.toast para acceso global
+  useEffect(() => {
+    const updateToast = () => {
+      if (toast.current) {
+        window.toast = { current: toast.current };
+      }
+    };
+    
+    // Actualizar inmediatamente
+    updateToast();
+    
+    // Actualizar periódicamente hasta que toast esté disponible
+    const interval = setInterval(() => {
+      if (toast.current) {
+        updateToast();
+        clearInterval(interval);
+      }
+    }, 100);
+    
+    // Limpiar después de 5 segundos si no se inicializa
+    setTimeout(() => clearInterval(interval), 5000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   // Actualizar contador de passwords cuando haya masterKey o en claro
   useEffect(() => {
     const updatePasswordsCount = async () => {

@@ -544,6 +544,34 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     }
   };
 
+  // Función para copiar al portapapeles
+  const copyToClipboard = async (text, fieldName) => {
+    try {
+      if (window.electron?.clipboard?.writeText) {
+        await window.electron.clipboard.writeText(text);
+      } else {
+        await navigator.clipboard.writeText(text);
+      }
+      
+      // Mostrar notificación si está disponible
+      if (window.toast?.current?.show) {
+        // Mensaje especial para passwords
+        const message = fieldName === 'Contraseña' || fieldName === 'Password' 
+          ? 'Password copiado' 
+          : `${fieldName} copiado al portapapeles`;
+        
+        window.toast.current.show({ 
+          severity: 'success', 
+          summary: 'Copiado', 
+          detail: message, 
+          life: 1500 
+        });
+      }
+    } catch (err) {
+      console.error('Error copiando al portapapeles:', err);
+    }
+  };
+
   const handleMinimize = () => {
     window.electronAPI?.minimize && window.electronAPI.minimize();
   };
@@ -1361,8 +1389,48 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                       </div>
                     )}
                     
-                    {/* Botones de acción - Solo para conexiones, no passwords */}
-                    {!isPassword && (
+                    {/* Botones de acción */}
+                    {isPassword ? (
+                      /* Icono de copiar password - Solo para passwords */
+                      node.data?.password && (
+                        <div style={{ display: 'flex', alignItems: 'flex-start', paddingTop: '2px', marginLeft: '4px' }}>
+                          <span
+                            title="Copiar contraseña"
+                            style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#ffc107',
+                              background: 'rgba(255, 193, 7, 0.15)',
+                              border: '1px solid rgba(255, 193, 7, 0.4)',
+                              transition: 'all .15s ease',
+                              cursor: 'pointer',
+                              flexShrink: 0
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'rgba(255, 193, 7, 0.25)';
+                              e.currentTarget.style.borderColor = 'rgba(255, 193, 7, 0.6)';
+                              e.currentTarget.style.transform = 'scale(1.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(255, 193, 7, 0.15)';
+                              e.currentTarget.style.borderColor = 'rgba(255, 193, 7, 0.4)';
+                              e.currentTarget.style.transform = 'scale(1)';
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(node.data.password, 'Contraseña');
+                            }}
+                          >
+                            <i className="pi pi-key" style={{ fontSize: '12px' }} />
+                          </span>
+                        </div>
+                      )
+                    ) : (
+                      /* Botones de favoritos y editar - Solo para conexiones SSH/RDP */
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, paddingTop: '2px' }}>
                         {/* Botón de favoritos */}
                         <button
