@@ -519,24 +519,33 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 {/* Breadcrumb con Path Input en la misma fila */}
                 <div className="file-explorer-breadcrumb-row">
                     <div className="breadcrumb-container">
+                        <button
+                            className="breadcrumb-home-button"
+                            onClick={() => homeDir && navigateToPath(homeDir)}
+                            title="Ir al home"
+                        >
+                            <FaHome className="breadcrumb-home-icon" />
+                        </button>
                         {breadcrumbItems.length === 0 ? (
                             <span className="breadcrumb-empty">/</span>
                         ) : (
-                            breadcrumbItems.map((item, index) => (
-                                <React.Fragment key={index}>
-                                    <button
-                                        className="breadcrumb-link"
-                                        onClick={item.command}
-                                        title={item.label}
-                                    >
-                                        <FaFolder className="breadcrumb-icon" />
-                                        <span>{item.label}</span>
-                                    </button>
-                                    {index < breadcrumbItems.length - 1 && (
-                                        <span className="breadcrumb-sep">></span>
-                                    )}
-                                </React.Fragment>
-                            ))
+                            <>
+                                <span className="breadcrumb-sep">></span>
+                                {breadcrumbItems.map((item, index) => (
+                                    <React.Fragment key={index}>
+                                        <button
+                                            className="breadcrumb-link"
+                                            onClick={item.command}
+                                            title={item.label}
+                                        >
+                                            {item.label}
+                                        </button>
+                                        {index < breadcrumbItems.length - 1 && (
+                                            <span className="breadcrumb-sep">></span>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </>
                         )}
                     </div>
                     <div className="breadcrumb-path-input">
