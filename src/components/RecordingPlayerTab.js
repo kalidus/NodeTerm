@@ -25,7 +25,9 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
     currentEventIndex: 0,
     startTime: 0,
     timeout: null,
-    isPaused: false
+    isPaused: false,
+    isDragging: false,
+    lastSeekTime: 0
   });
 
   useEffect(() => {
@@ -217,9 +219,14 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
   const play = () => {
     if (!terminalInstance.current || playbackData.current.events.length === 0) return;
 
-    // Si estamos en pausa, reanudar
+    // Si estamos en pausa, reanudar desde donde estábamos
     if (playbackData.current.isPaused) {
       playbackData.current.isPaused = false;
+      
+      // Ajustar startTime para continuar desde el tiempo actual
+      const currentTimeMs = playbackState.currentTime * 1000;
+      playbackData.current.startTime = Date.now() - (currentTimeMs / playbackState.speed);
+      
       setPlaybackState(prev => ({ ...prev, isPlaying: true }));
       scheduleNextEvent();
       return;
@@ -231,7 +238,8 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
       return;
     }
 
-    // Limpiar terminal y comenzar reproducción
+    // Si no está pausado y no ha terminado, comenzar desde el principio
+    // (esto solo debería pasar si se llama play() cuando no está reproduciendo)
     terminalInstance.current.clear();
     playbackData.current.startTime = Date.now();
     playbackData.current.currentEventIndex = 0;
@@ -316,15 +324,18 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
     
     // Actualizar estado
     playbackData.current.currentEventIndex = targetIndex;
-    playbackData.current.isPaused = false;
+    
+    // Actualizar tiempo actual
+    setPlaybackState(prev => ({ ...prev, currentTime: clampedTime }));
     
     // Si estaba reproduciendo, continuar desde aquí
-    if (playbackState.isPlaying) {
+    if (playbackState.isPlaying && !playbackData.current.isPaused) {
       playbackData.current.startTime = Date.now() - (clampedTime * 1000 / playbackState.speed);
-      setPlaybackState(prev => ({ ...prev, currentTime: clampedTime }));
       scheduleNextEvent();
     } else {
-      setPlaybackState(prev => ({ ...prev, currentTime: clampedTime }));
+      // Si está pausado o no está reproduciendo, solo actualizar el tiempo
+      // El startTime se ajustará cuando se reanude
+      playbackData.current.isPaused = playbackState.isPlaying ? false : playbackData.current.isPaused;
     }
   };
 
@@ -573,6 +584,7 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
 
       {/* Barra de progreso interactiva */}
       <div 
+        data-progress-bar
         style={{
           height: '12px',
           background: 'var(--ui-content-bg)',
@@ -583,28 +595,62 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
         onMouseDown={(e) => {
           if (!playbackState.duration) return;
           
+          e.preventDefault();
+          playbackData.current.isDragging = true;
+          
           const rect = e.currentTarget.getBoundingClientRect();
           const clickX = e.clientX - rect.left;
           const percentage = Math.max(0, Math.min(1, clickX / rect.width));
           const targetTime = percentage * playbackState.duration;
           
+          playbackData.current.lastSeekTime = targetTime;
           seekTo(targetTime);
+          
+          // Agregar listeners globales para arrastre fluido
+          const handleGlobalMouseMove = (moveEvent) => {
+            if (!playbackData.current.isDragging) return;
+            
+            const progressBar = document.querySelector('[data-progress-bar]');
+            if (progressBar) {
+              const barRect = progressBar.getBoundingClientRect();
+              const mouseX = moveEvent.clientX - barRect.left;
+              const newPercentage = Math.max(0, Math.min(1, mouseX / barRect.width));
+              const newTargetTime = newPercentage * playbackState.duration;
+              
+              // Actualizar solo si hay cambio significativo para evitar llamadas excesivas
+              if (Math.abs(newTargetTime - playbackData.current.lastSeekTime) > 0.05) {
+                playbackData.current.lastSeekTime = newTargetTime;
+                seekTo(newTargetTime);
+              }
+            }
+          };
+
+          const handleGlobalMouseUp = () => {
+            playbackData.current.isDragging = false;
+            document.removeEventListener('mousemove', handleGlobalMouseMove);
+            document.removeEventListener('mouseup', handleGlobalMouseUp);
+          };
+
+          document.addEventListener('mousemove', handleGlobalMouseMove);
+          document.addEventListener('mouseup', handleGlobalMouseUp);
         }}
         onMouseMove={(e) => {
-          // Mostrar preview del tiempo al pasar el mouse
-          if (e.buttons === 1 && playbackState.duration) { // Solo si está arrastrando
+          // Actualizar tiempo mientras se arrastra dentro del área
+          if (playbackData.current.isDragging && playbackState.duration) {
+            e.preventDefault();
             const rect = e.currentTarget.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const percentage = Math.max(0, Math.min(1, mouseX / rect.width));
-            const previewTime = percentage * playbackState.duration;
+            const targetTime = percentage * playbackState.duration;
             
-            // Actualizar tiempo mientras se arrastra
-            if (Math.abs(previewTime - playbackState.currentTime) > 0.5) {
-              seekTo(previewTime);
+            // Actualizar inmediatamente
+            if (Math.abs(targetTime - playbackData.current.lastSeekTime) > 0.05) {
+              playbackData.current.lastSeekTime = targetTime;
+              seekTo(targetTime);
             }
           }
         }}
-        title={`Click para saltar a un punto específico. Tiempo actual: ${formatDuration(playbackState.currentTime)} / ${formatDuration(playbackState.duration)}`}
+        title={`Click o arrastra para navegar. Tiempo actual: ${formatDuration(playbackState.currentTime)} / ${formatDuration(playbackState.duration)}`}
       >
         <div style={{
           height: '100%',
