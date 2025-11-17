@@ -588,6 +588,10 @@ export const useTabManagement = (toast, {
       // Cerrar pestañas de chat de IA (almacenadas en sshTabs)
       const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
       setSshTabs(newSshTabs);
+    } else if (closedTab.type === 'openwebui') {
+      // Cerrar pestañas de Open WebUI (almacenadas en sshTabs)
+      const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+      setSshTabs(newSshTabs);
     } else {
       if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
         window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
