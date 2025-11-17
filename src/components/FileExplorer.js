@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from 'primereact/card';
 import { Button } from 'primereact/button';
-import { BreadCrumb } from 'primereact/breadcrumb';
 import { InputText } from 'primereact/inputtext';
 import { ProgressBar } from 'primereact/progressbar';
 import { Message } from 'primereact/message';
@@ -9,6 +8,12 @@ import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { uiThemes } from '../themes/ui-themes';
+
+// Helper para obtener colores del tema
+const getThemeColors = (themeName) => {
+    const theme = uiThemes[themeName] || uiThemes['Light'];
+    return theme?.colors || {};
+};
 
 // React Icons - Iconos que SÍ funcionan
 import { 
@@ -483,11 +488,27 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         }
     };
 
+    const themeColors = getThemeColors(explorerColorTheme);
+    const isDarkTheme = themeColors.contentBackground && 
+        (themeColors.contentBackground.includes('#') && 
+         parseInt(themeColors.contentBackground.replace('#', ''), 16) < 0x888888);
+
     return (
         <div 
             className="file-explorer-container material-design" 
             data-tab-id={tabId}
-            style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
+            data-theme={explorerColorTheme}
+            style={{ 
+                fontFamily: explorerFont, 
+                fontSize: explorerFontSize,
+                '--theme-bg': themeColors.contentBackground || '#ffffff',
+                '--theme-text': themeColors.dialogText || '#1e293b',
+                '--theme-border': themeColors.contentBorder || '#e2e8f0',
+                '--theme-hover': themeColors.sidebarHover || '#f1f5f9',
+                '--theme-selected': themeColors.sidebarSelected || '#e0e7ff',
+                '--theme-primary': themeColors.buttonPrimary || '#667eea',
+                '--theme-secondary': themeColors.tabBackground || '#f8fafc',
+            }}
         >
             <Card className="file-explorer-card">
                 {/* Header */}
@@ -524,11 +545,23 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                     </div>
                 </div>
 
-                {/* Breadcrumb */}
-                <BreadCrumb 
-                    model={breadcrumbItems} 
-                    className="file-explorer-breadcrumb"
-                />
+                {/* Breadcrumb Simple */}
+                <div className="file-explorer-breadcrumb-simple">
+                    {breadcrumbItems.map((item, index) => (
+                        <React.Fragment key={index}>
+                            <button
+                                className="breadcrumb-link"
+                                onClick={item.command}
+                                title={item.label}
+                            >
+                                {item.label}
+                            </button>
+                            {index < breadcrumbItems.length - 1 && (
+                                <span className="breadcrumb-sep">/</span>
+                            )}
+                        </React.Fragment>
+                    ))}
+                </div>
 
                 {/* Toolbar */}
                 <div className="file-explorer-toolbar">
