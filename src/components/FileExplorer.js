@@ -732,21 +732,21 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                     </div>
                     <div className="toolbar-right">
                         <Button 
-                            label="↑ Subir"
+                            label="Subir"
                             icon={<FaUpload />}
                             onClick={handleUploadFiles}
                             disabled={!sshReady || !currentPath || loading}
                             className="toolbar-button-action"
                         />
                         <Button 
-                            label="+ Nueva"
+                            label="Nueva"
                             icon={<FaPlus />}
                             onClick={() => setNewFolderDialog(true)}
                             disabled={!sshReady || !currentPath || loading}
                             className="toolbar-button-action"
                         />
                         <Button 
-                            label="🗑 Borrar"
+                            label="Borrar"
                             icon={<FaTrash />}
                             onClick={() => handleDeleteFiles(selectedFiles)}
                             disabled={!sshReady || !currentPath || loading || selectedFiles.length === 0}
