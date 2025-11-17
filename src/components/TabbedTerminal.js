@@ -1319,40 +1319,14 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     menu.style.zIndex = '1000';
                                     menu.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
                                     
-                                    // Agrupar opciones por categoría
-                                    let lastCategory = null;
+                                    // Separar opciones locales y Docker
+                                    const localOptions = currentTerminalOptions.filter(opt => !opt.value.startsWith('docker-'));
+                                    const dockerOptions = currentTerminalOptions.filter(opt => opt.value.startsWith('docker-'));
                                     
-                                    currentTerminalOptions.forEach((option, index) => {
-                                        // Detectar si es Docker (por el valor o si tiene dockerContainer)
-                                        const isDocker = option.value.startsWith('docker-') || option.dockerContainer;
-                                        const currentCategory = isDocker ? 'Docker' : 'Local';
-                                        
-                                        // Si cambió de categoría, agregar encabezado
-                                        if (currentCategory !== lastCategory && lastCategory !== null) {
-                                            const divider = document.createElement('div');
-                                            divider.style.height = '1px';
-                                            divider.style.background = 'rgba(255, 255, 255, 0.1)';
-                                            divider.style.margin = '4px 0';
-                                            menu.appendChild(divider);
-                                        }
-                                        
-                                        if (currentCategory !== lastCategory) {
-                                            const header = document.createElement('div');
-                                            header.style.padding = '8px 12px';
-                                            header.style.color = '#888888';
-                                            header.style.fontSize = '11px';
-                                            header.style.fontWeight = 'bold';
-                                            header.style.textTransform = 'uppercase';
-                                            header.style.textAlign = 'left';
-                                            header.style.cursor = 'default';
-                                            header.textContent = currentCategory;
-                                            menu.appendChild(header);
-                                            lastCategory = currentCategory;
-                                        }
-                                        
+                                    // Agregar opciones locales
+                                    localOptions.forEach((option) => {
                                         const item = document.createElement('div');
                                         item.style.padding = '8px 12px';
-                                        item.style.marginLeft = '8px'; // Indentar items bajo el header
                                         item.style.cursor = 'pointer';
                                         item.style.display = 'flex';
                                         item.style.alignItems = 'center';
@@ -1361,14 +1335,12 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                         item.style.fontSize = '12px';
                                         item.style.transition = 'background-color 0.2s';
                                         
+                                        const iconColor = option.value === 'powershell' ? '#4fc3f7' : 
+                                                        option.value === 'wsl' ? '#8ae234' : 
+                                                        option.value === 'cygwin' ? '#00FF00' : '#e95420';
+                                        
                                         item.innerHTML = `
-                                            <i class="${option.icon}" style="color: ${
-                                                option.value === 'powershell' ? '#4fc3f7' : 
-                                                option.value === 'wsl' ? '#8ae234' : 
-                                                option.value === 'cygwin' ? '#00FF00' :
-                                                option.value === 'rdp-guacamole' ? '#ff6b35' : 
-                                                isDocker ? '#2496ED' : '#e95420'
-                                            }; font-size: 12px;"></i>
+                                            <i class="${option.icon}" style="color: ${iconColor}; font-size: 12px;"></i>
                                             <span>${option.label}</span>
                                         `;
                                         
@@ -1388,6 +1360,117 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                         
                                         menu.appendChild(item);
                                     });
+                                    
+                                    // Agregar Docker submenu si hay contenedores
+                                    if (dockerOptions.length > 0) {
+                                        const divider = document.createElement('div');
+                                        divider.style.height = '1px';
+                                        divider.style.background = 'rgba(255, 255, 255, 0.1)';
+                                        divider.style.margin = '4px 0';
+                                        menu.appendChild(divider);
+                                        
+                                        const dockerItem = document.createElement('div');
+                                        dockerItem.style.padding = '8px 12px';
+                                        dockerItem.style.cursor = 'pointer';
+                                        dockerItem.style.display = 'flex';
+                                        dockerItem.style.alignItems = 'center';
+                                        dockerItem.style.gap = '8px';
+                                        dockerItem.style.color = '#ffffff';
+                                        dockerItem.style.fontSize = '12px';
+                                        dockerItem.style.transition = 'background-color 0.2s';
+                                        dockerItem.style.position = 'relative';
+                                        
+                                        dockerItem.innerHTML = `
+                                            <i class="pi pi-box" style="color: #2496ED; font-size: 12px;"></i>
+                                            <span>🐳 Docker</span>
+                                            <i class="pi pi-chevron-right" style="margin-left: auto; font-size: 10px; color: rgba(255,255,255,0.6);"></i>
+                                        `;
+                                        
+                                        let submenuVisible = false;
+                                        let submenu = null;
+                                        let hideTimeout = null;
+                                        
+                                        const showSubmenu = () => {
+                                            // Cancelar el timeout de ocultamiento si existe
+                                            if (hideTimeout) {
+                                                clearTimeout(hideTimeout);
+                                                hideTimeout = null;
+                                            }
+                                            
+                                            if (submenuVisible && submenu) return;
+                                            
+                                            submenu = document.createElement('div');
+                                            submenu.style.position = 'absolute';
+                                            submenu.style.left = '100%';
+                                            submenu.style.top = '0';
+                                            submenu.style.background = '#2a4a6b';
+                                            submenu.style.border = '1px solid #3a5a7b';
+                                            submenu.style.borderRadius = '4px';
+                                            submenu.style.padding = '4px 0';
+                                            submenu.style.minWidth = '200px';
+                                            submenu.style.zIndex = '1001';
+                                            submenu.style.marginLeft = '4px';
+                                            
+                                            dockerOptions.forEach(option => {
+                                                const subItem = document.createElement('div');
+                                                subItem.style.padding = '8px 12px';
+                                                subItem.style.cursor = 'pointer';
+                                                subItem.style.color = '#ffffff';
+                                                subItem.style.fontSize = '12px';
+                                                subItem.style.transition = 'background-color 0.2s';
+                                                subItem.style.display = 'flex';
+                                                subItem.style.alignItems = 'center';
+                                                subItem.style.gap = '8px';
+                                                
+                                                subItem.innerHTML = `
+                                                    <i class="pi pi-box" style="color: #2496ED; font-size: 12px;"></i>
+                                                    <span>${option.label.replace('Docker: ', '')}</span>
+                                                `;
+                                                
+                                                subItem.addEventListener('mouseenter', () => {
+                                                    subItem.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                                                });
+                                                
+                                                subItem.addEventListener('mouseleave', () => {
+                                                    subItem.style.backgroundColor = 'transparent';
+                                                });
+                                                
+                                                subItem.addEventListener('click', () => {
+                                                    setSelectedTerminalType(option.value);
+                                                    createNewTab(option.value);
+                                                    document.body.removeChild(menu);
+                                                });
+                                                
+                                                submenu.appendChild(subItem);
+                                            });
+                                            
+                                            dockerItem.appendChild(submenu);
+                                            submenuVisible = true;
+                                        };
+                                        
+                                        const hideSubmenu = () => {
+                                            hideTimeout = setTimeout(() => {
+                                                if (submenu && dockerItem.contains(submenu)) {
+                                                    dockerItem.removeChild(submenu);
+                                                }
+                                                submenuVisible = false;
+                                                submenu = null;
+                                            }, 200); // Esperar 200ms antes de ocultarlo
+                                        };
+                                        
+                                        dockerItem.addEventListener('mouseenter', showSubmenu);
+                                        dockerItem.addEventListener('mouseleave', hideSubmenu);
+                                        
+                                        // Cuando el mouse entra al submenu, cancelar el ocultamiento
+                                        dockerItem.addEventListener('mouseenter', () => {
+                                            if (submenu) {
+                                                submenu.addEventListener('mouseenter', showSubmenu);
+                                                submenu.addEventListener('mouseleave', hideSubmenu);
+                                            }
+                                        });
+                                        
+                                        menu.appendChild(dockerItem);
+                                    }
                                     
                                     // Agregar listener para cerrar el menú al hacer click fuera
                                     const handleClickOutside = (event) => {
