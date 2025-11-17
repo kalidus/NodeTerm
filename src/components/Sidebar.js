@@ -323,14 +323,14 @@ const Sidebar = React.memo(({
         if (config) {
           const parsed = JSON.parse(config);
           setAiClientsEnabled({
-            nodeterm: parsed.nodeterm !== false, // Por defecto true si no existe
+            nodeterm: parsed.nodeterm === true, // Solo activo si está explícitamente configurado
             anythingllm: parsed.anythingllm === true,
             openwebui: parsed.openwebui === true
           });
         } else {
-          // Si no hay configuración, NodeTerm activo por defecto
+          // Si no hay configuración, todos desactivados por defecto
           setAiClientsEnabled({
-            nodeterm: true,
+            nodeterm: false,
             anythingllm: false,
             openwebui: false
           });

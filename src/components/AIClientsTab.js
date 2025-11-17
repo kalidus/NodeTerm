@@ -15,7 +15,7 @@ const AI_CLIENTS_STORAGE_KEY = 'ai_clients_enabled';
 const AIClientsTab = ({ themeColors }) => {
   // Estado para cada cliente de IA
   const [clients, setClients] = useState({
-    nodeterm: true,
+    nodeterm: false,
     anythingllm: false,
     openwebui: false
   });
