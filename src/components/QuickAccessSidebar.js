@@ -16,6 +16,7 @@ const QuickAccessSidebar = ({
   // Estados para terminales detectados dinámicamente
   const [wslDistributions, setWSLDistributions] = useState([]);
   const [cygwinAvailable, setCygwinAvailable] = useState(false);
+  const [dockerContainers, setDockerContainers] = useState([]);
   const [availableTerminals, setAvailableTerminals] = useState([]);
   const [quickActionItems, setQuickActionItems] = useState([]);
   
@@ -198,6 +199,35 @@ const QuickAccessSidebar = ({
     detectCygwin();
   }, []);
 
+  // Detectar contenedores Docker disponibles (UNA SOLA VEZ al montar)
+  useEffect(() => {
+    let mounted = true;
+    
+    const detectDocker = async () => {
+      try {
+        if (window.electron && window.electronAPI && mounted) {
+          const result = await window.electronAPI.invoke('docker:list');
+          if (mounted && result && result.success && Array.isArray(result.containers)) {
+            console.log(`🐳 Docker detectado: ${result.containers.length} contenedor(es)`);
+            setDockerContainers(result.containers);
+          } else {
+            setDockerContainers([]);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error detectando Docker:', error);
+        setDockerContainers([]);
+      }
+    };
+    
+    detectDocker();
+    
+    // Cleanup
+    return () => {
+      mounted = false;
+    };
+  }, []); // Solo ejecutar UNA VEZ al montar
+
   // Generar lista de terminales disponibles
   useEffect(() => {
     const platform = window.electron?.platform || 'unknown';
@@ -248,6 +278,20 @@ const QuickAccessSidebar = ({
           });
         }
       });
+
+      // Agregar contenedores Docker si están disponibles
+      if (dockerContainers.length > 0) {
+        dockerContainers.forEach(container => {
+          terminals.push({
+            label: `Docker: ${container.name}`,
+            value: `docker-${container.name}`,
+            icon: 'pi pi-box',
+            color: '#2496ED',
+            action: () => handleOpenTerminal(`docker-${container.name}`, { dockerContainer: container }),
+            dockerContainer: container
+          });
+        });
+      }
     } else if (platform === 'linux' || platform === 'darwin') {
       terminals.push({
         label: 'Terminal',
@@ -267,7 +311,7 @@ const QuickAccessSidebar = ({
     }
 
     setAvailableTerminals(terminals);
-  }, [wslDistributions, cygwinAvailable]);
+  }, [wslDistributions, cygwinAvailable, dockerContainers]);
 
   // Configurar acciones principales
   useEffect(() => {

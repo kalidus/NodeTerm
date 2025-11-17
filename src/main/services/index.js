@@ -8,6 +8,7 @@
 const WSLService = require('./WSLService');
 const PowerShellService = require('./PowerShellService');
 const CygwinService = require('./CygwinService');
+const DockerService = require('./DockerService');
 
 /**
  * Exporta todos los servicios organizados por categoría
@@ -17,9 +18,11 @@ module.exports = {
   WSL: WSLService,
   PowerShell: PowerShellService,
   Cygwin: CygwinService,
+  Docker: DockerService,
   
   // Exportaciones directas para compatibilidad
   ...WSLService,
   ...PowerShellService,
-  ...CygwinService
+  ...CygwinService,
+  ...DockerService
 };

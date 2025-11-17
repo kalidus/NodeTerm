@@ -108,6 +108,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^ubuntu:.*$/,
         /^wsl-distro:.*$/,
         /^cygwin:.*$/,
+        /^docker:.*$/,
         /^rdp:.*$/,
         /^guacamole:.*$/,
         /^anythingllm:.*$/,
@@ -137,6 +138,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^ubuntu:.*$/,
         /^wsl-distro:.*$/,
         /^cygwin:.*$/,
+        /^docker:.*$/,
         /^rdp:.*$/,
         /^updater-event$/
       ];
@@ -245,6 +247,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const validChannels = [
       'cygwin:detect',
       'cygwin:install',
+      'docker:list',
       // Add more channels as needed
     ];
     if (validChannels.includes(channel)) {

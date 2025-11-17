@@ -5,6 +5,7 @@ import PowerShellTerminal from './PowerShellTerminal';
 import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
 import CygwinTerminal from './CygwinTerminal';
+import DockerTerminal from './DockerTerminal';
 import GuacamoleTerminal from './GuacamoleTerminal';
 import { themes } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
@@ -99,6 +100,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     const [activeTabKey, setActiveTabKey] = useState(0); // Para forzar re-render
     const [wslDistributions, setWSLDistributions] = useState([]);
     const [cygwinAvailable, setCygwinAvailable] = useState(false); // Estado para Cygwin
+    const [dockerContainers, setDockerContainers] = useState([]); // Estado para Docker
     // Estado para drag & drop de pestañas locales del terminal
     const [draggedTabIndex, setDraggedTabIndex] = useState(null);
     const [dragOverTabIndex, setDragOverTabIndex] = useState(null);
@@ -381,6 +383,34 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         
         detectCygwin();
     }, []);
+
+    // Detectar contenedores Docker disponibles (UNA SOLA VEZ)
+    useEffect(() => {
+        let mounted = true;
+        
+        const detectDocker = async () => {
+            try {
+                if (window.electron && window.electronAPI && mounted) {
+                    const result = await window.electronAPI.invoke('docker:list');
+                    if (mounted && result && result.success && Array.isArray(result.containers)) {
+                        console.log(`🐳 Docker detectado: ${result.containers.length} contenedor(es)`);
+                        setDockerContainers(result.containers);
+                    } else {
+                        setDockerContainers([]);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error detectando Docker:', error);
+                setDockerContainers([]);
+            }
+        };
+        
+        detectDocker();
+        
+        return () => {
+            mounted = false;
+        };
+    }, []); // Solo ejecutar UNA VEZ al montar
 
     // Función para instalar Cygwin bajo demanda
     const installCygwin = async () => {
@@ -682,13 +712,37 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 distroName: distro.name,
                 distroInfo: distro
             })));
+
+            // Agregar contenedores Docker si están disponibles
+            if (dockerContainers.length > 0) {
+                options.push(...dockerContainers.map(container => ({
+                    label: `Docker: ${container.name}`,
+                    value: `docker-${container.name}`,
+                    icon: 'pi pi-box',
+                    color: '#2496ED',
+                    dockerContainer: container
+                })));
+            }
             
             return options;
         } else if (platform === 'linux' || platform === 'darwin') {
-            // En Linux/macOS: mostrar terminal nativo
-            return [
+            // En Linux/macOS: mostrar terminal nativo y Docker si disponible
+            const options = [
                 { label: 'Terminal', value: 'linux-terminal', icon: 'pi pi-desktop' }
             ];
+
+            // Agregar contenedores Docker si están disponibles
+            if (dockerContainers.length > 0) {
+                options.push(...dockerContainers.map(container => ({
+                    label: `Docker: ${container.name}`,
+                    value: `docker-${container.name}`,
+                    icon: 'pi pi-box',
+                    color: '#2496ED',
+                    dockerContainer: container
+                })));
+            }
+
+            return options;
         } else {
             // Fallback para otros sistemas
             return [
@@ -822,6 +876,31 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             } else {
                 title = 'WSL';
                 terminalType = 'wsl-distro';
+            }
+        } else if (terminalTypeToUse.startsWith('docker-')) {
+            // Extraer información del contenedor Docker seleccionado
+            const containerName = terminalTypeToUse.replace('docker-', '');
+            console.log('🐳 Buscando contenedor:', containerName, 'en', dockerContainers.map(c => c.name));
+            const selectedContainer = dockerContainers.find(c => c.name === containerName);
+            
+            if (selectedContainer) {
+                title = `🐳 ${selectedContainer.name}`;
+                terminalType = 'docker';
+                distroInfo = {
+                    containerName: selectedContainer.name,
+                    containerId: selectedContainer.id,
+                    shortId: selectedContainer.shortId
+                };
+                console.log('🐳 Contenedor encontrado:', distroInfo);
+            } else {
+                console.warn('🐳 Contenedor NO encontrado, usando fallback:', containerName);
+                title = `🐳 ${containerName}`;
+                terminalType = 'docker';
+                distroInfo = {
+                    containerName: containerName,
+                    containerId: 'unknown',
+                    shortId: 'unknown'
+                };
             }
         } else {
             title = 'Terminal';
@@ -1106,11 +1185,13 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     className={tab.type === 'powershell' ? 'pi pi-desktop' : 
                                               tab.type === 'wsl' ? 'pi pi-server' : 
                                               tab.type === 'cygwin' ? 'pi pi-code' :
+                                              tab.type === 'docker' ? 'pi pi-box' :
                                               tab.type === 'rdp-guacamole' ? 'pi pi-desktop' : 'pi pi-circle'} 
                                     style={{ 
                                         color: tab.type === 'powershell' ? '#4fc3f7' : 
                                                tab.type === 'wsl' ? '#8ae234' : 
                                                tab.type === 'cygwin' ? '#00FF00' :
+                                               tab.type === 'docker' ? '#2496ED' :
                                                tab.type === 'rdp-guacamole' ? '#ff6b35' : '#e95420',
                                         fontSize: '12px',
                                         marginRight: '6px'
@@ -1536,6 +1617,18 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
+                                fontFamily={localFontFamily}
+                                fontSize={localFontSize}
+                                theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
+                            />
+                        ) : tab.type === 'docker' ? (
+                            <DockerTerminal 
+                                key={`${tab.id}-terminal`}
+                                ref={(ref) => {
+                                    if (ref) terminalRefs.current[tab.id] = ref;
+                                }}
+                                tabId={tab.id}
+                                dockerInfo={tab.distroInfo}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
