@@ -1430,8 +1430,45 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                         </div>
                       )
                     ) : (
-                      /* Botones de favoritos y editar - Solo para conexiones SSH/RDP */
+                      /* Botones de acción para conexiones SSH/RDP */
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, paddingTop: '2px' }}>
+                        {/* Icono de copiar password - Si la conexión tiene password */}
+                        {node.data?.password && (
+                          <span
+                            title="Copiar contraseña"
+                            style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#ffc107',
+                              background: 'rgba(255, 193, 7, 0.15)',
+                              border: '1px solid rgba(255, 193, 7, 0.4)',
+                              transition: 'all .15s ease',
+                              cursor: 'pointer',
+                              flexShrink: 0
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'rgba(255, 193, 7, 0.25)';
+                              e.currentTarget.style.borderColor = 'rgba(255, 193, 7, 0.6)';
+                              e.currentTarget.style.transform = 'scale(1.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(255, 193, 7, 0.15)';
+                              e.currentTarget.style.borderColor = 'rgba(255, 193, 7, 0.4)';
+                              e.currentTarget.style.transform = 'scale(1)';
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(node.data.password, 'Contraseña');
+                            }}
+                          >
+                            <i className="pi pi-key" style={{ fontSize: '12px' }} />
+                          </span>
+                        )}
+                        
                         {/* Botón de favoritos */}
                         <button
                           style={{
