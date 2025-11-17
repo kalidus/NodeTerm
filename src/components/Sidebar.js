@@ -1806,20 +1806,57 @@ const Sidebar = React.memo(({
                 }} 
               />
               
-              {/* Botón de Chat de IA - Solo visible si está activado */}
-              {aiClientsEnabled.nodeterm && (
-                <Button 
-                  icon="pi pi-comments" 
-                  className="p-button-rounded p-button-text sidebar-action-button" 
-                  onClick={() => {
-                    // Crear pestaña de IA
-                    const newAITab = {
-                      key: `ai-chat-${Date.now()}`,
-                      label: 'Chat IA',
-                      type: 'ai-chat',
-                      createdAt: Date.now(),
-                      groupId: null
-                    };
+              {/* Botón de nuevo grupo */}
+              <Button 
+                icon="pi pi-th-large" 
+                className="p-button-rounded p-button-text sidebar-action-button" 
+                onClick={() => setShowCreateGroupDialog(true)} 
+                tooltip="Crear grupo de pestañas" 
+                tooltipOptions={{ position: 'right' }} 
+                style={{ 
+                  margin: 0, 
+                  width: 40, 
+                  height: 40, 
+                  minWidth: 40, 
+                  minHeight: 40, 
+                  fontSize: 18,
+                  border: 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important'
+                }} 
+              />
+              
+            {/* Separador para clientes de IA */}
+            {(aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui) && (
+              <div style={{
+                width: '28px',
+                height: '1px',
+                backgroundColor: 'var(--ui-sidebar-border, rgba(255, 255, 255, 0.1))',
+                margin: '10px auto',
+                borderRadius: '0.5px',
+                opacity: 0.6,
+                flexShrink: 0
+              }} />
+            )}
+
+            {/* Botones de clientes de IA */}
+            {/* Botón de Chat de IA - Solo visible si está activado */}
+            {aiClientsEnabled.nodeterm && (
+              <Button 
+                icon="pi pi-comments" 
+                className="p-button-rounded p-button-text sidebar-action-button" 
+                onClick={() => {
+                  // Crear pestaña de IA
+                  const newAITab = {
+                    key: `ai-chat-${Date.now()}`,
+                    label: 'Chat IA',
+                    type: 'ai-chat',
+                    createdAt: Date.now(),
+                    groupId: null
+                  };
 
                   // Disparar evento para crear la pestaña
                   window.dispatchEvent(new CustomEvent('create-ai-tab', {
@@ -1896,29 +1933,6 @@ const Sidebar = React.memo(({
                 }} 
               />
             )}
-            
-            {/* Botón de nuevo grupo */}
-            <Button 
-              icon="pi pi-th-large" 
-              className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => setShowCreateGroupDialog(true)} 
-              tooltip="Crear grupo de pestañas" 
-              tooltipOptions={{ position: 'right' }} 
-              style={{ 
-                margin: 0, 
-                width: 40, 
-                height: 40, 
-                minWidth: 40, 
-                minHeight: 40, 
-                fontSize: 18,
-                border: 'none',
-                display: 'flex !important',
-                alignItems: 'center',
-                justifyContent: 'center',
-                visibility: 'visible !important',
-                opacity: '1 !important'
-              }} 
-            />
             </div>
 
             <div style={{ flexGrow: 1 }} />
