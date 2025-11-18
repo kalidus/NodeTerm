@@ -232,12 +232,27 @@ function registerSSHHandlers(dependencies = {}) {
   // SSH: Descargar archivo
   ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath, sshConfig }) => {
     try {
+      // ✅ VALIDACIÓN CRÍTICA: Validar inputs antes de procesar
+      if (!remotePath || typeof remotePath !== 'string' || remotePath.trim() === '') {
+        return { success: false, error: 'remotePath inválido o vacío' };
+      }
+      if (!localPath || typeof localPath !== 'string' || localPath.trim() === '') {
+        return { success: false, error: 'localPath inválido o vacío' };
+      }
+      if (!sshConfig || typeof sshConfig !== 'object') {
+        return { success: false, error: 'sshConfig inválido' };
+      }
+      
+      // Sanitizar paths (prevenir path traversal)
+      const safeRemotePath = remotePath.trim();
+      const safeLocalPath = localPath.trim();
+      
       if (sshConfig.useBastionWallix) {
         // Construir string de conexión Wallix para SFTP
         // Formato: <USER>@<BASTION>::<TARGET>@<DEVICE>::<SERVICE>
         // En la mayoría de los casos, bastionUser ya tiene el formato correcto
         const sftp = new SftpClient();
-        const connectConfig = {
+        const         connectConfig = {
           host: sshConfig.bastionHost,
           port: sshConfig.port || 22,
           username: sshConfig.bastionUser, // Wallix espera el string especial aquí
@@ -245,7 +260,7 @@ function registerSSHHandlers(dependencies = {}) {
           readyTimeout: 20000,
         };
         await sftp.connect(connectConfig);
-        await sftp.fastGet(remotePath, localPath);
+        await sftp.fastGet(safeRemotePath, safeLocalPath);
         await sftp.end();
         return { success: true };
       } else {
@@ -259,7 +274,7 @@ function registerSSHHandlers(dependencies = {}) {
           readyTimeout: 20000,
         };
         await sftp.connect(connectConfig);
-        await sftp.fastGet(remotePath, localPath);
+        await sftp.fastGet(safeRemotePath, safeLocalPath);
         await sftp.end();
         return { success: true };
       }
@@ -271,6 +286,26 @@ function registerSSHHandlers(dependencies = {}) {
   // SSH: Subir archivo
   ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath, sshConfig }) => {
     try {
+      // ✅ VALIDACIÓN CRÍTICA: Validar inputs antes de procesar
+      if (!localPath || typeof localPath !== 'string' || localPath.trim() === '') {
+        return { success: false, error: 'localPath inválido o vacío' };
+      }
+      if (!remotePath || typeof remotePath !== 'string' || remotePath.trim() === '') {
+        return { success: false, error: 'remotePath inválido o vacío' };
+      }
+      if (!sshConfig || typeof sshConfig !== 'object') {
+        return { success: false, error: 'sshConfig inválido' };
+      }
+      
+      // Sanitizar paths
+      const safeLocalPath = localPath.trim();
+      const safeRemotePath = remotePath.trim();
+      
+      // Verificar que el archivo local existe
+      if (!fs.existsSync(safeLocalPath)) {
+        return { success: false, error: 'El archivo local no existe' };
+      }
+      
       const sftp = new SftpClient();
       let connectConfig;
       if (sshConfig.useBastionWallix) {
@@ -292,8 +327,8 @@ function registerSSHHandlers(dependencies = {}) {
           readyTimeout: 20000,
         };
       }
-      await sftp.connect(connectConfig);
-      await sftp.fastPut(localPath, remotePath);
+        await sftp.connect(connectConfig);
+        await sftp.fastPut(safeLocalPath, safeRemotePath);
       await sftp.end();
       return { success: true };
     } catch (err) {
