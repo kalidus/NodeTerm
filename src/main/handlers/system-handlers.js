@@ -77,25 +77,38 @@ function registerSystemHandlers() {
   
   // Handler para obtener información de archivo
   ipcMain.handle('import:get-file-info', async (event, filePath) => {
-    const stat = safeStatSync(filePath);
-    if (!stat) return { ok: false };
+    // ✅ VALIDACIÓN CRÍTICA: Validar input antes de procesar
+    if (!filePath || typeof filePath !== 'string' || filePath.trim() === '') {
+      return { ok: false, error: 'filePath inválido o vacío' };
+    }
+    const stat = safeStatSync(filePath.trim());
+    if (!stat) return { ok: false, error: 'No se pudo obtener información del archivo' };
     return { ok: true, mtimeMs: stat.mtimeMs, size: stat.size };
   });
 
   // Handler para obtener hash de archivo
   ipcMain.handle('import:get-file-hash', async (event, filePath) => {
-    const hash = hashFileSync(filePath);
-    if (!hash) return { ok: false };
+    // ✅ VALIDACIÓN CRÍTICA: Validar input antes de procesar
+    if (!filePath || typeof filePath !== 'string' || filePath.trim() === '') {
+      return { ok: false, error: 'filePath inválido o vacío' };
+    }
+    const hash = hashFileSync(filePath.trim());
+    if (!hash) return { ok: false, error: 'No se pudo calcular el hash del archivo' };
     return { ok: true, hash };
   });
 
   // Handler para leer contenido de archivo
   ipcMain.handle('import:read-file', async (event, filePath) => {
     try {
-      const data = fs.readFileSync(filePath, 'utf-8');
+      // ✅ VALIDACIÓN CRÍTICA: Validar input antes de procesar
+      if (!filePath || typeof filePath !== 'string' || filePath.trim() === '') {
+        return { ok: false, error: 'filePath inválido o vacío' };
+      }
+      const safePath = filePath.trim();
+      const data = fs.readFileSync(safePath, 'utf-8');
       return { ok: true, content: data };
     } catch (e) {
-      return { ok: false, error: e?.message };
+      return { ok: false, error: e?.message || 'Error desconocido al leer archivo' };
     }
   });
 

@@ -146,7 +146,12 @@ const QuickAccessSidebar = ({
       
       // Abrir el gestor de contraseñas
       window.dispatchEvent(new CustomEvent('open-password-manager'));
-    } catch (e) { /* noop */ }
+    } catch (e) {
+      // ✅ MEJORADO: Log en desarrollo para debugging
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[QuickAccessSidebar] Error abriendo password manager:', e?.message || e);
+      }
+    }
   };
 
   const handleOpenAuditGlobal = async () => {
@@ -164,7 +169,12 @@ const QuickAccessSidebar = ({
           }));
         }
       }
-    } catch (e) { /* noop */ }
+    } catch (e) {
+      // ✅ MEJORADO: Log en desarrollo para debugging
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[QuickAccessSidebar] Error abriendo auditoría global:', e?.message || e);
+      }
+    }
   };
 
   const handleToggleTerminalVisibility = useCallback(async () => {

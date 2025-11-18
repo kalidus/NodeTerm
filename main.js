@@ -143,12 +143,27 @@ process.on('uncaughtException', (error) => {
 
 // Manejador para promesas rechazadas no capturadas
 process.on('unhandledRejection', (reason, promise) => {
+  // Suprimir errores conocidos de ConPTY
   if (reason && reason.message && reason.message.includes('AttachConsole failed')) {
     console.warn('Promise rechazada con error AttachConsole capturado:', reason.message);
     return; // Suprimir el error
   }
   
-  console.error('Promise rechazada no manejada:', reason);
+  // Log detallado del error para debugging
+  console.error('❌ Promise rechazada no manejada:', {
+    reason: reason?.message || reason,
+    stack: reason?.stack,
+    promise: promise?.toString?.() || 'unknown'
+  });
+  
+  // En desarrollo, mostrar más información
+  if (process.env.NODE_ENV === 'development') {
+    console.error('Stack completo:', reason?.stack || 'No stack available');
+  }
+  
+  // Intentar prevenir crash: si es un error crítico, intentar cerrar limpiamente
+  // NO hacer process.exit() aquí porque podría causar pérdida de datos
+  // Solo loguear y dejar que el sistema maneje el error
 });
 
 // Store active SSH connections and their shells
@@ -599,21 +614,29 @@ function createWindow() {
   
   ipcMain.handle('fs:mkdir-recursive', async (event, path) => {
     try {
+      // ✅ VALIDACIÓN CRÍTICA: Validar input antes de procesar
+      if (!path || typeof path !== 'string' || path.trim() === '') {
+        return { success: false, error: 'path inválido o vacío' };
+      }
       const fs = require('fs').promises;
-      await fs.mkdir(path, { recursive: true });
+      await fs.mkdir(path.trim(), { recursive: true });
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || 'Error desconocido al crear directorio' };
     }
   });
   
   ipcMain.handle('shell:open-path', async (event, path) => {
     try {
+      // ✅ VALIDACIÓN CRÍTICA: Validar input antes de procesar
+      if (!path || typeof path !== 'string' || path.trim() === '') {
+        return { success: false, error: 'path inválido o vacío' };
+      }
       const { shell } = require('electron');
-      await shell.openPath(path);
+      await shell.openPath(path.trim());
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || 'Error desconocido al abrir path' };
     }
   });
     

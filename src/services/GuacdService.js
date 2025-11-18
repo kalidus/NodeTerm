@@ -217,7 +217,12 @@ function resolveGuacdZipCandidates() {
         if (!nameLower.startsWith('guacd')) continue; // evitar guacamole-server-*.zip (solo fuentes)
         pushIfExists(path.join(base, entry.name));
       }
-    } catch (_) { /* ignore */ }
+    } catch (err) {
+      // ✅ MEJORADO: Log en desarrollo para debugging de problemas de archivos
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[GuacdService] Error leyendo directorio de guacd:', err?.message || err);
+      }
+    }
   }
 
   // Ordenar por tamaño (desc) para priorizar el más grande (más probable que esté completo)
@@ -228,7 +233,12 @@ function resolveGuacdZipCandidates() {
       const sb = fs.statSync(b).size || 0;
       return sb - sa;
     });
-  } catch (_) {}
+  } catch (err) {
+    // ✅ MEJORADO: Log en desarrollo si falla el ordenamiento
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[GuacdService] Error ordenando archivos guacd:', err?.message || err);
+    }
+  }
   return result;
 }
 
