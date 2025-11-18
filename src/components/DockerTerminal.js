@@ -13,7 +13,8 @@ const DockerTerminal = forwardRef(({
     fontSize = 14, 
     theme = {},
     tabId = 'default',
-    dockerInfo = {}
+    dockerInfo = {},
+    hideStatusBar = false
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -282,15 +283,17 @@ const DockerTerminal = forwardRef(({
             />
             
             {/* Status Bar */}
-            <div style={getScopedStatusBarCssVars()}>
-                <StatusBar
-                    stats={statusStats}
-                    isLoading={isLoadingStats}
-                    themeName={localStatusBarThemeName}
-                    iconTheme={statusBarIconTheme}
-                    showNetworkDisks={showNetworkDisks}
-                />
-            </div>
+            {!hideStatusBar && (
+                <div style={getScopedStatusBarCssVars()}>
+                    <StatusBar
+                        stats={statusStats}
+                        isLoading={isLoadingStats}
+                        themeName={localStatusBarThemeName}
+                        iconTheme={statusBarIconTheme}
+                        showNetworkDisks={showNetworkDisks}
+                    />
+                </div>
+            )}
         </div>
     );
 });

@@ -24,7 +24,7 @@ function adjustColorBrightness(hex, percent) {
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
-const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localPowerShellTheme, localLinuxTerminalTheme }, ref) => {
+const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localPowerShellTheme, localLinuxTerminalTheme, hideStatusBar = false }, ref) => {
     // Referencias para control de scroll de pestañas
     const tabsContainerRef = useRef(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -1707,6 +1707,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
+                                hideStatusBar={hideStatusBar}
                             />
                         ) : tab.type === 'wsl' ? (
                             <WSLTerminal 
@@ -1716,6 +1717,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 }}
                                 tabId={tab.id}
                                 theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
+                                hideStatusBar={hideStatusBar}
                             />
                         ) : (tab.type === 'ubuntu' || tab.type === 'wsl-distro') ? (
                             <UbuntuTerminal 
@@ -1726,6 +1728,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 tabId={tab.id}
                                 ubuntuInfo={tab.distroInfo}
                                 theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
+                                hideStatusBar={hideStatusBar}
                             />
                         ) : tab.type === 'cygwin' ? (
                             <CygwinTerminal 
@@ -1737,6 +1740,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
+                                hideStatusBar={hideStatusBar}
                             />
                         ) : tab.type === 'docker' ? (
                             <DockerTerminal 
@@ -1749,6 +1753,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
+                                hideStatusBar={hideStatusBar}
                             />
                         ) : tab.type === 'rdp-guacamole' ? (
                             <GuacamoleTerminal 

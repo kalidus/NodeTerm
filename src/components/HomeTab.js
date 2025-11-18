@@ -9,6 +9,7 @@ import ConnectionHistory from './ConnectionHistory';
 import QuickAccessSidebar from './QuickAccessSidebar';
 import NodeTermStatus from './NodeTermStatus';
 import AIChatWithHistory from './AIChatWithHistory';
+import StandaloneStatusBar from './StandaloneStatusBar';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 import { themes } from '../themes';
@@ -38,6 +39,15 @@ const HomeTab = ({
   const [recentConnections, setRecentConnections] = useState([]); // Estado para conexiones recientes
   const [recentPasswords, setRecentPasswords] = useState([]); // Estado para passwords recientes
   const [showAIChat, setShowAIChat] = useState(false); // Estado para mostrar/ocultar chat de IA
+  const [statusBarVisible, setStatusBarVisible] = useState(() => {
+    // Cargar preferencia desde localStorage, por defecto visible
+    try {
+      const saved = localStorage.getItem('homeTab_statusBarVisible');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  }); // Estado para mostrar/ocultar status bar
   const versionInfo = getVersionInfo();
   const tabbedTerminalRef = useRef();
 
@@ -377,6 +387,20 @@ const HomeTab = ({
     setShowAIChat(prev => !prev);
   };
 
+  // Función para toggle de la status bar
+  const handleToggleStatusBar = () => {
+    setStatusBarVisible(prev => {
+      const newValue = !prev;
+      // Guardar preferencia en localStorage
+      try {
+        localStorage.setItem('homeTab_statusBarVisible', newValue.toString());
+      } catch (e) {
+        console.error('Error guardando preferencia de status bar:', e);
+      }
+      return newValue;
+    });
+  };
+
   useEffect(() => {
     const handleExternalToggle = () => {
       if (!showAIChat) return;
@@ -387,6 +411,8 @@ const HomeTab = ({
       window.removeEventListener('ai-chat-home-toggle-terminal', handleExternalToggle);
     };
   }, [showAIChat, handleToggleTerminalVisibility]);
+
+
 
   // Determinar el tamaño del panel superior
   const getTopPanelSize = () => {
@@ -450,7 +476,9 @@ const HomeTab = ({
             onOpenSettings={onOpenSettings}
             onToggleTerminalVisibility={handleToggleTerminalVisibility}
             onToggleAIChat={handleToggleAIChat}
+            onToggleStatusBar={handleToggleStatusBar}
             showAIChat={showAIChat}
+            statusBarVisible={statusBarVisible}
             sshConnectionsCount={sshConnectionsCount}
             foldersCount={foldersCount}
           />
@@ -1092,6 +1120,7 @@ const HomeTab = ({
         localFontSize={localFontSize}
         localPowerShellTheme={localPowerShellTheme}
         localLinuxTerminalTheme={localLinuxTerminalTheme}
+        hideStatusBar={!statusBarVisible}
       />
     </div>
   );
@@ -1107,31 +1136,51 @@ const HomeTab = ({
         height: '100%',
         width: '100%',
         background: dashboardBg,
-        overflow: 'hidden'
+        overflow: 'hidden',
+        position: 'relative'
       }}>
-        {topPanel}
+        <div style={{
+          height: statusBarVisible ? 'calc(100% - 40px)' : '100%',
+          width: '100%',
+          overflow: 'auto'
+        }}>
+          {topPanel}
+        </div>
+        <StandaloneStatusBar visible={statusBarVisible} />
       </div>
     );
   }
 
   return (
-    <SplitLayout
-      key={`home-split-${themeVersion}`}
-      leftTerminal={{ key: 'home_top', content: topPanel }}
-      rightTerminal={{ key: 'home_bottom', content: bottomPanel }}
-      orientation="horizontal"
-      fontFamily={''}
-      fontSize={16}
-      theme={{ background: localTerminalBg }}
-      onContextMenu={() => {}}
-      sshStatsByTabId={{}}
-      terminalRefs={{ current: {} }}
-      statusBarIconTheme="classic"
-      isHomeTab={true}
-      externalPaneSize={getTopPanelSize()}
-      onManualResize={handleManualResize}
-      splitterColor={splitterColor}
-    />
+    <div style={{
+      height: '100%',
+      width: '100%',
+      position: 'relative'
+    }}>
+      <div style={{
+        height: statusBarVisible ? 'calc(100% - 40px)' : '100%',
+        width: '100%'
+      }}>
+        <SplitLayout
+          key={`home-split-${themeVersion}`}
+          leftTerminal={{ key: 'home_top', content: topPanel }}
+          rightTerminal={{ key: 'home_bottom', content: bottomPanel }}
+          orientation="horizontal"
+          fontFamily={''}
+          fontSize={16}
+          theme={{ background: localTerminalBg }}
+          onContextMenu={() => {}}
+          sshStatsByTabId={{}}
+          terminalRefs={{ current: {} }}
+          statusBarIconTheme="classic"
+          isHomeTab={true}
+          externalPaneSize={getTopPanelSize()}
+          onManualResize={handleManualResize}
+          splitterColor={splitterColor}
+        />
+      </div>
+      <StandaloneStatusBar visible={statusBarVisible} />
+    </div>
   );
 };
 

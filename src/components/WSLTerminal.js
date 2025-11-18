@@ -12,7 +12,8 @@ const WSLTerminal = forwardRef(({
     fontFamily = 'Consolas, "Courier New", monospace', 
     fontSize = 14, 
     theme = {},
-    tabId = 'default'
+    tabId = 'default',
+    hideStatusBar = false
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -456,9 +457,11 @@ const WSLTerminal = forwardRef(({
                     margin: 0
                 }} 
             />
-            <div style={{ ...getScopedStatusBarCssVars() }}>
-                <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} showNetworkDisks={showNetworkDisks} isLoading={isLoadingStats} />
-            </div>
+            {!hideStatusBar && (
+                <div style={{ ...getScopedStatusBarCssVars() }}>
+                    <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} showNetworkDisks={showNetworkDisks} isLoading={isLoadingStats} />
+                </div>
+            )}
         </div>
     );
 });

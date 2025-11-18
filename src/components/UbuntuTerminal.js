@@ -13,7 +13,8 @@ const UbuntuTerminal = forwardRef(({
     fontSize = 14, 
     theme = {},
     tabId = 'default',
-    ubuntuInfo = null // Mantener nombre por compatibilidad, pero puede ser cualquier distribución WSL
+    ubuntuInfo = null, // Mantener nombre por compatibilidad, pero puede ser cualquier distribución WSL
+    hideStatusBar = false
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -528,9 +529,11 @@ const UbuntuTerminal = forwardRef(({
                     margin: 0
                 }} 
             />
-            <div style={{ ...getScopedStatusBarCssVars() }}>
-                <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} showNetworkDisks={showNetworkDisks} isLoading={isLoadingStats} />
-            </div>
+            {!hideStatusBar && (
+                <div style={{ ...getScopedStatusBarCssVars() }}>
+                    <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} showNetworkDisks={showNetworkDisks} isLoading={isLoadingStats} />
+                </div>
+            )}
         </div>
     );
 });
