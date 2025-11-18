@@ -73,7 +73,6 @@ function getRunningContainers() {
           .filter(c => c && c.id);
         
         if (containers.length > 0) {
-          logContainers(containers);
           return containers;
         }
       }
@@ -107,7 +106,6 @@ function getRunningContainers() {
           .filter(c => c && c.id);
         
         if (containers.length > 0) {
-          logContainers(containers);
           return containers;
         }
       }
@@ -145,7 +143,6 @@ function getRunningContainers() {
           .filter(c => c && c.id && c.name);
         
         if (containers.length > 0) {
-          logContainers(containers);
           return containers;
         }
       }
@@ -158,16 +155,6 @@ function getRunningContainers() {
     console.error('❌ Error obteniendo contenedores Docker:', error.message);
     return [];
   }
-}
-
-/**
- * Helper para loggear contenedores detectados
- */
-function logContainers(containers) {
-  console.log(`🐳 Docker: ${containers.length} contenedor(es) detectado(s)`);
-  containers.forEach(c => {
-    console.log(`  🐳 ${c.name} (${c.shortId})`);
-  });
 }
 
 /**
