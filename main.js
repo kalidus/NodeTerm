@@ -427,15 +427,68 @@ function createWindow() {
     }
   })();
 
-  mainWindow.loadURL(
-    process.env.NODE_ENV === 'development'
-      ? 'http://localhost:3000'
-      : url.format({
-          pathname: path.join(__dirname, 'dist', 'index.html'),
-          protocol: 'file:',
-          slashes: true
-        })
-  );
+  // 🔧 ESPERAR A QUE WEBPACK TERMINE DE COMPILAR EN DESARROLLO
+  // Función para verificar si el archivo compilado existe
+  async function waitForWebpackBuild(maxWaitMs = 30000) {
+    if (process.env.NODE_ENV !== 'development') {
+      return true; // En producción, el archivo debería existir siempre
+    }
+
+    const distPath = path.join(__dirname, 'dist', 'index.html');
+    const startTime = Date.now();
+
+    return new Promise((resolve) => {
+      function checkFile() {
+        try {
+          if (fs.existsSync(distPath)) {
+            console.log('✅ Archivo compilado encontrado, cargando ventana...');
+            resolve(true);
+            return;
+          }
+
+          const elapsed = Date.now() - startTime;
+          if (elapsed >= maxWaitMs) {
+            console.warn(`⚠️ Timeout esperando compilación de webpack (${maxWaitMs}ms), intentando cargar de todos modos...`);
+            resolve(false);
+            return;
+          }
+
+          // Revisar cada 500ms
+          setTimeout(checkFile, 500);
+        } catch (error) {
+          console.error('❌ Error verificando archivo compilado:', error.message);
+          resolve(false);
+        }
+      }
+
+      // Empezar a verificar inmediatamente
+      checkFile();
+    });
+  }
+
+  // Cargar la ventana esperando a que webpack termine
+  (async () => {
+    await waitForWebpackBuild();
+    
+    const urlToLoad = url.format({
+      pathname: path.join(__dirname, 'dist', 'index.html'),
+      protocol: 'file:',
+      slashes: true
+    });
+
+    try {
+      await mainWindow.loadURL(urlToLoad);
+      console.log('✅ Ventana cargada correctamente');
+    } catch (error) {
+      console.error('❌ Error cargando ventana:', error.message);
+      // Si falla, intentar recargar después de un momento
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.reload();
+        }
+      }, 2000);
+    }
+  })();
 
   // Mostrar ventana cuando esté lista para mostrar
   mainWindow.once('ready-to-show', () => {
