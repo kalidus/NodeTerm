@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 
@@ -33,6 +34,59 @@ const QuickAccessSidebar = ({
   
   // Estado global de transición para evitar re-renders
   const [isGlobalTransition, setIsGlobalTransition] = useState(false);
+  
+  // Estado para controlar el submenú de Docker
+  const [dockerMenuOpen, setDockerMenuOpen] = useState(false);
+  const [dockerMenuPosition, setDockerMenuPosition] = useState({ top: 0, left: 0 });
+  
+  // Ref para el botón de Docker
+  const dockerButtonRef = React.useRef(null);
+  const dockerMenuRef = React.useRef(null);
+
+  // Calcular posición del submenú cuando se abre
+  useEffect(() => {
+    if (dockerMenuOpen && dockerButtonRef.current) {
+      const updatePosition = () => {
+        if (dockerButtonRef.current) {
+          const rect = dockerButtonRef.current.getBoundingClientRect();
+          setDockerMenuPosition({
+            top: rect.top,
+            left: rect.right + 8
+          });
+        }
+      };
+      
+      updatePosition();
+      window.addEventListener('resize', updatePosition);
+      window.addEventListener('scroll', updatePosition, true);
+      
+      return () => {
+        window.removeEventListener('resize', updatePosition);
+        window.removeEventListener('scroll', updatePosition, true);
+      };
+    }
+  }, [dockerMenuOpen]);
+
+  // Cerrar el submenú de Docker al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dockerButtonRef.current && !dockerButtonRef.current.contains(event.target) &&
+          dockerMenuRef.current && !dockerMenuRef.current.contains(event.target)) {
+        setDockerMenuOpen(false);
+      }
+    };
+
+    if (dockerMenuOpen) {
+      // Pequeño delay para evitar que se cierre inmediatamente al abrir
+      setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 100);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dockerMenuOpen]);
 
   // Escuchar cambios en el tema
   useEffect(() => {
@@ -281,20 +335,7 @@ const QuickAccessSidebar = ({
         }
       });
 
-      // Agregar contenedores Docker si están disponibles
-      if (dockerContainers.length > 0) {
-        dockerContainers.forEach(container => {
-          terminals.push({
-            label: `Docker: ${container.name}`,
-            value: `docker-${container.name}`,
-            icon: 'pi pi-box',
-            color: '#2496ED',
-            action: () => handleOpenTerminal(`docker-${container.name}`, { dockerContainer: container }),
-            dockerContainer: container,
-            category: 'docker'
-          });
-        });
-      }
+      // NO agregar contenedores Docker aquí - se mostrarán en un submenú separado
     } else if (platform === 'linux' || platform === 'darwin') {
       terminals.push({
         label: 'Terminal',
@@ -612,12 +653,22 @@ const QuickAccessSidebar = ({
 
   return (
       <>
-        {/* Estilos para la animación del spinner */}
+        {/* Estilos para la animación del spinner y del submenú */}
         <style>
           {`
             @keyframes spin {
               0% { transform: rotate(0deg); }
               100% { transform: rotate(360deg); }
+            }
+            @keyframes slideInRight {
+              0% {
+                opacity: 0;
+                transform: translateX(-10px);
+              }
+              100% {
+                opacity: 1;
+                transform: translateX(0);
+              }
             }
           `}
         </style>
@@ -984,6 +1035,264 @@ const QuickAccessSidebar = ({
         }}>
         {availableTerminals.map((terminal, index) => 
           renderTerminalButton(terminal, index)
+        )}
+        
+        {/* Botón de Docker con submenú */}
+        {dockerContainers.length > 0 && (
+          <div style={{ position: 'relative' }}>
+            <div
+              ref={dockerButtonRef}
+              title="Docker Containers"
+              style={{
+                cursor: 'pointer',
+                transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                background: dockerMenuOpen
+                  ? `linear-gradient(135deg, rgba(36, 150, 237, 0.3) 0%, rgba(36, 150, 237, 0.2) 50%, rgba(36, 150, 237, 0.1) 100%)`
+                  : `linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)`,
+                backdropFilter: 'blur(24px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                border: dockerMenuOpen
+                  ? '1px solid rgba(36, 150, 237, 0.5)'
+                  : '1px solid rgba(255,255,255,0.12)',
+                position: 'relative',
+                width: '100%',
+                height: '48px',
+                borderRadius: '12px',
+                boxShadow: dockerMenuOpen
+                  ? '0 4px 16px rgba(36, 150, 237, 0.3), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2)'
+                  : '0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.15)',
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0.75rem',
+                marginBottom: '0.125rem',
+                zIndex: dockerMenuOpen ? 1001 : 1
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.background = dockerMenuOpen
+                  ? `linear-gradient(135deg, rgba(36, 150, 237, 0.4) 0%, rgba(36, 150, 237, 0.3) 50%, rgba(36, 150, 237, 0.2) 100%)`
+                  : `linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%)`;
+                e.currentTarget.style.boxShadow = dockerMenuOpen
+                  ? '0 6px 20px rgba(36, 150, 237, 0.4), 0 3px 10px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.25)'
+                  : '0 4px 16px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.2)';
+                e.currentTarget.style.borderColor = dockerMenuOpen ? 'rgba(36, 150, 237, 0.6)' : 'rgba(255,255,255,0.18)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.background = dockerMenuOpen
+                  ? `linear-gradient(135deg, rgba(36, 150, 237, 0.3) 0%, rgba(36, 150, 237, 0.2) 50%, rgba(36, 150, 237, 0.1) 100%)`
+                  : `linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)`;
+                e.currentTarget.style.boxShadow = dockerMenuOpen
+                  ? '0 4px 16px rgba(36, 150, 237, 0.3), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2)'
+                  : '0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.15)';
+                e.currentTarget.style.borderColor = dockerMenuOpen ? 'rgba(36, 150, 237, 0.5)' : 'rgba(255,255,255,0.12)';
+              }}
+              onClick={() => setDockerMenuOpen(!dockerMenuOpen)}
+            >
+              <div style={{ 
+                width: '28px',
+                height: '28px',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #2496ED 0%, #2496EDdd 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(36, 150, 237, 0.4), 0 1px 3px rgba(36, 150, 237, 0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
+                border: '1px solid rgba(36, 150, 237, 0.7)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <i 
+                  className="pi pi-box"
+                  style={{ 
+                    fontSize: '1rem',
+                    color: 'white',
+                    textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                    filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))',
+                    position: 'relative',
+                    zIndex: 1
+                  }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle, rgba(36, 150, 237, 0.4) 0%, transparent 60%)',
+                  filter: 'blur(1px)',
+                  opacity: '0.6'
+                }} />
+              </div>
+            </div>
+            
+            {/* Submenú de Docker - Renderizado con Portal */}
+            {dockerMenuOpen && createPortal(
+              <div 
+                ref={dockerMenuRef}
+                style={{
+                  position: 'fixed',
+                  top: `${dockerMenuPosition.top}px`,
+                  left: `${dockerMenuPosition.left}px`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                  minWidth: '240px',
+                  maxWidth: '320px',
+                  padding: '0.75rem',
+                  background: 'rgba(0, 0, 0, 0.85)',
+                  backdropFilter: 'blur(30px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+                  border: '1px solid rgba(36, 150, 237, 0.3)',
+                  borderRadius: '14px',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(36, 150, 237, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+                  zIndex: 10000,
+                  animation: 'slideInRight 0.2s ease-out'
+                }}
+              >
+                {dockerContainers.map((container, index) => (
+                  <div
+                    key={index}
+                    title={`Abrir terminal en: ${container.name}`}
+                    style={{
+                      cursor: 'pointer',
+                      transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                      background: `linear-gradient(135deg, 
+                        rgba(36, 150, 237, 0.15) 0%, 
+                        rgba(36, 150, 237, 0.1) 50%, 
+                        rgba(36, 150, 237, 0.05) 100%)`,
+                      backdropFilter: 'blur(24px) saturate(180%)',
+                      WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                      border: `1px solid rgba(36, 150, 237, 0.3)`,
+                      position: 'relative',
+                      width: '100%',
+                      minHeight: '56px',
+                      borderRadius: '12px',
+                      boxShadow: `0 2px 8px rgba(36, 150, 237, 0.2), 
+                                  0 1px 3px rgba(0,0,0,0.15),
+                                  inset 0 1px 0 rgba(255,255,255,0.1)`,
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'flex-start',
+                      padding: '0.75rem',
+                      gap: '0.875rem'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateX(4px)';
+                      e.currentTarget.style.background = `linear-gradient(135deg, 
+                        rgba(36, 150, 237, 0.25) 0%, 
+                        rgba(36, 150, 237, 0.2) 50%, 
+                        rgba(36, 150, 237, 0.15) 100%)`;
+                      e.currentTarget.style.boxShadow = `0 4px 16px rgba(36, 150, 237, 0.3), 
+                                                          0 2px 8px rgba(0,0,0,0.2),
+                                                          inset 0 1px 0 rgba(255,255,255,0.15)`;
+                      e.currentTarget.style.borderColor = `rgba(36, 150, 237, 0.5)`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateX(0)';
+                      e.currentTarget.style.background = `linear-gradient(135deg, 
+                        rgba(36, 150, 237, 0.15) 0%, 
+                        rgba(36, 150, 237, 0.1) 50%, 
+                        rgba(36, 150, 237, 0.05) 100%)`;
+                      e.currentTarget.style.boxShadow = `0 2px 8px rgba(36, 150, 237, 0.2), 
+                                                          0 1px 3px rgba(0,0,0,0.15),
+                                                          inset 0 1px 0 rgba(255,255,255,0.1)`;
+                      e.currentTarget.style.borderColor = `rgba(36, 150, 237, 0.3)`;
+                    }}
+                    onClick={() => {
+                      handleOpenTerminal(`docker-${container.name}`, { dockerContainer: container });
+                      setDockerMenuOpen(false);
+                    }}
+                  >
+                    {/* Icono */}
+                    <div style={{ 
+                      width: '36px',
+                      height: '36px',
+                      minWidth: '36px',
+                      borderRadius: '10px',
+                      background: `linear-gradient(135deg, 
+                        #2496ED 0%, 
+                        #2496EDdd 100%)`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: `0 2px 8px rgba(36, 150, 237, 0.4), 
+                                  0 1px 3px rgba(36, 150, 237, 0.3),
+                                  inset 0 1px 0 rgba(255,255,255,0.25)`,
+                      border: `1px solid rgba(36, 150, 237, 0.7)`,
+                      position: 'relative',
+                      overflow: 'hidden',
+                      flexShrink: 0
+                    }}>
+                      <i 
+                        className="pi pi-box"
+                        style={{ 
+                          fontSize: '1.2rem',
+                          color: 'white',
+                          textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                          filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))',
+                          position: 'relative',
+                          zIndex: 1
+                        }}
+                      />
+                      <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: `radial-gradient(circle, rgba(36, 150, 237, 0.3) 0%, transparent 60%)`,
+                        filter: 'blur(1px)',
+                        opacity: '0.6'
+                      }} />
+                    </div>
+                    
+                    {/* Nombre del contenedor */}
+                    <div style={{
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      minWidth: 0,
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        fontSize: '0.9375rem',
+                        fontWeight: '600',
+                        color: currentTheme.colors?.textPrimary || 'rgba(255,255,255,0.95)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        lineHeight: '1.3',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                      }}>
+                        {container.name}
+                      </div>
+                      <div style={{
+                        fontSize: '0.8125rem',
+                        color: currentTheme.colors?.textSecondary || 'rgba(255,255,255,0.65)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        lineHeight: '1.3',
+                        marginTop: '3px'
+                      }}>
+                        Docker Container
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>,
+              document.body
+            )}
+          </div>
         )}
       </div>
 
