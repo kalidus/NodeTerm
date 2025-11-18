@@ -733,7 +733,6 @@ ipcMain.handle('detect-ubuntu-availability', async () => {
 ipcMain.handle('cygwin:detect', async () => {
   try {
     const result = Cygwin.CygwinHandlers.detect();
-    console.log('🔍 Cygwin detection result:', result.available ? '✅ Available' : '❌ Not available');
     return result;
   } catch (error) {
     console.error('❌ Error detecting Cygwin:', error);
