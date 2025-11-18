@@ -283,13 +283,6 @@ const QuickAccessSidebar = ({
 
       // Agregar contenedores Docker si están disponibles
       if (dockerContainers.length > 0) {
-        // Agregar separador/encabezado de Docker
-        terminals.push({
-          isDivider: true,
-          label: 'DOCKER',
-          isHeader: true
-        });
-        
         dockerContainers.forEach(container => {
           terminals.push({
             label: `Docker: ${container.name}`,
