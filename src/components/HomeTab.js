@@ -1120,7 +1120,7 @@ const HomeTab = ({
         localFontSize={localFontSize}
         localPowerShellTheme={localPowerShellTheme}
         localLinuxTerminalTheme={localLinuxTerminalTheme}
-        hideStatusBar={!statusBarVisible}
+        hideStatusBar={true}
       />
     </div>
   );
