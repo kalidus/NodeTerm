@@ -8,11 +8,65 @@
 
 ## 🎉 ¡Bienvenido a NodeTerm v1.6.0!
 
-Esta versión introduce el **Sistema de Actualización Automática** completo, permitiéndote mantener NodeTerm siempre actualizado con las últimas funcionalidades y correcciones de seguridad. Además incluye mejoras significativas en la UI/UX y una arquitectura más robusta.
+Esta es una **versión mayor** que introduce un **Sistema Completo de IA y Chat**, integración completa con **MCP (Model Context Protocol)**, soporte para **AnythingLLM** y **OpenWebUI**, conexiones **Docker**, mejoras significativas en terminales, y el **Sistema de Actualización Automática**. Esta versión representa un salto cuántico en las capacidades de NodeTerm, transformándolo en una plataforma completa de productividad con IA integrada.
 
 ---
 
 ## ✨ Características Principales
+
+### 🤖 Sistema Completo de IA y Chat
+- **Chat de IA Integrado**: Sistema completo de chat con múltiples proveedores (OpenAI, Anthropic, Google, Ollama)
+- **Soporte Multi-Proveedor**: Integración nativa con OpenAI GPT, Anthropic Claude, Google Gemini, y modelos locales Ollama
+- **Gestión de Conversaciones**: Sistema completo de historial con carpetas, favoritos y búsqueda avanzada
+- **Análisis de Código con IA**: Análisis inteligente de archivos de código con soporte para múltiples lenguajes
+- **Adjuntos de Archivos**: Soporte completo para adjuntar y analizar archivos (PDF, DOCX, JSON, XML, CSV, TXT, código fuente)
+- **Detección Inteligente de Archivos**: Sistema avanzado de detección de tipos de archivo y lenguajes de programación
+- **Formateo Markdown**: Renderizado completo de markdown con resaltado de sintaxis profesional
+- **Gestión de Tokens**: Sistema de gestión de tokens con contadores en tiempo real y configuración por modelo
+- **Rendimiento Optimizado**: Configuración de tokens por modelo (LOW/MEDIUM/HIGH) para máximo rendimiento
+
+### 🔌 Integración MCP (Model Context Protocol)
+- **Sistema MCP Completo**: Integración nativa con Model Context Protocol para extender capacidades de IA
+- **MCP con Modelos Locales**: Soporte para usar MCP tools con modelos locales (Ollama, DeepSeek, Llama) mediante System Prompt
+- **MCP SSH/Terminal Nativo**: Servidor MCP nativo para ejecutar comandos localmente (WSL, Ubuntu, Kali, Cygwin, PowerShell) y remotamente (SSH)
+- **MCP Filesystem**: Acceso completo al sistema de archivos a través de MCP
+- **MCP Web Search Nativo**: Búsqueda web integrada con JavaScript nativo
+- **MCP Tenable**: Integración con Tenable para seguridad y auditoría
+- **Gestión de MCPs**: Interfaz completa para configurar, activar y gestionar servidores MCP
+- **Catálogo de MCPs**: Catálogo integrado con información detallada de servidores MCP disponibles
+- **Tools Orchestrator**: Sistema inteligente para orquestar múltiples herramientas MCP
+- **Indicadores Visuales**: Indicadores en tiempo real de ejecución de herramientas MCP
+
+### 🌐 Integración AnythingLLM
+- **AnythingLLM Integrado**: Integración completa con AnythingLLM para RAG (Retrieval Augmented Generation)
+- **MCP Filesystem para AnythingLLM**: Acceso al sistema de archivos desde AnythingLLM
+- **Configuración Docker**: Gestión automática de contenedores Docker para AnythingLLM
+- **Guía Completa**: Documentación detallada para configuración y uso
+
+### 🌐 Integración OpenWebUI
+- **OpenWebUI Integrado**: Interfaz web moderna para interactuar con modelos de lenguaje
+- **Gestión Automática de Docker**: Inicio y gestión automática de contenedores OpenWebUI
+- **Webview Embebido**: Interfaz integrada directamente en NodeTerm
+- **Configuración Flexible**: Variables de entorno personalizables
+
+### 🐳 Conexiones Docker
+- **Terminales Docker**: Conexión directa a contenedores Docker con terminales interactivas
+- **Listado de Contenedores**: Visualización de contenedores en ejecución
+- **Status Bar para Docker**: Información en tiempo real de recursos del contenedor
+- **Gestión de Sesiones**: Múltiples sesiones Docker simultáneas
+
+### 🖥️ Mejoras de Terminales
+- **Terminales Mejorados**: Mejoras significativas en todos los tipos de terminales
+- **Cygwin Mejorado**: Mejor integración y ejecución automática de comandos locales
+- **Status Bar Standalone**: Barra de estado independiente para terminales locales
+- **Switch de Terminales**: Cambio fluido entre diferentes tipos de terminales
+- **Auto-detección de Comandos**: Detección inteligente de tipo de comando (Linux/Windows)
+
+### 🎥 Sistema de Auditoría y Grabación de Sesiones
+- **Grabación de Sesiones SSH**: Captura completa de entrada/salida en tiempo real
+- **Panel de Auditoría**: Nueva pestaña para gestionar grabaciones
+- **Reproductor Integrado**: Playback profesional de grabaciones con controles completos
+- **Exportación y Compatibilidad**: Exportación a archivos `.cast` estándar, compatible con asciinema-player
 
 ### 🔄 Sistema de Actualización Automática
 - **Actualizaciones desde GitHub Releases**: Sistema completo de actualización automática
@@ -22,21 +76,16 @@ Esta versión introduce el **Sistema de Actualización Automática** completo, p
 - **Actualizaciones Seguras**: Todas las actualizaciones están firmadas y verificadas
 - **Descarga en Background**: Sin interrumpir tu flujo de trabajo
 
-### 🎨 Mejoras de UI/UX
-- **Nueva Pestaña de Actualizaciones**: Interfaz dedicada en configuración
-- **Indicadores Visuales**: Estado claro de actualizaciones disponibles
-- **Proceso Transparente**: Información detallada del progreso de actualización
-- **Configuración Flexible**: Personaliza intervalos y canales de actualización
-
-### 🔧 Mejoras Técnicas
-- **Integración electron-updater**: Sistema robusto de actualización automática
-- **Gestión de Versiones**: Control avanzado de versiones y compatibilidad
-- **Seguridad Reforzada**: Verificación de firmas y checksums
-- **Arquitectura Mejorada**: Mejor separación de responsabilidades
-
 ---
 
 ## 🎨 Mejoras de UI/UX
+
+### 🤖 Interfaz de Chat IA
+- **Interfaz Moderna**: Diseño moderno y responsive para el chat de IA
+- **Indicadores Visuales**: Estado claro de ejecución de herramientas MCP y respuestas del modelo
+- **Gestión de Conversaciones**: Interfaz intuitiva para organizar conversaciones en carpetas
+- **Vista de Historial**: Panel lateral con historial completo de conversaciones
+- **Búsqueda Avanzada**: Búsqueda rápida en conversaciones y archivos
 
 ### 🔄 Sistema de Actualizaciones
 - **Pestaña Dedicada**: Nueva sección en configuración para gestionar actualizaciones
@@ -48,10 +97,26 @@ Esta versión introduce el **Sistema de Actualización Automática** completo, p
 - **Descarga Optimizada**: Mejor rendimiento en la descarga de actualizaciones
 - **Gestión Eficiente**: Optimización en el manejo de versiones
 - **Proceso No Intrusivo**: Actualizaciones sin interrumpir el trabajo
+- **Optimización de IA**: Mejoras significativas en el rendimiento del chat de IA
 
 ---
 
 ## 🔧 Mejoras Técnicas
+
+### 🤖 Sistema de IA
+- **Arquitectura Modular**: Refactorización completa del sistema de IA con proveedores modulares
+- **Gestión de Contexto**: Sistema avanzado de gestión de contexto para conversaciones largas
+- **Sistema de Memoria de Modelos**: Gestión inteligente de memoria para modelos Ollama
+- **Cache de Ejecución de Tools**: Sistema de caché para optimizar ejecución de herramientas
+- **Tool Orchestrator**: Sistema inteligente para orquestar múltiples herramientas MCP
+- **Análisis de Código**: Motor avanzado de análisis de código con soporte multi-lenguaje
+
+### 🔌 Integración MCP
+- **MCPService**: Servicio completo para gestión de servidores MCP
+- **MCPClientService**: Cliente robusto para comunicación con servidores MCP
+- **Servidores MCP Nativos**: SSH/Terminal, Filesystem, Web Search, Tenable
+- **Gestión de Estado**: Sistema centralizado para estado de servidores MCP
+- **Catálogo de MCPs**: Sistema de catálogo con información detallada
 
 ### 🔄 Integración de Actualizaciones
 - **electron-updater**: Integración completa con la librería profesional de actualizaciones
@@ -60,19 +125,28 @@ Esta versión introduce el **Sistema de Actualización Automática** completo, p
 - **Compatibilidad Total**: Soporte completo para Windows, Linux y macOS
 
 ### 🏗️ Arquitectura Mejorada
-- **Nuevos Servicios**: UpdateService para gestión de actualizaciones
-- **Componentes Modulares**: UpdatePanel, UpdateSettings para mejor organización
-- **Estado Centralizado**: Mejor gestión del estado de actualizaciones
+- **Nuevos Servicios**: AIService, MCPService, ConversationService, FileAnalysisService, ModelMemoryService
+- **Componentes Modulares**: AIChatPanel, AIConfigDialog, MCPManagerTab, AnythingLLMTab, OpenWebUITab
+- **Estado Centralizado**: Mejor gestión del estado de conversaciones y MCPs
 - **Código Más Limpio**: Refactorización completa de componentes relacionados
+- **Proveedores de IA**: BaseProvider, OpenAIProvider, AnthropicProvider, GoogleProvider, OllamaProvider
 
 ### 🧪 Seguridad y Privacidad
 - **Actualizaciones Firmadas**: Todas las actualizaciones están firmadas y verificadas
 - **Sin Servicios Externos**: Todo se procesa desde GitHub Releases oficial
 - **Verificación de Checksums**: Validación automática de integridad
+- **Encriptación de Conversaciones**: Almacenamiento seguro de conversaciones
 
 ---
 
 ## 🐛 Correcciones de Bugs
+
+### 🤖 Correcciones de Chat IA
+- **Fix de Conversaciones Mezcladas**: Corrección de problemas con conversaciones que se mezclaban
+- **Fix de Conversaciones Antiguas**: Mejoras en la carga de conversaciones antiguas
+- **Fix de UI Chat IA**: Múltiples correcciones en la interfaz de chat
+- **Fix de Tool Results**: Corrección de problemas con resultados de herramientas MCP
+- **Fix de Markdown**: Mejoras en el renderizado de markdown
 
 ### 🔄 Correcciones de Actualizaciones
 - **Gestión de Versiones**: Corrección de problemas al verificar versiones
@@ -80,15 +154,27 @@ Esta versión introduce el **Sistema de Actualización Automática** completo, p
 - **Instalación**: Mejor manejo del proceso de instalación
 - **Notificaciones**: Corrección de problemas en notificaciones de actualización
 
+### 🖥️ Correcciones de Terminales
+- **Fix de Terminales**: Mejoras en la estabilidad de terminales
+- **Fix de Cygwin**: Correcciones en la integración con Cygwin
+- **Fix de Switch**: Mejoras en el cambio entre tipos de terminales
+- **Fix de Delay de Inicio**: Corrección de problemas de retraso al iniciar
+
+### 🐳 Correcciones de Docker
+- **Fix de Docker**: Correcciones en la integración con Docker
+- **Fix de Conexiones**: Mejoras en la gestión de conexiones Docker
+- **Fix de Status Bar**: Correcciones en la barra de estado de Docker
+
 ### 🔧 Correcciones de Rendimiento
-- **Gestión de Memoria**: Optimización en el manejo de actualizaciones
-- **Carga de Datos**: Mejor rendimiento al verificar actualizaciones
+- **Gestión de Memoria**: Optimización en el manejo de actualizaciones y modelos IA
+- **Carga de Datos**: Mejor rendimiento al verificar actualizaciones y cargar conversaciones
 - **Renderizado**: Los componentes se renderizan más eficientemente
 
 ### 🎯 Correcciones Generales
 - **Estabilidad General**: Mejoras significativas en la estabilidad de la aplicación
 - **UI/UX**: Corrección de problemas visuales en la interfaz
 - **Compatibilidad**: Mejor compatibilidad con diferentes sistemas operativos
+- **Optimización de Rendimiento**: Mejoras en la carga de componentes
 
 ---
 
@@ -97,22 +183,75 @@ Esta versión introduce el **Sistema de Actualización Automática** completo, p
 ### 🗂️ Nuevos Componentes
 ```
 src/components/
-├── UpdatePanel.js                    # Panel de actualizaciones
-├── UpdateSettings.js                 # Configuración de actualizaciones
-└── UpdateDialog.js                   # Diálogo de actualización
+├── AIChatPanel.js                    # Panel principal de chat IA
+├── AIChatTab.js                      # Pestaña de chat IA
+├── AIConfigDialog.js                 # Diálogo de configuración de IA
+├── AIClientsTab.js                   # Pestaña de clientes de IA
+├── AnythingLLMTab.js                 # Pestaña de AnythingLLM
+├── OpenWebUITab.js                   # Pestaña de OpenWebUI
+├── ConversationHistory.js            # Historial de conversaciones
+├── AttachedFilesDisplay.js           # Visualización de archivos adjuntos
+├── MCPManagerTab.js                  # Gestión de MCPs
+├── MCPCatalog.js                     # Catálogo de MCPs
+├── MCPActiveTools.js                 # Herramientas MCP activas
+├── DockerTerminal.js                 # Terminal Docker
+├── FolderManager.js                  # Gestor de carpetas
+├── FolderMenu.js                     # Menú de carpetas
+├── FileUploader.js                    # Cargador de archivos
+├── FileTypeDetectionPanel.js         # Panel de detección de tipos
+├── AIPerformanceStats.js             # Estadísticas de rendimiento
+├── ModelMemoryIndicator.jsx          # Indicador de memoria de modelos
+└── StandaloneStatusBar.js            # Barra de estado standalone
 
 src/services/
-└── UpdateService.js                  # Servicio de actualizaciones
+├── AIService.js                      # Servicio principal de IA
+├── MCPService.js                     # Servicio de MCP (main process)
+├── MCPClientService.js               # Cliente MCP (renderer)
+├── ConversationService.js            # Gestión de conversaciones
+├── FileAnalysisService.js            # Análisis de archivos
+├── ModelMemoryService.js             # Gestión de memoria de modelos
+├── AnythingLLMService.js            # Servicio de AnythingLLM
+├── OpenWebUIService.js               # Servicio de OpenWebUI
+├── ToolOrchestrator.js               # Orquestador de herramientas
+├── ToolExecutionCache.js             # Cache de ejecución
+├── SmartFileDetectionService.js      # Detección inteligente de archivos
+├── MarkdownFormatter.js              # Formateador de markdown
+├── PDFProcessor.js                   # Procesador de PDFs
+└── GPUMemoryService.js               # Servicio de memoria GPU
 
-src/styles/components/
-└── update-panel.css                  # Estilos del panel de actualizaciones
+src/services/ai/
+├── ModelManager.js                   # Gestor de modelos
+├── CodeAnalyzer.js                   # Analizador de código
+├── ContextManager.js                 # Gestor de contexto
+├── ToolProcessor.js                  # Procesador de herramientas
+└── providers/
+    ├── BaseProvider.js               # Proveedor base
+    ├── OpenAIProvider.js              # Proveedor OpenAI
+    ├── AnthropicProvider.js           # Proveedor Anthropic
+    ├── GoogleProvider.js              # Proveedor Google
+    └── OllamaProvider.js              # Proveedor Ollama
+
+src/main/services/
+├── MCPService.js                     # Servicio MCP (main)
+├── DockerService.js                  # Servicio Docker
+└── WebSearchService.js               # Servicio de búsqueda web
+
+src/main/services/native/
+├── SSHTerminalNativeServer.js        # Servidor MCP SSH/Terminal
+└── WebSearchNativeServer.js          # Servidor MCP Web Search
+
+src/mcp-servers/
+└── tenable/                          # Servidor MCP Tenable
 ```
 
 ### 📦 Componentes Actualizados
-- **App.js**: Integración del sistema de actualizaciones
+- **App.js**: Integración del sistema de IA y MCP
 - **MainContentArea.js**: Soporte para nuevas funcionalidades
-- **DialogsManager.js**: Nuevos diálogos de actualización
-- **SettingsDialog.js**: Nueva pestaña de actualizaciones
+- **DialogsManager.js**: Nuevos diálogos de IA y MCP
+- **SettingsDialog.js**: Nueva pestaña de actualizaciones y MCP
+- **HomeTab.js**: Integración de clientes de IA
+- **Sidebar.js**: Mejoras en la navegación
+- **FileExplorer.js**: Mejoras en el explorador de archivos
 
 ---
 
@@ -149,17 +288,32 @@ npm run build
 
 ---
 
+## 📚 Documentación
+
+Esta versión incluye documentación completa para todas las nuevas características:
+
+- **[Guía de Integración MCP con Modelos Locales](docs/INTEGRACION_MCP_MODELOS_LOCALES.md)**: Cómo usar MCP con modelos locales
+- **[Guía de AnythingLLM MCP](docs/GUIA_ESENCIAL_ANYTHINGLLM_MCP.md)**: Configuración de AnythingLLM
+- **[Guía de OpenWebUI](docs/GUIA_OPENWEBUI.md)**: Uso de OpenWebUI integrado
+- **[MCP SSH/Terminal Completo](docs/MCP_SSH_TERMINAL_COMPLETO.md)**: Guía del servidor MCP SSH/Terminal
+- **[MCP Web Search Nativo](docs/MCP_WEB_SEARCH_NATIVE.md)**: Búsqueda web con MCP
+- **[Sistema de Detección de Archivos](docs/SISTEMA_DETECCION_ARCHIVOS.md)**: Detección inteligente de archivos
+- **[Optimización de Rendimiento IA](docs/OPTIMIZACION_RENDIMIENTO_IA.md)**: Optimización de modelos IA
+- **[Gestión de Memoria de Modelos](docs/MEMORIA_MODELOS.md)**: Gestión de memoria para Ollama
+- **[Guía de Auditoría de Sesiones](docs/GUIA_AUDITORIA_SESIONES.md)**: Sistema de grabación de sesiones
+
 ## 🎯 Próximas Versiones
 
 ### v1.7.0 (Planificado)
 - 🔑 **Soporte para Llaves SSH**: Autenticación con claves privadas
 - 🔐 **Gestión de Credenciales**: Almacenamiento seguro de credenciales
 - 🌐 **Sincronización Cloud**: Sincronización con servicios en la nube
+- 🤖 **Mejoras de IA**: Nuevas capacidades de análisis y procesamiento
 
 ### v1.8.0 (Concepto)
-- 🖥️ **Terminal Integrado**: Múltiples shells en una sola interfaz
-- 🐳 **Soporte Docker**: Integración con contenedores
 - 📊 **Analytics**: Estadísticas de uso y rendimiento
+- 🔍 **Búsqueda Avanzada**: Búsqueda mejorada en conversaciones y archivos
+- 🎨 **Temas Personalizados**: Más opciones de personalización
 
 ---
 
