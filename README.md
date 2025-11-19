@@ -256,7 +256,7 @@ NodeTerm/
 - 📱 **Descarga en Background** - Sin interrumpir tu flujo de trabajo
 - 🎨 **UI Mejorada** - Nueva pestaña de actualizaciones en configuración
 
-### v1.5.9 (13 Enero 2025)
+### v1.5.9 (3 Noviembre 2025)
 - 🔐 **Password Manager Integrado** - Sistema completo de gestor de contraseñas con KeePass
 - 🎨 **Sidebar de Password Manager** - Panel lateral para gestión de credenciales
 - 📥 **Importación de KeePass** - Importa bases de datos .kdbx de forma nativa
@@ -264,7 +264,7 @@ NodeTerm/
 - 🛡️ **Seguridad Mejorada** - Encriptación adicional para credenciales importadas
 - 🏗️ **Código Más Modular** - Refactorización de componentes para mejor mantenibilidad
 
-### v1.5.8 (En Desarrollo)
+### v1.5.8 (12 Octubre 2025)
 - 🚧 **Rama de Desarrollo** - Preparación para nuevas funcionalidades
 - 🔧 **Mejoras de Estabilidad** - Correcciones y optimizaciones internas
 
