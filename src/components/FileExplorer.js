@@ -25,6 +25,12 @@ import {
 } from 'react-icons/fa';
 
 const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont = 'Segoe UI', explorerColorTheme = 'Light', explorerFontSize = 15 }) => {
+    // sshConfig puede tener protocol para SFTP/FTP/SCP, o ser SSH tradicional
+    const config = sshConfig || {};
+    const protocol = config.protocol || 'ssh'; // Por defecto SSH para compatibilidad
+    const protocolLabel = protocol.toUpperCase();
+    const host = config.host || config.bastionHost || 'Unknown';
+    
     const [currentPath, setCurrentPath] = useState(null);
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -51,7 +57,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
             setLoading(true);
             setError(null);
             try {
-                const homeResult = await window.electron.fileExplorer.getHomeDirectory(tabId, sshConfig);
+                const homeResult = await window.electron.fileExplorer.getHomeDirectory(tabId, config);
                 const homeDir = (homeResult && homeResult.success && typeof homeResult.home === 'string') ? homeResult.home : '/';
                 setHomeDir(homeDir);
                 setCurrentPath(homeDir);
@@ -67,7 +73,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         if (sshReady) {
             initializeExplorer();
         }
-    }, [tabId, sshReady]);
+    }, [tabId, sshReady, config]);
 
     useEffect(() => {
         if (currentPath !== null) {
@@ -83,7 +89,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         setError(null);
         
         try {
-            const result = await window.electron.fileExplorer.listFiles(tabId, path, sshConfig);
+            const result = await window.electron.fileExplorer.listFiles(tabId, path, config);
             
             if (result.success) {
                 setFiles(result.files);
@@ -122,8 +128,8 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         if (!window.electron || !tabId) return;
         
         try {
-            const exists = await window.electron.fileExplorer.checkDirectory(tabId, path, sshConfig);
-            if (exists) {
+            const result = await window.electron.fileExplorer.checkDirectory(tabId, path, config);
+            if (result && result.exists) {
                 setCurrentPath(path);
             } else {
                 setError(`El directorio ${path} no existe o no es accesible`);
@@ -289,7 +295,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                     const remotePath = currentPath === '/' ? `/${fileName}` : `${currentPath}/${fileName}`;
                     
                     try {
-                        const uploadResult = await window.electron.fileExplorer.uploadFile(tabId, localPath, remotePath, sshConfig);
+                        const uploadResult = await window.electron.fileExplorer.uploadFile(tabId, localPath, remotePath, config);
                         if (uploadResult.success) {
                             toast.current?.show({
                                 severity: 'success',
@@ -332,7 +338,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 setTransferProgress({ type: 'download', current: 0, total: 1, fileName: file.name });
                 
                 const remotePath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
-                const downloadResult = await window.electron.fileExplorer.downloadFile(tabId, remotePath, result.filePath, sshConfig);
+                const downloadResult = await window.electron.fileExplorer.downloadFile(tabId, remotePath, result.filePath, config);
                 
                 if (downloadResult.success) {
                     toast.current?.show({
@@ -368,7 +374,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                     const file = filesTarget[i];
                     const remotePath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
                     try {
-                        const deleteResult = await window.electron.fileExplorer.deleteFile(tabId, remotePath, file.type === 'directory', sshConfig);
+                        const deleteResult = await window.electron.fileExplorer.deleteFile(tabId, remotePath, file.type === 'directory', config);
                         if (deleteResult.success) {
                             toast.current?.show({
                                 severity: 'success',
@@ -401,7 +407,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         
         try {
             const remotePath = currentPath === '/' ? `/${newFolderName}` : `${currentPath}/${newFolderName}`;
-            const result = await window.electron.fileExplorer.createDirectory(tabId, remotePath, sshConfig);
+            const result = await window.electron.fileExplorer.createDirectory(tabId, remotePath, config);
             
             if (result.success) {
                 toast.current?.show({
@@ -637,7 +643,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 {/* Header */}
                 <div className="file-explorer-header">
                     <h2 className="file-explorer-title">
-                        Explorador <FaChevronRight className="header-separator" /> {sshConfig.host}
+                        Explorador {protocolLabel} <FaChevronRight className="header-separator" /> {host}
                     </h2>
                 </div>
 

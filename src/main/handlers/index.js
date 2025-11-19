@@ -12,6 +12,7 @@ const { registerAnythingLLMHandlers } = require('./anythingllm-handlers');
 const { registerOpenWebUIHandlers } = require('./openwebui-handlers');
 const registerSSHHandlers = require('./ssh-handlers');
 const { registerMCPHandlers } = require('./mcp-handlers');
+const { registerFileHandlers } = require('./file-handlers');
 
 /**
  * Registra todos los handlers del sistema
@@ -49,6 +50,9 @@ function registerAllHandlers(dependencies) {
   
   // Registrar handlers MCP
   registerMCPHandlers();
+  
+  // Registrar handlers de archivos (SFTP/FTP/SCP)
+  registerFileHandlers();
   
   console.log('✅ Sistema: Handlers registrados');
 }

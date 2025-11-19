@@ -673,6 +673,85 @@ export const useFormHandlers = ({
     setEditingRdpNode(null);
   }, [setNodes, findNodeByKey, setRdpTabs, setShowUnifiedConnectionDialog, setRdpNodeData, setEditingRdpNode]);
 
+  /**
+   * Guardar conexión de archivos (SFTP/FTP/SCP) en sidebar
+   */
+  const handleSaveFileConnectionToSidebar = useCallback((fileData, isEditing = false, originalNode = null) => {
+    // Validar que fileData existe y tiene los campos requeridos
+    if (!fileData) {
+      console.error('handleSaveFileConnectionToSidebar: fileData es undefined');
+      return;
+    }
+    
+    if (!fileData.name || !fileData.host || !fileData.username) {
+      console.error('handleSaveFileConnectionToSidebar: Faltan campos requeridos', fileData);
+      return;
+    }
+    
+    const fileType = fileData.protocol || 'sftp'; // sftp, ftp, scp
+    
+    if (isEditing && originalNode) {
+      // Actualizar nodo existente
+      setNodes(prevNodes => {
+        const nodesCopy = Array.isArray(prevNodes) ? [...prevNodes] : [];
+        const nodeToEdit = findNodeByKey(nodesCopy, originalNode.key);
+        
+        if (nodeToEdit) {
+          nodeToEdit.label = fileData.name || `${fileData.host}:${fileData.port}`;
+          nodeToEdit.data = {
+            ...nodeToEdit.data,
+            type: fileType,
+            name: fileData.name,
+            host: fileData.host,
+            user: fileData.username,
+            username: fileData.username,
+            password: fileData.password || '',
+            port: fileData.port || (fileType === 'ftp' ? 21 : 22),
+            protocol: fileType,
+            remoteFolder: fileData.remoteFolder || '',
+            targetFolder: fileData.targetFolder || ''
+          };
+        }
+        
+        return nodesCopy;
+      });
+    } else {
+      // Crear un nuevo nodo de archivos en la sidebar
+      const newNode = {
+        key: `${fileType}_${Date.now()}`,
+        label: fileData.name || `${fileData.host}:${fileData.port}`,
+        data: {
+          type: fileType,
+          name: fileData.name,
+          host: fileData.host,
+          user: fileData.username,
+          username: fileData.username,
+          password: fileData.password || '',
+          port: fileData.port || (fileType === 'ftp' ? 21 : 22),
+          protocol: fileType,
+          remoteFolder: fileData.remoteFolder || '',
+          targetFolder: fileData.targetFolder || ''
+        },
+        draggable: true,
+        droppable: false,
+        uid: `${fileType}_${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        isUserCreated: true
+      };
+
+      // Agregar el nodo a la raíz del árbol
+      setNodes(prevNodes => {
+        const newNodes = Array.isArray(prevNodes) ? [...prevNodes] : [];
+        newNodes.push(newNode);
+        console.log('Nodo de archivos agregado a la sidebar:', newNode);
+        return newNodes;
+      });
+    }
+
+    console.log('Cerrando diálogo unificado después de guardar');
+    setShowUnifiedConnectionDialog(false); // Cerrar diálogo unificado
+  }, [setNodes, findNodeByKey, setShowUnifiedConnectionDialog]);
+
   return {
     // Funciones de creación
     createNewFolder,
@@ -688,8 +767,8 @@ export const useFormHandlers = ({
     openNewRdpDialog,
     closeRdpDialog,
     openEditRdpDialog,
-    handleSaveRdpToSidebar
-    ,
+    handleSaveRdpToSidebar,
+    handleSaveFileConnectionToSidebar,
     createNewPasswordEntry
   };
 };

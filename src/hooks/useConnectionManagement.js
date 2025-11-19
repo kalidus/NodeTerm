@@ -23,29 +23,36 @@ export const useConnectionManagement = ({
 }) => {
 
   // === FUNCIÓN PARA ABRIR EXPLORADOR DE ARCHIVOS ===
-  const openFileExplorer = useCallback((sshNode) => {
-    // Registrar reciente (Explorer) - incluir todas las credenciales SSH
+  const openFileExplorer = useCallback((fileNode) => {
+    // Detectar si es SSH tradicional o conexión de archivos (SFTP/FTP/SCP)
+    const nodeType = fileNode.data?.type || 'ssh';
+    const isFileConnection = nodeType === 'sftp' || nodeType === 'ftp' || nodeType === 'scp';
+    const protocol = fileNode.data?.protocol || nodeType;
+    
+    // Registrar reciente
     try {
       connectionStore.recordRecent({
-        type: 'explorer',
-        name: sshNode.label,
-        host: sshNode.data?.host,
-        username: sshNode.data?.user,
-        port: sshNode.data?.port || 22,
-        password: sshNode.data?.password || '',
-        useBastionWallix: sshNode.data?.useBastionWallix || false,
-        bastionHost: sshNode.data?.bastionHost || '',
-        bastionUser: sshNode.data?.bastionUser || '',
-        targetServer: sshNode.data?.targetServer || '',
-        remoteFolder: sshNode.data?.remoteFolder || ''
+        type: isFileConnection ? protocol : 'explorer',
+        name: fileNode.label,
+        host: fileNode.data?.host,
+        username: fileNode.data?.user || fileNode.data?.username,
+        port: fileNode.data?.port || (protocol === 'ftp' ? 21 : 22),
+        password: fileNode.data?.password || '',
+        protocol: isFileConnection ? protocol : undefined,
+        useBastionWallix: fileNode.data?.useBastionWallix || false,
+        bastionHost: fileNode.data?.bastionHost || '',
+        bastionUser: fileNode.data?.bastionUser || '',
+        targetServer: fileNode.data?.targetServer || '',
+        remoteFolder: fileNode.data?.remoteFolder || ''
       }, 10);
     } catch (e) { /* noop */ }
 
-    // Buscar si ya existe un explorador para este host+usuario
+    // Buscar si ya existe un explorador para este host+usuario+protocolo
     const existingExplorerIndex = sshTabs.findIndex(tab => 
       tab.isExplorerInSSH && 
-      tab.sshConfig.host === sshNode.data.host && 
-      tab.sshConfig.username === sshNode.data.user
+      tab.sshConfig.host === fileNode.data.host && 
+      tab.sshConfig.username === (fileNode.data.user || fileNode.data.username) &&
+      tab.sshConfig.protocol === (isFileConnection ? protocol : undefined)
     );
     
     if (existingExplorerIndex !== -1) {
@@ -54,31 +61,32 @@ export const useConnectionManagement = ({
       return;
     }
     
-    // Crear el explorador SIN conexión SSH propia - reutilizará conexiones existentes del pool
-    const explorerTabId = `explorer_${sshNode.key}_${Date.now()}`;
-    const sshConfig = {
-      host: sshNode.data.useBastionWallix ? sshNode.data.targetServer : sshNode.data.host,
-      username: sshNode.data.user,
-      password: sshNode.data.password,
-      port: sshNode.data.port || 22,
-      originalKey: sshNode.key,
-      // Datos del bastión Wallix
-      useBastionWallix: sshNode.data.useBastionWallix || false,
-      bastionHost: sshNode.data.bastionHost || '',
-      bastionUser: sshNode.data.bastionUser || ''
+    // Crear el explorador
+    const explorerTabId = `explorer_${fileNode.key}_${Date.now()}`;
+    const config = {
+      host: fileNode.data.useBastionWallix ? fileNode.data.targetServer : fileNode.data.host,
+      username: fileNode.data.user || fileNode.data.username,
+      password: fileNode.data.password,
+      port: fileNode.data.port || (protocol === 'ftp' ? 21 : 22),
+      originalKey: fileNode.key,
+      // Protocolo para SFTP/FTP/SCP
+      protocol: isFileConnection ? protocol : undefined,
+      // Datos del bastión Wallix (si aplica)
+      useBastionWallix: fileNode.data.useBastionWallix || false,
+      bastionHost: fileNode.data.bastionHost || '',
+      bastionUser: fileNode.data.bastionUser || ''
     };
     
-    // NO crear conexión SSH nueva - el FileExplorer usará el pool existente
     const nowTs = Date.now();
     const newExplorerTab = {
       key: explorerTabId,
-      label: sshNode.label,
-      originalKey: sshNode.key,
-      sshConfig: sshConfig,
+      label: fileNode.label,
+      originalKey: fileNode.key,
+      sshConfig: config, // Mantener nombre sshConfig para compatibilidad
       type: 'explorer',
       createdAt: nowTs,
-      needsOwnConnection: false, // Cambio importante: NO necesita su propia conexión
-      isExplorerInSSH: true, // Flag para identificarla como explorador en el array SSH
+      needsOwnConnection: false,
+      isExplorerInSSH: true,
       groupId: null
     };
     
@@ -90,6 +98,43 @@ export const useConnectionManagement = ({
     setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
     setOpenTabOrder(prev => [explorerTabId, ...prev.filter(k => k !== explorerTabId)]);
   }, [sshTabs, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setGroupActiveIndices, setOpenTabOrder]);
+
+  // === FUNCIÓN PARA ABRIR CONEXIONES DE ARCHIVOS (SFTP/FTP/SCP) ===
+  const onOpenFileConnection = useCallback((node, nodes) => {
+    // Si no estamos en el grupo Home, cambiar a Home primero
+    if (activeGroupId !== null) {
+      const currentGroupKey = activeGroupId || 'no-group';
+      setGroupActiveIndices(prev => ({
+        ...prev,
+        [currentGroupKey]: activeTabIndex
+      }));
+      setActiveGroupId(null);
+    }
+
+    const protocol = node.data?.protocol || node.data?.type || 'sftp';
+    const host = node.data?.host || '';
+    const username = node.data?.user || node.data?.username || '';
+    const password = node.data?.password || '';
+    const port = node.data?.port || (protocol === 'ftp' ? 21 : 22);
+
+    // Registrar como reciente
+    try {
+      connectionStore.recordRecent({
+        type: protocol,
+        name: node.label || node.name,
+        host: host,
+        username: username,
+        port: port,
+        password: password,
+        protocol: protocol,
+        remoteFolder: node.data?.remoteFolder || '',
+        targetFolder: node.data?.targetFolder || ''
+      }, 10);
+    } catch (e) { /* noop */ }
+
+    // Abrir explorador de archivos
+    openFileExplorer(node);
+  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, openFileExplorer]);
 
   // === FUNCIÓN PARA ABRIR CONEXIONES SSH ===
   const onOpenSSHConnection = useCallback((nodeOrConn, nodes) => {
@@ -645,6 +690,7 @@ export const useConnectionManagement = ({
   return {
     onOpenSSHConnection,
     onOpenRdpConnection,
+    onOpenFileConnection,
     openFileExplorer
   };
 };

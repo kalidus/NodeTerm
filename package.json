@@ -100,6 +100,7 @@
     "@xterm/addon-webgl": "^0.18.0",
     "@xterm/xterm": "^5.5.0",
     "assert": "^2.1.0",
+    "basic-ftp": "^5.0.5",
     "browserify-zlib": "^0.2.0",
     "dommatrix": "^0.1.1",
     "dompurify": "^3.3.0",

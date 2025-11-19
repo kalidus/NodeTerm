@@ -32,7 +32,8 @@ function saveList(key, list) {
 
 function normalizePort(type, port) {
   if (port) return parseInt(port, 10);
-  if (type === 'ssh' || type === 'explorer') return 22;
+  if (type === 'ssh' || type === 'explorer' || type === 'sftp' || type === 'scp') return 22;
+  if (type === 'ftp') return 21;
   if (type === 'rdp-guacamole' || type === 'rdp') return 3389;
   return 0;
 }
@@ -46,7 +47,11 @@ function buildId({ type, host, hostname, username, port }) {
 }
 
 function toSerializable(connection) {
-  const type = connection.type === 'rdp' ? 'rdp-guacamole' : connection.type;
+  let type = connection.type === 'rdp' ? 'rdp-guacamole' : connection.type;
+  // Mantener tipos de archivos como están (sftp, ftp, scp)
+  if (type === 'sftp' || type === 'ftp' || type === 'scp') {
+    type = connection.type;
+  }
   const host = connection.hostname || connection.host || '';
   const username = connection.username || connection.user || '';
   const port = normalizePort(type, connection.port);
@@ -108,6 +113,9 @@ function toSerializable(connection) {
     bastionUser: connection.bastionUser || '',
     targetServer: connection.targetServer || '',
     remoteFolder: connection.remoteFolder || '',
+    // Campos adicionales para conexiones de archivos (SFTP/FTP/SCP)
+    protocol: connection.protocol || (type === 'sftp' || type === 'ftp' || type === 'scp' ? type : undefined),
+    targetFolder: connection.targetFolder || '',
     lastConnected: connection.lastConnected ? new Date(connection.lastConnected).toISOString() : new Date().toISOString()
   };
 }
@@ -117,7 +125,8 @@ function fromSidebarNode(node, typeOverride = null) {
   if (!node) return null;
   const isSSH = node.data && node.data.type === 'ssh';
   const isRDP = node.data && (node.data.type === 'rdp' || node.data.type === 'rdp-guacamole');
-  const type = typeOverride || (isSSH ? 'ssh' : (isRDP ? 'rdp-guacamole' : (node.data?.type || 'ssh')));
+  const isFileConnection = node.data && (node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp');
+  const type = typeOverride || (isSSH ? 'ssh' : (isRDP ? 'rdp-guacamole' : (isFileConnection ? node.data.type : (node.data?.type || 'ssh'))));
   const base = {
     type,
     name: node.label,
@@ -163,6 +172,9 @@ function fromSidebarNode(node, typeOverride = null) {
     bastionUser: node.data?.bastionUser || '',
     targetServer: node.data?.targetServer || '',
     remoteFolder: node.data?.remoteFolder || '',
+    // Campos adicionales para conexiones de archivos (SFTP/FTP/SCP)
+    protocol: node.data?.protocol || (isFileConnection ? node.data.type : undefined),
+    targetFolder: node.data?.targetFolder || '',
   };
   return toSerializable(base);
 }
