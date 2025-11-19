@@ -69,9 +69,10 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
       algorithms: {
         kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
         cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-        serverHostKey: ['ssh-rsa', 'ssh-dss'],
+        serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
         hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-      }
+      },
+      hostVerifier: () => true // Aceptar cualquier host key para Wallix
     });
   };
   
@@ -122,9 +123,10 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
     algorithms: {
       kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
       cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-      serverHostKey: ['ssh-rsa', 'ssh-dss'],
+      serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
       hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
     },
+    hostVerifier: () => true, // Aceptar cualquier host key para Wallix
     compress: false,
     debug: false
   });
