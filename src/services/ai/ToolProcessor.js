@@ -538,6 +538,591 @@ class ToolProcessor {
     
     return `Usa la herramienta ${name}`;
   }
+
+  /**
+   * Filtrar tools por contexto del mensaje
+   * @param {Array} tools - Array de tools disponibles
+   * @param {string} message - Mensaje del usuario
+   * @returns {Array} Tools filtrados y ordenados por relevancia
+   */
+  filterToolsByContext(tools, message = '') {
+    const MAX_TOOLS = 6; // Límite máximo de tools para no abrumar al modelo
+    const lowerMsg = message.toLowerCase();
+    
+    // Calcular score de relevancia para cada tool
+    const toolsWithScore = tools.map(tool => {
+      let score = 0;
+      const toolName = tool.name.toLowerCase();
+      const toolDesc = (tool.description || '').toLowerCase();
+      
+      // Búsquedas en web/internet
+      if (lowerMsg.match(/busca|search|google|web|internet|sitio|página|url|http|\.com/)) {
+        if (toolName.includes('search') || toolName.includes('web') || toolName.includes('fetch')) score += 10;
+        if (toolName.includes('goto') || toolName.includes('screenshot')) score += 5;
+      }
+      
+      // Archivos: LEER
+      if (lowerMsg.match(/lee|leer|muestra|abre|ver|contenido|archivo|file/)) {
+        if (toolName.includes('read_file') || toolName.includes('read_text')) score += 10;
+        if (toolName.includes('get_file_info')) score += 5;
+      }
+      
+      // Archivos: CREAR/ESCRIBIR
+      if (lowerMsg.match(/crea|crear|escribe|guarda|guardar|genera|nuevo archivo|write/)) {
+        if (toolName.includes('write_file') || toolName.includes('create')) score += 10;
+        if (toolName.includes('append')) score += 5;
+      }
+      
+      // Archivos: EDITAR/MODIFICAR
+      if (lowerMsg.match(/edita|editar|modifica|cambia|actualiza|reemplaza|edit/)) {
+        if (toolName.includes('edit_file') || toolName.includes('update')) score += 10;
+        if (toolName.includes('write_file')) score += 3; // Fallback
+      }
+      
+      // SSH/Terminal: HOSTS y CONEXIONES (ALTA PRIORIDAD)
+      if (lowerMsg.match(/ssh|host|conexión|remota|servidor|terminal remota|red|conecta|conectar|ejecuta en|comando remoto|archivo en el servidor/i)) {
+        if (toolName.includes('execute_ssh')) score += 20; // MÁS ALTO que read_text_file
+        if (toolName.includes('search_nodeterm')) score += 18; // Búsqueda inteligente de SSH hosts y credenciales
+        if (toolName.includes('test_ssh')) score += 12;
+        // PENALIZAR herramientas de filesystem cuando estamos en contexto SSH
+        if (toolName.includes('read_text_file')) score -= 10;
+        if (toolName.includes('list_directory')) score -= 10;
+      }
+      
+      // Terminal/Comandos LOCALES
+      if (lowerMsg.match(/local|máquina local|powershell|wsl|terminal local/i)) {
+        if (toolName.includes('execute_local')) score += 12;
+      }
+      
+      // Directorios: LISTAR (pero SIN interferir con SSH)
+      if (lowerMsg.match(/lista|listar/) && !lowerMsg.match(/ssh|host|conexión|remota|servidor|conecta|ejecuta/i)) {
+        if (lowerMsg.match(/directorio|carpeta|folder|contenido|archivos en/)) {
+          if (toolName.includes('list_directory')) score += 10;
+          if (toolName.includes('directory_tree')) score += 7;
+          if (toolName.includes('list_directory_with_sizes')) score += 8;
+        }
+      }
+      
+      // PENALIZAR read_text_file si hay contexto de SSH
+      if (lowerMsg.match(/ssh|remoto|servidor|conecta/i) && toolName.includes('read_text_file')) {
+        score -= 15; // Castigar fuertemente
+      }
+      
+      // Archivos: BUSCAR
+      if (lowerMsg.match(/busca archivo|encuentra archivo|search.*file|find.*file|patrón/)) {
+        if (toolName.includes('search_files') || toolName.includes('find')) score += 10;
+      }
+      
+      // Archivos: MOVER/RENOMBRAR
+      if (lowerMsg.match(/mueve|mover|renombra|rename|move/)) {
+        if (toolName.includes('move_file') || toolName.includes('rename')) score += 10;
+      }
+      
+      // Archivos: ELIMINAR
+      if (lowerMsg.match(/elimina|borrar|delete|remove/)) {
+        if (toolName.includes('delete') || toolName.includes('remove')) score += 10;
+      }
+      
+      // Comandos/CLI - SOLO si hay palabras explícitas de ejecución
+      // "crea un script" NO debe activar execute_local, solo "ejecuta el script" o "run script"
+      if (lowerMsg.match(/ejecuta|comando|command|run|terminal|shell/) && 
+          !lowerMsg.match(/crea|crear|create|genera|generar|generate|escribe|escribir|write|guarda|guardar|save/)) {
+        if (toolName.includes('run_command') || toolName.includes('execute')) score += 10;
+      }
+      // Si dice "script" PERO también dice "ejecuta/run", entonces sí activar execute
+      if (lowerMsg.match(/script/) && lowerMsg.match(/ejecuta|ejecutar|run|corre|correr|lanza|lanzar/)) {
+        if (toolName.includes('run_command') || toolName.includes('execute')) score += 10;
+      }
+      
+      // Base de datos
+      if (lowerMsg.match(/query|sql|database|tabla|consulta/)) {
+        if (toolName.includes('query') || toolName.includes('sql')) score += 10;
+      }
+      
+      // 🔒 TENABLE.IO - Detección de intenciones relacionadas con seguridad/vulnerabilidades/activos
+      const tenableKeywords = /tenable|vulnerabilidad|vulnerabilidades|activo|activos|asset|assets|seguridad|security|scanner|scan|escaneo|escaneado|cve|exploit|parche|patch|riesgo|risk|severidad|severity|crítico|critical|alto|high|medio|medium|bajo|low|hostname|ip address|dirección ip/i;
+      const isTenableTool = tool.serverId === 'tenable' || toolName.includes('asset') || toolName.includes('vulnerability');
+      
+      if (lowerMsg.match(tenableKeywords) || isTenableTool) {
+        // Alta prioridad para herramientas de Tenable cuando se menciona
+        if (isTenableTool) {
+          if (lowerMsg.match(/lista|listar|muestra|mostrar|obtén|obtener|get|busca|buscar|search|find/i)) {
+            if (toolName.includes('get_assets') || toolName.includes('list')) score += 25;
+            if (toolName.includes('search_assets')) score += 23;
+            if (toolName.includes('get_asset_details')) score += 22;
+          }
+          if (lowerMsg.match(/vulnerabilidad|vulnerabilidades|vulnerability|cve|exploit|riesgo|risk|severidad|severity/i)) {
+            if (toolName.includes('vulnerability') || toolName.includes('vulnerabilities')) score += 25;
+            if (toolName.includes('get_asset_details')) score += 20; // Los detalles pueden incluir vulnerabilidades
+          }
+          if (lowerMsg.match(/detalle|detalles|detail|información|info|específico|specific/i)) {
+            if (toolName.includes('get_asset_details')) score += 24;
+          }
+          // Si es herramienta de Tenable pero no hay keywords específicos, dar score base
+          if (isTenableTool && score === 0) {
+            score += 15; // Score base para herramientas de Tenable
+          }
+        }
+      }
+      
+      // Penalizar tools genéricas si hay específicas
+      if (toolName === 'write_file' && lowerMsg.includes('edit')) score -= 3;
+      if (toolName === 'read_file' && lowerMsg.includes('list')) score -= 3;
+      
+      return { tool, score };
+    });
+    
+    // Ordenar por score descendente
+    toolsWithScore.sort((a, b) => b.score - a.score);
+    
+    // Tomar las top N más relevantes
+    const topTools = toolsWithScore
+      .filter(t => t.score > 0) // Solo las que tienen score positivo
+      .slice(0, MAX_TOOLS)
+      .map(t => t.tool);
+    
+    // Si no hay tools con score, usar un conjunto mínimo por defecto
+    if (topTools.length === 0) {
+      const defaultNames = ['read_file', 'list_directory', 'write_file'];
+      topTools.push(...tools.filter(t => defaultNames.some(dn => t.name.includes(dn))).slice(0, 3));
+    }
+    
+    // 🔒 CRÍTICO: SIEMPRE incluir herramientas de Tenable si están disponibles
+    // Esto asegura que el modelo las conozca y pueda usarlas cuando sea necesario
+    const tenableTools = tools.filter(t => t.serverId === 'tenable');
+    const hasTenableInTop = topTools.some(t => t.serverId === 'tenable');
+    
+    if (tenableTools.length > 0 && !hasTenableInTop) {
+      // Agregar TODAS las herramientas de Tenable (son solo 4, no afecta mucho el límite)
+      // Priorizar get_assets primero, luego las demás
+      const sortedTenable = [
+        tenableTools.find(t => t.name === 'get_assets'),
+        tenableTools.find(t => t.name === 'search_assets'),
+        tenableTools.find(t => t.name === 'get_asset_details'),
+        tenableTools.find(t => t.name === 'get_asset_vulnerabilities')
+      ].filter(Boolean);
+      
+      // Agregar las que no están ya en topTools
+      sortedTenable.forEach(tool => {
+        if (!topTools.some(t => t.serverId === tool.serverId && t.name === tool.name)) {
+          topTools.unshift(tool); // Agregar al inicio para máxima prioridad
+        }
+      });
+      
+      debugLogger.debug('ToolProcessor', 'Herramientas de Tenable agregadas forzosamente', {
+        cantidad: sortedTenable.length,
+        herramientas: sortedTenable.map(t => t.name)
+      });
+    }
+
+    debugLogger.debug('ToolProcessor', 'Tools filtrados con scoring', {
+      disponibles: tools.length,
+      relevantes: topTools.length,
+      topScores: toolsWithScore.slice(0, 3).map(t => ({ name: t.tool.name, score: t.score }))
+    });
+    
+    return topTools;
+  }
+
+  /**
+   * Resolver información de tool (serverId y toolName)
+   * @param {string} toolName - Nombre de la tool
+   * @param {string} serverIdHint - Hint del serverId (opcional)
+   * @param {Object} mcpClient - Cliente MCP para obtener tools disponibles
+   * @returns {Object} { serverId, toolName }
+   */
+  resolveToolInfo(toolName, serverIdHint = null, mcpClient = null) {
+    // 🔒 DEBUG: Validar entrada
+    if (!toolName) {
+      debugLogger.warn('ToolProcessor', 'resolveToolInfo recibió toolName vacío', { toolName, serverIdHint });
+      return { serverId: null, toolName: toolName || '' };
+    }
+    
+    const tools = mcpClient?.getAvailableTools() || [];
+    
+    // 🔒 ESPECIAL: Si serverIdHint es 'tenable', buscar específicamente en Tenable primero
+    if (serverIdHint === 'tenable') {
+      const tenableMatch = tools.find(t => t.serverId === 'tenable' && t.name === toolName);
+      if (tenableMatch) {
+        debugLogger.debug('ToolProcessor', 'Herramienta de Tenable encontrada', { toolName, serverId: 'tenable' });
+        return { serverId: 'tenable', toolName: tenableMatch.name };
+      }
+    }
+    
+    if (serverIdHint) {
+      const match = tools.find(t => t.serverId === serverIdHint && t.name === toolName);
+      if (match) {
+        return { serverId: match.serverId, toolName: match.name };
+      }
+    }
+
+    const exactMatches = tools.filter(t => t.name === toolName);
+    if (exactMatches.length === 1) {
+      return { serverId: exactMatches[0].serverId, toolName: exactMatches[0].name };
+    }
+
+    if (exactMatches.length > 1) {
+      // 🔒 MEJORADO: Priorizar Tenable si hay múltiples matches
+      const tenableMatch = exactMatches.find(t => t.serverId === 'tenable');
+      if (tenableMatch) {
+        return { serverId: tenableMatch.serverId, toolName: tenableMatch.name };
+      }
+      return { serverId: exactMatches[0].serverId, toolName: exactMatches[0].name };
+    }
+
+    const namespacedMatch = tools.find(t => `${t.serverId}__${t.name}` === toolName);
+    if (namespacedMatch) {
+      return { serverId: namespacedMatch.serverId, toolName: namespacedMatch.name };
+    }
+
+    const filesystemMatch = tools.find(t => t.serverId === 'filesystem' && t.name === toolName);
+    if (filesystemMatch) {
+      return { serverId: filesystemMatch.serverId, toolName: filesystemMatch.name };
+    }
+    
+    // 🔒 ESPECIAL: Buscar en Tenable si el nombre contiene palabras relacionadas
+    if (toolName.includes('asset') || toolName.includes('vulnerability') || toolName.includes('tenable')) {
+      const tenableTools = tools.filter(t => t.serverId === 'tenable');
+      const tenableMatch = tenableTools.find(t => 
+        t.name.includes(toolName) || toolName.includes(t.name)
+      );
+      if (tenableMatch) {
+        debugLogger.debug('ToolProcessor', 'Herramienta de Tenable encontrada por nombre relacionado', { 
+          toolName, 
+          encontrada: tenableMatch.name 
+        });
+        return { serverId: 'tenable', toolName: tenableMatch.name };
+      }
+    }
+
+    // 🔧 NUEVO: Fuzzy matching para nombres similares (corrección automática)
+    // Buscar herramientas con nombres similares (útil cuando el modelo genera nombres incorrectos)
+    const similarTools = this.findSimilarToolName(toolName, tools);
+    if (similarTools.length > 0) {
+      const bestMatch = similarTools[0];
+      console.warn(`⚠️ [ToolProcessor] Tool "${toolName}" no encontrada, usando similar: "${bestMatch.name}"`);
+      return { serverId: bestMatch.serverId, toolName: bestMatch.name };
+    }
+
+    return { serverId: serverIdHint, toolName };
+  }
+
+  /**
+   * Encontrar herramientas con nombres similares usando distancia de Levenshtein
+   */
+  findSimilarToolName(targetName, tools, maxDistance = 3) {
+    if (!targetName || typeof targetName !== 'string' || !tools || tools.length === 0) {
+      return [];
+    }
+
+    const targetLower = targetName.toLowerCase();
+    const candidates = [];
+
+    for (const tool of tools) {
+      const toolNameLower = tool.name.toLowerCase();
+      
+      // Calcular distancia de Levenshtein simple
+      const distance = this.levenshteinDistance(targetLower, toolNameLower);
+      
+      // También verificar si el nombre contiene el target o viceversa
+      const containsMatch = toolNameLower.includes(targetLower) || targetLower.includes(toolNameLower);
+      
+      if (distance <= maxDistance || containsMatch) {
+        candidates.push({
+          ...tool,
+          distance: containsMatch ? Math.min(distance, 1) : distance
+        });
+      }
+    }
+
+    // Ordenar por distancia (menor es mejor)
+    candidates.sort((a, b) => a.distance - b.distance);
+    
+    return candidates;
+  }
+
+  /**
+   * Calcular distancia de Levenshtein entre dos strings
+   */
+  levenshteinDistance(str1, str2) {
+    const m = str1.length;
+    const n = str2.length;
+    const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (str1[i - 1] === str2[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1];
+        } else {
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,     // eliminación
+            dp[i][j - 1] + 1,     // inserción
+            dp[i - 1][j - 1] + 1  // sustitución
+          );
+        }
+      }
+    }
+
+    return dp[m][n];
+  }
+
+  /**
+   * Detectar PLAN de herramientas (modo ReAct) en la respuesta
+   * @param {string} response - Respuesta del modelo
+   * @returns {Object|null} Plan detectado o null
+   */
+  detectToolPlan(response) {
+    if (!response || typeof response !== 'string') return null;
+    
+    // Buscar JSON con estructura de plan: {"plan": [...]}
+    // Mejorado: buscar también variantes como "tools", "steps", "actions"
+    const jsonPatterns = [
+      /\{[\s\S]*?"plan"[\s\S]*?\[[\s\S]*?\][\s\S]*?\}/g,
+      /\{[\s\S]*?"tools"[\s\S]*?\[[\s\S]*?\][\s\S]*?\}/g,
+      /\{[\s\S]*?"steps"[\s\S]*?\[[\s\S]*?\][\s\S]*?\}/g
+    ];
+    
+    let matches = [];
+    for (const pattern of jsonPatterns) {
+      const found = response.match(pattern);
+      if (found) matches = matches.concat(found);
+    }
+    
+    if (!matches || matches.length === 0) return null;
+    
+    for (const jsonStr of matches) {
+      try {
+        const data = JSON.parse(jsonStr);
+        // Buscar plan, tools, steps, o actions
+        const planArray = data.plan || data.tools || data.steps || data.actions;
+        
+        if (planArray && Array.isArray(planArray) && planArray.length > 0) {
+          // Validar que cada elemento del plan tenga tool
+          const validTools = planArray.filter(t => {
+            if (!t) return false;
+            // Aceptar tool, toolName, name, o function
+            return !!(t.tool || t.toolName || t.name || t.function);
+          });
+          
+          if (validTools.length > 0) {
+            debugLogger.debug('ToolProcessor', 'Plan detectado con herramientas válidas', {
+              herramientas: validTools.length,
+              formato: data.plan ? 'plan' : (data.tools ? 'tools' : (data.steps ? 'steps' : 'actions'))
+            });
+            return {
+              isPlan: true,
+              tools: validTools.map(t => ({
+                tool: t.tool || t.toolName || t.name || t.function,
+                toolName: t.tool || t.toolName || t.name || t.function,
+                arguments: t.arguments || t.args || t.params || {},
+                serverId: t.serverId || t.server || null
+              }))
+            };
+          }
+        }
+      } catch (e) {
+        // Intentar extraer JSON más específico si falla el parse completo
+        try {
+          // Buscar solo el array del plan
+          const arrayMatch = jsonStr.match(/\[[\s\S]*\]/);
+          if (arrayMatch) {
+            const arrayData = JSON.parse(arrayMatch[0]);
+            if (Array.isArray(arrayData) && arrayData.length > 0) {
+              const validTools = arrayData.filter(t => t && (t.tool || t.toolName || t.name));
+              if (validTools.length > 0) {
+                debugLogger.debug('ToolProcessor', 'Plan detectado (array directo)', {
+                  herramientas: validTools.length
+                });
+                return {
+                  isPlan: true,
+                  tools: validTools.map(t => ({
+                    tool: t.tool || t.toolName || t.name,
+                    toolName: t.tool || t.toolName || t.name,
+                    arguments: t.arguments || t.args || {},
+                    serverId: t.serverId || t.server || null
+                  }))
+                };
+              }
+            }
+          }
+        } catch (e2) {
+          continue;
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Generar system prompt UNIVERSAL para MCP (modelos sin function calling)
+   * @param {Array} tools - Array de tools
+   * @param {Object} options - Opciones (maxPerServer, serverHints)
+   * @returns {string} System prompt formateado
+   */
+  generateUniversalMCPSystemPrompt(tools, options = {}) {
+    if (!tools || tools.length === 0) return '';
+
+    const maxPerServer = typeof options.maxPerServer === 'number' ? options.maxPerServer : 6;
+    const serverHints = options.serverHints || {};
+
+    // Agrupar tools por servidor
+    const serverIdToTools = tools.reduce((acc, t) => {
+      const sid = t.serverId || 'unknown';
+      if (!acc[sid]) acc[sid] = [];
+      acc[sid].push(t);
+      return acc;
+    }, {});
+
+    let out = '';
+    out += 'HERRAMIENTAS DISPONIBLES:\n\n';
+    out += 'Formato JSON: {"tool":"<server>__<name>","arguments":{...}}\n';
+    out += 'Usa estas herramientas cuando el usuario pida ejecutar comandos, listar archivos, o trabajar con servidores.\n\n';
+
+    const serverIds = Object.keys(serverIdToTools).sort();
+    serverIds.forEach((serverId, sidx) => {
+      const list = serverIdToTools[serverId] || [];
+      const selected = list.slice(0, Math.max(1, maxPerServer));
+
+      out += `[${serverId}]\n`;
+
+      // Hints específicos del servidor (p.ej., filesystem)
+      const hints = serverHints[serverId] || {};
+      if (hints.allowedDirsText) {
+        const lines = String(hints.allowedDirsText).split('\n').map(l => l.trim()).filter(Boolean).slice(0, 2);
+        out += `Dirs: ${lines.join(', ')}${lines.length < 2 ? '' : '...'}\n`;
+      }
+      if (hints.defaultRaw) {
+        out += `⚠️ DEFAULT PATH: ${hints.defaultRaw}\n`;
+        out += `CRÍTICO: SIEMPRE usa rutas ABSOLUTAS comenzando con este directorio.\n`;
+        out += `Ejemplo correcto: "${hints.defaultRaw}\\archivo.txt"\n`;
+        out += `Ejemplo INCORRECTO: "archivo.txt" (ruta relativa - NO usar)\n`;
+      }
+
+      // Acciones comunes (sólo si es filesystem) - OPTIMIZADO
+      if (serverId === 'filesystem') {
+        const names = list.map(t => t.name);
+        const has = (n) => names.includes(n);
+        const actions = [];
+        if (has('list_directory')) actions.push('listar→list_directory');
+        if (has('read_text_file')) actions.push('leer→read_text_file');
+        if (has('write_file')) actions.push('crear→write_file');
+        if (has('edit_file')) actions.push('editar→edit_file');
+        if (has('move_file')) actions.push('mover→move_file(source,destination con nombre completo)');
+        if (has('search_files')) actions.push('buscar→search_files(pattern,path)');
+        if (actions.length > 0) {
+          out += `Acciones: ${actions.join(', ')}\n`;
+        }
+      }
+
+      selected.forEach((tool, tidx) => {
+        const schema = tool.inputSchema || {};
+        const properties = schema.properties || {};
+        const required = schema.required || [];
+        const keys = Object.keys(properties);
+
+        // Formato compacto: nombre(params) - descripción COMPLETA (sin truncar)
+        const reqParams = keys.filter(k => required.includes(k));
+        const optParams = keys.filter(k => !required.includes(k));
+        const paramsList = [...reqParams, ...optParams.map(p => `${p}?`)];
+        
+        out += `${tool.name}(${paramsList.join(',')})`;
+        if (tool.description) {
+          // ✅ Mostrar descripción completa (era 60 caracteres, muy corto)
+          out += ` - ${tool.description}`;
+        }
+        // 🔧 CRÍTICO: Reforzar nombre correcto para search_nodeterm
+        if (tool.name === 'search_nodeterm') {
+          out += ' ⚠️ NOMBRE CORRECTO: "search_nodeterm" (NO "search_noderm", NO "search_nodeterms")';
+        }
+        out += '\n';
+
+        // Ejemplo compacto
+        const exampleArgs = {};
+        reqParams.forEach((p) => {
+          const prop = properties[p] || {};
+          if (prop.type === 'string') {
+            const isPathLike = /path|file|dir|directory/i.test(p);
+            if (isPathLike && hints.defaultRaw) {
+              const baseRaw = hints.defaultRaw;
+              const needsSep = !baseRaw.endsWith('\\') && !baseRaw.endsWith('/');
+              if (/dir|directory/i.test(p)) {
+                exampleArgs[p] = baseRaw;
+              } else {
+                const sep = needsSep ? (baseRaw.includes('\\') ? '\\' : '/') : '';
+                exampleArgs[p] = `${baseRaw}${sep}file.txt`;
+              }
+            } else {
+              exampleArgs[p] = 'value';
+            }
+          }
+          else if (prop.type === 'array') exampleArgs[p] = [];
+          else if (prop.type === 'object') exampleArgs[p] = {};
+          else exampleArgs[p] = prop.type === 'number' ? 0 : true;
+        });
+
+        if (keys.length > 0) {
+          out += `  {"tool":"${serverId}__${tool.name}","arguments":${JSON.stringify(exampleArgs)}}\n`;
+        }
+      });
+
+      if (sidx < serverIds.length - 1) {
+        out += '\n';
+      }
+    });
+
+    // Ejemplos compactos con rutas absolutas
+    out += '\nEJEMPLOS:\n';
+    // Usar el defaultRaw si está disponible para filesystem
+    const fsHints = serverHints['filesystem'] || {};
+    const basePath = fsHints.defaultRaw || 'C:\\path\\to\\dir';
+    const sep = basePath.includes('\\') ? '\\' : '/';
+    out += `Listar: {"tool":"filesystem__list_directory","arguments":{"path":"${basePath}"}}\n`;
+    out += `Leer: {"tool":"filesystem__read_file","arguments":{"path":"${basePath}${sep}config.json"}}\n`;
+    out += `Crear: {"tool":"filesystem__write_file","arguments":{"path":"${basePath}${sep}file.txt","content":"texto"}}\n`;
+    
+    // 🔧 CRÍTICO: Ejemplo explícito para search_nodeterm (NO search_noderm)
+    const hasSearchNodeterm = tools.some(t => t.name === 'search_nodeterm');
+    if (hasSearchNodeterm) {
+      out += `Buscar SSH: {"tool":"ssh-terminal__search_nodeterm","arguments":{"query":"AC68U"}}\n`;
+      out += `Listar todos SSH: {"tool":"ssh-terminal__search_nodeterm","arguments":{}}\n`;
+      out += '⚠️ IMPORTANTE: El nombre correcto es "search_nodeterm" (NO "search_noderm", NO "search_nodeterms").\n';
+      out += '🚫 CRÍTICO: search_nodeterm SOLO debe usarse cuando el usuario EXPLÍCITAMENTE pide buscar, listar o conectar a una conexión SSH. NO lo uses proactivamente ni para sugerencias.\n';
+    }
+    
+    // 🔒 Ejemplos específicos para Tenable.io
+    const hasTenableTools = tools.some(t => t.serverId === 'tenable');
+    if (hasTenableTools) {
+      out += '\n🔒 EJEMPLOS TENABLE.IO:\n';
+      out += `Listar activos: {"tool":"tenable__get_assets","arguments":{"limit":"50","offset":"0"}}\n`;
+      out += `Buscar activo: {"tool":"tenable__search_assets","arguments":{"search_term":"servidor01","limit":"50"}}\n`;
+      out += `Detalles de activo: {"tool":"tenable__get_asset_details","arguments":{"asset_id":"uuid-del-activo"}}\n`;
+      out += `Vulnerabilidades: {"tool":"tenable__get_asset_vulnerabilities","arguments":{"asset_id":"uuid-del-activo","severity":"critical","limit":"100"}}\n`;
+      out += '⚠️ IMPORTANTE: Cuando el usuario mencione Tenable, vulnerabilidades, activos o seguridad, usa estas herramientas automáticamente.\n';
+    }
+    
+    out += '\nCRÍTICO: USA SIEMPRE RUTAS ABSOLUTAS. NO uses rutas relativas.\n';
+    out += '\n🔴 FORMATO DE RESPUESTA - CRÍTICO:\n';
+    out += '• Si el objetivo requiere MÚLTIPLES herramientas → Usa formato PLAN: {"plan":[{"tool":"...","arguments":{...}},{"tool":"...","arguments":{...}}]}\n';
+    out += '• Si solo necesitas UNA herramienta → {"tool":"<server>__<name>","arguments":{...}}\n';
+    out += '• NO preguntes, NO expliques, NO uses campos como "messages" o "response"\n';
+    out += '• Solo responde en texto natural cuando hayas completado TODAS las acciones\n';
+    out += '• Ejemplo PLAN: {"plan":[{"tool":"ssh-terminal__search_nodeterm","arguments":{"query":"Kepler"}},{"tool":"ssh-terminal__execute_ssh","arguments":{"hostId":"Kepler","command":"free -h"}}]}\n';
+    out += '• Ejemplo correcto: {"tool":"ssh-terminal__search_nodeterm","arguments":{"query":"Kepler"}}\n';
+    out += '• Ejemplo INCORRECTO: {"messages":["¿Puedo usar search_nodeterm?"]}\n';
+    out += '\n⚠️ NOMBRES DE HERRAMIENTAS: Usa EXACTAMENTE los nombres mostrados arriba. NO inventes nombres similares.\n';
+    out += '🚫 NO USES HERRAMIENTAS PROACTIVAMENTE: Solo ejecuta herramientas cuando el usuario lo pida explícitamente.\n';
+    out += '\n🔴 REGLA CRÍTICA - CREAR vs EJECUTAR:\n';
+    out += '• "crea un script" / "crea un archivo" → SOLO usa write_file (NO execute_local)\n';
+    out += '• "ejecuta el script" / "run script" / "corre el comando" → USA execute_local\n';
+    out += '• "crea y ejecuta" → PRIMERO write_file, LUEGO execute_local\n';
+    out += '• Si el usuario SOLO pide CREAR/GENERAR/ESCRIBIR → NO ejecutes comandos automáticamente\n\n';
+
+    return out;
+  }
 }
 
 // Exportar instancia singleton
