@@ -1,6 +1,6 @@
 # 🚀 NodeTerm v1.6.0 - Release Notes
 
-**Fecha de Release**: 13 de Enero, 2025  
+**Fecha de Release**: 19 de Noviembre, 2025  
 **Tipo de Release**: Major Feature Release  
 **Versión Anterior**: v1.5.9
 

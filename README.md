@@ -121,14 +121,6 @@ npm run build:win
 
 ---
 
-## 🆕 Novedades en v1.6.0 (Próximamente)
-
-- 🔄 **Sistema de Actualización Automática** - Actualiza NodeTerm automáticamente desde GitHub Releases
-- ⚙️ **Configuración de Actualizaciones** - Control completo sobre cuándo y cómo actualizar
-- 📦 **Canales de Actualización** - Elige entre versiones estables o beta
-- 🔔 **Notificaciones Inteligentes** - Recibe avisos de nuevas versiones sin interrupciones
-- 🛡️ **Actualizaciones Seguras** - Todas las actualizaciones están firmadas y verificadas
-
 ## 🎉 Versión Actual: v1.6.0
 
 ### 🔄 Sistema de Actualización Automática
@@ -250,7 +242,12 @@ NodeTerm/
 
 ## 📝 Changelog
 
-### v1.6.0 (13 Enero 2025) - ACTUAL
+### v1.6.0 (19 Noviembre 2025) - ACTUAL
+- 🤖 **Sistema Completo de IA y Chat** - Chat integrado con múltiples proveedores (OpenAI, Anthropic, Google, Ollama)
+- 🔌 **Integración MCP Completa** - Model Context Protocol para extender capacidades de IA
+- 🌐 **AnythingLLM y OpenWebUI** - Integración completa con AnythingLLM y OpenWebUI
+- 🐳 **Conexiones Docker** - Terminales Docker con gestión de contenedores
+- 🎥 **Sistema de Auditoría** - Grabación y reproducción de sesiones SSH
 - 🔄 **Sistema de Actualización Automática** - Actualizaciones desde GitHub Releases
 - ⚙️ **Configuración Avanzada** - Control completo sobre el proceso de actualización
 - 📦 **Canales Stable/Beta** - Elige tu nivel de riesgo
