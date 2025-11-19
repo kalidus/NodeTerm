@@ -43,6 +43,17 @@ export const useDialogManagement = () => {
   const [rdpUsername, setRdpUsername] = useState('');
   const [rdpPassword, setRdpPassword] = useState('');
   const [rdpPort, setRdpPort] = useState(3389);
+
+  // ============ ESTADOS DE FORMULARIOS ARCHIVOS (SFTP/FTP/SCP) ============
+  
+  const [fileConnectionName, setFileConnectionName] = useState('');
+  const [fileConnectionHost, setFileConnectionHost] = useState('');
+  const [fileConnectionUser, setFileConnectionUser] = useState('');
+  const [fileConnectionPassword, setFileConnectionPassword] = useState('');
+  const [fileConnectionPort, setFileConnectionPort] = useState(22);
+  const [fileConnectionProtocol, setFileConnectionProtocol] = useState('sftp');
+  const [fileConnectionRemoteFolder, setFileConnectionRemoteFolder] = useState('');
+  const [fileConnectionTargetFolder, setFileConnectionTargetFolder] = useState('');
   const [rdpClientType, setRdpClientType] = useState('guacamole');
   const [rdpGuacSecurity, setRdpGuacSecurity] = useState('any');
   const [rdpTargetFolder, setRdpTargetFolder] = useState(null);
@@ -86,6 +97,18 @@ export const useDialogManagement = () => {
   const resetFolderForm = () => {
     setFolderName('');
     setParentNodeKey(null);
+  };
+
+  // Resetear todos los campos Archivos
+  const resetFileConnectionForm = () => {
+    setFileConnectionName('');
+    setFileConnectionHost('');
+    setFileConnectionUser('');
+    setFileConnectionPassword('');
+    setFileConnectionPort(22);
+    setFileConnectionProtocol('sftp');
+    setFileConnectionRemoteFolder('');
+    setFileConnectionTargetFolder('');
   };
 
   // Resetear todos los campos Edit SSH
@@ -206,6 +229,16 @@ export const useDialogManagement = () => {
     parentNodeKey, setParentNodeKey,
     editFolderNode, setEditFolderNode,
     editFolderName, setEditFolderName,
+
+    // Estados de formularios Archivos (SFTP/FTP/SCP)
+    fileConnectionName, setFileConnectionName,
+    fileConnectionHost, setFileConnectionHost,
+    fileConnectionUser, setFileConnectionUser,
+    fileConnectionPassword, setFileConnectionPassword,
+    fileConnectionPort, setFileConnectionPort,
+    fileConnectionProtocol, setFileConnectionProtocol,
+    fileConnectionRemoteFolder, setFileConnectionRemoteFolder,
+    fileConnectionTargetFolder, setFileConnectionTargetFolder,
 
     // Funciones de utilidad
     resetSSHForm, resetRDPForm, resetFolderForm,

@@ -1331,6 +1331,7 @@ const Sidebar = React.memo(({
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && node.data.type === 'rdp';
+    const isFileConnection = node.data && (node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp');
     const isPassword = node.data && node.data.type === 'password';
     // Icono según tema seleccionado para la sidebar
     let icon = null;
@@ -1593,6 +1594,9 @@ const Sidebar = React.memo(({
       title += " | Doble click para abrir terminal SSH";
     } else if (isRDP) {
       title += " | Doble click para conectar RDP";
+    } else if (isFileConnection) {
+      const protocolLabel = (node.data?.protocol || node.data?.type || 'SFTP').toUpperCase();
+      title += ` | Doble click para abrir explorador ${protocolLabel}`;
     }
     
     // Render básico, puedes añadir acciones/contextual aquí
@@ -1605,6 +1609,8 @@ const Sidebar = React.memo(({
             onOpenSSHConnection(node, nodes);
           } else if (isRDP && sidebarCallbacksRef?.current?.connectRDP) {
             sidebarCallbacksRef.current.connectRDP(node);
+          } else if (isFileConnection && sidebarCallbacksRef?.current?.openFileConnection) {
+            sidebarCallbacksRef.current.openFileConnection(node, nodes);
           }
         }}
         style={{ cursor: 'pointer', fontFamily: explorerFont, alignItems: 'flex-start' }}

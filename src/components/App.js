@@ -781,6 +781,7 @@ const App = () => {
   const {
     onOpenSSHConnection,
     onOpenRdpConnection,
+    onOpenFileConnection,
     openFileExplorer
   } = useConnectionManagement({
     activeGroupId, setActiveGroupId, activeTabIndex, setActiveTabIndex,
@@ -981,6 +982,15 @@ const App = () => {
     rdpTargetFolder, setRdpTargetFolder,
     rdpNodeData, setRdpNodeData,
     editingRdpNode, setEditingRdpNode,
+    // Estados de formularios Archivos (SFTP/FTP/SCP)
+    fileConnectionName, setFileConnectionName,
+    fileConnectionHost, setFileConnectionHost,
+    fileConnectionUser, setFileConnectionUser,
+    fileConnectionPassword, setFileConnectionPassword,
+    fileConnectionPort, setFileConnectionPort,
+    fileConnectionProtocol, setFileConnectionProtocol,
+    fileConnectionRemoteFolder, setFileConnectionRemoteFolder,
+    fileConnectionTargetFolder, setFileConnectionTargetFolder,
     // Estados de formularios Folder
     folderName, setFolderName,
     parentNodeKey, setParentNodeKey,
@@ -1080,6 +1090,7 @@ const App = () => {
     closeRdpDialog,
     openEditRdpDialog,
     handleSaveRdpToSidebar,
+    handleSaveFileConnectionToSidebar,
     createNewPasswordEntry
   } = useFormHandlers({
     toast,
@@ -1625,6 +1636,9 @@ const App = () => {
     sidebarCallbacksRef.current.connectRDP = (node) => {
       onOpenRdpConnection(node);
     };
+    sidebarCallbacksRef.current.openFileConnection = (node, nodes) => {
+      onOpenFileConnection(node, nodes);
+    };
     sidebarCallbacksRef.current.deleteNode = (nodeKey, nodeLabel) => {
       // Detectar si la carpeta tiene hijos
       const nodeInfo = findParentNodeAndIndex(nodes, nodeKey);
@@ -1632,6 +1646,22 @@ const App = () => {
       confirmDeleteNode(nodeKey, nodeLabel, hasChildren, nodes, setNodes);
     };
   }, [sidebarCallbacksRef.current]);
+  
+  // Listener para evento personalizado de guardar conexión de archivos (fallback)
+  useEffect(() => {
+    const handleSaveFileConnection = (event) => {
+      const fileData = event.detail;
+      if (fileData && handleSaveFileConnectionToSidebar) {
+        console.log('App - Recibido evento save-file-connection, guardando:', fileData);
+        handleSaveFileConnectionToSidebar(fileData, false, null);
+      }
+    };
+    
+    window.addEventListener('save-file-connection', handleSaveFileConnection);
+    return () => {
+      window.removeEventListener('save-file-connection', handleSaveFileConnection);
+    };
+  }, [handleSaveFileConnectionToSidebar]);
 
   // Desactivar reactivación automática al cambiar rdpTabs si hay activación forzada u orden explícito
   useEffect(() => {
@@ -2173,6 +2203,24 @@ const App = () => {
         editingRdpNode={editingRdpNode}
         setEditingRdpNode={setEditingRdpNode}
         
+        // Estados de formularios Archivos (SFTP/FTP/SCP)
+        fileConnectionName={fileConnectionName}
+        setFileConnectionName={setFileConnectionName}
+        fileConnectionHost={fileConnectionHost}
+        setFileConnectionHost={setFileConnectionHost}
+        fileConnectionUser={fileConnectionUser}
+        setFileConnectionUser={setFileConnectionUser}
+        fileConnectionPassword={fileConnectionPassword}
+        setFileConnectionPassword={setFileConnectionPassword}
+        fileConnectionPort={fileConnectionPort}
+        setFileConnectionPort={setFileConnectionPort}
+        fileConnectionProtocol={fileConnectionProtocol}
+        setFileConnectionProtocol={setFileConnectionProtocol}
+        fileConnectionRemoteFolder={fileConnectionRemoteFolder}
+        setFileConnectionRemoteFolder={setFileConnectionRemoteFolder}
+        fileConnectionTargetFolder={fileConnectionTargetFolder}
+        setFileConnectionTargetFolder={setFileConnectionTargetFolder}
+        
         // Estados de formularios Folder
         folderName={folderName}
         setFolderName={setFolderName}
@@ -2196,6 +2244,13 @@ const App = () => {
         saveEditFolder={saveEditFolder}
         createNewGroup={createNewGroup}
         handleSaveRdpToSidebar={handleSaveRdpToSidebar}
+        handleSaveFileConnectionToSidebar={handleSaveFileConnectionToSidebar}
+        // Exponer globalmente para acceso directo
+        onFileConnectionSave={(fileData) => {
+          if (handleSaveFileConnectionToSidebar) {
+            handleSaveFileConnectionToSidebar(fileData, false, null);
+          }
+        }}
         closeRdpDialog={closeRdpDialog}
         getAllFolders={getAllFolders}
         nodes={nodes}

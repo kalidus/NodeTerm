@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Toast } from 'primereact/toast';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
@@ -99,6 +99,24 @@ const DialogsManager = ({
   editSSHNode,
   setEditSSHNode,
   
+  // Estados de formularios Archivos (SFTP/FTP/SCP)
+  fileConnectionName,
+  setFileConnectionName,
+  fileConnectionHost,
+  setFileConnectionHost,
+  fileConnectionUser,
+  setFileConnectionUser,
+  fileConnectionPassword,
+  setFileConnectionPassword,
+  fileConnectionPort,
+  setFileConnectionPort,
+  fileConnectionProtocol,
+  setFileConnectionProtocol,
+  fileConnectionRemoteFolder,
+  setFileConnectionRemoteFolder,
+  fileConnectionTargetFolder,
+  setFileConnectionTargetFolder,
+  
   // Estados de formularios Folder
   folderName,
   setFolderName,
@@ -122,6 +140,7 @@ const DialogsManager = ({
   saveEditFolder,
   createNewGroup,
   handleSaveRdpToSidebar,
+  handleSaveFileConnectionToSidebar,
   closeRdpDialog,
   getAllFolders,
   nodes,
@@ -184,6 +203,49 @@ const DialogsManager = ({
   // Encriptación
   onMasterPasswordConfigured
 }) => {
+  // Debug: verificar que el prop se recibe correctamente
+  useEffect(() => {
+    console.log('DialogsManager - Montado - handleSaveFileConnectionToSidebar:', typeof handleSaveFileConnectionToSidebar, !!handleSaveFileConnectionToSidebar);
+  }, [handleSaveFileConnectionToSidebar]);
+  
+  // Crear handler estable con useCallback para que no cambie entre renders
+  // SIEMPRE crear una función, incluso si handleSaveFileConnectionToSidebar no está definido
+  const stableFileConnectionHandler = useCallback((fileData) => {
+    console.log('DialogsManager - stableFileConnectionHandler llamado con:', fileData);
+    console.log('DialogsManager - handleSaveFileConnectionToSidebar existe:', !!handleSaveFileConnectionToSidebar);
+    console.log('DialogsManager - handleSaveFileConnectionToSidebar tipo:', typeof handleSaveFileConnectionToSidebar);
+    
+    if (!fileData || !fileData.name || !fileData.host || !fileData.username) {
+      console.error('DialogsManager - Datos inválidos:', fileData);
+      return;
+    }
+    
+    if (handleSaveFileConnectionToSidebar && typeof handleSaveFileConnectionToSidebar === 'function') {
+      console.log('DialogsManager - Guardando conexión de archivos');
+      try {
+        handleSaveFileConnectionToSidebar(fileData, false, null);
+      } catch (error) {
+        console.error('DialogsManager - Error al guardar conexión:', error);
+      }
+    } else {
+      console.error('DialogsManager - handleSaveFileConnectionToSidebar no está definido o no es una función!');
+      console.error('DialogsManager - handleSaveFileConnectionToSidebar:', handleSaveFileConnectionToSidebar);
+    }
+  }, [handleSaveFileConnectionToSidebar]);
+  
+  // Debug: verificar que el handler se crea correctamente
+  useEffect(() => {
+    console.log('DialogsManager - Render - stableFileConnectionHandler:', typeof stableFileConnectionHandler, !!stableFileConnectionHandler);
+    console.log('DialogsManager - Render - handleSaveFileConnectionToSidebar:', typeof handleSaveFileConnectionToSidebar, !!handleSaveFileConnectionToSidebar);
+    if (stableFileConnectionHandler) {
+      console.log('DialogsManager - ✅ Handler válido, se pasará a UnifiedConnectionDialog');
+      console.log('DialogsManager - Handler value:', stableFileConnectionHandler);
+    } else {
+      console.error('DialogsManager - ❌ Handler es null/undefined, NO se pasará correctamente!');
+      console.error('DialogsManager - handleSaveFileConnectionToSidebar:', handleSaveFileConnectionToSidebar);
+    }
+  }, [stableFileConnectionHandler, handleSaveFileConnectionToSidebar]);
+  
   return (
     <>
       {/* Toast para notificaciones */}
@@ -456,6 +518,17 @@ const DialogsManager = ({
             setEditingRdpNode(null);
             setRdpNodeData(null);
           }
+          // Resetear formulario de archivos si existe
+          if (setFileConnectionName) {
+            setFileConnectionName('');
+            setFileConnectionHost('');
+            setFileConnectionUser('');
+            setFileConnectionPassword('');
+            setFileConnectionPort(22);
+            setFileConnectionProtocol('sftp');
+            setFileConnectionRemoteFolder('');
+            setFileConnectionTargetFolder('');
+          }
         }}
         // Props SSH
         sshName={editSSHNode ? editSSHName : sshName}
@@ -485,9 +558,30 @@ const DialogsManager = ({
         isEditMode={!!(editSSHNode || editingRdpNode)}
         editConnectionType={editSSHNode ? 'ssh' : (editingRdpNode ? 'rdp' : null)}
         editNodeData={editSSHNode || editingRdpNode}
+        // Props Archivos (SFTP/FTP/SCP) - Usar valores por defecto si son undefined
+        fileConnectionName={fileConnectionName ?? ''}
+        setFileConnectionName={setFileConnectionName ?? (() => console.warn('setFileConnectionName not provided'))}
+        fileConnectionHost={fileConnectionHost ?? ''}
+        setFileConnectionHost={setFileConnectionHost ?? (() => console.warn('setFileConnectionHost not provided'))}
+        fileConnectionUser={fileConnectionUser ?? ''}
+        setFileConnectionUser={setFileConnectionUser ?? (() => console.warn('setFileConnectionUser not provided'))}
+        fileConnectionPassword={fileConnectionPassword ?? ''}
+        setFileConnectionPassword={setFileConnectionPassword ?? (() => console.warn('setFileConnectionPassword not provided'))}
+        fileConnectionPort={fileConnectionPort ?? 22}
+        setFileConnectionPort={setFileConnectionPort ?? (() => console.warn('setFileConnectionPort not provided'))}
+        fileConnectionProtocol={fileConnectionProtocol ?? 'sftp'}
+        setFileConnectionProtocol={setFileConnectionProtocol ?? (() => console.warn('setFileConnectionProtocol not provided'))}
+        fileConnectionRemoteFolder={fileConnectionRemoteFolder ?? ''}
+        setFileConnectionRemoteFolder={setFileConnectionRemoteFolder ?? (() => console.warn('setFileConnectionRemoteFolder not provided'))}
+        fileConnectionTargetFolder={fileConnectionTargetFolder ?? ''}
+        setFileConnectionTargetFolder={setFileConnectionTargetFolder ?? (() => console.warn('setFileConnectionTargetFolder not provided'))}
+        onFileConnectionConfirm={stableFileConnectionHandler}
+        fileConnectionLoading={false}
       />
     </>
   );
 };
+
+DialogsManager.displayName = 'DialogsManager';
 
 export default DialogsManager;

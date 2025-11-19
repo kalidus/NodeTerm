@@ -7,13 +7,49 @@ contextBridge.exposeInMainWorld('electron', {
     readText: () => ipcRenderer.invoke('clipboard:readText'),
   },
   fileExplorer: {
-    listFiles: (tabId, path, sshConfig) => ipcRenderer.invoke('ssh:list-files', { tabId, path, sshConfig }),
-    checkDirectory: (tabId, path, sshConfig) => ipcRenderer.invoke('ssh:check-directory', { tabId, path, sshConfig }),
-    getHomeDirectory: (tabId, sshConfig) => ipcRenderer.invoke('ssh:get-home-directory', { tabId, sshConfig }),
-    downloadFile: (tabId, remotePath, localPath, sshConfig) => ipcRenderer.invoke('ssh:download-file', { tabId, remotePath, localPath, sshConfig }),
-    uploadFile: (tabId, localPath, remotePath, sshConfig) => ipcRenderer.invoke('ssh:upload-file', { tabId, localPath, remotePath, sshConfig }),
-    deleteFile: (tabId, remotePath, isDirectory, sshConfig) => ipcRenderer.invoke('ssh:delete-file', { tabId, remotePath, isDirectory, sshConfig }),
-    createDirectory: (tabId, remotePath, sshConfig) => ipcRenderer.invoke('ssh:create-directory', { tabId, remotePath, sshConfig })
+    listFiles: (tabId, path, config) => {
+      // Si tiene protocol, usar handlers de archivos; si no, usar SSH (compatibilidad)
+      if (config && (config.protocol === 'sftp' || config.protocol === 'ftp' || config.protocol === 'scp')) {
+        return ipcRenderer.invoke('file:list-files', { tabId, path, config });
+      }
+      return ipcRenderer.invoke('ssh:list-files', { tabId, path, sshConfig: config });
+    },
+    checkDirectory: (tabId, path, config) => {
+      if (config && (config.protocol === 'sftp' || config.protocol === 'ftp' || config.protocol === 'scp')) {
+        return ipcRenderer.invoke('file:check-directory', { tabId, path, config });
+      }
+      return ipcRenderer.invoke('ssh:check-directory', { tabId, path, sshConfig: config });
+    },
+    getHomeDirectory: (tabId, config) => {
+      if (config && (config.protocol === 'sftp' || config.protocol === 'ftp' || config.protocol === 'scp')) {
+        return ipcRenderer.invoke('file:get-home-directory', { tabId, config });
+      }
+      return ipcRenderer.invoke('ssh:get-home-directory', { tabId, sshConfig: config });
+    },
+    downloadFile: (tabId, remotePath, localPath, config) => {
+      if (config && (config.protocol === 'sftp' || config.protocol === 'ftp' || config.protocol === 'scp')) {
+        return ipcRenderer.invoke('file:download-file', { tabId, remotePath, localPath, config });
+      }
+      return ipcRenderer.invoke('ssh:download-file', { tabId, remotePath, localPath, sshConfig: config });
+    },
+    uploadFile: (tabId, localPath, remotePath, config) => {
+      if (config && (config.protocol === 'sftp' || config.protocol === 'ftp' || config.protocol === 'scp')) {
+        return ipcRenderer.invoke('file:upload-file', { tabId, localPath, remotePath, config });
+      }
+      return ipcRenderer.invoke('ssh:upload-file', { tabId, localPath, remotePath, sshConfig: config });
+    },
+    deleteFile: (tabId, remotePath, isDirectory, config) => {
+      if (config && (config.protocol === 'sftp' || config.protocol === 'ftp' || config.protocol === 'scp')) {
+        return ipcRenderer.invoke('file:delete-file', { tabId, remotePath, isDirectory, config });
+      }
+      return ipcRenderer.invoke('ssh:delete-file', { tabId, remotePath, isDirectory, sshConfig: config });
+    },
+    createDirectory: (tabId, remotePath, config) => {
+      if (config && (config.protocol === 'sftp' || config.protocol === 'ftp' || config.protocol === 'scp')) {
+        return ipcRenderer.invoke('file:create-directory', { tabId, remotePath, config });
+      }
+      return ipcRenderer.invoke('ssh:create-directory', { tabId, remotePath, sshConfig: config });
+    }
   },
   dialog: {
     showSaveDialog: (options) => ipcRenderer.invoke('dialog:show-save-dialog', options),
@@ -68,6 +104,7 @@ contextBridge.exposeInMainWorld('electron', {
         'detect-wsl-distributions',
         'nextcloud:http-request',
         /^ssh:.*$/,
+        /^file:.*$/,
         /^dialog:.*$/,
         /^ubuntu:.*$/,
         /^wsl-distro:.*$/,
