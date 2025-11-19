@@ -14,6 +14,12 @@ import { summarizeToolResult } from '../utils/toolResultSummarizer';
 import { rememberToolExecution, getRecentToolExecution } from './ToolExecutionCache';
 import { modelManager } from './ai/ModelManager';
 import { codeAnalyzer } from './ai/CodeAnalyzer';
+import { openAIProvider } from './ai/providers/OpenAIProvider';
+import { anthropicProvider } from './ai/providers/AnthropicProvider';
+import { googleProvider } from './ai/providers/GoogleProvider';
+import { ollamaProvider } from './ai/providers/OllamaProvider';
+import { contextManager } from './ai/ContextManager';
+import { toolProcessor } from './ai/ToolProcessor';
 
 const TOOLS_REQUIRE_FULL_CONTEXT = new Set([
   'search_nodeterm'
@@ -40,7 +46,17 @@ class AIService {
     this.models = modelManager.getAllModels();
     // Nota: Los modelos ahora están centralizados en ModelManager
     // El código anterior que definía this.models aquí ha sido movido a ModelManager
-    this.conversationHistory = [];
+    
+    // Usar ContextManager para gestionar el historial
+    // this.conversationHistory ahora se gestiona a través de contextManager
+    // Mantener referencia para compatibilidad temporal
+    Object.defineProperty(this, 'conversationHistory', {
+      get: () => contextManager.getHistory(),
+      set: (value) => contextManager.setHistory(value),
+      enumerable: true,
+      configurable: true
+    });
+    
     this.loadConfig();
   }
 
@@ -987,12 +1003,10 @@ class AIService {
     };
 
     // Limitar historial si es necesario
-    if (this.conversationHistory.length > finalOptions.maxHistory) {
-      this.conversationHistory = this.conversationHistory.slice(-finalOptions.maxHistory);
-    }
+    contextManager.limitHistory(finalOptions.maxHistory);
 
     // Agregar mensaje al historial
-    this.conversationHistory.push({
+    contextManager.addMessage({
       role: 'user',
       content: message,
       timestamp: Date.now()
@@ -1008,7 +1022,7 @@ class AIService {
       }
 
       // Agregar respuesta al historial
-      this.conversationHistory.push({
+      contextManager.addMessage({
         role: 'assistant',
         content: response,
         timestamp: Date.now()
@@ -1311,83 +1325,7 @@ class AIService {
    * 📚 Los ejemplos ayudan al modelo a entender el uso correcto
    */
   generateToolExamples(tools, provider) {
-    // Seleccionar hasta 3 ejemplos representativos
-    const exampleTools = tools.slice(0, 3);
-    
-    if (exampleTools.length === 0) return '';
-    
-    let examples = '\n🎯 EJEMPLOS DE USO:\n\n';
-    
-    exampleTools.forEach((tool, idx) => {
-      const params = tool.inputSchema?.properties || {};
-      const required = tool.inputSchema?.required || [];
-      
-      // Generar ejemplo de parámetros
-      const exampleArgs = {};
-      Object.keys(params).forEach(key => {
-        if (required.includes(key)) {
-          const param = params[key];
-          // Generar valor de ejemplo según el tipo
-          if (param.type === 'string') {
-            if (key === 'path' || key === 'file' || key === 'source' || key === 'destination') {
-              exampleArgs[key] = '/ruta/archivo.txt';
-            } else if (key === 'content' || key === 'text') {
-              exampleArgs[key] = 'contenido del texto';
-            } else if (key === 'pattern') {
-              exampleArgs[key] = '*.txt';
-            } else {
-              exampleArgs[key] = 'valor';
-            }
-          } else if (param.type === 'number' || param.type === 'integer') {
-            exampleArgs[key] = 100;
-          } else if (param.type === 'boolean') {
-            exampleArgs[key] = true;
-          } else if (param.type === 'array') {
-            exampleArgs[key] = [];
-          } else {
-            exampleArgs[key] = param.example || 'valor';
-          }
-        }
-      });
-      
-      const toolName = tool.serverId ? `${tool.serverId}__${tool.name}` : tool.name;
-      
-      examples += `Ejemplo ${idx + 1}:\n`;
-      examples += `Usuario: "${this._generateUserExampleForTool(tool)}"\n`;
-      examples += `Tool llamada: ${toolName}\n`;
-      examples += `Argumentos: ${JSON.stringify(exampleArgs, null, 2)}\n\n`;
-    });
-    
-    return examples;
-  }
-  
-  /**
-   * Generar ejemplo de petición del usuario para una tool
-   */
-  _generateUserExampleForTool(tool) {
-    const name = tool.name;
-    
-    if (name.includes('list') && name.includes('directory')) {
-      return 'Lista los archivos del directorio actual';
-    } else if (name.includes('read') && name.includes('file')) {
-      return 'Lee el contenido del archivo config.json';
-    } else if (name.includes('write') && name.includes('file')) {
-      return 'Crea un archivo llamado notas.txt con el texto "Hola mundo"';
-    } else if (name.includes('edit') && name.includes('file')) {
-      return 'Cambia la línea que dice "version: 1.0" por "version: 2.0"';
-    } else if (name.includes('search')) {
-      return 'Busca todos los archivos .txt en el directorio';
-    } else if (name.includes('create') && name.includes('directory')) {
-      return 'Crea una carpeta llamada "proyectos"';
-    } else if (name.includes('move')) {
-      return 'Mueve el archivo documento.txt a la carpeta backup';
-    } else if (name.includes('delete')) {
-      return 'Elimina el archivo temporal.tmp';
-    } else if (name.includes('get') && name.includes('info')) {
-      return 'Dame información del archivo imagen.png';
-    }
-    
-    return `Usa la herramienta ${name}`;
+    return toolProcessor.generateToolExamples(tools, provider);
   }
 
   /**
@@ -1395,68 +1333,7 @@ class AIService {
    * ✨ MEJORADO: Enriquece descripciones automáticamente para mejor comprensión
    */
   convertMCPToolsToProviderFormat(tools, provider, options = {}) {
-    if (!tools || tools.length === 0) return [];
-
-    return tools.map(tool => {
-      // 🔍 Enriquecer descripción automáticamente
-      let enrichedDescription = tool.description || `Herramienta ${tool.name}`;
-      
-      // Agregar contexto de parámetros importantes a la descripción
-      if (tool.inputSchema && tool.inputSchema.properties) {
-        const params = tool.inputSchema.properties;
-        const required = tool.inputSchema.required || [];
-        
-        // Si hay parámetros requeridos, mencionarlos en la descripción
-        if (required.length > 0) {
-          const requiredParams = required.map(r => `'${r}'`).join(', ');
-          enrichedDescription += `. Requiere: ${requiredParams}`;
-        }
-        
-        // Agregar hints específicos por tipo de tool
-        if (tool.name.includes('read') || tool.name.includes('list')) {
-          enrichedDescription += '. Use esta herramienta cuando necesite OBTENER o VER información';
-        } else if (tool.name.includes('write') || tool.name.includes('create')) {
-          enrichedDescription += '. Use esta herramienta cuando necesite CREAR o GUARDAR contenido';
-        } else if (tool.name.includes('edit') || tool.name.includes('update') || tool.name.includes('modify')) {
-          enrichedDescription += '. Use esta herramienta cuando necesite MODIFICAR contenido existente';
-        } else if (tool.name.includes('delete') || tool.name.includes('remove')) {
-          enrichedDescription += '. Use esta herramienta cuando necesite ELIMINAR algo';
-        } else if (tool.name.includes('search') || tool.name.includes('find')) {
-          enrichedDescription += '. Use esta herramienta cuando necesite BUSCAR o ENCONTRAR algo';
-        } else if (tool.name.includes('move') || tool.name.includes('rename')) {
-          enrichedDescription += '. Use esta herramienta cuando necesite MOVER o RENOMBRAR';
-        }
-      }
-
-      // Formato común para function calling
-      const toolDef = {
-        name: (options.namespace ? `${tool.serverId}__${tool.name}` : tool.name),
-        description: enrichedDescription,
-        parameters: tool.inputSchema || { type: 'object', properties: {} }
-      };
-
-      // Adaptar según el proveedor
-      if (provider === 'openai') {
-        return {
-          type: 'function',
-          function: toolDef
-        };
-      } else if (provider === 'anthropic') {
-        return {
-          name: toolDef.name,
-          description: toolDef.description,
-          input_schema: toolDef.parameters
-        };
-      } else if (provider === 'google') {
-        return {
-          name: toolDef.name,
-          description: toolDef.description,
-          parameters: toolDef.parameters
-        };
-      }
-
-      return toolDef;
-    });
+    return toolProcessor.convertMCPToolsToProviderFormat(tools, provider, options);
   }
 
   /**
@@ -2024,38 +1901,7 @@ class AIService {
    * Detectar si la respuesta del modelo solicita usar una tool
    */
   detectToolCallInResponse(response) {
-    if (!response || typeof response !== 'string') return null;
-    
-    // NUEVO: Log agresivo para ver la respuesta COMPLETA
-    debugLogger.debug('AIService.MCP', 'detectToolCallInResponse entrada', {
-      tipo: typeof response,
-      length: response?.length,
-      muestra: response?.substring(0, 200),
-      incluyeTool: response?.includes('"tool"'),
-      incluyeLlave: response?.includes('{')
-    });
-    
-    try {
-      // Estrategia 1: Bloques explícitos con backticks (```json...```)
-      const toolCall = this._extractToolCallFromCodeBlock(response);
-      if (toolCall) {
-        return toolCall;
-      }
-      
-      // Estrategia 2: JSON flexible en cualquier posición (con preámbulo/epilogo)
-      const jsonToolCall = this._extractToolCallFromJSON(response);
-      return jsonToolCall;
-      
-    } catch (error) {
-      // Error inesperado en detección
-      if (response.trim().startsWith('{') && response.trim().endsWith('}')) {
-        debugLogger.debug('AIService.MCP', 'JSON inválido detectado al buscar tool call', {
-          error: error.message.substring(0, 100)
-        });
-      }
-      console.error('❌ [AIService] Error detectando tool call:', error.message);
-      return null;
-    }
+    return toolProcessor.detectToolCallInResponse(response);
   }
 
   /**
@@ -2064,25 +1910,7 @@ class AIService {
    * {"prompt": {"server":"<serverId>", "name":"<promptName>", "arguments":{...}}}
    */
   detectPromptCallInResponse(response) {
-    if (!response || typeof response !== 'string') return null;
-    try {
-      // Buscar bloque JSON que contenga "prompt": { ... }
-      const re = /\{[\s\S]*?"prompt"\s*:\s*\{[\s\S]*?\}[\s\S]*?\}/g;
-      const matches = response.match(re);
-      if (!matches) return null;
-      for (const jsonStr of matches) {
-        try {
-          const data = JSON.parse(jsonStr);
-          const pr = data.prompt;
-          if (pr && typeof pr === 'object' && pr.name) {
-            return { serverId: pr.server || pr.serverId, promptName: pr.name, arguments: pr.arguments || {} };
-          }
-        } catch (_) { /* ignore */ }
-      }
-      return null;
-    } catch (_) {
-      return null;
-    }
+    return toolProcessor.detectPromptCallInResponse(response);
   }
 
   async _handlePromptCallAndContinue({ serverId, promptName, arguments: args }, messages, callbacks, options, modelId) {
@@ -2100,47 +1928,7 @@ class AIService {
    * Convertir JSON Schema a el formato de parámetros de Gemini (tipos en MAYÚSCULAS)
    */
   _toGeminiSchema(schema) {
-    if (!schema || typeof schema !== 'object') return { type: 'OBJECT' };
-
-    const upper = (t) => {
-      if (!t) return undefined;
-      const map = {
-        object: 'OBJECT',
-        array: 'ARRAY',
-        string: 'STRING',
-        number: 'NUMBER',
-        integer: 'INTEGER',
-        boolean: 'BOOLEAN'
-      };
-      return map[String(t).toLowerCase()] || String(t).toUpperCase();
-    };
-
-    const convert = (node) => {
-      if (!node || typeof node !== 'object') return node;
-      const t = upper(node.type);
-      if (t === 'OBJECT') {
-        const props = node.properties || {};
-        const outProps = {};
-        Object.keys(props).forEach((k) => {
-          outProps[k] = convert(props[k]);
-        });
-        return {
-          type: 'OBJECT',
-          properties: outProps,
-          required: Array.isArray(node.required) ? node.required : undefined
-        };
-      }
-      if (t === 'ARRAY') {
-        return {
-          type: 'ARRAY',
-          items: convert(node.items || {})
-        };
-      }
-      // Primitivos
-      return { type: t };
-    };
-
-    return convert(schema);
+    return toolProcessor.toGeminiSchema(schema);
   }
 
   _resolveToolInfo(toolName, serverIdHint = null) {
@@ -2282,148 +2070,13 @@ class AIService {
   }
 
   _normalizeFunctionCall(fullName, rawArgs) {
-    debugLogger.debug('AIService.MCP', '_normalizeFunctionCall entrada', { fullName, rawArgs });
-    let argsObj;
-    if (!rawArgs) {
-      argsObj = {};
-    } else if (typeof rawArgs === 'string') {
-      argsObj = { tool: rawArgs };
-    } else {
-      argsObj = { ...rawArgs };
-    }
-
-    let toolName = argsObj.tool || argsObj.name || fullName;
-    let serverId = argsObj.server || argsObj.serverId || null;
-
-    // 🔧 ARREGLO: Manejar nombres namespaced con doble guión bajo (__) O un solo guión bajo (_)
-    // El modelo a veces genera ssh-terminal_search_noderm en lugar de ssh-terminal__search_nodeterm
-    if (!serverId && typeof fullName === 'string') {
-      // Intentar con doble guión bajo primero (formato correcto)
-      if (fullName.includes('__')) {
-        const idx = fullName.indexOf('__');
-        if (idx >= 0) {
-          serverId = fullName.slice(0, idx);
-          toolName = fullName.slice(idx + 2);
-        }
-      }
-      // Si no se encontró, intentar con un solo guión bajo (formato incorrecto del modelo)
-      else if (fullName.includes('_') && !fullName.includes('__')) {
-        // Buscar patrones como "ssh-terminal_search_noderm"
-        const parts = fullName.split('_');
-        if (parts.length >= 2) {
-          const possibleServerId = parts[0];
-          const possibleBaseName = parts.slice(1).join('_');
-          
-          // Verificar si existe un servidor con ese ID
-          const tools = mcpClient.getAvailableTools() || [];
-          const serverExists = tools.some(t => t.serverId === possibleServerId);
-          if (serverExists) {
-            serverId = possibleServerId;
-            toolName = possibleBaseName;
-          }
-        }
-      }
-    }
-
-    if (!serverId) {
-      const tools = mcpClient.getAvailableTools() || [];
-      const matches = tools.filter(t => t.name === toolName);
-      if (matches.length === 1) {
-        serverId = matches[0].serverId;
-      } else if (matches.length > 1) {
-        serverId = matches[0].serverId;
-      }
-    }
-
-    if (!serverId) {
-      const fallbackDir = this._getMcpDefaultDir('filesystem');
-      if (fallbackDir) {
-        serverId = 'filesystem';
-      }
-    }
-
-    if (!serverId) {
-      const tools = mcpClient.getAvailableTools() || [];
-      const fsMatch = tools.find(t => t.serverId === 'filesystem' && t.name === toolName);
-      if (fsMatch) {
-        serverId = 'filesystem';
-      }
-    }
-
-    if (!serverId) {
-      debugLogger.warn('AIService.MCP', '_normalizeFunctionCall sin serverId resuelto', {
-        fullName,
-        rawArgs,
-        toolName,
-        argsObj
-      });
-    }
-
-    // Construir argumentos limpios
-    let finalArgs = argsObj.arguments || argsObj.args || argsObj.parameters;
-    if (typeof finalArgs === 'string') {
-      finalArgs = { tool: finalArgs };
-    }
-
-    if (!finalArgs || typeof finalArgs !== 'object' || Array.isArray(finalArgs)) {
-      const copy = { ...argsObj };
-      delete copy.tool;
-      delete copy.name;
-      delete copy.server;
-      delete copy.serverId;
-      delete copy.arguments;
-      delete copy.args;
-      delete copy.parameters;
-      finalArgs = copy;
-    } else {
-      finalArgs = { ...finalArgs };
-    }
-
-    if (finalArgs.arguments && typeof finalArgs.arguments === 'object' && !Array.isArray(finalArgs.arguments)) {
-      finalArgs = { ...finalArgs, ...finalArgs.arguments };
-      delete finalArgs.arguments;
-    }
-
-    if (finalArgs.server || finalArgs.serverId) {
-      serverId = serverId || finalArgs.server || finalArgs.serverId;
-      delete finalArgs.server;
-      delete finalArgs.serverId;
-    }
-
-    const nestedTool = finalArgs.tool || finalArgs.toolName;
-    if (nestedTool) {
-      toolName = nestedTool;
-      delete finalArgs.tool;
-      delete finalArgs.toolName;
-    }
-
-    if (!serverId) {
-      const tools = mcpClient.getAvailableTools() || [];
-      const matches = tools.filter(t => t.name === toolName);
-      if (matches.length === 1) {
-        serverId = matches[0].serverId;
-      }
-    }
-
-    if (!finalArgs || typeof finalArgs !== 'object') {
-      finalArgs = {};
-    }
-
-    const defaultInfo = serverId ? this._getMcpDefaultDir(serverId) : this._getMcpDefaultDir('filesystem');
-    const defaultPath = defaultInfo?.raw || defaultInfo?.normalized || null;
-    if (defaultPath) {
-      if (['list_directory', 'directory_tree', 'list_directory_with_sizes'].includes(toolName) && !finalArgs.path) {
-        finalArgs.path = defaultPath;
-      }
-      if (toolName === 'read_text_file' && !finalArgs.path) {
-        finalArgs.path = defaultPath;
-      }
-    }
-
-    const resolved = this._resolveToolInfo(toolName, serverId);
-    const normalized = { serverId: resolved.serverId, toolName: resolved.toolName, arguments: finalArgs };
-    debugLogger.debug('AIService.MCP', '_normalizeFunctionCall salida', normalized);
-    return normalized;
+    return toolProcessor.normalizeFunctionCall(
+      fullName,
+      rawArgs,
+      mcpClient,
+      this._getMcpDefaultDir.bind(this),
+      this._resolveToolInfo.bind(this)
+    );
   }
 
   async _handleRemotePostResponse(rawResponse, conversationMessages, mcpContext, callbacks, options, model) {
@@ -2500,91 +2153,21 @@ class AIService {
   /**
    * Extraer tool call de bloques de código (```json...```)
    */
+  // Métodos de extracción ahora están en ToolProcessor
   _extractToolCallFromCodeBlock(response) {
-    const jsonBlockRegex = /```(?:json|tool|tool_call)?\s*([\s\S]*?)```/gi;
-    let match = jsonBlockRegex.exec(response);
-    
-    while (match) {
-      try {
-        const jsonContent = match[1].trim();
-        const data = JSON.parse(jsonContent);
-        const toolCall = this._normalizeToolCall(data);
-        if (toolCall) return toolCall;
-      } catch (e) {
-        // Este bloque no es válido, intentar siguiente
-      }
-      match = jsonBlockRegex.exec(response);
-    }
-    
-    return null;
+    return toolProcessor.extractToolCallFromCodeBlock(response);
   }
 
-  /**
-   * Extraer tool call de JSON flexible (en cualquier posición con preámbulo/epilogo)
-   */
   _extractToolCallFromJSON(response) {
-    // NUEVO: Log para debugging
-    debugLogger.debug('AIService.MCP', 'Buscando JSON en respuesta', { length: response.length });
-    
-    // Buscar JSON que contenga "tool" o "use_tool"
-    // Permite preámbulo y epilogo alrededor del JSON
-    // FIX: Usar [\s\S]* GREEDY (sin ?) para capturar hasta el ÚLTIMO } del objeto
-    const jsonPattern = /\{[\s\S]*?"(?:tool|use_tool)"[\s\S]*\}/g;
-    const matches = response.match(jsonPattern);
-    
-    if (!matches) {
-      debugLogger.debug('AIService.MCP', 'No se encontró JSON con tool/use_tool');
-      return null;
-    }
-    
-    // Intentar cada JSON encontrado (puede haber múltiples)
-    for (let i = 0; i < matches.length; i++) {
-      const jsonStr = matches[i];
-      debugLogger.debug('AIService.MCP', 'Intentando candidato para tool call', {
-        indice: i + 1,
-        preview: jsonStr.substring(0, 50).replace(/\n/g, '\\n')
-      });
-      
-      try {
-        const data = JSON.parse(jsonStr);
-        const toolCall = this._normalizeToolCall(data);
-        if (toolCall) {
-          debugLogger.debug('AIService.MCP', 'Tool call detectado', { tool: toolCall.toolName });
-          return toolCall;
-        }
-      } catch (e) {
-        debugLogger.debug('AIService.MCP', 'JSON inválido durante parseo de tool call', { error: e.message });
-        continue;
-      }
-    }
-    
-    debugLogger.debug('AIService.MCP', 'Ningún candidato fue un tool call válido');
-    return null;
+    return toolProcessor.extractToolCallFromJSON(response);
   }
 
-  /**
-   * Validar si data es un tool call válido
-   */
   _isValidToolCall(data) {
-    if (!data || typeof data !== 'object') return false;
-    
-    const hasToolField = (data.tool && typeof data.tool === 'string') ||
-                         (data.use_tool && typeof data.use_tool === 'string');
-    
-    return hasToolField;
+    return toolProcessor.isValidToolCall(data);
   }
 
-  /**
-   * Normalizar tool call a formato estándar
-   */
   _normalizeToolCall(data) {
-    if (!this._isValidToolCall(data)) return null;
-    
-    return {
-      toolName: data.tool || data.use_tool,
-      arguments: data.arguments || {},
-      serverId: data.serverId || data.server || null
-    };
+    return toolProcessor.normalizeToolCall(data);
   }
 
   /**
@@ -3365,164 +2948,281 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
     let endpointWithKey = null;
 
     if (model.provider === 'openai') {
-      headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      };
+      // Usar OpenAIProvider para enviar el mensaje
+      const messages = contextManager.getFormattedMessages();
       
-      requestBody = {
-        model: model.id,
-        messages: this.conversationHistory.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        })),
-        stream: options.stream || false,
-        temperature: options.temperature || 0.7,
-        max_tokens: options.maxTokens || 2000
-      };
-    } else if (model.provider === 'anthropic') {
-      headers = {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      };
-      
-      requestBody = {
-        model: model.id,
-        messages: this.conversationHistory.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        })),
-        max_tokens: options.maxTokens || 2000
-      };
-    } else if (model.provider === 'google') {
-      headers = {
-        'Content-Type': 'application/json'
-      };
-      
-      // Gemini usa un formato diferente - necesita el API key como parámetro de query
-      endpointWithKey = `${model.endpoint}?key=${apiKey}`;
-      
-      // Convertir historial de conversación al formato de Gemini
-      const contents = this.conversationHistory.map(msg => ({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }]
-      }));
-      
-      requestBody = {
-        contents: contents,
-        generationConfig: {
-          temperature: options.temperature || 0.7,
-          maxOutputTokens: options.maxTokens || 2000
+      try {
+        const content = await openAIProvider.sendMessage(
+          model,
+          messages,
+          options,
+          apiKey,
+          this._safeReadJSON.bind(this),
+          this._safeProcessResponse.bind(this)
+        );
+        return content;
+      } catch (error) {
+        // Manejar errores de modelo sobrecargado con fallback
+        if (error.message.includes('overloaded') || error.message.includes('503') || error.message.includes('The model is overloaded')) {
+          debugLogger.warn('AIService.RemoteModel', 'Intentando fallback automático por modelo sobrecargado', {
+            modelId: model.id
+          });
+          
+          // Buscar otros modelos del mismo proveedor que no hayan sido intentados
+          const alternativeModels = this.models.remote.filter(m => 
+            m.provider === model.provider && 
+            m.id !== model.id && 
+            this.getApiKey(m.provider) // Que tenga API key configurada
+          );
+          
+          if (alternativeModels.length > 0) {
+            const fallbackModel = alternativeModels[0];
+            debugLogger.info('AIService.RemoteModel', 'Cambiando a modelo fallback', {
+              fallbackModel: fallbackModel.name
+            });
+            
+            // Temporalmente cambiar el modelo actual para el fallback
+            const originalModel = this.currentModel;
+            this.currentModel = fallbackModel.id;
+            
+            try {
+              const result = await this.sendToRemoteModel(message, options);
+              
+              // Restaurar modelo original
+              this.currentModel = originalModel;
+              return result;
+            } catch (fallbackError) {
+              // Restaurar modelo original
+              this.currentModel = originalModel;
+              console.error('Error en modelo fallback:', fallbackError);
+              throw new Error(`Todos los modelos de ${model.provider} están sobrecargados. Por favor, intenta más tarde o cambia a otro proveedor (OpenAI, Anthropic).`);
+            }
+          }
         }
-      };
+        
+        throw error;
+      }
+    } else if (model.provider === 'anthropic') {
+      // Usar AnthropicProvider para enviar el mensaje
+      const messages = contextManager.getFormattedMessages();
+      
+      try {
+        const content = await anthropicProvider.sendMessage(
+          model,
+          messages,
+          options,
+          apiKey,
+          this._safeReadJSON.bind(this),
+          this._safeProcessResponse.bind(this)
+        );
+        return content;
+      } catch (error) {
+        // Manejar errores de modelo sobrecargado con fallback
+        if (error.message.includes('overloaded') || error.message.includes('503') || error.message.includes('The model is overloaded')) {
+          debugLogger.warn('AIService.RemoteModel', 'Intentando fallback automático por modelo sobrecargado', {
+            modelId: model.id
+          });
+          
+          // Buscar otros modelos del mismo proveedor que no hayan sido intentados
+          const alternativeModels = this.models.remote.filter(m => 
+            m.provider === model.provider && 
+            m.id !== model.id && 
+            this.getApiKey(m.provider) // Que tenga API key configurada
+          );
+          
+          if (alternativeModels.length > 0) {
+            const fallbackModel = alternativeModels[0];
+            debugLogger.info('AIService.RemoteModel', 'Cambiando a modelo fallback', {
+              fallbackModel: fallbackModel.name
+            });
+            
+            // Temporalmente cambiar el modelo actual para el fallback
+            const originalModel = this.currentModel;
+            this.currentModel = fallbackModel.id;
+            
+            try {
+              const result = await this.sendToRemoteModel(message, options);
+              
+              // Restaurar modelo original
+              this.currentModel = originalModel;
+              return result;
+            } catch (fallbackError) {
+              // Restaurar modelo original
+              this.currentModel = originalModel;
+              console.error('Error en modelo fallback:', fallbackError);
+              throw new Error(`Todos los modelos de ${model.provider} están sobrecargados. Por favor, intenta más tarde o cambia a otro proveedor (OpenAI, Anthropic).`);
+            }
+          }
+        }
+        
+        throw error;
+      }
+    } else if (model.provider === 'google') {
+      // Usar GoogleProvider para enviar el mensaje
+      const messages = contextManager.getFormattedMessages();
+      
+      try {
+        const content = await googleProvider.sendMessage(
+          model,
+          messages,
+          options,
+          apiKey,
+          this._safeReadJSON.bind(this),
+          this._safeProcessResponse.bind(this)
+        );
+        return content;
+      } catch (error) {
+        // Manejar errores de modelo sobrecargado con fallback
+        if (error.message.includes('overloaded') || error.message.includes('503') || error.message.includes('The model is overloaded')) {
+          debugLogger.warn('AIService.RemoteModel', 'Intentando fallback automático por modelo sobrecargado', {
+            modelId: model.id
+          });
+          
+          // Buscar otros modelos del mismo proveedor que no hayan sido intentados
+          const alternativeModels = this.models.remote.filter(m => 
+            m.provider === model.provider && 
+            m.id !== model.id && 
+            this.getApiKey(m.provider) // Que tenga API key configurada
+          );
+          
+          if (alternativeModels.length > 0) {
+            const fallbackModel = alternativeModels[0];
+            debugLogger.info('AIService.RemoteModel', 'Cambiando a modelo fallback', {
+              fallbackModel: fallbackModel.name
+            });
+            
+            // Temporalmente cambiar el modelo actual para el fallback
+            const originalModel = this.currentModel;
+            this.currentModel = fallbackModel.id;
+            
+            try {
+              const result = await this.sendToRemoteModel(message, options);
+              
+              // Restaurar modelo original
+              this.currentModel = originalModel;
+              return result;
+            } catch (fallbackError) {
+              // Restaurar modelo original
+              this.currentModel = originalModel;
+              console.error('Error en modelo fallback:', fallbackError);
+              throw new Error(`Todos los modelos de ${model.provider} están sobrecargados. Por favor, intenta más tarde o cambia a otro proveedor (OpenAI, Anthropic).`);
+            }
+          }
+        }
+        
+        throw error;
+      }
     }
 
-    try {
-      // Usar la URL correcta según el proveedor
-      const requestUrl = model.provider === 'google' ? endpointWithKey : model.endpoint;
-      
-      // Intentar con reintentos para errores 503 (modelo sobrecargado)
-      let lastError;
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-          const response = await fetch(requestUrl, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(requestBody),
-        signal: options.signal
-      });
+    // Esta sección ya no debería ejecutarse porque todos los proveedores remotos tienen providers
+    // Se mantiene como fallback por si acaso
+    if (model.provider !== 'openai' && model.provider !== 'anthropic' && model.provider !== 'google') {
+      try {
+        // Usar la URL correcta según el proveedor
+        const requestUrl = model.provider === 'google' ? endpointWithKey : model.endpoint;
+        
+        // Intentar con reintentos para errores 503 (modelo sobrecargado)
+        let lastError;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            const response = await fetch(requestUrl, {
+              method: 'POST',
+              headers: headers,
+              body: JSON.stringify(requestBody),
+              signal: options.signal
+            });
 
-      if (!response.ok) {
-        const error = await response.json();
-            const errorMessage = error.error?.message || 'Error en la API';
+            if (!response.ok) {
+              const error = await response.json();
+              const errorMessage = error.error?.message || 'Error en la API';
+              
+              // Si es error 503 (modelo sobrecargado) y no es el último intento, reintentar
+              if (response.status === 503 && attempt < 3) {
+                debugLogger.warn('AIService.RemoteModel', 'Modelo remoto sobrecargado, reintentando', {
+                  modelId: model.id,
+                  intento: attempt,
+                  delayMs: attempt * 2000
+                });
+                await new Promise(resolve => setTimeout(resolve, attempt * 2000)); // Esperar 2, 4 segundos
+                continue;
+              }
+              
+              throw new Error(errorMessage);
+            }
+
+            // 🛡️ USAR PROCESAMIENTO SEGURO para evitar crashes de memoria con respuestas largas
+            const content = await this._safeProcessResponse(response, model.provider, model.id);
+            return content;
+          } catch (error) {
+            lastError = error;
             
-            // Si es error 503 (modelo sobrecargado) y no es el último intento, reintentar
-            if (response.status === 503 && attempt < 3) {
-              debugLogger.warn('AIService.RemoteModel', 'Modelo remoto sobrecargado, reintentando', {
+            // Si es error de modelo sobrecargado y no es el último intento, reintentar
+            if (error.message.includes('overloaded') && attempt < 3) {
+              debugLogger.warn('AIService.RemoteModel', 'Modelo remoto sobrecargado (mensaje), reintentando', {
                 modelId: model.id,
                 intento: attempt,
                 delayMs: attempt * 2000
               });
-              await new Promise(resolve => setTimeout(resolve, attempt * 2000)); // Esperar 2, 4 segundos
+              await new Promise(resolve => setTimeout(resolve, attempt * 2000));
               continue;
             }
             
-            throw new Error(errorMessage);
-      }
-
-      // 🛡️ USAR PROCESAMIENTO SEGURO para evitar crashes de memoria con respuestas largas
-      const content = await this._safeProcessResponse(response, model.provider, model.id);
-      return content;
-        } catch (error) {
-          lastError = error;
-          
-          // Si es error de modelo sobrecargado y no es el último intento, reintentar
-          if (error.message.includes('overloaded') && attempt < 3) {
-            debugLogger.warn('AIService.RemoteModel', 'Modelo remoto sobrecargado (mensaje), reintentando', {
-              modelId: model.id,
-              intento: attempt,
-              delayMs: attempt * 2000
-            });
-            await new Promise(resolve => setTimeout(resolve, attempt * 2000));
-            continue;
+            // Si no es el último intento, continuar con el siguiente intento
+            if (attempt < 3) {
+              continue;
+            }
+            
+            throw error;
           }
-          
-          // Si no es el último intento, continuar con el siguiente intento
-          if (attempt < 3) {
-            continue;
-          }
-          
-          throw error;
         }
-      }
-      
-      throw lastError;
-    } catch (error) {
-      debugLogger.error('AIService.RemoteModel', 'Error llamando a API remota', {
-        modelId: model.id,
-        error: error?.message
-      });
-      
-      // Si es error de modelo sobrecargado, intentar con otro modelo del mismo proveedor
-      if (error.message.includes('overloaded') || error.message.includes('503') || error.message.includes('The model is overloaded')) {
-        debugLogger.warn('AIService.RemoteModel', 'Intentando fallback automático por modelo sobrecargado', {
-          modelId: model.id
+        
+        throw lastError;
+      } catch (error) {
+        debugLogger.error('AIService.RemoteModel', 'Error llamando a API remota', {
+          modelId: model.id,
+          error: error?.message
         });
         
-        // Buscar otros modelos del mismo proveedor que no hayan sido intentados
-        const alternativeModels = this.models.remote.filter(m => 
-          m.provider === model.provider && 
-          m.id !== model.id && 
-          this.getApiKey(m.provider) // Que tenga API key configurada
-        );
-        
-        if (alternativeModels.length > 0) {
-          const fallbackModel = alternativeModels[0];
-          debugLogger.info('AIService.RemoteModel', 'Cambiando a modelo fallback', {
-            fallbackModel: fallbackModel.name
+        // Si es error de modelo sobrecargado, intentar con otro modelo del mismo proveedor
+        if (error.message.includes('overloaded') || error.message.includes('503') || error.message.includes('The model is overloaded')) {
+          debugLogger.warn('AIService.RemoteModel', 'Intentando fallback automático por modelo sobrecargado', {
+            modelId: model.id
           });
           
-          // Temporalmente cambiar el modelo actual para el fallback
-          const originalModel = this.currentModel;
-          this.currentModel = fallbackModel.id;
+          // Buscar otros modelos del mismo proveedor que no hayan sido intentados
+          const alternativeModels = this.models.remote.filter(m => 
+            m.provider === model.provider && 
+            m.id !== model.id && 
+            this.getApiKey(m.provider) // Que tenga API key configurada
+          );
           
-          try {
-            const result = await this.sendToRemoteModel(message, options);
+          if (alternativeModels.length > 0) {
+            const fallbackModel = alternativeModels[0];
+            debugLogger.info('AIService.RemoteModel', 'Cambiando a modelo fallback', {
+              fallbackModel: fallbackModel.name
+            });
             
-            // Restaurar modelo original
-            this.currentModel = originalModel;
-            return result;
-          } catch (fallbackError) {
-            // Restaurar modelo original
-            this.currentModel = originalModel;
-            console.error('Error en modelo fallback:', fallbackError);
-            throw new Error(`Todos los modelos de ${model.provider} están sobrecargados. Por favor, intenta más tarde o cambia a otro proveedor (OpenAI, Anthropic).`);
+            // Temporalmente cambiar el modelo actual para el fallback
+            const originalModel = this.currentModel;
+            this.currentModel = fallbackModel.id;
+            
+            try {
+              const result = await this.sendToRemoteModel(message, options);
+              
+              // Restaurar modelo original
+              this.currentModel = originalModel;
+              return result;
+            } catch (fallbackError) {
+              // Restaurar modelo original
+              this.currentModel = originalModel;
+              console.error('Error en modelo fallback:', fallbackError);
+              throw new Error(`Todos los modelos de ${model.provider} están sobrecargados. Por favor, intenta más tarde o cambia a otro proveedor (OpenAI, Anthropic).`);
+            }
           }
         }
+        
+        throw error;
       }
-      
-      throw error;
     }
   }
 
@@ -3539,10 +3239,10 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
       throw new Error('El modelo local no está descargado');
     }
 
-    // Comunicación con Ollama usando la API /api/chat
+    // Comunicación con Ollama usando OllamaProvider
     try {
       // Preparar mensajes en el formato que espera Ollama
-      const messages = this.conversationHistory.map(msg => ({
+      const messages = contextManager.getFormattedMessages(msg => ({
         role: msg.role === 'assistant' ? 'assistant' : 'user',
         content: msg.content
       }));
@@ -3551,14 +3251,16 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
       
       // Usar streaming si está habilitado
       if (options.useStreaming) {
+        // Para streaming, usar el método existente que tiene más lógica de callbacks
         return await this.sendToLocalModelStreaming(model.id, messages, options);
       } else {
-        return await this.sendToLocalModelNonStreaming(model.id, messages, options);
+        // Para non-streaming, usar OllamaProvider
+        return await ollamaProvider.sendMessage(model.id, messages, options, ollamaUrl);
       }
     } catch (error) {
       console.error('Error llamando a modelo local:', error);
       
-      // Isajes de error más específicos
+      // Mensajes de error más específicos
       if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
         throw new Error('No se pudo conectar con Ollama. Verifica que esté ejecutándose en http://localhost:11434');
       } else if (error.message.includes('404')) {
@@ -4428,104 +4130,20 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
 
   /**
    * Enviar mensaje a modelo local sin streaming
+   * Ahora usa OllamaProvider
    */
-  async sendToLocalModelNonStreaming(modelId, messages, options) {
+  async sendToLocalModelNonStreaming(modelId, messages, options, callbacks = {}) {
     const ollamaUrl = this.getOllamaUrl();
     
-    // Preparar opciones con configuración (usar valores de options directamente, sin defaults hardcodeados)
-    const ollamaOptions = {
-      temperature: options.temperature ?? 0.7,
-      num_predict: options.maxTokens ?? 4000,
-      num_ctx: options.contextLimit ?? 8000,
-      top_k: options.top_k ?? 40,
-      top_p: options.top_p ?? 0.9,
-      repeat_penalty: options.repeat_penalty ?? 1.1
-    };
+    // Usar OllamaProvider para enviar el mensaje
+    const content = await ollamaProvider.sendMessage(modelId, messages, options, ollamaUrl);
     
-    // Preparar el body completo que se enviará a Ollama
-    const requestBody = {
-      model: modelId,
-      messages: messages,
-      stream: false,
-      options: ollamaOptions
-    };
-    
-    // Log compacto
-    
-    const response = await fetch(`${ollamaUrl}/api/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody),
-      signal: options.signal
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      debugLogger.error('AIService.LocalModel', 'Error de Ollama', {
-        error: errorText
-      });
-      throw new Error(`Error del servidor Ollama (${response.status})`);
-    }
-
-    const data = await response.json();
-    
-    // NUEVO: Log detallado de respuesta
-    debugLogger.debug('AIService.LocalModel', 'Respuesta cruda de Ollama', {
-      resumida: JSON.stringify(data).substring(0, 200),
-      message: data.message,
-      contentLength: data.message?.content?.length || 0,
-      hasReasoning: !!(data.message?.reasoning_content || data.reasoning_content)
-    });
-    
-    // ✅ CAPTURAR REASONING UNIVERSAL: Buscar reasoning en TODOS los modelos
-    // Ollama puede devolver reasoning en diferentes campos según el modelo
-    const reasoningContent = data.message?.reasoning_content || 
-                             data.reasoning_content || 
-                             data.message?.reasoning ||
-                             data.reasoning ||
-                             data.message?.thinking ||
-                             data.thinking ||
-                             data.message?.chain_of_thought ||
-                             data.chain_of_thought ||
-                             null;
-    
-    // 🔍 DEBUG: Log solo para modelos reasoning conocidos o cuando se detecta reasoning
-    const isReasoningModel = modelId && (modelId.includes('deepseek-r1') || modelId.includes('o1') || modelId.includes('reasoning'));
-    if (isReasoningModel || reasoningContent) {
-      if (data.message) {
-        const messageKeys = Object.keys(data.message);
-        debugLogger.debug('AIService.Reasoning', 'Respuesta completa de Ollama (non-streaming)', {
-          model: modelId,
-          messageKeys: messageKeys,
-          hasReasoning: !!reasoningContent,
-          reasoningLength: reasoningContent ? reasoningContent.length : 0,
-          allKeys: Object.keys(data),
-          preview: JSON.stringify(data).substring(0, 500)
-        });
-      }
+    // Si hay callbacks, notificar el contenido
+    if (callbacks && callbacks.onContent) {
+      callbacks.onContent(content);
     }
     
-    // La respuesta de Ollama viene en data.message.content
-    if (data.message && data.message.content) {
-      // Si hay callbacks y hay reasoning, notificarlo
-      if (callbacks && callbacks.onReasoning && reasoningContent) {
-        callbacks.onReasoning({
-          reasoning: reasoningContent,
-          model: modelId,
-          provider: 'local',
-          isComplete: true
-        });
-      }
-      return data.message.content;
-    } else {
-      debugLogger.error('AIService.LocalModel', 'Respuesta vacía o inválida de Ollama', {
-        message: data.message,
-        content: data.message?.content
-      });
-      throw new Error('Respuesta inválida del modelo local');
-    }
+    return content;
   }
 
   /**
@@ -4992,7 +4610,7 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
    * Limpiar historial de conversación
    */
   clearHistory() {
-    this.conversationHistory = [];
+    contextManager.clearHistory();
     this._filesystemModified = false; // Reset flag al limpiar historial
   }
 
@@ -5000,7 +4618,7 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
    * Obtener historial de conversación
    */
   getHistory() {
-    return this.conversationHistory;
+    return contextManager.getHistory();
   }
 
   /**
@@ -5009,7 +4627,7 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
   loadHistory(conversationId) {
     try {
       const histories = JSON.parse(localStorage.getItem('ai-conversations') || '{}');
-      this.conversationHistory = histories[conversationId] || [];
+      contextManager.loadConversationHistory(conversationId, histories);
     } catch (error) {
       debugLogger.error('AIService.History', 'Error cargando historial', {
         error: error?.message
@@ -5023,7 +4641,7 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
   saveHistory(conversationId) {
     try {
       const histories = JSON.parse(localStorage.getItem('ai-conversations') || '{}');
-      histories[conversationId] = this.conversationHistory;
+      contextManager.saveConversationHistory(conversationId, histories);
       localStorage.setItem('ai-conversations', JSON.stringify(histories));
     } catch (error) {
       debugLogger.error('AIService.History', 'Error guardando historial', {
