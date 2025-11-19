@@ -116,6 +116,8 @@ const DialogsManager = ({
   setFileConnectionRemoteFolder,
   fileConnectionTargetFolder,
   setFileConnectionTargetFolder,
+  editingFileConnectionNode,
+  setEditingFileConnectionNode,
   
   // Estados de formularios Folder
   folderName,
@@ -214,6 +216,7 @@ const DialogsManager = ({
     console.log('DialogsManager - stableFileConnectionHandler llamado con:', fileData);
     console.log('DialogsManager - handleSaveFileConnectionToSidebar existe:', !!handleSaveFileConnectionToSidebar);
     console.log('DialogsManager - handleSaveFileConnectionToSidebar tipo:', typeof handleSaveFileConnectionToSidebar);
+    console.log('DialogsManager - editingFileConnectionNode:', editingFileConnectionNode);
     
     if (!fileData || !fileData.name || !fileData.host || !fileData.username) {
       console.error('DialogsManager - Datos inválidos:', fileData);
@@ -221,9 +224,14 @@ const DialogsManager = ({
     }
     
     if (handleSaveFileConnectionToSidebar && typeof handleSaveFileConnectionToSidebar === 'function') {
-      console.log('DialogsManager - Guardando conexión de archivos');
+      const isEditing = !!editingFileConnectionNode;
+      console.log('DialogsManager - Guardando conexión de archivos', isEditing ? '(EDITANDO)' : '(CREANDO)');
       try {
-        handleSaveFileConnectionToSidebar(fileData, false, null);
+        handleSaveFileConnectionToSidebar(fileData, isEditing, editingFileConnectionNode);
+        // Limpiar el nodo de edición después de guardar
+        if (isEditing && setEditingFileConnectionNode) {
+          setEditingFileConnectionNode(null);
+        }
       } catch (error) {
         console.error('DialogsManager - Error al guardar conexión:', error);
       }
@@ -231,7 +239,7 @@ const DialogsManager = ({
       console.error('DialogsManager - handleSaveFileConnectionToSidebar no está definido o no es una función!');
       console.error('DialogsManager - handleSaveFileConnectionToSidebar:', handleSaveFileConnectionToSidebar);
     }
-  }, [handleSaveFileConnectionToSidebar]);
+  }, [handleSaveFileConnectionToSidebar, editingFileConnectionNode, setEditingFileConnectionNode]);
   
   // Debug: verificar que el handler se crea correctamente
   useEffect(() => {
@@ -514,6 +522,9 @@ const DialogsManager = ({
           if (editSSHNode) {
             setEditSSHNode(null);
           }
+          if (editingFileConnectionNode && setEditingFileConnectionNode) {
+            setEditingFileConnectionNode(null);
+          }
           if (editingRdpNode) {
             setEditingRdpNode(null);
             setRdpNodeData(null);
@@ -555,9 +566,9 @@ const DialogsManager = ({
         onSaveToSidebar={handleSaveRdpToSidebar}
         editingNode={editingRdpNode}
         // Props para modo edición
-        isEditMode={!!(editSSHNode || editingRdpNode)}
-        editConnectionType={editSSHNode ? 'ssh' : (editingRdpNode ? 'rdp' : null)}
-        editNodeData={editSSHNode || editingRdpNode}
+        isEditMode={!!(editSSHNode || editingRdpNode || editingFileConnectionNode)}
+        editConnectionType={editSSHNode ? 'ssh' : (editingRdpNode ? 'rdp' : (editingFileConnectionNode ? (editingFileConnectionNode.data?.protocol || editingFileConnectionNode.data?.type || 'sftp') : null))}
+        editNodeData={editSSHNode || editingRdpNode || editingFileConnectionNode}
         // Props Archivos (SFTP/FTP/SCP) - Usar valores por defecto si son undefined
         fileConnectionName={fileConnectionName ?? ''}
         setFileConnectionName={setFileConnectionName ?? (() => console.warn('setFileConnectionName not provided'))}

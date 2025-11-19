@@ -99,6 +99,9 @@ export const useDialogManagement = () => {
     setParentNodeKey(null);
   };
 
+  // Estados para edición de conexiones de archivos
+  const [editingFileConnectionNode, setEditingFileConnectionNode] = useState(null);
+
   // Resetear todos los campos Archivos
   const resetFileConnectionForm = () => {
     setFileConnectionName('');
@@ -109,6 +112,7 @@ export const useDialogManagement = () => {
     setFileConnectionProtocol('sftp');
     setFileConnectionRemoteFolder('');
     setFileConnectionTargetFolder('');
+    setEditingFileConnectionNode(null);
   };
 
   // Resetear todos los campos Edit SSH
@@ -239,6 +243,7 @@ export const useDialogManagement = () => {
     fileConnectionProtocol, setFileConnectionProtocol,
     fileConnectionRemoteFolder, setFileConnectionRemoteFolder,
     fileConnectionTargetFolder, setFileConnectionTargetFolder,
+    editingFileConnectionNode, setEditingFileConnectionNode,
 
     // Funciones de utilidad
     resetSSHForm, resetRDPForm, resetFolderForm,

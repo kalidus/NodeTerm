@@ -991,6 +991,7 @@ const App = () => {
     fileConnectionProtocol, setFileConnectionProtocol,
     fileConnectionRemoteFolder, setFileConnectionRemoteFolder,
     fileConnectionTargetFolder, setFileConnectionTargetFolder,
+    editingFileConnectionNode, setEditingFileConnectionNode,
     // Estados de formularios Folder
     folderName, setFolderName,
     parentNodeKey, setParentNodeKey,
@@ -1091,6 +1092,7 @@ const App = () => {
     openEditRdpDialog,
     handleSaveRdpToSidebar,
     handleSaveFileConnectionToSidebar,
+    openEditFileConnectionDialog,
     createNewPasswordEntry
   } = useFormHandlers({
     toast,
@@ -1125,6 +1127,16 @@ const App = () => {
     rdpTargetFolder, setRdpTargetFolder,
     rdpNodeData, setRdpNodeData,
     editingRdpNode, setEditingRdpNode,
+    // Estados Archivos (SFTP/FTP/SCP)
+    fileConnectionName, setFileConnectionName,
+    fileConnectionHost, setFileConnectionHost,
+    fileConnectionUser, setFileConnectionUser,
+    fileConnectionPassword, setFileConnectionPassword,
+    fileConnectionPort, setFileConnectionPort,
+    fileConnectionProtocol, setFileConnectionProtocol,
+    fileConnectionRemoteFolder, setFileConnectionRemoteFolder,
+    fileConnectionTargetFolder, setFileConnectionTargetFolder,
+    editingFileConnectionNode, setEditingFileConnectionNode,
     // Estados Folder
     folderName, parentNodeKey,
     editFolderNode, setEditFolderNode,
@@ -1639,13 +1651,16 @@ const App = () => {
     sidebarCallbacksRef.current.openFileConnection = (node, nodes) => {
       onOpenFileConnection(node, nodes);
     };
+    sidebarCallbacksRef.current.editFileConnection = (node) => {
+      openEditFileConnectionDialog(node);
+    };
     sidebarCallbacksRef.current.deleteNode = (nodeKey, nodeLabel) => {
       // Detectar si la carpeta tiene hijos
       const nodeInfo = findParentNodeAndIndex(nodes, nodeKey);
       const hasChildren = !!(nodeInfo.node && Array.isArray(nodeInfo.node.children) && nodeInfo.node.children.length);
       confirmDeleteNode(nodeKey, nodeLabel, hasChildren, nodes, setNodes);
     };
-  }, [sidebarCallbacksRef.current]);
+  }, [sidebarCallbacksRef.current, openEditFileConnectionDialog]);
   
   // Listener para evento personalizado de guardar conexión de archivos (fallback)
   useEffect(() => {
@@ -2220,6 +2235,8 @@ const App = () => {
         setFileConnectionRemoteFolder={setFileConnectionRemoteFolder}
         fileConnectionTargetFolder={fileConnectionTargetFolder}
         setFileConnectionTargetFolder={setFileConnectionTargetFolder}
+        editingFileConnectionNode={editingFileConnectionNode}
+        setEditingFileConnectionNode={setEditingFileConnectionNode}
         
         // Estados de formularios Folder
         folderName={folderName}

@@ -42,6 +42,17 @@ export const useFormHandlers = ({
   rdpNodeData, setRdpNodeData,
   editingRdpNode, setEditingRdpNode,
   
+  // Estados de formularios Archivos (SFTP/FTP/SCP)
+  fileConnectionName, setFileConnectionName,
+  fileConnectionHost, setFileConnectionHost,
+  fileConnectionUser, setFileConnectionUser,
+  fileConnectionPassword, setFileConnectionPassword,
+  fileConnectionPort, setFileConnectionPort,
+  fileConnectionProtocol, setFileConnectionProtocol,
+  fileConnectionRemoteFolder, setFileConnectionRemoteFolder,
+  fileConnectionTargetFolder, setFileConnectionTargetFolder,
+  editingFileConnectionNode, setEditingFileConnectionNode,
+  
   // Estados de formularios Folder
   folderName, parentNodeKey,
   folderColor, setFolderColor,
@@ -752,6 +763,32 @@ export const useFormHandlers = ({
     setShowUnifiedConnectionDialog(false); // Cerrar diálogo unificado
   }, [setNodes, findNodeByKey, setShowUnifiedConnectionDialog]);
 
+  /**
+   * Abrir diálogo de edición de conexión de archivos
+   */
+  const openEditFileConnectionDialog = useCallback((node) => {
+    // Cargar los datos del nodo en los estados de edición
+    setFileConnectionName(node.label || '');
+    setFileConnectionHost(node.data?.host || '');
+    setFileConnectionUser(node.data?.username || node.data?.user || '');
+    setFileConnectionPassword(node.data?.password || '');
+    setFileConnectionPort(node.data?.port || (node.data?.protocol === 'ftp' ? 21 : 22));
+    setFileConnectionProtocol(node.data?.protocol || node.data?.type || 'sftp');
+    setFileConnectionRemoteFolder(node.data?.remoteFolder || '');
+    setFileConnectionTargetFolder(node.data?.targetFolder || '');
+    
+    // Guardar el nodo que se está editando
+    setEditingFileConnectionNode(node);
+    
+    // Abrir el diálogo unificado en modo edición
+    setShowUnifiedConnectionDialog(true);
+  }, [
+    setFileConnectionName, setFileConnectionHost, setFileConnectionUser,
+    setFileConnectionPassword, setFileConnectionPort, setFileConnectionProtocol,
+    setFileConnectionRemoteFolder, setFileConnectionTargetFolder,
+    setEditingFileConnectionNode, setShowUnifiedConnectionDialog
+  ]);
+
   return {
     // Funciones de creación
     createNewFolder,
@@ -769,6 +806,7 @@ export const useFormHandlers = ({
     openEditRdpDialog,
     handleSaveRdpToSidebar,
     handleSaveFileConnectionToSidebar,
+    openEditFileConnectionDialog,
     createNewPasswordEntry
   };
 };
