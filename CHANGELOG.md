@@ -7,7 +7,55 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [1.6.0] - 2025-01-13
 
-### 🔄 Nuevas Características - Sistema de Actualización Automática
+### 🤖 Nuevas Características - Sistema Completo de IA y Chat
+- **Chat de IA Integrado**: Sistema completo de chat con múltiples proveedores (OpenAI, Anthropic, Google, Ollama)
+- **Soporte Multi-Proveedor**: Integración nativa con OpenAI, Anthropic Claude, Google Gemini, y modelos locales Ollama
+- **Gestión de Conversaciones**: Sistema completo de historial con carpetas, favoritos y búsqueda
+- **Análisis de Código con IA**: Análisis inteligente de archivos de código con múltiples lenguajes soportados
+- **Adjuntos de Archivos**: Soporte para adjuntar y analizar archivos (PDF, DOCX, JSON, XML, CSV, TXT, código)
+- **Detección Inteligente de Archivos**: Sistema avanzado de detección de tipos de archivo y lenguajes de programación
+- **Formateo Markdown**: Renderizado completo de markdown con resaltado de sintaxis
+- **Tokens y Contexto**: Sistema de gestión de tokens con contadores en tiempo real
+- **Rendimiento Optimizado**: Configuración de tokens por modelo (LOW/MEDIUM/HIGH) para máximo rendimiento
+
+### 🔌 Integración MCP (Model Context Protocol)
+- **Sistema MCP Completo**: Integración nativa con Model Context Protocol
+- **MCP con Modelos Locales**: Soporte para usar MCP tools con modelos locales (Ollama, DeepSeek, Llama) mediante System Prompt
+- **MCP SSH/Terminal Nativo**: Servidor MCP nativo para ejecutar comandos localmente (WSL, Ubuntu, Kali, Cygwin, PowerShell) y remotamente (SSH)
+- **MCP Filesystem**: Acceso completo al sistema de archivos a través de MCP
+- **MCP Web Search Nativo**: Búsqueda web integrada con JavaScript nativo
+- **MCP Tenable**: Integración con Tenable para seguridad
+- **Gestión de MCPs**: Interfaz completa para configurar, activar y gestionar servidores MCP
+- **Catálogo de MCPs**: Catálogo integrado con información de servidores MCP disponibles
+- **Tools Orchestrator**: Sistema inteligente para orquestar múltiples herramientas MCP
+- **Indicadores Visuales**: Indicadores en tiempo real de ejecución de herramientas MCP
+
+### 🌐 Integración AnythingLLM
+- **AnythingLLM Integrado**: Integración completa con AnythingLLM para RAG (Retrieval Augmented Generation)
+- **MCP Filesystem para AnythingLLM**: Acceso al sistema de archivos desde AnythingLLM
+- **Configuración Docker**: Gestión automática de contenedores Docker para AnythingLLM
+- **Guía Completa**: Documentación detallada para configuración y uso
+
+### 🌐 Integración OpenWebUI
+- **OpenWebUI Integrado**: Interfaz web moderna para interactuar con modelos de lenguaje
+- **Gestión Automática de Docker**: Inicio y gestión automática de contenedores OpenWebUI
+- **Webview Embebido**: Interfaz integrada directamente en NodeTerm
+- **Configuración Flexible**: Variables de entorno personalizables
+
+### 🐳 Conexiones Docker
+- **Terminales Docker**: Conexión directa a contenedores Docker con terminales interactivas
+- **Listado de Contenedores**: Visualización de contenedores en ejecución
+- **Status Bar para Docker**: Información en tiempo real de recursos del contenedor
+- **Gestión de Sesiones**: Múltiples sesiones Docker simultáneas
+
+### 🖥️ Mejoras de Terminales
+- **Terminales Mejorados**: Mejoras significativas en todos los tipos de terminales
+- **Cygwin Mejorado**: Mejor integración y ejecución automática de comandos locales
+- **Status Bar Standalone**: Barra de estado independiente para terminales locales
+- **Switch de Terminales**: Cambio fluido entre diferentes tipos de terminales
+- **Auto-detección de Comandos**: Detección inteligente de tipo de comando (Linux/Windows)
+
+### 🔄 Sistema de Actualización Automática
 - **Actualizaciones desde GitHub Releases**: Sistema completo de actualización automática
 - **Configuración Avanzada**: Control completo sobre cuándo y cómo actualizar
 - **Canales Stable/Beta**: Elige entre versiones estables o beta
@@ -17,19 +65,50 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ### 🎨 Mejoras de UI/UX
 - **Nueva Pestaña de Actualizaciones**: Interfaz dedicada en configuración
-- **Indicadores Visuales**: Estado claro de actualizaciones disponibles
+- **Interfaz de Chat IA**: Interfaz moderna y responsive para el chat de IA
+- **Indicadores Visuales**: Estado claro de actualizaciones disponibles y ejecución de herramientas
 - **Proceso Transparente**: Información detallada del progreso de actualización
 - **Configuración Flexible**: Personaliza intervalos y canales de actualización
+- **Mejoras de Layout**: Correcciones y mejoras en el diseño general
 
 ### 🔧 Mejoras Técnicas
 - **Integración electron-updater**: Sistema robusto de actualización automática
 - **Gestión de Versiones**: Control avanzado de versiones y compatibilidad
 - **Seguridad Reforzada**: Verificación de firmas y checksums
 - **Arquitectura Mejorada**: Mejor separación de responsabilidades
+- **Sistema de Memoria de Modelos**: Gestión inteligente de memoria para modelos Ollama
+- **Refactorización Completa**: Refactorización del sistema de IA con proveedores modulares
+- **Gestión de Contexto**: Sistema avanzado de gestión de contexto para conversaciones
+- **Cache de Ejecución de Tools**: Sistema de caché para optimizar ejecución de herramientas
+
+### 🎥 Sistema de Auditoría y Grabación de Sesiones
+- **Grabación de Sesiones SSH**: Captura completa de entrada/salida en tiempo real
+  - Formato estándar asciicast v2 (compatible con asciinema)
+  - Soporte para conexiones SSH directas y con Bastion/Wallix
+  - Control desde menú contextual del terminal (⏺ Iniciar / ⏹ Detener)
+  - Captura automática sin impacto en el rendimiento
+- **Panel de Auditoría**: Nueva pestaña para gestionar grabaciones
+  - Acceso desde menú contextual de conexión SSH (📼 Auditoría)
+  - Lista filtrada por host y usuario
+  - Estadísticas: total de grabaciones, duración, tamaño
+  - Acciones: Reproducir, Exportar, Eliminar
+- **Reproductor Integrado**: Playback profesional de grabaciones
+  - Controles completos: Play, Pause, Stop, Reiniciar
+  - Velocidad ajustable (0.5x - 3x)
+  - Barra de progreso interactiva
+  - Renderizado con xterm.js (mismo motor que terminal)
+  - Display de tiempo transcurrido / total
+- **Exportación y Compatibilidad**: Exportación a archivos `.cast` estándar, compatible con asciinema-player
 
 ### 🐛 Correcciones de Bugs
 - **Estabilidad General**: Mejoras en la estabilidad de la aplicación
 - **Optimización de Rendimiento**: Mejoras en la carga de componentes
+- **Fix de Conversaciones Mezcladas**: Corrección de problemas con conversaciones que se mezclaban
+- **Fix de Conversaciones Antiguas**: Mejoras en la carga de conversaciones antiguas
+- **Fix de UI Chat IA**: Múltiples correcciones en la interfaz de chat
+- **Fix de Delay de Inicio**: Corrección de problemas de retraso al iniciar
+- **Fix de Terminales**: Mejoras en la estabilidad de terminales
+- **Fix de Docker**: Correcciones en la integración con Docker
 
 ## [1.5.9] - 2025-01-13
 
@@ -75,118 +154,6 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - **Mejor Manejo de Errores**: Enhanced error handling para futuros problemas de checksum
 - **Nota Importante**: Usuarios deben actualizar de v1.5.4 → v1.5.6 (saltar v1.5.5)
 
-## [1.6.0] - 2025-01-11
-
-### 🎥 Nueva Funcionalidad: Sistema de Auditoría y Grabación de Sesiones
-
-- **Grabación de Sesiones SSH**: Captura completa de entrada/salida en tiempo real
-  - Formato estándar asciicast v2 (compatible con asciinema)
-  - Soporte para conexiones SSH directas y con Bastion/Wallix
-  - Control desde menú contextual del terminal (⏺ Iniciar / ⏹ Detener)
-  - Captura automática sin impacto en el rendimiento
-
-- **Panel de Auditoría**: Nueva pestaña para gestionar grabaciones
-  - Acceso desde menú contextual de conexión SSH (📼 Auditoría)
-  - Lista filtrada por host y usuario
-  - Estadísticas: total de grabaciones, duración, tamaño
-  - Acciones: Reproducir, Exportar, Eliminar
-
-- **Reproductor Integrado**: Playback profesional de grabaciones
-  - Controles completos: Play, Pause, Stop, Reiniciar
-  - Velocidad ajustable (0.5x - 3x)
-  - Barra de progreso interactiva
-  - Renderizado con xterm.js (mismo motor que terminal)
-  - Display de tiempo transcurrido / total
-
-- **Exportación y Compatibilidad**:
-  - Exportación a archivos `.cast` estándar
-  - Compatible con asciinema-player y otras herramientas
-  - Almacenamiento local en `userData/recordings/`
-  - Metadata separada para búsqueda rápida
-
-### 🔧 Mejoras Técnicas
-
-- **Backend (Proceso Principal)**:
-  - Nueva clase `SessionRecorder` para captura en tiempo real
-  - Nueva clase `SessionRecordingManager` para gestión de archivos
-  - IPC handlers: `recording:start`, `recording:stop`, `recording:list`, etc.
-  - Integración no invasiva en flujo SSH existente
-  
-- **Frontend (Proceso Renderer)**:
-  - Nuevo componente `AuditTab` para lista de grabaciones
-  - Nuevo componente `RecordingPlayerTab` para reproducción
-  - Hook `useRecordingManagement` para gestión de estado
-  - Integración en menús contextuales (terminal y sidebar)
-  - Soporte para nuevos tipos de tabs (`audit`, `recording-player`)
-
-- **Preload Script**:
-  - Nuevos canales IPC permitidos: `/^recording:.*$/`
-  - Exposición segura de métodos de grabación
-
-### 📖 Documentación
-
-- **Nueva Guía Completa**: [docs/GUIA_AUDITORIA_SESIONES.md](docs/GUIA_AUDITORIA_SESIONES.md)
-  - Introducción y casos de uso
-  - Guía de usuario detallada con ejemplos visuales
-  - Arquitectura técnica y flujos de datos
-  - Especificación de formato de datos
-  - Seguridad y privacidad
-  - Solución de problemas
-  - Referencias y herramientas compatibles
-
-- **README Actualizado**: Nueva sección sobre sistema de auditoría
-
-### 📁 Archivos Nuevos
-
-```
-src/services/
-├── SessionRecorder.js               # Motor de grabación en tiempo real
-└── SessionRecordingManager.js       # Gestión de almacenamiento
-
-src/main/handlers/
-└── recording-handlers.js            # IPC handlers para grabaciones
-
-src/components/
-├── AuditTab.js                      # UI de lista de grabaciones
-└── RecordingPlayerTab.js            # UI de reproductor
-
-src/hooks/
-└── useRecordingManagement.js        # Hook React para grabaciones
-
-docs/
-└── GUIA_AUDITORIA_SESIONES.md       # Documentación completa
-```
-
-### 📁 Archivos Modificados
-
-- `main.js` - Integración de captura SSH
-- `preload.js` - Exposición de canales IPC
-- `src/components/contextmenus/TerminalContextMenu.js` - Botón de grabación
-- `src/hooks/useSidebarManagement.js` - Menú de auditoría
-- `src/components/TabContentRenderer.js` - Renderizado de nuevos tabs
-- `src/components/App.js` - Integración de hook
-- `src/components/MainContentArea.js` - Props de grabación
-
-### 🎯 Casos de Uso
-
-1. **Auditoría de Seguridad**: Registro de acciones en servidores críticos
-2. **Debugging**: Reproducir secuencias que causaron errores
-3. **Documentación**: Crear tutoriales paso a paso
-4. **Formación**: Compartir sesiones de ejemplo
-5. **Compliance**: Cumplir requisitos de trazabilidad
-
-### 🚀 Características Futuras Planificadas
-
-- [ ] Indicador visual de grabación activa en tab
-- [ ] Búsqueda de texto dentro de grabaciones
-- [ ] Marcadores/timestamps en grabaciones
-- [ ] Exportación a GIF animado
-- [ ] Cifrado de grabaciones sensibles
-- [ ] Limpieza automática de grabaciones antiguas
-- [ ] Compresión de grabaciones
-- [ ] Anotaciones en reproducción
-
----
 
 ## [1.5.5] - 2024-12-21
 
