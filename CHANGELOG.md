@@ -5,6 +5,11 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2025-11-19
+
+### 🐛 Correcciones de Bugs
+- **Fix de Conexión WALLIX**: Corrección de problemas con conexiones a través de Bastion Wallix
+
 ## [1.6.0] - 2025-11-19
 
 ### 🤖 Nuevas Características - Sistema Completo de IA y Chat

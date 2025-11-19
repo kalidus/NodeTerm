@@ -5,7 +5,7 @@
   <br>
   <b>Cliente SSH moderno y multiplataforma para administradores y devs</b>
   <br><br>
-  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.6.0-blue.svg"/></a>
+  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.6.1-blue.svg"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg"/></a>
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/electron-latest-brightgreen.svg"/></a>
   <a href="#donaciones"><img src="https://img.shields.io/badge/💰-Donate_Crypto-yellow.svg"/></a>
@@ -121,7 +121,7 @@ npm run build:win
 
 ---
 
-## 🎉 Versión Actual: v1.6.0
+## 🎉 Versión Actual: v1.6.1
 
 ### 🔄 Sistema de Actualización Automática
 - **Actualizaciones desde GitHub Releases**: Sistema completo de actualización automática
@@ -229,7 +229,8 @@ NodeTerm/
 
 | Versión | Características | Estado |
 |---------|----------------|--------|
-| **v1.6.0** | 🔄 Sistema de Actualización Automática + Configuración Avanzada + Canales Stable/Beta | ✅ Actual |
+| **v1.6.1** | 🐛 Fix de Conexión WALLIX | ✅ Actual |
+| **v1.6.0** | 🔄 Sistema de Actualización Automática + Configuración Avanzada + Canales Stable/Beta | ✅ Completado |
 | **v1.5.9** | 🔐 Password Manager Integrado + KeePass + Auto-completado de Credenciales | ✅ Completado |
 | **v1.5.8** | 🚧 Rama de Desarrollo + Mejoras de Estabilidad | ✅ Completado |
 | **v1.5.7** | 🔧 Fix de Checksum Final + Instalador Funcional | ✅ Completado |
@@ -242,7 +243,10 @@ NodeTerm/
 
 ## 📝 Changelog
 
-### v1.6.0 (19 Noviembre 2025) - ACTUAL
+### v1.6.1 (19 Noviembre 2025) - ACTUAL
+- 🐛 **Fix de Conexión WALLIX** - Corrección de problemas con conexiones a través de Bastion Wallix
+
+### v1.6.0 (19 Noviembre 2025)
 - 🤖 **Sistema Completo de IA y Chat** - Chat integrado con múltiples proveedores (OpenAI, Anthropic, Google, Ollama)
 - 🔌 **Integración MCP Completa** - Model Context Protocol para extender capacidades de IA
 - 🌐 **AnythingLLM y OpenWebUI** - Integración completa con AnythingLLM y OpenWebUI
