@@ -5,30 +5,38 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.6.0] - 2025-01-13
+## [1.6.0] - 2025-11-19
 
 ### 🤖 Nuevas Características - Sistema Completo de IA y Chat
-- **Chat de IA Integrado**: Sistema completo de chat con múltiples proveedores (OpenAI, Anthropic, Google, Ollama)
-- **Soporte Multi-Proveedor**: Integración nativa con OpenAI, Anthropic Claude, Google Gemini, y modelos locales Ollama
-- **Gestión de Conversaciones**: Sistema completo de historial con carpetas, favoritos y búsqueda
-- **Análisis de Código con IA**: Análisis inteligente de archivos de código con múltiples lenguajes soportados
-- **Adjuntos de Archivos**: Soporte para adjuntar y analizar archivos (PDF, DOCX, JSON, XML, CSV, TXT, código)
+- **Chat de IA Integrado**: Sistema completo de chat con múltiples proveedores (OpenAI GPT, Anthropic Claude, Google Gemini, Ollama)
+- **Soporte Multi-Proveedor**: Integración nativa con OpenAI GPT, Anthropic Claude, Google Gemini, y modelos locales Ollama
+- **Gestión de Conversaciones**: Sistema completo de historial con carpetas, favoritos y búsqueda avanzada
+- **Análisis de Código con IA**: Análisis inteligente de archivos de código con soporte para múltiples lenguajes de programación
+- **Adjuntos de Archivos**: Soporte completo para adjuntar y analizar archivos (PDF, DOCX, JSON, XML, CSV, TXT, código fuente)
 - **Detección Inteligente de Archivos**: Sistema avanzado de detección de tipos de archivo y lenguajes de programación
-- **Formateo Markdown**: Renderizado completo de markdown con resaltado de sintaxis
-- **Tokens y Contexto**: Sistema de gestión de tokens con contadores en tiempo real
+- **Formateo Markdown**: Renderizado completo de markdown con resaltado de sintaxis profesional
+- **Gestión de Tokens**: Sistema de gestión de tokens con contadores en tiempo real y configuración por modelo
 - **Rendimiento Optimizado**: Configuración de tokens por modelo (LOW/MEDIUM/HIGH) para máximo rendimiento
+- **Interfaz Moderna de Chat**: Diseño moderno y responsive para el chat de IA
+- **Vista de Historial**: Panel lateral con historial completo de conversaciones
+- **Búsqueda Avanzada**: Búsqueda rápida en conversaciones y archivos
+- **Motor de Análisis de Código**: Motor avanzado de análisis de código con soporte multi-lenguaje
 
 ### 🔌 Integración MCP (Model Context Protocol)
-- **Sistema MCP Completo**: Integración nativa con Model Context Protocol
+- **Sistema MCP Completo**: Integración nativa con Model Context Protocol para extender capacidades de IA
 - **MCP con Modelos Locales**: Soporte para usar MCP tools con modelos locales (Ollama, DeepSeek, Llama) mediante System Prompt
 - **MCP SSH/Terminal Nativo**: Servidor MCP nativo para ejecutar comandos localmente (WSL, Ubuntu, Kali, Cygwin, PowerShell) y remotamente (SSH)
 - **MCP Filesystem**: Acceso completo al sistema de archivos a través de MCP
 - **MCP Web Search Nativo**: Búsqueda web integrada con JavaScript nativo
-- **MCP Tenable**: Integración con Tenable para seguridad
+- **MCP Tenable**: Integración con Tenable para seguridad y auditoría
 - **Gestión de MCPs**: Interfaz completa para configurar, activar y gestionar servidores MCP
-- **Catálogo de MCPs**: Catálogo integrado con información de servidores MCP disponibles
+- **Catálogo de MCPs**: Catálogo integrado con información detallada de servidores MCP disponibles
 - **Tools Orchestrator**: Sistema inteligente para orquestar múltiples herramientas MCP
 - **Indicadores Visuales**: Indicadores en tiempo real de ejecución de herramientas MCP
+- **MCPService**: Servicio completo para gestión de servidores MCP
+- **MCPClientService**: Cliente robusto para comunicación con servidores MCP
+- **Servidores MCP Nativos**: SSH/Terminal, Filesystem, Web Search, Tenable
+- **Gestión de Estado**: Sistema centralizado para estado de servidores MCP
 
 ### 🌐 Integración AnythingLLM
 - **AnythingLLM Integrado**: Integración completa con AnythingLLM para RAG (Retrieval Augmented Generation)
@@ -78,8 +86,13 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - **Arquitectura Mejorada**: Mejor separación de responsabilidades
 - **Sistema de Memoria de Modelos**: Gestión inteligente de memoria para modelos Ollama
 - **Refactorización Completa**: Refactorización del sistema de IA con proveedores modulares
-- **Gestión de Contexto**: Sistema avanzado de gestión de contexto para conversaciones
+- **Gestión de Contexto**: Sistema avanzado de gestión de contexto para conversaciones largas
 - **Cache de Ejecución de Tools**: Sistema de caché para optimizar ejecución de herramientas
+- **Arquitectura Modular de IA**: Refactorización completa del sistema de IA con proveedores modulares (BaseProvider, OpenAIProvider, AnthropicProvider, GoogleProvider, OllamaProvider)
+- **Nuevos Servicios**: AIService, MCPService, ConversationService, FileAnalysisService, ModelMemoryService
+- **Componentes Modulares**: AIChatPanel, AIConfigDialog, MCPManagerTab, AnythingLLMTab, OpenWebUITab
+- **Estado Centralizado**: Mejor gestión del estado de conversaciones y MCPs
+- **Encriptación de Conversaciones**: Almacenamiento seguro de conversaciones
 
 ### 🎥 Sistema de Auditoría y Grabación de Sesiones
 - **Grabación de Sesiones SSH**: Captura completa de entrada/salida en tiempo real
@@ -101,16 +114,45 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - **Exportación y Compatibilidad**: Exportación a archivos `.cast` estándar, compatible con asciinema-player
 
 ### 🐛 Correcciones de Bugs
-- **Estabilidad General**: Mejoras en la estabilidad de la aplicación
-- **Optimización de Rendimiento**: Mejoras en la carga de componentes
+
+#### 🤖 Correcciones de Chat IA
 - **Fix de Conversaciones Mezcladas**: Corrección de problemas con conversaciones que se mezclaban
 - **Fix de Conversaciones Antiguas**: Mejoras en la carga de conversaciones antiguas
 - **Fix de UI Chat IA**: Múltiples correcciones en la interfaz de chat
-- **Fix de Delay de Inicio**: Corrección de problemas de retraso al iniciar
-- **Fix de Terminales**: Mejoras en la estabilidad de terminales
-- **Fix de Docker**: Correcciones en la integración con Docker
+- **Fix de Tool Results**: Corrección de problemas con resultados de herramientas MCP
+- **Fix de Markdown**: Mejoras en el renderizado de markdown
+- **Fix de Mensajes Vacíos**: Corrección de problemas con mensajes sin contenido
+- **Fix de Gestión de Contexto**: Mejoras en la gestión de contexto para conversaciones largas
 
-## [1.5.9] - 2025-01-13
+#### 🔄 Correcciones de Actualizaciones
+- **Gestión de Versiones**: Corrección de problemas al verificar versiones
+- **Descarga de Actualizaciones**: Mejoras en el proceso de descarga
+- **Instalación**: Mejor manejo del proceso de instalación
+- **Notificaciones**: Corrección de problemas en notificaciones de actualización
+
+#### 🖥️ Correcciones de Terminales
+- **Fix de Terminales**: Mejoras en la estabilidad de terminales
+- **Fix de Cygwin**: Correcciones en la integración con Cygwin
+- **Fix de Switch**: Mejoras en el cambio entre tipos de terminales
+- **Fix de Delay de Inicio**: Corrección de problemas de retraso al iniciar
+
+#### 🐳 Correcciones de Docker
+- **Fix de Docker**: Correcciones en la integración con Docker
+- **Fix de Conexiones**: Mejoras en la gestión de conexiones Docker
+- **Fix de Status Bar**: Correcciones en la barra de estado de Docker
+
+#### 🔧 Correcciones de Rendimiento
+- **Gestión de Memoria**: Optimización en el manejo de actualizaciones y modelos IA
+- **Carga de Datos**: Mejor rendimiento al verificar actualizaciones y cargar conversaciones
+- **Renderizado**: Los componentes se renderizan más eficientemente
+
+#### 🎯 Correcciones Generales
+- **Estabilidad General**: Mejoras significativas en la estabilidad de la aplicación
+- **UI/UX**: Corrección de problemas visuales en la interfaz
+- **Compatibilidad**: Mejor compatibilidad con diferentes sistemas operativos
+- **Optimización de Rendimiento**: Mejoras en la carga de componentes
+
+## [1.5.9] - 2025-11-19
 
 ### 🔐 Nuevas Características - Password Manager
 - **Integración de KeePass**: Sistema completo de gestor de contraseñas
