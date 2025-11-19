@@ -4,7 +4,7 @@
 
 const { ipcMain } = require('electron');
 const SftpClient = require('ssh2-sftp-client');
-const { FTPClient } = require('basic-ftp');
+const { Client: FTPClient } = require('basic-ftp');
 const fs = require('fs');
 const path = require('path');
 
