@@ -122,6 +122,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && node.data.type === 'rdp';
+    const isFileConnection = node.data && (node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp');
     const isPassword = node.data && node.data.type === 'password';
     const items = [];
     
@@ -361,6 +362,65 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         command: () => {
           if (sidebarCallbacksRef.current.editRDP) {
             sidebarCallbacksRef.current.editRDP(node);
+          }
+        }
+      });
+      items.push({
+        label: 'Eliminar',
+        icon: 'pi pi-trash',
+        command: () => {
+          if (sidebarCallbacksRef.current.deleteNode) {
+            sidebarCallbacksRef.current.deleteNode(node.key, node.label);
+          }
+        }
+      });
+    } else if (isFileConnection) {
+      const protocol = node.data?.protocol || node.data?.type || 'sftp';
+      const protocolLabel = protocol.toUpperCase();
+      
+      items.push({
+        label: `Abrir Explorador ${protocolLabel}`,
+        icon: 'pi pi-folder-open',
+        command: () => {
+          if (activeGroupId !== null) {
+            const currentGroupKey = activeGroupId || 'no-group';
+            setGroupActiveIndices(prev => ({
+              ...prev,
+              [currentGroupKey]: activeTabIndex
+            }));
+            setActiveGroupId(null);
+          }
+          openFileExplorer(node);
+        }
+      });
+      
+      items.push({
+        label: 'Agregar/Quitar de Favoritos',
+        icon: 'pi pi-star',
+        command: () => {
+          try {
+            connectionStore.toggleFavorite({
+              type: protocol,
+              name: node.label,
+              host: node.data?.host,
+              username: node.data?.username || node.data?.user,
+              port: node.data?.port || (protocol === 'ftp' ? 21 : 22),
+              password: node.data?.password || '',
+              protocol: protocol,
+              remoteFolder: node.data?.remoteFolder || '',
+              targetFolder: node.data?.targetFolder || ''
+            });
+          } catch (e) { /* noop */ }
+        }
+      });
+      
+      items.push({ separator: true });
+      items.push({
+        label: 'Editar',
+        icon: 'pi pi-pencil',
+        command: () => {
+          if (sidebarCallbacksRef.current.editFileConnection) {
+            sidebarCallbacksRef.current.editFileConnection(node);
           }
         }
       });

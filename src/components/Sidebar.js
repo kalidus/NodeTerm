@@ -1360,6 +1360,11 @@ const Sidebar = React.memo(({
       }) : '🖥️'; // Icono RDP o fallback
     } else if (isPassword) {
       icon = <span className="pi pi-key" style={{ color: '#ffc107', fontSize: `${connectionIconSize}px` }} />;
+    } else if (isFileConnection) {
+      // Icono para conexiones de archivos (SFTP/FTP/SCP)
+      const protocol = node.data?.protocol || node.data?.type || 'sftp';
+      const iconColor = protocol === 'ftp' ? '#2196F3' : (protocol === 'scp' ? '#4CAF50' : '#FF9800');
+      icon = <span className="pi pi-folder" style={{ color: iconColor, fontSize: `${connectionIconSize}px` }} />;
     } else if (isFolder) {
       // Lógica inteligente para determinar el color de la carpeta:
       // 1. Si no tiene color asignado → usar color por defecto del tema actual
