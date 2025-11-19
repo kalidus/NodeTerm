@@ -1,8 +1,10 @@
 const { URL } = require('url');
 const { BrowserWindow } = require('electron');
-const { JSDOM } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
 const TurndownService = require('turndown');
+
+// DOMMatrix polyfill ya está cargado en main.js antes de cualquier importación
+const { JSDOM } = require('jsdom');
 class WebSearchService {
   constructor() {
     this.defaultConfig = {
@@ -136,7 +138,9 @@ class WebSearchService {
 
   extractHeadingsFromHtml(html = '') {
     try {
-      const dom = new JSDOM(`<!DOCTYPE html><html><body>${html}</body></html>`);
+      const dom = new JSDOM(`<!DOCTYPE html><html><body>${html}</body></html>`, {
+        pretendToBeVisual: true
+      });
       const headings = [];
       dom.window.document.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((el) => {
         const text = (el.textContent || '').trim();
@@ -157,7 +161,9 @@ class WebSearchService {
 
   extractLinksFromHtml(html = '', limit = 50) {
     try {
-      const dom = new JSDOM(`<!DOCTYPE html><html><body>${html}</body></html>`);
+      const dom = new JSDOM(`<!DOCTYPE html><html><body>${html}</body></html>`, {
+        pretendToBeVisual: true
+      });
       const links = [];
       dom.window.document.querySelectorAll('a[href]').forEach((el) => {
         if (links.length >= limit) return;
