@@ -891,6 +891,16 @@ class SSHTerminalNativeServer {
         sshConfig.host = hostConfig.bastionHost;
         sshConfig.port = parseInt(hostConfig.port) || 22;
         sshConfig.username = hostConfig.bastionUser; // Formato especial: rt01119@default@HOST:SSH:rt01119
+        
+        // ✅ CONFIGURACIÓN DE ALGORITMOS SSH PARA WALLIX
+        // Wallix requiere algoritmos específicos para el handshake SSH
+        // Sin esto, falla con "no matching host key format"
+        sshConfig.algorithms = {
+          kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
+          cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
+          serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
+          hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
+        };
       }
       // Para conexión directa: usar host y username normales
       else {
@@ -1117,9 +1127,6 @@ class SSHTerminalNativeServer {
     
     try {
       const sshConfig = {
-        host: hostConfig.host,
-        port: hostConfig.port || 22,
-        username: hostConfig.username,
         readyTimeout: 10000
       };
       
@@ -1127,6 +1134,27 @@ class SSHTerminalNativeServer {
         sshConfig.password = hostConfig.password;
       } else if (hostConfig.privateKey) {
         sshConfig.privateKey = hostConfig.privateKey;
+      }
+      
+      // Para Bastion Wallix: usar bastionUser como username y bastionHost como host
+      if (hostConfig.useBastionWallix && hostConfig.bastionHost && hostConfig.bastionUser) {
+        sshConfig.host = hostConfig.bastionHost;
+        sshConfig.port = parseInt(hostConfig.port) || 22;
+        sshConfig.username = hostConfig.bastionUser;
+        
+        // ✅ CONFIGURACIÓN DE ALGORITMOS SSH PARA WALLIX
+        sshConfig.algorithms = {
+          kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
+          cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
+          serverHostKey: ['ssh-rsa', 'ssh-dss'],
+          hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
+        };
+      }
+      // Para conexión directa: usar host y username normales
+      else {
+        sshConfig.host = hostConfig.host;
+        sshConfig.port = hostConfig.port || 22;
+        sshConfig.username = hostConfig.username || hostConfig.user;
       }
       
       const testSSH = new SSH2Promise(sshConfig);
