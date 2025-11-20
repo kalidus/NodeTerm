@@ -511,51 +511,65 @@ const MainContentArea = ({
     buttonsContainer.className = 'local-terminal-buttons';
     buttonsContainer.style.cssText = `
       display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-left: 8px;
+      align-items: flex-end;
+      gap: 3px;
+      margin-left: 4px;
+      margin-right: 2px;
       flex-shrink: 0;
+      height: 26px;
+      padding-bottom: 0;
     `;
     
     // Botón +
     const plusButton = document.createElement('button');
     plusButton.innerHTML = '<i class="pi pi-plus"></i>';
-    plusButton.className = 'p-button p-button-text p-button-sm';
+    plusButton.className = 'p-button p-button-text p-button-sm tab-action-button';
     plusButton.style.cssText = `
-      color: var(--ui-sidebar-text, #cccccc) !important;
-      padding: 0 !important;
-      min-width: 15px !important;
-      width: 15px !important;
-      height: 15px !important;
-      font-size: 8px !important;
-      background: transparent !important;
-      background-color: transparent !important;
-      border: none !important;
-      border-radius: 2px !important;
+      color: var(--ui-tab-text, rgba(255, 255, 255, 0.7)) !important;
+      padding: 0 8px !important;
+      min-width: 28px !important;
+      height: 24px !important;
+      font-size: 11px !important;
+      background: var(--ui-tab-bg, transparent) !important;
+      background-color: var(--ui-tab-bg, transparent) !important;
+      border: 1px solid var(--ui-tab-border, transparent) !important;
+      border-radius: var(--tab-border-radius, 4px 4px 0 0) !important;
+      box-shadow: var(--tab-box-shadow, none) !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       cursor: pointer !important;
-      transition: all 0.2s ease !important;
+      transition: var(--tab-transition, all 0.2s ease) !important;
+      backdrop-filter: var(--tab-backdrop-filter, none) !important;
+      border-bottom: var(--tab-border-bottom, 1px solid var(--ui-tab-border, transparent)) !important;
+      clip-path: var(--tab-clip-path, none) !important;
+      filter: var(--tab-filter, none) !important;
+      transform: var(--tab-transform, none) !important;
+      border-style: var(--tab-border-style, solid) !important;
+      background-size: var(--tab-background-size, auto) !important;
+      margin-bottom: 0 !important;
+      line-height: 1 !important;
     `;
     
     // Aplicar color del tema al icono
     const plusIcon = plusButton.querySelector('i');
     if (plusIcon) {
-      plusIcon.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
+      plusIcon.style.setProperty('color', 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))', 'important');
     }
     plusButton.title = 'Nueva terminal local';
     plusButton.addEventListener('mouseenter', () => {
-      plusButton.style.setProperty('background-color', 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))', 'important');
-      plusButton.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
+      plusButton.style.setProperty('background', 'var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.15))', 'important');
+      plusButton.style.setProperty('background-color', 'var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.15))', 'important');
+      plusButton.style.setProperty('color', 'var(--ui-tab-text, rgba(255, 255, 255, 1))', 'important');
       const icon = plusButton.querySelector('i');
-      if (icon) icon.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
+      if (icon) icon.style.setProperty('color', 'var(--ui-tab-text, rgba(255, 255, 255, 1))', 'important');
     });
     plusButton.addEventListener('mouseleave', () => {
-      plusButton.style.setProperty('background-color', 'transparent', 'important');
-      plusButton.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
+      plusButton.style.setProperty('background', 'var(--ui-tab-bg, transparent)', 'important');
+      plusButton.style.setProperty('background-color', 'var(--ui-tab-bg, transparent)', 'important');
+      plusButton.style.setProperty('color', 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))', 'important');
       const icon = plusButton.querySelector('i');
-      if (icon) icon.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
+      if (icon) icon.style.setProperty('color', 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))', 'important');
     });
     plusButton.addEventListener('click', () => {
       // Usar la referencia que se actualiza de forma síncrona
@@ -578,42 +592,53 @@ const MainContentArea = ({
     // Botón dropdown
     const dropdownButton = document.createElement('button');
     dropdownButton.innerHTML = '<i class="pi pi-chevron-down"></i>';
-    dropdownButton.className = 'p-button p-button-text p-button-sm';
+    dropdownButton.className = 'p-button p-button-text p-button-sm tab-action-button';
     dropdownButton.style.cssText = `
-      color: var(--ui-sidebar-text, #cccccc) !important;
-      padding: 0 !important;
-      min-width: 15px !important;
-      width: 15px !important;
-      height: 15px !important;
-      font-size: 7px !important;
-      background: transparent !important;
-      background-color: transparent !important;
-      border: none !important;
-      border-radius: 2px !important;
+      color: var(--ui-tab-text, rgba(255, 255, 255, 0.7)) !important;
+      padding: 0 8px !important;
+      min-width: 28px !important;
+      height: 24px !important;
+      font-size: 10px !important;
+      background: var(--ui-tab-bg, transparent) !important;
+      background-color: var(--ui-tab-bg, transparent) !important;
+      border: 1px solid var(--ui-tab-border, transparent) !important;
+      border-radius: var(--tab-border-radius, 4px 4px 0 0) !important;
+      box-shadow: var(--tab-box-shadow, none) !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       cursor: pointer !important;
-      transition: all 0.2s ease !important;
+      transition: var(--tab-transition, all 0.2s ease) !important;
+      backdrop-filter: var(--tab-backdrop-filter, none) !important;
+      border-bottom: var(--tab-border-bottom, 1px solid var(--ui-tab-border, transparent)) !important;
+      clip-path: var(--tab-clip-path, none) !important;
+      filter: var(--tab-filter, none) !important;
+      transform: var(--tab-transform, none) !important;
+      border-style: var(--tab-border-style, solid) !important;
+      background-size: var(--tab-background-size, auto) !important;
+      margin-bottom: 0 !important;
+      line-height: 1 !important;
     `;
     
     // Aplicar color del tema al icono
     const dropdownIcon = dropdownButton.querySelector('i');
     if (dropdownIcon) {
-      dropdownIcon.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
+      dropdownIcon.style.setProperty('color', 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))', 'important');
     }
     dropdownButton.title = 'Seleccionar tipo de terminal';
     dropdownButton.addEventListener('mouseenter', () => {
-      dropdownButton.style.setProperty('background-color', 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))', 'important');
-      dropdownButton.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
+      dropdownButton.style.setProperty('background', 'var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.15))', 'important');
+      dropdownButton.style.setProperty('background-color', 'var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.15))', 'important');
+      dropdownButton.style.setProperty('color', 'var(--ui-tab-text, rgba(255, 255, 255, 1))', 'important');
       const icon = dropdownButton.querySelector('i');
-      if (icon) icon.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
+      if (icon) icon.style.setProperty('color', 'var(--ui-tab-text, rgba(255, 255, 255, 1))', 'important');
     });
     dropdownButton.addEventListener('mouseleave', () => {
-      dropdownButton.style.setProperty('background-color', 'transparent', 'important');
-      dropdownButton.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
+      dropdownButton.style.setProperty('background', 'var(--ui-tab-bg, transparent)', 'important');
+      dropdownButton.style.setProperty('background-color', 'var(--ui-tab-bg, transparent)', 'important');
+      dropdownButton.style.setProperty('color', 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))', 'important');
       const icon = dropdownButton.querySelector('i');
-      if (icon) icon.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
+      if (icon) icon.style.setProperty('color', 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))', 'important');
     });
     dropdownButton.addEventListener('click', (e) => {
       terminalSelectorMenuRef.current?.show(e);
