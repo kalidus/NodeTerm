@@ -293,6 +293,11 @@ function registerSystemHandlers() {
 
   // === GPU MEMORY HANDLERS ===
 
+  // Variable estática para cachear la detección de GPU (evitar logs repetidos)
+  let gpuDetectionLogged = false;
+  let detectedGpuType = null;
+  let detectedGpuName = null;
+
   // Handler para obtener estadísticas de GPU (mejorado con más información)
   ipcMain.handle('system:get-gpu-stats', async () => {
     try {
@@ -318,7 +323,13 @@ function registerSystemHandlers() {
               const temperature = parseInt(temp) || null;
 
               if (totalMB && !isNaN(totalMB) && !isNaN(usedMB)) {
-                console.log('[GPU Handler] ✅ GPU NVIDIA detectada:', name);
+                // Solo loguear la primera vez que se detecta
+                if (!gpuDetectionLogged || detectedGpuType !== 'nvidia' || detectedGpuName !== name) {
+                  console.log('[GPU Handler] ✅ GPU NVIDIA detectada:', name);
+                  gpuDetectionLogged = true;
+                  detectedGpuType = 'nvidia';
+                  detectedGpuName = name;
+                }
                 return {
                   ok: true,
                   type: 'nvidia',
@@ -363,7 +374,13 @@ function registerSystemHandlers() {
               }
               
               if (total && !isNaN(used) && !isNaN(total)) {
-                console.log('[GPU Handler] ✅ GPU AMD (ROCm) detectada:', gpuName);
+                // Solo loguear la primera vez que se detecta
+                if (!gpuDetectionLogged || detectedGpuType !== 'amd' || detectedGpuName !== gpuName) {
+                  console.log('[GPU Handler] ✅ GPU AMD (ROCm) detectada:', gpuName);
+                  gpuDetectionLogged = true;
+                  detectedGpuType = 'amd';
+                  detectedGpuName = gpuName;
+                }
                 return {
                   ok: true,
                   type: 'amd',
@@ -394,7 +411,13 @@ function registerSystemHandlers() {
             const amdGpus = lines.filter(l => l.toLowerCase().includes('amd') || l.toLowerCase().includes('radeon'));
             if (amdGpus.length > 0) {
               const gpuName = amdGpus[0].trim();
-              console.log('[GPU Handler] ✅ GPU AMD detectada en Windows:', gpuName);
+              // Solo loguear la primera vez que se detecta
+              if (!gpuDetectionLogged || detectedGpuType !== 'amd' || detectedGpuName !== gpuName) {
+                console.log('[GPU Handler] ✅ GPU AMD detectada en Windows:', gpuName);
+                gpuDetectionLogged = true;
+                detectedGpuType = 'amd';
+                detectedGpuName = gpuName;
+              }
               // Windows no expone VRAM fácilmente sin drivers específicos
               return {
                 ok: true,
@@ -425,7 +448,13 @@ function registerSystemHandlers() {
               // Intentar extraer nombre del GPU
               const nameMatch = output.match(/Chipset Model:\s*(.+)/);
               const gpuName = nameMatch ? nameMatch[1].trim() : 'Apple Silicon GPU';
-              console.log('[GPU Handler] ✅ GPU Apple Silicon detectada:', gpuName);
+              // Solo loguear la primera vez que se detecta
+              if (!gpuDetectionLogged || detectedGpuType !== 'apple-metal' || detectedGpuName !== gpuName) {
+                console.log('[GPU Handler] ✅ GPU Apple Silicon detectada:', gpuName);
+                gpuDetectionLogged = true;
+                detectedGpuType = 'apple-metal';
+                detectedGpuName = gpuName;
+              }
               // Apple Silicon no expone VRAM de forma directa
               return {
                 ok: true,
