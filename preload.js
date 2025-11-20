@@ -49,6 +49,12 @@ contextBridge.exposeInMainWorld('electron', {
         return ipcRenderer.invoke('file:create-directory', { tabId, remotePath, config });
       }
       return ipcRenderer.invoke('ssh:create-directory', { tabId, remotePath, sshConfig: config });
+    },
+    renameFile: (tabId, oldPath, newPath, config) => {
+      if (config && (config.protocol === 'sftp' || config.protocol === 'ftp' || config.protocol === 'scp')) {
+        return ipcRenderer.invoke('file:rename-file', { tabId, oldPath, newPath, config });
+      }
+      return ipcRenderer.invoke('ssh:rename-file', { tabId, oldPath, newPath, sshConfig: config });
     }
   },
   dialog: {

@@ -447,6 +447,43 @@ function registerSSHHandlers(dependencies = {}) {
     }
   });
 
+  // SSH: Renombrar/Mover archivo o directorio
+  ipcMain.handle('ssh:rename-file', async (event, { tabId, oldPath, newPath, sshConfig }) => {
+    try {
+      const sftp = new SftpClient();
+      let connectConfig;
+      if (sshConfig.useBastionWallix) {
+        connectConfig = {
+          host: sshConfig.bastionHost,
+          port: sshConfig.port || 22,
+          username: sshConfig.bastionUser,
+          password: sshConfig.password,
+          readyTimeout: 20000,
+          algorithms: {
+            kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
+            cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
+            serverHostKey: ['ssh-rsa', 'ssh-dss'],
+            hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
+          }
+        };
+      } else {
+        connectConfig = {
+          host: sshConfig.host,
+          port: sshConfig.port || 22,
+          username: sshConfig.username,
+          password: sshConfig.password,
+          readyTimeout: 20000,
+        };
+      }
+      await sftp.connect(connectConfig);
+      await sftp.rename(oldPath, newPath);
+      await sftp.end();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message || err };
+    }
+  });
+
   // MCP: Obtener hosts SSH desde la aplicación (NodeTerm sidebar)
   ipcMain.handle('mcp:get-ssh-hosts-from-app', async (event) => {
     try {
