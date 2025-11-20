@@ -46,6 +46,9 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     const [isDragActive, setIsDragActive] = useState(false);
     const [homeDir, setHomeDir] = useState(null);
     const [pathInput, setPathInput] = useState('');
+    
+    const containerRef = React.useRef(null);
+    const filesContainerRef = React.useRef(null);
 
     useEffect(() => {
         setSshReady(true);
@@ -81,6 +84,53 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
             setPathInput(currentPath);
         }
     }, [currentPath]);
+
+    // Calcular altura del contenedor de archivos dinámicamente
+    useEffect(() => {
+        const updateFilesContainerHeight = () => {
+            if (containerRef.current && filesContainerRef.current) {
+                const container = containerRef.current;
+                const filesContainer = filesContainerRef.current;
+                
+                // Calcular altura disponible restando headers, breadcrumbs, toolbars, etc.
+                const headerHeight = container.querySelector('.file-explorer-header')?.offsetHeight || 0;
+                const breadcrumbHeight = container.querySelector('.file-explorer-breadcrumb-row')?.offsetHeight || 0;
+                const toolbarHeight = container.querySelector('.file-explorer-toolbar')?.offsetHeight || 0;
+                const loadingHeight = container.querySelector('.file-explorer-loading')?.offsetHeight || 0;
+                const messageHeight = container.querySelector('.p-message')?.offsetHeight || 0;
+                const progressHeight = container.querySelector('.transfer-progress-container')?.offsetHeight || 0;
+                
+                const totalFixedHeight = headerHeight + breadcrumbHeight + toolbarHeight + loadingHeight + messageHeight + progressHeight;
+                const containerHeight = container.offsetHeight;
+                const availableHeight = containerHeight - totalFixedHeight;
+                
+                if (availableHeight > 0) {
+                    filesContainer.style.height = `${availableHeight}px`;
+                    filesContainer.style.maxHeight = `${availableHeight}px`;
+                }
+            }
+        };
+        
+        // Actualizar altura al montar y cuando cambia el contenido
+        updateFilesContainerHeight();
+        
+        // Actualizar al redimensionar
+        const resizeObserver = new ResizeObserver(() => {
+            updateFilesContainerHeight();
+        });
+        
+        if (containerRef.current) {
+            resizeObserver.observe(containerRef.current);
+        }
+        
+        // También actualizar después de cambios en el DOM
+        const timeoutId = setTimeout(updateFilesContainerHeight, 100);
+        
+        return () => {
+            resizeObserver.disconnect();
+            clearTimeout(timeoutId);
+        };
+    }, [files, loading, error, transferProgress, sshReady]);
 
     const loadFiles = async (path) => {
         if (!window.electron || !tabId) return;
@@ -624,12 +674,19 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
 
     return (
         <div 
+            ref={containerRef}
             className="file-explorer-container material-design" 
             data-tab-id={tabId}
             data-theme={explorerColorTheme}
             style={{ 
                 fontFamily: explorerFont, 
                 fontSize: explorerFontSize,
+                height: '100%',
+                width: '100%',
+                minHeight: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative',
                 '--theme-bg': themeColors.contentBackground || '#ffffff',
                 '--theme-text': themeColors.dialogText || '#1e293b',
                 '--theme-border': themeColors.contentBorder || '#e2e8f0',
@@ -639,7 +696,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 '--theme-secondary': themeColors.tabBackground || '#f8fafc',
             }}
         >
-            <Card className="file-explorer-card">
+            <Card className="file-explorer-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 {/* Header */}
                 <div className="file-explorer-header">
                     <h2 className="file-explorer-title">
@@ -780,11 +837,19 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 {/* Files List - Material Design Cards */}
                 {sshReady && (
                     <div 
+                        ref={filesContainerRef}
                         className={`file-explorer-files-container${isDragActive ? ' drag-active' : ''}`}
                         onDrop={handleDrop}
                         onDragEnter={handleDragEnter}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
+                        style={{
+                            flex: '1 1 0',
+                            minHeight: 0,
+                            overflowY: 'auto',
+                            overflowX: 'hidden',
+                            position: 'relative'
+                        }}
                     >
                         {visibleFiles.length === 0 ? (
                             <div className="empty-state">
