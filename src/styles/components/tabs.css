@@ -431,6 +431,29 @@ button.tab-action-button,
   font-size: 10px !important;
   border-radius: 3px !important;
   box-sizing: border-box !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Hover para botones en contenedor de terminales locales - máxima especificidad */
+button.local-terminal-buttons .tab-action-button:hover,
+.local-terminal-buttons button.tab-action-button:hover,
+.local-terminal-buttons .p-button.tab-action-button:hover,
+.local-terminal-buttons button:hover.tab-action-button,
+.local-terminal-buttons .tab-action-button:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  color: rgba(255, 255, 255, 1) !important;
+}
+
+.local-terminal-buttons .tab-action-button:hover .p-button-icon,
+.local-terminal-buttons .tab-action-button:hover i,
+.local-terminal-buttons button.tab-action-button:hover .p-button-icon,
+.local-terminal-buttons button.tab-action-button:hover i,
+.local-terminal-buttons .p-button.tab-action-button:hover .p-button-icon,
+.local-terminal-buttons .p-button.tab-action-button:hover i {
+  color: var(--ui-tab-text, rgba(255, 255, 255, 1)) !important;
 }
 
 /* Contenedor de botones de acción */
@@ -476,6 +499,7 @@ button[aria-label="Nueva pestaña"]:hover,
 button[aria-label="Seleccionar tipo de terminal"]:hover {
   background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.15)) !important;
   background-color: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.15)) !important;
+  border-color: var(--ui-tab-border, rgba(255, 255, 255, 0.4)) !important;
   color: var(--ui-tab-text, rgba(255, 255, 255, 1)) !important;
 }
 
