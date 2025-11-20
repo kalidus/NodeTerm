@@ -330,7 +330,27 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         return typeMap[extension] || 'Archivo';
     };
 
-    const visibleFiles = showDotfiles ? files : files.filter(f => !f.name.startsWith('.') || f.name === '..');
+    // Filtrar archivos ocultos si es necesario
+    const filteredFiles = showDotfiles ? files : files.filter(f => !f.name.startsWith('.') || f.name === '..');
+    
+    // Ordenar: primero carpetas, luego archivos, ambos alfabéticamente
+    // ".." siempre va primero si existe
+    const visibleFiles = [...filteredFiles].sort((a, b) => {
+        // ".." siempre va primero
+        if (a.name === '..') return -1;
+        if (b.name === '..') return 1;
+        
+        // Separar carpetas de archivos
+        const aIsDir = a.type === 'directory';
+        const bIsDir = b.type === 'directory';
+        
+        // Si uno es carpeta y el otro no, la carpeta va primero
+        if (aIsDir && !bIsDir) return -1;
+        if (!aIsDir && bIsDir) return 1;
+        
+        // Si ambos son del mismo tipo, ordenar alfabéticamente (case-insensitive)
+        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true });
+    });
 
     const handleUploadFiles = async () => {
         try {
