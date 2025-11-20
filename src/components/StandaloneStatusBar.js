@@ -7,6 +7,7 @@ const StandaloneStatusBar = ({ visible = true }) => {
     const [isLoadingStats, setIsLoadingStats] = useState(true);
     const [cpuHistory, setCpuHistory] = useState([]);
     const cpuHistoryRef = useRef([]);
+    const [gpuStats, setGpuStats] = useState(null);
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
         try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
     });
@@ -86,6 +87,19 @@ const StandaloneStatusBar = ({ visible = true }) => {
                     setCpuHistory([...cpuHistoryRef.current]);
                 }
                 
+                // Obtener estadísticas de GPU
+                try {
+                    const gpuData = await window.electron.system?.getGPUStats();
+                    if (gpuData && gpuData.ok) {
+                        setGpuStats(gpuData);
+                    } else {
+                        setGpuStats(null);
+                    }
+                } catch (gpuError) {
+                    // GPU no disponible o error
+                    setGpuStats(null);
+                }
+                
                 // Usar el historial actualizado desde el ref
                 const statsPayload = {
                     cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
@@ -146,6 +160,7 @@ const StandaloneStatusBar = ({ visible = true }) => {
         }}>
             <StatusBar 
                 stats={statusStats || {}} 
+                gpuStats={gpuStats}
                 active={true} 
                 statusBarIconTheme={statusBarIconTheme} 
                 showNetworkDisks={showNetworkDisks} 

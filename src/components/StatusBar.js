@@ -1,7 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicrochip, faMemory, faHdd, faClock, faArrowDown, faArrowUp, faServer } from '@fortawesome/free-solid-svg-icons';
-import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora, FaWindows, FaNetworkWired } from 'react-icons/fa';
+import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora, FaWindows, FaNetworkWired, FaDesktop } from 'react-icons/fa';
 import { SiDebian } from 'react-icons/si';
 import { getVersionInfo } from '../version-info';
 import { statusBarIconThemes } from '../themes/statusbar-icon-themes';
@@ -90,12 +90,30 @@ const DistroIcon = ({ distro }) => {
     }
 };
 
-const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkDisks = true, isLoading = false }) => {
+const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkDisks = true, isLoading = false, gpuStats = null }) => {
     // Obtener la versión de la aplicación de forma segura
     const { appVersion } = getVersionInfo();
     
     // Obtener el tema de iconos actual
     const currentIconTheme = statusBarIconThemes[statusBarIconTheme] || statusBarIconThemes.classic;
+    
+    // Función para obtener icono de GPU según el tipo
+    const getGPUIcon = (type) => {
+        if (!type) return null;
+        if (type.toLowerCase().includes('nvidia')) return '🟢';
+        if (type.toLowerCase().includes('amd')) return '🔴';
+        if (type.toLowerCase().includes('apple')) return '🍎';
+        return '🎮';
+    };
+    
+    // Función para obtener color de GPU según el tipo
+    const getGPUColor = (type) => {
+        if (!type) return currentIconTheme.colors.memory;
+        if (type.toLowerCase().includes('nvidia')) return '#76b900'; // Verde NVIDIA
+        if (type.toLowerCase().includes('amd')) return '#ED1C24'; // Rojo AMD
+        if (type.toLowerCase().includes('apple')) return '#A8A8A8'; // Gris Apple
+        return currentIconTheme.colors.memory;
+    };
     
     // Mostrar estado de carga si no hay stats o está cargando
     if (!stats || isLoading) {
@@ -196,6 +214,26 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
                             {currentIconTheme.icons.memory}
                         </span>
                         <span>{formatBytes(mem.used)} / {formatBytes(mem.total)}</span>
+                    </div>
+                )}
+                {gpuStats && gpuStats.ok && gpuStats.type && (
+                    <div className="status-bar-section gpu-section" title={gpuStats.name || `${gpuStats.type.toUpperCase()} GPU`}>
+                        <span 
+                            className="status-bar-icon gpu" 
+                            style={{ color: getGPUColor(gpuStats.type) }}
+                        >
+                            {getGPUIcon(gpuStats.type)}
+                        </span>
+                        {gpuStats.totalMB && gpuStats.usedMB !== null ? (
+                            <span>{Math.round(gpuStats.usedMB / 1024 * 10) / 10}GB / {Math.round(gpuStats.totalMB / 1024 * 10) / 10}GB</span>
+                        ) : (
+                            <span>{gpuStats.type.toUpperCase()}</span>
+                        )}
+                        {gpuStats.temperature !== null && (
+                            <span style={{ marginLeft: '4px', fontSize: '0.85em', opacity: 0.8 }}>
+                                {gpuStats.temperature}°C
+                            </span>
+                        )}
                     </div>
                 )}
                 {network && (
