@@ -504,6 +504,66 @@ async function createDirectory(config, remotePath) {
 }
 
 /**
+ * Renombra/Mueve un archivo o directorio
+ */
+async function renameFile(config, oldPath, newPath) {
+  const { protocol, host, port, username, password, useBastionWallix, bastionHost, bastionUser } = config;
+
+  if (protocol === 'sftp' || protocol === 'scp') {
+    const sftp = new SftpClient();
+    try {
+      let connectConfig;
+      if (useBastionWallix) {
+        connectConfig = {
+          host: bastionHost,
+          port: port || 22,
+          username: bastionUser,
+          password: password,
+          readyTimeout: 20000,
+          algorithms: {
+            kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
+            cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
+            serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
+            hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
+          }
+        };
+      } else {
+        connectConfig = {
+          host: host,
+          port: port || 22,
+          username: username,
+          password: password,
+          readyTimeout: 20000,
+        };
+      }
+      await sftp.connect(connectConfig);
+      await sftp.rename(oldPath, newPath);
+      await sftp.end();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message || err };
+    }
+  } else if (protocol === 'ftp') {
+    const client = new FTPClient();
+    try {
+      await client.access({
+        host: host,
+        port: port || 21,
+        user: username,
+        password: password,
+        secure: false,
+      });
+      await client.rename(oldPath, newPath);
+      await client.close();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message || err };
+    }
+  }
+  return { success: false, error: 'Protocolo no soportado' };
+}
+
+/**
  * Registra todos los manejadores IPC relacionados con archivos (SFTP/FTP/SCP)
  */
 function registerFileHandlers() {
@@ -540,6 +600,11 @@ function registerFileHandlers() {
   // Crear directorio
   ipcMain.handle('file:create-directory', async (event, { tabId, remotePath, config }) => {
     return await createDirectory(config, remotePath);
+  });
+
+  // Renombrar/Mover archivo o directorio
+  ipcMain.handle('file:rename-file', async (event, { tabId, oldPath, newPath, config }) => {
+    return await renameFile(config, oldPath, newPath);
   });
 }
 

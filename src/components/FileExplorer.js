@@ -21,7 +21,7 @@ import {
     FaImage, FaVideo, FaMusic, FaCode, FaGlobe, FaArchive, FaCog, 
     FaDatabase, FaFileAlt, FaArrowUp, FaLink, FaPython, FaJs, FaHtml5,
     FaCss3Alt, FaFileCode, FaChevronRight, FaUpload, FaDownload, FaTrash,
-    FaPlus, FaHome, FaSync, FaEye, FaEyeSlash, FaArrowRight
+    FaPlus, FaHome, FaSync, FaEye, FaEyeSlash, FaArrowRight, FaEdit
 } from 'react-icons/fa';
 
 const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont = 'Segoe UI', explorerColorTheme = 'Light', explorerFontSize = 15 }) => {
@@ -39,6 +39,9 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     const [error, setError] = useState(null);
     const [newFolderDialog, setNewFolderDialog] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
+    const [renameDialog, setRenameDialog] = useState(false);
+    const [fileToRename, setFileToRename] = useState(null);
+    const [newFileName, setNewFileName] = useState('');
     const [transferProgress, setTransferProgress] = useState(null);
     const [sshReady, setSshReady] = useState(false);
     const [showDotfiles, setShowDotfiles] = useState(false);
@@ -482,6 +485,44 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         }
     };
 
+    const handleRenameFile = async () => {
+        if (!fileToRename || !newFileName.trim() || newFileName.trim() === fileToRename.name) return;
+        
+        try {
+            const oldPath = currentPath === '/' ? `/${fileToRename.name}` : `${currentPath}/${fileToRename.name}`;
+            const newPath = currentPath === '/' ? `/${newFileName.trim()}` : `${currentPath}/${newFileName.trim()}`;
+            const result = await window.electron.fileExplorer.renameFile(tabId, oldPath, newPath, config);
+            
+            if (result.success) {
+                toast.current?.show({
+                    severity: 'success',
+                    summary: 'Elemento renombrado',
+                    detail: `${fileToRename.name} renombrado a "${newFileName.trim()}"`,
+                    life: 3000
+                });
+                setNewFileName('');
+                setFileToRename(null);
+                setRenameDialog(false);
+                loadFiles(currentPath);
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (err) {
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error al renombrar',
+                detail: `Error renombrando ${fileToRename.name}: ${err.message}`,
+                life: 5000
+            });
+        }
+    };
+
+    const openRenameDialog = (file) => {
+        setFileToRename(file);
+        setNewFileName(file.name);
+        setRenameDialog(true);
+    };
+
     const handleDrop = async (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -883,22 +924,32 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                                                 <span className="file-modified">{file.modified}</span>
                                             </div>
                                         </div>
-                                        {file.type === 'file' && (
-                                            <div className="file-card-actions" onClick={(e) => e.stopPropagation()}>
+                                        <div className="file-card-actions" onClick={(e) => e.stopPropagation()}>
+                                            {file.type === 'file' && (
                                                 <Button 
                                                     icon={<FaDownload />}
                                                     onClick={() => handleDownloadFile(file)}
                                                     tooltip="Descargar"
                                                     className="file-action-button"
                                                 />
-                                                <Button
-                                                    icon={<FaTrash />}
-                                                    onClick={() => handleDeleteFiles([file])}
-                                                    tooltip="Eliminar"
-                                                    className="file-action-button file-action-danger"
-                                                />
-                                            </div>
-                                        )}
+                                            )}
+                                            {file.name !== '..' && (
+                                                <>
+                                                    <Button
+                                                        icon={<FaEdit />}
+                                                        onClick={() => openRenameDialog(file)}
+                                                        tooltip="Renombrar"
+                                                        className="file-action-button"
+                                                    />
+                                                    <Button
+                                                        icon={<FaTrash />}
+                                                        onClick={() => handleDeleteFiles([file])}
+                                                        tooltip="Eliminar"
+                                                        className="file-action-button file-action-danger"
+                                                    />
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             })
@@ -970,6 +1021,61 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                             }
                         }}
                     />
+                </div>
+            </Dialog>
+            
+            {/* Rename File Dialog */}
+            <Dialog 
+                header="Renombrar Elemento" 
+                visible={renameDialog} 
+                style={{ width: '400px' }} 
+                onHide={() => {
+                    setRenameDialog(false);
+                    setFileToRename(null);
+                    setNewFileName('');
+                }}
+                footer={
+                    <div>
+                        <Button 
+                            label="Cancelar" 
+                            icon={<FaArrowUp />}
+                            className="p-button-text" 
+                            onClick={() => {
+                                setRenameDialog(false);
+                                setFileToRename(null);
+                                setNewFileName('');
+                            }}
+                        />
+                        <Button 
+                            label="Renombrar" 
+                            icon={<FaEdit />}
+                            className="p-button-primary" 
+                            onClick={handleRenameFile}
+                            disabled={!newFileName.trim() || !fileToRename || newFileName.trim() === fileToRename.name}
+                        />
+                    </div>
+                }
+            >
+                <div className="field">
+                    <label htmlFor="fileName">Nuevo nombre:</label>
+                    <InputText 
+                        id="fileName"
+                        value={newFileName} 
+                        onChange={(e) => setNewFileName(e.target.value)}
+                        placeholder="Ingresa el nuevo nombre"
+                        className="w-full mt-2"
+                        autoFocus
+                        onKeyPress={(e) => {
+                            if (e.key === 'Enter' && newFileName.trim() && fileToRename && newFileName.trim() !== fileToRename.name) {
+                                handleRenameFile();
+                            }
+                        }}
+                    />
+                    {fileToRename && (
+                        <small className="p-d-block mt-2" style={{ color: 'var(--theme-text)', opacity: 0.7 }}>
+                            Renombrando: <strong>{fileToRename.name}</strong>
+                        </small>
+                    )}
                 </div>
             </Dialog>
             
