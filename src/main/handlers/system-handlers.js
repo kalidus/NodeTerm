@@ -293,7 +293,7 @@ function registerSystemHandlers() {
 
   // === GPU MEMORY HANDLERS ===
 
-  // Handler para obtener estadísticas de GPU
+  // Handler para obtener estadísticas de GPU (mejorado con más información)
   ipcMain.handle('system:get-gpu-stats', async () => {
     try {
       const { execSync } = require('child_process');
@@ -302,24 +302,36 @@ function registerSystemHandlers() {
       // NVIDIA CUDA
       if (platform === 'win32' || platform === 'linux' || platform === 'darwin') {
         try {
-          // Intenta nvidia-smi (disponible en NVIDIA GPUs)
-          const output = execSync('nvidia-smi --query-gpu=memory.total,memory.used --format=csv,nounits,noheader', {
+          // Intenta nvidia-smi con más información (nombre, memoria, temperatura, uso)
+          const output = execSync('nvidia-smi --query-gpu=name,memory.total,memory.used,utilization.gpu,temperature.gpu --format=csv,nounits,noheader', {
             encoding: 'utf-8',
-            timeout: 2000
+            timeout: 3000
           }).trim();
 
           if (output) {
-            const [total, used] = output.split(',').map(v => parseInt(v.trim()));
-            if (total && !isNaN(total) && !isNaN(used)) {
-              console.log('[GPU Handler] ✅ GPU NVIDIA detectada');
-              return {
-                ok: true,
-                type: 'nvidia',
-                totalMB: total,
-                usedMB: used,
-                freeMB: total - used,
-                usagePercent: Math.round((used / total) * 100)
-              };
+            const lines = output.split('\n').filter(l => l.trim());
+            if (lines.length > 0) {
+              const [name, total, used, gpuUtil, temp] = lines[0].split(',').map(v => v.trim());
+              const totalMB = parseInt(total);
+              const usedMB = parseInt(used);
+              const gpuUsage = parseInt(gpuUtil) || 0;
+              const temperature = parseInt(temp) || null;
+
+              if (totalMB && !isNaN(totalMB) && !isNaN(usedMB)) {
+                console.log('[GPU Handler] ✅ GPU NVIDIA detectada:', name);
+                return {
+                  ok: true,
+                  type: 'nvidia',
+                  name: name || 'NVIDIA GPU',
+                  totalMB: totalMB,
+                  usedMB: usedMB,
+                  freeMB: totalMB - usedMB,
+                  usagePercent: Math.round((usedMB / totalMB) * 100),
+                  gpuUtilization: gpuUsage, // Uso de GPU (0-100)
+                  temperature: temperature, // Temperatura en °C
+                  driverVersion: null // Se puede obtener con otro comando si es necesario
+                };
+              }
             }
           }
         } catch (e) {
@@ -331,21 +343,38 @@ function registerSystemHandlers() {
           try {
             const output = execSync('rocm-smi --showmeminfo --json', {
               encoding: 'utf-8',
-              timeout: 2000
+              timeout: 3000
             });
             const data = JSON.parse(output);
             if (data && data.gpu_memory_use && data.gpu_memory_use.length > 0) {
               const used = parseInt(data.gpu_memory_use[0]);
               const total = parseInt(data.gpu_memory_tot[0]);
+              // Intentar obtener nombre del modelo
+              let gpuName = 'AMD GPU';
+              try {
+                const nameOutput = execSync('rocm-smi --showproductname', {
+                  encoding: 'utf-8',
+                  timeout: 2000
+                });
+                const nameMatch = nameOutput.match(/Product Name:\s*(.+)/);
+                if (nameMatch) gpuName = nameMatch[1].trim();
+              } catch (e) {
+                // No se pudo obtener nombre
+              }
+              
               if (total && !isNaN(used) && !isNaN(total)) {
-                console.log('[GPU Handler] ✅ GPU AMD (ROCm) detectada');
+                console.log('[GPU Handler] ✅ GPU AMD (ROCm) detectada:', gpuName);
                 return {
                   ok: true,
                   type: 'amd',
+                  name: gpuName,
                   totalMB: total,
                   usedMB: used,
                   freeMB: total - used,
-                  usagePercent: Math.round((used / total) * 100)
+                  usagePercent: Math.round((used / total) * 100),
+                  gpuUtilization: null, // ROCm no expone esto fácilmente
+                  temperature: null, // Se puede obtener con otro comando
+                  driverVersion: null
                 };
               }
             }
@@ -354,23 +383,60 @@ function registerSystemHandlers() {
           }
         }
 
+        // AMD en Windows (usando wmic)
+        if (platform === 'win32') {
+          try {
+            const output = execSync('wmic path win32_VideoController get name', {
+              encoding: 'utf-8',
+              timeout: 2000
+            });
+            const lines = output.split('\n').filter(l => l.trim() && !l.includes('Name') && !l.includes('----'));
+            const amdGpus = lines.filter(l => l.toLowerCase().includes('amd') || l.toLowerCase().includes('radeon'));
+            if (amdGpus.length > 0) {
+              const gpuName = amdGpus[0].trim();
+              console.log('[GPU Handler] ✅ GPU AMD detectada en Windows:', gpuName);
+              // Windows no expone VRAM fácilmente sin drivers específicos
+              return {
+                ok: true,
+                type: 'amd',
+                name: gpuName,
+                totalMB: null,
+                usedMB: null,
+                freeMB: null,
+                usagePercent: null,
+                gpuUtilization: null,
+                temperature: null,
+                note: 'AMD en Windows requiere drivers AMD para mostrar VRAM'
+              };
+            }
+          } catch (e) {
+            // No se pudo detectar AMD en Windows
+          }
+        }
+
         // Apple Silicon (Metal)
         if (platform === 'darwin') {
           try {
             const output = execSync('system_profiler SPDisplaysDataType', {
               encoding: 'utf-8',
-              timeout: 2000
+              timeout: 3000
             });
-            if (output.includes('GPU Memory')) {
-              console.log('[GPU Handler] ✅ GPU Apple Silicon detectada');
-              // Apple Silicon no expone VRAM de forma directa, retornamos placeholder
+            if (output.includes('GPU')) {
+              // Intentar extraer nombre del GPU
+              const nameMatch = output.match(/Chipset Model:\s*(.+)/);
+              const gpuName = nameMatch ? nameMatch[1].trim() : 'Apple Silicon GPU';
+              console.log('[GPU Handler] ✅ GPU Apple Silicon detectada:', gpuName);
+              // Apple Silicon no expone VRAM de forma directa
               return {
                 ok: true,
                 type: 'apple-metal',
+                name: gpuName,
                 totalMB: null,
                 usedMB: null,
                 freeMB: null,
                 usagePercent: null,
+                gpuUtilization: null,
+                temperature: null,
                 note: 'Apple Metal no expone datos de VRAM'
               };
             }
@@ -384,10 +450,13 @@ function registerSystemHandlers() {
       return {
         ok: false,
         type: null,
+        name: null,
         totalMB: null,
         usedMB: null,
         freeMB: null,
-        usagePercent: null
+        usagePercent: null,
+        gpuUtilization: null,
+        temperature: null
       };
     } catch (e) {
       return {
