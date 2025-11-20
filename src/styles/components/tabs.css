@@ -7,6 +7,7 @@
   position: relative;
   max-width: 100%;
   overflow-x: auto;
+  overflow-y: visible !important;
   flex-wrap: nowrap;
   white-space: nowrap;
   height: 26px;
@@ -405,29 +406,43 @@ button.tab-action-button,
 .local-terminal-buttons .tab-action-button {
   color: var(--ui-tab-text, rgba(255, 255, 255, 0.7)) !important;
   background: var(--ui-tab-bg, transparent) !important;
-  border: 1px solid var(--ui-tab-border, transparent) !important;
-  transition: var(--tab-transition, all 0.2s ease) !important;
-  border-radius: var(--tab-border-radius, 4px 4px 0 0) !important;
-  box-shadow: var(--tab-box-shadow, none) !important;
-  backdrop-filter: var(--tab-backdrop-filter, none) !important;
-  border-bottom: var(--tab-border-bottom, 1px solid var(--ui-tab-border, transparent)) !important;
-  clip-path: var(--tab-clip-path, none) !important;
-  filter: var(--tab-filter, none) !important;
-  transform: var(--tab-transform, none) !important;
-  border-style: var(--tab-border-style, solid) !important;
-  background-size: var(--tab-background-size, auto) !important;
+  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.2)) !important;
+  transition: all 0.2s ease !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  clip-path: none !important;
+  filter: none !important;
+  transform: none !important;
+  border-style: solid !important;
+  background-size: auto !important;
+  margin-bottom: 0 !important;
+}
+
+/* Botones cuadrados pequeños en el contenedor de terminales locales */
+.local-terminal-buttons .tab-action-button {
+  width: 18px !important;
+  min-width: 18px !important;
+  max-width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  max-height: 18px !important;
+  padding: 0 !important;
+  font-size: 10px !important;
+  box-sizing: border-box !important;
 }
 
 /* Contenedor de botones de acción */
 .local-terminal-buttons {
   display: flex !important;
-  align-items: flex-end !important;
+  align-items: center !important;
   gap: 3px !important;
   margin-left: 4px !important;
   margin-right: 2px !important;
   flex-shrink: 0 !important;
   height: 26px !important;
   padding-bottom: 0 !important;
+  box-sizing: border-box !important;
 }
 
 .tab-action-button .p-button-icon,

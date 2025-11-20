@@ -511,13 +511,14 @@ const MainContentArea = ({
     buttonsContainer.className = 'local-terminal-buttons';
     buttonsContainer.style.cssText = `
       display: flex;
-      align-items: flex-end;
+      align-items: center;
       gap: 3px;
       margin-left: 4px;
       margin-right: 2px;
       flex-shrink: 0;
       height: 26px;
       padding-bottom: 0;
+      box-sizing: border-box;
     `;
     
     // Botón +
@@ -526,29 +527,33 @@ const MainContentArea = ({
     plusButton.className = 'p-button p-button-text p-button-sm tab-action-button';
     plusButton.style.cssText = `
       color: var(--ui-tab-text, rgba(255, 255, 255, 0.7)) !important;
-      padding: 0 8px !important;
-      min-width: 28px !important;
-      height: 24px !important;
-      font-size: 11px !important;
+      padding: 0 !important;
+      width: 18px !important;
+      min-width: 18px !important;
+      max-width: 18px !important;
+      height: 18px !important;
+      min-height: 18px !important;
+      max-height: 18px !important;
+      font-size: 10px !important;
       background: var(--ui-tab-bg, transparent) !important;
       background-color: var(--ui-tab-bg, transparent) !important;
-      border: 1px solid var(--ui-tab-border, transparent) !important;
-      border-radius: var(--tab-border-radius, 4px 4px 0 0) !important;
-      box-shadow: var(--tab-box-shadow, none) !important;
+      border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.2)) !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       cursor: pointer !important;
-      transition: var(--tab-transition, all 0.2s ease) !important;
-      backdrop-filter: var(--tab-backdrop-filter, none) !important;
-      border-bottom: var(--tab-border-bottom, 1px solid var(--ui-tab-border, transparent)) !important;
-      clip-path: var(--tab-clip-path, none) !important;
-      filter: var(--tab-filter, none) !important;
-      transform: var(--tab-transform, none) !important;
-      border-style: var(--tab-border-style, solid) !important;
-      background-size: var(--tab-background-size, auto) !important;
+      transition: all 0.2s ease !important;
+      backdrop-filter: none !important;
+      clip-path: none !important;
+      filter: none !important;
+      transform: none !important;
+      border-style: solid !important;
+      background-size: auto !important;
       margin-bottom: 0 !important;
       line-height: 1 !important;
+      box-sizing: border-box !important;
     `;
     
     // Aplicar color del tema al icono
@@ -595,29 +600,33 @@ const MainContentArea = ({
     dropdownButton.className = 'p-button p-button-text p-button-sm tab-action-button';
     dropdownButton.style.cssText = `
       color: var(--ui-tab-text, rgba(255, 255, 255, 0.7)) !important;
-      padding: 0 8px !important;
-      min-width: 28px !important;
-      height: 24px !important;
-      font-size: 10px !important;
+      padding: 0 !important;
+      width: 18px !important;
+      min-width: 18px !important;
+      max-width: 18px !important;
+      height: 18px !important;
+      min-height: 18px !important;
+      max-height: 18px !important;
+      font-size: 9px !important;
       background: var(--ui-tab-bg, transparent) !important;
       background-color: var(--ui-tab-bg, transparent) !important;
-      border: 1px solid var(--ui-tab-border, transparent) !important;
-      border-radius: var(--tab-border-radius, 4px 4px 0 0) !important;
-      box-shadow: var(--tab-box-shadow, none) !important;
+      border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.2)) !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       cursor: pointer !important;
-      transition: var(--tab-transition, all 0.2s ease) !important;
-      backdrop-filter: var(--tab-backdrop-filter, none) !important;
-      border-bottom: var(--tab-border-bottom, 1px solid var(--ui-tab-border, transparent)) !important;
-      clip-path: var(--tab-clip-path, none) !important;
-      filter: var(--tab-filter, none) !important;
-      transform: var(--tab-transform, none) !important;
-      border-style: var(--tab-border-style, solid) !important;
-      background-size: var(--tab-background-size, auto) !important;
+      transition: all 0.2s ease !important;
+      backdrop-filter: none !important;
+      clip-path: none !important;
+      filter: none !important;
+      transform: none !important;
+      border-style: solid !important;
+      background-size: auto !important;
       margin-bottom: 0 !important;
       line-height: 1 !important;
+      box-sizing: border-box !important;
     `;
     
     // Aplicar color del tema al icono
