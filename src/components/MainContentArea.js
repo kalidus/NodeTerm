@@ -538,7 +538,7 @@ const MainContentArea = ({
       background: var(--ui-tab-bg, transparent) !important;
       background-color: var(--ui-tab-bg, transparent) !important;
       border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.2)) !important;
-      border-radius: 0 !important;
+      border-radius: 3px !important;
       box-shadow: none !important;
       display: flex !important;
       align-items: center !important;
@@ -611,7 +611,7 @@ const MainContentArea = ({
       background: var(--ui-tab-bg, transparent) !important;
       background-color: var(--ui-tab-bg, transparent) !important;
       border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.2)) !important;
-      border-radius: 0 !important;
+      border-radius: 3px !important;
       box-shadow: none !important;
       display: flex !important;
       align-items: center !important;

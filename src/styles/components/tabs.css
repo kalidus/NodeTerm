@@ -408,7 +408,7 @@ button.tab-action-button,
   background: var(--ui-tab-bg, transparent) !important;
   border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.2)) !important;
   transition: all 0.2s ease !important;
-  border-radius: 0 !important;
+  border-radius: 3px !important;
   box-shadow: none !important;
   backdrop-filter: none !important;
   clip-path: none !important;
@@ -429,6 +429,7 @@ button.tab-action-button,
   max-height: 18px !important;
   padding: 0 !important;
   font-size: 10px !important;
+  border-radius: 3px !important;
   box-sizing: border-box !important;
 }
 
