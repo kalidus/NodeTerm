@@ -384,16 +384,141 @@
 
 /* === ESTILOS PARA BOTONES DE ACCIÓN DE PESTAÑAS (+ y ▼) === */
 /* Los botones dentro del contenedor de pestañas que no son botones de cerrar */
-.hide-scrollbar + div .p-button-text.p-button-sm:hover,
-button[aria-label="Nueva pestaña"]:hover,
-button[aria-label="Seleccionar tipo de terminal"]:hover {
-  background: rgba(255, 255, 255, 0.15) !important;
-  color: rgba(255, 255, 255, 1) !important;
+.tab-action-button,
+button.tab-action-button,
+.p-button.tab-action-button,
+.main-tab-view .tab-action-button,
+.main-tab-view button.tab-action-button,
+.main-tab-view .p-button.tab-action-button,
+.local-terminal-buttons .tab-action-button {
+  color: var(--ui-tab-text, rgba(255, 255, 255, 0.7)) !important;
+  background: var(--ui-tab-bg, transparent) !important;
+  border: 1px solid var(--ui-tab-border, transparent) !important;
+  transition: var(--tab-transition, all 0.2s ease) !important;
+  border-radius: var(--tab-border-radius, 4px 4px 0 0) !important;
+  box-shadow: var(--tab-box-shadow, none) !important;
+  backdrop-filter: var(--tab-backdrop-filter, none) !important;
+  border-bottom: var(--tab-border-bottom, 1px solid var(--ui-tab-border, transparent)) !important;
+  clip-path: var(--tab-clip-path, none) !important;
+  filter: var(--tab-filter, none) !important;
+  transform: var(--tab-transform, none) !important;
+  border-style: var(--tab-border-style, solid) !important;
+  background-size: var(--tab-background-size, auto) !important;
 }
 
-.hide-scrollbar + div .p-button-text.p-button-sm:active,
+/* Contenedor de botones de acción */
+.local-terminal-buttons {
+  display: flex !important;
+  align-items: flex-end !important;
+  gap: 3px !important;
+  margin-left: 4px !important;
+  margin-right: 2px !important;
+  flex-shrink: 0 !important;
+  height: 26px !important;
+  padding-bottom: 0 !important;
+}
+
+.tab-action-button .p-button-icon,
+button.tab-action-button .p-button-icon,
+.p-button.tab-action-button .p-button-icon,
+.tab-action-button i,
+button.tab-action-button i,
+.p-button.tab-action-button i,
+.main-tab-view .tab-action-button .p-button-icon,
+.main-tab-view button.tab-action-button .p-button-icon,
+.main-tab-view .p-button.tab-action-button .p-button-icon,
+.main-tab-view .tab-action-button i,
+.main-tab-view button.tab-action-button i,
+.main-tab-view .p-button.tab-action-button i,
+.local-terminal-buttons .tab-action-button .p-button-icon,
+.local-terminal-buttons .tab-action-button i {
+  color: var(--ui-tab-text, rgba(255, 255, 255, 0.7)) !important;
+  font-size: inherit !important;
+  line-height: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.tab-action-button:hover,
+button.tab-action-button:hover,
+.p-button.tab-action-button:hover,
+.local-terminal-buttons .tab-action-button:hover,
+button[aria-label="Nueva pestaña"]:hover,
+button[aria-label="Seleccionar tipo de terminal"]:hover {
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.15)) !important;
+  background-color: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.15)) !important;
+  color: var(--ui-tab-text, rgba(255, 255, 255, 1)) !important;
+}
+
+.tab-action-button:hover .p-button-icon,
+button.tab-action-button:hover .p-button-icon,
+.p-button.tab-action-button:hover .p-button-icon,
+.local-terminal-buttons .tab-action-button:hover .p-button-icon,
+button[aria-label="Nueva pestaña"]:hover .p-button-icon,
+button[aria-label="Seleccionar tipo de terminal"]:hover .p-button-icon,
+.tab-action-button:hover i,
+button.tab-action-button:hover i,
+.p-button.tab-action-button:hover i,
+.local-terminal-buttons .tab-action-button:hover i,
+button[aria-label="Nueva pestaña"]:hover i,
+button[aria-label="Seleccionar tipo de terminal"]:hover i {
+  color: var(--ui-tab-text, rgba(255, 255, 255, 1)) !important;
+}
+
+.tab-action-button:active,
+.tab-action-button:focus,
+button.tab-action-button:active,
+button.tab-action-button:focus,
+.p-button.tab-action-button:active,
+.p-button.tab-action-button:focus,
+.local-terminal-buttons .tab-action-button:active,
+.local-terminal-buttons .tab-action-button:focus,
 button[aria-label="Nueva pestaña"]:active,
-button[aria-label="Seleccionar tipo de terminal"]:active {
-  background: rgba(255, 255, 255, 0.2) !important;
+button[aria-label="Nueva pestaña"]:focus,
+button[aria-label="Seleccionar tipo de terminal"]:active,
+button[aria-label="Seleccionar tipo de terminal"]:focus {
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.2)) !important;
+  background-color: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.2)) !important;
+  color: var(--ui-tab-text, rgba(255, 255, 255, 1)) !important;
+  transform: scale(0.98);
+  box-shadow: var(--tab-box-shadow, none) !important;
+}
+
+.tab-action-button:active .p-button-icon,
+.tab-action-button:focus .p-button-icon,
+button.tab-action-button:active .p-button-icon,
+button.tab-action-button:focus .p-button-icon,
+.p-button.tab-action-button:active .p-button-icon,
+.p-button.tab-action-button:focus .p-button-icon,
+.local-terminal-buttons .tab-action-button:active .p-button-icon,
+.local-terminal-buttons .tab-action-button:focus .p-button-icon,
+button[aria-label="Nueva pestaña"]:active .p-button-icon,
+button[aria-label="Nueva pestaña"]:focus .p-button-icon,
+button[aria-label="Seleccionar tipo de terminal"]:active .p-button-icon,
+button[aria-label="Seleccionar tipo de terminal"]:focus .p-button-icon,
+.tab-action-button:active i,
+.tab-action-button:focus i,
+button.tab-action-button:active i,
+button.tab-action-button:focus i,
+.p-button.tab-action-button:active i,
+.p-button.tab-action-button:focus i,
+.local-terminal-buttons .tab-action-button:active i,
+.local-terminal-buttons .tab-action-button:focus i,
+button[aria-label="Nueva pestaña"]:active i,
+button[aria-label="Nueva pestaña"]:focus i,
+button[aria-label="Seleccionar tipo de terminal"]:active i,
+button[aria-label="Seleccionar tipo de terminal"]:focus i {
+  color: var(--ui-tab-text, rgba(255, 255, 255, 1)) !important;
+}
+
+/* Compatibilidad con selectores existentes */
+.hide-scrollbar + div .p-button-text.p-button-sm:hover {
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.15)) !important;
+  color: var(--ui-tab-text, rgba(255, 255, 255, 1)) !important;
+}
+
+.hide-scrollbar + div .p-button-text.p-button-sm:active {
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.2)) !important;
   transform: scale(0.95);
 }

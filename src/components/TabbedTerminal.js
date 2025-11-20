@@ -1257,16 +1257,16 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             {/* Botón para nueva pestaña */}
                             <Button
                                 icon="pi pi-plus"
-                                className="p-button-text p-button-sm"
+                                className="p-button-text p-button-sm tab-action-button"
                                 style={{
-                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    color: 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))',
+                                    background: 'transparent',
+                                    border: 'none',
                                     padding: '0',
                                     minWidth: '18px',
                                     width: '18px',
                                     height: '18px',
                                     fontSize: '9px',
-                                    background: 'transparent',
-                                    border: 'none',
                                     borderRadius: '2px',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -1283,16 +1283,16 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             {/* Botón dropdown para seleccionar tipo de terminal */}
                             <Button
                                 icon="pi pi-chevron-down"
-                                className="p-button-text p-button-sm"
+                                className="p-button-text p-button-sm tab-action-button"
                                 style={{
-                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    color: 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))',
+                                    background: 'transparent',
+                                    border: 'none',
                                     padding: '0',
                                     minWidth: '18px',
                                     width: '18px',
                                     height: '18px',
                                     fontSize: '8px',
-                                    background: 'transparent',
-                                    border: 'none',
                                     borderRadius: '2px',
                                     display: 'flex',
                                     alignItems: 'center',
