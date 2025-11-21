@@ -268,7 +268,43 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           }))
         });
       }
-      
+
+      // Opción para copiar contraseña
+      if (node.data?.password) {
+        items.push({
+          label: 'Copiar contraseña',
+          icon: 'pi pi-key',
+          command: async () => {
+            try {
+              if (window.electron?.clipboard?.writeText) {
+                await window.electron.clipboard.writeText(node.data.password);
+              } else if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(node.data.password);
+              }
+              // Mostrar toast de confirmación
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'success',
+                  summary: 'Copiado',
+                  detail: 'Contraseña copiada al portapapeles',
+                  life: 1500
+                });
+              }
+            } catch (error) {
+              console.error('Error copiando contraseña:', error);
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'error',
+                  summary: 'Error',
+                  detail: 'No se pudo copiar la contraseña',
+                  life: 3000
+                });
+              }
+            }
+          }
+        });
+      }
+
       items.push({ separator: true });
       items.push({
         label: 'Duplicar',
@@ -346,6 +382,43 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           } catch (e) { /* noop */ }
         }
       });
+
+      // Opción para copiar contraseña en RDP
+      if (node.data?.password) {
+        items.push({
+          label: 'Copiar contraseña',
+          icon: 'pi pi-key',
+          command: async () => {
+            try {
+              if (window.electron?.clipboard?.writeText) {
+                await window.electron.clipboard.writeText(node.data.password);
+              } else if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(node.data.password);
+              }
+              // Mostrar toast de confirmación
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'success',
+                  summary: 'Copiado',
+                  detail: 'Contraseña copiada al portapapeles',
+                  life: 1500
+                });
+              }
+            } catch (error) {
+              console.error('Error copiando contraseña:', error);
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'error',
+                  summary: 'Error',
+                  detail: 'No se pudo copiar la contraseña',
+                  life: 3000
+                });
+              }
+            }
+          }
+        });
+      }
+
       items.push({ separator: true });
       items.push({
         label: 'Duplicar',
@@ -434,7 +507,42 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         }
       });
     } else if (isPassword) {
-      // Solo opción de eliminar para passwords antiguos en la sidebar de conexiones
+      // Opción para copiar contraseña en conexiones de tipo password
+      if (node.data?.password) {
+        items.push({
+          label: 'Copiar contraseña',
+          icon: 'pi pi-key',
+          command: async () => {
+            try {
+              if (window.electron?.clipboard?.writeText) {
+                await window.electron.clipboard.writeText(node.data.password);
+              } else if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(node.data.password);
+              }
+              // Mostrar toast de confirmación
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'success',
+                  summary: 'Copiado',
+                  detail: 'Contraseña copiada al portapapeles',
+                  life: 1500
+                });
+              }
+            } catch (error) {
+              console.error('Error copiando contraseña:', error);
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'error',
+                  summary: 'Error',
+                  detail: 'No se pudo copiar la contraseña',
+                  life: 3000
+                });
+              }
+            }
+          }
+        });
+      }
+
       items.push({
         label: 'Eliminar',
         icon: 'pi pi-trash',
