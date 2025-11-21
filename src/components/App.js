@@ -1094,6 +1094,7 @@ const App = () => {
     handleSaveRdpToSidebar,
     handleSaveFileConnectionToSidebar,
     openEditFileConnectionDialog,
+    openNewUnifiedConnectionDialog,
     createNewPasswordEntry
   } = useFormHandlers({
     toast,
@@ -1641,6 +1642,9 @@ const App = () => {
       sidebarCallbacksRef.current = {};
     }
     
+    sidebarCallbacksRef.current.createSSH = (targetFolder = null) => {
+      window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
+    };
     sidebarCallbacksRef.current.createRDP = (targetFolder = null) => {
       openNewRdpDialog(targetFolder);
     };
@@ -1673,12 +1677,27 @@ const App = () => {
         handleSaveFileConnectionToSidebar(fileData, false, null);
       }
     };
-    
+
     window.addEventListener('save-file-connection', handleSaveFileConnection);
     return () => {
       window.removeEventListener('save-file-connection', handleSaveFileConnection);
     };
   }, [handleSaveFileConnectionToSidebar]);
+
+  // Listener para abrir diálogo unificado de nueva conexión
+  useEffect(() => {
+    const handleOpenNewUnifiedConnectionDialog = () => {
+      if (openNewUnifiedConnectionDialog) {
+        console.log('App - Recibido evento open-new-unified-connection-dialog');
+        openNewUnifiedConnectionDialog();
+      }
+    };
+
+    window.addEventListener('open-new-unified-connection-dialog', handleOpenNewUnifiedConnectionDialog);
+    return () => {
+      window.removeEventListener('open-new-unified-connection-dialog', handleOpenNewUnifiedConnectionDialog);
+    };
+  }, [openNewUnifiedConnectionDialog]);
 
   // Desactivar reactivación automática al cambiar rdpTabs si hay activación forzada u orden explícito
   useEffect(() => {
