@@ -1688,7 +1688,6 @@ const App = () => {
   useEffect(() => {
     const handleOpenNewUnifiedConnectionDialog = () => {
       if (openNewUnifiedConnectionDialog) {
-        console.log('App - Recibido evento open-new-unified-connection-dialog');
         openNewUnifiedConnectionDialog();
       }
     };
