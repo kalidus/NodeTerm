@@ -483,6 +483,21 @@ export const useFormHandlers = ({
   }, [setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setShowUnifiedConnectionDialog]);
 
   /**
+   * Abrir diálogo unificado para nueva conexión (limpia todos los estados de edición)
+   */
+  const openNewUnifiedConnectionDialog = useCallback(() => {
+    console.log('🔵 openNewUnifiedConnectionDialog - Abriendo diálogo unificado para nueva conexión');
+
+    // Limpiar SOLO los estados de edición esenciales para asegurar modo creación
+    setEditSSHNode(null);
+    setEditingRdpNode(null);
+    setEditingFileConnectionNode(null);
+
+    console.log('🔵 openNewUnifiedConnectionDialog - Estados de edición limpiados');
+    setShowUnifiedConnectionDialog(true);
+  }, [setEditSSHNode, setEditingRdpNode, setEditingFileConnectionNode, setShowUnifiedConnectionDialog]);
+
+  /**
    * Abrir diálogo nuevo RDP
    */
   const openNewRdpDialog = useCallback((targetFolder = null) => {
@@ -822,6 +837,7 @@ export const useFormHandlers = ({
     handleSaveFileConnectionToSidebar,
     openEditFileConnectionDialog,
     openNewFileConnectionDialog,
+    openNewUnifiedConnectionDialog,
     createNewPasswordEntry
   };
 };

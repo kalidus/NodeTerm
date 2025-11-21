@@ -2108,7 +2108,10 @@ const Sidebar = React.memo(({
                   <Button 
                     icon="pi pi-desktop" 
                     className="p-button-rounded p-button-text sidebar-action-button glass-button" 
-                    onClick={() => setShowUnifiedConnectionDialog && setShowUnifiedConnectionDialog(true)} 
+                    onClick={() => {
+                      // Usar evento personalizado para evitar problemas de props
+                      window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
+                    }} 
                     tooltip="Nueva conexión" 
                     tooltipOptions={{ position: 'bottom' }}
                   />
