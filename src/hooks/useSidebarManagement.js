@@ -554,16 +554,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       });
     } else if (isFolder) {
       items.push({
-        label: 'Nueva Carpeta',
-        icon: 'pi pi-folder',
-        command: () => {
-          if (sidebarCallbacksRef.current.createFolder) {
-            sidebarCallbacksRef.current.createFolder(node.key);
-          }
-        }
-      });
-      items.push({
-        label: 'Nueva Conexión SSH',
+        label: 'Nueva Conexión',
         icon: 'pi pi-desktop',
         command: () => {
           if (sidebarCallbacksRef.current.createSSH) {
@@ -572,6 +563,15 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         }
       });
       items.push({ separator: true });
+      items.push({
+        label: 'Nueva Carpeta',
+        icon: 'pi pi-folder',
+        command: () => {
+          if (sidebarCallbacksRef.current.createFolder) {
+            sidebarCallbacksRef.current.createFolder(node.key);
+          }
+        }
+      });
       items.push({
         label: 'Duplicar Carpeta',
         icon: 'pi pi-copy',
@@ -616,7 +616,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         }
       },
       {
-        label: 'Nueva Conexión SSH',
+        label: 'Nueva Conexión',
         icon: 'pi pi-desktop',
         command: () => {
           if (sidebarCallbacksRef.current.createSSH) {
