@@ -3,10 +3,10 @@
 /* Menú contextual de PrimeReact (usado para terminal, etc.) */
 .p-menu.p-menu-overlay {
   min-width: 180px !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-  border: 1px solid var(--surface-300, #dee2e6) !important;
+  box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.15)) !important;
+  border: 1px solid var(--ui-context-border) !important;
   border-radius: 6px !important;
-  background: var(--surface-0, #ffffff) !important;
+  background: var(--ui-context-bg) !important;
   z-index: 9999 !important;
   animation: none !important;
   position: fixed !important;
@@ -44,23 +44,29 @@
 }
 
 .p-menu .p-menuitem-link:hover {
-  background-color: var(--surface-100, #f8f9fa);
+  background-color: var(--ui-context-hover) !important;
 }
 
 .p-menu .p-menuitem-icon {
   width: 1rem;
   text-align: center;
-  color: var(--text-color-secondary, #6c757d);
+  color: var(--ui-context-text) !important;
+  opacity: 0.8;
+}
+
+.p-menu .p-menuitem-link:hover .p-menuitem-icon {
+  opacity: 1;
 }
 
 .p-menu .p-menuitem-text {
-  color: var(--text-color, #212529);
+  color: var(--ui-context-text) !important;
   font-weight: 500;
 }
 
 .p-menu .p-separator {
   margin: 0.25rem 0;
-  border-top: 1px solid var(--surface-300, #dee2e6);
+  border-top: 1px solid var(--ui-context-border) !important;
+  opacity: 0.5;
 }
 
 /* Estilos para el menú personalizado de la aplicación (sidebar, etc.) */
@@ -166,13 +172,61 @@
   }
 }
 
+/* Menú contextual de PrimeReact (ContextMenu) - FORZAR tema */
+.p-contextmenu {
+  background: var(--ui-context-bg) !important;
+  background-color: var(--ui-context-bg) !important;
+  border: 1px solid var(--ui-context-border) !important;
+  box-shadow: 0 4px 12px var(--ui-context-shadow) !important;
+  border-radius: 6px !important;
+  padding: 4px 0 !important;
+}
+
+.p-contextmenu ul,
+.p-contextmenu li,
+.p-contextmenu .p-menuitem,
+.p-contextmenu .p-menuitem-content {
+  background: var(--ui-context-bg) !important;
+  background-color: var(--ui-context-bg) !important;
+}
+
+.p-contextmenu .p-menuitem-link {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: var(--ui-context-text) !important;
+  transition: background-color 0.15s ease;
+}
+
+.p-contextmenu .p-menuitem-link:hover {
+  background: var(--ui-context-hover) !important;
+  background-color: var(--ui-context-hover) !important;
+}
+
+.p-contextmenu .p-menuitem-icon {
+  color: var(--ui-context-text) !important;
+  opacity: 0.8;
+}
+
+.p-contextmenu .p-menuitem-link:hover .p-menuitem-icon {
+  opacity: 1;
+}
+
+.p-contextmenu .p-menuitem-text {
+  color: var(--ui-context-text) !important;
+}
+
+.p-contextmenu .p-separator {
+  border-top: 1px solid var(--ui-context-border) !important;
+  opacity: 0.5;
+}
+
 /* Menú contextual de selección de terminales - FORZAR tema */
 .context-menu-themed.p-contextmenu {
-  background: var(--ui-dialog-bg, #1e1e1e) !important;
-  background-color: var(--ui-dialog-bg, #1e1e1e) !important;
-  border: 1px solid var(--ui-dialog-border, #333) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-  border-radius: 4px !important;
+  background: var(--ui-context-bg) !important;
+  background-color: var(--ui-context-bg) !important;
+  border: 1px solid var(--ui-context-border) !important;
+  box-shadow: 0 4px 12px var(--ui-context-shadow) !important;
+  border-radius: 6px !important;
   opacity: 1 !important;
 }
 
@@ -180,39 +234,25 @@
 .context-menu-themed.p-contextmenu li,
 .context-menu-themed.p-contextmenu .p-menuitem,
 .context-menu-themed.p-contextmenu .p-menuitem-content {
-  background: var(--ui-dialog-bg, #1e1e1e) !important;
-  background-color: var(--ui-dialog-bg, #1e1e1e) !important;
+  background: var(--ui-context-bg) !important;
+  background-color: var(--ui-context-bg) !important;
 }
 
 .context-menu-themed.p-contextmenu .p-menuitem-link {
   background: transparent !important;
   background-color: transparent !important;
-  color: var(--ui-dialog-text, #ffffff) !important;
+  color: var(--ui-context-text) !important;
 }
 
 .context-menu-themed.p-contextmenu .p-menuitem-link:hover {
-  background: var(--ui-hover-bg, rgba(255, 255, 255, 0.1)) !important;
-  background-color: var(--ui-hover-bg, rgba(255, 255, 255, 0.1)) !important;
+  background: var(--ui-context-hover) !important;
+  background-color: var(--ui-context-hover) !important;
 }
 
 .context-menu-themed.p-contextmenu .p-menuitem-icon {
-  color: var(--ui-dialog-text, #ffffff) !important;
-}
-
-.context-menu-themed.p-contextmenu .p-menuitem-link {
-  color: var(--ui-text-primary) !important;
-  background: transparent !important;
-  transition: background-color 0.15s;
-}
-
-.context-menu-themed.p-contextmenu .p-menuitem-link:hover {
-  background: var(--ui-hover-bg, rgba(255, 255, 255, 0.1)) !important;
-}
-
-.context-menu-themed.p-contextmenu .p-menuitem-icon {
-  color: var(--ui-text-secondary, #888) !important;
+  color: var(--ui-context-text) !important;
 }
 
 .context-menu-themed.p-contextmenu .p-menuitem-link:hover .p-menuitem-icon {
-  color: var(--ui-text-primary) !important;
+  opacity: 1;
 }
