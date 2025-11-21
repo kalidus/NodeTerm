@@ -290,6 +290,250 @@ export function GroupDialog({
 }
 
 // --- UnifiedConnectionDialog: diálogo unificado para SSH y RDP ---
+// Diálogo independiente para conexiones de archivos (SFTP/FTP/SCP)
+export function FileConnectionDialog({
+  visible,
+  onHide,
+  // Props para edición
+  isEditMode = false,
+  editNodeData = null,
+  // Props para creación
+  fileConnectionName = '',
+  setFileConnectionName = () => {},
+  fileConnectionHost = '',
+  setFileConnectionHost = () => {},
+  fileConnectionUser = '',
+  setFileConnectionUser = () => {},
+  fileConnectionPassword = '',
+  setFileConnectionPassword = () => {},
+  fileConnectionPort = 22,
+  setFileConnectionPort = () => {},
+  fileConnectionProtocol = 'sftp',
+  setFileConnectionProtocol = () => {},
+  fileConnectionRemoteFolder = '',
+  setFileConnectionRemoteFolder = () => {},
+  fileConnectionTargetFolder = '',
+  setFileConnectionTargetFolder = () => {},
+  onFileConnectionConfirm = null,
+  fileConnectionLoading = false
+}) {
+  // Estados locales para el formulario
+  const [localName, setLocalName] = useState('');
+  const [localHost, setLocalHost] = useState('');
+  const [localUser, setLocalUser] = useState('');
+  const [localPassword, setLocalPassword] = useState('');
+  const [localPort, setLocalPort] = useState(22);
+  const [localProtocol, setLocalProtocol] = useState('sftp');
+  const [localRemoteFolder, setLocalRemoteFolder] = useState('');
+  const [localTargetFolder, setLocalTargetFolder] = useState('');
+
+  // Precargar datos en modo edición
+  useEffect(() => {
+    if (isEditMode && editNodeData && visible) {
+      console.log('🔵 [FileConnectionDialog] Precargando datos en modo edición:', editNodeData);
+      const data = editNodeData.data || {};
+      setLocalName(editNodeData.label || '');
+      setLocalHost(data.host || '');
+      setLocalUser(data.user || data.username || '');
+      setLocalPassword(data.password || '');
+      setLocalPort(data.port || (data.protocol === 'ftp' ? 21 : 22));
+      setLocalProtocol(data.protocol || data.type || 'sftp');
+      setLocalRemoteFolder(data.remoteFolder || '');
+      setLocalTargetFolder(data.targetFolder || '');
+    } else if (!isEditMode && visible) {
+      // Modo creación: usar valores por defecto o de props
+      setLocalName(fileConnectionName || '');
+      setLocalHost(fileConnectionHost || '');
+      setLocalUser(fileConnectionUser || '');
+      setLocalPassword(fileConnectionPassword || '');
+      setLocalPort(fileConnectionPort || 22);
+      setLocalProtocol(fileConnectionProtocol || 'sftp');
+      setLocalRemoteFolder(fileConnectionRemoteFolder || '');
+      setLocalTargetFolder(fileConnectionTargetFolder || '');
+    }
+  }, [isEditMode, editNodeData, visible, fileConnectionName, fileConnectionHost, fileConnectionUser, fileConnectionPassword, fileConnectionPort, fileConnectionProtocol, fileConnectionRemoteFolder, fileConnectionTargetFolder]);
+
+  // Resetear al cerrar
+  useEffect(() => {
+    if (!visible) {
+      setLocalName('');
+      setLocalHost('');
+      setLocalUser('');
+      setLocalPassword('');
+      setLocalPort(22);
+      setLocalProtocol('sftp');
+      setLocalRemoteFolder('');
+      setLocalTargetFolder('');
+    }
+  }, [visible]);
+
+  const handleProtocolChange = (value) => {
+    setLocalProtocol(value);
+    if (setFileConnectionProtocol) setFileConnectionProtocol(value);
+    // Cambiar puerto por defecto según protocolo
+    const defaultPorts = { sftp: 22, ftp: 21, scp: 22 };
+    const newPort = defaultPorts[value] || 22;
+    setLocalPort(newPort);
+    if (setFileConnectionPort) setFileConnectionPort(newPort);
+  };
+
+  const handleConfirm = () => {
+    if (!localName.trim() || !localHost.trim() || !localUser.trim()) {
+      console.error('Faltan campos requeridos');
+      return;
+    }
+
+    const fileData = {
+      name: localName,
+      host: localHost,
+      username: localUser,
+      password: localPassword,
+      port: localPort,
+      protocol: localProtocol,
+      remoteFolder: localRemoteFolder,
+      targetFolder: localTargetFolder
+    };
+
+    console.log('Guardando conexión de archivos:', fileData);
+
+    if (onFileConnectionConfirm && typeof onFileConnectionConfirm === 'function') {
+      onFileConnectionConfirm(fileData);
+    }
+  };
+
+  return (
+    <Dialog
+      header={isEditMode ? "Editar Conexión de Archivos" : "Nueva Conexión de Archivos"}
+      visible={visible}
+      style={{ width: '500px', borderRadius: '16px' }}
+      modal
+      onHide={onHide}
+      className="file-connection-dialog"
+    >
+      <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
+          <Card title="🔗 Conexión de Archivos" className="mb-2">
+            <div className="formgrid grid">
+              <div className="field col-12">
+                <label htmlFor="file-name">Nombre de la conexión *</label>
+                <InputText
+                  id="file-name"
+                  value={localName}
+                  onChange={(e) => setLocalName(e.target.value)}
+                  placeholder="Mi servidor SFTP"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div className="field col-12 md:col-6">
+                <label htmlFor="file-protocol">Protocolo *</label>
+                <Dropdown
+                  id="file-protocol"
+                  value={localProtocol}
+                  options={[
+                    { label: 'SFTP', value: 'sftp' },
+                    { label: 'FTP', value: 'ftp' },
+                    { label: 'SCP', value: 'scp' }
+                  ]}
+                  onChange={(e) => handleProtocolChange(e.value)}
+                  placeholder="Seleccionar protocolo"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div className="field col-12 md:col-6">
+                <label htmlFor="file-host">Host *</label>
+                <InputText
+                  id="file-host"
+                  value={localHost}
+                  onChange={(e) => setLocalHost(e.target.value)}
+                  placeholder="192.168.1.100"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div className="field col-12 md:col-6">
+                <label htmlFor="file-user">Usuario *</label>
+                <InputText
+                  id="file-user"
+                  value={localUser}
+                  onChange={(e) => setLocalUser(e.target.value)}
+                  placeholder="usuario"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div className="field col-12 md:col-6">
+                <label htmlFor="file-port">Puerto</label>
+                <InputText
+                  id="file-port"
+                  type="number"
+                  value={localPort}
+                  onChange={(e) => setLocalPort(parseInt(e.target.value) || (localProtocol === 'ftp' ? 21 : 22))}
+                  placeholder={localProtocol === 'ftp' ? '21' : '22'}
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div className="field col-12">
+                <label htmlFor="file-password">Contraseña</label>
+                <InputText
+                  id="file-password"
+                  type="password"
+                  value={localPassword}
+                  onChange={(e) => setLocalPassword(e.target.value)}
+                  placeholder="Contraseña"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div className="field col-12">
+                <label htmlFor="file-remote-folder">Carpeta remota (opcional)</label>
+                <InputText
+                  id="file-remote-folder"
+                  value={localRemoteFolder}
+                  onChange={(e) => setLocalRemoteFolder(e.target.value)}
+                  placeholder="/home/usuario"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div className="field col-12">
+                <label htmlFor="file-target-folder">Carpeta local destino (opcional)</label>
+                <InputText
+                  id="file-target-folder"
+                  value={localTargetFolder}
+                  onChange={(e) => setLocalTargetFolder(e.target.value)}
+                  placeholder="C:\\Downloads"
+                  style={{ width: '100%' }}
+                />
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div className="flex justify-content-end gap-2 mt-3" style={{ borderTop: '1px solid #e9ecef', paddingTop: '12px' }}>
+          <Button
+            label="Cancelar"
+            icon="pi pi-times"
+            className="p-button-text"
+            onClick={onHide}
+            style={{ fontSize: '13px', padding: '8px 16px' }}
+          />
+          <Button
+            label={isEditMode ? "Guardar Cambios" : "Crear Conexión"}
+            icon="pi pi-check"
+            className="p-button-primary"
+            onClick={handleConfirm}
+            loading={fileConnectionLoading}
+            style={{ fontSize: '13px', padding: '8px 16px' }}
+          />
+        </div>
+      </div>
+    </Dialog>
+  );
+}
+
 export function UnifiedConnectionDialog({
   visible,
   onHide,
@@ -361,27 +605,74 @@ export function UnifiedConnectionDialog({
     }
   }, [visible, onFileConnectionConfirm]);
   // Estados locales para los campos de archivos - siempre funcionan
-  const [localFileConnectionName, setLocalFileConnectionName] = useState(fileConnectionName || '');
-  const [localFileConnectionHost, setLocalFileConnectionHost] = useState(fileConnectionHost || '');
-  const [localFileConnectionUser, setLocalFileConnectionUser] = useState(fileConnectionUser || '');
-  const [localFileConnectionPassword, setLocalFileConnectionPassword] = useState(fileConnectionPassword || '');
-  const [localFileConnectionPort, setLocalFileConnectionPort] = useState(fileConnectionPort || 22);
-  const [localFileConnectionProtocol, setLocalFileConnectionProtocol] = useState(fileConnectionProtocol || 'sftp');
-  const [localFileConnectionRemoteFolder, setLocalFileConnectionRemoteFolder] = useState(fileConnectionRemoteFolder || '');
-  const [localFileConnectionTargetFolder, setLocalFileConnectionTargetFolder] = useState(fileConnectionTargetFolder || '');
+  // Para modo edición, inicializar con valores por defecto que se sobrescribirán en useEffect
+  const [localFileConnectionName, setLocalFileConnectionName] = useState('');
+  const [localFileConnectionHost, setLocalFileConnectionHost] = useState('');
+  const [localFileConnectionUser, setLocalFileConnectionUser] = useState('');
+  const [localFileConnectionPassword, setLocalFileConnectionPassword] = useState('');
+  const [localFileConnectionPort, setLocalFileConnectionPort] = useState(22);
+  const [localFileConnectionProtocol, setLocalFileConnectionProtocol] = useState('sftp');
+  const [localFileConnectionRemoteFolder, setLocalFileConnectionRemoteFolder] = useState('');
+  const [localFileConnectionTargetFolder, setLocalFileConnectionTargetFolder] = useState('');
   
-  // Sincronizar estados locales con props cuando cambian
+  // Sincronizar estados locales con props para modo creación
   useEffect(() => {
-    if (fileConnectionName !== undefined) setLocalFileConnectionName(fileConnectionName);
-    if (fileConnectionHost !== undefined) setLocalFileConnectionHost(fileConnectionHost);
-    if (fileConnectionUser !== undefined) setLocalFileConnectionUser(fileConnectionUser);
-    if (fileConnectionPassword !== undefined) setLocalFileConnectionPassword(fileConnectionPassword);
-    if (fileConnectionPort !== undefined) setLocalFileConnectionPort(fileConnectionPort);
-    if (fileConnectionProtocol !== undefined) setLocalFileConnectionProtocol(fileConnectionProtocol);
-    if (fileConnectionRemoteFolder !== undefined) setLocalFileConnectionRemoteFolder(fileConnectionRemoteFolder);
-    if (fileConnectionTargetFolder !== undefined) setLocalFileConnectionTargetFolder(fileConnectionTargetFolder);
+    console.log('🔄 [Dialogs] Sincronizando estados locales con props:', {
+      isEditMode,
+      fileConnectionName,
+      fileConnectionHost,
+      fileConnectionUser,
+      fileConnectionPort,
+      fileConnectionProtocol
+    });
+
+    // Siempre sincronizar con props, pero el modo edición tiene prioridad con editNodeData
+    if (fileConnectionName !== undefined) {
+      console.log('🔄 [Dialogs] Actualizando localFileConnectionName:', fileConnectionName);
+      setLocalFileConnectionName(fileConnectionName);
+    }
+    if (fileConnectionHost !== undefined) {
+      console.log('🔄 [Dialogs] Actualizando localFileConnectionHost:', fileConnectionHost);
+      setLocalFileConnectionHost(fileConnectionHost);
+    }
+    if (fileConnectionUser !== undefined) {
+      console.log('🔄 [Dialogs] Actualizando localFileConnectionUser:', fileConnectionUser);
+      setLocalFileConnectionUser(fileConnectionUser);
+    }
+    if (fileConnectionPassword !== undefined) {
+      setLocalFileConnectionPassword(fileConnectionPassword);
+    }
+    if (fileConnectionPort !== undefined) {
+      console.log('🔄 [Dialogs] Actualizando localFileConnectionPort:', fileConnectionPort);
+      setLocalFileConnectionPort(fileConnectionPort);
+    }
+    if (fileConnectionProtocol !== undefined) {
+      console.log('🔄 [Dialogs] Actualizando localFileConnectionProtocol:', fileConnectionProtocol);
+      setLocalFileConnectionProtocol(fileConnectionProtocol);
+    }
+    if (fileConnectionRemoteFolder !== undefined) {
+      setLocalFileConnectionRemoteFolder(fileConnectionRemoteFolder);
+    }
+    if (fileConnectionTargetFolder !== undefined) {
+      setLocalFileConnectionTargetFolder(fileConnectionTargetFolder);
+    }
   }, [fileConnectionName, fileConnectionHost, fileConnectionUser, fileConnectionPassword, fileConnectionPort, fileConnectionProtocol, fileConnectionRemoteFolder, fileConnectionTargetFolder]);
-  
+
+  // Resetear estados locales cuando se cierra el diálogo
+  useEffect(() => {
+    if (!visible) {
+      console.log('🔄 [Dialogs] Reseteando estados locales al cerrar diálogo');
+      setLocalFileConnectionName('');
+      setLocalFileConnectionHost('');
+      setLocalFileConnectionUser('');
+      setLocalFileConnectionPassword('');
+      setLocalFileConnectionPort(22);
+      setLocalFileConnectionProtocol('sftp');
+      setLocalFileConnectionRemoteFolder('');
+      setLocalFileConnectionTargetFolder('');
+    }
+  }, [visible]);
+
   // Sincronizar cambios locales con los setters externos
   const handleFileConnectionNameChange = (value) => {
     setLocalFileConnectionName(value);
@@ -582,21 +873,39 @@ export function UnifiedConnectionDialog({
         setActiveTabIndex(1); // Tab RDP
       } else if (editConnectionType === 'sftp' || editConnectionType === 'ftp' || editConnectionType === 'scp') {
         // Precargar datos de archivos (SFTP/FTP/SCP)
+        console.log('🔵 [Dialogs] Precargando datos SFTP/FTP/SCP:', { editConnectionType, editNodeData });
         const data = editNodeData.data || {};
-        if (setFileConnectionName) setFileConnectionName(editNodeData.label || '');
-        if (setFileConnectionHost) setFileConnectionHost(data.host || '');
-        if (setFileConnectionUser) setFileConnectionUser(data.user || data.username || '');
-        if (setFileConnectionPassword) setFileConnectionPassword(data.password || '');
-        if (setFileConnectionPort) setFileConnectionPort(data.port || (editConnectionType === 'ftp' ? 21 : 22));
-        if (setFileConnectionProtocol) setFileConnectionProtocol(data.protocol || editConnectionType || 'sftp');
-        if (setFileConnectionRemoteFolder) setFileConnectionRemoteFolder(data.remoteFolder || '');
-        if (setFileConnectionTargetFolder) setFileConnectionTargetFolder(data.targetFolder || '');
+        const name = editNodeData.label || '';
+        const host = data.host || '';
+        const user = data.user || data.username || '';
+        const password = data.password || '';
+        const port = data.port || (editConnectionType === 'ftp' ? 21 : 22);
+        const protocol = data.protocol || editConnectionType || 'sftp';
+        const remoteFolder = data.remoteFolder || '';
+        const targetFolder = data.targetFolder || '';
+
+        console.log('🔵 [Dialogs] Datos extraídos:', { name, host, user, password, port, protocol, remoteFolder, targetFolder });
+
+        // Actualizar estados locales directamente (solo para modo edición)
+        setLocalFileConnectionName(name);
+        setLocalFileConnectionHost(host);
+        setLocalFileConnectionUser(user);
+        setLocalFileConnectionPassword(password);
+        setLocalFileConnectionPort(port);
+        setLocalFileConnectionProtocol(protocol);
+        setLocalFileConnectionRemoteFolder(remoteFolder);
+        setLocalFileConnectionTargetFolder(targetFolder);
+
+        // NO actualizar los props externos en modo edición para evitar interferencias
+        // Los props externos se usan solo para modo creación
         setActiveTabIndex(2); // Tab Archivos
+      } else {
+        console.log('⚠️ [Dialogs] editConnectionType no reconocido:', { editConnectionType, isEditMode, editNodeData });
       }
     }
     // No resetear automáticamente cuando se abre en modo creación
     // Los campos se resetean cuando se cierra el diálogo en onHide
-  }, [isEditMode, editNodeData, editConnectionType, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setFileConnectionName, setFileConnectionHost, setFileConnectionUser, setFileConnectionPassword, setFileConnectionPort, setFileConnectionProtocol, setFileConnectionRemoteFolder, setFileConnectionTargetFolder]);
+  }, [isEditMode, editNodeData, editConnectionType, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword]);
 
   // Header personalizado con botón de expansión
   const customHeader = (
@@ -624,34 +933,225 @@ export function UnifiedConnectionDialog({
       className="unified-connection-dialog"
     >
       {isEditMode ? (
-        // Modo edición: mostrar solo el formulario específico sin pestañas
-        editConnectionType === 'ssh' ? (
-          <EnhancedSSHForm 
-            activeTabIndex={activeTabIndex}
-            sshName={sshName}
-            setSSHName={setSSHName}
-            sshHost={sshHost}
-            setSSHHost={setSSHHost}
-            sshUser={sshUser}
-            setSSHUser={setSSHUser}
-            sshPassword={sshPassword}
-            setSSHPassword={setSSHPassword}
-            sshPort={sshPort}
-            setSSHPort={setSSHPort}
-            sshRemoteFolder={sshRemoteFolder}
-            setSSHRemoteFolder={setSSHRemoteFolder}
-            sshTargetFolder={sshTargetFolder}
-            setSSHTargetFolder={setSSHTargetFolder}
-            sshAutoCopyPassword={sshAutoCopyPassword}
-            setSSHAutoCopyPassword={setSSHAutoCopyPassword}
-            foldersOptions={foldersOptions}
-            onSSHConfirm={onSSHConfirm}
-            onHide={onHide}
-            sshLoading={sshLoading}
-          />
+        // Verificar primero SFTP/FTP/SCP antes que SSH para evitar conflictos
+        editConnectionType === 'sftp' || editConnectionType === 'ftp' || editConnectionType === 'scp' ? (
+          // Formulario de archivos (SFTP/FTP/SCP) optimizado para edición
+          (() => {
+            console.log('🟡 [Dialogs] Renderizando modo edición - editConnectionType:', editConnectionType, 'isEditMode:', isEditMode);
+            console.log('✅ [Dialogs] Renderizando formulario SFTP/FTP/SCP');
+            console.log('🔵 [Dialogs] Valores de estados locales SFTP:', {
+              name: localFileConnectionName,
+              host: localFileConnectionHost,
+              user: localFileConnectionUser,
+              port: localFileConnectionPort,
+              protocol: localFileConnectionProtocol
+            });
+            console.log('🔵 [Dialogs] Valores de props SFTP:', {
+              name: fileConnectionName,
+              host: fileConnectionHost,
+              user: fileConnectionUser,
+              port: fileConnectionPort,
+              protocol: fileConnectionProtocol
+            });
+            // Usar los estados locales, pero si están vacíos y los props tienen valores, usar los props
+            const displayName = localFileConnectionName || fileConnectionName || '';
+            const displayHost = localFileConnectionHost || fileConnectionHost || '';
+            const displayUser = localFileConnectionUser || fileConnectionUser || '';
+            const displayPassword = localFileConnectionPassword || fileConnectionPassword || '';
+            const displayPort = localFileConnectionPort || fileConnectionPort || 22;
+            const displayProtocol = localFileConnectionProtocol || fileConnectionProtocol || 'sftp';
+            const displayRemoteFolder = localFileConnectionRemoteFolder || fileConnectionRemoteFolder || '';
+            const displayTargetFolder = localFileConnectionTargetFolder || fileConnectionTargetFolder || '';
+            console.log('🔵 [Dialogs] Valores finales para mostrar:', {
+              name: displayName,
+              host: displayHost,
+              user: displayUser,
+              port: displayPort,
+              protocol: displayProtocol
+            });
+            return (
+              <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
+              <Card title="🔗 Conexión de Archivos" className="mb-2">
+                <div className="formgrid grid">
+                  <div className="field col-12">
+                    <label htmlFor="file-name-edit">Nombre de la conexión *</label>
+                    <InputText
+                      id="file-name-edit"
+                      value={displayName}
+                      onChange={(e) => handleFileConnectionNameChange(e.target.value)}
+                      placeholder="Mi servidor SFTP"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  
+                  <div className="field col-12 md:col-6">
+                    <label htmlFor="file-protocol-edit">Protocolo *</label>
+                    <Dropdown
+                      id="file-protocol-edit"
+                      value={displayProtocol}
+                      options={[
+                        { label: 'SFTP', value: 'sftp' },
+                        { label: 'FTP', value: 'ftp' },
+                        { label: 'SCP', value: 'scp' }
+                      ]}
+                      onChange={(e) => handleFileConnectionProtocolChange(e.value)}
+                      placeholder="Seleccionar protocolo"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+
+                  <div className="field col-12 md:col-6">
+                    <label htmlFor="file-host-edit">Host *</label>
+                    <InputText
+                      id="file-host-edit"
+                      value={displayHost}
+                      onChange={(e) => handleFileConnectionHostChange(e.target.value)}
+                      placeholder="192.168.1.100"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+
+                  <div className="field col-12 md:col-6">
+                    <label htmlFor="file-user-edit">Usuario *</label>
+                    <InputText
+                      id="file-user-edit"
+                      value={displayUser}
+                      onChange={(e) => handleFileConnectionUserChange(e.target.value)}
+                      placeholder="usuario"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+
+                  <div className="field col-12 md:col-6">
+                    <label htmlFor="file-port-edit">Puerto</label>
+                    <InputText
+                      id="file-port-edit"
+                      type="number"
+                      value={displayPort}
+                      onChange={(e) => {
+                        const portValue = parseInt(e.target.value) || (displayProtocol === 'ftp' ? 21 : 22);
+                        handleFileConnectionPortChange(portValue);
+                      }}
+                      placeholder={displayProtocol === 'ftp' ? '21' : '22'}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+
+                  <div className="field col-12">
+                    <label htmlFor="file-password-edit">Contraseña</label>
+                    <InputText
+                      id="file-password-edit"
+                      type="password"
+                      value={displayPassword}
+                      onChange={(e) => handleFileConnectionPasswordChange(e.target.value)}
+                      placeholder="Contraseña (opcional)"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+
+                  <div className="field col-12 md:col-6">
+                    <label htmlFor="file-remote-folder-edit">Carpeta remota (opcional)</label>
+                    <InputText
+                      id="file-remote-folder-edit"
+                      value={displayRemoteFolder}
+                      onChange={(e) => handleFileConnectionRemoteFolderChange(e.target.value)}
+                      placeholder="/home/usuario"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+
+                  <div className="field col-12 md:col-6">
+                    <label htmlFor="file-target-folder-edit">Carpeta destino (opcional)</label>
+                    <InputText
+                      id="file-target-folder-edit"
+                      value={displayTargetFolder}
+                      onChange={(e) => handleFileConnectionTargetFolderChange(e.target.value)}
+                      placeholder="Carpeta local"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                </div>
+              </Card>
+            </div>
+            
+            {/* Botones */}
+            <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', paddingTop: '12px' }}>
+              <Button 
+                label="Cancelar" 
+                icon="pi pi-times" 
+                className="p-button-text" 
+                onClick={onHide}
+                style={{ fontSize: '13px', padding: '8px 16px' }}
+              />
+              <Button 
+                label="Guardar" 
+                icon="pi pi-check" 
+                className="p-button-primary" 
+                onClick={() => {
+                  // Validar que los campos requeridos estén presentes
+                  if (!localFileConnectionName?.trim() || !localFileConnectionHost?.trim() || !localFileConnectionUser?.trim()) {
+                    console.error('Faltan campos requeridos');
+                    return;
+                  }
+                  
+                  const fileData = {
+                    name: localFileConnectionName.trim(),
+                    host: localFileConnectionHost.trim(),
+                    username: localFileConnectionUser.trim(),
+                    password: localFileConnectionPassword || '',
+                    port: localFileConnectionPort || (localFileConnectionProtocol === 'ftp' ? 21 : 22),
+                    protocol: localFileConnectionProtocol || 'sftp',
+                    remoteFolder: localFileConnectionRemoteFolder || '',
+                    targetFolder: localFileConnectionTargetFolder || ''
+                  };
+                  
+                  if (onFileConnectionConfirm && typeof onFileConnectionConfirm === 'function') {
+                    onFileConnectionConfirm(fileData);
+                  }
+                }}
+                disabled={!localFileConnectionName?.trim() || !localFileConnectionHost?.trim() || !localFileConnectionUser?.trim() || fileConnectionLoading}
+                loading={fileConnectionLoading}
+                style={{ fontSize: '13px', padding: '8px 16px' }}
+              />
+            </div>
+          </div>
+            );
+          })()
+        ) : editConnectionType === 'ssh' ? (
+          (() => {
+            console.log('✅ [Dialogs] Renderizando formulario SSH');
+            return (
+              <EnhancedSSHForm 
+                activeTabIndex={activeTabIndex}
+                sshName={sshName}
+                setSSHName={setSSHName}
+                sshHost={sshHost}
+                setSSHHost={setSSHHost}
+                sshUser={sshUser}
+                setSSHUser={setSSHUser}
+                sshPassword={sshPassword}
+                setSSHPassword={setSSHPassword}
+                sshPort={sshPort}
+                setSSHPort={setSSHPort}
+                sshRemoteFolder={sshRemoteFolder}
+                setSSHRemoteFolder={setSSHRemoteFolder}
+                sshTargetFolder={sshTargetFolder}
+                setSSHTargetFolder={setSSHTargetFolder}
+                sshAutoCopyPassword={sshAutoCopyPassword}
+                setSSHAutoCopyPassword={setSSHAutoCopyPassword}
+                foldersOptions={foldersOptions}
+                onSSHConfirm={onSSHConfirm}
+                onHide={onHide}
+                sshLoading={sshLoading}
+              />
+            );
+          })()
         ) : (
           // Formulario RDP optimizado para edición (mismo diseño que el tab RDP)
-          <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+          (() => {
+            return (
+              <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
             {/* Contenedor principal que se expande */}
             <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
               {/* Contenedor principal de 2 columnas */}
@@ -922,6 +1422,8 @@ export function UnifiedConnectionDialog({
               />
             </div>
           </div>
+            );
+          })()
         )
       ) : (
         // Modo creación: mostrar pestañas

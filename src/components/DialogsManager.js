@@ -9,7 +9,7 @@ import { InputNumber } from 'primereact/inputnumber';
 
 import SettingsDialog from './SettingsDialog';
 import SyncSettingsDialog from './SyncSettingsDialog';
-import { SSHDialog, FolderDialog, GroupDialog, UnifiedConnectionDialog } from './Dialogs';
+import { SSHDialog, FolderDialog, GroupDialog, UnifiedConnectionDialog, FileConnectionDialog } from './Dialogs';
 
 /**
  * DialogsManager - Componente que centraliza la gestión de todos los diálogos
@@ -39,7 +39,9 @@ const DialogsManager = ({
   setShowCreateGroupDialog,
   showUnifiedConnectionDialog,
   setShowUnifiedConnectionDialog,
-  
+  showFileConnectionDialog,
+  setShowFileConnectionDialog,
+
   // Estados de formularios SSH
   sshName,
   setSSHName,
@@ -211,18 +213,17 @@ const DialogsManager = ({
   }, [handleSaveFileConnectionToSidebar]);
   
   // Crear handler estable con useCallback para que no cambie entre renders
-  // SIEMPRE crear una función, incluso si handleSaveFileConnectionToSidebar no está definido
   const stableFileConnectionHandler = useCallback((fileData) => {
     console.log('DialogsManager - stableFileConnectionHandler llamado con:', fileData);
     console.log('DialogsManager - handleSaveFileConnectionToSidebar existe:', !!handleSaveFileConnectionToSidebar);
     console.log('DialogsManager - handleSaveFileConnectionToSidebar tipo:', typeof handleSaveFileConnectionToSidebar);
     console.log('DialogsManager - editingFileConnectionNode:', editingFileConnectionNode);
-    
+
     if (!fileData || !fileData.name || !fileData.host || !fileData.username) {
       console.error('DialogsManager - Datos inválidos:', fileData);
       return;
     }
-    
+
     if (handleSaveFileConnectionToSidebar && typeof handleSaveFileConnectionToSidebar === 'function') {
       const isEditing = !!editingFileConnectionNode;
       console.log('DialogsManager - Guardando conexión de archivos', isEditing ? '(EDITANDO)' : '(CREANDO)');
@@ -247,12 +248,11 @@ const DialogsManager = ({
     console.log('DialogsManager - Render - handleSaveFileConnectionToSidebar:', typeof handleSaveFileConnectionToSidebar, !!handleSaveFileConnectionToSidebar);
     if (stableFileConnectionHandler) {
       console.log('DialogsManager - ✅ Handler válido, se pasará a UnifiedConnectionDialog');
-      console.log('DialogsManager - Handler value:', stableFileConnectionHandler);
     } else {
       console.error('DialogsManager - ❌ Handler es null/undefined, NO se pasará correctamente!');
       console.error('DialogsManager - handleSaveFileConnectionToSidebar:', handleSaveFileConnectionToSidebar);
     }
-  }, [stableFileConnectionHandler, handleSaveFileConnectionToSidebar]);
+  }, [handleSaveFileConnectionToSidebar]);
   
   return (
     <>
@@ -567,9 +567,50 @@ const DialogsManager = ({
         editingNode={editingRdpNode}
         // Props para modo edición
         isEditMode={!!(editSSHNode || editingRdpNode || editingFileConnectionNode)}
-        editConnectionType={editSSHNode ? 'ssh' : (editingRdpNode ? 'rdp' : (editingFileConnectionNode ? (editingFileConnectionNode.data?.protocol || editingFileConnectionNode.data?.type || 'sftp') : null))}
+        editConnectionType={(() => {
+          const type = editSSHNode ? 'ssh' : (editingRdpNode ? 'rdp' : (editingFileConnectionNode ? (editingFileConnectionNode.data?.protocol || editingFileConnectionNode.data?.type || 'sftp') : null));
+          console.log('🟢 [DialogsManager] editConnectionType calculado:', type, {
+            editSSHNode: !!editSSHNode,
+            editingRdpNode: !!editingRdpNode,
+            editingFileConnectionNode: !!editingFileConnectionNode,
+            nodeData: editingFileConnectionNode?.data
+          });
+          return type;
+        })()}
         editNodeData={editSSHNode || editingRdpNode || editingFileConnectionNode}
         // Props Archivos (SFTP/FTP/SCP) - Usar valores por defecto si son undefined
+        fileConnectionName={fileConnectionName ?? ''}
+        setFileConnectionName={setFileConnectionName ?? (() => console.warn('setFileConnectionName not provided'))}
+        fileConnectionHost={fileConnectionHost ?? ''}
+        setFileConnectionHost={setFileConnectionHost ?? (() => console.warn('setFileConnectionHost not provided'))}
+        fileConnectionUser={fileConnectionUser ?? ''}
+        setFileConnectionUser={setFileConnectionUser ?? (() => console.warn('setFileConnectionUser not provided'))}
+        fileConnectionPassword={fileConnectionPassword ?? ''}
+        setFileConnectionPassword={setFileConnectionPassword ?? (() => console.warn('setFileConnectionPassword not provided'))}
+        fileConnectionPort={fileConnectionPort ?? 22}
+        setFileConnectionPort={setFileConnectionPort ?? (() => console.warn('setFileConnectionPort not provided'))}
+        fileConnectionProtocol={fileConnectionProtocol ?? 'sftp'}
+        setFileConnectionProtocol={setFileConnectionProtocol ?? (() => console.warn('setFileConnectionProtocol not provided'))}
+        fileConnectionRemoteFolder={fileConnectionRemoteFolder ?? ''}
+        setFileConnectionRemoteFolder={setFileConnectionRemoteFolder ?? (() => console.warn('setFileConnectionRemoteFolder not provided'))}
+        fileConnectionTargetFolder={fileConnectionTargetFolder ?? ''}
+        setFileConnectionTargetFolder={setFileConnectionTargetFolder ?? (() => console.warn('setFileConnectionTargetFolder not provided'))}
+        onFileConnectionConfirm={stableFileConnectionHandler}
+        fileConnectionLoading={false}
+      />
+
+      {/* Diálogo independiente para conexiones de archivos */}
+      <FileConnectionDialog
+        visible={showFileConnectionDialog}
+        onHide={() => {
+          setShowFileConnectionDialog(false);
+          // Limpiar estado de edición de archivos
+          if (editingFileConnectionNode && setEditingFileConnectionNode) {
+            setEditingFileConnectionNode(null);
+          }
+        }}
+        isEditMode={!!editingFileConnectionNode}
+        editNodeData={editingFileConnectionNode}
         fileConnectionName={fileConnectionName ?? ''}
         setFileConnectionName={setFileConnectionName ?? (() => console.warn('setFileConnectionName not provided'))}
         fileConnectionHost={fileConnectionHost ?? ''}
