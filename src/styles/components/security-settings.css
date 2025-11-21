@@ -304,6 +304,18 @@
 
 .security-status-badge {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.security-status-badge .p-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0.4rem 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
 }
 
 .security-status-info {
