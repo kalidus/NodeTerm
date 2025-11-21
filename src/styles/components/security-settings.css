@@ -249,6 +249,13 @@
   overflow: hidden;
 }
 
+.security-status-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
 .security-status-icon::before {
   content: '';
   position: absolute;
