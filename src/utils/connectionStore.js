@@ -265,6 +265,43 @@ export function isGroupFavorite(groupId, groupName = null) {
   );
 }
 
+/**
+ * Actualiza un favorito cuando se edita una conexión
+ * Si el tipo cambió, remueve el favorito viejo y agrega uno nuevo
+ * @param {Object} oldConnection - La conexión antigua (nodo original)
+ * @param {Object} newConnection - La conexión nueva (nodo actualizado)
+ */
+export function updateFavoriteOnEdit(oldConnection, newConnection) {
+  if (!oldConnection || !newConnection) return;
+  
+  const oldSerial = toSerializable(oldConnection);
+  const newSerial = toSerializable(newConnection);
+  const oldId = oldSerial.id;
+  const newId = newSerial.id;
+  
+  const list = getFavorites();
+  const oldIdx = list.findIndex(f => f.id === oldId);
+  
+  // Si el ID cambió (por ejemplo, cambió el tipo), remover el viejo
+  if (oldId !== newId && oldIdx >= 0) {
+    list.splice(oldIdx, 1);
+  }
+  
+  // Si el favorito existía (con ID viejo o nuevo), actualizarlo
+  const newIdx = list.findIndex(f => f.id === newId);
+  if (newIdx >= 0) {
+    // Actualizar el favorito existente con los nuevos datos
+    list[newIdx] = newSerial;
+  } else if (oldIdx >= 0) {
+    // Si tenía ID viejo pero no nuevo, agregar con nuevo ID
+    list.unshift(newSerial);
+  }
+  // Si no estaba en favoritos, no hacer nada
+  
+  saveList(FAVORITES_KEY, list);
+  return list;
+}
+
 // RECENTS
 export function getRecents(limit = DEFAULT_RECENTS_LIMIT) {
   const list = loadList(RECENTS_KEY);
@@ -369,6 +406,7 @@ export default {
   addGroupToFavorites,
   removeGroupFromFavorites,
   isGroupFavorite,
+  updateFavoriteOnEdit,
   getRecents,
   recordRecent,
   clearRecents,
