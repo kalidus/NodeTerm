@@ -214,31 +214,36 @@ const DialogsManager = ({
   
   // Crear handler estable con useCallback para que no cambie entre renders
   const stableFileConnectionHandler = useCallback((fileData) => {
-    console.log('DialogsManager - stableFileConnectionHandler llamado con:', fileData);
-    console.log('DialogsManager - handleSaveFileConnectionToSidebar existe:', !!handleSaveFileConnectionToSidebar);
-    console.log('DialogsManager - handleSaveFileConnectionToSidebar tipo:', typeof handleSaveFileConnectionToSidebar);
-    console.log('DialogsManager - editingFileConnectionNode:', editingFileConnectionNode);
+    console.log('🔵 DialogsManager - stableFileConnectionHandler llamado con:', fileData);
+    console.log('🔵 DialogsManager - handleSaveFileConnectionToSidebar existe:', !!handleSaveFileConnectionToSidebar);
+    console.log('🔵 DialogsManager - handleSaveFileConnectionToSidebar tipo:', typeof handleSaveFileConnectionToSidebar);
+    console.log('🔵 DialogsManager - editingFileConnectionNode:', editingFileConnectionNode);
+    console.log('🔵 DialogsManager - setEditingFileConnectionNode existe:', !!setEditingFileConnectionNode);
 
     if (!fileData || !fileData.name || !fileData.host || !fileData.username) {
-      console.error('DialogsManager - Datos inválidos:', fileData);
+      console.error('❌ DialogsManager - Datos inválidos:', fileData);
       return;
     }
 
     if (handleSaveFileConnectionToSidebar && typeof handleSaveFileConnectionToSidebar === 'function') {
       const isEditing = !!editingFileConnectionNode;
-      console.log('DialogsManager - Guardando conexión de archivos', isEditing ? '(EDITANDO)' : '(CREANDO)');
+      console.log('🔵 DialogsManager - Guardando conexión de archivos', isEditing ? '(EDITANDO)' : '(CREANDO)');
       try {
+        console.log('🔵 DialogsManager - Llamando handleSaveFileConnectionToSidebar...');
         handleSaveFileConnectionToSidebar(fileData, isEditing, editingFileConnectionNode);
+        console.log('✅ DialogsManager - handleSaveFileConnectionToSidebar llamado exitosamente');
         // Limpiar el nodo de edición después de guardar
         if (isEditing && setEditingFileConnectionNode) {
+          console.log('🔵 DialogsManager - Limpiando editingFileConnectionNode...');
           setEditingFileConnectionNode(null);
+          console.log('✅ DialogsManager - editingFileConnectionNode limpiado');
         }
       } catch (error) {
-        console.error('DialogsManager - Error al guardar conexión:', error);
+        console.error('❌ DialogsManager - Error al guardar conexión:', error);
       }
     } else {
-      console.error('DialogsManager - handleSaveFileConnectionToSidebar no está definido o no es una función!');
-      console.error('DialogsManager - handleSaveFileConnectionToSidebar:', handleSaveFileConnectionToSidebar);
+      console.error('❌ DialogsManager - handleSaveFileConnectionToSidebar no está definido o no es una función!');
+      console.error('❌ DialogsManager - handleSaveFileConnectionToSidebar:', handleSaveFileConnectionToSidebar);
     }
   }, [handleSaveFileConnectionToSidebar, editingFileConnectionNode, setEditingFileConnectionNode]);
   

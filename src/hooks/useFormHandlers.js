@@ -689,14 +689,16 @@ export const useFormHandlers = ({
    * Guardar conexión de archivos (SFTP/FTP/SCP) en sidebar
    */
   const handleSaveFileConnectionToSidebar = useCallback((fileData, isEditing = false, originalNode = null) => {
+    console.log('🔵 useFormHandlers - handleSaveFileConnectionToSidebar llamado con:', { fileData, isEditing, originalNode });
+
     // Validar que fileData existe y tiene los campos requeridos
     if (!fileData) {
-      console.error('handleSaveFileConnectionToSidebar: fileData es undefined');
+      console.error('❌ useFormHandlers - handleSaveFileConnectionToSidebar: fileData es undefined');
       return;
     }
-    
+
     if (!fileData.name || !fileData.host || !fileData.username) {
-      console.error('handleSaveFileConnectionToSidebar: Faltan campos requeridos', fileData);
+      console.error('❌ useFormHandlers - handleSaveFileConnectionToSidebar: Faltan campos requeridos', fileData);
       return;
     }
     
@@ -760,9 +762,21 @@ export const useFormHandlers = ({
       });
     }
 
-    console.log('Cerrando diálogo unificado después de guardar');
-    setShowUnifiedConnectionDialog(false); // Cerrar diálogo unificado
-  }, [setNodes, findNodeByKey, setShowUnifiedConnectionDialog]);
+    console.log('🔵 useFormHandlers - Cerrando diálogo después de guardar');
+    console.log('🔵 useFormHandlers - setShowFileConnectionDialog existe:', !!setShowFileConnectionDialog);
+    console.log('🔵 useFormHandlers - setShowFileConnectionDialog tipo:', typeof setShowFileConnectionDialog);
+
+    // Mostrar toast de éxito
+    toast.current?.show({
+      severity: 'success',
+      summary: isEditing ? 'Conexión actualizada' : 'Conexión añadida',
+      detail: `Conexión "${fileData.name}" ${isEditing ? 'actualizada' : 'añadida'} al árbol`,
+      life: 3000
+    });
+
+    setShowFileConnectionDialog(false); // Cerrar diálogo de archivos
+    console.log('✅ useFormHandlers - Diálogo cerrado');
+  }, [setNodes, findNodeByKey, setShowFileConnectionDialog, toast]);
 
   /**
    * Abrir diálogo de edición de conexión de archivos

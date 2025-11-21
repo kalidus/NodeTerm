@@ -355,7 +355,9 @@ export function FileConnectionDialog({
 
   // Resetear al cerrar
   useEffect(() => {
+    console.log('🔄 FileConnectionDialog - Visibilidad cambió:', visible);
     if (!visible) {
+      console.log('🔄 FileConnectionDialog - Reseteando estados al cerrar');
       setLocalName('');
       setLocalHost('');
       setLocalUser('');
@@ -379,7 +381,7 @@ export function FileConnectionDialog({
 
   const handleConfirm = () => {
     if (!localName.trim() || !localHost.trim() || !localUser.trim()) {
-      console.error('Faltan campos requeridos');
+      console.error('❌ Faltan campos requeridos');
       return;
     }
 
@@ -394,10 +396,20 @@ export function FileConnectionDialog({
       targetFolder: localTargetFolder
     };
 
-    console.log('Guardando conexión de archivos:', fileData);
+    console.log('🔵 FileConnectionDialog - Guardando conexión de archivos:', fileData);
+    console.log('🔵 FileConnectionDialog - onFileConnectionConfirm existe:', !!onFileConnectionConfirm);
+    console.log('🔵 FileConnectionDialog - onFileConnectionConfirm tipo:', typeof onFileConnectionConfirm);
 
     if (onFileConnectionConfirm && typeof onFileConnectionConfirm === 'function') {
-      onFileConnectionConfirm(fileData);
+      console.log('🔵 FileConnectionDialog - Llamando onFileConnectionConfirm...');
+      try {
+        onFileConnectionConfirm(fileData);
+        console.log('✅ FileConnectionDialog - onFileConnectionConfirm llamado exitosamente');
+      } catch (error) {
+        console.error('❌ FileConnectionDialog - Error al llamar onFileConnectionConfirm:', error);
+      }
+    } else {
+      console.error('❌ FileConnectionDialog - onFileConnectionConfirm no es una función válida');
     }
   };
 
