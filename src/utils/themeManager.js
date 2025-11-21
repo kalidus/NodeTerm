@@ -408,14 +408,41 @@ class ThemeManager {
         background: var(--ui-context-bg) !important;
         border: 1px solid var(--ui-context-border) !important;
         box-shadow: 0 4px 12px var(--ui-context-shadow) !important;
+        border-radius: 6px !important;
+        padding: 4px 0 !important;
+      }
+
+      .p-menu .p-menuitem {
+        margin: 2px 4px !important;
       }
 
       .p-menu .p-menuitem-link {
         color: var(--ui-context-text) !important;
+        border-radius: 4px !important;
+        padding: 0.75rem 1rem !important;
       }
 
       .p-menu .p-menuitem-link:hover {
         background: var(--ui-context-hover) !important;
+      }
+
+      .p-menu .p-menuitem-icon {
+        color: var(--ui-context-text) !important;
+        opacity: 0.8;
+      }
+
+      .p-menu .p-menuitem-link:hover .p-menuitem-icon {
+        opacity: 1;
+      }
+
+      .p-menu .p-menuitem-text {
+        color: var(--ui-context-text) !important;
+      }
+
+      .p-menu .p-separator {
+        border-top: 1px solid var(--ui-context-border) !important;
+        margin: 4px 8px !important;
+        opacity: 0.5;
       }
 
       /* Custom context menus */
@@ -428,6 +455,82 @@ class ThemeManager {
 
       .context-menu-custom .context-menu-item:hover {
         background: var(--ui-context-hover) !important;
+      }
+
+      /* Menús contextuales personalizados de la aplicación */
+      .app-context-menu,
+      .app-context-menu-titlebar,
+      .app-context-menu-unified,
+      .app-context-menu-sidebar {
+        background: var(--ui-context-bg) !important;
+        border: 1px solid var(--ui-context-border) !important;
+        box-shadow: 0 4px 12px var(--ui-context-shadow) !important;
+        color: var(--ui-context-text) !important;
+      }
+
+      .app-context-menu .menu-item,
+      .app-context-menu-titlebar .menu-item-titlebar,
+      .app-context-menu-unified .menu-item-unified,
+      .app-context-menu-sidebar .menu-item {
+        color: var(--ui-context-text) !important;
+      }
+
+      .app-context-menu .menu-item:hover,
+      .app-context-menu-titlebar .menu-item-titlebar:hover,
+      .app-context-menu-unified .menu-item-unified:hover,
+      .app-context-menu-sidebar .menu-item:hover {
+        background: var(--ui-context-hover) !important;
+      }
+
+      .app-context-menu .menu-separator,
+      .app-context-menu-titlebar .menu-separator,
+      .app-context-menu-unified .menu-separator,
+      .app-context-menu-sidebar .menu-separator {
+        background: var(--ui-context-border) !important;
+        opacity: 0.5;
+      }
+
+      /* Menús contextuales de terminal y tabs (estilos para componentes con clases) */
+      .terminal-context-menu,
+      .tab-context-menu {
+        background: var(--ui-context-bg) !important;
+        border: 1px solid var(--ui-context-border) !important;
+        box-shadow: 0 4px 12px var(--ui-context-shadow) !important;
+        color: var(--ui-context-text) !important;
+        border-radius: 6px !important;
+      }
+
+      .terminal-context-menu .menu-item,
+      .tab-context-menu .menu-item {
+        color: var(--ui-context-text) !important;
+        transition: background-color 0.15s ease;
+      }
+
+      .terminal-context-menu .menu-item:hover,
+      .tab-context-menu .menu-item:hover {
+        background: var(--ui-context-hover) !important;
+      }
+
+      .terminal-context-menu .menu-separator,
+      .tab-context-menu .menu-separator {
+        background: var(--ui-context-border) !important;
+        opacity: 0.5;
+      }
+
+      .terminal-context-menu .menu-item i,
+      .tab-context-menu .menu-item i {
+        color: var(--ui-context-text) !important;
+        opacity: 0.8;
+      }
+
+      .terminal-context-menu .menu-item:hover i,
+      .tab-context-menu .menu-item:hover i {
+        opacity: 1;
+      }
+
+      .tab-context-menu .menu-header {
+        color: var(--ui-context-text) !important;
+        border-bottom: 1px solid var(--ui-context-border) !important;
       }
 
       /* === CARD STYLES === */

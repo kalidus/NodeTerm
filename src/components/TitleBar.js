@@ -782,7 +782,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         // Limpiar todos los hovers antes de remover
         const menuItems = menu.querySelectorAll('.menu-item-titlebar');
         menuItems.forEach(item => {
-          item.style.backgroundColor = 'transparent';
+          item.style.backgroundColor = '';
         });
         if (document.body.contains(menu)) {
           document.body.removeChild(menu);
@@ -941,10 +941,10 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           const allMenuItems = contextMenu.querySelectorAll('.menu-item-titlebar');
           allMenuItems.forEach(item => {
             if (item !== menuItem) {
-              item.style.backgroundColor = 'transparent';
+              item.style.backgroundColor = '';
             }
           });
-          menuItem.style.backgroundColor = 'var(--ui-context-hover, rgba(255, 255, 255, 0.1))';
+          menuItem.style.backgroundColor = 'var(--ui-context-hover)';
           
           // Mostrar submenú directamente - SIN TIMERS
           showSubmenu(menuItem, item.submenu);
@@ -969,14 +969,14 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           const allMenuItems = contextMenu.querySelectorAll('.menu-item-titlebar');
           allMenuItems.forEach(item => {
             if (item !== menuItem) {
-              item.style.backgroundColor = 'transparent';
+              item.style.backgroundColor = '';
             }
           });
-          menuItem.style.backgroundColor = 'var(--ui-context-hover, rgba(255, 255, 255, 0.1))';
+          menuItem.style.backgroundColor = 'var(--ui-context-hover)';
         });
         
         menuItem.addEventListener('mouseleave', () => {
-          menuItem.style.backgroundColor = 'transparent';
+          menuItem.style.backgroundColor = '';
         });
       }
       
