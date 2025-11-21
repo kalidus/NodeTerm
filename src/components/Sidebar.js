@@ -1361,10 +1361,31 @@ const Sidebar = React.memo(({
     } else if (isPassword) {
       icon = <span className="pi pi-key" style={{ color: '#ffc107', fontSize: `${connectionIconSize}px` }} />;
     } else if (isFileConnection) {
-      // Icono para conexiones de archivos (SFTP/FTP/SCP)
+      // Icono para conexiones de archivos (SFTP/FTP/SCP) usando el tema
       const protocol = node.data?.protocol || node.data?.type || 'sftp';
-      const iconColor = protocol === 'ftp' ? '#2196F3' : (protocol === 'scp' ? '#4CAF50' : '#FF9800');
-      icon = <span className="pi pi-folder" style={{ color: iconColor, fontSize: `${connectionIconSize}px` }} />;
+
+      // Buscar icono en tema actual, con fallback a material
+      const themeIcon = themeIcons[protocol] || iconThemes['material']?.icons?.[protocol];
+
+      if (themeIcon) {
+        icon = React.cloneElement(themeIcon, {
+          width: connectionIconSize,
+          height: connectionIconSize,
+          style: {
+            ...themeIcon.props.style,
+            width: `${connectionIconSize}px`,
+            height: `${connectionIconSize}px`
+          }
+        });
+      } else {
+        // Último fallback si no hay icono en ningún tema
+        const fallbackColors = {
+          sftp: '#ff9800',
+          ftp: '#2196f3',
+          scp: '#4caf50'
+        };
+        icon = <span className="pi pi-folder" style={{ color: fallbackColors[protocol] || '#ff9800', fontSize: `${connectionIconSize}px` }} />;
+      }
     } else if (isFolder) {
       // Lógica inteligente para determinar el color de la carpeta:
       // 1. Si no tiene color asignado → usar color por defecto del tema actual
