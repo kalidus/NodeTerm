@@ -1116,7 +1116,7 @@ const SettingsDialog = ({
                           
                           <div className="security-field">
                             <label htmlFor="master-password" className="security-field-label">
-                              <i className="pi pi-lock"></i>
+                              <i className="pi pi-key"></i>
                               Nueva Clave Maestra
                             </label>
                             <div className="security-field-input">
@@ -1134,7 +1134,7 @@ const SettingsDialog = ({
 
                           <div className="security-field">
                             <label htmlFor="confirm-password" className="security-field-label">
-                              <i className="pi pi-lock"></i>
+                              <i className="pi pi-shield"></i>
                               Confirmar Clave Maestra
                             </label>
                             <div className="security-field-input">
@@ -1169,7 +1169,7 @@ const SettingsDialog = ({
                           
                           <div className="security-field">
                             <label htmlFor="current-password" className="security-field-label">
-                              <i className="pi pi-lock"></i>
+                              <i className="pi pi-unlock"></i>
                               Clave Actual
                             </label>
                             <div className="security-field-input">
@@ -1187,7 +1187,7 @@ const SettingsDialog = ({
 
                           <div className="security-field">
                             <label htmlFor="new-password" className="security-field-label">
-                              <i className="pi pi-lock"></i>
+                              <i className="pi pi-key"></i>
                               Nueva Clave Maestra
                             </label>
                             <div className="security-field-input">
@@ -1205,7 +1205,7 @@ const SettingsDialog = ({
 
                           <div className="security-field">
                             <label htmlFor="confirm-new-password" className="security-field-label">
-                              <i className="pi pi-lock"></i>
+                              <i className="pi pi-shield"></i>
                               Confirmar Nueva Clave
                             </label>
                             <div className="security-field-input">
@@ -1224,7 +1224,7 @@ const SettingsDialog = ({
                           <div className="security-actions">
                             <Button
                               label={isLoading ? 'Cambiando...' : 'Cambiar Clave'}
-                              icon={isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-key'}
+                              icon={isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-sync'}
                               onClick={handleChangeMasterPassword}
                               disabled={!validatePasswordChange() || isLoading}
                               className="security-button security-button-primary"
@@ -1232,7 +1232,7 @@ const SettingsDialog = ({
                             
                             <Button
                               label="Eliminar"
-                              icon="pi pi-trash"
+                              icon="pi pi-times-circle"
                               onClick={handleRemoveMasterKey}
                               disabled={isLoading}
                               className="security-button security-button-danger"
