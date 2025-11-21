@@ -486,14 +486,11 @@ export const useFormHandlers = ({
    * Abrir diálogo unificado para nueva conexión (limpia todos los estados de edición)
    */
   const openNewUnifiedConnectionDialog = useCallback(() => {
-    console.log('🔵 openNewUnifiedConnectionDialog - Abriendo diálogo unificado para nueva conexión');
-
     // Limpiar SOLO los estados de edición esenciales para asegurar modo creación
     setEditSSHNode(null);
     setEditingRdpNode(null);
     setEditingFileConnectionNode(null);
 
-    console.log('🔵 openNewUnifiedConnectionDialog - Estados de edición limpiados');
     setShowUnifiedConnectionDialog(true);
   }, [setEditSSHNode, setEditingRdpNode, setEditingFileConnectionNode, setShowUnifiedConnectionDialog]);
 
@@ -704,16 +701,14 @@ export const useFormHandlers = ({
    * Guardar conexión de archivos (SFTP/FTP/SCP) en sidebar
    */
   const handleSaveFileConnectionToSidebar = useCallback((fileData, isEditing = false, originalNode = null) => {
-    console.log('🔵 useFormHandlers - handleSaveFileConnectionToSidebar llamado con:', { fileData, isEditing, originalNode });
-
     // Validar que fileData existe y tiene los campos requeridos
     if (!fileData) {
-      console.error('❌ useFormHandlers - handleSaveFileConnectionToSidebar: fileData es undefined');
+      console.error('❌ handleSaveFileConnectionToSidebar: fileData es undefined');
       return;
     }
 
     if (!fileData.name || !fileData.host || !fileData.username) {
-      console.error('❌ useFormHandlers - handleSaveFileConnectionToSidebar: Faltan campos requeridos', fileData);
+      console.error('❌ handleSaveFileConnectionToSidebar: Faltan campos requeridos', fileData);
       return;
     }
     
@@ -777,10 +772,6 @@ export const useFormHandlers = ({
       });
     }
 
-    console.log('🔵 useFormHandlers - Cerrando diálogo después de guardar');
-    console.log('🔵 useFormHandlers - setShowFileConnectionDialog existe:', !!setShowFileConnectionDialog);
-    console.log('🔵 useFormHandlers - setShowFileConnectionDialog tipo:', typeof setShowFileConnectionDialog);
-
     // Mostrar toast de éxito
     toast.current?.show({
       severity: 'success',
@@ -790,22 +781,15 @@ export const useFormHandlers = ({
     });
 
     setShowFileConnectionDialog(false); // Cerrar diálogo de archivos
-    console.log('✅ useFormHandlers - Diálogo cerrado');
   }, [setNodes, findNodeByKey, setShowFileConnectionDialog, toast]);
 
   /**
    * Abrir diálogo de edición de conexión de archivos
    */
   const openEditFileConnectionDialog = useCallback((node) => {
-    console.log('🔵 [openEditFileConnectionDialog] Llamado con nodo:', node);
-    console.log('🔵 [openEditFileConnectionDialog] node.data:', node.data);
-    console.log('🔵 [openEditFileConnectionDialog] node.data.type:', node.data?.type);
-    console.log('🔵 [openEditFileConnectionDialog] node.data.protocol:', node.data?.protocol);
-
     // Guardar el nodo que se está editando
     setEditingFileConnectionNode(node);
 
-    console.log('🔵 [openEditFileConnectionDialog] Abriendo diálogo independiente de archivos...');
     // Abrir el diálogo independiente de archivos
     setShowFileConnectionDialog(true);
   }, [setEditingFileConnectionNode, setShowFileConnectionDialog]);
@@ -814,7 +798,6 @@ export const useFormHandlers = ({
    * Abrir diálogo nuevo de archivos
    */
   const openNewFileConnectionDialog = useCallback(() => {
-    console.log('🔵 [openNewFileConnectionDialog] Abriendo diálogo de nueva conexión de archivos...');
     setShowFileConnectionDialog(true);
   }, [setShowFileConnectionDialog]);
 

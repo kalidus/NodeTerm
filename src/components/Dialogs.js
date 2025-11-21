@@ -330,7 +330,6 @@ export function FileConnectionDialog({
   // Precargar datos en modo edición
   useEffect(() => {
     if (isEditMode && editNodeData && visible) {
-      console.log('🔵 [FileConnectionDialog] Precargando datos en modo edición:', editNodeData);
       const data = editNodeData.data || {};
       setLocalName(editNodeData.label || '');
       setLocalHost(data.host || '');
@@ -355,9 +354,7 @@ export function FileConnectionDialog({
 
   // Resetear al cerrar
   useEffect(() => {
-    console.log('🔄 FileConnectionDialog - Visibilidad cambió:', visible);
     if (!visible) {
-      console.log('🔄 FileConnectionDialog - Reseteando estados al cerrar');
       setLocalName('');
       setLocalHost('');
       setLocalUser('');
@@ -396,20 +393,14 @@ export function FileConnectionDialog({
       targetFolder: localTargetFolder
     };
 
-    console.log('🔵 FileConnectionDialog - Guardando conexión de archivos:', fileData);
-    console.log('🔵 FileConnectionDialog - onFileConnectionConfirm existe:', !!onFileConnectionConfirm);
-    console.log('🔵 FileConnectionDialog - onFileConnectionConfirm tipo:', typeof onFileConnectionConfirm);
-
     if (onFileConnectionConfirm && typeof onFileConnectionConfirm === 'function') {
-      console.log('🔵 FileConnectionDialog - Llamando onFileConnectionConfirm...');
       try {
         onFileConnectionConfirm(fileData);
-        console.log('✅ FileConnectionDialog - onFileConnectionConfirm llamado exitosamente');
       } catch (error) {
-        console.error('❌ FileConnectionDialog - Error al llamar onFileConnectionConfirm:', error);
+        console.error('❌ Error al guardar conexión de archivos:', error);
       }
     } else {
-      console.error('❌ FileConnectionDialog - onFileConnectionConfirm no es una función válida');
+      console.error('❌ onFileConnectionConfirm no es una función válida');
     }
   };
 
@@ -585,37 +576,16 @@ export function UnifiedConnectionDialog({
 }) {
   // Usar useRef para mantener una referencia estable al handler
   // Inicializar con el valor del prop si está disponible
-  const stableHandlerRef = useRef((() => {
-    if (onFileConnectionConfirm && typeof onFileConnectionConfirm === 'function') {
-      console.log('✅ Inicializando ref con handler válido');
-      return onFileConnectionConfirm;
-    }
-    return null;
-  })());
+  const stableHandlerRef = useRef(onFileConnectionConfirm);
   
-  // Actualizar la referencia cuando el prop es válido - NUNCA limpiar
+    // Actualizar la referencia cuando el prop es válido - NUNCA limpiar
   useEffect(() => {
     // Solo actualizar si el prop es una función válida
     if (onFileConnectionConfirm && typeof onFileConnectionConfirm === 'function') {
-      console.log('✅ Actualizando handler válido en ref');
-      console.log('✅ Handler anterior en ref:', !!stableHandlerRef.current, typeof stableHandlerRef.current);
       stableHandlerRef.current = onFileConnectionConfirm;
-      console.log('✅ Handler nuevo en ref:', !!stableHandlerRef.current, typeof stableHandlerRef.current);
     }
     // NO hacer nada si el prop es null/undefined - mantener el último valor válido
-    
-    if (visible) {
-      console.log('UnifiedConnectionDialog - Props recibidos:', {
-        onFileConnectionConfirm: !!onFileConnectionConfirm,
-        onFileConnectionConfirmType: typeof onFileConnectionConfirm,
-        onFileConnectionConfirmValue: onFileConnectionConfirm,
-        stableHandlerRef: !!stableHandlerRef.current,
-        stableHandlerRefType: typeof stableHandlerRef.current,
-        stableHandlerRefValue: stableHandlerRef.current,
-        visible
-      });
-    }
-  }, [visible, onFileConnectionConfirm]);
+  }, [onFileConnectionConfirm]);
   // Estados locales para los campos de archivos - siempre funcionan
   // Para modo edición, inicializar con valores por defecto que se sobrescribirán en useEffect
   const [localFileConnectionName, setLocalFileConnectionName] = useState('');
@@ -629,37 +599,23 @@ export function UnifiedConnectionDialog({
   
   // Sincronizar estados locales con props para modo creación
   useEffect(() => {
-    console.log('🔄 [Dialogs] Sincronizando estados locales con props:', {
-      isEditMode,
-      fileConnectionName,
-      fileConnectionHost,
-      fileConnectionUser,
-      fileConnectionPort,
-      fileConnectionProtocol
-    });
-
     // Siempre sincronizar con props, pero el modo edición tiene prioridad con editNodeData
     if (fileConnectionName !== undefined) {
-      console.log('🔄 [Dialogs] Actualizando localFileConnectionName:', fileConnectionName);
       setLocalFileConnectionName(fileConnectionName);
     }
     if (fileConnectionHost !== undefined) {
-      console.log('🔄 [Dialogs] Actualizando localFileConnectionHost:', fileConnectionHost);
       setLocalFileConnectionHost(fileConnectionHost);
     }
     if (fileConnectionUser !== undefined) {
-      console.log('🔄 [Dialogs] Actualizando localFileConnectionUser:', fileConnectionUser);
       setLocalFileConnectionUser(fileConnectionUser);
     }
     if (fileConnectionPassword !== undefined) {
       setLocalFileConnectionPassword(fileConnectionPassword);
     }
     if (fileConnectionPort !== undefined) {
-      console.log('🔄 [Dialogs] Actualizando localFileConnectionPort:', fileConnectionPort);
       setLocalFileConnectionPort(fileConnectionPort);
     }
     if (fileConnectionProtocol !== undefined) {
-      console.log('🔄 [Dialogs] Actualizando localFileConnectionProtocol:', fileConnectionProtocol);
       setLocalFileConnectionProtocol(fileConnectionProtocol);
     }
     if (fileConnectionRemoteFolder !== undefined) {
@@ -885,7 +841,6 @@ export function UnifiedConnectionDialog({
         setActiveTabIndex(1); // Tab RDP
       } else if (editConnectionType === 'sftp' || editConnectionType === 'ftp' || editConnectionType === 'scp') {
         // Precargar datos de archivos (SFTP/FTP/SCP)
-        console.log('🔵 [Dialogs] Precargando datos SFTP/FTP/SCP:', { editConnectionType, editNodeData });
         const data = editNodeData.data || {};
         const name = editNodeData.label || '';
         const host = data.host || '';
@@ -895,8 +850,6 @@ export function UnifiedConnectionDialog({
         const protocol = data.protocol || editConnectionType || 'sftp';
         const remoteFolder = data.remoteFolder || '';
         const targetFolder = data.targetFolder || '';
-
-        console.log('🔵 [Dialogs] Datos extraídos:', { name, host, user, password, port, protocol, remoteFolder, targetFolder });
 
         // Actualizar estados locales directamente (solo para modo edición)
         setLocalFileConnectionName(name);
@@ -915,9 +868,21 @@ export function UnifiedConnectionDialog({
         console.log('⚠️ [Dialogs] editConnectionType no reconocido:', { editConnectionType, isEditMode, editNodeData });
       }
     }
-    // No resetear automáticamente cuando se abre en modo creación
-    // Los campos se resetean cuando se cierra el diálogo en onHide
   }, [isEditMode, editNodeData, editConnectionType, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword]);
+
+  // Resetear estados locales cuando se cierra el diálogo
+  useEffect(() => {
+    if (!visible) {
+      setLocalFileConnectionName('');
+      setLocalFileConnectionHost('');
+      setLocalFileConnectionUser('');
+      setLocalFileConnectionPassword('');
+      setLocalFileConnectionPort(22);
+      setLocalFileConnectionProtocol('sftp');
+      setLocalFileConnectionRemoteFolder('');
+      setLocalFileConnectionTargetFolder('');
+    }
+  }, [visible]);
 
   // Header personalizado con botón de expansión
   const customHeader = (
@@ -949,22 +914,6 @@ export function UnifiedConnectionDialog({
         editConnectionType === 'sftp' || editConnectionType === 'ftp' || editConnectionType === 'scp' ? (
           // Formulario de archivos (SFTP/FTP/SCP) optimizado para edición
           (() => {
-            console.log('🟡 [Dialogs] Renderizando modo edición - editConnectionType:', editConnectionType, 'isEditMode:', isEditMode);
-            console.log('✅ [Dialogs] Renderizando formulario SFTP/FTP/SCP');
-            console.log('🔵 [Dialogs] Valores de estados locales SFTP:', {
-              name: localFileConnectionName,
-              host: localFileConnectionHost,
-              user: localFileConnectionUser,
-              port: localFileConnectionPort,
-              protocol: localFileConnectionProtocol
-            });
-            console.log('🔵 [Dialogs] Valores de props SFTP:', {
-              name: fileConnectionName,
-              host: fileConnectionHost,
-              user: fileConnectionUser,
-              port: fileConnectionPort,
-              protocol: fileConnectionProtocol
-            });
             // Usar los estados locales, pero si están vacíos y los props tienen valores, usar los props
             const displayName = localFileConnectionName || fileConnectionName || '';
             const displayHost = localFileConnectionHost || fileConnectionHost || '';
@@ -974,13 +923,6 @@ export function UnifiedConnectionDialog({
             const displayProtocol = localFileConnectionProtocol || fileConnectionProtocol || 'sftp';
             const displayRemoteFolder = localFileConnectionRemoteFolder || fileConnectionRemoteFolder || '';
             const displayTargetFolder = localFileConnectionTargetFolder || fileConnectionTargetFolder || '';
-            console.log('🔵 [Dialogs] Valores finales para mostrar:', {
-              name: displayName,
-              host: displayHost,
-              user: displayUser,
-              port: displayPort,
-              protocol: displayProtocol
-            });
             return (
               <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
             <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
@@ -1130,9 +1072,8 @@ export function UnifiedConnectionDialog({
           </div>
             );
           })()
-        ) : editConnectionType === 'ssh' ? (
+        ) :         editConnectionType === 'ssh' ? (
           (() => {
-            console.log('✅ [Dialogs] Renderizando formulario SSH');
             return (
               <EnhancedSSHForm 
                 activeTabIndex={activeTabIndex}

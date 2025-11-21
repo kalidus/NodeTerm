@@ -214,12 +214,6 @@ const DialogsManager = ({
   
   // Crear handler estable con useCallback para que no cambie entre renders
   const stableFileConnectionHandler = useCallback((fileData) => {
-    console.log('🔵 DialogsManager - stableFileConnectionHandler llamado con:', fileData);
-    console.log('🔵 DialogsManager - handleSaveFileConnectionToSidebar existe:', !!handleSaveFileConnectionToSidebar);
-    console.log('🔵 DialogsManager - handleSaveFileConnectionToSidebar tipo:', typeof handleSaveFileConnectionToSidebar);
-    console.log('🔵 DialogsManager - editingFileConnectionNode:', editingFileConnectionNode);
-    console.log('🔵 DialogsManager - setEditingFileConnectionNode existe:', !!setEditingFileConnectionNode);
-
     if (!fileData || !fileData.name || !fileData.host || !fileData.username) {
       console.error('❌ DialogsManager - Datos inválidos:', fileData);
       return;
@@ -227,37 +221,19 @@ const DialogsManager = ({
 
     if (handleSaveFileConnectionToSidebar && typeof handleSaveFileConnectionToSidebar === 'function') {
       const isEditing = !!editingFileConnectionNode;
-      console.log('🔵 DialogsManager - Guardando conexión de archivos', isEditing ? '(EDITANDO)' : '(CREANDO)');
       try {
-        console.log('🔵 DialogsManager - Llamando handleSaveFileConnectionToSidebar...');
         handleSaveFileConnectionToSidebar(fileData, isEditing, editingFileConnectionNode);
-        console.log('✅ DialogsManager - handleSaveFileConnectionToSidebar llamado exitosamente');
         // Limpiar el nodo de edición después de guardar
         if (isEditing && setEditingFileConnectionNode) {
-          console.log('🔵 DialogsManager - Limpiando editingFileConnectionNode...');
           setEditingFileConnectionNode(null);
-          console.log('✅ DialogsManager - editingFileConnectionNode limpiado');
         }
       } catch (error) {
         console.error('❌ DialogsManager - Error al guardar conexión:', error);
       }
     } else {
       console.error('❌ DialogsManager - handleSaveFileConnectionToSidebar no está definido o no es una función!');
-      console.error('❌ DialogsManager - handleSaveFileConnectionToSidebar:', handleSaveFileConnectionToSidebar);
     }
   }, [handleSaveFileConnectionToSidebar, editingFileConnectionNode, setEditingFileConnectionNode]);
-  
-  // Debug: verificar que el handler se crea correctamente
-  useEffect(() => {
-    console.log('DialogsManager - Render - stableFileConnectionHandler:', typeof stableFileConnectionHandler, !!stableFileConnectionHandler);
-    console.log('DialogsManager - Render - handleSaveFileConnectionToSidebar:', typeof handleSaveFileConnectionToSidebar, !!handleSaveFileConnectionToSidebar);
-    if (stableFileConnectionHandler) {
-      console.log('DialogsManager - ✅ Handler válido, se pasará a UnifiedConnectionDialog');
-    } else {
-      console.error('DialogsManager - ❌ Handler es null/undefined, NO se pasará correctamente!');
-      console.error('DialogsManager - handleSaveFileConnectionToSidebar:', handleSaveFileConnectionToSidebar);
-    }
-  }, [handleSaveFileConnectionToSidebar]);
   
   return (
     <>
@@ -572,16 +548,7 @@ const DialogsManager = ({
         editingNode={editingRdpNode}
         // Props para modo edición
         isEditMode={!!(editSSHNode || editingRdpNode || editingFileConnectionNode)}
-        editConnectionType={(() => {
-          const type = editSSHNode ? 'ssh' : (editingRdpNode ? 'rdp' : (editingFileConnectionNode ? (editingFileConnectionNode.data?.protocol || editingFileConnectionNode.data?.type || 'sftp') : null));
-          console.log('🟢 [DialogsManager] editConnectionType calculado:', type, {
-            editSSHNode: !!editSSHNode,
-            editingRdpNode: !!editingRdpNode,
-            editingFileConnectionNode: !!editingFileConnectionNode,
-            nodeData: editingFileConnectionNode?.data
-          });
-          return type;
-        })()}
+        editConnectionType={editSSHNode ? 'ssh' : (editingRdpNode ? 'rdp' : (editingFileConnectionNode ? (editingFileConnectionNode.data?.protocol || editingFileConnectionNode.data?.type || 'sftp') : null))}
         editNodeData={editSSHNode || editingRdpNode || editingFileConnectionNode}
         // Props Archivos (SFTP/FTP/SCP) - Usar valores por defecto si son undefined
         fileConnectionName={fileConnectionName ?? ''}
