@@ -1188,7 +1188,47 @@ const SettingsDialog = ({
                         /* Configurar nueva clave maestra */
                         <div className="security-form-container">
                           <h4 className="security-form-title">
-                            <i className="pi pi-key"></i>
+                            <span className="security-form-title-icon">
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                  <linearGradient id="formKeyGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#667eea" />
+                                    <stop offset="50%" stopColor="#764ba2" />
+                                    <stop offset="100%" stopColor="#f093fb" />
+                                  </linearGradient>
+                                  <linearGradient id="formKeyGradientWhite2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#ffffff" />
+                                    <stop offset="100%" stopColor="#e8e8f0" />
+                                  </linearGradient>
+                                </defs>
+                                {/* Escudo de fondo */}
+                                <path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z" 
+                                      fill="url(#formKeyGradient2)" 
+                                      stroke="rgba(255,255,255,0.35)" 
+                                      strokeWidth="0.6"/>
+                                {/* Llave maestra estilizada */}
+                                <g transform="translate(12, 11)">
+                                  {/* Anillo de la llave */}
+                                  <circle cx="0" cy="-1" r="2.2" 
+                                          fill="none" 
+                                          stroke="url(#formKeyGradientWhite2)" 
+                                          strokeWidth="1.4" 
+                                          opacity="0.98"/>
+                                  {/* Cuerpo de la llave */}
+                                  <rect x="-1.8" y="0.5" width="3.6" height="5.5" rx="1.2" 
+                                        fill="url(#formKeyGradientWhite2)" 
+                                        opacity="0.98"
+                                        stroke="rgba(102, 126, 234, 0.25)" 
+                                        strokeWidth="0.4"/>
+                                  {/* Dientes de la llave (patrón de seguridad) */}
+                                  <rect x="-1" y="3.5" width="2" height="2.5" rx="0.5" 
+                                        fill="url(#formKeyGradientWhite2)" 
+                                        opacity="0.98"/>
+                                  <rect x="-0.4" y="5" width="0.8" height="1.2" rx="0.2" 
+                                        fill="rgba(102, 126, 234, 0.5)"/>
+                                </g>
+                              </svg>
+                            </span>
                             Configurar Clave Maestra
                           </h4>
                           
@@ -1241,7 +1281,47 @@ const SettingsDialog = ({
                         /* Cambiar clave maestra existente */
                         <div className="security-form-container">
                           <h4 className="security-form-title">
-                            <i className="pi pi-key"></i>
+                            <span className="security-form-title-icon">
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                  <linearGradient id="formKeyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#667eea" />
+                                    <stop offset="50%" stopColor="#764ba2" />
+                                    <stop offset="100%" stopColor="#f093fb" />
+                                  </linearGradient>
+                                  <linearGradient id="formKeyGradientWhite" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#ffffff" />
+                                    <stop offset="100%" stopColor="#e8e8f0" />
+                                  </linearGradient>
+                                </defs>
+                                {/* Escudo de fondo */}
+                                <path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z" 
+                                      fill="url(#formKeyGradient)" 
+                                      stroke="rgba(255,255,255,0.35)" 
+                                      strokeWidth="0.6"/>
+                                {/* Llave maestra estilizada */}
+                                <g transform="translate(12, 11)">
+                                  {/* Anillo de la llave */}
+                                  <circle cx="0" cy="-1" r="2.2" 
+                                          fill="none" 
+                                          stroke="url(#formKeyGradientWhite)" 
+                                          strokeWidth="1.4" 
+                                          opacity="0.98"/>
+                                  {/* Cuerpo de la llave */}
+                                  <rect x="-1.8" y="0.5" width="3.6" height="5.5" rx="1.2" 
+                                        fill="url(#formKeyGradientWhite)" 
+                                        opacity="0.98"
+                                        stroke="rgba(102, 126, 234, 0.25)" 
+                                        strokeWidth="0.4"/>
+                                  {/* Dientes de la llave (patrón de seguridad) */}
+                                  <rect x="-1" y="3.5" width="2" height="2.5" rx="0.5" 
+                                        fill="url(#formKeyGradientWhite)" 
+                                        opacity="0.98"/>
+                                  <rect x="-0.4" y="5" width="0.8" height="1.2" rx="0.2" 
+                                        fill="rgba(102, 126, 234, 0.5)"/>
+                                </g>
+                              </svg>
+                            </span>
                             Cambiar Clave Maestra
                           </h4>
                           
