@@ -987,13 +987,6 @@ const Sidebar = React.memo(({
           setParentNodeKey(parentKey);
           setShowFolderDialog(true);
         },
-
-        createRDP: () => {
-          // Esta función debe ser pasada desde App.js
-          if (window.createRDP) {
-            window.createRDP();
-          }
-        },
         editRDP: (node) => {
           // Esta función debe ser pasada desde App.js
           if (window.editRDP) {

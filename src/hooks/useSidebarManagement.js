@@ -571,15 +571,6 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           }
         }
       });
-      items.push({
-        label: 'Nueva Conexión RDP',
-        icon: 'pi pi-desktop',
-        command: () => {
-          if (sidebarCallbacksRef.current.createRDP) {
-            sidebarCallbacksRef.current.createRDP(node.key);
-          }
-        }
-      });
       items.push({ separator: true });
       items.push({
         label: 'Duplicar Carpeta',

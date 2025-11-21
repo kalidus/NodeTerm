@@ -1645,9 +1645,6 @@ const App = () => {
     sidebarCallbacksRef.current.createSSH = (targetFolder = null) => {
       window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
     };
-    sidebarCallbacksRef.current.createRDP = (targetFolder = null) => {
-      openNewRdpDialog(targetFolder);
-    };
     sidebarCallbacksRef.current.editRDP = (node) => {
       openEditRdpDialog(node);
     };

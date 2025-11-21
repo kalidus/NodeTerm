@@ -32,7 +32,12 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 			case 'rdp-guacamole':
 				return 'pi pi-desktop';
 			case 'explorer':
+			case 'sftp':
 				return 'pi pi-folder-open';
+			case 'ftp':
+				return 'pi pi-cloud-upload';
+			case 'scp':
+				return 'pi pi-copy';
 			case 'group':
 				return 'pi pi-th-large';
 			default:
@@ -47,7 +52,12 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 			case 'rdp-guacamole':
 				return '#ff6b35';
 			case 'explorer':
+			case 'sftp':
 				return '#FFB300';
+			case 'ftp':
+				return '#4CAF50';
+			case 'scp':
+				return '#9C27B0';
 			case 'group':
 				return '#9c27b0';
 			default:
@@ -63,6 +73,9 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 					{ key: 'ssh', label: 'SSH' },
 					{ key: 'rdp-guacamole', label: 'RDP' },
 					{ key: 'explorer', label: 'SFTP' },
+					{ key: 'sftp', label: 'SFTP' },
+					{ key: 'ftp', label: 'FTP' },
+					{ key: 'scp', label: 'SCP' },
 					{ key: 'group', label: 'Grupos' }
 				].map(opt => (
 					<button
@@ -174,8 +187,11 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 							fontWeight: 700
 						}}>
 							{connection.type === 'rdp-guacamole' ? 'RDP' : 
-							 (connection.type === 'explorer' ? 'SFTP' : 
-							  connection.type === 'group' ? 'Grupo' : 'SSH')}
+							 connection.type === 'explorer' ? 'SFTP' : 
+							 connection.type === 'sftp' ? 'SFTP' :
+							 connection.type === 'ftp' ? 'FTP' :
+							 connection.type === 'scp' ? 'SCP' :
+							 connection.type === 'group' ? 'Grupo' : 'SSH'}
 						</span>
 						{connection.type === 'group' && connection.sessions && (
 							<span style={{
