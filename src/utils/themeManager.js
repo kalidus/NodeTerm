@@ -311,6 +311,80 @@ class ThemeManager {
         border-top: 1px solid var(--ui-dialog-border) !important;
       }
 
+      /* === TOAST STYLES === */
+      .p-toast {
+        z-index: 1100;
+      }
+
+      .p-toast .p-toast-message {
+        background: var(--ui-dialog-bg) !important;
+        color: var(--ui-dialog-text) !important;
+        border: 1px solid var(--ui-dialog-border) !important;
+        box-shadow: 0 4px 12px var(--ui-dialog-shadow) !important;
+      }
+
+      .p-toast .p-toast-message .p-toast-message-content {
+        background: var(--ui-dialog-bg) !important;
+        color: var(--ui-dialog-text) !important;
+      }
+
+      .p-toast .p-toast-message .p-toast-message-text {
+        color: var(--ui-dialog-text) !important;
+      }
+
+      .p-toast .p-toast-message .p-toast-message-summary {
+        color: var(--ui-dialog-text) !important;
+        font-weight: 600;
+      }
+
+      .p-toast .p-toast-message .p-toast-message-detail {
+        color: var(--ui-dialog-text) !important;
+        opacity: 0.9;
+      }
+
+      .p-toast .p-toast-message .p-toast-icon-close {
+        color: var(--ui-dialog-text) !important;
+        opacity: 0.7;
+      }
+
+      .p-toast .p-toast-message .p-toast-icon-close:hover {
+        opacity: 1;
+        background: var(--ui-sidebar-hover) !important;
+      }
+
+      /* Toast severity colors - usando colores semánticos que se adaptan al tema */
+      .p-toast .p-toast-message.p-toast-message-success {
+        border-left: 4px solid #4caf50 !important;
+      }
+
+      .p-toast .p-toast-message.p-toast-message-success .p-toast-icon {
+        color: #4caf50 !important;
+      }
+
+      .p-toast .p-toast-message.p-toast-message-info {
+        border-left: 4px solid ${colors.buttonPrimary || '#2196f3'} !important;
+      }
+
+      .p-toast .p-toast-message.p-toast-message-info .p-toast-icon {
+        color: ${colors.buttonPrimary || '#2196f3'} !important;
+      }
+
+      .p-toast .p-toast-message.p-toast-message-warn {
+        border-left: 4px solid #ff9800 !important;
+      }
+
+      .p-toast .p-toast-message.p-toast-message-warn .p-toast-icon {
+        color: #ff9800 !important;
+      }
+
+      .p-toast .p-toast-message.p-toast-message-error {
+        border-left: 4px solid #f44336 !important;
+      }
+
+      .p-toast .p-toast-message.p-toast-message-error .p-toast-icon {
+        color: #f44336 !important;
+      }
+
       /* === BUTTON STYLES === */
       .p-button {
         background: var(--ui-button-secondary) !important;
