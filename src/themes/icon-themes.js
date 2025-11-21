@@ -47,6 +47,60 @@ export const iconThemes = {
       ),
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#616161" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      ),
+      sftp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="materialSFTP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ff9800"/>
+              <stop offset="100%" stopColor="#ffb74d"/>
+            </linearGradient>
+          </defs>
+          {/* Archivo con candado */}
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="url(#materialSFTP)" opacity="0.1"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="url(#materialSFTP)" strokeWidth="1.5" fill="none"/>
+          <polyline points="14 2 14 8 20 8" stroke="url(#materialSFTP)" strokeWidth="1.5"/>
+          {/* Candado de seguridad */}
+          <rect x="8" y="12" width="8" height="6" rx="1" stroke="url(#materialSFTP)" strokeWidth="1.5" fill="none"/>
+          <rect x="9" y="15" width="6" height="3" rx="0.5" stroke="url(#materialSFTP)" strokeWidth="1" fill="url(#materialSFTP)" opacity="0.3"/>
+          <circle cx="12" cy="13.5" r="1.5" stroke="url(#materialSFTP)" strokeWidth="1.5" fill="none"/>
+        </svg>
+      ),
+      ftp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="materialFTP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#2196f3"/>
+              <stop offset="100%" stopColor="#64b5f6"/>
+            </linearGradient>
+          </defs>
+          {/* Archivo con flechas de transferencia */}
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="url(#materialFTP)" opacity="0.1"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="url(#materialFTP)" strokeWidth="1.5" fill="none"/>
+          <polyline points="14 2 14 8 20 8" stroke="url(#materialFTP)" strokeWidth="1.5"/>
+          {/* Flechas de transferencia */}
+          <path d="M8 12l3-3 3 3" stroke="url(#materialFTP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M8 16l3 3 3-3" stroke="url(#materialFTP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      scp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="materialSCP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#4caf50"/>
+              <stop offset="100%" stopColor="#81c784"/>
+            </linearGradient>
+          </defs>
+          {/* Archivo con terminal y flecha */}
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="url(#materialSCP)" opacity="0.1"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="url(#materialSCP)" strokeWidth="1.5" fill="none"/>
+          <polyline points="14 2 14 8 20 8" stroke="url(#materialSCP)" strokeWidth="1.5"/>
+          {/* Terminal pequeño */}
+          <rect x="7" y="10" width="6" height="4" rx="1" stroke="url(#materialSCP)" strokeWidth="1" fill="none"/>
+          <rect x="8" y="11.5" width="4" height="1" rx="0.5" fill="url(#materialSCP)"/>
+          {/* Flecha de copia */}
+          <path d="M16 14l2 2 2-2" stroke="url(#materialSCP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
       )
     }
   },
@@ -154,6 +208,53 @@ export const iconThemes = {
       ),
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#605e5c"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="10" y="6" width="4" height="12" fill="#fff"/></svg>
+      ),
+      sftp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="fluentSFTP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#0078d4"/>
+              <stop offset="100%" stopColor="#106ebe"/>
+            </linearGradient>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#0078d4" opacity="0.1"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#0078d4" strokeWidth="1.5" fill="none"/>
+          <polyline points="14 2 14 8 20 8" stroke="#0078d4" strokeWidth="1.5"/>
+          <rect x="8" y="12" width="8" height="6" rx="1" stroke="#0078d4" strokeWidth="1.5" fill="none"/>
+          <rect x="9" y="15" width="6" height="3" rx="0.5" stroke="#0078d4" strokeWidth="1" fill="#0078d4" opacity="0.3"/>
+          <circle cx="12" cy="13.5" r="1.5" stroke="#0078d4" strokeWidth="1.5" fill="none"/>
+        </svg>
+      ),
+      ftp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="fluentFTP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#0078d4"/>
+              <stop offset="100%" stopColor="#106ebe"/>
+            </linearGradient>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#0078d4" opacity="0.1"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#0078d4" strokeWidth="1.5" fill="none"/>
+          <polyline points="14 2 14 8 20 8" stroke="#0078d4" strokeWidth="1.5"/>
+          <path d="M8 12l3-3 3 3" stroke="#0078d4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M8 16l3 3 3-3" stroke="#0078d4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      scp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="fluentSCP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#0078d4"/>
+              <stop offset="100%" stopColor="#106ebe"/>
+            </linearGradient>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#0078d4" opacity="0.1"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#0078d4" strokeWidth="1.5" fill="none"/>
+          <polyline points="14 2 14 8 20 8" stroke="#0078d4" strokeWidth="1.5"/>
+          <rect x="7" y="10" width="6" height="4" rx="1" stroke="#0078d4" strokeWidth="1" fill="none"/>
+          <rect x="8" y="11.5" width="4" height="1" rx="0.5" fill="#0078d4"/>
+          <path d="M16 14l2 2 2-2" stroke="#0078d4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
       )
     }
   },
@@ -227,6 +328,50 @@ export const iconThemes = {
           <circle cx="12" cy="10" r="1.5" fill="#88c0d0"/>
           <rect x="10" y="12" width="4" height="1" rx="0.5" fill="#5e81ac"/>
           <path d="M8 20l4 2 4-2" stroke="url(#nordRDP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      sftp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="nordSFTP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ebcb8b"/>
+              <stop offset="100%" stopColor="#d08770"/>
+            </linearGradient>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#434c5e" stroke="url(#nordSFTP)" strokeWidth="1.5"/>
+          <polyline points="14 2 14 8 20 8" stroke="url(#nordSFTP)" strokeWidth="1.5"/>
+          <rect x="8" y="12" width="8" height="6" rx="1" stroke="url(#nordSFTP)" strokeWidth="1.5" fill="none"/>
+          <rect x="9" y="15" width="6" height="3" rx="0.5" stroke="url(#nordSFTP)" strokeWidth="1" fill="#d08770" opacity="0.3"/>
+          <circle cx="12" cy="13.5" r="1.5" stroke="url(#nordSFTP)" strokeWidth="1.5" fill="none"/>
+        </svg>
+      ),
+      ftp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="nordFTP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#88c0d0"/>
+              <stop offset="100%" stopColor="#81a1c1"/>
+            </linearGradient>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#434c5e" stroke="url(#nordFTP)" strokeWidth="1.5"/>
+          <polyline points="14 2 14 8 20 8" stroke="url(#nordFTP)" strokeWidth="1.5"/>
+          <path d="M8 12l3-3 3 3" stroke="url(#nordFTP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M8 16l3 3 3-3" stroke="url(#nordFTP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      scp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="nordSCP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#a3be8c"/>
+              <stop offset="100%" stopColor="#8fbcbb"/>
+            </linearGradient>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#434c5e" stroke="url(#nordSCP)" strokeWidth="1.5"/>
+          <polyline points="14 2 14 8 20 8" stroke="url(#nordSCP)" strokeWidth="1.5"/>
+          <rect x="7" y="10" width="6" height="4" rx="1" stroke="url(#nordSCP)" strokeWidth="1" fill="none"/>
+          <rect x="8" y="11.5" width="4" height="1" rx="0.5" fill="#a3be8c"/>
+          <path d="M16 14l2 2 2-2" stroke="url(#nordSCP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       ),
       file: (

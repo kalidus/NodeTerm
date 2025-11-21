@@ -65,6 +65,36 @@ export const useNodeTemplate = ({
       icon = iconThemes[iconThemeSidebar]?.icons?.ssh || <span className="pi pi-desktop" />;
     } else if (isRDP) {
       icon = iconThemes[iconThemeSidebar]?.icons?.rdp || <span className="pi pi-desktop" style={{ color: '#007ad9' }} />;
+    } else if (isSFTP || isFTP || isSCP) {
+      // Determinar el tipo de protocolo
+      let protocolType = 'sftp';
+      if (isSCP) protocolType = 'scp';
+      else if (isFTP) protocolType = 'ftp';
+
+      // Obtener icono del tema actual, con fallback al tema material
+      icon = iconThemes[iconThemeSidebar]?.icons?.[protocolType] ||
+             iconThemes['material']?.icons?.[protocolType];
+
+      // Si aún no hay icono, usar fallback genérico
+      if (!icon) {
+        const fallbackColors = {
+          sftp: '#ff9800',
+          ftp: '#2196f3',
+          scp: '#4caf50'
+        };
+        icon = <span className="pi pi-folder" style={{ color: fallbackColors[protocolType] || '#ff9800', fontSize: `${iconSize}px` }} />;
+      } else {
+        // Si tenemos un icono SVG del tema, clonarlo con el tamaño correcto
+        icon = React.cloneElement(icon, {
+          width: iconSize,
+          height: iconSize,
+          style: {
+            ...icon.props.style,
+            width: `${iconSize}px`,
+            height: `${iconSize}px`
+          }
+        });
+      }
     } else if (isPassword) {
       icon = <span className="pi pi-key" style={{ color: '#ffc107' }} />;
     } else if (isFolder) {
