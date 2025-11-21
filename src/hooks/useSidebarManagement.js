@@ -419,8 +419,14 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Editar',
         icon: 'pi pi-pencil',
         command: () => {
+          console.log('🟣 [useSidebarManagement] Editando conexión de archivos:', node);
+          console.log('🟣 [useSidebarManagement] node.data.type:', node.data?.type);
+          console.log('🟣 [useSidebarManagement] node.data.protocol:', node.data?.protocol);
+          console.log('🟣 [useSidebarManagement] editFileConnection existe:', !!sidebarCallbacksRef.current.editFileConnection);
           if (sidebarCallbacksRef.current.editFileConnection) {
             sidebarCallbacksRef.current.editFileConnection(node);
+          } else {
+            console.error('❌ [useSidebarManagement] editFileConnection NO está definido!');
           }
         }
       });

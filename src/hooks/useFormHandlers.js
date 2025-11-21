@@ -15,7 +15,8 @@ export const useFormHandlers = ({
   setShowEditFolderDialog,
 
   setShowUnifiedConnectionDialog,
-  
+  setShowFileConnectionDialog,
+
   // Estados de formularios SSH
   sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword,
   closeSSHDialogWithReset,
@@ -767,27 +768,26 @@ export const useFormHandlers = ({
    * Abrir diálogo de edición de conexión de archivos
    */
   const openEditFileConnectionDialog = useCallback((node) => {
-    // Cargar los datos del nodo en los estados de edición
-    setFileConnectionName(node.label || '');
-    setFileConnectionHost(node.data?.host || '');
-    setFileConnectionUser(node.data?.username || node.data?.user || '');
-    setFileConnectionPassword(node.data?.password || '');
-    setFileConnectionPort(node.data?.port || (node.data?.protocol === 'ftp' ? 21 : 22));
-    setFileConnectionProtocol(node.data?.protocol || node.data?.type || 'sftp');
-    setFileConnectionRemoteFolder(node.data?.remoteFolder || '');
-    setFileConnectionTargetFolder(node.data?.targetFolder || '');
-    
+    console.log('🔵 [openEditFileConnectionDialog] Llamado con nodo:', node);
+    console.log('🔵 [openEditFileConnectionDialog] node.data:', node.data);
+    console.log('🔵 [openEditFileConnectionDialog] node.data.type:', node.data?.type);
+    console.log('🔵 [openEditFileConnectionDialog] node.data.protocol:', node.data?.protocol);
+
     // Guardar el nodo que se está editando
     setEditingFileConnectionNode(node);
-    
-    // Abrir el diálogo unificado en modo edición
-    setShowUnifiedConnectionDialog(true);
-  }, [
-    setFileConnectionName, setFileConnectionHost, setFileConnectionUser,
-    setFileConnectionPassword, setFileConnectionPort, setFileConnectionProtocol,
-    setFileConnectionRemoteFolder, setFileConnectionTargetFolder,
-    setEditingFileConnectionNode, setShowUnifiedConnectionDialog
-  ]);
+
+    console.log('🔵 [openEditFileConnectionDialog] Abriendo diálogo independiente de archivos...');
+    // Abrir el diálogo independiente de archivos
+    setShowFileConnectionDialog(true);
+  }, [setEditingFileConnectionNode, setShowFileConnectionDialog]);
+
+  /**
+   * Abrir diálogo nuevo de archivos
+   */
+  const openNewFileConnectionDialog = useCallback(() => {
+    console.log('🔵 [openNewFileConnectionDialog] Abriendo diálogo de nueva conexión de archivos...');
+    setShowFileConnectionDialog(true);
+  }, [setShowFileConnectionDialog]);
 
   return {
     // Funciones de creación
@@ -807,6 +807,7 @@ export const useFormHandlers = ({
     handleSaveRdpToSidebar,
     handleSaveFileConnectionToSidebar,
     openEditFileConnectionDialog,
+    openNewFileConnectionDialog,
     createNewPasswordEntry
   };
 };

@@ -953,6 +953,7 @@ const App = () => {
     showSyncDialog, setShowSyncDialog,
   
     showUnifiedConnectionDialog, setShowUnifiedConnectionDialog,
+    showFileConnectionDialog, setShowFileConnectionDialog,
     // Estados de formularios SSH
     sshName, setSSHName,
     sshHost, setSSHHost,
@@ -1101,6 +1102,7 @@ const App = () => {
     setShowEditFolderDialog,
 
     setShowUnifiedConnectionDialog,
+    setShowFileConnectionDialog,
     // Estados SSH para creación
     sshName, setSSHName, sshHost, setSSHHost, sshUser, setSSHUser, 
     sshPassword, setSSHPassword, sshRemoteFolder, setSSHRemoteFolder, 
@@ -2158,7 +2160,9 @@ const App = () => {
         setShowCreateGroupDialog={setShowCreateGroupDialog}
         showUnifiedConnectionDialog={showUnifiedConnectionDialog}
         setShowUnifiedConnectionDialog={setShowUnifiedConnectionDialog}
-        
+        showFileConnectionDialog={showFileConnectionDialog}
+        setShowFileConnectionDialog={setShowFileConnectionDialog}
+
         // Estados de formularios SSH
         sshName={sshName}
         setSSHName={setSSHName}
