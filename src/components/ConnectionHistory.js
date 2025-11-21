@@ -4,7 +4,12 @@ import { getFavorites, toggleFavorite, onUpdate } from '../utils/connectionStore
 
 const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recentsLimit = 10, activeIds = new Set(), onEdit, templateColumns, favoritesColumns = 2, recentsColumns = 1, sshConnectionsCount = 0, foldersCount = 0, rdpConnectionsCount = 0, themeColors = {} }) => {
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
-	const [favType, setFavType] = useState(() => localStorage.getItem('nodeterm_fav_type') || 'all');
+	const [favType, setFavType] = useState(() => {
+		const saved = localStorage.getItem('nodeterm_fav_type');
+		// Convertir 'explorer' a 'sftp' para consistencia
+		if (saved === 'explorer') return 'sftp';
+		return saved || 'all';
+	});
 	const [favQuery, setFavQuery] = useState('');
 	const [currentPage, setCurrentPage] = useState(1);
 	const itemsPerPage = 15;
@@ -65,41 +70,136 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 		}
 	};
 
-	const TypeChips = ({ value, onChange }) => (
-		<>
-			<div style={{ display: 'flex', gap: 5 }}>
-				{[
-					{ key: 'all', label: 'Todos' },
-					{ key: 'ssh', label: 'SSH' },
-					{ key: 'rdp-guacamole', label: 'RDP' },
-					{ key: 'explorer', label: 'SFTP' },
-					{ key: 'sftp', label: 'SFTP' },
-					{ key: 'ftp', label: 'FTP' },
-					{ key: 'scp', label: 'SCP' },
-					{ key: 'group', label: 'Grupos' }
-				].map(opt => (
+	const TypeChips = ({ value, onChange }) => {
+		// Determinar el valor del selector de archivos (SFTP/FTP/SCP)
+		const getFileProtocolValue = () => {
+			if (value === 'explorer' || value === 'sftp') return 'sftp';
+			if (value === 'ftp') return 'ftp';
+			if (value === 'scp') return 'scp';
+			return 'sftp'; // Por defecto SFTP
+		};
+
+		const fileProtocolValue = getFileProtocolValue();
+		const isFileProtocolSelected = ['explorer', 'sftp', 'ftp', 'scp'].includes(value);
+
+		const handleFileProtocolChange = (newValue) => {
+			// Mapear el valor del selector al tipo de conexión
+			const typeMap = {
+				'sftp': 'sftp',
+				'ftp': 'ftp',
+				'scp': 'scp'
+			};
+			const connectionType = typeMap[newValue] || 'sftp';
+			onChange(connectionType);
+			if (onChange === setFavType) localStorage.setItem('nodeterm_fav_type', connectionType);
+		};
+
+		return (
+			<>
+				<div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+					{/* Botones: Todos, SSH, RDP */}
+					{[
+						{ key: 'all', label: 'Todos' },
+						{ key: 'ssh', label: 'SSH' },
+						{ key: 'rdp-guacamole', label: 'RDP' }
+					].map(opt => (
+						<button
+							key={opt.key}
+							onClick={() => { onChange(opt.key); if (onChange === setFavType) localStorage.setItem('nodeterm_fav_type', opt.key); }}
+							style={{
+								padding: '2px 7px',
+								borderRadius: 999,
+								border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.14)'}`,
+								background: value === opt.key ? (themeColors.hoverBackground || 'rgba(255,255,255,0.12)') : (themeColors.itemBackground || 'rgba(255,255,255,0.04)'),
+								color: themeColors.textPrimary || 'var(--text-color)',
+								fontSize: 10,
+								cursor: 'pointer',
+								backdropFilter: 'blur(8px) saturate(130%)',
+								height: '20px',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center'
+							}}
+						>{opt.label}</button>
+					))}
+					
+					{/* Selector para SFTP/FTP/SCP - después de RDP */}
+					<div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+						<select
+							value={fileProtocolValue}
+							onChange={(e) => handleFileProtocolChange(e.target.value)}
+							style={{
+								padding: '0 20px 0 7px',
+								borderRadius: 999,
+								border: `1px solid ${isFileProtocolSelected ? (themeColors.hoverBackground || 'rgba(255,255,255,0.12)') : (themeColors.borderColor || 'rgba(255,255,255,0.14)')}`,
+								background: isFileProtocolSelected ? (themeColors.hoverBackground || 'rgba(255,255,255,0.12)') : (themeColors.itemBackground || 'rgba(255,255,255,0.04)'),
+								color: themeColors.textPrimary || 'var(--text-color)',
+								fontSize: 10,
+								cursor: 'pointer',
+								backdropFilter: 'blur(8px) saturate(130%)',
+								outline: 'none',
+								appearance: 'none',
+								WebkitAppearance: 'none',
+								MozAppearance: 'none',
+								width: 'auto',
+								minWidth: '50px',
+								height: '20px',
+								lineHeight: '20px',
+								verticalAlign: 'middle',
+								boxSizing: 'border-box',
+								margin: 0
+							}}
+						>
+							<option value="sftp">SFTP</option>
+							<option value="ftp">FTP</option>
+							<option value="scp">SCP</option>
+						</select>
+						<i 
+							className="pi pi-chevron-down" 
+							style={{ 
+								position: 'absolute',
+								right: '6px',
+								top: '50%',
+								transform: 'translateY(-50%)',
+								pointerEvents: 'none',
+								fontSize: '8px',
+								color: themeColors.textPrimary || 'var(--text-color)',
+								opacity: 0.7
+							}} 
+						/>
+					</div>
+					
+					{/* Botón Grupos - después del selector */}
 					<button
-						key={opt.key}
-						onClick={() => { onChange(opt.key); if (onChange === setFavType) localStorage.setItem('nodeterm_fav_type', opt.key); }}
+						key="group"
+						onClick={() => { onChange('group'); if (onChange === setFavType) localStorage.setItem('nodeterm_fav_type', 'group'); }}
 						style={{
 							padding: '2px 7px',
 							borderRadius: 999,
 							border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.14)'}`,
-							background: value === opt.key ? (themeColors.hoverBackground || 'rgba(255,255,255,0.12)') : (themeColors.itemBackground || 'rgba(255,255,255,0.04)'),
+							background: value === 'group' ? (themeColors.hoverBackground || 'rgba(255,255,255,0.12)') : (themeColors.itemBackground || 'rgba(255,255,255,0.04)'),
 							color: themeColors.textPrimary || 'var(--text-color)',
 							fontSize: 10,
 							cursor: 'pointer',
-							backdropFilter: 'blur(8px) saturate(130%)'
+							backdropFilter: 'blur(8px) saturate(130%)',
+							height: '20px',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center'
 						}}
-					>{opt.label}</button>
-				))}
-			</div>
-		</>
-	);
+					>Grupos</button>
+				</div>
+			</>
+		);
+	};
 
 
 	const applyTypeFilter = (items, type) => {
 		if (type === 'all') return items;
+		// 'explorer' y 'sftp' son ambos SFTP, así que los tratamos igual
+		if (type === 'sftp') {
+			return items.filter(c => c.type === 'sftp' || c.type === 'explorer');
+		}
 		return items.filter(c => c.type === type);
 	};
 
