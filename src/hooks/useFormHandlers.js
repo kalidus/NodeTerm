@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { iconThemes } from '../themes/icon-themes';
+import { updateFavoriteOnEdit, helpers as connectionHelpers } from '../utils/connectionStore';
 
 /**
  * Hook para manejar todas las operaciones de formularios de la aplicación
@@ -380,6 +381,9 @@ export const useFormHandlers = ({
     // Detectar automáticamente si es formato Wallix
     const userInfo = parseWallixUser(editSSHUser.trim());
     
+    // Guardar datos antiguos para actualizar favoritos
+    const oldConnection = connectionHelpers.fromSidebarNode(editSSHNode);
+    
     const nodesCopy = deepCopy(nodes);
     const nodeToEdit = findNodeByKey(nodesCopy, editSSHNode.key);
     if (nodeToEdit) {
@@ -401,6 +405,12 @@ export const useFormHandlers = ({
         autoCopyPassword: editSSHAutoCopyPassword || false
       };
       nodeToEdit.droppable = false; // Asegurar que las sesiones SSH no sean droppable
+      
+      // Actualizar favoritos si la conexión estaba en favoritos
+      if (oldConnection) {
+        const newConnection = connectionHelpers.fromSidebarNode(nodeToEdit);
+        updateFavoriteOnEdit(oldConnection, newConnection);
+      }
     }
     
     setNodes(nodesCopy);
@@ -537,6 +547,9 @@ export const useFormHandlers = ({
    */
   const handleSaveRdpToSidebar = useCallback((rdpData, isEditing = false, originalNode = null) => {
     if (isEditing && originalNode) {
+      // Guardar datos antiguos para actualizar favoritos
+      const oldConnection = connectionHelpers.fromSidebarNode(originalNode);
+      
       // Actualizar nodo existente
       setNodes(prevNodes => {
         const nodesCopy = Array.isArray(prevNodes) ? [...prevNodes] : [];
@@ -583,6 +596,12 @@ export const useFormHandlers = ({
             guacDisableBitmapCaching: rdpData.guacDisableBitmapCaching === true,
             guacDisableCopyRect: rdpData.guacDisableCopyRect === true
           };
+          
+          // Actualizar favoritos si la conexión estaba en favoritos
+          if (oldConnection) {
+            const newConnection = connectionHelpers.fromSidebarNode(nodeToEdit);
+            updateFavoriteOnEdit(oldConnection, newConnection);
+          }
         }
         
         return nodesCopy;
@@ -715,6 +734,9 @@ export const useFormHandlers = ({
     const fileType = fileData.protocol || 'sftp'; // sftp, ftp, scp
     
     if (isEditing && originalNode) {
+      // Guardar datos antiguos para actualizar favoritos
+      const oldConnection = connectionHelpers.fromSidebarNode(originalNode);
+      
       // Actualizar nodo existente
       setNodes(prevNodes => {
         const nodesCopy = Array.isArray(prevNodes) ? [...prevNodes] : [];
@@ -735,6 +757,12 @@ export const useFormHandlers = ({
             remoteFolder: fileData.remoteFolder || '',
             targetFolder: fileData.targetFolder || ''
           };
+          
+          // Actualizar favoritos si la conexión estaba en favoritos
+          if (oldConnection) {
+            const newConnection = connectionHelpers.fromSidebarNode(nodeToEdit);
+            updateFavoriteOnEdit(oldConnection, newConnection);
+          }
         }
         
         return nodesCopy;
