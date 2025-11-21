@@ -1098,7 +1098,47 @@ const SettingsDialog = ({
                       {/* Columna izquierda: Estado */}
                       <div className="security-status-card">
                         <div className="security-status-header">
-                          <i className={`pi ${hasMasterKey ? 'pi-check-circle' : 'pi-exclamation-triangle'} security-status-icon ${hasMasterKey ? 'success' : 'warning'}`}></i>
+                          <span className={`security-status-icon ${hasMasterKey ? 'success' : 'warning'}`}>
+                            {hasMasterKey ? (
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                  <linearGradient id="statusSuccessGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#11998e" />
+                                    <stop offset="100%" stopColor="#38ef7d" />
+                                  </linearGradient>
+                                </defs>
+                                {/* Escudo de seguridad */}
+                                <path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z" 
+                                      fill="url(#statusSuccessGradient)" 
+                                      stroke="rgba(255,255,255,0.3)" 
+                                      strokeWidth="0.5"/>
+                                {/* Check de verificación */}
+                                <path d="M9 12l2 2 4-4" 
+                                      stroke="#ffffff" 
+                                      strokeWidth="2.5" 
+                                      strokeLinecap="round" 
+                                      strokeLinejoin="round" 
+                                      fill="none"/>
+                              </svg>
+                            ) : (
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                  <linearGradient id="statusWarningGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#f093fb" />
+                                    <stop offset="100%" stopColor="#f5576c" />
+                                  </linearGradient>
+                                </defs>
+                                {/* Escudo de seguridad */}
+                                <path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z" 
+                                      fill="url(#statusWarningGradient)" 
+                                      stroke="rgba(255,255,255,0.3)" 
+                                      strokeWidth="0.5"/>
+                                {/* Signo de exclamación */}
+                                <circle cx="12" cy="9" r="1.2" fill="#ffffff"/>
+                                <rect x="11" y="11.5" width="2" height="4" rx="1" fill="#ffffff"/>
+                              </svg>
+                            )}
+                          </span>
                           <span className="security-status-label">Estado:</span>
                           <div className="security-status-badge">
                             <Badge 
