@@ -888,26 +888,34 @@ const SettingsDialog = ({
                         <stop offset="50%" stopColor="#764ba2" />
                         <stop offset="100%" stopColor="#f093fb" />
                       </linearGradient>
-                      <linearGradient id="slidersGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <linearGradient id="gearGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" stopColor="#ffffff" />
                         <stop offset="100%" stopColor="#e8e8f0" />
                       </linearGradient>
                     </defs>
-                    {/* Fondo circular con gradiente */}
-                    <circle cx="12" cy="12" r="10" fill="url(#generalSettingsGradient)" stroke="rgba(255,255,255,0.35)" strokeWidth="0.6"/>
-                    {/* Sliders/Controles */}
+                    {/* Engranaje principal */}
                     <g transform="translate(12, 12)">
-                      {/* Slider 1 - Superior */}
-                      <line x1="-4" y1="-3" x2="4" y2="-3" stroke="url(#slidersGradient)" strokeWidth="1.5" strokeLinecap="round"/>
-                      <circle cx="-2" cy="-3" r="1.2" fill="url(#slidersGradient)" opacity="0.98"/>
+                      {/* Círculo exterior del engranaje */}
+                      <circle cx="0" cy="0" r="7" fill="url(#generalSettingsGradient)" stroke="rgba(255,255,255,0.35)" strokeWidth="0.6"/>
                       
-                      {/* Slider 2 - Centro */}
-                      <line x1="-4" y1="0" x2="4" y2="0" stroke="url(#slidersGradient)" strokeWidth="1.5" strokeLinecap="round"/>
-                      <circle cx="1" cy="0" r="1.2" fill="url(#slidersGradient)" opacity="0.98"/>
+                      {/* Dientes del engranaje (8 dientes) */}
+                      {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => {
+                        const rad = (angle * Math.PI) / 180;
+                        const x1 = Math.cos(rad) * 6;
+                        const y1 = Math.sin(rad) * 6;
+                        const x2 = Math.cos(rad) * 8.5;
+                        const y2 = Math.sin(rad) * 8.5;
+                        return (
+                          <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} 
+                                stroke="url(#gearGradient)" strokeWidth="1.2" strokeLinecap="round" opacity="0.98"/>
+                        );
+                      })}
                       
-                      {/* Slider 3 - Inferior */}
-                      <line x1="-4" y1="3" x2="4" y2="3" stroke="url(#slidersGradient)" strokeWidth="1.5" strokeLinecap="round"/>
-                      <circle cx="2.5" cy="3" r="1.2" fill="url(#slidersGradient)" opacity="0.98"/>
+                      {/* Círculo interior */}
+                      <circle cx="0" cy="0" r="3.5" fill="url(#gearGradient)" opacity="0.98" stroke="rgba(102, 126, 234, 0.25)" strokeWidth="0.4"/>
+                      
+                      {/* Centro del engranaje */}
+                      <circle cx="0" cy="0" r="1.5" fill="url(#generalSettingsGradient)" opacity="0.8"/>
                     </g>
                   </svg>
                 </span>
