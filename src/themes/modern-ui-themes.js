@@ -51,7 +51,7 @@ export const modernUiThemes = {
       
       // Dialogs
       dialogBackground: '#2d3138',
-      dialogText: '#d6d8db',
+      dialogText: '#e8e8e8',
       dialogBorder: '#434a54',
       dialogShadow: 'rgba(0, 0, 0, 0.3)',
       
@@ -129,7 +129,7 @@ export const modernUiThemes = {
       
       // Dialogs
       dialogBackground: '#0f3354',
-      dialogText: '#b7cde3',
+      dialogText: '#d0e0f0',
       dialogBorder: '#2a72b5',
       dialogShadow: 'rgba(0, 0, 0, 0.4)',
       
@@ -207,7 +207,7 @@ export const modernUiThemes = {
       
       // Dialogs
       dialogBackground: '#11301f',
-      dialogText: '#c9e7d3',
+      dialogText: '#e0f0e8',
       dialogBorder: '#2e7d32',
       dialogShadow: 'rgba(0, 0, 0, 0.4)',
       
@@ -363,7 +363,7 @@ export const modernUiThemes = {
       
       // Dialogs
       dialogBackground: '#2a2a2a',
-      dialogText: '#ddd',
+      dialogText: '#e8e8e8',
       dialogBorder: '#444',
       dialogShadow: 'rgba(0, 0, 0, 0.4)',
       
@@ -753,7 +753,7 @@ export const modernUiThemes = {
       
       // Dialogs
       dialogBackground: '#0f1730',
-      dialogText: '#c9d4ff',
+      dialogText: '#d8e0ff',
       dialogBorder: '#1f2e5f',
       dialogShadow: 'rgba(0, 0, 0, 0.4)',
       
