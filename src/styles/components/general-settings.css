@@ -307,9 +307,9 @@
 
 /* Iconos de configuración */
 .general-setting-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -335,7 +335,7 @@
 
 .general-setting-icon i {
   color: var(--ui-button-primary-text);
-  font-size: 0.875rem;
+  font-size: 0.7rem;
   position: relative;
   z-index: 1;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
@@ -471,9 +471,9 @@ body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
   background: var(--ui-button-primary);
   padding: 0;
   box-shadow: 
@@ -484,7 +484,7 @@ body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
 
 .general-selector-icon-compact i {
   color: var(--ui-button-primary-text);
-  font-size: 0.875rem;
+  font-size: 0.7rem;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
@@ -646,8 +646,8 @@ body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
   }
 
   .general-setting-icon {
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
   }
 
   .general-selector-row-expandable {
