@@ -1437,440 +1437,493 @@ const SettingsDialog = ({
                 </div>
               </TabPanel>
               <TabPanel header={<span><i className="pi pi-shield-alt" style={{ marginRight: 8 }}></i>Auditoría</span>}>
-                <div style={{
-                  padding: '2rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  minHeight: '50vh',
-                  width: '100%'
-                }}>
-                  <div style={{
-                    maxWidth: '600px',
-                    width: '100%',
-                    textAlign: 'left'
-                  }}>
-                    <h3 style={{ 
-                      margin: '0 0 1.5rem 0', 
-                      color: 'var(--text-color)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}>
-                      <i className="pi pi-shield-alt" style={{ color: 'var(--primary-color)' }}></i>
+                <div className="general-settings-container">
+                  {/* Header */}
+                  <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                    <h3 className="general-header">
+                      <span className="general-header-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <defs>
+                            <linearGradient id="auditSettingsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#667eea" />
+                              <stop offset="50%" stopColor="#764ba2" />
+                              <stop offset="100%" stopColor="#f093fb" />
+                            </linearGradient>
+                            <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#ffffff" />
+                              <stop offset="100%" stopColor="#e8e8f0" />
+                            </linearGradient>
+                          </defs>
+                          {/* Escudo principal */}
+                          <path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z" 
+                                fill="url(#auditSettingsGradient)" 
+                                stroke="rgba(255,255,255,0.35)" 
+                                strokeWidth="0.6"/>
+                          {/* Icono de video/cámara dentro del escudo */}
+                          <g transform="translate(12, 12)">
+                            <circle cx="0" cy="0" r="3.5" 
+                                    fill="none" 
+                                    stroke="url(#shieldGradient)" 
+                                    strokeWidth="1.2" 
+                                    opacity="0.98"/>
+                            <circle cx="0" cy="0" r="1.8" 
+                                    fill="url(#shieldGradient)" 
+                                    opacity="0.98"/>
+                            <path d="M-2.5,-1.5 L2.5,-1.5 L2.5,1.5 L-2.5,1.5 Z" 
+                                  fill="url(#auditSettingsGradient)" 
+                                  opacity="0.6"/>
+                          </g>
+                        </svg>
+                      </span>
                       Configuración de Auditoría
                     </h3>
-
-                    <p style={{
-                      marginBottom: '2rem',
-                      color: 'var(--text-color-secondary)',
-                      fontSize: '0.9rem',
-                      lineHeight: '1.5'
-                    }}>
-                      Configura el grabado automático de sesiones SSH y la gestión de archivos de auditoría.
+                    <p className="general-description">
+                      Configura el grabado automático de sesiones SSH y la gestión de archivos de auditoría
                     </p>
+                  </div>
 
-                    {/* Grabación Automática */}
-                    <div style={{
-                      background: 'var(--surface-card)',
-                      border: '1px solid var(--surface-border)',
-                      borderRadius: '8px',
-                      padding: '1.5rem',
-                      marginBottom: '2rem'
-                    }}>
-                      <h4 style={{ 
-                        margin: '0 0 1rem 0', 
-                        color: 'var(--text-color)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem'
-                      }}>
-                        <i className="pi pi-video" style={{ color: '#4fc3f7' }}></i>
-                        Grabación Automática de Sesiones SSH
-                      </h4>
-                      
-                      <div style={{ marginBottom: '1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                          <Checkbox
-                            inputId="autoRecording"
-                            checked={autoRecordingEnabled}
-                            onChange={(e) => setAutoRecordingEnabled(e.checked)}
-                          />
-                          <label htmlFor="autoRecording" style={{ 
-                            color: 'var(--text-color)',
-                            cursor: 'pointer',
-                            userSelect: 'none'
-                          }}>
-                            Activar grabación automática de todas las sesiones SSH
-                          </label>
+                  {/* Grid de 2 columnas para las secciones */}
+                  <div className="general-settings-content">
+                    {/* Sección de Grabación Automática */}
+                    <div className="general-settings-section">
+                      <div className="general-section-header">
+                        <div className="general-section-icon">
+                          <i className="pi pi-video"></i>
                         </div>
-                        
-                        {autoRecordingEnabled && (
-                          <>
-                            <div style={{ marginBottom: '1rem' }}>
-                              <label htmlFor="recordingQuality" style={{
-                                display: 'block',
-                                marginBottom: '0.5rem',
-                                color: 'var(--text-color)',
-                                fontWeight: '500'
-                              }}>
-                                Calidad de grabación
+                        <h4 className="general-section-title">Grabación Automática de Sesiones SSH</h4>
+                      </div>
+                      
+                      <div className="general-settings-options">
+                      
+                        {/* Activar grabación automática */}
+                        <div className="general-setting-card" onClick={() => setAutoRecordingEnabled(!autoRecordingEnabled)}>
+                          <div className="general-setting-content">
+                            <div className="general-setting-icon lock">
+                              <i className="pi pi-video"></i>
+                            </div>
+                            <div className="general-setting-info">
+                              <label htmlFor="autoRecording" className="general-setting-label">
+                                Activar grabación automática
                               </label>
-                              <Dropdown
-                                id="recordingQuality"
-                                value={recordingQuality}
-                                options={[
-                                  { label: 'Alta (todos los eventos)', value: 'high' },
-                                  { label: 'Media (eventos importantes)', value: 'medium' },
-                                  { label: 'Baja (solo comandos)', value: 'low' }
-                                ]}
-                                onChange={(e) => setRecordingQuality(e.value)}
-                                style={{ width: '100%' }}
+                              <p className="general-setting-description">
+                                Graba automáticamente todas las sesiones SSH iniciadas
+                              </p>
+                            </div>
+                            <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                inputId="autoRecording"
+                                checked={autoRecordingEnabled}
+                                onChange={(e) => setAutoRecordingEnabled(e.checked)}
                               />
                             </div>
+                          </div>
+                        </div>
 
-                            <div style={{ marginBottom: '1rem' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                                <Checkbox
-                                  inputId="encryptRecordings"
-                                  checked={encryptRecordings}
-                                  onChange={(e) => setEncryptRecordings(e.checked)}
-                                />
-                                <label htmlFor="encryptRecordings" style={{ 
-                                  color: 'var(--text-color)',
-                                  cursor: 'pointer',
-                                  userSelect: 'none'
-                                }}>
-                                  Cifrar grabaciones con clave maestra
-                                </label>
+                        {autoRecordingEnabled && (
+                          <>
+                            {/* Calidad de grabación */}
+                            <div className="general-icon-selector-section">
+                              <div className="general-selector-row-expandable">
+                                <div className="general-selector-info-group">
+                                  <div className="general-selector-icon-compact">
+                                    <i className="pi pi-sliders-h"></i>
+                                  </div>
+                                  <div className="general-selector-text-group">
+                                    <span className="general-selector-title-compact">Calidad de grabación</span>
+                                    <span className="general-selector-description-compact">Nivel de detalle capturado en las grabaciones</span>
+                                  </div>
+                                </div>
+                                <div className="general-selector-action-wrapper">
+                                  <Dropdown
+                                    id="recordingQuality"
+                                    value={recordingQuality}
+                                    options={[
+                                      { label: 'Alta (todos los eventos)', value: 'high' },
+                                      { label: 'Media (eventos importantes)', value: 'medium' },
+                                      { label: 'Baja (solo comandos)', value: 'low' }
+                                    ]}
+                                    onChange={(e) => setRecordingQuality(e.value)}
+                                    style={{ minWidth: '200px' }}
+                                  />
+                                </div>
                               </div>
-                              <small style={{ color: 'var(--text-color-secondary)', marginLeft: '2rem' }}>
-                                Las grabaciones se cifrarán automáticamente si tienes una clave maestra configurada
-                              </small>
+                            </div>
+
+                            {/* Cifrar grabaciones */}
+                            <div className="general-setting-card" onClick={() => setEncryptRecordings(!encryptRecordings)}>
+                              <div className="general-setting-content">
+                                <div className="general-setting-icon lock">
+                                  <i className="pi pi-lock"></i>
+                                </div>
+                                <div className="general-setting-info">
+                                  <label htmlFor="encryptRecordings" className="general-setting-label">
+                                    Cifrar grabaciones con clave maestra
+                                  </label>
+                                  <p className="general-setting-description">
+                                    Las grabaciones se cifrarán automáticamente si tienes una clave maestra configurada
+                                  </p>
+                                </div>
+                                <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                                  <Checkbox
+                                    inputId="encryptRecordings"
+                                    checked={encryptRecordings}
+                                    onChange={(e) => setEncryptRecordings(e.checked)}
+                                  />
+                                </div>
+                              </div>
                             </div>
 
                             {/* Ubicación de grabaciones */}
-                            <div style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>
-                              <label style={{
-                                display: 'block',
-                                marginBottom: '0.5rem',
-                                color: 'var(--text-color)',
-                                fontWeight: '500'
-                              }}>
-                                Ubicación de grabaciones
-                              </label>
-                              <div style={{
-                                display: 'flex',
-                                gap: '0.5rem',
-                                alignItems: 'center',
-                                marginBottom: '0.5rem'
-                              }}>
-                                <InputText
-                                  value={recordingPath || ''}
-                                  readOnly
-                                  style={{
-                                    flex: 1,
-                                    fontFamily: 'monospace',
-                                    fontSize: '0.85rem'
-                                  }}
-                                  placeholder={loadingPath ? 'Cargando...' : 'Ruta de grabaciones'}
-                                />
-                                <Button
-                                  icon="pi pi-folder-open"
-                                  label="Cambiar"
-                                  onClick={async () => {
-                                    try {
-                                      if (!window?.electron?.dialog?.showOpenDialog) {
-                                        toast?.show({
-                                          severity: 'warn',
-                                          summary: 'No disponible',
-                                          detail: 'El selector de directorios requiere la app de escritorio'
-                                        });
-                                        return;
-                                      }
-                                      
-                                      const result = await window.electron.dialog.showOpenDialog({
-                                        properties: ['openDirectory'],
-                                        title: 'Seleccionar carpeta para guardar grabaciones'
-                                      });
-                                      
-                                      if (result && !result.canceled && result.filePaths && result.filePaths.length > 0) {
-                                        const selectedPath = result.filePaths[0];
-                                        setLoadingPath(true);
-                                        
-                                        const setResult = await window.electron.ipcRenderer.invoke('recording:set-path', {
-                                          customPath: selectedPath
-                                        });
-                                        
-                                        if (setResult && setResult.success) {
-                                          setRecordingPath(setResult.currentPath);
-                                          setIsDefaultPath(false);
-                                          toast?.show({
-                                            severity: 'success',
-                                            summary: 'Ubicación actualizada',
-                                            detail: `Las grabaciones se guardarán en: ${setResult.currentPath}`
-                                          });
-                                        } else {
-                                          toast?.show({
-                                            severity: 'error',
-                                            summary: 'Error',
-                                            detail: setResult?.error || 'No se pudo cambiar la ubicación'
-                                          });
+                            <div className="general-icon-selector-section">
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                <div className="general-selector-row-expandable">
+                                  <div className="general-selector-info-group">
+                                    <div className="general-selector-icon-compact">
+                                      <i className="pi pi-folder-open"></i>
+                                    </div>
+                                    <div className="general-selector-text-group">
+                                      <span className="general-selector-title-compact">Ubicación de grabaciones</span>
+                                      <span className="general-selector-description-compact">
+                                        {isDefaultPath 
+                                          ? 'Ubicación por defecto: AppData/NodeTerm/recordings'
+                                          : `Personalizada: ${recordingPath || 'Cargando...'}`
                                         }
-                                        setLoadingPath(false);
-                                      }
-                                    } catch (error) {
-                                      console.error('Error seleccionando carpeta:', error);
-                                      toast?.show({
-                                        severity: 'error',
-                                        summary: 'Error',
-                                        detail: 'No se pudo abrir el selector de carpeta'
-                                      });
-                                      setLoadingPath(false);
-                                    }
-                                  }}
-                                  disabled={loadingPath}
-                                  style={{ minWidth: '100px' }}
-                                />
-                                {!isDefaultPath && (
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                                  <InputText
+                                    value={recordingPath || ''}
+                                    readOnly
+                                    style={{
+                                      flex: 1,
+                                      fontFamily: 'monospace',
+                                      fontSize: '0.8125rem',
+                                      padding: '0.5rem 0.75rem'
+                                    }}
+                                    placeholder={loadingPath ? 'Cargando...' : 'Ruta de grabaciones'}
+                                  />
                                   <Button
-                                    icon="pi pi-refresh"
-                                    label="Restaurar"
+                                    icon="pi pi-folder-open"
+                                    label="Cambiar"
                                     onClick={async () => {
                                       try {
-                                        setLoadingPath(true);
-                                        const result = await window.electron.ipcRenderer.invoke('recording:set-path', {
-                                          customPath: null
+                                        if (!window?.electron?.dialog?.showOpenDialog) {
+                                          toast?.show({
+                                            severity: 'warn',
+                                            summary: 'No disponible',
+                                            detail: 'El selector de directorios requiere la app de escritorio'
+                                          });
+                                          return;
+                                        }
+                                        
+                                        const result = await window.electron.dialog.showOpenDialog({
+                                          properties: ['openDirectory'],
+                                          title: 'Seleccionar carpeta para guardar grabaciones'
                                         });
                                         
-                                        if (result && result.success) {
-                                          setRecordingPath(result.currentPath);
-                                          setIsDefaultPath(true);
-                                          toast?.show({
-                                            severity: 'success',
-                                            summary: 'Ubicación restaurada',
-                                            detail: 'Se usará la ubicación por defecto'
+                                        if (result && !result.canceled && result.filePaths && result.filePaths.length > 0) {
+                                          const selectedPath = result.filePaths[0];
+                                          setLoadingPath(true);
+                                          
+                                          const setResult = await window.electron.ipcRenderer.invoke('recording:set-path', {
+                                            customPath: selectedPath
                                           });
+                                          
+                                          if (setResult && setResult.success) {
+                                            setRecordingPath(setResult.currentPath);
+                                            setIsDefaultPath(false);
+                                            toast?.show({
+                                              severity: 'success',
+                                              summary: 'Ubicación actualizada',
+                                              detail: `Las grabaciones se guardarán en: ${setResult.currentPath}`
+                                            });
+                                          } else {
+                                            toast?.show({
+                                              severity: 'error',
+                                              summary: 'Error',
+                                              detail: setResult?.error || 'No se pudo cambiar la ubicación'
+                                            });
+                                          }
+                                          setLoadingPath(false);
                                         }
-                                        setLoadingPath(false);
                                       } catch (error) {
-                                        console.error('Error restaurando ruta:', error);
+                                        console.error('Error seleccionando carpeta:', error);
+                                        toast?.show({
+                                          severity: 'error',
+                                          summary: 'Error',
+                                          detail: 'No se pudo abrir el selector de carpeta'
+                                        });
                                         setLoadingPath(false);
                                       }
                                     }}
                                     disabled={loadingPath}
                                     style={{ minWidth: '100px' }}
                                   />
-                                )}
+                                  {!isDefaultPath && (
+                                    <Button
+                                      icon="pi pi-refresh"
+                                      label="Restaurar"
+                                      onClick={async () => {
+                                        try {
+                                          setLoadingPath(true);
+                                          const result = await window.electron.ipcRenderer.invoke('recording:set-path', {
+                                            customPath: null
+                                          });
+                                          
+                                          if (result && result.success) {
+                                            setRecordingPath(result.currentPath);
+                                            setIsDefaultPath(true);
+                                            toast?.show({
+                                              severity: 'success',
+                                              summary: 'Ubicación restaurada',
+                                              detail: 'Se usará la ubicación por defecto'
+                                            });
+                                          }
+                                          setLoadingPath(false);
+                                        } catch (error) {
+                                          console.error('Error restaurando ruta:', error);
+                                          setLoadingPath(false);
+                                        }
+                                      }}
+                                      disabled={loadingPath}
+                                      style={{ minWidth: '100px' }}
+                                    />
+                                  )}
+                                </div>
                               </div>
-                              <small style={{ color: 'var(--text-color-secondary)' }}>
-                                {isDefaultPath 
-                                  ? 'Usando ubicación por defecto: AppData/NodeTerm/recordings'
-                                  : `Ubicación personalizada: ${recordingPath}`
-                                }
-                              </small>
                             </div>
                           </>
                         )}
                       </div>
                     </div>
 
-                    {/* Limpieza de Archivos */}
-                    <div style={{
-                      background: 'var(--surface-card)',
-                      border: '1px solid var(--surface-border)',
-                      borderRadius: '8px',
-                      padding: '1.5rem'
-                    }}>
-                      <h4 style={{ 
-                        margin: '0 0 1rem 0', 
-                        color: 'var(--text-color)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem'
-                      }}>
-                        <i className="pi pi-trash" style={{ color: '#ff9800' }}></i>
-                        Limpieza Automática de Archivos
-                      </h4>
-                      
-                      <div style={{ marginBottom: '1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                          <Checkbox
-                            inputId="autoCleanup"
-                            checked={autoCleanupEnabled}
-                            onChange={(e) => setAutoCleanupEnabled(e.checked)}
-                          />
-                          <label htmlFor="autoCleanup" style={{ 
-                            color: 'var(--text-color)',
-                            cursor: 'pointer',
-                            userSelect: 'none'
-                          }}>
-                            Activar limpieza automática de archivos antiguos
-                          </label>
+                    {/* Sección de Limpieza Automática */}
+                    <div className="general-settings-section">
+                      <div className="general-section-header">
+                        <div className="general-section-icon">
+                          <i className="pi pi-trash"></i>
                         </div>
-                        
+                        <h4 className="general-section-title">Limpieza Automática de Archivos</h4>
+                      </div>
+                      
+                      <div className="general-settings-options">
+                        {/* Activar limpieza automática */}
+                        <div className="general-setting-card" onClick={() => setAutoCleanupEnabled(!autoCleanupEnabled)}>
+                          <div className="general-setting-content">
+                            <div className="general-setting-icon lock">
+                              <i className="pi pi-refresh"></i>
+                            </div>
+                            <div className="general-setting-info">
+                              <label htmlFor="autoCleanup" className="general-setting-label">
+                                Activar limpieza automática
+                              </label>
+                              <p className="general-setting-description">
+                                Elimina automáticamente archivos de auditoría antiguos según las reglas configuradas
+                              </p>
+                            </div>
+                            <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                inputId="autoCleanup"
+                                checked={autoCleanupEnabled}
+                                onChange={(e) => setAutoCleanupEnabled(e.checked)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
                         {autoCleanupEnabled && (
                           <>
-                            <div style={{ marginBottom: '1rem' }}>
-                              <label htmlFor="retentionDays" style={{
-                                display: 'block',
-                                marginBottom: '0.5rem',
-                                color: 'var(--text-color)',
-                                fontWeight: '500'
-                              }}>
-                                Días de retención: {retentionDays}
-                              </label>
-                              <Slider
-                                id="retentionDays"
-                                value={retentionDays}
-                                onChange={(e) => setRetentionDays(e.value)}
-                                min={1}
-                                max={365}
-                                step={1}
-                                style={{ width: '100%' }}
-                              />
-                              <div style={{ 
-                                display: 'flex', 
-                                justifyContent: 'space-between', 
-                                fontSize: '0.8rem', 
-                                color: 'var(--text-color-secondary)',
-                                marginTop: '0.25rem'
-                              }}>
-                                <span>1 día</span>
-                                <span>365 días</span>
+                            {/* Días de retención */}
+                            <div className="general-icon-selector-section">
+                              <div className="general-selector-row-expandable">
+                                <div className="general-selector-info-group">
+                                  <div className="general-selector-icon-compact">
+                                    <i className="pi pi-calendar"></i>
+                                  </div>
+                                  <div className="general-selector-text-group">
+                                    <span className="general-selector-title-compact">Días de retención: {retentionDays}</span>
+                                    <span className="general-selector-description-compact">Archivos más antiguos serán eliminados automáticamente</span>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-
-                            <div style={{ marginBottom: '1rem' }}>
-                              <label htmlFor="maxStorageSize" style={{
-                                display: 'block',
-                                marginBottom: '0.5rem',
-                                color: 'var(--text-color)',
-                                fontWeight: '500'
-                              }}>
-                                Tamaño máximo de almacenamiento (GB): {maxStorageSize}
-                              </label>
-                              <Slider
-                                id="maxStorageSize"
-                                value={maxStorageSize}
-                                onChange={(e) => setMaxStorageSize(e.value)}
-                                min={0.1}
-                                max={100}
-                                step={0.1}
-                                style={{ width: '100%' }}
-                              />
-                              <div style={{ 
-                                display: 'flex', 
-                                justifyContent: 'space-between', 
-                                fontSize: '0.8rem', 
-                                color: 'var(--text-color-secondary)',
-                                marginTop: '0.25rem'
-                              }}>
-                                <span>0.1 GB</span>
-                                <span>100 GB</span>
-                              </div>
-                            </div>
-
-                            <div style={{ marginBottom: '1rem' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                                <Checkbox
-                                  inputId="cleanupOnStartup"
-                                  checked={cleanupOnStartup}
-                                  onChange={(e) => setCleanupOnStartup(e.checked)}
+                              <div style={{ marginTop: '0.75rem', paddingLeft: '2.75rem' }}>
+                                <Slider
+                                  id="retentionDays"
+                                  value={retentionDays}
+                                  onChange={(e) => setRetentionDays(e.value)}
+                                  min={1}
+                                  max={365}
+                                  step={1}
+                                  style={{ width: '100%' }}
                                 />
-                                <label htmlFor="cleanupOnStartup" style={{ 
-                                  color: 'var(--text-color)',
-                                  cursor: 'pointer',
-                                  userSelect: 'none'
+                                <div style={{ 
+                                  display: 'flex', 
+                                  justifyContent: 'space-between', 
+                                  fontSize: '0.75rem', 
+                                  color: 'var(--text-color-secondary)',
+                                  marginTop: '0.25rem',
+                                  opacity: 0.7
                                 }}>
-                                  Ejecutar limpieza al iniciar la aplicación
-                                </label>
+                                  <span>1 día</span>
+                                  <span>365 días</span>
+                                </div>
                               </div>
                             </div>
 
-                            <div style={{ marginBottom: '1rem' }}>
-                              <label htmlFor="cleanupFrequency" style={{
-                                display: 'block',
-                                marginBottom: '0.5rem',
-                                color: 'var(--text-color)',
-                                fontWeight: '500'
-                              }}>
-                                Frecuencia de limpieza automática
-                              </label>
-                              <Dropdown
-                                id="cleanupFrequency"
-                                value={cleanupFrequency}
-                                options={[
-                                  { label: 'Diaria', value: 'daily' },
-                                  { label: 'Semanal', value: 'weekly' },
-                                  { label: 'Mensual', value: 'monthly' },
-                                  { label: 'Manual únicamente', value: 'manual' }
-                                ]}
-                                onChange={(e) => setCleanupFrequency(e.value)}
-                                style={{ width: '100%' }}
-                              />
+                            {/* Tamaño máximo de almacenamiento */}
+                            <div className="general-icon-selector-section">
+                              <div className="general-selector-row-expandable">
+                                <div className="general-selector-info-group">
+                                  <div className="general-selector-icon-compact">
+                                    <i className="pi pi-database"></i>
+                                  </div>
+                                  <div className="general-selector-text-group">
+                                    <span className="general-selector-title-compact">Tamaño máximo: {maxStorageSize} GB</span>
+                                    <span className="general-selector-description-compact">Límite total de espacio para archivos de auditoría</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div style={{ marginTop: '0.75rem', paddingLeft: '2.75rem' }}>
+                                <Slider
+                                  id="maxStorageSize"
+                                  value={maxStorageSize}
+                                  onChange={(e) => setMaxStorageSize(e.value)}
+                                  min={0.1}
+                                  max={100}
+                                  step={0.1}
+                                  style={{ width: '100%' }}
+                                />
+                                <div style={{ 
+                                  display: 'flex', 
+                                  justifyContent: 'space-between', 
+                                  fontSize: '0.75rem', 
+                                  color: 'var(--text-color-secondary)',
+                                  marginTop: '0.25rem',
+                                  opacity: 0.7
+                                }}>
+                                  <span>0.1 GB</span>
+                                  <span>100 GB</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Ejecutar limpieza al iniciar */}
+                            <div className="general-setting-card" onClick={() => setCleanupOnStartup(!cleanupOnStartup)}>
+                              <div className="general-setting-content">
+                                <div className="general-setting-icon bolt">
+                                  <i className="pi pi-power-off"></i>
+                                </div>
+                                <div className="general-setting-info">
+                                  <label htmlFor="cleanupOnStartup" className="general-setting-label">
+                                    Ejecutar limpieza al iniciar la aplicación
+                                  </label>
+                                  <p className="general-setting-description">
+                                    Limpia archivos antiguos cada vez que se inicia NodeTerm
+                                  </p>
+                                </div>
+                                <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                                  <Checkbox
+                                    inputId="cleanupOnStartup"
+                                    checked={cleanupOnStartup}
+                                    onChange={(e) => setCleanupOnStartup(e.checked)}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Frecuencia de limpieza */}
+                            <div className="general-icon-selector-section">
+                              <div className="general-selector-row-expandable">
+                                <div className="general-selector-info-group">
+                                  <div className="general-selector-icon-compact">
+                                    <i className="pi pi-clock"></i>
+                                  </div>
+                                  <div className="general-selector-text-group">
+                                    <span className="general-selector-title-compact">Frecuencia de limpieza automática</span>
+                                    <span className="general-selector-description-compact">Con qué frecuencia se ejecutará la limpieza automática</span>
+                                  </div>
+                                </div>
+                                <div className="general-selector-action-wrapper">
+                                  <Dropdown
+                                    id="cleanupFrequency"
+                                    value={cleanupFrequency}
+                                    options={[
+                                      { label: 'Diaria', value: 'daily' },
+                                      { label: 'Semanal', value: 'weekly' },
+                                      { label: 'Mensual', value: 'monthly' },
+                                      { label: 'Manual únicamente', value: 'manual' }
+                                    ]}
+                                    onChange={(e) => setCleanupFrequency(e.value)}
+                                    style={{ minWidth: '180px' }}
+                                  />
+                                </div>
+                              </div>
                             </div>
                           </>
                         )}
-                      </div>
 
-                      {/* Estadísticas actuales */}
-                      <div style={{
-                        background: 'var(--surface-ground)',
-                        border: '1px solid var(--surface-border)',
-                        borderRadius: '6px',
-                        padding: '1rem',
-                        marginTop: '1rem'
-                      }}>
-                        <h5 style={{ margin: '0 0 0.75rem 0', color: 'var(--text-color)' }}>
-                          <i className="pi pi-chart-bar" style={{ marginRight: '0.5rem' }}></i>
-                          Estadísticas Actuales
-                        </h5>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem' }}>
-                          <div>
-                            <span style={{ color: 'var(--text-color-secondary)' }}>Archivos de auditoría:</span>
-                            <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem' }}>
-                              {auditStats?.fileCount || 0}
+                        {/* Estadísticas actuales */}
+                        <div style={{
+                          marginTop: '1rem',
+                          padding: '1rem',
+                          background: 'rgba(255, 255, 255, 0.02)',
+                          border: '1px solid rgba(255, 255, 255, 0.05)',
+                          borderRadius: '10px'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                            <i className="pi pi-chart-bar" style={{ color: 'var(--ui-button-primary)', fontSize: '0.875rem' }}></i>
+                            <span style={{ color: 'var(--text-color)', fontWeight: '600', fontSize: '0.875rem' }}>
+                              Estadísticas Actuales
                             </span>
                           </div>
-                          <div>
-                            <span style={{ color: 'var(--text-color-secondary)' }}>Tamaño total:</span>
-                            <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem' }}>
-                              {formatBytes(auditStats?.totalSize || 0)}
-                            </span>
-                          </div>
-                          <div>
-                            <span style={{ color: 'var(--text-color-secondary)' }}>Archivo más antiguo:</span>
-                            <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem' }}>
-                              {auditStats?.oldestFile ? new Date(auditStats.oldestFile).toLocaleDateString() : 'N/A'}
-                            </span>
-                          </div>
-                          <div>
-                            <span style={{ color: 'var(--text-color-secondary)' }}>Última limpieza:</span>
-                            <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem' }}>
-                              {auditStats?.lastCleanup ? new Date(auditStats.lastCleanup).toLocaleDateString() : 'Nunca'}
-                            </span>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.8125rem' }}>
+                            <div>
+                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>Archivos:</span>
+                              <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem' }}>
+                                {auditStats?.fileCount || 0}
+                              </span>
+                            </div>
+                            <div>
+                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>Tamaño total:</span>
+                              <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem' }}>
+                                {formatBytes(auditStats?.totalSize || 0)}
+                              </span>
+                            </div>
+                            <div>
+                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>Más antiguo:</span>
+                              <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem', fontSize: '0.75rem' }}>
+                                {auditStats?.oldestFile ? new Date(auditStats.oldestFile).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'N/A'}
+                              </span>
+                            </div>
+                            <div>
+                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>Última limpieza:</span>
+                              <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem', fontSize: '0.75rem' }}>
+                                {auditStats?.lastCleanup ? new Date(auditStats.lastCleanup).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'Nunca'}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Botón de limpieza manual */}
-                      <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem' }}>
-                        <Button
-                          label="Ejecutar Limpieza Ahora"
-                          icon="pi pi-trash"
-                          onClick={handleManualCleanup}
-                          disabled={!autoCleanupEnabled}
-                          className="p-button-warning"
-                          style={{ flex: 1 }}
-                        />
-                        <Button
-                          label="Ver Archivos"
-                          icon="pi pi-folder-open"
-                          onClick={handleViewAuditFiles}
-                          className="p-button-secondary"
-                          style={{ flex: 1 }}
-                        />
+                        {/* Botones de acción */}
+                        <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                          <Button
+                            label="Ejecutar Limpieza Ahora"
+                            icon="pi pi-trash"
+                            onClick={handleManualCleanup}
+                            disabled={!autoCleanupEnabled}
+                            className="p-button-warning"
+                            style={{ flex: 1, fontSize: '0.875rem', padding: '0.5rem' }}
+                          />
+                          <Button
+                            label="Ver Archivos"
+                            icon="pi pi-folder-open"
+                            onClick={handleViewAuditFiles}
+                            className="p-button-secondary"
+                            style={{ flex: 1, fontSize: '0.875rem', padding: '0.5rem' }}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
