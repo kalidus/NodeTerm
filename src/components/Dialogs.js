@@ -1248,6 +1248,14 @@ export function EnhancedSSHForm({
     }
   };
 
+  // Handler para toggle de autoCopyPassword
+  const handleAutoCopyToggle = useCallback((checked) => {
+    setAutoCopyPassword(checked);
+    if (setSSHAutoCopyPassword && typeof setSSHAutoCopyPassword === 'function') {
+      setSSHAutoCopyPassword(checked);
+    }
+  }, [setSSHAutoCopyPassword]);
+
   const isFormValid = () => {
     return sshName?.trim() && 
            sshHost?.trim() && 
@@ -1356,6 +1364,16 @@ export function EnhancedSSHForm({
                       </div>
                       {validationErrors.password && <small className="p-error">{validationErrors.password}</small>}
                     </div>
+                    <div className="field col-12">
+                      <div className="field-checkbox">
+                        <Checkbox 
+                          inputId="autoCopyPassword" 
+                          checked={autoCopyPassword} 
+                          onChange={(e) => handleAutoCopyToggle(e.checked)} 
+                        />
+                        <label htmlFor="autoCopyPassword">Copiar contraseña automáticamente al portapapeles</label>
+                      </div>
+                    </div>
                   </>
                 )}
 
@@ -1414,17 +1432,6 @@ export function EnhancedSSHForm({
                     filter
                     showClear
                   />
-                </div>
-
-                <div className="field col-12">
-                  <div className="field-checkbox">
-                    <Checkbox 
-                      inputId="autoCopyPassword" 
-                      checked={autoCopyPassword} 
-                      onChange={(e) => handleAutoCopyToggle(e.checked)} 
-                    />
-                    <label htmlFor="autoCopyPassword">Copiar contraseña automáticamente al portapapeles</label>
-                  </div>
                 </div>
               </div>
             </Card>
