@@ -4,7 +4,7 @@ import { Tree } from 'primereact/tree';
 import { Divider } from 'primereact/divider';
 import SidebarFooter from './SidebarFooter';
 import { uiThemes, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
-import { FolderDialog, UnifiedConnectionDialog } from './Dialogs';
+import { FolderDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import ImportDialog from './ImportDialog';
 import PasswordManagerSidebar from './PasswordManagerSidebar';
@@ -2290,43 +2290,7 @@ const Sidebar = React.memo(({
         themeDefaultColor={getThemeDefaultColor(iconTheme)}
         themeName={iconThemes[iconTheme]?.name || 'Material'}
       />
-      <UnifiedConnectionDialog
-        visible={showUnifiedConnectionDialog}
-        onHide={() => {
-          setShowUnifiedConnectionDialog(false);
-        }}
-
-        foldersOptions={getAllFoldersToUse(nodes)}
-
-        sshLoading={false}
-        // Props RDP
-        rdpNodeData={rdpNodeData}
-        onSaveToSidebar={handleSaveRdpToSidebar}
-        editingNode={editingRdpNode}
-        // Props para modo edición
-        isEditMode={!!(editSSHNode || editingRdpNode)}
-        editConnectionType={editSSHNode ? 'ssh' : (editingRdpNode ? 'rdp' : null)}
-        editNodeData={editSSHNode || editingRdpNode}
-        // Props SSH
-        sshName={editSSHNode ? editSSHName : sshName}
-        setSSHName={editSSHNode ? setEditSSHName : setSSHName}
-        sshHost={editSSHNode ? editSSHHost : sshHost}
-        setSSHHost={editSSHNode ? setEditSSHHost : setSSHHost}
-        sshUser={editSSHNode ? editSSHUser : sshUser}
-        setSSHUser={editSSHNode ? setEditSSHUser : setSSHUser}
-        sshPassword={editSSHNode ? editSSHPassword : sshPassword}
-        setSSHPassword={editSSHNode ? setEditSSHPassword : setSSHPassword}
-        sshPort={editSSHNode ? editSSHPort : sshPort}
-        setSSHPort={editSSHNode ? setEditSSHPort : setSSHPort}
-        sshRemoteFolder={editSSHNode ? editSSHRemoteFolder : sshRemoteFolder}
-        setSSHRemoteFolder={editSSHNode ? setEditSSHRemoteFolder : setSSHRemoteFolder}
-        sshTargetFolder={sshTargetFolder}
-        setSSHTargetFolder={setSSHTargetFolder}
-        sshAutoCopyPassword={editSSHNode ? editSSHAutoCopyPassword : sshAutoCopyPassword}
-        setSSHAutoCopyPassword={editSSHNode ? setEditSSHAutoCopyPassword : setSSHAutoCopyPassword}
-        onSSHConfirm={editSSHNode ? saveEditSSH : createNewSSH}
-        allowPasswordTab={viewMode === 'passwords'}
-      />
+      {/* Los diálogos de edición SSH y RDP ahora se manejan en DialogsManager */}
       
       <ImportDialog
         visible={showImportDialog}
