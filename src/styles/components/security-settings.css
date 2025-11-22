@@ -4,14 +4,7 @@
    VARIABLES Y UTILIDADES
    ======================================== */
 
-:root {
-  --security-gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --security-gradient-success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-  --security-gradient-warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  --security-gradient-danger: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-  --security-glass-bg: rgba(255, 255, 255, 0.1);
-  --security-glass-border: rgba(255, 255, 255, 0.2);
-}
+/* Usar variables del tema en lugar de gradientes fijos */
 
 /* ========================================
    CONTENEDOR PRINCIPAL CON FONDO DECORATIVO
@@ -28,7 +21,7 @@
   overflow: hidden;
 }
 
-/* Decoraciones geométricas de fondo */
+/* Decoraciones geométricas de fondo con colores del tema */
 .security-settings-container::before {
   content: '';
   position: absolute;
@@ -36,7 +29,8 @@
   right: -10%;
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--ui-button-primary) 0%, transparent 70%);
+  opacity: 0.1;
   border-radius: 50%;
   animation: float 20s ease-in-out infinite;
   z-index: 0;
@@ -49,7 +43,8 @@
   left: -10%;
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, rgba(118, 75, 162, 0.1) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--ui-button-primary) 0%, transparent 70%);
+  opacity: 0.08;
   border-radius: 50%;
   animation: float 15s ease-in-out infinite reverse;
   z-index: 0;
@@ -96,36 +91,35 @@
 
 .security-header {
   margin: 0 0 1.5rem 0;
-  color: var(--text-color);
+  color: var(--ui-dialog-text);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 1rem;
   font-size: 1.75rem;
   font-weight: 700;
-  background: var(--security-gradient-primary);
+  background: linear-gradient(135deg, var(--ui-button-primary) 0%, color-mix(in srgb, var(--ui-button-primary) 80%, transparent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   position: relative;
-  text-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
 }
 
 .security-header-icon {
-  color: #ffffff;
+  color: var(--ui-button-primary-text);
   font-size: 1.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 56px;
   height: 56px;
-  background: var(--security-gradient-primary);
+  background: var(--ui-button-primary);
   border-radius: 16px;
   padding: 0.65rem;
   box-shadow: 
-    0 8px 32px rgba(102, 126, 234, 0.4),
-    0 0 0 4px rgba(102, 126, 234, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    0 0 0 4px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
   overflow: hidden;
@@ -162,9 +156,9 @@
 .security-header-icon:hover {
   transform: scale(1.1) rotate(5deg);
   box-shadow: 
-    0 12px 40px rgba(102, 126, 234, 0.5),
-    0 0 0 6px rgba(102, 126, 234, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    0 12px 40px rgba(0, 0, 0, 0.3),
+    0 0 0 6px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .security-description {
@@ -182,20 +176,32 @@
    ======================================== */
 
 .security-status-card {
-  background: var(--security-glass-bg);
+  background: var(--ui-content-bg);
+  opacity: 0.95;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--security-glass-border);
+  border: 1px solid var(--ui-content-border);
   border-radius: 20px;
   padding: 1.75rem;
   text-align: left;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 var(--ui-button-primary);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
   overflow: hidden;
   height: fit-content;
+}
+
+/* Mejora con color-mix para navegadores modernos */
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  .security-status-card {
+    background: color-mix(in srgb, var(--ui-content-bg) 88%, transparent);
+    border-color: color-mix(in srgb, var(--ui-content-border) 65%, transparent);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 color-mix(in srgb, var(--ui-button-primary) 25%, transparent);
+  }
 }
 
 .security-status-card::before {
@@ -205,8 +211,8 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: var(--security-gradient-primary);
-  opacity: 0.6;
+  background: var(--ui-button-primary);
+  opacity: 0.7;
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.6s ease;
@@ -218,10 +224,20 @@
 
 .security-status-card:hover {
   transform: translateY(-4px);
+  opacity: 1;
   box-shadow: 
-    0 16px 48px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  border-color: rgba(102, 126, 234, 0.4);
+    0 16px 48px var(--ui-dialog-shadow),
+    inset 0 1px 0 var(--ui-button-primary);
+  border-color: var(--ui-button-primary);
+}
+
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  .security-status-card:hover {
+    box-shadow: 
+      0 16px 48px color-mix(in srgb, var(--ui-dialog-shadow) 45%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--ui-button-primary) 35%, transparent);
+    border-color: color-mix(in srgb, var(--ui-button-primary) 55%, transparent);
+  }
 }
 
 .security-status-header {
@@ -276,13 +292,13 @@
 
 .security-status-icon.success {
   color: #ffffff;
-  background: var(--security-gradient-success);
+  background: #28a745; /* Verde para éxito */
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
 .security-status-icon.warning {
   color: #ffffff;
-  background: var(--security-gradient-warning);
+  background: #ffc107; /* Amarillo/Naranja para advertencia */
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
@@ -291,7 +307,7 @@
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   }
   50% {
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 20px rgba(17, 153, 142, 0.4);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 20px rgba(40, 167, 69, 0.4);
   }
 }
 
@@ -320,30 +336,31 @@
 
 .security-status-info {
   font-size: 0.95rem;
-  color: var(--text-color-secondary);
+  color: var(--ui-dialog-text);
+  opacity: 0.9;
   margin-bottom: 1.25rem;
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
   line-height: 1.6;
   padding: 1rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--ui-content-bg);
   border-radius: 12px;
-  border-left: 3px solid var(--primary-color);
+  border-left: 3px solid var(--ui-button-primary);
   transition: all 0.3s ease;
 }
 
 .security-status-info:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--ui-content-bg);
   transform: translateX(4px);
+  border-left-color: var(--ui-button-primary);
 }
 
 .security-status-info i {
   margin-top: 0.2rem;
-  color: var(--primary-color);
+  color: var(--ui-button-primary);
   font-size: 1.1rem;
   flex-shrink: 0;
-  filter: drop-shadow(0 2px 4px rgba(0, 123, 255, 0.3));
 }
 
 /* ========================================
@@ -384,9 +401,9 @@
 }
 
 .security-checkbox-wrapper .p-checkbox .p-checkbox-box.p-highlight {
-  background: var(--security-gradient-primary);
+  background: var(--ui-button-primary);
   border-color: transparent;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .security-checkbox-label {
@@ -415,19 +432,30 @@
 
 .security-form-container {
   text-align: left;
-  background: var(--security-glass-bg);
+  background: var(--ui-content-bg);
+  opacity: 0.95;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: 20px;
   padding: 1.75rem;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  border: 1px solid var(--security-glass-border);
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 var(--ui-button-primary);
+  border: 1px solid var(--ui-content-border);
   position: relative;
   overflow: hidden;
   height: fit-content;
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  .security-form-container {
+    background: color-mix(in srgb, var(--ui-content-bg) 88%, transparent);
+    border-color: color-mix(in srgb, var(--ui-content-border) 65%, transparent);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 color-mix(in srgb, var(--ui-button-primary) 25%, transparent);
+  }
 }
 
 .security-form-container > *:first-child {
@@ -441,8 +469,8 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: var(--security-gradient-primary);
-  opacity: 0.6;
+  background: var(--ui-button-primary);
+  opacity: 0.7;
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.6s ease;
@@ -454,14 +482,24 @@
 
 .security-form-container:hover {
   transform: translateY(-4px);
+  opacity: 1;
   box-shadow: 
-    0 16px 48px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  border-color: rgba(102, 126, 234, 0.4);
+    0 16px 48px var(--ui-dialog-shadow),
+    inset 0 1px 0 var(--ui-button-primary);
+  border-color: var(--ui-button-primary);
+}
+
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  .security-form-container:hover {
+    box-shadow: 
+      0 16px 48px color-mix(in srgb, var(--ui-dialog-shadow) 45%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--ui-button-primary) 35%, transparent);
+    border-color: color-mix(in srgb, var(--ui-button-primary) 55%, transparent);
+  }
 }
 
 .security-form-title {
-  color: var(--text-color);
+  color: var(--ui-dialog-text);
   margin-top: 0;
   margin-bottom: 1.25rem;
   font-size: 1.1rem;
@@ -469,7 +507,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: var(--security-gradient-primary);
+  background: linear-gradient(135deg, var(--ui-button-primary) 0%, color-mix(in srgb, var(--ui-button-primary) 80%, transparent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -484,12 +522,12 @@
   height: 48px;
   border-radius: 14px;
   flex-shrink: 0;
-  background: var(--security-gradient-primary);
+  background: var(--ui-button-primary);
   padding: 0.65rem;
   box-shadow: 
-    0 4px 16px rgba(102, 126, 234, 0.3),
-    0 0 0 2px rgba(102, 126, 234, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    0 0 0 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
@@ -505,9 +543,9 @@
 .security-form-title-icon:hover {
   transform: scale(1.05);
   box-shadow: 
-    0 6px 20px rgba(102, 126, 234, 0.4),
-    0 0 0 3px rgba(102, 126, 234, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    0 6px 20px rgba(0, 0, 0, 0.25),
+    0 0 0 3px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 /* ========================================
@@ -536,26 +574,26 @@
 }
 
 .security-field-label i {
-  color: #ffffff;
+  color: var(--ui-button-primary-text);
   font-size: 0.95rem;
   width: 24px;
   height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.8), rgba(118, 75, 162, 0.8));
+  background: var(--ui-button-primary);
   border-radius: 6px;
   padding: 0.3rem;
   transition: all 0.3s ease;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .security-field:hover .security-field-label i {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 1), rgba(118, 75, 162, 1));
+  background: var(--ui-button-primary);
   transform: scale(1.15);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   border-color: rgba(255, 255, 255, 0.3);
 }
 
@@ -605,20 +643,20 @@
 }
 
 .security-field-input .p-inputtext:focus {
-  border-color: var(--primary-color);
+  border-color: var(--ui-button-primary);
   background: rgba(255, 255, 255, 0.08);
   box-shadow: 
-    0 0 0 3px rgba(102, 126, 234, 0.12),
-    0 2px 8px rgba(102, 126, 234, 0.15);
+    0 0 0 3px color-mix(in srgb, var(--ui-button-primary) 20%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.15);
   outline: none;
 }
 
 .security-field-input .p-password .p-password-input .p-inputtext:focus {
-  border-color: var(--primary-color);
+  border-color: var(--ui-button-primary);
   background: rgba(255, 255, 255, 0.08);
   box-shadow: 
-    0 0 0 3px rgba(102, 126, 234, 0.12),
-    0 2px 8px rgba(102, 126, 234, 0.15);
+    0 0 0 3px color-mix(in srgb, var(--ui-button-primary) 20%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.15);
   outline: none;
 }
 
@@ -646,8 +684,8 @@
 }
 
 .security-field-input .p-password .p-password-input .p-password-toggle:hover {
-  color: var(--primary-color);
-  background: rgba(102, 126, 234, 0.15);
+  color: var(--ui-button-primary);
+  background: color-mix(in srgb, var(--ui-button-primary) 15%, transparent);
   transform: translateY(-50%) scale(1.05);
 }
 
@@ -705,14 +743,15 @@
 }
 
 .security-button-primary {
-  background: var(--security-gradient-primary);
-  color: #ffffff;
-  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.25);
+  background: var(--ui-button-primary);
+  color: var(--ui-button-primary-text);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .security-button-primary:hover:not(:disabled) {
+  background: var(--ui-button-hover);
   transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.35);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
 }
 
 .security-button-primary:active:not(:disabled) {
@@ -720,14 +759,15 @@
 }
 
 .security-button-danger {
-  background: var(--security-gradient-danger);
+  background: #dc3545; /* Rojo para acciones peligrosas */
   color: #ffffff;
-  box-shadow: 0 2px 6px rgba(250, 112, 154, 0.25);
+  box-shadow: 0 2px 6px rgba(220, 53, 69, 0.25);
 }
 
 .security-button-danger:hover:not(:disabled) {
+  background: #c82333;
   transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(250, 112, 154, 0.35);
+  box-shadow: 0 3px 10px rgba(220, 53, 69, 0.35);
 }
 
 .security-button-danger:active:not(:disabled) {
@@ -774,12 +814,8 @@
   }
 }
 
-/* Efecto de partículas flotantes */
-.security-settings-container {
-  background-image: 
-    radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.05) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.05) 0%, transparent 50%);
-}
+/* Efecto de partículas flotantes con colores del tema */
+/* Nota: Los efectos flotantes ::before y ::after ya manejan las decoraciones con el tema */
 
 /* ========================================
    RESPONSIVE
@@ -815,20 +851,5 @@
   }
 }
 
-/* ========================================
-   MEJORAS ADICIONALES PARA TEMA OSCURO
-   ======================================== */
-
-@media (prefers-color-scheme: dark) {
-  .security-status-card,
-  .security-form-container {
-    background: rgba(30, 30, 40, 0.6);
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-  
-  .security-field-input .p-inputtext,
-  .security-field-input .p-password {
-    background: rgba(20, 20, 30, 0.5);
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-}
+/* Los colores ahora se adaptan automáticamente al tema mediante variables CSS */
+/* No necesitamos media queries específicas ya que usamos variables del tema */
