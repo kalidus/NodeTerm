@@ -877,161 +877,169 @@ const SettingsDialog = ({
       >
         <TabPanel header="General" leftIcon="pi pi-cog">
           <div className="general-settings-container">
-            {/* Header con descripción */}
-            <div className="settings-header">
-              <div className="header-content">
-                <h3 className="settings-title">
-                  <i className="pi pi-cog header-icon"></i>
-                  Configuración General
-                </h3>
-                <p className="settings-description">
-                  Personaliza el comportamiento y la apariencia básica de NodeTerm
-                </p>
-              </div>
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <h3 className="general-header">
+                <span className="general-header-icon">
+                  <i className="pi pi-cog"></i>
+                </span>
+                Configuración General
+              </h3>
+              <p className="general-description">
+                Personaliza el comportamiento y la apariencia básica de NodeTerm
+              </p>
             </div>
             
-            {/* Sección de Comportamiento */}
-            <div className="settings-section">
-              <div className="section-header">
-                <i className="pi pi-sliders-h section-icon"></i>
-                <h4 className="section-title">Comportamiento de la Aplicación</h4>
-              </div>
-              
-              <div className="settings-options">
-                <div className="setting-card">
-                  <div className="setting-content">
-                    <div className="setting-icon">
-                      <i className="pi pi-lock"></i>
-                    </div>
-                    <div className="setting-info">
-                      <label htmlFor="lock-home-button" className="setting-label">
-                        Bloquear Botón de Inicio
-                      </label>
-                      <p className="setting-description">
-                        Previene que el botón de inicio se pueda cerrar o mover accidentalmente
-                      </p>
-                    </div>
-                    <div className="setting-control">
-                      <Checkbox
-                        id="lock-home-button"
-                        checked={lockHomeButton}
-                        onChange={(e) => setLockHomeButton(e.checked)}
-                        className="modern-checkbox"
-                      />
+            {/* Grid de 2 columnas para las secciones */}
+            <div className="general-settings-content">
+              {/* Sección de Comportamiento */}
+              <div className="general-settings-section">
+                <div className="general-section-header">
+                  <div className="general-section-icon">
+                    <i className="pi pi-sliders-h"></i>
+                  </div>
+                  <h4 className="general-section-title">Comportamiento de la Aplicación</h4>
+                </div>
+                
+                <div className="general-settings-options">
+                  <div className="general-setting-card" onClick={() => setLockHomeButton(!lockHomeButton)}>
+                    <div className="general-setting-content">
+                      <div className="general-setting-icon lock">
+                        <i className="pi pi-lock"></i>
+                      </div>
+                      <div className="general-setting-info">
+                        <label htmlFor="lock-home-button" className="general-setting-label">
+                          Bloquear Botón de Inicio
+                        </label>
+                        <p className="general-setting-description">
+                          Previene que el botón de inicio se pueda cerrar o mover accidentalmente
+                        </p>
+                      </div>
+                      <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          id="lock-home-button"
+                          checked={lockHomeButton}
+                          onChange={(e) => setLockHomeButton(e.checked)}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="setting-card">
-                  <div className="setting-content">
-                    <div className="setting-icon">
-                      <i className="pi pi-bolt"></i>
-                    </div>
-                    <div className="setting-info">
-                      <label htmlFor="interactive-icon" className="setting-label">
-                        Icono NodeTerm Interactivo
-                      </label>
-                      <p className="setting-description">
-                        Hace que el cursor "_" en el título parpadee como un terminal real
-                      </p>
-                    </div>
-                    <div className="setting-control">
-                      <Checkbox
-                        id="interactive-icon"
-                        checked={interactiveIcon}
-                        onChange={(e) => setInteractiveIcon(e.checked)}
-                        className="modern-checkbox"
-                      />
+                  <div className="general-setting-card" onClick={() => setInteractiveIcon(!interactiveIcon)}>
+                    <div className="general-setting-content">
+                      <div className="general-setting-icon bolt">
+                        <i className="pi pi-bolt"></i>
+                      </div>
+                      <div className="general-setting-info">
+                        <label htmlFor="interactive-icon" className="general-setting-label">
+                          Icono NodeTerm Interactivo
+                        </label>
+                        <p className="general-setting-description">
+                          Hace que el cursor "_" en el título parpadee como un terminal real
+                        </p>
+                      </div>
+                      <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          id="interactive-icon"
+                          checked={interactiveIcon}
+                          onChange={(e) => setInteractiveIcon(e.checked)}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="setting-card">
-                  <div className="setting-content">
-                    <div className="setting-icon">
-                      <i className="pi pi-angle-left"></i>
-                    </div>
-                    <div className="setting-info">
-                      <label htmlFor="sidebar-start-collapsed" className="setting-label">
-                        Iniciar con Sidebar Colapsada
-                      </label>
-                      <p className="setting-description">
-                        La barra lateral se iniciará colapsada por defecto al abrir la aplicación
-                      </p>
-                    </div>
-                    <div className="setting-control">
-                      <Checkbox
-                        id="sidebar-start-collapsed"
-                        checked={sidebarStartCollapsed}
-                        onChange={(e) => setSidebarStartCollapsed(e.checked)}
-                        className="modern-checkbox"
-                      />
+                  <div className="general-setting-card" onClick={() => setSidebarStartCollapsed(!sidebarStartCollapsed)}>
+                    <div className="general-setting-content">
+                      <div className="general-setting-icon collapse">
+                        <i className="pi pi-angle-left"></i>
+                      </div>
+                      <div className="general-setting-info">
+                        <label htmlFor="sidebar-start-collapsed" className="general-setting-label">
+                          Iniciar con Sidebar Colapsada
+                        </label>
+                        <p className="general-setting-description">
+                          La barra lateral se iniciará colapsada por defecto al abrir la aplicación
+                        </p>
+                      </div>
+                      <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          id="sidebar-start-collapsed"
+                          checked={sidebarStartCollapsed}
+                          onChange={(e) => setSidebarStartCollapsed(e.checked)}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Sección de Personalización Visual */}
-            <div className="settings-section">
-              <div className="section-header">
-                <i className="pi pi-palette section-icon"></i>
-                <h4 className="section-title">Personalización Visual</h4>
-              </div>
-              
-              {/* Selector de Icono de Pestaña de Inicio */}
-              <div className="icon-selector-section">
-                <div className="selector-header">
-                  <div className="selector-title">
-                    <i className="pi pi-home selector-icon"></i>
-                    <span>Icono de la Pestaña de Inicio</span>
-                  </div>
-                  <p className="selector-description">
-                    Personaliza el icono que aparece en la pestaña de inicio
-                  </p>
-                </div>
-
-                <div className="current-selection">
-                  <div className="current-label">Selección actual:</div>
-                  <div className="current-icon-display">
-                    {homeTabIcons[selectedHomeIcon]?.icon(18)}
-                    <span className="icon-name">{homeTabIcons[selectedHomeIcon]?.name}</span>
-                  </div>
-                </div>
-
-                <div className="icon-selector-container">
-                  <HomeIconSelectorGrid
-                    selected={selectedHomeIcon}
-                    onSelect={setSelectedHomeIcon}
-                  />
                 </div>
               </div>
 
-              {/* Selector de Icono de Grupos */}
-              <div className="icon-selector-section">
-                <div className="selector-header">
-                  <div className="selector-title">
-                    <i className="pi pi-th-large selector-icon"></i>
-                    <span>Icono de Grupos de Pestañas</span>
+              {/* Sección de Personalización Visual */}
+              <div className="general-settings-section">
+                <div className="general-section-header">
+                  <div className="general-section-icon">
+                    <i className="pi pi-palette"></i>
                   </div>
-                  <p className="selector-description">
-                    Elige el icono para la pestaña de grupos
-                  </p>
+                  <h4 className="general-section-title">Personalización Visual</h4>
+                </div>
+                
+                {/* Selector de Icono de Pestaña de Inicio */}
+                <div className="general-icon-selector-section">
+                  <div className="general-selector-header">
+                    <div className="general-selector-title">
+                      <div className="general-selector-icon">
+                        <i className="pi pi-home"></i>
+                      </div>
+                      <span>Icono de la Pestaña de Inicio</span>
+                    </div>
+                    <p className="general-selector-description">
+                      Personaliza el icono que aparece en la pestaña de inicio
+                    </p>
+                  </div>
+
+                  <div className="general-current-selection">
+                    <span className="general-current-label">Selección actual:</span>
+                    <div className="general-current-icon-display">
+                      {homeTabIcons[selectedHomeIcon]?.icon(18)}
+                      <span className="general-icon-name">{homeTabIcons[selectedHomeIcon]?.name}</span>
+                    </div>
+                  </div>
+
+                  <div className="general-icon-selector-container">
+                    <HomeIconSelectorGrid
+                      selected={selectedHomeIcon}
+                      onSelect={setSelectedHomeIcon}
+                    />
+                  </div>
                 </div>
 
-                <div className="current-selection">
-                  <div className="current-label">Selección actual:</div>
-                  <div className="current-icon-display">
-                    {groupTabIcons[selectedGroupIcon]?.icon(18)}
-                    <span className="icon-name">{groupTabIcons[selectedGroupIcon]?.name}</span>
+                {/* Selector de Icono de Grupos */}
+                <div className="general-icon-selector-section">
+                  <div className="general-selector-header">
+                    <div className="general-selector-title">
+                      <div className="general-selector-icon">
+                        <i className="pi pi-th-large"></i>
+                      </div>
+                      <span>Icono de Grupos de Pestañas</span>
+                    </div>
+                    <p className="general-selector-description">
+                      Elige el icono para la pestaña de grupos
+                    </p>
                   </div>
-                </div>
 
-                <div className="icon-selector-container">
-                  <GroupIconSelectorGrid
-                    selected={selectedGroupIcon}
-                    onSelect={setSelectedGroupIcon}
-                  />
+                  <div className="general-current-selection">
+                    <span className="general-current-label">Selección actual:</span>
+                    <div className="general-current-icon-display">
+                      {groupTabIcons[selectedGroupIcon]?.icon(18)}
+                      <span className="general-icon-name">{groupTabIcons[selectedGroupIcon]?.name}</span>
+                    </div>
+                  </div>
+
+                  <div className="general-icon-selector-container">
+                    <GroupIconSelectorGrid
+                      selected={selectedGroupIcon}
+                      onSelect={setSelectedGroupIcon}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
