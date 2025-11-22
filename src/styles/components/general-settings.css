@@ -413,14 +413,27 @@
   height: 20px;
 }
 
-.general-setting-control .p-checkbox .p-checkbox-box.p-highlight {
-  background: var(--ui-button-primary);
-  border-color: transparent;
+.general-setting-control .p-checkbox .p-checkbox-box.p-highlight,
+.general-setting-control .p-checkbox .p-checkbox-box.p-checkbox-checked,
+.general-setting-control .p-checkbox.p-checkbox-checked .p-checkbox-box,
+body .general-setting-control .p-checkbox .p-checkbox-box.p-highlight,
+body .general-setting-control .p-checkbox .p-checkbox-box.p-checkbox-checked,
+body .general-setting-control .p-checkbox.p-checkbox-checked .p-checkbox-box {
+  background: var(--primary-color, var(--ui-button-primary)) !important;
+  background-color: var(--primary-color, var(--ui-button-primary)) !important;
+  border-color: var(--primary-color, var(--ui-button-primary)) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
+/* Forzar color incluso si hay estilos inline */
+.general-setting-control .p-checkbox .p-checkbox-box[style*="background"],
+body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
+  background: var(--primary-color, var(--ui-button-primary)) !important;
+  background-color: var(--primary-color, var(--ui-button-primary)) !important;
+}
+
 .general-setting-control .p-checkbox .p-checkbox-box:hover {
-  border-color: var(--ui-button-primary);
+  border-color: var(--primary-color, var(--ui-button-primary)) !important;
 }
 
 /* ========================================
