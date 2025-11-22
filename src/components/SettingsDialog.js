@@ -881,7 +881,35 @@ const SettingsDialog = ({
             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
               <h3 className="general-header">
                 <span className="general-header-icon">
-                  <i className="pi pi-cog"></i>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="generalSettingsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#667eea" />
+                        <stop offset="50%" stopColor="#764ba2" />
+                        <stop offset="100%" stopColor="#f093fb" />
+                      </linearGradient>
+                      <linearGradient id="slidersGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#ffffff" />
+                        <stop offset="100%" stopColor="#e8e8f0" />
+                      </linearGradient>
+                    </defs>
+                    {/* Fondo circular con gradiente */}
+                    <circle cx="12" cy="12" r="10" fill="url(#generalSettingsGradient)" stroke="rgba(255,255,255,0.35)" strokeWidth="0.6"/>
+                    {/* Sliders/Controles */}
+                    <g transform="translate(12, 12)">
+                      {/* Slider 1 - Superior */}
+                      <line x1="-4" y1="-3" x2="4" y2="-3" stroke="url(#slidersGradient)" strokeWidth="1.5" strokeLinecap="round"/>
+                      <circle cx="-2" cy="-3" r="1.2" fill="url(#slidersGradient)" opacity="0.98"/>
+                      
+                      {/* Slider 2 - Centro */}
+                      <line x1="-4" y1="0" x2="4" y2="0" stroke="url(#slidersGradient)" strokeWidth="1.5" strokeLinecap="round"/>
+                      <circle cx="1" cy="0" r="1.2" fill="url(#slidersGradient)" opacity="0.98"/>
+                      
+                      {/* Slider 3 - Inferior */}
+                      <line x1="-4" y1="3" x2="4" y2="3" stroke="url(#slidersGradient)" strokeWidth="1.5" strokeLinecap="round"/>
+                      <circle cx="2.5" cy="3" r="1.2" fill="url(#slidersGradient)" opacity="0.98"/>
+                    </g>
+                  </svg>
                 </span>
                 Configuración General
               </h3>
