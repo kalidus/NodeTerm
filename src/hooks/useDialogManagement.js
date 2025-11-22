@@ -14,6 +14,7 @@ export const useDialogManagement = () => {
 
   const [showUnifiedConnectionDialog, setShowUnifiedConnectionDialog] = useState(false);
   const [showFileConnectionDialog, setShowFileConnectionDialog] = useState(false);
+  const [showProtocolSelectionDialog, setShowProtocolSelectionDialog] = useState(false);
 
   // ============ ESTADOS DE FORMULARIOS SSH ============
   
@@ -197,6 +198,7 @@ export const useDialogManagement = () => {
 
     showUnifiedConnectionDialog, setShowUnifiedConnectionDialog,
     showFileConnectionDialog, setShowFileConnectionDialog,
+    showProtocolSelectionDialog, setShowProtocolSelectionDialog,
 
     // Estados de formularios SSH
     sshName, setSSHName,

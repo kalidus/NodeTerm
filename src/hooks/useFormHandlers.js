@@ -17,6 +17,7 @@ export const useFormHandlers = ({
 
   setShowUnifiedConnectionDialog,
   setShowFileConnectionDialog,
+  setShowProtocolSelectionDialog,
 
   // Estados de formularios SSH
   sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword,
@@ -493,7 +494,7 @@ export const useFormHandlers = ({
   }, [setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setShowUnifiedConnectionDialog]);
 
   /**
-   * Abrir diálogo unificado para nueva conexión (limpia todos los estados de edición)
+   * Abrir diálogo de selección de protocolo para nueva conexión (limpia todos los estados de edición)
    */
   const openNewUnifiedConnectionDialog = useCallback(() => {
     // Limpiar SOLO los estados de edición esenciales para asegurar modo creación
@@ -501,8 +502,14 @@ export const useFormHandlers = ({
     setEditingRdpNode(null);
     setEditingFileConnectionNode(null);
 
-    setShowUnifiedConnectionDialog(true);
-  }, [setEditSSHNode, setEditingRdpNode, setEditingFileConnectionNode, setShowUnifiedConnectionDialog]);
+    // Abrir diálogo de selección de protocolo
+    if (setShowProtocolSelectionDialog) {
+      setShowProtocolSelectionDialog(true);
+    } else {
+      // Fallback: abrir diálogo unificado directamente si no está disponible el diálogo de selección
+      setShowUnifiedConnectionDialog(true);
+    }
+  }, [setEditSSHNode, setEditingRdpNode, setEditingFileConnectionNode, setShowUnifiedConnectionDialog, setShowProtocolSelectionDialog]);
 
   /**
    * Abrir diálogo nuevo RDP

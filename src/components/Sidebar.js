@@ -2120,11 +2120,16 @@ const Sidebar = React.memo(({
                 />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
                   <Button 
-                    icon="pi pi-desktop" 
+                    icon="pi pi-sitemap" 
                     className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                     onClick={() => {
-                      // Usar evento personalizado para evitar problemas de props
-                      window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
+                      // Abrir diálogo de selección de protocolo
+                      if (sidebarCallbacksRef?.current?.showProtocolSelection) {
+                        sidebarCallbacksRef.current.showProtocolSelection();
+                      } else {
+                        // Fallback: usar evento personalizado
+                        window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
+                      }
                     }} 
                     tooltip="Nueva conexión" 
                     tooltipOptions={{ position: 'bottom' }}
