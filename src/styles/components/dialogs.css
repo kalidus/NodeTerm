@@ -295,6 +295,64 @@
   flex-direction: column;
 }
 
+/* Home Icon Selector - Badge Expandible */
+.home-icon-expandable-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border-left: 2px solid var(--ui-button-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 180px;
+}
+
+.home-icon-expandable-badge:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(102, 126, 234, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.15);
+}
+
+.home-icon-badge-content {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.home-icon-badge-content svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.home-icon-badge-name {
+  color: var(--text-color);
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.home-icon-badge-chevron {
+  color: var(--text-color-secondary);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.home-icon-expandable-badge:hover .home-icon-badge-chevron {
+  transform: translateY(1px);
+}
+
 /* Home Icon Selector - themed */
 .home-icon-overlay .p-overlaypanel-content {
   background: var(--ui-dialog-bg) !important;
@@ -346,6 +404,64 @@
   border: 2px solid var(--ui-button-primary) !important;
   background: var(--ui-button-primary) !important;
   color: var(--ui-button-primary-text) !important;
+}
+
+/* Group Icon Selector - Badge Expandible */
+.group-icon-expandable-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border-left: 2px solid var(--ui-button-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 180px;
+}
+
+.group-icon-expandable-badge:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(102, 126, 234, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.15);
+}
+
+.group-icon-badge-content {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.group-icon-badge-content svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.group-icon-badge-name {
+  color: var(--text-color);
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.group-icon-badge-chevron {
+  color: var(--text-color-secondary);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.group-icon-expandable-badge:hover .group-icon-badge-chevron {
+  transform: translateY(1px);
 }
 
 /* Group Icon Selector - themed */

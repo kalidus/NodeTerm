@@ -194,16 +194,20 @@ const SettingsDialog = ({
       const groups = getHomeTabIconGroups();
       const [activeTab, setActiveTab] = useState(0);
       const openPanel = (e) => opRef.current?.toggle(e);
+      const currentIcon = homeTabIcons[selected];
       return (
         <div className="home-icon-selector">
-          <Button
+          <button
             type="button"
-            label="Elegir icono"
-            icon="pi pi-chevron-down"
-            iconPos="right"
             onClick={openPanel}
-            className="p-button-outlined home-icon-trigger"
-          />
+            className="home-icon-expandable-badge"
+          >
+            <div className="home-icon-badge-content">
+              {currentIcon?.icon(20)}
+              <span className="home-icon-badge-name">{currentIcon?.name || 'Seleccionar'}</span>
+            </div>
+            <i className="pi pi-chevron-down home-icon-badge-chevron"></i>
+          </button>
           <OverlayPanel ref={opRef} showCloseIcon dismissable style={{ width: 420, maxWidth: '90vw' }} className="home-icon-overlay">
             <div style={{ marginBottom: 8, fontWeight: 600, color: 'var(--text-color-secondary)' }}>
               Selecciona una categoría
@@ -243,17 +247,21 @@ const SettingsDialog = ({
         name: iconData.name,
         icon: iconData.icon(18)
       }));
+      const currentIcon = groupTabIcons[selected];
 
       return (
         <div className="group-icon-selector">
-          <Button
+          <button
             type="button"
-            label="Elegir icono"
-            icon="pi pi-chevron-down"
-            iconPos="right"
             onClick={openPanel}
-            className="p-button-outlined group-icon-trigger"
-          />
+            className="group-icon-expandable-badge"
+          >
+            <div className="group-icon-badge-content">
+              {currentIcon?.icon(20)}
+              <span className="group-icon-badge-name">{currentIcon?.name || 'Seleccionar'}</span>
+            </div>
+            <i className="pi pi-chevron-down group-icon-badge-chevron"></i>
+          </button>
           <OverlayPanel ref={opRef} showCloseIcon dismissable
             className="group-icon-overlay"
             style={{ width: '300px' }}
@@ -1020,61 +1028,43 @@ const SettingsDialog = ({
                 
                 {/* Selector de Icono de Pestaña de Inicio */}
                 <div className="general-icon-selector-section">
-                  <div className="general-selector-header">
-                    <div className="general-selector-title">
-                      <div className="general-selector-icon">
+                  <div className="general-selector-row-expandable">
+                    <div className="general-selector-info-group">
+                      <div className="general-selector-icon-compact">
                         <i className="pi pi-home"></i>
                       </div>
-                      <span>Icono de la Pestaña de Inicio</span>
+                      <div className="general-selector-text-group">
+                        <span className="general-selector-title-compact">Icono de la Pestaña de Inicio</span>
+                        <span className="general-selector-description-compact">Personaliza el icono que aparece en la pestaña de inicio</span>
+                      </div>
                     </div>
-                    <p className="general-selector-description">
-                      Personaliza el icono que aparece en la pestaña de inicio
-                    </p>
-                  </div>
-
-                  <div className="general-current-selection">
-                    <span className="general-current-label">Selección actual:</span>
-                    <div className="general-current-icon-display">
-                      {homeTabIcons[selectedHomeIcon]?.icon(18)}
-                      <span className="general-icon-name">{homeTabIcons[selectedHomeIcon]?.name}</span>
+                    <div className="general-selector-action-wrapper">
+                      <HomeIconSelectorGrid
+                        selected={selectedHomeIcon}
+                        onSelect={setSelectedHomeIcon}
+                      />
                     </div>
-                  </div>
-
-                  <div className="general-icon-selector-container">
-                    <HomeIconSelectorGrid
-                      selected={selectedHomeIcon}
-                      onSelect={setSelectedHomeIcon}
-                    />
                   </div>
                 </div>
 
                 {/* Selector de Icono de Grupos */}
                 <div className="general-icon-selector-section">
-                  <div className="general-selector-header">
-                    <div className="general-selector-title">
-                      <div className="general-selector-icon">
+                  <div className="general-selector-row-expandable">
+                    <div className="general-selector-info-group">
+                      <div className="general-selector-icon-compact">
                         <i className="pi pi-th-large"></i>
                       </div>
-                      <span>Icono de Grupos de Pestañas</span>
+                      <div className="general-selector-text-group">
+                        <span className="general-selector-title-compact">Icono de Grupos de Pestañas</span>
+                        <span className="general-selector-description-compact">Elige el icono para la pestaña de grupos</span>
+                      </div>
                     </div>
-                    <p className="general-selector-description">
-                      Elige el icono para la pestaña de grupos
-                    </p>
-                  </div>
-
-                  <div className="general-current-selection">
-                    <span className="general-current-label">Selección actual:</span>
-                    <div className="general-current-icon-display">
-                      {groupTabIcons[selectedGroupIcon]?.icon(18)}
-                      <span className="general-icon-name">{groupTabIcons[selectedGroupIcon]?.name}</span>
+                    <div className="general-selector-action-wrapper">
+                      <GroupIconSelectorGrid
+                        selected={selectedGroupIcon}
+                        onSelect={setSelectedGroupIcon}
+                      />
                     </div>
-                  </div>
-
-                  <div className="general-icon-selector-container">
-                    <GroupIconSelectorGrid
-                      selected={selectedGroupIcon}
-                      onSelect={setSelectedGroupIcon}
-                    />
                   </div>
                 </div>
               </div>
