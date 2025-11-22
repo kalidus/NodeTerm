@@ -1436,7 +1436,7 @@ const SettingsDialog = ({
                   </div>
                 </div>
               </TabPanel>
-              <TabPanel header={<span><i className="pi pi-shield-alt" style={{ marginRight: 8 }}></i>Auditoría</span>}>
+              <TabPanel header={<span><i className="pi pi-video" style={{ marginRight: 8 }}></i>Auditoría</span>}>
                 <div className="general-settings-container">
                   {/* Header */}
                   <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
