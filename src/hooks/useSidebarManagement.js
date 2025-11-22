@@ -617,10 +617,11 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       },
       {
         label: 'Nueva Conexión',
-        icon: 'pi pi-desktop',
+        icon: 'pi pi-sitemap',
         command: () => {
-          if (sidebarCallbacksRef.current.createSSH) {
-            sidebarCallbacksRef.current.createSSH();
+          // Abrir diálogo de selección de protocolo
+          if (sidebarCallbacksRef.current.showProtocolSelection) {
+            sidebarCallbacksRef.current.showProtocolSelection();
           }
         }
       }

@@ -954,6 +954,7 @@ const App = () => {
   
     showUnifiedConnectionDialog, setShowUnifiedConnectionDialog,
     showFileConnectionDialog, setShowFileConnectionDialog,
+    showProtocolSelectionDialog, setShowProtocolSelectionDialog,
     // Estados de formularios SSH
     sshName, setSSHName,
     sshHost, setSSHHost,
@@ -1104,6 +1105,7 @@ const App = () => {
 
     setShowUnifiedConnectionDialog,
     setShowFileConnectionDialog,
+    setShowProtocolSelectionDialog,
     // Estados SSH para creación
     sshName, setSSHName, sshHost, setSSHHost, sshUser, setSSHUser, 
     sshPassword, setSSHPassword, sshRemoteFolder, setSSHRemoteFolder, 
@@ -1642,6 +1644,10 @@ const App = () => {
       sidebarCallbacksRef.current = {};
     }
     
+    sidebarCallbacksRef.current.showProtocolSelection = () => {
+      setShowProtocolSelectionDialog(true);
+    };
+
     sidebarCallbacksRef.current.createSSH = (targetFolder = null) => {
       window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
     };
@@ -2177,6 +2183,8 @@ const App = () => {
         setShowUnifiedConnectionDialog={setShowUnifiedConnectionDialog}
         showFileConnectionDialog={showFileConnectionDialog}
         setShowFileConnectionDialog={setShowFileConnectionDialog}
+        showProtocolSelectionDialog={showProtocolSelectionDialog}
+        setShowProtocolSelectionDialog={setShowProtocolSelectionDialog}
 
         // Estados de formularios SSH
         sshName={sshName}

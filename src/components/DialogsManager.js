@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Toast } from 'primereact/toast';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
@@ -9,7 +9,7 @@ import { InputNumber } from 'primereact/inputnumber';
 
 import SettingsDialog from './SettingsDialog';
 import SyncSettingsDialog from './SyncSettingsDialog';
-import { SSHDialog, FolderDialog, GroupDialog, UnifiedConnectionDialog, FileConnectionDialog } from './Dialogs';
+import { SSHDialog, FolderDialog, GroupDialog, UnifiedConnectionDialog, FileConnectionDialog, ProtocolSelectionDialog, NewSSHConnectionDialog, NewRDPConnectionDialog } from './Dialogs';
 
 /**
  * DialogsManager - Componente que centraliza la gestión de todos los diálogos
@@ -41,6 +41,8 @@ const DialogsManager = ({
   setShowUnifiedConnectionDialog,
   showFileConnectionDialog,
   setShowFileConnectionDialog,
+  showProtocolSelectionDialog,
+  setShowProtocolSelectionDialog,
 
   // Estados de formularios SSH
   sshName,
@@ -235,6 +237,38 @@ const DialogsManager = ({
     }
   }, [handleSaveFileConnectionToSidebar, editingFileConnectionNode, setEditingFileConnectionNode]);
   
+  // Estados para los nuevos diálogos de creación
+  const [showNewSSHDialog, setShowNewSSHDialog] = useState(false);
+  const [showNewRDPDialog, setShowNewRDPDialog] = useState(false);
+
+  // Handler para cuando se selecciona un protocolo
+  const handleProtocolSelect = useCallback((protocolId) => {
+    setShowProtocolSelectionDialog(false);
+    
+    // Abrir el diálogo correspondiente según el protocolo seleccionado
+    switch (protocolId) {
+      case 'ssh':
+        // Abrir nuevo diálogo SSH
+        setShowNewSSHDialog(true);
+        break;
+      case 'rdp':
+        // Abrir nuevo diálogo RDP
+        setShowNewRDPDialog(true);
+        break;
+      case 'sftp':
+      case 'ftp':
+      case 'scp':
+        // Abrir FileConnectionDialog con el protocolo seleccionado
+        if (setFileConnectionProtocol) {
+          setFileConnectionProtocol(protocolId);
+        }
+        setShowFileConnectionDialog(true);
+        break;
+      default:
+        console.warn('Protocolo no reconocido:', protocolId);
+    }
+  }, [setShowFileConnectionDialog, setFileConnectionProtocol]);
+  
   return (
     <>
       {/* Toast para notificaciones */}
@@ -380,7 +414,39 @@ const DialogsManager = ({
         onConfirm={createNewGroup}
       />
 
-      {/* Diálogo: Conexión Unificada (SSH/RDP) */}
+      {/* Diálogo: Nueva Conexión SSH */}
+      <NewSSHConnectionDialog
+        visible={showNewSSHDialog}
+        onHide={() => setShowNewSSHDialog(false)}
+        sshName={sshName}
+        setSSHName={setSSHName}
+        sshHost={sshHost}
+        setSSHHost={setSSHHost}
+        sshUser={sshUser}
+        setSSHUser={setSSHUser}
+        sshPassword={sshPassword}
+        setSSHPassword={setSSHPassword}
+        sshPort={sshPort}
+        setSSHPort={setSSHPort}
+        sshRemoteFolder={sshRemoteFolder}
+        setSSHRemoteFolder={setSSHRemoteFolder}
+        sshTargetFolder={sshTargetFolder}
+        setSSHTargetFolder={setSSHTargetFolder}
+        sshAutoCopyPassword={sshAutoCopyPassword}
+        setSSHAutoCopyPassword={setSSHAutoCopyPassword}
+        foldersOptions={getAllFolders(nodes)}
+        onSSHConfirm={createNewSSH}
+        sshLoading={false}
+      />
+
+      {/* Diálogo: Nueva Conexión RDP */}
+      <NewRDPConnectionDialog
+        visible={showNewRDPDialog}
+        onHide={() => setShowNewRDPDialog(false)}
+        onSaveToSidebar={handleSaveRdpToSidebar}
+      />
+
+      {/* Diálogo: Conexión Unificada (SSH/RDP) - Solo para edición */}
       <UnifiedConnectionDialog
         visible={showUnifiedConnectionDialog}
         onHide={() => {
@@ -487,6 +553,13 @@ const DialogsManager = ({
         setFileConnectionTargetFolder={setFileConnectionTargetFolder ?? (() => console.warn('setFileConnectionTargetFolder not provided'))}
         onFileConnectionConfirm={stableFileConnectionHandler}
         fileConnectionLoading={false}
+      />
+
+      {/* Diálogo de selección de protocolo */}
+      <ProtocolSelectionDialog
+        visible={showProtocolSelectionDialog}
+        onHide={() => setShowProtocolSelectionDialog(false)}
+        onSelectProtocol={handleProtocolSelect}
       />
     </>
   );

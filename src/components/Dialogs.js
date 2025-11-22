@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
@@ -683,6 +683,40 @@ export function UnifiedConnectionDialog({
   const [activeTabIndex, setActiveTabIndex] = useState(0); // 0 = SSH, 1 = RDP, 2 = Archivos, 3 = Password
   const [isExpanded, setIsExpanded] = useState(false); // Estado para controlar si está expandido
   const [showRdpPassword, setShowRdpPassword] = useState(false); // Estado para mostrar/ocultar contraseña RDP
+
+  // Ref para almacenar el tabIndex pendiente cuando el diálogo se abre desde el selector de protocolo
+  const pendingTabIndexRef = useRef(null);
+
+  // Listener para establecer la pestaña desde el diálogo de selección de protocolo
+  useEffect(() => {
+    const handleSetTab = (event) => {
+      if (event.detail?.tabIndex !== undefined) {
+        pendingTabIndexRef.current = event.detail.tabIndex;
+        // Si el diálogo está visible, establecer la pestaña inmediatamente
+        if (visible) {
+          setActiveTabIndex(event.detail.tabIndex);
+          pendingTabIndexRef.current = null;
+        }
+      }
+    };
+
+    window.addEventListener('set-unified-dialog-tab', handleSetTab);
+    return () => {
+      window.removeEventListener('set-unified-dialog-tab', handleSetTab);
+    };
+  }, [visible]);
+
+  // Cuando el diálogo se hace visible, aplicar el tabIndex pendiente si existe
+  useEffect(() => {
+    if (visible && pendingTabIndexRef.current !== null) {
+      setActiveTabIndex(pendingTabIndexRef.current);
+      pendingTabIndexRef.current = null;
+    } else if (!visible) {
+      // Resetear cuando se cierra
+      pendingTabIndexRef.current = null;
+    }
+  }, [visible]);
+
   
   // Estados para RDP
   const [formData, setFormData] = useState({
@@ -887,7 +921,9 @@ export function UnifiedConnectionDialog({
   // Header personalizado con botón de expansión
   const customHeader = (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '4px 0' }}>
-      <span style={{ fontSize: '16px', fontWeight: '500' }}>{isEditMode ? "Editar Conexión" : "Nueva Conexión"}</span>
+      <span style={{ fontSize: '16px', fontWeight: '500' }}>
+        {isEditMode ? "Editar Conexión" : "Nueva Conexión"}
+      </span>
       <Button
         icon={isExpanded ? "pi pi-window-minimize" : "pi pi-window-maximize"}
         className="p-button-text p-button-sm"
@@ -2231,6 +2267,560 @@ export function EnhancedSSHForm({
         />
       </div>
     </div>
+  );
+}
+
+// --- NewSSHConnectionDialog: Diálogo simple solo para SSH ---
+export function NewSSHConnectionDialog({
+  visible,
+  onHide,
+  sshName, setSSHName,
+  sshHost, setSSHHost,
+  sshUser, setSSHUser,
+  sshPassword, setSSHPassword,
+  sshPort, setSSHPort,
+  sshRemoteFolder, setSSHRemoteFolder,
+  sshTargetFolder, setSSHTargetFolder,
+  sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
+  foldersOptions = [],
+  onSSHConfirm,
+  sshLoading = false
+}) {
+  return (
+    <Dialog
+      header="Nueva Conexión SSH"
+      visible={visible}
+      style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
+      modal
+      resizable={true}
+      onHide={onHide}
+      contentStyle={{ padding: '0', overflow: 'auto' }}
+      className="new-ssh-connection-dialog"
+    >
+      <div style={{ marginTop: '10px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <EnhancedSSHForm
+          activeTabIndex={0}
+          sshName={sshName}
+          setSSHName={setSSHName}
+          sshHost={sshHost}
+          setSSHHost={setSSHHost}
+          sshUser={sshUser}
+          setSSHUser={setSSHUser}
+          sshPassword={sshPassword}
+          setSSHPassword={setSSHPassword}
+          sshPort={sshPort}
+          setSSHPort={setSSHPort}
+          sshRemoteFolder={sshRemoteFolder}
+          setSSHRemoteFolder={setSSHRemoteFolder}
+          sshTargetFolder={sshTargetFolder}
+          setSSHTargetFolder={setSSHTargetFolder}
+          sshAutoCopyPassword={sshAutoCopyPassword}
+          setSSHAutoCopyPassword={setSSHAutoCopyPassword}
+          foldersOptions={foldersOptions}
+          onSSHConfirm={onSSHConfirm}
+          onHide={onHide}
+          sshLoading={sshLoading}
+        />
+      </div>
+    </Dialog>
+  );
+}
+
+// --- NewRDPConnectionDialog: Diálogo simple solo para RDP ---
+export function NewRDPConnectionDialog({
+  visible,
+  onHide,
+  onSaveToSidebar
+}) {
+  const [formData, setFormData] = useState({
+    name: '',
+    server: '',
+    username: '',
+    password: '',
+    port: 3389,
+    clientType: 'guacamole',
+    preset: 'default',
+    resolution: '1600x1000',
+    colorDepth: 32,
+    redirectFolders: true,
+    redirectClipboard: true,
+    redirectPrinters: false,
+    redirectAudio: false,
+    fullscreen: false,
+    smartSizing: true,
+    span: false,
+    admin: false,
+    public: false,
+    autoResize: true,
+    guacDpi: 96,
+    guacSecurity: 'any',
+    guacEnableWallpaper: true,
+    guacEnableDrive: false,
+    guacDriveHostDir: '',
+    guacEnableGfx: false,
+    guacEnableDesktopComposition: false,
+    guacEnableFontSmoothing: false,
+    guacEnableTheming: false,
+    guacEnableFullWindowDrag: false,
+    guacEnableMenuAnimations: false,
+    guacDisableGlyphCaching: false,
+    guacDisableOffscreenCaching: false,
+    guacDisableBitmapCaching: false,
+    guacDisableCopyRect: false
+  });
+
+  const [showRdpPassword, setShowRdpPassword] = useState(false);
+
+  // Resetear formulario al cerrar
+  useEffect(() => {
+    if (!visible) {
+      setFormData({
+        name: '',
+        server: '',
+        username: '',
+        password: '',
+        port: 3389,
+        clientType: 'guacamole',
+        preset: 'default',
+        resolution: '1600x1000',
+        colorDepth: 32,
+        redirectFolders: true,
+        redirectClipboard: true,
+        redirectPrinters: false,
+        redirectAudio: false,
+        fullscreen: false,
+        smartSizing: true,
+        span: false,
+        admin: false,
+        public: false,
+        autoResize: true,
+        guacDpi: 96,
+        guacSecurity: 'any',
+        guacEnableWallpaper: true,
+        guacEnableDrive: false,
+        guacDriveHostDir: '',
+        guacEnableGfx: false,
+        guacEnableDesktopComposition: false,
+        guacEnableFontSmoothing: false,
+        guacEnableTheming: false,
+        guacEnableFullWindowDrag: false,
+        guacEnableMenuAnimations: false,
+        guacDisableGlyphCaching: false,
+        guacDisableOffscreenCaching: false,
+        guacDisableBitmapCaching: false,
+        guacDisableCopyRect: false
+      });
+    }
+  }, [visible]);
+
+  const handleTextChange = (field) => (e) => {
+    setFormData(prev => ({ ...prev, [field]: e.target.value }));
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleCheckboxChange = (field) => (e) => {
+    setFormData(prev => ({ ...prev, [field]: e.checked }));
+  };
+
+  const handleSelectFolder = async () => {
+    try {
+      const { dialog } = window.require('electron').remote || window.require('@electron/remote');
+      const result = await dialog.showOpenDialog({
+        properties: ['openDirectory']
+      });
+      if (!result.canceled && result.filePaths.length > 0) {
+        setFormData(prev => ({ ...prev, guacDriveHostDir: result.filePaths[0] }));
+      }
+    } catch (error) {
+      console.error('Error al seleccionar carpeta:', error);
+    }
+  };
+
+  return (
+    <Dialog
+      header="Nueva Conexión RDP"
+      visible={visible}
+      style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
+      modal
+      resizable={true}
+      onHide={onHide}
+      contentStyle={{ padding: '0', overflow: 'auto' }}
+      className="new-rdp-connection-dialog"
+    >
+      <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            
+            {/* --- COLUMNA IZQUIERDA: Conexión --- */}
+            <div style={{ flex: '1', minWidth: '320px' }}>
+              <Card title="🔗 Conexión" className="mb-2">
+                <div className="formgrid grid">
+                  <div className="field col-12">
+                    <label htmlFor="rdp-name">Nombre *</label>
+                    <InputText
+                      id="rdp-name"
+                      value={formData.name}
+                      onChange={handleTextChange('name')}
+                      placeholder="Nombre descriptivo"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="field col-8">
+                    <label htmlFor="rdp-server">Servidor *</label>
+                    <InputText
+                      id="rdp-server"
+                      value={formData.server}
+                      onChange={handleTextChange('server')}
+                      placeholder="IP o nombre del servidor"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="field col-4">
+                    <label htmlFor="rdp-port">Puerto</label>
+                    <InputText
+                      id="rdp-port"
+                      type="number"
+                      value={formData.port}
+                      onChange={handleTextChange('port')}
+                      placeholder="3389"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="field col-12">
+                    <label htmlFor="rdp-username">Usuario *</label>
+                    <InputText
+                      id="rdp-username"
+                      value={formData.username}
+                      onChange={handleTextChange('username')}
+                      placeholder="Usuario"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="field col-12">
+                    <label htmlFor="rdp-password">Contraseña</label>
+                    <div className="p-inputgroup">
+                      <InputText
+                        id="rdp-password"
+                        type={showRdpPassword ? "text" : "password"}
+                        value={formData.password}
+                        onChange={handleTextChange('password')}
+                        placeholder="Contraseña (opcional)"
+                        autoComplete="off"
+                      />
+                      <Button 
+                        type="button" 
+                        icon={showRdpPassword ? "pi pi-eye-slash" : "pi pi-eye"} 
+                        className="p-button-outlined"
+                        onClick={() => setShowRdpPassword(!showRdpPassword)}
+                        tooltip={showRdpPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        tooltipOptions={{ position: 'top' }}
+                      />
+                    </div>
+                  </div>
+                  <div className="field col-12">
+                    <label htmlFor="rdp-clientType">💻 Cliente</label>
+                    <Dropdown
+                      id="rdp-clientType"
+                      value={formData.clientType}
+                      options={[
+                        { label: 'Windows MSTSC', value: 'mstsc' },
+                        { label: 'Apache Guacamole', value: 'guacamole' }
+                      ]}
+                      onChange={(e) => handleInputChange('clientType', e.value)}
+                      placeholder="Seleccionar tipo"
+                    />
+                  </div>
+                  {formData.clientType === 'guacamole' && (
+                    <div className="field col-12">
+                      <label htmlFor="rdp-guacSecurity">🔒 Seguridad</label>
+                      <Dropdown
+                        id="rdp-guacSecurity"
+                        value={formData.guacSecurity}
+                        options={[
+                          { label: '🛡️ Automático', value: 'any' },
+                          { label: '🔐 RDP Estándar', value: 'rdp' },
+                          { label: '🔒 TLS', value: 'tls' },
+                          { label: '🛡️ Network Level Authentication', value: 'nla' }
+                        ]}
+                        onChange={(e) => handleInputChange('guacSecurity', e.value)}
+                        placeholder="Seleccionar protocolo"
+                      />
+                      <small>Nivel de seguridad para la conexión RDP</small>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
+                <Card title="📁 Carpeta Compartida" className="mt-3">
+                  <div className="field">
+                    <label htmlFor="rdp-guacDriveHostDir">Ruta del directorio local</label>
+                    <div className="p-inputgroup">
+                      <InputText
+                        id="rdp-guacDriveHostDir"
+                        value={formData.guacDriveHostDir}
+                        onChange={handleTextChange('guacDriveHostDir')}
+                        placeholder="Ej: C:\Users\TuUsuario\Compartido"
+                      />
+                      <Button icon="pi pi-folder-open" className="p-button-secondary p-button-outlined" onClick={handleSelectFolder} tooltip="Seleccionar carpeta" />
+                    </div>
+                    <small className="p-d-block mt-2 text-color-secondary">
+                      Esta carpeta estará disponible como una unidad de red dentro de la sesión RDP.
+                    </small>
+                  </div>
+                </Card>
+              )}
+            </div>
+
+            {/* --- COLUMNA DERECHA: Ajustes de Sesión --- */}
+            <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              
+              <Card title="🖥️ Pantalla">
+                <div className="formgrid grid">
+                  <div className="field col-6">
+                    <label htmlFor="rdp-preset">Preset</label>
+                    <Dropdown
+                      id="rdp-preset"
+                      value={formData.preset}
+                      options={[
+                        { label: 'Por defecto', value: 'default' },
+                        { label: 'Rendimiento', value: 'performance' },
+                        { label: 'Calidad', value: 'quality' }
+                      ]}
+                      onChange={(e) => handleInputChange('preset', e.value)}
+                    />
+                  </div>
+                  <div className="field col-6">
+                    <label htmlFor="rdp-resolution">Resolución</label>
+                    <Dropdown
+                      id="rdp-resolution"
+                      value={formData.resolution}
+                      options={[
+                        { label: 'Pantalla completa', value: 'fullscreen' },
+                        { label: '1920x1080', value: '1920x1080' },
+                        { label: '1600x1000', value: '1600x1000' },
+                        { label: '1366x768', value: '1366x768' },
+                        { label: '1024x768', value: '1024x768' }
+                      ]}
+                      onChange={(e) => handleInputChange('resolution', e.value)}
+                    />
+                  </div>
+                  <div className="field col-6">
+                    <label htmlFor="rdp-colorDepth">Color</label>
+                    <Dropdown
+                      id="rdp-colorDepth"
+                      value={formData.colorDepth}
+                      options={[
+                        { label: '32 bits', value: 32 },
+                        { label: '24 bits', value: 24 },
+                        { label: '16 bits', value: 16 },
+                        { label: '15 bits', value: 15 }
+                      ]}
+                      onChange={(e) => handleInputChange('colorDepth', e.value)}
+                    />
+                  </div>
+                  <div className="field col-6">
+                    <label htmlFor="rdp-guacDpi">DPI</label>
+                    <InputText
+                      id="rdp-guacDpi"
+                      value={formData.guacDpi}
+                      onChange={handleTextChange('guacDpi')}
+                      placeholder="96"
+                    />
+                  </div>
+                </div>
+              </Card>
+
+              <Card title="⚙️ Opciones">
+                <div className="formgrid grid">
+                  {formData.clientType === 'mstsc' && (
+                    <>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectClipboard" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="mstsc-redirectClipboard">📋 Portapapeles</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectAudio" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="mstsc-redirectAudio">🔊 Audio</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectPrinters" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="mstsc-redirectPrinters">🖨️ Impresoras</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectFolders" checked={formData.redirectFolders} onChange={handleCheckboxChange('redirectFolders')} /><label htmlFor="mstsc-redirectFolders">📁 Carpetas</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-smartSizing" checked={formData.smartSizing} onChange={handleCheckboxChange('smartSizing')} /><label htmlFor="mstsc-smartSizing">📐 Ajuste automático</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-fullscreen" checked={formData.fullscreen} onChange={handleCheckboxChange('fullscreen')} /><label htmlFor="mstsc-fullscreen">🖥️ Pantalla completa</label></div>
+                    </>
+                  )}
+                  {formData.clientType === 'guacamole' && (
+                    <>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="guac-redirectClipboard">📋 Portapapeles</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="guac-redirectAudio">🔊 Audio</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive" checked={formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} /><label htmlFor="guac-enableDrive">💾 Carpetas (NodeTerm Drive)</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize" checked={formData.autoResize} onChange={handleCheckboxChange('autoResize')} /><label htmlFor="guac-autoResize">📐 Ajuste automático</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper" checked={formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} /><label htmlFor="guac-enableWallpaper">🖼️ Mostrar fondo</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="guac-redirectPrinters">🖨️ Impresoras</label></div>
+                    </>
+                  )}
+                </div>
+
+                {formData.clientType === 'guacamole' && (
+                  <div style={{ marginTop: '1rem', paddingTop: '1rem' }}>
+                    <Fieldset legend="⚙️ Opciones Avanzadas" toggleable collapsed>
+                      <div className="formgrid grid">
+                        <div className="col-4">
+                          <h5>Rendimiento</h5>
+                          <div className="field-checkbox"><Checkbox inputId="guac-gfx" checked={formData.guacEnableGfx} onChange={handleCheckboxChange('guacEnableGfx')} /><label htmlFor="guac-gfx">🎨 Habilitar GFX</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-composition" checked={formData.guacEnableDesktopComposition} onChange={handleCheckboxChange('guacEnableDesktopComposition')} /><label htmlFor="guac-composition">🖼️ Desktop Composition</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-font" checked={formData.guacEnableFontSmoothing} onChange={handleCheckboxChange('guacEnableFontSmoothing')} /><label htmlFor="guac-font">✨ Font Smoothing</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-theming" checked={formData.guacEnableTheming} onChange={handleCheckboxChange('guacEnableTheming')} /><label htmlFor="guac-theming">🎭 Theming</label></div>
+                        </div>
+                        <div className="col-4">
+                          <h5>Interfaz</h5>
+                          <div className="field-checkbox"><Checkbox inputId="guac-drag" checked={formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} /><label htmlFor="guac-drag">🖱️ Full Window Drag</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-menu" checked={formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} /><label htmlFor="guac-menu">🎬 Animaciones de menú</label></div>
+                        </div>
+                        <div className="col-4">
+                          <h5>Caché</h5>
+                          <div className="field-checkbox"><Checkbox inputId="guac-glyph-cache" checked={!formData.guacDisableGlyphCaching} onChange={(e) => handleInputChange('guacDisableGlyphCaching', !e.checked)} /><label htmlFor="guac-glyph-cache">🔤 Glyph Caching</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-offscreen-cache" checked={!formData.guacDisableOffscreenCaching} onChange={(e) => handleInputChange('guacDisableOffscreenCaching', !e.checked)} /><label htmlFor="guac-offscreen-cache">📱 Offscreen Caching</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-bitmap-cache" checked={!formData.guacDisableBitmapCaching} onChange={(e) => handleInputChange('guacDisableBitmapCaching', !e.checked)} /><label htmlFor="guac-bitmap-cache">🖼️ Bitmap Caching</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-copy-rect" checked={!formData.guacDisableCopyRect} onChange={(e) => handleInputChange('guacDisableCopyRect', !e.checked)} /><label htmlFor="guac-copy-rect">📋 Copy-Rect</label></div>
+                        </div>
+                      </div>
+                    </Fieldset>
+                  </div>
+                )}
+              </Card>
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', paddingTop: '12px' }}>
+          <Button 
+            label="Cancelar" 
+            icon="pi pi-times" 
+            className="p-button-text" 
+            onClick={onHide}
+            style={{ fontSize: '13px', padding: '8px 16px' }}
+          />
+          <Button 
+            label="Crear Conexión" 
+            icon="pi pi-check" 
+            className="p-button-primary" 
+            onClick={() => {
+              if (!formData.name?.trim() || !formData.server?.trim() || !formData.username?.trim()) {
+                return;
+              }
+              console.log('Crear conexión RDP con datos:', formData);
+              onSaveToSidebar && onSaveToSidebar(formData, false, null);
+              onHide();
+            }}
+            disabled={!formData.name?.trim() || !formData.server?.trim() || !formData.username?.trim()}
+            style={{ fontSize: '13px', padding: '8px 16px' }}
+          />
+        </div>
+      </div>
+    </Dialog>
+  );
+}
+
+// --- ProtocolSelectionDialog: diálogo de selección de protocolo con cards ---
+export function ProtocolSelectionDialog({
+  visible,
+  onHide,
+  onSelectProtocol // Callback: (protocol) => void
+}) {
+  const protocols = [
+    {
+      id: 'ssh',
+      name: 'SSH',
+      description: 'Conexión segura para terminal remoto y transferencia de archivos',
+      icon: 'pi pi-terminal',
+      color: '#2196F3'
+    },
+    {
+      id: 'rdp',
+      name: 'RDP',
+      description: 'Escritorio remoto de Windows con soporte completo de sesiones',
+      icon: 'pi pi-desktop',
+      color: '#4CAF50'
+    },
+    {
+      id: 'sftp',
+      name: 'SFTP',
+      description: 'Transferencia segura de archivos mediante SSH',
+      icon: 'pi pi-folder-open',
+      color: '#FF9800'
+    },
+    {
+      id: 'ftp',
+      name: 'FTP',
+      description: 'Protocolo de transferencia de archivos estándar',
+      icon: 'pi pi-cloud-upload',
+      color: '#9C27B0'
+    },
+    {
+      id: 'scp',
+      name: 'SCP',
+      description: 'Copia segura de archivos mediante SSH',
+      icon: 'pi pi-copy',
+      color: '#00BCD4'
+    }
+  ];
+
+  const handleProtocolSelect = (protocolId) => {
+    if (onSelectProtocol) {
+      onSelectProtocol(protocolId);
+    }
+    onHide();
+  };
+
+  return (
+    <Dialog
+      header="Seleccionar Tipo de Conexión"
+      visible={visible}
+      onHide={onHide}
+      style={{ width: '90vw', maxWidth: '900px' }}
+      modal
+      className="protocol-selection-dialog"
+    >
+      <div className="protocol-selection-container">
+        {/* Header */}
+        <div className="protocol-selection-header">
+          <h3 className="protocol-selection-title">
+            <span className="protocol-selection-icon">
+              <i className="pi pi-sitemap"></i>
+            </span>
+            Crear Nueva Conexión
+          </h3>
+          <p className="protocol-selection-description">
+            Selecciona el tipo de conexión que deseas crear
+          </p>
+        </div>
+
+        {/* Grid de protocolos */}
+        <div className="protocol-selection-grid">
+          {protocols.map((protocol) => (
+            <div
+              key={protocol.id}
+              className="protocol-card"
+              onClick={() => handleProtocolSelect(protocol.id)}
+            >
+              <div className="protocol-card-content">
+                <div 
+                  className="protocol-card-icon"
+                  style={{ background: protocol.color }}
+                >
+                  <i className={protocol.icon}></i>
+                </div>
+                <div className="protocol-card-info">
+                  <h4 className="protocol-card-name">{protocol.name}</h4>
+                  <p className="protocol-card-description">{protocol.description}</p>
+                </div>
+                <div className="protocol-card-arrow">
+                  <i className="pi pi-chevron-right"></i>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Dialog>
   );
 }
 
