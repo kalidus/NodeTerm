@@ -39,7 +39,20 @@ class ThemeManager {
   constructor() {
     this.currentTheme = null;
     this.styleElement = null;
+    this.checkboxObserver = null;
+    this.checkboxChangeListener = null;
+    this.checkboxTimeout = null;
     this.createStyleElement();
+    // Aplicar estilos de checkboxes cuando el DOM esté listo
+    if (typeof window !== 'undefined') {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+          setTimeout(() => this.applyCheckboxStyles(), 100);
+        });
+      } else {
+        setTimeout(() => this.applyCheckboxStyles(), 100);
+      }
+    }
   }
 
   createStyleElement() {
@@ -73,7 +86,9 @@ class ThemeManager {
       // Usar setTimeout para asegurar que el tema se haya aplicado completamente
       setTimeout(() => {
         window.dispatchEvent(new Event('theme-changed'));
-      }, 10);
+        // Aplicar estilos de checkboxes directamente al DOM
+        this.applyCheckboxStyles();
+      }, 50);
     }
   }
 
@@ -170,6 +185,10 @@ class ThemeManager {
         --ui-file-button-bg: transparent;
         --ui-titlebar-accent: ${usePrimaryColorsForTitlebar ? (colors['--ui-titlebar-accent'] || colors.buttonPrimary || '#1976d2') : (adjustColorBrightness(colors.sidebarBackground, 8) || colors.buttonPrimary || '#1976d2')};
         --ui-titlebar-text: ${usePrimaryColorsForTitlebar ? (colors['--ui-titlebar-text'] || '#fff') : (colors.buttonPrimary || '#fff')};
+        
+        /* Primary color - usado por checkboxes y otros componentes */
+        --primary-color: ${colors.buttonPrimary};
+        --primary-color-text: ${colors.buttonPrimaryText};
       }
 
       /* === SIDEBAR STYLES === */
@@ -309,6 +328,30 @@ class ThemeManager {
       .p-dialog .p-dialog-footer {
         background: var(--ui-dialog-bg) !important;
         border-top: 1px solid var(--ui-dialog-border) !important;
+      }
+
+      /* === CHECKBOX OVERRIDES - SOBRESCRIBIR COLORES DE PRIMEREACT === */
+      /* Asegurar que todos los checkboxes usen el color del tema */
+      body .p-checkbox .p-checkbox-box.p-highlight,
+      body .p-checkbox .p-checkbox-box.p-checkbox-checked,
+      body .p-checkbox.p-checkbox-checked .p-checkbox-box,
+      body .p-checkbox.p-highlight .p-checkbox-box,
+      body .general-setting-control .p-checkbox .p-checkbox-box.p-highlight,
+      body .general-setting-control .p-checkbox .p-checkbox-box.p-checkbox-checked,
+      body .security-checkbox-wrapper .p-checkbox .p-checkbox-box.p-highlight,
+      body .security-checkbox-wrapper .p-checkbox .p-checkbox-box.p-checkbox-checked {
+        background: ${colors.buttonPrimary} !important;
+        background-color: ${colors.buttonPrimary} !important;
+        border-color: ${colors.buttonPrimary} !important;
+      }
+      
+      body .p-checkbox .p-checkbox-box.p-highlight .p-checkbox-icon,
+      body .p-checkbox .p-checkbox-box.p-checkbox-checked .p-checkbox-icon {
+        color: ${colors.buttonPrimaryText} !important;
+      }
+      
+      body .p-checkbox .p-checkbox-box:hover {
+        border-color: ${colors.buttonPrimary} !important;
       }
 
       /* === TOAST STYLES === */
@@ -629,7 +672,83 @@ class ThemeManager {
     setTimeout(() => {
       const rootStyles = getComputedStyle(document.documentElement);
       // Log de debug removido para limpiar la consola
+      // Aplicar estilos de checkboxes directamente
+      this.applyCheckboxStyles();
     }, 100);
+  }
+
+  applyCheckboxStyles() {
+    if (typeof document === 'undefined') return;
+    
+    // Obtener el color primario del tema actual o de las variables CSS
+    const root = document.documentElement;
+    const primaryColor = this.currentTheme?.colors?.buttonPrimary || 
+                        getComputedStyle(root).getPropertyValue('--primary-color').trim() ||
+                        getComputedStyle(root).getPropertyValue('--ui-button-primary').trim() ||
+                        '#6366f1'; // Fallback
+    
+    const primaryColorText = this.currentTheme?.colors?.buttonPrimaryText || 
+                            getComputedStyle(root).getPropertyValue('--primary-color-text').trim() ||
+                            getComputedStyle(root).getPropertyValue('--ui-button-primary-text').trim() ||
+                            '#ffffff'; // Fallback
+    
+    // Buscar todos los checkboxes marcados
+    const checkboxes = document.querySelectorAll('.p-checkbox-box.p-highlight, .p-checkbox-box.p-checkbox-checked, .p-checkbox.p-checkbox-checked .p-checkbox-box');
+    
+    checkboxes.forEach(box => {
+      // Aplicar estilos directamente al elemento con !important usando setProperty
+      box.style.setProperty('background', primaryColor, 'important');
+      box.style.setProperty('background-color', primaryColor, 'important');
+      box.style.setProperty('border-color', primaryColor, 'important');
+      
+      // Aplicar color al icono si existe
+      const icon = box.querySelector('.p-checkbox-icon, .pi');
+      if (icon) {
+        icon.style.setProperty('color', primaryColorText, 'important');
+      }
+    });
+    
+    // También aplicar a checkboxes que puedan tener el estado en el input
+    const checkboxInputs = document.querySelectorAll('input[type="checkbox"]:checked');
+    checkboxInputs.forEach(input => {
+      const box = input.closest('.p-checkbox')?.querySelector('.p-checkbox-box');
+      if (box) {
+        box.style.setProperty('background', primaryColor, 'important');
+        box.style.setProperty('background-color', primaryColor, 'important');
+        box.style.setProperty('border-color', primaryColor, 'important');
+        box.classList.add('p-highlight', 'p-checkbox-checked');
+      }
+    });
+    
+    // Usar MutationObserver para aplicar estilos a checkboxes que se creen después
+    if (!this.checkboxObserver && typeof MutationObserver !== 'undefined') {
+      this.checkboxObserver = new MutationObserver(() => {
+        // Aplicar con un pequeño delay para evitar loops
+        clearTimeout(this.checkboxTimeout);
+        this.checkboxTimeout = setTimeout(() => {
+          this.applyCheckboxStyles();
+        }, 50);
+      });
+      
+      if (document.body) {
+        this.checkboxObserver.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['class', 'aria-checked']
+        });
+      }
+    }
+    
+    // También escuchar cambios en checkboxes
+    if (!this.checkboxChangeListener) {
+      this.checkboxChangeListener = (e) => {
+        if (e.target.type === 'checkbox') {
+          setTimeout(() => this.applyCheckboxStyles(), 10);
+        }
+      };
+      document.addEventListener('change', this.checkboxChangeListener, true);
+    }
   }
 
   applyAnimations(theme) {
