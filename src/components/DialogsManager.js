@@ -9,7 +9,7 @@ import { InputNumber } from 'primereact/inputnumber';
 
 import SettingsDialog from './SettingsDialog';
 import SyncSettingsDialog from './SyncSettingsDialog';
-import { SSHDialog, FolderDialog, GroupDialog, UnifiedConnectionDialog, FileConnectionDialog, ProtocolSelectionDialog, NewSSHConnectionDialog, NewRDPConnectionDialog } from './Dialogs';
+import { SSHDialog, FolderDialog, GroupDialog, EditSSHConnectionDialog, EditRDPConnectionDialog, FileConnectionDialog, ProtocolSelectionDialog, NewSSHConnectionDialog, NewRDPConnectionDialog } from './Dialogs';
 
 /**
  * DialogsManager - Componente que centraliza la gestión de todos los diálogos
@@ -446,35 +446,16 @@ const DialogsManager = ({
         onSaveToSidebar={handleSaveRdpToSidebar}
       />
 
-      {/* Diálogo: Conexión Unificada (SSH/RDP) - Solo para edición */}
-      <UnifiedConnectionDialog
-        visible={showUnifiedConnectionDialog}
+      {/* Diálogo: Editar Conexión SSH */}
+      <EditSSHConnectionDialog
+        visible={showUnifiedConnectionDialog && !!editSSHNode}
         onHide={() => {
           setShowUnifiedConnectionDialog(false);
-          // Limpiar estados de edición
           if (editSSHNode) {
             setEditSSHNode(null);
           }
-          if (editingFileConnectionNode && setEditingFileConnectionNode) {
-            setEditingFileConnectionNode(null);
-          }
-          if (editingRdpNode) {
-            setEditingRdpNode(null);
-            setRdpNodeData(null);
-          }
-          // Resetear formulario de archivos si existe
-          if (setFileConnectionName) {
-            setFileConnectionName('');
-            setFileConnectionHost('');
-            setFileConnectionUser('');
-            setFileConnectionPassword('');
-            setFileConnectionPort(22);
-            setFileConnectionProtocol('sftp');
-            setFileConnectionRemoteFolder('');
-            setFileConnectionTargetFolder('');
-          }
         }}
-        // Props SSH
+        editNodeData={editSSHNode}
         sshName={editSSHNode ? editSSHName : sshName}
         setSSHName={editSSHNode ? setEditSSHName : setSSHName}
         sshHost={editSSHNode ? editSSHHost : sshHost}
@@ -494,33 +475,20 @@ const DialogsManager = ({
         foldersOptions={getAllFolders(nodes)}
         onSSHConfirm={editSSHNode ? saveEditSSH : createNewSSH}
         sshLoading={false}
-        // Props RDP
-        rdpNodeData={rdpNodeData}
+      />
+
+      {/* Diálogo: Editar Conexión RDP */}
+      <EditRDPConnectionDialog
+        visible={showUnifiedConnectionDialog && !!editingRdpNode}
+        onHide={() => {
+          setShowUnifiedConnectionDialog(false);
+          if (editingRdpNode) {
+            setEditingRdpNode(null);
+            setRdpNodeData(null);
+          }
+        }}
+        editNodeData={editingRdpNode}
         onSaveToSidebar={handleSaveRdpToSidebar}
-        editingNode={editingRdpNode}
-        // Props para modo edición
-        isEditMode={!!(editSSHNode || editingRdpNode || editingFileConnectionNode)}
-        editConnectionType={editSSHNode ? 'ssh' : (editingRdpNode ? 'rdp' : (editingFileConnectionNode ? (editingFileConnectionNode.data?.protocol || editingFileConnectionNode.data?.type || 'sftp') : null))}
-        editNodeData={editSSHNode || editingRdpNode || editingFileConnectionNode}
-        // Props Archivos (SFTP/FTP/SCP) - Usar valores por defecto si son undefined
-        fileConnectionName={fileConnectionName ?? ''}
-        setFileConnectionName={setFileConnectionName ?? (() => console.warn('setFileConnectionName not provided'))}
-        fileConnectionHost={fileConnectionHost ?? ''}
-        setFileConnectionHost={setFileConnectionHost ?? (() => console.warn('setFileConnectionHost not provided'))}
-        fileConnectionUser={fileConnectionUser ?? ''}
-        setFileConnectionUser={setFileConnectionUser ?? (() => console.warn('setFileConnectionUser not provided'))}
-        fileConnectionPassword={fileConnectionPassword ?? ''}
-        setFileConnectionPassword={setFileConnectionPassword ?? (() => console.warn('setFileConnectionPassword not provided'))}
-        fileConnectionPort={fileConnectionPort ?? 22}
-        setFileConnectionPort={setFileConnectionPort ?? (() => console.warn('setFileConnectionPort not provided'))}
-        fileConnectionProtocol={fileConnectionProtocol ?? 'sftp'}
-        setFileConnectionProtocol={setFileConnectionProtocol ?? (() => console.warn('setFileConnectionProtocol not provided'))}
-        fileConnectionRemoteFolder={fileConnectionRemoteFolder ?? ''}
-        setFileConnectionRemoteFolder={setFileConnectionRemoteFolder ?? (() => console.warn('setFileConnectionRemoteFolder not provided'))}
-        fileConnectionTargetFolder={fileConnectionTargetFolder ?? ''}
-        setFileConnectionTargetFolder={setFileConnectionTargetFolder ?? (() => console.warn('setFileConnectionTargetFolder not provided'))}
-        onFileConnectionConfirm={stableFileConnectionHandler}
-        fileConnectionLoading={false}
       />
 
       {/* Diálogo independiente para conexiones de archivos */}

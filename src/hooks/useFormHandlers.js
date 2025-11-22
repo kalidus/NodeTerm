@@ -507,7 +507,7 @@ export const useFormHandlers = ({
       setShowProtocolSelectionDialog(true);
     } else {
       // Fallback: abrir diálogo unificado directamente si no está disponible el diálogo de selección
-      setShowUnifiedConnectionDialog(true);
+    setShowUnifiedConnectionDialog(true);
     }
   }, [setEditSSHNode, setEditingRdpNode, setEditingFileConnectionNode, setShowUnifiedConnectionDialog, setShowProtocolSelectionDialog]);
 

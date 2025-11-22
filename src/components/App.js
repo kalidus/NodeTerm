@@ -1647,7 +1647,7 @@ const App = () => {
     sidebarCallbacksRef.current.showProtocolSelection = () => {
       setShowProtocolSelectionDialog(true);
     };
-
+    
     sidebarCallbacksRef.current.createSSH = (targetFolder = null) => {
       window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
     };
