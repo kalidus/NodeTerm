@@ -130,7 +130,7 @@ export const classicUiThemes = {
       
       // Dialogs
       dialogBackground: '#2d2d30',
-      dialogText: '#cccccc',
+      dialogText: '#e8e8e8',
       dialogBorder: '#3e3e42',
       dialogShadow: 'rgba(0, 0, 0, 0.4)',
       
@@ -286,7 +286,7 @@ export const classicUiThemes = {
       
       // Dialogs
       dialogBackground: '#002b36',
-      dialogText: '#839496',
+      dialogText: '#b0c4d0',
       dialogBorder: '#073642',
       dialogShadow: 'rgba(0, 0, 0, 0.4)',
       
@@ -644,7 +644,7 @@ export const classicUiThemes = {
       contentBorder: '#676e95',
       
       dialogBackground: '#292d3e',
-      dialogText: '#a6accd',
+      dialogText: '#c0caf5',
       dialogBorder: '#676e95',
       dialogShadow: 'rgba(0, 0, 0, 0.4)',
       
@@ -840,7 +840,7 @@ export const classicUiThemes = {
       contentBorder: '#969896',
       
       dialogBackground: '#1d1f21',
-      dialogText: '#c5c8c6',
+      dialogText: '#e0e0e0',
       dialogBorder: '#969896',
       dialogShadow: 'rgba(0, 0, 0, 0.4)',
       
@@ -1100,7 +1100,7 @@ export const classicUiThemes = {
       contentBorder: '#5d4d7a',
       
       dialogBackground: '#292b2e',
-      dialogText: '#b2b2b2',
+      dialogText: '#e0e0e0',
       dialogBorder: '#5d4d7a',
       dialogShadow: 'rgba(0, 0, 0, 0.4)',
       
