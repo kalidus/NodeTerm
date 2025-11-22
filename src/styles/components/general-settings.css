@@ -5,12 +5,9 @@
    ======================================== */
 
 :root {
-  --general-gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --general-gradient-secondary: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-  --general-gradient-accent: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  --general-gradient-info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  --general-glass-bg: rgba(255, 255, 255, 0.1);
-  --general-glass-border: rgba(255, 255, 255, 0.2);
+  /* Usar variables del tema en lugar de gradientes fijos */
+  --general-glass-bg: rgba(255, 255, 255, 0.08);
+  --general-glass-border: rgba(255, 255, 255, 0.15);
 }
 
 /* ========================================
@@ -59,41 +56,42 @@
 
 .general-header {
   margin: 0 0 1rem 0;
-  color: var(--text-color);
+  color: var(--ui-dialog-text);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 1rem;
   font-size: 1.75rem;
   font-weight: 700;
-  background: var(--general-gradient-primary);
+  /* Usar color primario del tema con gradiente sutil */
+  background: linear-gradient(135deg, var(--ui-button-primary) 0%, color-mix(in srgb, var(--ui-button-primary) 80%, transparent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .general-header-icon {
-  color: #ffffff;
+  color: var(--ui-button-primary-text);
   font-size: 1.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 56px;
   height: 56px;
-  background: var(--general-gradient-primary);
+  background: var(--ui-button-primary);
   border-radius: 16px;
   padding: 0.65rem;
   box-shadow: 
-    0 8px 32px rgba(102, 126, 234, 0.4),
-    0 0 0 4px rgba(102, 126, 234, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    0 0 0 4px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
   overflow: hidden;
 }
 
 .general-header-icon i {
-  color: #ffffff;
+  color: var(--ui-button-primary-text);
   font-size: 1.75rem;
   position: relative;
   z-index: 2;
@@ -126,9 +124,9 @@
 .general-header-icon:hover {
   transform: scale(1.1) rotate(5deg);
   box-shadow: 
-    0 12px 40px rgba(102, 126, 234, 0.5),
-    0 0 0 6px rgba(102, 126, 234, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    0 12px 40px rgba(0, 0, 0, 0.3),
+    0 0 0 6px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .general-description {
@@ -142,23 +140,36 @@
 }
 
 /* ========================================
-   SECCIONES CON GLASSMORPHISM
+   SECCIONES CON GLASSMORPHISM - TEMÁTICAS
    ======================================== */
 
 .general-settings-section {
   margin-bottom: 1.5rem;
-  background: var(--general-glass-bg);
+  /* Usar color del tema con transparencia para efecto glassmorphism */
+  background: var(--ui-content-bg);
+  opacity: 0.95;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--general-glass-border);
+  border: 1px solid var(--ui-content-border);
   border-radius: 20px;
   padding: 0;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 var(--ui-button-primary);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
   overflow: hidden;
+}
+
+/* Mejora con color-mix para navegadores modernos */
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  .general-settings-section {
+    background: color-mix(in srgb, var(--ui-content-bg) 88%, transparent);
+    border-color: color-mix(in srgb, var(--ui-content-border) 65%, transparent);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 color-mix(in srgb, var(--ui-button-primary) 25%, transparent);
+  }
 }
 
 .general-settings-section::before {
@@ -168,8 +179,8 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: var(--general-gradient-primary);
-  opacity: 0.6;
+  background: var(--ui-button-primary);
+  opacity: 0.7;
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.6s ease;
@@ -181,10 +192,20 @@
 
 .general-settings-section:hover {
   transform: translateY(-4px);
+  opacity: 1;
   box-shadow: 
-    0 16px 48px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  border-color: rgba(102, 126, 234, 0.4);
+    0 16px 48px var(--ui-dialog-shadow),
+    inset 0 1px 0 var(--ui-button-primary);
+  border-color: var(--ui-button-primary);
+}
+
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  .general-settings-section:hover {
+    box-shadow: 
+      0 16px 48px color-mix(in srgb, var(--ui-dialog-shadow) 45%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--ui-button-primary) 35%, transparent);
+    border-color: color-mix(in srgb, var(--ui-button-primary) 55%, transparent);
+  }
 }
 
 /* Header de sección */
@@ -205,16 +226,16 @@
   height: 32px;
   border-radius: 8px;
   flex-shrink: 0;
-  background: var(--general-gradient-info);
+  background: var(--ui-button-primary);
   padding: 0;
   box-shadow: 
-    0 2px 8px rgba(79, 172, 254, 0.25),
+    0 2px 8px rgba(0, 0, 0, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
   transition: all 0.3s ease;
 }
 
 .general-section-icon i {
-  color: #ffffff;
+  color: var(--ui-button-primary-text);
   font-size: 0.875rem;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
@@ -222,9 +243,9 @@
 .general-section-icon:hover {
   transform: scale(1.05);
   box-shadow: 
-    0 6px 20px rgba(102, 126, 234, 0.4),
-    0 0 0 3px rgba(102, 126, 234, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    0 6px 20px rgba(0, 0, 0, 0.25),
+    0 0 0 3px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .general-section-title {
@@ -299,19 +320,21 @@
 }
 
 .general-setting-icon.lock {
-  background: var(--general-gradient-primary);
+  background: var(--ui-button-primary);
 }
 
 .general-setting-icon.bolt {
-  background: var(--general-gradient-secondary);
+  background: var(--ui-button-primary);
+  opacity: 0.9;
 }
 
 .general-setting-icon.collapse {
-  background: var(--general-gradient-accent);
+  background: var(--ui-button-primary);
+  opacity: 0.85;
 }
 
 .general-setting-icon i {
-  color: #ffffff;
+  color: var(--ui-button-primary-text);
   font-size: 0.875rem;
   position: relative;
   z-index: 1;
@@ -391,13 +414,13 @@
 }
 
 .general-setting-control .p-checkbox .p-checkbox-box.p-highlight {
-  background: var(--general-gradient-primary);
+  background: var(--ui-button-primary);
   border-color: transparent;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .general-setting-control .p-checkbox .p-checkbox-box:hover {
-  border-color: rgba(102, 126, 234, 0.5);
+  border-color: var(--ui-button-primary);
 }
 
 /* ========================================
@@ -438,16 +461,16 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: var(--general-gradient-info);
+  background: var(--ui-button-primary);
   padding: 0;
   box-shadow: 
-    0 2px 8px rgba(79, 172, 254, 0.25),
+    0 2px 8px rgba(0, 0, 0, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
   flex-shrink: 0;
 }
 
 .general-selector-icon-compact i {
-  color: #ffffff;
+  color: var(--ui-button-primary-text);
   font-size: 0.875rem;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
@@ -503,16 +526,16 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: var(--general-gradient-info);
+  background: var(--ui-button-primary);
   padding: 0.5rem;
   box-shadow: 
-    0 3px 12px rgba(79, 172, 254, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 3px 12px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
   flex-shrink: 0;
 }
 
 .general-selector-icon i {
-  color: #ffffff;
+  color: var(--ui-button-primary-text);
   font-size: 1rem;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
@@ -546,8 +569,8 @@
 }
 
 .general-current-selection:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(102, 126, 234, 0.3);
+  background: var(--ui-content-bg);
+  border-color: var(--ui-button-primary);
   transform: translateX(4px);
 }
 
@@ -563,16 +586,16 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--ui-content-bg);
+  border: 1px solid var(--ui-content-border);
   border-radius: 8px;
-  border-left: 3px solid var(--general-gradient-primary);
+  border-left: 3px solid var(--ui-button-primary);
   transition: all 0.3s ease;
 }
 
 .general-current-icon-display:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(102, 126, 234, 0.3);
+  background: var(--ui-content-bg);
+  border-color: var(--ui-button-primary);
 }
 
 .general-icon-name {
@@ -645,14 +668,5 @@
    MEJORAS PARA TEMA OSCURO
    ======================================== */
 
-@media (prefers-color-scheme: dark) {
-  .general-settings-section {
-    background: rgba(25, 25, 35, 0.5);
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-
-  .general-setting-card {
-    background: transparent;
-    border: none;
-  }
-}
+/* Los colores ahora se adaptan automáticamente al tema mediante variables CSS */
+/* No necesitamos media queries específicas ya que usamos variables del tema */
