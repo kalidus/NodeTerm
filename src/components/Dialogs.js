@@ -2108,7 +2108,19 @@ export function ProtocolSelectionDialog({
 
   return (
     <Dialog
-      header="Seleccionar Tipo de Conexión"
+      header={
+        <div className="protocol-dialog-header-custom">
+          <span className="protocol-dialog-header-icon">
+            <i className="pi pi-th-large"></i>
+          </span>
+          <div className="protocol-dialog-header-content">
+            <h3 className="protocol-dialog-header-title">Seleccionar Tipo de Conexión</h3>
+            <p className="protocol-dialog-header-description">
+              Selecciona el tipo de conexión que deseas crear
+            </p>
+          </div>
+        </div>
+      }
       visible={visible}
       onHide={onHide}
       style={{ width: '90vw', maxWidth: '1000px' }}
@@ -2116,19 +2128,6 @@ export function ProtocolSelectionDialog({
       className="protocol-selection-dialog"
     >
       <div className="protocol-selection-container">
-        {/* Header */}
-        <div className="protocol-selection-header">
-          <h3 className="protocol-selection-title">
-            <span className="protocol-selection-icon">
-              <i className="pi pi-sitemap"></i>
-            </span>
-            Seleccionar Tipo de Conexión
-          </h3>
-          <p className="protocol-selection-description">
-            Selecciona el tipo de conexión que deseas crear
-          </p>
-        </div>
-
         {/* Secciones agrupadas */}
         {protocolSections.map((section) => (
           <div key={section.title} className="protocol-section">
