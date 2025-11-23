@@ -808,6 +808,7 @@ export function EditRDPConnectionDialog({
 export function FileConnectionDialog({
   visible,
   onHide,
+  onGoBack,
   // Props para edición
   isEditMode = false,
   editNodeData = null,
@@ -1029,22 +1030,35 @@ export function FileConnectionDialog({
           </Card>
         </div>
 
-        <div className="flex justify-content-end gap-2 mt-3" style={{ borderTop: '1px solid #e9ecef', paddingTop: '12px' }}>
-          <Button
-            label="Cancelar"
-            icon="pi pi-times"
-            className="p-button-text"
-            onClick={onHide}
-            style={{ fontSize: '13px', padding: '8px 16px' }}
-          />
-          <Button
-            label={isEditMode ? "Guardar Cambios" : "Crear Conexión"}
-            icon="pi pi-check"
-            className="p-button-primary"
-            onClick={handleConfirm}
-            loading={fileConnectionLoading}
-            style={{ fontSize: '13px', padding: '8px 16px' }}
-          />
+        <div className="flex justify-content-between gap-2 mt-3" style={{ borderTop: '1px solid #e9ecef', paddingTop: '12px' }}>
+          <div style={{ display: 'flex', gap: 12 }}>
+            {onGoBack && (
+              <Button
+                label="Volver"
+                icon="pi pi-arrow-left"
+                className="p-button-text"
+                onClick={onGoBack}
+                style={{ fontSize: '13px', padding: '8px 16px' }}
+              />
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <Button
+              label="Cancelar"
+              icon="pi pi-times"
+              className="p-button-text"
+              onClick={onHide}
+              style={{ fontSize: '13px', padding: '8px 16px' }}
+            />
+            <Button
+              label={isEditMode ? "Guardar Cambios" : "Crear Conexión"}
+              icon="pi pi-check"
+              className="p-button-primary"
+              onClick={handleConfirm}
+              loading={fileConnectionLoading}
+              style={{ fontSize: '13px', padding: '8px 16px' }}
+            />
+          </div>
         </div>
       </div>
     </Dialog>
@@ -1163,6 +1177,7 @@ export function EnhancedSSHForm({
   foldersOptions = [],
   onSSHConfirm,
   onHide,
+  onGoBack,
   sshLoading = false
 }) {
   const [authMethod, setAuthMethod] = useState('password'); // 'password' | 'key'
@@ -1440,23 +1455,36 @@ export function EnhancedSSHForm({
       </div>
 
       {/* Botones */}
-      <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', paddingTop: '12px' }}>
-        <Button 
-          label="Cancelar" 
-          icon="pi pi-times" 
-          className="p-button-text" 
-          onClick={onHide}
-          style={{ fontSize: '13px', padding: '8px 16px' }}
-        />
-        <Button 
-          label="Guardar" 
-          icon="pi pi-check" 
-          className="p-button-primary" 
-          onClick={handleSubmit}
-          disabled={!isFormValid()}
-          loading={sshLoading}
-          style={{ fontSize: '13px', padding: '8px 16px' }}
-        />
+      <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'space-between', paddingTop: '12px' }}>
+        <div style={{ display: 'flex', gap: 12 }}>
+          {onGoBack && (
+            <Button 
+              label="Volver" 
+              icon="pi pi-arrow-left" 
+              className="p-button-text" 
+              onClick={onGoBack}
+              style={{ fontSize: '13px', padding: '8px 16px' }}
+            />
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <Button 
+            label="Cancelar" 
+            icon="pi pi-times" 
+            className="p-button-text" 
+            onClick={onHide}
+            style={{ fontSize: '13px', padding: '8px 16px' }}
+          />
+          <Button 
+            label="Guardar" 
+            icon="pi pi-check" 
+            className="p-button-primary" 
+            onClick={handleSubmit}
+            disabled={!isFormValid()}
+            loading={sshLoading}
+            style={{ fontSize: '13px', padding: '8px 16px' }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -1466,6 +1494,7 @@ export function EnhancedSSHForm({
 export function NewSSHConnectionDialog({
   visible,
   onHide,
+  onGoBack,
   sshName, setSSHName,
   sshHost, setSSHHost,
   sshUser, setSSHUser,
@@ -1511,6 +1540,7 @@ export function NewSSHConnectionDialog({
           foldersOptions={foldersOptions}
           onSSHConfirm={onSSHConfirm}
           onHide={onHide}
+          onGoBack={onGoBack}
           sshLoading={sshLoading}
         />
       </div>
@@ -1522,6 +1552,7 @@ export function NewSSHConnectionDialog({
 export function NewRDPConnectionDialog({
   visible,
   onHide,
+  onGoBack,
   onSaveToSidebar
 }) {
   const [formData, setFormData] = useState({
@@ -1896,26 +1927,39 @@ export function NewRDPConnectionDialog({
           </div>
         </div>
         {/* Botones */}
-        <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', paddingTop: '12px' }}>
-          <Button
-            label="Cancelar"
-            icon="pi pi-times"
-            className="p-button-text"
-            onClick={onHide}
-            style={{ fontSize: '13px', padding: '8px 16px' }}
-          />
-          <Button
-            label="Guardar"
-            icon="pi pi-check"
-            className="p-button-primary"
-            onClick={() => {
-              console.log('Crear conexión RDP con datos:', formData);
-              onSaveToSidebar && onSaveToSidebar(formData, false, null);
-              onHide();
-            }}
-            disabled={!isFormValid}
-            style={{ fontSize: '13px', padding: '8px 16px' }}
-          />
+        <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'space-between', paddingTop: '12px' }}>
+          <div style={{ display: 'flex', gap: 12 }}>
+            {onGoBack && (
+              <Button
+                label="Volver"
+                icon="pi pi-arrow-left"
+                className="p-button-text"
+                onClick={onGoBack}
+                style={{ fontSize: '13px', padding: '8px 16px' }}
+              />
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <Button
+              label="Cancelar"
+              icon="pi pi-times"
+              className="p-button-text"
+              onClick={onHide}
+              style={{ fontSize: '13px', padding: '8px 16px' }}
+            />
+            <Button
+              label="Guardar"
+              icon="pi pi-check"
+              className="p-button-primary"
+              onClick={() => {
+                console.log('Crear conexión RDP con datos:', formData);
+                onSaveToSidebar && onSaveToSidebar(formData, false, null);
+                onHide();
+              }}
+              disabled={!isFormValid}
+              style={{ fontSize: '13px', padding: '8px 16px' }}
+            />
+          </div>
         </div>
       </div>
     </Dialog>

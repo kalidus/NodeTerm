@@ -269,6 +269,16 @@ const DialogsManager = ({
     }
   }, [setShowFileConnectionDialog, setFileConnectionProtocol]);
 
+  // Handler para volver al diálogo de selección de protocolo
+  const handleGoBackToProtocolSelection = useCallback(() => {
+    // Cerrar el diálogo actual
+    setShowNewSSHDialog(false);
+    setShowNewRDPDialog(false);
+    setShowFileConnectionDialog(false);
+    // Abrir el diálogo de selección de protocolo
+    setShowProtocolSelectionDialog(true);
+  }, []);
+
   // Wrapper para createNewSSH que también cierra el diálogo NewSSHConnectionDialog
   const handleCreateNewSSH = useCallback(() => {
     // Llamar a la función original
@@ -428,6 +438,7 @@ const DialogsManager = ({
       <NewSSHConnectionDialog
         visible={showNewSSHDialog}
         onHide={() => setShowNewSSHDialog(false)}
+        onGoBack={handleGoBackToProtocolSelection}
         sshName={sshName}
         setSSHName={setSSHName}
         sshHost={sshHost}
@@ -453,6 +464,7 @@ const DialogsManager = ({
       <NewRDPConnectionDialog
         visible={showNewRDPDialog}
         onHide={() => setShowNewRDPDialog(false)}
+        onGoBack={handleGoBackToProtocolSelection}
         onSaveToSidebar={handleSaveRdpToSidebar}
       />
 
@@ -511,6 +523,7 @@ const DialogsManager = ({
             setEditingFileConnectionNode(null);
           }
         }}
+        onGoBack={!editingFileConnectionNode ? handleGoBackToProtocolSelection : undefined}
         isEditMode={!!editingFileConnectionNode}
         editNodeData={editingFileConnectionNode}
         fileConnectionName={fileConnectionName ?? ''}
