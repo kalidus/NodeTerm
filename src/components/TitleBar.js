@@ -7,7 +7,7 @@ import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { iconThemes } from '../themes/icon-themes';
 import { toggleFavorite, helpers } from '../utils/connectionStore';
 
-const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onShowImportDialog, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog, expandedKeys, masterKey, secureStorage }) => {
+const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onOpenVncConnection, onShowImportDialog, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog, expandedKeys, masterKey, secureStorage }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredConnections, setFilteredConnections] = useState([]);
@@ -489,6 +489,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     const isPassword = node.data && node.data.type === 'password';
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && (node.data.type === 'rdp' || node.data.type === 'rdp-guacamole');
+    const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
     
     if (isPassword) {
       // Abrir password en una pestaña
@@ -508,6 +509,8 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       onOpenSSHConnection(node, allNodes);
     } else if (isRDP && onOpenRdpConnection) {
       onOpenRdpConnection(node, allNodes);
+    } else if (isVNC && onOpenVncConnection) {
+      onOpenVncConnection(node, allNodes);
     } else if (onOpenSSHConnection) {
       // Fallback para conexiones sin tipo definido
       onOpenSSHConnection(node, allNodes);

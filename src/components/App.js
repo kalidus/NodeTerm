@@ -1094,6 +1094,7 @@ const App = () => {
     openNewVncDialog,
     closeRdpDialog,
     openEditRdpDialog,
+    openEditVncDialog,
     handleSaveRdpToSidebar,
     handleSaveVncToSidebar,
     handleSaveFileConnectionToSidebar,
@@ -1173,6 +1174,7 @@ const App = () => {
     setOnCreateActivateTabKey,
     homeTabs,
     onOpenRdpConnection,
+    onOpenVncConnection,
     iconThemes,
     iconThemeSidebar,
     sidebarFont,
@@ -1660,6 +1662,12 @@ const App = () => {
     sidebarCallbacksRef.current.connectRDP = (node) => {
       onOpenRdpConnection(node);
     };
+    sidebarCallbacksRef.current.editVNC = (node) => {
+      openEditVncDialog(node);
+    };
+    sidebarCallbacksRef.current.connectVNC = (node) => {
+      onOpenVncConnection(node);
+    };
     sidebarCallbacksRef.current.openFileConnection = (node, nodes) => {
       onOpenFileConnection(node, nodes);
     };
@@ -1871,6 +1879,7 @@ const App = () => {
     showToast: toast.current && toast.current.show ? toast.current.show : undefined,
     confirmDialog: confirmDialog,
     onOpenSSHConnection,
+    onOpenVncConnection,
     onNodeContextMenu,
     onTreeAreaContextMenu,
     hideContextMenu,

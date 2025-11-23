@@ -13,6 +13,7 @@ export const useNodeTemplate = ({
   setOnCreateActivateTabKey,
   homeTabs,
   onOpenRdpConnection,
+  onOpenVncConnection,
   iconThemes,
   iconThemeSidebar,
   sidebarFont,
@@ -52,6 +53,7 @@ export const useNodeTemplate = ({
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && node.data.type === 'rdp';
+    const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
     const isPassword = node.data && node.data.type === 'password';
     
     // Debug log para verificar tipo de nodo
@@ -249,6 +251,8 @@ export const useNodeTemplate = ({
             });
           } else if (isRDP) {
             onOpenRdpConnection(node);
+          } else if (isVNC && onOpenVncConnection) {
+            onOpenVncConnection(node);
           } else if (isPassword) {
             // Delegar a App para crear/activar la pestaña
             console.log('🔑 Password double-click detected:', node);
@@ -286,6 +290,7 @@ export const useNodeTemplate = ({
     setSshTabs,
     homeTabs,
     onOpenRdpConnection,
+    onOpenVncConnection,
     iconThemes,
     iconThemeSidebar,
     sidebarFont

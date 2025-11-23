@@ -35,6 +35,10 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 			case 'ssh':
 				return 'pi pi-server';
 			case 'rdp-guacamole':
+			case 'rdp':
+				return 'pi pi-desktop';
+			case 'vnc-guacamole':
+			case 'vnc':
 				return 'pi pi-desktop';
 			case 'explorer':
 			case 'sftp':
@@ -55,7 +59,11 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 			case 'ssh':
 				return '#4fc3f7';
 			case 'rdp-guacamole':
+			case 'rdp':
 				return '#ff6b35';
+			case 'vnc-guacamole':
+			case 'vnc':
+				return '#00ff00';
 			case 'explorer':
 			case 'sftp':
 				return '#FFB300';
@@ -99,9 +107,10 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 				<div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
 					{/* Botones: Todos, SSH, RDP */}
 					{[
-						{ key: 'all', label: 'Todos' },
-						{ key: 'ssh', label: 'SSH' },
-						{ key: 'rdp-guacamole', label: 'RDP' }
+					{ key: 'all', label: 'Todos' },
+					{ key: 'ssh', label: 'SSH' },
+					{ key: 'rdp-guacamole', label: 'RDP' },
+					{ key: 'vnc-guacamole', label: 'VNC' }
 					].map(opt => (
 						<button
 							key={opt.key}
@@ -196,6 +205,9 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 
 	const applyTypeFilter = (items, type) => {
 		if (type === 'all') return items;
+		if (type === 'vnc-guacamole' || type === 'vnc') {
+			return items.filter(c => c.type === 'vnc-guacamole' || c.type === 'vnc');
+		}
 		// 'explorer' y 'sftp' son ambos SFTP, así que los tratamos igual
 		if (type === 'sftp') {
 			return items.filter(c => c.type === 'sftp' || c.type === 'explorer');
@@ -286,7 +298,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 							fontSize: micro ? 9 : (compact ? 10 : 11),
 							fontWeight: 700
 						}}>
-							{connection.type === 'rdp-guacamole' ? 'RDP' : 
+							{connection.type === 'rdp-guacamole' || connection.type === 'rdp' ? 'RDP' : 
+						 connection.type === 'vnc-guacamole' || connection.type === 'vnc' ? 'VNC' :
 							 connection.type === 'explorer' ? 'SFTP' : 
 							 connection.type === 'sftp' ? 'SFTP' :
 							 connection.type === 'ftp' ? 'FTP' :
