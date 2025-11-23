@@ -1031,9 +1031,42 @@
    ======================================== */
 
 .protocol-selection-dialog-new .p-dialog-header {
-  padding: 1.5rem 2rem !important;
-  background: var(--ui-dialog-bg) !important;
+  padding: 0 !important;
+  background: rgba(0, 0, 0, 0.3) !important;
   border-bottom: 1px solid var(--ui-dialog-border) !important;
+}
+
+/* Header personalizado con icono */
+.protocol-dialog-header-custom {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem 2rem;
+  width: 100%;
+}
+
+.protocol-dialog-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  color: white;
+  font-size: 1.25rem;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+.protocol-dialog-header-icon i {
+  font-size: 1.25rem;
+}
+
+.protocol-dialog-header-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--ui-text-primary);
+  letter-spacing: 0.01em;
 }
 
 .protocol-selection-dialog-new .p-dialog-content {
@@ -1075,9 +1108,33 @@
   background: var(--ui-sidebar-hover) !important;
 }
 
-.protocol-category-item.active {
+/* Colores específicos por categoría */
+.protocol-category-item[data-category="Acceso Remoto"].active {
+  background: var(--ui-sidebar-selected) !important;
+  border-left-color: #2196F3;
+}
+
+.protocol-category-item[data-category="Transferencia de Archivos"].active {
   background: var(--ui-sidebar-selected) !important;
   border-left-color: #FF9800;
+}
+
+.protocol-category-item[data-category="Gestión de Contraseñas"].active {
+  background: var(--ui-sidebar-selected) !important;
+  border-left-color: #E91E63;
+}
+
+/* Hover con colores específicos por categoría */
+.protocol-category-item[data-category="Acceso Remoto"]:hover {
+  background: rgba(33, 150, 243, 0.1) !important;
+}
+
+.protocol-category-item[data-category="Transferencia de Archivos"]:hover {
+  background: rgba(255, 152, 0, 0.1) !important;
+}
+
+.protocol-category-item[data-category="Gestión de Contraseñas"]:hover {
+  background: rgba(233, 30, 99, 0.1) !important;
 }
 
 .protocol-category-title {
@@ -1142,6 +1199,77 @@
   opacity: 1;
 }
 
+/* Colores hover específicos por protocolo */
+.protocol-option-card[data-protocol="ssh"]:hover {
+  border-color: #2196F3 !important;
+  background: rgba(33, 150, 243, 0.05) !important;
+}
+
+.protocol-option-card[data-protocol="ssh"]:hover::before {
+  background: #2196F3;
+  opacity: 1;
+}
+
+.protocol-option-card[data-protocol="rdp"]:hover {
+  border-color: #4CAF50 !important;
+  background: rgba(76, 175, 80, 0.05) !important;
+}
+
+.protocol-option-card[data-protocol="rdp"]:hover::before {
+  background: #4CAF50;
+  opacity: 1;
+}
+
+.protocol-option-card[data-protocol="vnc"]:hover {
+  border-color: #FF5722 !important;
+  background: rgba(255, 87, 34, 0.05) !important;
+}
+
+.protocol-option-card[data-protocol="vnc"]:hover::before {
+  background: #FF5722;
+  opacity: 1;
+}
+
+.protocol-option-card[data-protocol="sftp"]:hover {
+  border-color: #FF9800 !important;
+  background: rgba(255, 152, 0, 0.05) !important;
+}
+
+.protocol-option-card[data-protocol="sftp"]:hover::before {
+  background: #FF9800;
+  opacity: 1;
+}
+
+.protocol-option-card[data-protocol="ftp"]:hover {
+  border-color: #9C27B0 !important;
+  background: rgba(156, 39, 176, 0.05) !important;
+}
+
+.protocol-option-card[data-protocol="ftp"]:hover::before {
+  background: #9C27B0;
+  opacity: 1;
+}
+
+.protocol-option-card[data-protocol="scp"]:hover {
+  border-color: #00BCD4 !important;
+  background: rgba(0, 188, 212, 0.05) !important;
+}
+
+.protocol-option-card[data-protocol="scp"]:hover::before {
+  background: #00BCD4;
+  opacity: 1;
+}
+
+.protocol-option-card[data-protocol="password"]:hover {
+  border-color: #E91E63 !important;
+  background: rgba(233, 30, 99, 0.05) !important;
+}
+
+.protocol-option-card[data-protocol="password"]:hover::before {
+  background: #E91E63;
+  opacity: 1;
+}
+
 /* Ícono del protocolo - Más compacto y bonito */
 .protocol-option-icon {
   width: 52px;
@@ -1179,6 +1307,42 @@
 
 .protocol-option-card:hover .protocol-option-icon::before {
   opacity: 1;
+}
+
+/* Efectos hover específicos en iconos por protocolo */
+.protocol-option-card[data-protocol="ssh"]:hover .protocol-option-icon {
+  transform: scale(1.1) rotate(3deg);
+  box-shadow: 0 4px 16px rgba(33, 150, 243, 0.4), 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+.protocol-option-card[data-protocol="rdp"]:hover .protocol-option-icon {
+  transform: scale(1.1) rotate(-3deg);
+  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.4), 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.protocol-option-card[data-protocol="vnc"]:hover .protocol-option-icon {
+  transform: scale(1.1) rotate(3deg);
+  box-shadow: 0 4px 16px rgba(255, 87, 34, 0.4), 0 2px 8px rgba(255, 87, 34, 0.3);
+}
+
+.protocol-option-card[data-protocol="sftp"]:hover .protocol-option-icon {
+  transform: scale(1.1) rotate(-2deg);
+  box-shadow: 0 4px 16px rgba(255, 152, 0, 0.4), 0 2px 8px rgba(255, 152, 0, 0.3);
+}
+
+.protocol-option-card[data-protocol="ftp"]:hover .protocol-option-icon {
+  transform: scale(1.1) rotate(2deg);
+  box-shadow: 0 4px 16px rgba(156, 39, 176, 0.4), 0 2px 8px rgba(156, 39, 176, 0.3);
+}
+
+.protocol-option-card[data-protocol="scp"]:hover .protocol-option-icon {
+  transform: scale(1.1) rotate(-2deg);
+  box-shadow: 0 4px 16px rgba(0, 188, 212, 0.4), 0 2px 8px rgba(0, 188, 212, 0.3);
+}
+
+.protocol-option-card[data-protocol="password"]:hover .protocol-option-icon {
+  transform: scale(1.1) rotate(2deg);
+  box-shadow: 0 4px 16px rgba(233, 30, 99, 0.4), 0 2px 8px rgba(233, 30, 99, 0.3);
 }
 
 .protocol-option-icon i {

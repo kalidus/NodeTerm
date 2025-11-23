@@ -255,6 +255,11 @@ const DialogsManager = ({
         // Abrir nuevo diálogo RDP
         setShowNewRDPDialog(true);
         break;
+      case 'vnc':
+        // Abrir nuevo diálogo RDP (Guacamole soporta VNC también)
+        // TODO: Crear diálogo específico para VNC en el futuro
+        setShowNewRDPDialog(true);
+        break;
       case 'sftp':
       case 'ftp':
       case 'scp':
