@@ -1180,6 +1180,8 @@
     0 2px 8px rgba(0, 0, 0, 0.08),
     0 1px 3px rgba(0, 0, 0, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  user-select: none;
 }
 
 .protocol-option-card::before {
@@ -1571,52 +1573,114 @@
   padding-left: 0.5rem;
 }
 
-/* Botón de acción - Profesional y refinado */
+/* Botón de acción - Opción 3: Pill/Cápsula */
 .protocol-option-button {
-  min-width: 150px;
-  height: 40px;
-  font-size: 0.9rem;
-  padding: 0.625rem 1.5rem;
-  border-radius: 10px;
+  min-width: 125px;
+  height: 32px;
+  font-size: 0.85rem;
+  padding: 0.5rem 1.5rem;
+  border-radius: 999px;
   font-weight: 600;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
+  position: relative;
+  border: none !important;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  cursor: pointer;
   box-shadow: 
     0 2px 6px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  letter-spacing: 0.01em;
+    0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .protocol-option-button.primary {
-  background: linear-gradient(135deg, 
-    var(--ui-button-primary) 0%, 
-    rgba(33, 150, 243, 0.9) 100%) !important;
-  border-color: var(--ui-button-primary) !important;
-  color: var(--ui-button-primary-text) !important;
+  background: #2196F3 !important;
+  color: #ffffff !important;
+}
+
+.protocol-option-button.primary:hover {
+  background: #42A5F5 !important;
+  transform: scale(1.05);
+  box-shadow: 
+    0 4px 12px rgba(33, 150, 243, 0.3),
+    0 2px 6px rgba(33, 150, 243, 0.2);
 }
 
 .protocol-option-button.secondary {
-  background: linear-gradient(135deg, 
-    var(--ui-button-secondary) 0%, 
-    rgba(76, 175, 80, 0.9) 100%) !important;
-  border-color: var(--ui-button-secondary) !important;
-  color: var(--ui-button-secondary-text) !important;
+  background: #4CAF50 !important;
+  color: #ffffff !important;
 }
 
-.protocol-option-button:hover {
-  opacity: 1;
-  transform: translateY(-2px) scale(1.02);
+.protocol-option-button.secondary:hover {
+  background: #66BB6A !important;
+  transform: scale(1.05);
   box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.2),
-    0 2px 6px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 4px 12px rgba(76, 175, 80, 0.3),
+    0 2px 6px rgba(76, 175, 80, 0.2);
 }
 
 .protocol-option-button:active {
-  transform: translateY(0) scale(0.98);
+  transform: scale(1.02);
   box-shadow: 
-    0 2px 4px rgba(0, 0, 0, 0.15),
-    inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* Efectos específicos por protocolo - versión pill */
+.protocol-option-card[data-protocol="ssh"] .protocol-option-button.primary {
+  background: #2196F3 !important;
+}
+
+.protocol-option-card[data-protocol="ssh"] .protocol-option-button.primary:hover {
+  background: #42A5F5 !important;
+  box-shadow: 
+    0 4px 12px rgba(33, 150, 243, 0.35),
+    0 2px 6px rgba(33, 150, 243, 0.25);
+}
+
+.protocol-option-card[data-protocol="rdp"] .protocol-option-button.secondary {
+  background: #4CAF50 !important;
+}
+
+.protocol-option-card[data-protocol="rdp"] .protocol-option-button.secondary:hover {
+  background: #66BB6A !important;
+  box-shadow: 
+    0 4px 12px rgba(76, 175, 80, 0.35),
+    0 2px 6px rgba(76, 175, 80, 0.25);
+}
+
+.protocol-option-card[data-protocol="sftp"] .protocol-option-button.primary,
+.protocol-option-card[data-protocol="ftp"] .protocol-option-button.primary,
+.protocol-option-card[data-protocol="scp"] .protocol-option-button.primary {
+  background: #FF9800 !important;
+}
+
+.protocol-option-card[data-protocol="sftp"] .protocol-option-button.primary:hover,
+.protocol-option-card[data-protocol="ftp"] .protocol-option-button.primary:hover,
+.protocol-option-card[data-protocol="scp"] .protocol-option-button.primary:hover {
+  background: #FFB74D !important;
+  box-shadow: 
+    0 4px 12px rgba(255, 152, 0, 0.35),
+    0 2px 6px rgba(255, 152, 0, 0.25);
+}
+
+.protocol-option-card[data-protocol="password"] .protocol-option-button.primary {
+  background: #E91E63 !important;
+}
+
+.protocol-option-card[data-protocol="password"] .protocol-option-button.primary:hover {
+  background: #F06292 !important;
+  box-shadow: 
+    0 4px 12px rgba(233, 30, 99, 0.35),
+    0 2px 6px rgba(233, 30, 99, 0.25);
+}
+
+/* Hacer toda la card clickeable */
+.protocol-option-card {
+  cursor: pointer;
+}
+
+.protocol-option-card:active {
+  transform: translateY(0) scale(0.998);
 }
 
 /* Responsive */
@@ -1910,6 +1974,32 @@
   50% {
     opacity: 0.6;
     transform: translateX(100%);
+  }
+}
+
+@keyframes buttonPulse {
+  0%, 100% {
+    box-shadow: 
+      0 4px 12px rgba(0, 0, 0, 0.15),
+      0 2px 6px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 5px 14px rgba(0, 0, 0, 0.18),
+      0 3px 8px rgba(0, 0, 0, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  }
+}
+
+@keyframes buttonShimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
   }
 }
 
