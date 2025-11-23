@@ -1164,8 +1164,8 @@
 .protocol-option-card {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  padding: 1.5rem 1.75rem;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
   background: linear-gradient(135deg, 
     rgba(255, 255, 255, 0.08) 0%, 
     rgba(255, 255, 255, 0.03) 100%) !important;
@@ -1218,11 +1218,11 @@
 .protocol-option-card:hover {
   border-color: rgba(33, 150, 243, 0.4) !important;
   box-shadow: 
-    0 8px 24px rgba(0, 0, 0, 0.12),
-    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 6px 20px rgba(0, 0, 0, 0.12),
+    0 3px 10px rgba(0, 0, 0, 0.08),
     0 0 0 1px rgba(33, 150, 243, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  transform: translateY(-3px) scale(1.01);
+  transform: translateY(-2px) scale(1.005);
   background: linear-gradient(135deg, 
     rgba(255, 255, 255, 0.12) 0%, 
     rgba(255, 255, 255, 0.05) 100%) !important;
@@ -1365,15 +1365,15 @@
 
 /* Ícono del protocolo - Profesional y refinado */
 .protocol-option-icon {
-  width: 56px;
-  height: 56px;
-  min-width: 56px;
-  border-radius: 14px;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.4rem;
+  font-size: 1.25rem;
   box-shadow: 
     0 4px 12px rgba(0, 0, 0, 0.15),
     0 2px 6px rgba(0, 0, 0, 0.1),
@@ -1478,20 +1478,101 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
   min-width: 0;
   padding-right: 0.5rem;
+}
+
+/* Header con título y badges */
+.protocol-option-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Contenedor de badges principales */
+.protocol-badges-container {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Badge principal (Seguro, Recomendado, etc.) */
+.protocol-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.25s ease;
+}
+
+.protocol-badge-text {
+  font-size: 0.7rem;
+  letter-spacing: 0.01em;
+}
+
+/* Badge Seguro */
+.protocol-badge-seguro {
+  background: rgba(76, 175, 80, 0.15);
+  color: #81C784;
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+/* Badge Recomendado */
+.protocol-badge-recomendado {
+  background: rgba(33, 150, 243, 0.15);
+  color: #64B5F6;
+  border-color: rgba(33, 150, 243, 0.3);
+}
+
+/* Badge No seguro */
+.protocol-badge-no-seguro {
+  background: rgba(244, 67, 54, 0.15);
+  color: #E57373;
+  border-color: rgba(244, 67, 54, 0.3);
+}
+
+/* Badge Windows */
+.protocol-badge-windows {
+  background: rgba(76, 175, 80, 0.15);
+  color: #81C784;
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+/* Badge Multiplataforma */
+.protocol-badge-multiplataforma {
+  background: rgba(255, 152, 0, 0.15);
+  color: #FFB74D;
+  border-color: rgba(255, 152, 0, 0.3);
+}
+
+.protocol-option-card:hover .protocol-badge {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .protocol-option-title {
   margin: 0;
   color: var(--ui-dialog-text) !important;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 650;
-  line-height: 1.35;
+  line-height: 1.3;
   letter-spacing: -0.015em;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   transition: color 0.3s ease;
+  flex: 1;
+  min-width: 0;
 }
 
 .protocol-option-card:hover .protocol-option-title {
@@ -1503,12 +1584,13 @@
   margin: 0;
   color: var(--ui-dialog-text) !important;
   opacity: 0.8;
-  font-size: 0.9rem;
-  line-height: 1.6;
+  font-size: 0.875rem;
+  line-height: 1.5;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
   transition: opacity 0.3s ease;
 }
 
@@ -1516,49 +1598,50 @@
   opacity: 0.95;
 }
 
-/* Sección de ventajas - Compacta */
+/* Sección de ventajas - Compacta con badges */
 .protocol-option-advantages {
-  margin-top: 0.25rem;
+  margin-top: 0.2rem;
 }
 
-.protocol-advantages-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.protocol-advantages-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem 1rem;
+  gap: 0.5rem;
   align-items: center;
 }
 
-.protocol-advantages-list li {
+.protocol-advantage-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
   color: var(--ui-dialog-text) !important;
-  font-size: 0.825rem;
-  line-height: 1.5;
-  opacity: 0.9;
-  position: relative;
-  padding-left: 1.4rem;
-  display: flex;
-  align-items: center;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  opacity: 0.85;
   white-space: nowrap;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: all 0.25s ease;
+  position: relative;
+  padding-left: 1.5rem;
 }
 
-.protocol-option-card:hover .protocol-advantages-list li {
-  opacity: 1;
-  transform: translateX(2px);
-}
-
-.protocol-advantages-list li::before {
+.protocol-advantage-badge::before {
   content: '✓';
   position: absolute;
-  left: 0;
+  left: 0.4rem;
   color: #4CAF50;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.7rem;
   line-height: 1;
-  text-shadow: 0 1px 2px rgba(76, 175, 80, 0.3);
-  transition: transform 0.3s ease;
+}
+
+.protocol-option-card:hover .protocol-advantage-badge {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
 }
 
 .protocol-option-card:hover .protocol-advantages-list li::before {
@@ -1725,6 +1808,16 @@
 
   .protocol-option-icon {
     align-self: flex-start;
+  }
+
+  .protocol-option-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .protocol-badges-container {
+    width: 100%;
   }
 
   .protocol-option-actions {

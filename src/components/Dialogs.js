@@ -2024,7 +2024,8 @@ export function ProtocolSelectionDialog({
           advantages: [
             'Alta seguridad',
             'Versatilidad para tunelización y reenvío de puertos'
-          ]
+          ],
+          badges: ['Seguro']
         },
         {
           id: 'rdp',
@@ -2036,7 +2037,8 @@ export function ProtocolSelectionDialog({
           advantages: [
             'Experiencia de usuario familiar para entornos Windows',
             'Soporte para múltiples sesiones'
-          ]
+          ],
+          badges: ['Windows']
         },
         {
           id: 'vnc',
@@ -2048,7 +2050,8 @@ export function ProtocolSelectionDialog({
           advantages: [
             'Multiplataforma (Linux, Windows, macOS)',
             'Ligero y eficiente para conexiones remotas'
-          ]
+          ],
+          badges: ['Multiplataforma']
         }
       ]
     },
@@ -2067,7 +2070,8 @@ export function ProtocolSelectionDialog({
             'Transferencia encriptada y segura',
             'Basado en SSH, ampliamente soportado'
           ],
-          isRecommended: true
+          isRecommended: true,
+          badges: ['Seguro', 'Recomendado']
         },
         {
           id: 'ftp',
@@ -2080,7 +2084,8 @@ export function ProtocolSelectionDialog({
             'Rápido y eficiente',
             'Amplia compatibilidad'
           ],
-          isInsecure: true
+          isInsecure: true,
+          badges: ['No seguro']
         },
         {
           id: 'scp',
@@ -2092,7 +2097,8 @@ export function ProtocolSelectionDialog({
           advantages: [
             'Seguro y rápido',
             'Basado en SSH'
-          ]
+          ],
+          badges: ['Seguro']
         }
       ]
     },
@@ -2110,7 +2116,8 @@ export function ProtocolSelectionDialog({
           advantages: [
             'Encriptación segura AES-256-GCM',
             'Organización en carpetas y grupos'
-          ]
+          ],
+          badges: ['Seguro']
         }
       ]
     }
@@ -2183,14 +2190,35 @@ export function ProtocolSelectionDialog({
                 <i className={protocol.icon}></i>
               </div>
               <div className="protocol-option-content">
-                <h3 className="protocol-option-title">{protocol.fullName || protocol.name}</h3>
+                <div className="protocol-option-header">
+                  <h3 className="protocol-option-title">{protocol.fullName || protocol.name}</h3>
+                  {protocol.badges && protocol.badges.length > 0 && (
+                    <div className="protocol-badges-container">
+                      {protocol.badges.map((badge, idx) => (
+                        <span 
+                          key={idx} 
+                          className={`protocol-badge protocol-badge-${badge.toLowerCase().replace(/\s+/g, '-')}`}
+                        >
+                          {badge === 'Seguro' && '🛡️'}
+                          {badge === 'Recomendado' && '⭐'}
+                          {badge === 'No seguro' && '⚠️'}
+                          {badge === 'Windows' && '🖥️'}
+                          {badge === 'Multiplataforma' && '🌐'}
+                          <span className="protocol-badge-text">{badge}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <p className="protocol-option-description">{protocol.description}</p>
                 <div className="protocol-option-advantages">
-                  <ul className="protocol-advantages-list">
+                  <div className="protocol-advantages-badges">
                     {protocol.advantages.map((advantage, idx) => (
-                      <li key={idx}>{advantage}</li>
+                      <span key={idx} className="protocol-advantage-badge">
+                        {advantage}
+                      </span>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               </div>
             </div>
