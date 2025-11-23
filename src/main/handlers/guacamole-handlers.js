@@ -148,11 +148,16 @@ function registerGuacamoleHandlers({
       // Si guacd está en modo mock, informar al usuario y rechazar
       try {
         if (guacdService && guacdService.getStatus && guacdService.getStatus().method === 'mock') {
-          const message = 'RDP requiere Docker Desktop o WSL. Activa Docker Desktop o instala/activa WSL para utilizar RDP con Guacamole.';
-          console.warn('⚠️  [MAIN] Intento de crear token con guacd en modo mock. ' + message);
+          const connectionType = config.connectionType || 'RDP';
+          const message = `${connectionType} requiere Docker Desktop o WSL. Activa Docker Desktop o instala/activa WSL para utilizar ${connectionType} con Guacamole.`;
+          console.warn(`⚠️  [MAIN] Intento de crear token con guacd en modo mock. ${message}`);
           return { success: false, error: message };
         }
       } catch {}
+      
+      // Detectar tipo de conexión: RDP o VNC
+      const connectionType = config.connectionType || (config.type === 'vnc' || config.type === 'vnc-guacamole' ? 'vnc' : 'rdp');
+      const isVNC = connectionType === 'vnc';
       
       // Calcular resolución final: priorizar width/height, luego parsear resolution
       let finalWidth = config.width || 1024;
@@ -178,7 +183,7 @@ function registerGuacamoleHandlers({
         }
       } catch {}
 
-      console.log('🔐 [MAIN] Creando token para configuración RDP:', {
+      console.log(`🔐 [MAIN] Creando token para configuración ${connectionType.toUpperCase()}:`, {
         hostname: config.hostname,
         username: config.username,
         password: config.password ? '***OCULTA***' : 'NO DEFINIDA',
@@ -193,7 +198,8 @@ function registerGuacamoleHandlers({
         redirectClipboard: config.redirectClipboard,
         security: config.security,
         resolution: config.resolution,
-        autoResize: config.autoResize
+        autoResize: config.autoResize,
+        readOnly: config.readOnly
       });
       
       // Obtener el estado actual del servidor usando las funciones getter
@@ -209,89 +215,119 @@ function registerGuacamoleHandlers({
       const SECRET_KEY_RAW = 'NodeTermGuacamoleSecretKey2024!';
       const SECRET_KEY = crypto.createHash('sha256').update(SECRET_KEY_RAW).digest(); // 32 bytes exactos
 
-      // Preparar campos de drive si el usuario lo activó
+      // Preparar campos de drive si el usuario lo activó (solo para RDP)
       let driveSettings = {};
-      try {
-        if (config.enableDrive) {
-          console.log('🔍 [DEBUG] Drive config:', {
-            enableDrive: config.enableDrive,
-            driveHostDir: config.driveHostDir,
-            hasDriveHostDir: !!config.driveHostDir,
-            driveHostDirLength: config.driveHostDir?.length || 0
-          });
-          
-          // Si llega una carpeta de host desde UI, resolverla según método actual
-          let resolvedDrivePath = null;
-          if (config.driveHostDir && typeof config.driveHostDir === 'string' && config.driveHostDir.trim().length > 0 && typeof guacdService.resolveDrivePath === 'function') {
-            resolvedDrivePath = guacdService.resolveDrivePath(config.driveHostDir);
-          } else if (typeof guacdService.getDrivePathForCurrentMethod === 'function') {
-            resolvedDrivePath = guacdService.getDrivePathForCurrentMethod();
+      if (!isVNC) {
+        try {
+          if (config.enableDrive) {
+            console.log('🔍 [DEBUG] Drive config:', {
+              enableDrive: config.enableDrive,
+              driveHostDir: config.driveHostDir,
+              hasDriveHostDir: !!config.driveHostDir,
+              driveHostDirLength: config.driveHostDir?.length || 0
+            });
+            
+            // Si llega una carpeta de host desde UI, resolverla según método actual
+            let resolvedDrivePath = null;
+            if (config.driveHostDir && typeof config.driveHostDir === 'string' && config.driveHostDir.trim().length > 0 && typeof guacdService.resolveDrivePath === 'function') {
+              resolvedDrivePath = guacdService.resolveDrivePath(config.driveHostDir);
+            } else if (typeof guacdService.getDrivePathForCurrentMethod === 'function') {
+              resolvedDrivePath = guacdService.getDrivePathForCurrentMethod();
+            }
+            const drivePath = resolvedDrivePath;
+            const driveName = guacdService.getDriveName ? guacdService.getDriveName() : 'NodeTerm Drive';
+            if (typeof drivePath === 'string' && drivePath.trim().length > 0) {
+              driveSettings = {
+                'enable-drive': true,
+                'drive-path': drivePath,
+                'drive-name': driveName,
+                'create-drive-path': true
+              };
+              console.log('🔍 [DEBUG] Final drive settings:', driveSettings);
+            } else {
+              // fallback: solo activar drive sin ruta explícita
+              driveSettings = {
+                'enable-drive': true,
+                'create-drive-path': true
+              };
+              console.log('🔍 [DEBUG] Fallback drive settings:', driveSettings);
+            }
           }
-          const drivePath = resolvedDrivePath;
-          const driveName = guacdService.getDriveName ? guacdService.getDriveName() : 'NodeTerm Drive';
-          if (typeof drivePath === 'string' && drivePath.trim().length > 0) {
-            driveSettings = {
-              'enable-drive': true,
-              'drive-path': drivePath,
-              'drive-name': driveName,
-              'create-drive-path': true
-            };
-            console.log('🔍 [DEBUG] Final drive settings:', driveSettings);
-          } else {
-            // fallback: solo activar drive sin ruta explícita
-            driveSettings = {
-              'enable-drive': true,
-              'create-drive-path': true
-            };
-            console.log('🔍 [DEBUG] Fallback drive settings:', driveSettings);
-          }
+        } catch (e) {
+          // Si algo falla, no bloquear la conexión, sólo loguear
+          console.warn('⚠️  [MAIN] No se pudo calcular drive-path para Guacamole:', e?.message || e);
         }
-      } catch (e) {
-        // Si algo falla, no bloquear la conexión, sólo loguear
-        console.warn('⚠️  [MAIN] No se pudo calcular drive-path para Guacamole:', e?.message || e);
+      }
+
+      // Construir objeto de configuración según el tipo
+      let connectionSettings = {};
+      
+      if (isVNC) {
+        // Configuración VNC
+        connectionSettings = {
+          hostname: config.hostname,
+          port: config.port || 5900,
+          password: config.password || '',
+          "read-only": config.readOnly === true ? true : false,
+          "color-depth": normalizedColorDepth,
+          width: finalWidth,
+          height: finalHeight,
+          dpi: config.dpi || 96,
+          // Portapapeles: desactivar solo si el usuario lo deshabilitó
+          "disable-clipboard": (config.redirectClipboard === false) ? true : undefined,
+          // Compresión VNC
+          "enable-compression": config.enableCompression !== false, // Por defecto true
+          // Calidad de imagen
+          "image-quality": config.imageQuality || 'lossless', // lossless, lossy-low, lossy-medium, lossy-high
+          // Actualización automática
+          "auto-reconnect": config.autoReconnect !== false, // Por defecto true
+        };
+      } else {
+        // Configuración RDP (existente)
+        connectionSettings = {
+          hostname: config.hostname,
+          username: config.username,
+          password: config.password,
+          port: config.port || 3389,
+          security: config.security || "any",
+          "ignore-cert": true,
+          // Drive redirection
+          ...driveSettings,
+          "enable-wallpaper": config.enableWallpaper === true ? true : false,
+          width: finalWidth,
+          height: finalHeight,
+          dpi: config.dpi || 96,
+          "color-depth": normalizedColorDepth,
+          // Características visuales optimizadas: desactivadas por defecto para conexión más rápida
+          // Solo se activan si el usuario las habilita explícitamente o si autoResize está activo
+          "enable-desktop-composition": (config.enableDesktopComposition === true || config.autoResize === true) ? true : false,
+          "enable-font-smoothing": config.enableFontSmoothing === true ? true : false,
+          "enable-theming": config.enableTheming === true ? true : false,
+          "enable-full-window-drag": (config.enableFullWindowDrag === true || config.autoResize === true) ? true : false,
+          "enable-menu-animations": config.enableMenuAnimations === true ? true : false,
+          // Configuración específica para resize dinámico
+          // Usar display-update siempre para evitar reconexiones, incluso con resolución fija
+          "resize-method": "display-update",
+          // Portapapeles: desactivar solo si el usuario lo deshabilitó
+          "disable-clipboard": (config.redirectClipboard === false) ? true : undefined,
+          // Compatibilidad Windows 11: desactivar GFX cuando se active la casilla
+          "enable-gfx": (config.enableGfx === true) ? true : undefined,
+          // Flags de prueba (enviar solo el activo si es true). Guacamole ignora claves con undefined.
+          "disable-glyph-caching": config.disableGlyphCaching === true ? true : undefined,
+          "disable-offscreen-caching": config.disableOffscreenCaching === true ? true : undefined,
+          "disable-bitmap-caching": config.disableBitmapCaching === true ? true : undefined,
+          "disable-copy-rect": config.disableCopyRect === true ? true : undefined,
+          // Configuración de mouse para mejorar sincronización de cursor en macOS
+          "mouse-mode": "absolute", // Usar modo absoluto para mejor sincronización
+          "enable-mouse": true, // Asegurar que el mouse esté habilitado
+          "mouse-autoselect": true // Auto-selección de mouse para mejor experiencia
+        };
       }
 
       const tokenObject = {
         connection: {
-          type: "rdp",
-          settings: {
-            hostname: config.hostname,
-            username: config.username,
-            password: config.password,
-            port: config.port || 3389,
-            security: config.security || "any",
-            "ignore-cert": true,
-            // Drive redirection
-            ...driveSettings,
-            "enable-wallpaper": config.enableWallpaper === true ? true : false,
-            width: finalWidth,
-            height: finalHeight,
-            dpi: config.dpi || 96,
-            "color-depth": normalizedColorDepth,
-            // Características visuales optimizadas: desactivadas por defecto para conexión más rápida
-            // Solo se activan si el usuario las habilita explícitamente o si autoResize está activo
-            "enable-desktop-composition": (config.enableDesktopComposition === true || config.autoResize === true) ? true : false,
-            "enable-font-smoothing": config.enableFontSmoothing === true ? true : false,
-            "enable-theming": config.enableTheming === true ? true : false,
-            "enable-full-window-drag": (config.enableFullWindowDrag === true || config.autoResize === true) ? true : false,
-            "enable-menu-animations": config.enableMenuAnimations === true ? true : false,
-            // Configuración específica para resize dinámico
-            // Usar display-update siempre para evitar reconexiones, incluso con resolución fija
-            "resize-method": "display-update",
-            // Portapapeles: desactivar solo si el usuario lo deshabilitó
-            "disable-clipboard": (config.redirectClipboard === false) ? true : undefined,
-            // Compatibilidad Windows 11: desactivar GFX cuando se active la casilla
-            "enable-gfx": (config.enableGfx === true) ? true : undefined,
-            // Flags de prueba (enviar solo el activo si es true). Guacamole ignora claves con undefined.
-            "disable-glyph-caching": config.disableGlyphCaching === true ? true : undefined,
-            "disable-offscreen-caching": config.disableOffscreenCaching === true ? true : undefined,
-            "disable-bitmap-caching": config.disableBitmapCaching === true ? true : undefined,
-            "disable-copy-rect": config.disableCopyRect === true ? true : undefined,
-            // Configuración de mouse para mejorar sincronización de cursor en macOS
-            "mouse-mode": "absolute", // Usar modo absoluto para mejor sincronización
-            "enable-mouse": true, // Asegurar que el mouse esté habilitado
-            "mouse-autoselect": true // Auto-selección de mouse para mejor experiencia
-          }
+          type: isVNC ? "vnc" : "rdp",
+          settings: connectionSettings
         }
       };
       

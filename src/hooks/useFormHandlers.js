@@ -45,6 +45,16 @@ export const useFormHandlers = ({
   rdpNodeData, setRdpNodeData,
   editingRdpNode, setEditingRdpNode,
   
+  // Estados de formularios VNC
+  vncName, setVncName,
+  vncServer, setVncServer,
+  vncPassword, setVncPassword,
+  vncPort, setVncPort,
+  vncTargetFolder, setVncTargetFolder,
+  vncNodeData, setVncNodeData,
+  editingVncNode, setEditingVncNode,
+  setShowVncDialog,
+  
   // Estados de formularios Archivos (SFTP/FTP/SCP)
   fileConnectionName, setFileConnectionName,
   fileConnectionHost, setFileConnectionHost,
@@ -724,6 +734,161 @@ export const useFormHandlers = ({
   }, [setNodes, findNodeByKey, setRdpTabs, setShowUnifiedConnectionDialog, setRdpNodeData, setEditingRdpNode]);
 
   /**
+   * Abrir diálogo de nueva conexión VNC
+   */
+  const openNewVncDialog = useCallback((targetFolder = null) => {
+    setVncTargetFolder(targetFolder);
+    setVncName('');
+    setVncServer('');
+    setVncPassword('');
+    setVncPort(5900);
+    setShowVncDialog(true);
+  }, [setVncTargetFolder, setVncName, setVncServer, setVncPassword, setVncPort, setShowVncDialog]);
+
+  /**
+   * Cerrar diálogo VNC
+   */
+  const closeVncDialog = useCallback(() => {
+    setShowVncDialog(false);
+    setVncTargetFolder(null);
+    setVncName('');
+    setVncServer('');
+    setVncPassword('');
+    setVncPort(5900);
+  }, [setShowVncDialog, setVncTargetFolder, setVncName, setVncServer, setVncPassword, setVncPort]);
+
+  /**
+   * Abrir diálogo de edición VNC
+   */
+  const openEditVncDialog = useCallback((node) => {
+    setVncNodeData(node.data);
+    setEditingVncNode(node);
+    setShowUnifiedConnectionDialog(true);
+  }, [setVncNodeData, setEditingVncNode, setShowUnifiedConnectionDialog]);
+
+  /**
+   * Guardar VNC en sidebar
+   */
+  const handleSaveVncToSidebar = useCallback((vncData, isEditing = false, originalNode = null) => {
+    if (isEditing && originalNode) {
+      // Guardar datos antiguos para actualizar favoritos
+      const oldConnection = connectionHelpers.fromSidebarNode(originalNode);
+      
+      // Actualizar nodo existente
+      setNodes(prevNodes => {
+        const nodesCopy = Array.isArray(prevNodes) ? [...prevNodes] : [];
+        const nodeToEdit = findNodeByKey(nodesCopy, originalNode.key);
+        
+        if (nodeToEdit) {
+          nodeToEdit.label = vncData.name || `${vncData.server}:${vncData.port}`;
+          nodeToEdit.data = {
+            ...nodeToEdit.data,
+            type: 'vnc',
+            name: vncData.name,
+            server: vncData.server,
+            password: vncData.password,
+            port: vncData.port || 5900,
+            clientType: 'guacamole',
+            resolution: vncData.resolution || '1024x768',
+            colorDepth: vncData.colorDepth || 32,
+            // Opciones VNC
+            readOnly: vncData.readOnly === true,
+            enableCompression: vncData.enableCompression !== false,
+            imageQuality: vncData.imageQuality || 'lossless',
+            autoReconnect: vncData.autoReconnect !== false,
+            autoResize: vncData.autoResize !== false,
+            redirectClipboard: vncData.redirectClipboard !== false,
+            guacDpi: vncData.guacDpi || 96
+          };
+          
+          // Actualizar favoritos si la conexión estaba en favoritos
+          if (oldConnection) {
+            const newConnection = connectionHelpers.fromSidebarNode(nodeToEdit);
+            updateFavoriteOnEdit(oldConnection, newConnection);
+          }
+        }
+        
+        return nodesCopy;
+      });
+    } else {
+      // Crear un nuevo nodo VNC en la sidebar
+      const newNode = {
+        key: `vnc_${Date.now()}`,
+        label: vncData.name || `${vncData.server}:${vncData.port}`,
+        data: {
+          type: 'vnc',
+          name: vncData.name,
+          server: vncData.server,
+          password: vncData.password,
+          port: vncData.port || 5900,
+          clientType: 'guacamole',
+          resolution: vncData.resolution || '1024x768',
+          colorDepth: vncData.colorDepth || 32,
+          // Opciones VNC
+          readOnly: vncData.readOnly === true,
+          enableCompression: vncData.enableCompression !== false,
+          imageQuality: vncData.imageQuality || 'lossless',
+          autoReconnect: vncData.autoReconnect !== false,
+          autoResize: vncData.autoResize !== false,
+          redirectClipboard: vncData.redirectClipboard !== false,
+          guacDpi: vncData.guacDpi || 96
+        },
+        draggable: true,
+        droppable: false,
+        uid: `vnc_${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        isUserCreated: true
+      };
+
+      // Agregar el nodo a la raíz del árbol
+      setNodes(prevNodes => {
+        const newNodes = Array.isArray(prevNodes) ? [...prevNodes] : [];
+        newNodes.push(newNode);
+        return newNodes;
+      });
+    }
+
+    // Actualizar pestañas VNC si están abiertas
+    if (isEditing && originalNode) {
+      setRdpTabs(prevTabs => {
+        return prevTabs.map(tab => {
+          if (tab.originalKey === originalNode.key && tab.type === 'vnc-guacamole') {
+            return {
+              ...tab,
+              label: vncData.name || `${vncData.server}:${vncData.port}`,
+              rdpConfig: {
+                connectionType: 'vnc',
+                hostname: vncData.server,
+                password: vncData.password,
+                port: vncData.port || 5900,
+                width: parseInt(vncData.resolution?.split('x')[0]) || 1024,
+                height: parseInt(vncData.resolution?.split('x')[1]) || 768,
+                dpi: vncData.guacDpi || 96,
+                colorDepth: vncData.colorDepth || 32,
+                readOnly: vncData.readOnly === true,
+                enableCompression: vncData.enableCompression !== false,
+                imageQuality: vncData.imageQuality || 'lossless',
+                autoReconnect: vncData.autoReconnect !== false,
+                autoResize: vncData.autoResize !== false,
+                redirectClipboard: vncData.redirectClipboard !== false
+              }
+            };
+          }
+          return tab;
+        });
+      });
+    }
+
+    // Solo cerrar diálogo unificado si estamos editando (no creando nueva)
+    if (isEditing) {
+      setShowUnifiedConnectionDialog(false);
+      setVncNodeData(null);
+      setEditingVncNode(null);
+    }
+    // Si es nueva conexión, el diálogo se cierra con onHide() en NewVNCConnectionDialog
+  }, [setNodes, findNodeByKey, setRdpTabs, setShowUnifiedConnectionDialog, setVncNodeData, setEditingVncNode]);
+
+  /**
    * Guardar conexión de archivos (SFTP/FTP/SCP) en sidebar
    */
   const handleSaveFileConnectionToSidebar = useCallback((fileData, isEditing = false, originalNode = null) => {
@@ -852,6 +1017,12 @@ export const useFormHandlers = ({
     closeRdpDialog,
     openEditRdpDialog,
     handleSaveRdpToSidebar,
+    
+    // Funciones VNC
+    openNewVncDialog,
+    closeVncDialog,
+    openEditVncDialog,
+    handleSaveVncToSidebar,
     handleSaveFileConnectionToSidebar,
     openEditFileConnectionDialog,
     openNewFileConnectionDialog,

@@ -35,11 +35,13 @@ function normalizePort(type, port) {
   if (type === 'ssh' || type === 'explorer' || type === 'sftp' || type === 'scp') return 22;
   if (type === 'ftp') return 21;
   if (type === 'rdp-guacamole' || type === 'rdp') return 3389;
+  if (type === 'vnc-guacamole' || type === 'vnc') return 5900;
   return 0;
 }
 
 function buildId({ type, host, hostname, username, port }) {
-  const t = type === 'rdp' ? 'rdp-guacamole' : type; // normalize
+  let t = type === 'rdp' ? 'rdp-guacamole' : type; // normalize
+  t = t === 'vnc' ? 'vnc-guacamole' : t; // normalize VNC también
   const h = hostname || host || '';
   const p = normalizePort(t, port);
   const u = username || '';
@@ -48,6 +50,7 @@ function buildId({ type, host, hostname, username, port }) {
 
 function toSerializable(connection) {
   let type = connection.type === 'rdp' ? 'rdp-guacamole' : connection.type;
+  type = type === 'vnc' ? 'vnc-guacamole' : type; // normalize VNC también
   // Mantener tipos de archivos como están (sftp, ftp, scp)
   if (type === 'sftp' || type === 'ftp' || type === 'scp') {
     type = connection.type;
@@ -79,7 +82,7 @@ function toSerializable(connection) {
     port,
     // Guardar credenciales y configuración importante
     password: connection.password || '',
-    clientType: connection.clientType || (type === 'rdp-guacamole' ? 'guacamole' : 'native'),
+    clientType: connection.clientType || (type === 'rdp-guacamole' || type === 'vnc-guacamole' ? 'guacamole' : 'native'),
     // Campos adicionales para RDP
     domain: connection.domain || '',
     resolution: connection.resolution || '1024x768',
@@ -125,8 +128,9 @@ function fromSidebarNode(node, typeOverride = null) {
   if (!node) return null;
   const isSSH = node.data && node.data.type === 'ssh';
   const isRDP = node.data && (node.data.type === 'rdp' || node.data.type === 'rdp-guacamole');
+  const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
   const isFileConnection = node.data && (node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp');
-  const type = typeOverride || (isSSH ? 'ssh' : (isRDP ? 'rdp-guacamole' : (isFileConnection ? node.data.type : (node.data?.type || 'ssh'))));
+  const type = typeOverride || (isSSH ? 'ssh' : (isRDP ? 'rdp-guacamole' : (isVNC ? 'vnc-guacamole' : (isFileConnection ? node.data.type : (node.data?.type || 'ssh')))));
   const base = {
     type,
     name: node.label,

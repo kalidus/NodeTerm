@@ -28,6 +28,7 @@ const HomeTab = ({
   localPowerShellTheme,
   localLinuxTerminalTheme,
   onCreateRdpConnection,
+  onCreateVncConnection,
   onEditConnection,
   onLoadGroup,
 }) => {
@@ -113,6 +114,8 @@ const HomeTab = ({
         return 'pi pi-server';
       case 'rdp-guacamole':
         return 'pi pi-desktop';
+      case 'vnc-guacamole':
+        return 'pi pi-desktop';
       case 'explorer':
         return 'pi pi-folder-open';
       case 'group':
@@ -128,6 +131,8 @@ const HomeTab = ({
         return '#4fc3f7';
       case 'rdp-guacamole':
         return '#ff6b35';
+      case 'vnc-guacamole':
+        return '#7b68ee';
       case 'explorer':
         return '#FFB300';
       case 'group':
@@ -320,6 +325,9 @@ const HomeTab = ({
     } else if (connection.type === 'rdp-guacamole') {
       // Manejar conexiones RDP-Guacamole
       handleCreateRdpConnection(connection);
+    } else if (connection.type === 'vnc-guacamole') {
+      // Manejar conexiones VNC-Guacamole
+      handleCreateVncConnection(connection);
     } else if (onCreateSSHConnection) {
       // Manejar conexiones SSH tradicionales
       onCreateSSHConnection(connection);
@@ -335,6 +343,12 @@ const HomeTab = ({
   const handleCreateRdpConnection = (connectionData) => {
     if (onCreateRdpConnection) {
       onCreateRdpConnection(connectionData);
+    }
+  };
+
+  const handleCreateVncConnection = (connectionData) => {
+    if (onCreateVncConnection) {
+      onCreateVncConnection(connectionData);
     }
   };
 
