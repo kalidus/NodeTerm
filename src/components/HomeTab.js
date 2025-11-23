@@ -113,8 +113,10 @@ const HomeTab = ({
       case 'ssh':
         return 'pi pi-server';
       case 'rdp-guacamole':
+      case 'rdp':
         return 'pi pi-desktop';
       case 'vnc-guacamole':
+      case 'vnc':
         return 'pi pi-desktop';
       case 'explorer':
         return 'pi pi-folder-open';
@@ -130,9 +132,11 @@ const HomeTab = ({
       case 'ssh':
         return '#4fc3f7';
       case 'rdp-guacamole':
+      case 'rdp':
         return '#ff6b35';
       case 'vnc-guacamole':
-        return '#7b68ee';
+      case 'vnc':
+        return '#00ff00';
       case 'explorer':
         return '#FFB300';
       case 'group':

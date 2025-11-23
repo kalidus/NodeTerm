@@ -65,6 +65,7 @@ const Sidebar = React.memo(({
   showToast, // callback opcional para mostrar toast global
   confirmDialog, // callback para mostrar diálogo de confirmación
   onOpenSSHConnection, // nuevo prop para doble click en SSH
+  onOpenVncConnection, // nuevo prop para doble click en VNC
   onNodeContextMenu, // handler del menú contextual de nodos
   onTreeAreaContextMenu, // handler del menú contextual del área del árbol
   hideContextMenu, // función para cerrar el menú contextual
@@ -1125,6 +1126,57 @@ const Sidebar = React.memo(({
           }
         },
 
+        duplicateVNC: (node) => {
+          // Duplicar conexión VNC
+          const nodesCopy = deepCopy(nodes);
+          const newKey = `vnc_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
+          const duplicatedNode = {
+            ...node,
+            key: newKey,
+            uid: newKey,
+            label: `${node.label} (Copia)`,
+            data: {
+              ...node.data,
+              // Mantener todos los datos originales
+            }
+          };
+          
+          // Buscar el nodo original para encontrar su posición
+          const findNodePosition = (nodes, targetKey) => {
+            for (let i = 0; i < nodes.length; i++) {
+              if (nodes[i].key === targetKey) {
+                return { parentNodes: nodes, index: i, isRoot: true };
+              }
+              if (nodes[i].children) {
+                for (let j = 0; j < nodes[i].children.length; j++) {
+                  if (nodes[i].children[j].key === targetKey) {
+                    return { parentNodes: nodes[i].children, index: j, isRoot: false };
+                  }
+                }
+                const found = findNodePosition(nodes[i].children, targetKey);
+                if (found) return found;
+              }
+            }
+            return null;
+          };
+          
+          const position = findNodePosition(nodesCopy, node.key);
+          if (position) {
+            position.parentNodes.splice(position.index + 1, 0, duplicatedNode);
+            setNodes(() => logSetNodes('Sidebar-DuplicateVNC', nodesCopy));
+            showToast && showToast({
+              severity: 'success',
+              summary: 'Duplicado',
+              detail: `Conexión VNC "${node.label}" duplicada`,
+              life: 3000
+            });
+            // Desbloquear formularios por si alguna máscara quedó activa
+            setTimeout(() => {
+              safeUnblockForms(showToast);
+            }, 0);
+          }
+        },
+
         duplicateFolder: (node) => {
           // Duplicar carpeta con todo su contenido
           const nodesCopy = deepCopy(nodes);
@@ -1324,6 +1376,7 @@ const Sidebar = React.memo(({
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && node.data.type === 'rdp';
+    const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
     const isFileConnection = node.data && (node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp');
     const isPassword = node.data && node.data.type === 'password';
     // Icono según tema seleccionado para la sidebar
@@ -1351,6 +1404,18 @@ const Sidebar = React.memo(({
           height: `${connectionIconSize}px`
         }
       }) : '🖥️'; // Icono RDP o fallback
+    } else if (isVNC) {
+      // Usar icono VNC si existe, sino usar RDP como fallback
+      const vncIcon = themeIcons.vnc || themeIcons.rdp;
+      icon = vncIcon ? React.cloneElement(vncIcon, {
+        width: connectionIconSize,
+        height: connectionIconSize,
+        style: { 
+          ...vncIcon.props.style,
+          width: `${connectionIconSize}px`,
+          height: `${connectionIconSize}px`
+        }
+      }) : '🖥️'; // Icono VNC o fallback
     } else if (isPassword) {
       icon = <span className="pi pi-key" style={{ color: '#ffc107', fontSize: `${connectionIconSize}px` }} />;
     } else if (isFileConnection) {
@@ -1613,6 +1678,8 @@ const Sidebar = React.memo(({
       title += " | Doble click para abrir terminal SSH";
     } else if (isRDP) {
       title += " | Doble click para conectar RDP";
+    } else if (isVNC) {
+      title += " | Doble click para conectar VNC";
     } else if (isFileConnection) {
       const protocolLabel = (node.data?.protocol || node.data?.type || 'SFTP').toUpperCase();
       title += ` | Doble click para abrir explorador ${protocolLabel}`;
@@ -1628,13 +1695,15 @@ const Sidebar = React.memo(({
             onOpenSSHConnection(node, nodes);
           } else if (isRDP && sidebarCallbacksRef?.current?.connectRDP) {
             sidebarCallbacksRef.current.connectRDP(node);
+          } else if (isVNC && onOpenVncConnection) {
+            onOpenVncConnection(node, nodes);
           } else if (isFileConnection && sidebarCallbacksRef?.current?.openFileConnection) {
             sidebarCallbacksRef.current.openFileConnection(node, nodes);
           }
         }}
         style={{ cursor: 'pointer', fontFamily: explorerFont, alignItems: 'flex-start' }}
         title={title}
-        data-connection-type={isSSH ? 'ssh' : (isRDP ? 'rdp' : null)}
+        data-connection-type={isSSH ? 'ssh' : (isRDP ? 'rdp' : (isVNC ? 'vnc' : null))}
         data-node-type={isFolder ? 'folder' : 'connection'}
       >
         <span style={{ 
@@ -1700,7 +1769,7 @@ const Sidebar = React.memo(({
         </span>
         <span className="node-label" style={{ 
           flex: 1,
-          marginLeft: (isSSH || isRDP) && iconTheme === 'nodetermBasic' ? '6px' : '0px' // Espaciado para conexiones SSH y RDP solo en tema Nodeterm Basic
+          marginLeft: (isSSH || isRDP || isVNC) && iconTheme === 'nodetermBasic' ? '6px' : '0px' // Espaciado para conexiones SSH, RDP y VNC solo en tema Nodeterm Basic
         }}>{node.label}</span>
         {/* Estrella de favoritos oculta en la lista lateral por solicitud */}
       </div>
