@@ -2289,6 +2289,308 @@ export function NewVNCConnectionDialog({
   );
 }
 
+// --- EditVNCConnectionDialog: Diálogo independiente para editar conexiones VNC ---
+export function EditVNCConnectionDialog({
+  visible,
+  onHide,
+  editNodeData,
+  onSaveToSidebar
+}) {
+  const [formData, setFormData] = useState({
+    name: '',
+    server: '',
+    password: '',
+    port: 5900,
+    resolution: '1600x1000',
+    colorDepth: 32,
+    readOnly: false,
+    enableCompression: true,
+    imageQuality: 'lossless',
+    autoReconnect: true,
+    autoResize: true,
+    redirectClipboard: true,
+    guacDpi: 96
+  });
+
+  const [showVncPassword, setShowVncPassword] = useState(false);
+
+  // Precargar datos cuando se abre el diálogo
+  useEffect(() => {
+    if (editNodeData && visible) {
+      const data = editNodeData.data || {};
+      setFormData({
+        name: editNodeData.label || '',
+        server: data.server || data.hostname || data.host || '',
+        password: data.password || '',
+        port: data.port || 5900,
+        resolution: data.resolution || '1600x1000',
+        colorDepth: data.colorDepth || 32,
+        readOnly: data.readOnly === true,
+        enableCompression: data.enableCompression !== false,
+        imageQuality: data.imageQuality || 'lossless',
+        autoReconnect: data.autoReconnect !== false,
+        autoResize: data.autoResize !== false,
+        redirectClipboard: data.redirectClipboard !== false,
+        guacDpi: data.guacDpi || 96
+      });
+    }
+  }, [editNodeData, visible]);
+
+  // Resetear formulario al cerrar
+  useEffect(() => {
+    if (!visible) {
+      setFormData({
+        name: '',
+        server: '',
+        password: '',
+        port: 5900,
+        resolution: '1600x1000',
+        colorDepth: 32,
+        readOnly: false,
+        enableCompression: true,
+        imageQuality: 'lossless',
+        autoReconnect: true,
+        autoResize: true,
+        redirectClipboard: true,
+        guacDpi: 96
+      });
+      setShowVncPassword(false);
+    }
+  }, [visible]);
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleTextChange = (field) => (e) => {
+    setFormData(prev => ({ ...prev, [field]: e.target.value }));
+  };
+
+  const handleCheckboxChange = (field) => (e) => {
+    const newValue = !!e.checked;
+    setFormData(prev => ({ ...prev, [field]: newValue }));
+  };
+
+  const isFormValid = useMemo(() => {
+    return formData.name.trim() !== '' && formData.server.trim() !== '';
+  }, [formData]);
+
+  return (
+    <Dialog
+      header="Editar Conexión VNC"
+      visible={visible}
+      style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
+      modal
+      resizable={true}
+      onHide={onHide}
+      contentStyle={{ padding: '0', overflow: 'auto' }}
+      className="edit-vnc-connection-dialog"
+    >
+      <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            {/* --- COLUMNA IZQUIERDA: Conexión --- */}
+            <div style={{ flex: '1', minWidth: '320px' }}>
+              <Card title="🔗 Conexión" className="mb-2">
+                <div className="formgrid grid">
+                  <div className="field col-12">
+                    <label htmlFor="name-edit-vnc">Nombre *</label>
+                    <InputText
+                      id="name-edit-vnc"
+                      value={formData.name}
+                      onChange={handleTextChange('name')}
+                      placeholder="Nombre descriptivo"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="field col-8">
+                    <label htmlFor="server-edit-vnc">Servidor *</label>
+                    <InputText
+                      id="server-edit-vnc"
+                      value={formData.server}
+                      onChange={handleTextChange('server')}
+                      placeholder="IP o nombre del servidor"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="field col-4">
+                    <label htmlFor="port-edit-vnc">Puerto</label>
+                    <InputText
+                      id="port-edit-vnc"
+                      type="number"
+                      value={formData.port}
+                      onChange={handleTextChange('port')}
+                      placeholder="5900"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="field col-12">
+                    <label htmlFor="password-edit-vnc">Contraseña VNC</label>
+                    <div className="p-inputgroup">
+                      <InputText
+                        id="password-edit-vnc"
+                        type={showVncPassword ? "text" : "password"}
+                        value={formData.password}
+                        onChange={handleTextChange('password')}
+                        placeholder="Contraseña VNC (opcional)"
+                        autoComplete="off"
+                      />
+                      <Button
+                        type="button"
+                        icon={showVncPassword ? "pi pi-eye-slash" : "pi pi-eye"}
+                        className="p-button-outlined"
+                        onClick={() => setShowVncPassword(!showVncPassword)}
+                        tooltip={showVncPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        tooltipOptions={{ position: 'top' }}
+                      />
+                    </div>
+                    <small className="p-d-block mt-2 text-color-secondary">
+                      Contraseña del servidor VNC (si está configurada)
+                    </small>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* --- COLUMNA DERECHA: Ajustes de Sesión --- */}
+            <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* Card: Pantalla */}
+              <Card title="🖥️ Pantalla">
+                <div className="formgrid grid">
+                  <div className="field col-6">
+                    <label htmlFor="resolution-edit-vnc">Resolución</label>
+                    <Dropdown
+                      id="resolution-edit-vnc"
+                      value={formData.resolution}
+                      options={[
+                        { label: 'Pantalla completa', value: 'fullscreen' },
+                        { label: '1920x1080', value: '1920x1080' },
+                        { label: '1600x1000', value: '1600x1000' },
+                        { label: '1366x768', value: '1366x768' },
+                        { label: '1024x768', value: '1024x768' }
+                      ]}
+                      onChange={(e) => handleInputChange('resolution', e.value)}
+                    />
+                  </div>
+                  <div className="field col-6">
+                    <label htmlFor="colorDepth-edit-vnc">Profundidad de Color</label>
+                    <Dropdown
+                      id="colorDepth-edit-vnc"
+                      value={formData.colorDepth}
+                      options={[
+                        { label: '32 bits', value: 32 },
+                        { label: '24 bits', value: 24 },
+                        { label: '16 bits', value: 16 },
+                        { label: '8 bits', value: 8 }
+                      ]}
+                      onChange={(e) => handleInputChange('colorDepth', e.value)}
+                    />
+                  </div>
+                  <div className="field col-6">
+                    <label htmlFor="guacDpi-edit-vnc">DPI</label>
+                    <InputText
+                      id="guacDpi-edit-vnc"
+                      type="number"
+                      value={formData.guacDpi}
+                      onChange={handleTextChange('guacDpi')}
+                      placeholder="96"
+                    />
+                  </div>
+                  <div className="field col-6">
+                    <label htmlFor="imageQuality-edit-vnc">Calidad de Imagen</label>
+                    <Dropdown
+                      id="imageQuality-edit-vnc"
+                      value={formData.imageQuality}
+                      options={[
+                        { label: 'Sin pérdida', value: 'lossless' },
+                        { label: 'Pérdida baja', value: 'lossy-low' },
+                        { label: 'Pérdida media', value: 'lossy-medium' },
+                        { label: 'Pérdida alta', value: 'lossy-high' }
+                      ]}
+                      onChange={(e) => handleInputChange('imageQuality', e.value)}
+                    />
+                  </div>
+                </div>
+              </Card>
+
+              {/* Card: Opciones */}
+              <Card title="⚙️ Opciones">
+                <div className="formgrid grid">
+                  <div className="field-checkbox col-6">
+                    <Checkbox 
+                      inputId="readOnly-edit-vnc" 
+                      checked={formData.readOnly} 
+                      onChange={handleCheckboxChange('readOnly')} 
+                    />
+                    <label htmlFor="readOnly-edit-vnc">👁️ Solo lectura</label>
+                  </div>
+                  <div className="field-checkbox col-6">
+                    <Checkbox 
+                      inputId="enableCompression-edit-vnc" 
+                      checked={formData.enableCompression} 
+                      onChange={handleCheckboxChange('enableCompression')} 
+                    />
+                    <label htmlFor="enableCompression-edit-vnc">🗜️ Compresión</label>
+                  </div>
+                  <div className="field-checkbox col-6">
+                    <Checkbox 
+                      inputId="autoReconnect-edit-vnc" 
+                      checked={formData.autoReconnect} 
+                      onChange={handleCheckboxChange('autoReconnect')} 
+                    />
+                    <label htmlFor="autoReconnect-edit-vnc">🔄 Reconexión automática</label>
+                  </div>
+                  <div className="field-checkbox col-6">
+                    <Checkbox 
+                      inputId="autoResize-edit-vnc" 
+                      checked={formData.autoResize} 
+                      onChange={handleCheckboxChange('autoResize')} 
+                    />
+                    <label htmlFor="autoResize-edit-vnc">📐 Ajuste automático</label>
+                  </div>
+                  <div className="field-checkbox col-6">
+                    <Checkbox 
+                      inputId="redirectClipboard-edit-vnc" 
+                      checked={formData.redirectClipboard} 
+                      onChange={handleCheckboxChange('redirectClipboard')} 
+                    />
+                    <label htmlFor="redirectClipboard-edit-vnc">📋 Portapapeles</label>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        </div>
+        {/* Botones */}
+        <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', paddingTop: '12px' }}>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <Button
+              label="Cancelar"
+              icon="pi pi-times"
+              className="p-button-text"
+              onClick={onHide}
+              style={{ fontSize: '13px', padding: '8px 16px' }}
+            />
+            <Button
+              label="Guardar"
+              icon="pi pi-check"
+              className="p-button-primary"
+              onClick={() => {
+                if (onSaveToSidebar && editNodeData) {
+                  onSaveToSidebar(formData, true, editNodeData);
+                }
+                onHide();
+              }}
+              disabled={!isFormValid}
+              style={{ fontSize: '13px', padding: '8px 16px' }}
+            />
+          </div>
+        </div>
+      </div>
+    </Dialog>
+  );
+}
+
 // --- ProtocolSelectionDialog: diálogo de selección de protocolo con diseño de dos paneles ---
 export function ProtocolSelectionDialog({
   visible,

@@ -9,7 +9,7 @@ import { InputNumber } from 'primereact/inputnumber';
 
 import SettingsDialog from './SettingsDialog';
 import SyncSettingsDialog from './SyncSettingsDialog';
-import { SSHDialog, FolderDialog, GroupDialog, EditSSHConnectionDialog, EditRDPConnectionDialog, FileConnectionDialog, ProtocolSelectionDialog, NewSSHConnectionDialog, NewRDPConnectionDialog, NewVNCConnectionDialog } from './Dialogs';
+import { SSHDialog, FolderDialog, GroupDialog, EditSSHConnectionDialog, EditRDPConnectionDialog, EditVNCConnectionDialog, FileConnectionDialog, ProtocolSelectionDialog, NewSSHConnectionDialog, NewRDPConnectionDialog, NewVNCConnectionDialog } from './Dialogs';
 
 /**
  * DialogsManager - Componente que centraliza la gestión de todos los diálogos
@@ -98,6 +98,10 @@ const DialogsManager = ({
   setRdpNodeData,
   editingRdpNode,
   setEditingRdpNode,
+  vncNodeData,
+  setVncNodeData,
+  editingVncNode,
+  setEditingVncNode,
   
   // Estados para modo edición
   editSSHNode,
@@ -559,6 +563,22 @@ const DialogsManager = ({
         visible={showNewVNCDialog}
         onHide={() => setShowNewVNCDialog(false)}
         onGoBack={handleGoBackToProtocolSelection}
+        onSaveToSidebar={handleSaveVncToSidebar}
+      />
+
+      {/* Diálogo: Editar Conexión VNC */}
+      <EditVNCConnectionDialog
+        visible={showUnifiedConnectionDialog && !!editingVncNode}
+        onHide={() => {
+          setShowUnifiedConnectionDialog(false);
+          if (editingVncNode && setEditingVncNode) {
+            setEditingVncNode(null);
+          }
+          if (setVncNodeData) {
+            setVncNodeData(null);
+          }
+        }}
+        editNodeData={editingVncNode}
         onSaveToSidebar={handleSaveVncToSidebar}
       />
 

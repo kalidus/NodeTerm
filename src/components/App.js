@@ -985,6 +985,8 @@ const App = () => {
     rdpTargetFolder, setRdpTargetFolder,
     rdpNodeData, setRdpNodeData,
     editingRdpNode, setEditingRdpNode,
+    vncNodeData, setVncNodeData,
+    editingVncNode, setEditingVncNode,
     // Estados de formularios Archivos (SFTP/FTP/SCP)
     fileConnectionName, setFileConnectionName,
     fileConnectionHost, setFileConnectionHost,
@@ -1136,6 +1138,8 @@ const App = () => {
     rdpTargetFolder, setRdpTargetFolder,
     rdpNodeData, setRdpNodeData,
     editingRdpNode, setEditingRdpNode,
+    vncNodeData, setVncNodeData,
+    editingVncNode, setEditingVncNode,
     // Estados Archivos (SFTP/FTP/SCP)
     fileConnectionName, setFileConnectionName,
     fileConnectionHost, setFileConnectionHost,
@@ -2266,6 +2270,10 @@ const App = () => {
         setRdpNodeData={setRdpNodeData}
         editingRdpNode={editingRdpNode}
         setEditingRdpNode={setEditingRdpNode}
+        vncNodeData={vncNodeData}
+        setVncNodeData={setVncNodeData}
+        editingVncNode={editingVncNode}
+        setEditingVncNode={setEditingVncNode}
         
         // Estados de formularios Archivos (SFTP/FTP/SCP)
         fileConnectionName={fileConnectionName}
