@@ -2037,6 +2037,18 @@ export function ProtocolSelectionDialog({
             'Experiencia de usuario familiar para entornos Windows',
             'Soporte para múltiples sesiones'
           ]
+        },
+        {
+          id: 'vnc',
+          name: 'VNC (Virtual Network Computing)',
+          fullName: 'VNC (Virtual Network Computing)',
+          description: 'Acceso remoto multiplataforma a escritorios gráficos. Compatible con Linux, Windows, macOS y sistemas embebidos.',
+          icon: 'pi pi-eye',
+          iconColor: '#FF5722',
+          advantages: [
+            'Multiplataforma (Linux, Windows, macOS)',
+            'Ligero y eficiente para conexiones remotas'
+          ]
         }
       ]
     },
@@ -2124,9 +2136,18 @@ export function ProtocolSelectionDialog({
 
   const currentSection = protocolSections.find(section => section.id === selectedCategory) || protocolSections[0];
 
+  const headerTemplate = (
+    <div className="protocol-dialog-header-custom">
+      <div className="protocol-dialog-header-icon">
+        <i className="pi pi-plus-circle"></i>
+      </div>
+      <span className="protocol-dialog-header-title">Configuración de Nueva Conexión</span>
+    </div>
+  );
+
   return (
     <Dialog
-      header="Configuración de Nueva Conexión"
+      header={headerTemplate}
       visible={visible}
       onHide={onHide}
       style={{ width: '90vw', maxWidth: '1200px' }}
@@ -2141,6 +2162,7 @@ export function ProtocolSelectionDialog({
             <div
               key={section.id}
               className={`protocol-category-item ${selectedCategory === section.id ? 'active' : ''}`}
+              data-category={section.id}
               onClick={() => setSelectedCategory(section.id)}
             >
               <span className="protocol-category-title">{section.title}</span>
@@ -2151,7 +2173,7 @@ export function ProtocolSelectionDialog({
         {/* Panel derecho: Protocolos */}
         <div className="protocol-options-panel">
           {currentSection.protocols.map((protocol) => (
-            <div key={protocol.id} className="protocol-option-card">
+            <div key={protocol.id} className="protocol-option-card" data-protocol={protocol.id}>
               <div className="protocol-option-icon" style={{ backgroundColor: protocol.iconColor }}>
                 <i className={protocol.icon}></i>
               </div>
@@ -2166,21 +2188,23 @@ export function ProtocolSelectionDialog({
                   </ul>
                 </div>
               </div>
-              <div className="protocol-option-actions">
-                <Button
-                  label={
-                    protocol.id === 'rdp' 
-                      ? 'Configurar RDP' 
-                      : protocol.id === 'password' 
-                        ? 'Nueva Contraseña' 
-                        : protocol.id === 'ssh'
-                          ? 'Configurar SSH'
-                          : `Configurar ${protocol.name}`
-                  }
-                  className={`protocol-option-button ${protocol.id === 'rdp' ? 'secondary' : 'primary'}`}
-                  onClick={() => handleProtocolSelect(protocol.id)}
-                />
-              </div>
+              {protocol.id !== 'vnc' && (
+                <div className="protocol-option-actions">
+                  <Button
+                    label={
+                      protocol.id === 'rdp' 
+                        ? 'Configurar RDP' 
+                        : protocol.id === 'password' 
+                          ? 'Nueva Contraseña' 
+                          : protocol.id === 'ssh'
+                            ? 'Configurar SSH'
+                            : `Configurar ${protocol.name}`
+                    }
+                    className={`protocol-option-button ${protocol.id === 'rdp' ? 'secondary' : 'primary'}`}
+                    onClick={() => handleProtocolSelect(protocol.id)}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>
