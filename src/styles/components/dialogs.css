@@ -1121,16 +1121,37 @@
 /* Grid de protocolos dentro de cada sección */
 .protocol-section-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1rem;
   align-items: stretch;
 }
 
-/* Asegurar que todas las cards tengan la misma altura */
+/* Asegurar que todas las cards tengan el mismo ancho mínimo y altura */
 .protocol-section-grid .protocol-card {
-  display: flex;
-  flex-direction: column;
+  min-width: 300px;
   height: 100%;
+}
+
+/* En pantallas medianas, ajustar el ancho mínimo */
+@media (max-width: 1200px) {
+  .protocol-section-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+  
+  .protocol-section-grid .protocol-card {
+    min-width: 280px;
+  }
+}
+
+/* En pantallas pequeñas, usar 1 columna */
+@media (max-width: 768px) {
+  .protocol-section-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .protocol-section-grid .protocol-card {
+    min-width: unset;
+  }
 }
 
 .protocol-card {
@@ -1146,6 +1167,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  box-sizing: border-box;
 }
 
 .protocol-card:hover {
@@ -1161,6 +1183,7 @@
   padding: 1.25rem;
   height: 100%;
   flex: 1;
+  box-sizing: border-box;
 }
 
 .protocol-card-icon {
@@ -1192,6 +1215,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  justify-content: space-between;
 }
 
 .protocol-card-header {
@@ -1227,6 +1251,9 @@
   line-height: 1.5;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
 }
 
 .protocol-card-arrow {
@@ -1423,6 +1450,7 @@
 .edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content {
   margin: 0 8px !important;
   padding: 0 !important;
+  pointer-events: auto !important;
 }
 
 .edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div {
@@ -1549,6 +1577,36 @@
   font-size: 8px !important;
 }
 
+/* Asegurar que los checkboxes dentro del Fieldset sean clickeables */
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox label {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* Asegurar que cuando el checkbox NO está marcado, no tenga clases de estado marcado */
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box {
+  background: transparent !important;
+  border-color: var(--surface-border) !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box .p-checkbox-icon,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box .p-checkbox-icon {
+  display: none !important;
+}
+
+/* Remover clases de estado marcado cuando no está marcado */
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box.p-highlight,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box.p-highlight,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box.p-checkbox-checked,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box.p-checkbox-checked {
+  background: transparent !important;
+  border-color: var(--surface-border) !important;
+}
+
 .edit-rdp-connection-dialog .advanced-fieldset .field-checkbox label,
 .edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .field-checkbox label,
 .edit-rdp-connection-dialog .p-fieldset-content > div > div .field-checkbox label {
@@ -1571,6 +1629,36 @@
   margin-left: 0.5rem;
   font-size: 0.85rem;
   cursor: pointer;
+}
+
+/* Asegurar que los checkboxes normales también limpien el estado visual cuando están desmarcados */
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box,
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box {
+  background: transparent !important;
+  border-color: var(--surface-border) !important;
+}
+
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box .p-checkbox-icon,
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box .p-checkbox-icon {
+  display: none !important;
+}
+
+/* Remover clases de estado marcado cuando no está marcado */
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box.p-highlight,
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box.p-highlight,
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box.p-checkbox-checked,
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box.p-checkbox-checked {
+  background: transparent !important;
+  border-color: var(--surface-border) !important;
+}
+
+/* Asegurar pointer-events en checkboxes normales */
+.edit-rdp-connection-dialog .field-checkbox,
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox,
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box,
+.edit-rdp-connection-dialog .field-checkbox label {
+  pointer-events: auto !important;
+  cursor: pointer !important;
 }
 
 /* Estilos del diálogo de nueva conexión RDP - Opciones avanzadas */
@@ -1676,6 +1764,7 @@
 .new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content {
   margin: 0 8px !important;
   padding: 0 !important;
+  pointer-events: auto !important;
 }
 
 .new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div {
@@ -1802,6 +1891,36 @@
   font-size: 8px !important;
 }
 
+/* Asegurar que los checkboxes dentro del Fieldset sean clickeables */
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox label {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* Asegurar que cuando el checkbox NO está marcado, no tenga clases de estado marcado */
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box {
+  background: transparent !important;
+  border-color: var(--surface-border) !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box .p-checkbox-icon,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box .p-checkbox-icon {
+  display: none !important;
+}
+
+/* Remover clases de estado marcado cuando no está marcado */
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box.p-highlight,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box.p-highlight,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box.p-checkbox-checked,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box.p-checkbox-checked {
+  background: transparent !important;
+  border-color: var(--surface-border) !important;
+}
+
 .new-rdp-connection-dialog .advanced-fieldset .field-checkbox label,
 .new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .field-checkbox label,
 .new-rdp-connection-dialog .p-fieldset-content > div > div .field-checkbox label {
@@ -1824,4 +1943,34 @@
   margin-left: 0.5rem;
   font-size: 0.85rem;
   cursor: pointer;
+}
+
+/* Asegurar que los checkboxes normales también limpien el estado visual cuando están desmarcados */
+.new-rdp-connection-dialog .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box,
+.new-rdp-connection-dialog .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box {
+  background: transparent !important;
+  border-color: var(--surface-border) !important;
+}
+
+.new-rdp-connection-dialog .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box .p-checkbox-icon,
+.new-rdp-connection-dialog .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box .p-checkbox-icon {
+  display: none !important;
+}
+
+/* Remover clases de estado marcado cuando no está marcado */
+.new-rdp-connection-dialog .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box.p-highlight,
+.new-rdp-connection-dialog .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box.p-highlight,
+.new-rdp-connection-dialog .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box.p-checkbox-checked,
+.new-rdp-connection-dialog .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box.p-checkbox-checked {
+  background: transparent !important;
+  border-color: var(--surface-border) !important;
+}
+
+/* Asegurar pointer-events en checkboxes normales */
+.new-rdp-connection-dialog .field-checkbox,
+.new-rdp-connection-dialog .field-checkbox .p-checkbox,
+.new-rdp-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box,
+.new-rdp-connection-dialog .field-checkbox label {
+  pointer-events: auto !important;
+  cursor: pointer !important;
 }
