@@ -121,10 +121,28 @@ const App = () => {
             themeManager.applyTheme('Nord');
             statusBarThemeManager.applyTheme('Night Owl');
           }
+          
+          // 5. Ocultar boot-splash cuando el tema esté completamente aplicado
+          // Esperar un frame adicional para asegurar que todo está renderizado
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const splash = document.getElementById('boot-splash');
+              if (splash) {
+                splash.classList.add('hidden');
+              }
+            });
+          });
         }, 200);
         
       } catch (error) {
         console.error('[THEME] Error inicializando temas:', error);
+        // En caso de error, ocultar splash después de un tiempo razonable
+        setTimeout(() => {
+          const splash = document.getElementById('boot-splash');
+          if (splash) {
+            splash.classList.add('hidden');
+          }
+        }, 1000);
       }
     };
     
