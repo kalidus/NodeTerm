@@ -2051,15 +2051,17 @@ export function ProtocolSelectionDialog({
           id: 'ssh',
           name: 'SSH',
           description: 'Acceso remoto y seguro a línea de comandos. Ideal para administración de servidores y ejecución de comandos.',
-          icon: 'pi pi-terminal',
-          color: '#2196F3'
+          icon: 'pi pi-server',
+          color: '#2196F3',
+          gradient: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)'
         },
         {
           id: 'rdp',
           name: 'RDP',
           description: 'Control total del entorno gráfico de un PC con Windows. Soporte completo de sesiones y periféricos.',
           icon: 'pi pi-desktop',
-          color: '#4CAF50'
+          color: '#4CAF50',
+          gradient: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)'
         }
       ]
     },
@@ -2072,7 +2074,9 @@ export function ProtocolSelectionDialog({
           name: 'SFTP',
           description: 'La forma más recomendada para mover archivos de forma encriptada, utilizando vías de seguridad de SSH.',
           icon: 'pi pi-folder-open',
-          color: '#FF9800'
+          color: '#FF9800',
+          gradient: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)',
+          isRecommended: true
         },
         {
           id: 'ftp',
@@ -2080,6 +2084,7 @@ export function ProtocolSelectionDialog({
           description: 'Protocolo clásico de transferencia. Rápido, pero *no encripta* los datos (no recomendado para información sensible).',
           icon: 'pi pi-cloud-upload',
           color: '#9C27B0',
+          gradient: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
           isInsecure: true
         },
         {
@@ -2087,7 +2092,8 @@ export function ProtocolSelectionDialog({
           name: 'SCP',
           description: 'Herramienta rápida y segura para copiar archivos y directorios entre hosts remotos (basado en SSH).',
           icon: 'pi pi-copy',
-          color: '#00BCD4'
+          color: '#00BCD4',
+          gradient: 'linear-gradient(135deg, #00BCD4 0%, #0097A7 100%)'
         }
       ]
     }
@@ -2119,7 +2125,7 @@ export function ProtocolSelectionDialog({
             Seleccionar Tipo de Conexión
           </h3>
           <p className="protocol-selection-description">
-            Seleca al tipo de conexión que deseas crear
+            Selecciona el tipo de conexión que deseas crear
           </p>
         </div>
 
@@ -2142,22 +2148,39 @@ export function ProtocolSelectionDialog({
                   key={protocol.id}
                   className="protocol-card"
                   onClick={() => handleProtocolSelect(protocol.id)}
+                  style={{ '--protocol-color': protocol.color }}
                 >
+                  {/* Efecto de brillo de fondo */}
+                  <div className="protocol-card-glow" style={{ background: protocol.gradient || protocol.color }}></div>
+                  
                   <div className="protocol-card-content">
                     <div 
-                      className="protocol-card-icon"
-                      style={{ background: protocol.color }}
+                      className="protocol-card-icon-wrapper"
                     >
-                      <i className={protocol.icon}></i>
+                      <div 
+                        className="protocol-card-icon"
+                        style={{ background: protocol.gradient || protocol.color }}
+                      >
+                        <i className={protocol.icon}></i>
+                      </div>
                     </div>
                     <div className="protocol-card-info">
                       <div className="protocol-card-header">
                         <h4 className="protocol-card-name">{protocol.name}</h4>
-                        {protocol.isInsecure && (
-                          <span className="protocol-card-warning" title="Conexión no encriptada">
-                            <i className="pi pi-exclamation-triangle"></i>
-                          </span>
-                        )}
+                        <div className="protocol-card-badges">
+                          {protocol.isRecommended && (
+                            <span className="protocol-card-badge protocol-card-badge-recommended" title="Recomendado">
+                              <i className="pi pi-star-fill"></i>
+                              <span>Recomendado</span>
+                            </span>
+                          )}
+                          {protocol.isInsecure && (
+                            <span className="protocol-card-badge protocol-card-badge-warning" title="Conexión no encriptada">
+                              <i className="pi pi-exclamation-triangle"></i>
+                              <span>No seguro</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <p className="protocol-card-description">{protocol.description}</p>
                     </div>
