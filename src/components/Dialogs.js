@@ -501,8 +501,20 @@ export function EditRDPConnectionDialog({
   }, []);
 
   const handleCheckboxChange = useCallback((field) => (e) => {
-    setFormData(prev => ({ ...prev, [field]: e.checked }));
-  }, []);
+    // PrimeReact Checkbox pasa el estado en e.checked (boolean)
+    const newValue = !!e.checked; // Asegurar que sea boolean
+    console.log(`[EditRDP] Checkbox ${field} cambiado:`, { 
+      checked: e.checked, 
+      newValue,
+      currentState: formData[field]
+    });
+    
+    setFormData(prev => {
+      const updated = { ...prev, [field]: newValue };
+      console.log(`[EditRDP] Estado actualizado:`, { field, oldValue: prev[field], newValue: updated[field] });
+      return updated;
+    });
+  }, [formData]);
 
   const handleSelectFolder = async () => {
     try {
@@ -734,12 +746,12 @@ export function EditRDPConnectionDialog({
                   {/* Opciones para Guacamole */}
                   {formData.clientType === 'guacamole' && (
                     <>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-edit-rdp" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="guac-redirectClipboard-edit-rdp">📋 Portapapeles</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-edit-rdp" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="guac-redirectAudio-edit-rdp">🔊 Audio</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-edit-rdp" checked={formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} /><label htmlFor="guac-enableDrive-edit-rdp">💾 Carpetas (NodeTerm Drive)</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-edit-rdp" checked={formData.autoResize} onChange={handleCheckboxChange('autoResize')} /><label htmlFor="guac-autoResize-edit-rdp">📐 Ajuste automático</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-edit-rdp" checked={formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} /><label htmlFor="guac-enableWallpaper-edit-rdp">🖼️ Mostrar fondo</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-edit-rdp" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="guac-redirectPrinters-edit-rdp">🖨️ Impresoras</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-edit-rdp" checked={!!formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} key={`clipboard-${formData.redirectClipboard}`} /><label htmlFor="guac-redirectClipboard-edit-rdp">📋 Portapapeles</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-edit-rdp" checked={!!formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} key={`audio-${formData.redirectAudio}`} /><label htmlFor="guac-redirectAudio-edit-rdp">🔊 Audio</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-edit-rdp" checked={!!formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} key={`drive-${formData.guacEnableDrive}`} /><label htmlFor="guac-enableDrive-edit-rdp">💾 Carpetas (NodeTerm Drive)</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-edit-rdp" checked={!!formData.autoResize} onChange={handleCheckboxChange('autoResize')} key={`resize-${formData.autoResize}`} /><label htmlFor="guac-autoResize-edit-rdp">📐 Ajuste automático</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-edit-rdp" checked={!!formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} key={`wallpaper-${formData.guacEnableWallpaper}`} /><label htmlFor="guac-enableWallpaper-edit-rdp">🖼️ Mostrar fondo</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-edit-rdp" checked={!!formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} key={`printers-${formData.redirectPrinters}`} /><label htmlFor="guac-redirectPrinters-edit-rdp">🖨️ Impresoras</label></div>
                     </>
                   )}
                 </div>
@@ -751,22 +763,22 @@ export function EditRDPConnectionDialog({
                       <div className="formgrid grid">
                         <div className="col-4">
                           <h5>Rendimiento</h5>
-                          <div className="field-checkbox"><Checkbox inputId="guac-gfx-edit-rdp" checked={formData.guacEnableGfx} onChange={handleCheckboxChange('guacEnableGfx')} /><label htmlFor="guac-gfx-edit-rdp">🎨 Habilitar GFX</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-composition-edit-rdp" checked={formData.guacEnableDesktopComposition} onChange={handleCheckboxChange('guacEnableDesktopComposition')} /><label htmlFor="guac-composition-edit-rdp">🖼️ Desktop Composition</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-font-edit-rdp" checked={formData.guacEnableFontSmoothing} onChange={handleCheckboxChange('guacEnableFontSmoothing')} /><label htmlFor="guac-font-edit-rdp">✨ Font Smoothing</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-theming-edit-rdp" checked={formData.guacEnableTheming} onChange={handleCheckboxChange('guacEnableTheming')} /><label htmlFor="guac-theming-edit-rdp">🎭 Theming</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-gfx-edit-rdp" checked={!!formData.guacEnableGfx} onChange={handleCheckboxChange('guacEnableGfx')} key={`gfx-${formData.guacEnableGfx}`} /><label htmlFor="guac-gfx-edit-rdp">🎨 Habilitar GFX</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-composition-edit-rdp" checked={!!formData.guacEnableDesktopComposition} onChange={handleCheckboxChange('guacEnableDesktopComposition')} key={`composition-${formData.guacEnableDesktopComposition}`} /><label htmlFor="guac-composition-edit-rdp">🖼️ Desktop Composition</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-font-edit-rdp" checked={!!formData.guacEnableFontSmoothing} onChange={handleCheckboxChange('guacEnableFontSmoothing')} key={`font-${formData.guacEnableFontSmoothing}`} /><label htmlFor="guac-font-edit-rdp">✨ Font Smoothing</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-theming-edit-rdp" checked={!!formData.guacEnableTheming} onChange={handleCheckboxChange('guacEnableTheming')} key={`theming-${formData.guacEnableTheming}`} /><label htmlFor="guac-theming-edit-rdp">🎭 Theming</label></div>
                         </div>
                         <div className="col-4">
                           <h5>Interfaz</h5>
-                          <div className="field-checkbox"><Checkbox inputId="guac-drag-edit-rdp" checked={formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} /><label htmlFor="guac-drag-edit-rdp">🖱️ Full Window Drag</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-menu-edit-rdp" checked={formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} /><label htmlFor="guac-menu-edit-rdp">🎬 Animaciones de menú</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-drag-edit-rdp" checked={!!formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} key={`drag-${formData.guacEnableFullWindowDrag}`} /><label htmlFor="guac-drag-edit-rdp">🖱️ Full Window Drag</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-menu-edit-rdp" checked={!!formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} key={`menu-${formData.guacEnableMenuAnimations}`} /><label htmlFor="guac-menu-edit-rdp">🎬 Animaciones de menú</label></div>
                         </div>
                         <div className="col-4">
                           <h5>Caché</h5>
-                          <div className="field-checkbox"><Checkbox inputId="guac-glyph-cache-edit-rdp" checked={!formData.guacDisableGlyphCaching} onChange={(e) => handleInputChange('guacDisableGlyphCaching', !e.checked)} /><label htmlFor="guac-glyph-cache-edit-rdp">🔤 Glyph Caching</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-offscreen-cache-edit-rdp" checked={!formData.guacDisableOffscreenCaching} onChange={(e) => handleInputChange('guacDisableOffscreenCaching', !e.checked)} /><label htmlFor="guac-offscreen-cache-edit-rdp">📱 Offscreen Caching</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-bitmap-cache-edit-rdp" checked={!formData.guacDisableBitmapCaching} onChange={(e) => handleInputChange('guacDisableBitmapCaching', !e.checked)} /><label htmlFor="guac-bitmap-cache-edit-rdp">🖼️ Bitmap Caching</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-copy-rect-edit-rdp" checked={!formData.guacDisableCopyRect} onChange={(e) => handleInputChange('guacDisableCopyRect', !e.checked)} /><label htmlFor="guac-copy-rect-edit-rdp">📋 Copy-Rect</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-glyph-cache-edit-rdp" checked={!!(!formData.guacDisableGlyphCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableGlyphCaching', !newValue); }} key={`glyph-${!formData.guacDisableGlyphCaching}`} /><label htmlFor="guac-glyph-cache-edit-rdp">🔤 Glyph Caching</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-offscreen-cache-edit-rdp" checked={!!(!formData.guacDisableOffscreenCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableOffscreenCaching', !newValue); }} key={`offscreen-${!formData.guacDisableOffscreenCaching}`} /><label htmlFor="guac-offscreen-cache-edit-rdp">📱 Offscreen Caching</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-bitmap-cache-edit-rdp" checked={!!(!formData.guacDisableBitmapCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableBitmapCaching', !newValue); }} key={`bitmap-${!formData.guacDisableBitmapCaching}`} /><label htmlFor="guac-bitmap-cache-edit-rdp">🖼️ Bitmap Caching</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-copy-rect-edit-rdp" checked={!!(!formData.guacDisableCopyRect)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableCopyRect', !newValue); }} key={`copyrect-${!formData.guacDisableCopyRect}`} /><label htmlFor="guac-copy-rect-edit-rdp">📋 Copy-Rect</label></div>
                         </div>
                       </div>
                     </Fieldset>
@@ -1605,7 +1617,19 @@ export function NewRDPConnectionDialog({
   };
 
   const handleCheckboxChange = (field) => (e) => {
-    setFormData(prev => ({ ...prev, [field]: e.checked }));
+    // PrimeReact Checkbox pasa el estado en e.checked (boolean)
+    const newValue = !!e.checked; // Asegurar que sea boolean
+    console.log(`[NewRDP] Checkbox ${field} cambiado:`, { 
+      checked: e.checked, 
+      newValue,
+      currentState: formData[field]
+    });
+    
+    setFormData(prev => {
+      const updated = { ...prev, [field]: newValue };
+      console.log(`[NewRDP] Estado actualizado:`, { field, oldValue: prev[field], newValue: updated[field] });
+      return updated;
+    });
   };
 
   // Función para abrir el selector de carpeta
@@ -1884,12 +1908,12 @@ export function NewRDPConnectionDialog({
                   {/* Opciones para Guacamole */}
                   {formData.clientType === 'guacamole' && (
                     <>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-create-rdp" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="guac-redirectClipboard-create-rdp">📋 Portapapeles</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-create-rdp" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="guac-redirectAudio-create-rdp">🔊 Audio</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-create-rdp" checked={formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} /><label htmlFor="guac-enableDrive-create-rdp">💾 Carpetas (NodeTerm Drive)</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-create-rdp" checked={formData.autoResize} onChange={handleCheckboxChange('autoResize')} /><label htmlFor="guac-autoResize-create-rdp">📐 Ajuste automático</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-create-rdp" checked={formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} /><label htmlFor="guac-enableWallpaper-create-rdp">🖼️ Mostrar fondo</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-create-rdp" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="guac-redirectPrinters-create-rdp">🖨️ Impresoras</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-create-rdp" checked={!!formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} key={`clipboard-create-${formData.redirectClipboard}`} /><label htmlFor="guac-redirectClipboard-create-rdp">📋 Portapapeles</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-create-rdp" checked={!!formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} key={`audio-create-${formData.redirectAudio}`} /><label htmlFor="guac-redirectAudio-create-rdp">🔊 Audio</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-create-rdp" checked={!!formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} key={`drive-create-${formData.guacEnableDrive}`} /><label htmlFor="guac-enableDrive-create-rdp">💾 Carpetas (NodeTerm Drive)</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-create-rdp" checked={!!formData.autoResize} onChange={handleCheckboxChange('autoResize')} key={`resize-create-${formData.autoResize}`} /><label htmlFor="guac-autoResize-create-rdp">📐 Ajuste automático</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-create-rdp" checked={!!formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} key={`wallpaper-create-${formData.guacEnableWallpaper}`} /><label htmlFor="guac-enableWallpaper-create-rdp">🖼️ Mostrar fondo</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-create-rdp" checked={!!formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} key={`printers-create-${formData.redirectPrinters}`} /><label htmlFor="guac-redirectPrinters-create-rdp">🖨️ Impresoras</label></div>
                     </>
                   )}
                 </div>
@@ -1901,22 +1925,22 @@ export function NewRDPConnectionDialog({
                       <div className="formgrid grid">
                         <div className="col-4">
                           <h5>Rendimiento</h5>
-                          <div className="field-checkbox"><Checkbox inputId="guac-gfx-create-rdp" checked={formData.guacEnableGfx} onChange={handleCheckboxChange('guacEnableGfx')} /><label htmlFor="guac-gfx-create-rdp">🎨 Habilitar GFX</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-composition-create-rdp" checked={formData.guacEnableDesktopComposition} onChange={handleCheckboxChange('guacEnableDesktopComposition')} /><label htmlFor="guac-composition-create-rdp">🖼️ Desktop Composition</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-font-create-rdp" checked={formData.guacEnableFontSmoothing} onChange={handleCheckboxChange('guacEnableFontSmoothing')} /><label htmlFor="guac-font-create-rdp">✨ Font Smoothing</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-theming-create-rdp" checked={formData.guacEnableTheming} onChange={handleCheckboxChange('guacEnableTheming')} /><label htmlFor="guac-theming-create-rdp">🎭 Theming</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-gfx-create-rdp" checked={!!formData.guacEnableGfx} onChange={handleCheckboxChange('guacEnableGfx')} key={`gfx-create-${formData.guacEnableGfx}`} /><label htmlFor="guac-gfx-create-rdp">🎨 Habilitar GFX</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-composition-create-rdp" checked={!!formData.guacEnableDesktopComposition} onChange={handleCheckboxChange('guacEnableDesktopComposition')} key={`composition-create-${formData.guacEnableDesktopComposition}`} /><label htmlFor="guac-composition-create-rdp">🖼️ Desktop Composition</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-font-create-rdp" checked={!!formData.guacEnableFontSmoothing} onChange={handleCheckboxChange('guacEnableFontSmoothing')} key={`font-create-${formData.guacEnableFontSmoothing}`} /><label htmlFor="guac-font-create-rdp">✨ Font Smoothing</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-theming-create-rdp" checked={!!formData.guacEnableTheming} onChange={handleCheckboxChange('guacEnableTheming')} key={`theming-create-${formData.guacEnableTheming}`} /><label htmlFor="guac-theming-create-rdp">🎭 Theming</label></div>
                         </div>
                         <div className="col-4">
                           <h5>Interfaz</h5>
-                          <div className="field-checkbox"><Checkbox inputId="guac-drag-create-rdp" checked={formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} /><label htmlFor="guac-drag-create-rdp">🖱️ Full Window Drag</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-menu-create-rdp" checked={formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} /><label htmlFor="guac-menu-create-rdp">🎬 Animaciones de menú</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-drag-create-rdp" checked={!!formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} key={`drag-create-${formData.guacEnableFullWindowDrag}`} /><label htmlFor="guac-drag-create-rdp">🖱️ Full Window Drag</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-menu-create-rdp" checked={!!formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} key={`menu-create-${formData.guacEnableMenuAnimations}`} /><label htmlFor="guac-menu-create-rdp">🎬 Animaciones de menú</label></div>
                         </div>
                         <div className="col-4">
                           <h5>Caché</h5>
-                          <div className="field-checkbox"><Checkbox inputId="guac-glyph-cache-create-rdp" checked={!formData.guacDisableGlyphCaching} onChange={(e) => handleInputChange('guacDisableGlyphCaching', !e.checked)} /><label htmlFor="guac-glyph-cache-create-rdp">🔤 Glyph Caching</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-offscreen-cache-create-rdp" checked={!formData.guacDisableOffscreenCaching} onChange={(e) => handleInputChange('guacDisableOffscreenCaching', !e.checked)} /><label htmlFor="guac-offscreen-cache-create-rdp">📱 Offscreen Caching</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-bitmap-cache-create-rdp" checked={!formData.guacDisableBitmapCaching} onChange={(e) => handleInputChange('guacDisableBitmapCaching', !e.checked)} /><label htmlFor="guac-bitmap-cache-create-rdp">🖼️ Bitmap Caching</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-copy-rect-create-rdp" checked={!formData.guacDisableCopyRect} onChange={(e) => handleInputChange('guacDisableCopyRect', !e.checked)} /><label htmlFor="guac-copy-rect-create-rdp">📋 Copy-Rect</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-glyph-cache-create-rdp" checked={!!(!formData.guacDisableGlyphCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableGlyphCaching', !newValue); }} key={`glyph-create-${!formData.guacDisableGlyphCaching}`} /><label htmlFor="guac-glyph-cache-create-rdp">🔤 Glyph Caching</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-offscreen-cache-create-rdp" checked={!!(!formData.guacDisableOffscreenCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableOffscreenCaching', !newValue); }} key={`offscreen-create-${!formData.guacDisableOffscreenCaching}`} /><label htmlFor="guac-offscreen-cache-create-rdp">📱 Offscreen Caching</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-bitmap-cache-create-rdp" checked={!!(!formData.guacDisableBitmapCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableBitmapCaching', !newValue); }} key={`bitmap-create-${!formData.guacDisableBitmapCaching}`} /><label htmlFor="guac-bitmap-cache-create-rdp">🖼️ Bitmap Caching</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-copy-rect-create-rdp" checked={!!(!formData.guacDisableCopyRect)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableCopyRect', !newValue); }} key={`copyrect-create-${!formData.guacDisableCopyRect}`} /><label htmlFor="guac-copy-rect-create-rdp">📋 Copy-Rect</label></div>
                         </div>
                       </div>
                     </Fieldset>
@@ -1976,6 +2000,48 @@ export function ProtocolSelectionDialog({
   onHide,
   onSelectProtocol // Callback: (protocol) => void
 }) {
+  // Hook para igualar alturas de cards en cada sección
+  useEffect(() => {
+    if (!visible) return;
+    
+    const equalizeCardHeights = () => {
+      // Para cada sección, encontrar la altura máxima de las cards
+      const sections = document.querySelectorAll('.protocol-section');
+      sections.forEach((section) => {
+        const cards = section.querySelectorAll('.protocol-card');
+        if (cards.length === 0) return;
+        
+        // Resetear alturas para recalcular
+        cards.forEach(card => {
+          card.style.height = 'auto';
+        });
+        
+        // Encontrar la altura máxima
+        let maxHeight = 0;
+        cards.forEach(card => {
+          const height = card.offsetHeight;
+          if (height > maxHeight) {
+            maxHeight = height;
+          }
+        });
+        
+        // Aplicar la altura máxima a todas las cards
+        cards.forEach(card => {
+          card.style.height = `${maxHeight}px`;
+        });
+      });
+    };
+    
+    // Ejecutar después de que el DOM se actualice
+    setTimeout(equalizeCardHeights, 0);
+    
+    // Re-ejecutar cuando cambie el tamaño de la ventana
+    window.addEventListener('resize', equalizeCardHeights);
+    
+    return () => {
+      window.removeEventListener('resize', equalizeCardHeights);
+    };
+  }, [visible]);
   const protocolSections = [
     {
       title: 'Acceso Remoto',
