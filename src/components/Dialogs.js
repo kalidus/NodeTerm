@@ -2046,6 +2046,8 @@ export function ProtocolSelectionDialog({
     {
       title: 'Acceso Remoto',
       icon: 'pi pi-link',
+      color: '#2196F3',
+      gradient: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)',
       protocols: [
         {
           id: 'ssh',
@@ -2068,6 +2070,8 @@ export function ProtocolSelectionDialog({
     {
       title: 'Transferencia de Archivos',
       icon: 'pi pi-cloud',
+      color: '#9C27B0',
+      gradient: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
       protocols: [
         {
           id: 'sftp',
@@ -2133,7 +2137,14 @@ export function ProtocolSelectionDialog({
           <div key={section.title} className="protocol-section">
             <div className="protocol-section-header">
               <div className="protocol-section-title-group">
-                <span className="protocol-section-icon">
+                <span 
+                  className="protocol-section-icon"
+                  style={{ 
+                    background: section.gradient,
+                    '--section-color': section.color
+                  }}
+                  data-section-color={section.color}
+                >
                   <i className={section.icon}></i>
                 </span>
                 <h4 className="protocol-section-title">{section.title}</h4>

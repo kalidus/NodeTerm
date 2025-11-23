@@ -1065,10 +1065,44 @@
   color: white !important;
   font-size: 1.4rem;
   box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+  animation: iconPulse 3s ease-in-out infinite;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.protocol-dialog-header-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  animation: iconShine 3s ease-in-out infinite;
+}
+
+.protocol-dialog-header-icon:hover {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 4px 16px rgba(255, 152, 0, 0.5);
+}
+
+.protocol-dialog-header-icon:hover::before {
+  opacity: 1;
 }
 
 .protocol-dialog-header-icon i {
   font-size: 1.4rem;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  transition: transform 0.3s ease;
+}
+
+.protocol-dialog-header-icon:hover i {
+  transform: scale(1.1);
 }
 
 .protocol-dialog-header-content {
@@ -1126,18 +1160,107 @@
 
 .protocol-section-icon {
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--ui-content-bg) !important;
-  border: 2px solid var(--ui-button-primary) !important;
-  border-radius: 12px;
-  color: var(--ui-button-primary) !important;
-  font-size: 1.25rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  color: white !important;
+  font-size: 1.15rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Icono azul para Acceso Remoto */
+.protocol-section-icon[data-section-color="#2196F3"] {
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+  animation: iconPulseBlue 3s ease-in-out infinite;
+}
+
+.protocol-section-icon[data-section-color="#2196F3"]:hover {
+  box-shadow: 0 4px 16px rgba(33, 150, 243, 0.5);
+}
+
+/* Icono morado para Transferencia de Archivos */
+.protocol-section-icon[data-section-color="#9C27B0"] {
+  box-shadow: 0 2px 8px rgba(156, 39, 176, 0.3);
+  animation: iconPulsePurple 3s ease-in-out infinite;
+}
+
+.protocol-section-icon[data-section-color="#9C27B0"]:hover {
+  box-shadow: 0 4px 16px rgba(156, 39, 176, 0.5);
+}
+
+.protocol-section-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  animation: iconShine 3s ease-in-out infinite;
+}
+
+.protocol-section-icon:hover {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.protocol-section-icon:hover::before {
+  opacity: 1;
+}
+
+.protocol-section-icon i {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  transition: transform 0.3s ease;
+}
+
+.protocol-section-icon:hover i {
+  transform: scale(1.1);
+}
+
+@keyframes iconPulseBlue {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(33, 150, 243, 0.5);
+  }
+}
+
+@keyframes iconPulsePurple {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(156, 39, 176, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(156, 39, 176, 0.5);
+  }
+}
+
+@keyframes iconPulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(255, 152, 0, 0.5);
+  }
+}
+
+@keyframes iconShine {
+  0%, 100% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translateX(100%);
+  }
 }
 
 .protocol-section-title {
@@ -1462,9 +1585,9 @@
   }
 
   .protocol-section-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 1.15rem;
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
     border-radius: 10px;
   }
 
