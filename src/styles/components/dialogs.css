@@ -1126,6 +1126,13 @@
   align-items: stretch;
 }
 
+/* Asegurar que todas las cards tengan la misma altura */
+.protocol-section-grid .protocol-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .protocol-card {
   background: var(--ui-content-bg) !important;
   border: 1px solid var(--ui-dialog-border) !important;
@@ -1149,10 +1156,11 @@
 
 .protocol-card-content {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 1rem;
   padding: 1.25rem;
   height: 100%;
+  flex: 1;
 }
 
 .protocol-card-icon {
