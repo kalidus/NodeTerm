@@ -1926,47 +1926,60 @@ export function NewRDPConnectionDialog({
 
 // Código residual del UnifiedConnectionDialog eliminado completamente
 
-// --- ProtocolSelectionDialog: diálogo de selección de protocolo con cards ---
+// --- ProtocolSelectionDialog: diálogo de selección de protocolo con cards agrupadas por sección ---
 export function ProtocolSelectionDialog({
   visible,
   onHide,
   onSelectProtocol // Callback: (protocol) => void
 }) {
-  const protocols = [
+  const protocolSections = [
     {
-      id: 'ssh',
-      name: 'SSH',
-      description: 'Conexión segura para terminal remoto y transferencia de archivos',
-      icon: 'pi pi-terminal',
-      color: '#2196F3'
+      title: 'Acceso Remoto',
+      icon: 'pi pi-link',
+      protocols: [
+        {
+          id: 'ssh',
+          name: 'SSH',
+          description: 'Acceso remoto y seguro a línea de comandos. Ideal para administración de servidores y ejecución de comandos.',
+          icon: 'pi pi-terminal',
+          color: '#2196F3'
+        },
+        {
+          id: 'rdp',
+          name: 'RDP',
+          description: 'Control total del entorno gráfico de un PC con Windows. Soporte completo de sesiones y periféricos.',
+          icon: 'pi pi-desktop',
+          color: '#4CAF50'
+        }
+      ]
     },
     {
-      id: 'rdp',
-      name: 'RDP',
-      description: 'Escritorio remoto de Windows con soporte completo de sesiones',
-      icon: 'pi pi-desktop',
-      color: '#4CAF50'
-    },
-    {
-      id: 'sftp',
-      name: 'SFTP',
-      description: 'Transferencia segura de archivos mediante SSH',
-      icon: 'pi pi-folder-open',
-      color: '#FF9800'
-    },
-    {
-      id: 'ftp',
-      name: 'FTP',
-      description: 'Protocolo de transferencia de archivos estándar',
-      icon: 'pi pi-cloud-upload',
-      color: '#9C27B0'
-    },
-    {
-      id: 'scp',
-      name: 'SCP',
-      description: 'Copia segura de archivos mediante SSH',
-      icon: 'pi pi-copy',
-      color: '#00BCD4'
+      title: 'Transferencia de Archivos',
+      icon: 'pi pi-cloud',
+      protocols: [
+        {
+          id: 'sftp',
+          name: 'SFTP',
+          description: 'La forma más recomendada para mover archivos de forma encriptada, utilizando vías de seguridad de SSH.',
+          icon: 'pi pi-folder-open',
+          color: '#FF9800'
+        },
+        {
+          id: 'ftp',
+          name: 'FTP',
+          description: 'Protocolo clásico de transferencia. Rápido, pero *no encripta* los datos (no recomendado para información sensible).',
+          icon: 'pi pi-cloud-upload',
+          color: '#9C27B0',
+          isInsecure: true
+        },
+        {
+          id: 'scp',
+          name: 'SCP',
+          description: 'Herramienta rápida y segura para copiar archivos y directorios entre hosts remotos (basado en SSH).',
+          icon: 'pi pi-copy',
+          color: '#00BCD4'
+        }
+      ]
     }
   ];
 
@@ -1982,7 +1995,7 @@ export function ProtocolSelectionDialog({
       header="Seleccionar Tipo de Conexión"
       visible={visible}
       onHide={onHide}
-      style={{ width: '90vw', maxWidth: '900px' }}
+      style={{ width: '90vw', maxWidth: '1000px' }}
       modal
       className="protocol-selection-dialog"
     >
@@ -1993,39 +2006,60 @@ export function ProtocolSelectionDialog({
             <span className="protocol-selection-icon">
               <i className="pi pi-sitemap"></i>
             </span>
-            Crear Nueva Conexión
+            Seleccionar Tipo de Conexión
           </h3>
           <p className="protocol-selection-description">
-            Selecciona el tipo de conexión que deseas crear
+            Seleca al tipo de conexión que deseas crear
           </p>
         </div>
 
-        {/* Grid de protocolos */}
-        <div className="protocol-selection-grid">
-          {protocols.map((protocol) => (
-            <div
-              key={protocol.id}
-              className="protocol-card"
-              onClick={() => handleProtocolSelect(protocol.id)}
-            >
-              <div className="protocol-card-content">
-                <div 
-                  className="protocol-card-icon"
-                  style={{ background: protocol.color }}
-                >
-                  <i className={protocol.icon}></i>
-                </div>
-                <div className="protocol-card-info">
-                  <h4 className="protocol-card-name">{protocol.name}</h4>
-                  <p className="protocol-card-description">{protocol.description}</p>
-                </div>
-                <div className="protocol-card-arrow">
-                  <i className="pi pi-chevron-right"></i>
-                </div>
+        {/* Secciones agrupadas */}
+        {protocolSections.map((section) => (
+          <div key={section.title} className="protocol-section">
+            <div className="protocol-section-header">
+              <div className="protocol-section-title-group">
+                <span className="protocol-section-icon">
+                  <i className={section.icon}></i>
+                </span>
+                <h4 className="protocol-section-title">{section.title}</h4>
               </div>
             </div>
-          ))}
-        </div>
+
+            {/* Grid de protocolos en esta sección */}
+            <div className="protocol-section-grid">
+              {section.protocols.map((protocol) => (
+                <div
+                  key={protocol.id}
+                  className="protocol-card"
+                  onClick={() => handleProtocolSelect(protocol.id)}
+                >
+                  <div className="protocol-card-content">
+                    <div 
+                      className="protocol-card-icon"
+                      style={{ background: protocol.color }}
+                    >
+                      <i className={protocol.icon}></i>
+                    </div>
+                    <div className="protocol-card-info">
+                      <div className="protocol-card-header">
+                        <h4 className="protocol-card-name">{protocol.name}</h4>
+                        {protocol.isInsecure && (
+                          <span className="protocol-card-warning" title="Conexión no encriptada">
+                            <i className="pi pi-exclamation-triangle"></i>
+                          </span>
+                        )}
+                      </div>
+                      <p className="protocol-card-description">{protocol.description}</p>
+                    </div>
+                    <div className="protocol-card-arrow">
+                      <i className="pi pi-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </Dialog>
   );
