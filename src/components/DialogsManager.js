@@ -268,6 +268,16 @@ const DialogsManager = ({
         console.warn('Protocolo no reconocido:', protocolId);
     }
   }, [setShowFileConnectionDialog, setFileConnectionProtocol]);
+
+  // Wrapper para createNewSSH que también cierra el diálogo NewSSHConnectionDialog
+  const handleCreateNewSSH = useCallback(() => {
+    // Llamar a la función original
+    if (createNewSSH && typeof createNewSSH === 'function') {
+      createNewSSH();
+    }
+    // Cerrar el diálogo NewSSHConnectionDialog
+    setShowNewSSHDialog(false);
+  }, [createNewSSH]);
   
   return (
     <>
@@ -435,7 +445,7 @@ const DialogsManager = ({
         sshAutoCopyPassword={sshAutoCopyPassword}
         setSSHAutoCopyPassword={setSSHAutoCopyPassword}
         foldersOptions={getAllFolders(nodes)}
-        onSSHConfirm={createNewSSH}
+        onSSHConfirm={handleCreateNewSSH}
         sshLoading={false}
       />
 
