@@ -1994,215 +1994,196 @@ export function NewRDPConnectionDialog({
 
 // Código residual del UnifiedConnectionDialog eliminado completamente
 
-// --- ProtocolSelectionDialog: diálogo de selección de protocolo con cards agrupadas por sección ---
+// --- ProtocolSelectionDialog: diálogo de selección de protocolo con diseño de dos paneles ---
 export function ProtocolSelectionDialog({
   visible,
   onHide,
   onSelectProtocol // Callback: (protocol) => void
 }) {
-  // Hook para igualar alturas de cards en cada sección
+  const [selectedCategory, setSelectedCategory] = useState('Acceso Remoto');
+
+  // Resetear categoría cuando se abre el diálogo
   useEffect(() => {
-    if (!visible) return;
-    
-    const equalizeCardHeights = () => {
-      // Para cada sección, encontrar la altura máxima de las cards
-      const sections = document.querySelectorAll('.protocol-section');
-      sections.forEach((section) => {
-        const cards = section.querySelectorAll('.protocol-card');
-        if (cards.length === 0) return;
-        
-        // Resetear alturas para recalcular
-        cards.forEach(card => {
-          card.style.height = 'auto';
-        });
-        
-        // Encontrar la altura máxima
-        let maxHeight = 0;
-        cards.forEach(card => {
-          const height = card.offsetHeight;
-          if (height > maxHeight) {
-            maxHeight = height;
-          }
-        });
-        
-        // Aplicar la altura máxima a todas las cards
-        cards.forEach(card => {
-          card.style.height = `${maxHeight}px`;
-        });
-      });
-    };
-    
-    // Ejecutar después de que el DOM se actualice
-    setTimeout(equalizeCardHeights, 0);
-    
-    // Re-ejecutar cuando cambie el tamaño de la ventana
-    window.addEventListener('resize', equalizeCardHeights);
-    
-    return () => {
-      window.removeEventListener('resize', equalizeCardHeights);
-    };
+    if (visible) {
+      setSelectedCategory('Acceso Remoto');
+    }
   }, [visible]);
+
   const protocolSections = [
     {
+      id: 'Acceso Remoto',
       title: 'Acceso Remoto',
-      icon: 'pi pi-link',
-      color: '#2196F3',
-      gradient: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)',
       protocols: [
         {
           id: 'ssh',
-          name: 'SSH',
-          description: 'Acceso remoto y seguro a línea de comandos. Ideal para administración de servidores y ejecución de comandos.',
+          name: 'SSH (Secure Shell)',
+          fullName: 'SSH (Secure Shell)',
+          description: 'Acceso seguro a la línea de comandos de sistemas remotos (Linux/Unix). Esencial para administración de servidores y desarrollo.',
           icon: 'pi pi-server',
-          color: '#2196F3',
-          gradient: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)'
+          iconColor: '#2196F3',
+          advantages: [
+            'Alta seguridad',
+            'Versatilidad para tunelización y reenvío de puertos'
+          ]
         },
         {
           id: 'rdp',
-          name: 'RDP',
-          description: 'Control total del entorno gráfico de un PC con Windows. Soporte completo de sesiones y periféricos.',
+          name: 'RDP (Remote Desktop Protocol)',
+          fullName: 'RDP (Remote Desktop Protocol)',
+          description: 'Acceso gráfico completo a escritorios de Windows. Permite control visual de un PC remoto.',
           icon: 'pi pi-desktop',
-          color: '#4CAF50',
-          gradient: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)'
+          iconColor: '#4CAF50',
+          advantages: [
+            'Experiencia de usuario familiar para entornos Windows',
+            'Soporte para múltiples sesiones'
+          ]
         }
       ]
     },
     {
+      id: 'Transferencia de Archivos',
       title: 'Transferencia de Archivos',
-      icon: 'pi pi-cloud',
-      color: '#9C27B0',
-      gradient: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
       protocols: [
         {
           id: 'sftp',
           name: 'SFTP',
+          fullName: 'SFTP (SSH File Transfer Protocol)',
           description: 'La forma más recomendada para mover archivos de forma encriptada, utilizando vías de seguridad de SSH.',
           icon: 'pi pi-folder-open',
-          color: '#FF9800',
-          gradient: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)',
+          iconColor: '#FF9800',
+          advantages: [
+            'Transferencia encriptada y segura',
+            'Basado en SSH, ampliamente soportado'
+          ],
           isRecommended: true
         },
         {
           id: 'ftp',
           name: 'FTP',
+          fullName: 'FTP (File Transfer Protocol)',
           description: 'Protocolo clásico de transferencia. Rápido, pero *no encripta* los datos (no recomendado para información sensible).',
           icon: 'pi pi-cloud-upload',
-          color: '#9C27B0',
-          gradient: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
+          iconColor: '#9C27B0',
+          advantages: [
+            'Rápido y eficiente',
+            'Amplia compatibilidad'
+          ],
           isInsecure: true
         },
         {
           id: 'scp',
           name: 'SCP',
+          fullName: 'SCP (Secure Copy Protocol)',
           description: 'Herramienta rápida y segura para copiar archivos y directorios entre hosts remotos (basado en SSH).',
           icon: 'pi pi-copy',
-          color: '#00BCD4',
-          gradient: 'linear-gradient(135deg, #00BCD4 0%, #0097A7 100%)'
+          iconColor: '#00BCD4',
+          advantages: [
+            'Seguro y rápido',
+            'Basado en SSH'
+          ]
+        }
+      ]
+    },
+    {
+      id: 'Gestión de Contraseñas',
+      title: 'Gestión de Contraseñas',
+      protocols: [
+        {
+          id: 'password',
+          name: 'Nueva Contraseña',
+          fullName: 'Nueva Contraseña',
+          description: 'Almacena y gestiona contraseñas de forma segura. Encriptación AES-256-GCM con master password opcional.',
+          icon: 'pi pi-lock',
+          iconColor: '#E91E63',
+          advantages: [
+            'Encriptación segura AES-256-GCM',
+            'Organización en carpetas y grupos'
+          ]
         }
       ]
     }
   ];
 
   const handleProtocolSelect = (protocolId) => {
+    if (protocolId === 'password') {
+      // Cambiar a la vista de passwords y abrir el diálogo de nueva contraseña
+      window.dispatchEvent(new CustomEvent('open-password-manager'));
+      // Pequeño delay para asegurar que la vista cambie antes de abrir el diálogo
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('open-new-password-dialog'));
+      }, 100);
+      onHide();
+      return;
+    }
+    
     if (onSelectProtocol) {
       onSelectProtocol(protocolId);
     }
     onHide();
   };
 
+  const currentSection = protocolSections.find(section => section.id === selectedCategory) || protocolSections[0];
+
   return (
     <Dialog
-      header={
-        <div className="protocol-dialog-header-custom">
-          <span className="protocol-dialog-header-icon">
-            <i className="pi pi-th-large"></i>
-          </span>
-          <div className="protocol-dialog-header-content">
-            <h3 className="protocol-dialog-header-title">Seleccionar Tipo de Conexión</h3>
-            <p className="protocol-dialog-header-description">
-              Selecciona el tipo de conexión que deseas crear
-            </p>
-          </div>
-        </div>
-      }
+      header="Configuración de Nueva Conexión"
       visible={visible}
       onHide={onHide}
-      style={{ width: '90vw', maxWidth: '1000px' }}
+      style={{ width: '90vw', maxWidth: '1200px' }}
       modal
-      className="protocol-selection-dialog"
+      className="protocol-selection-dialog-new"
+      contentStyle={{ padding: '0', overflow: 'hidden' }}
     >
-      <div className="protocol-selection-container">
-        {/* Secciones agrupadas */}
-        {protocolSections.map((section) => (
-          <div key={section.title} className="protocol-section">
-            <div className="protocol-section-header">
-              <div className="protocol-section-title-group">
-                <span 
-                  className="protocol-section-icon"
-                  style={{ 
-                    background: section.gradient,
-                    '--section-color': section.color
-                  }}
-                  data-section-color={section.color}
-                >
-                  <i className={section.icon}></i>
-                </span>
-                <h4 className="protocol-section-title">{section.title}</h4>
+      <div className="protocol-selection-layout">
+        {/* Panel izquierdo: Categorías */}
+        <div className="protocol-categories-panel">
+          {protocolSections.map((section) => (
+            <div
+              key={section.id}
+              className={`protocol-category-item ${selectedCategory === section.id ? 'active' : ''}`}
+              onClick={() => setSelectedCategory(section.id)}
+            >
+              <span className="protocol-category-title">{section.title}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Panel derecho: Protocolos */}
+        <div className="protocol-options-panel">
+          {currentSection.protocols.map((protocol) => (
+            <div key={protocol.id} className="protocol-option-card">
+              <div className="protocol-option-icon" style={{ backgroundColor: protocol.iconColor }}>
+                <i className={protocol.icon}></i>
+              </div>
+              <div className="protocol-option-content">
+                <h3 className="protocol-option-title">{protocol.fullName || protocol.name}</h3>
+                <p className="protocol-option-description">{protocol.description}</p>
+                <div className="protocol-option-advantages">
+                  <ul className="protocol-advantages-list">
+                    {protocol.advantages.map((advantage, idx) => (
+                      <li key={idx}>{advantage}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <div className="protocol-option-actions">
+                <Button
+                  label={
+                    protocol.id === 'rdp' 
+                      ? 'Configurar RDP' 
+                      : protocol.id === 'password' 
+                        ? 'Nueva Contraseña' 
+                        : protocol.id === 'ssh'
+                          ? 'Configurar SSH'
+                          : `Configurar ${protocol.name}`
+                  }
+                  className={`protocol-option-button ${protocol.id === 'rdp' ? 'secondary' : 'primary'}`}
+                  onClick={() => handleProtocolSelect(protocol.id)}
+                />
               </div>
             </div>
-
-            {/* Grid de protocolos en esta sección */}
-            <div className="protocol-section-grid">
-              {section.protocols.map((protocol) => (
-                <div
-                  key={protocol.id}
-                  className="protocol-card"
-                  onClick={() => handleProtocolSelect(protocol.id)}
-                  style={{ '--protocol-color': protocol.color }}
-                >
-                  {/* Efecto de brillo de fondo */}
-                  <div className="protocol-card-glow" style={{ background: protocol.gradient || protocol.color }}></div>
-                  
-                  <div className="protocol-card-content">
-                    <div 
-                      className="protocol-card-icon-wrapper"
-                    >
-                      <div 
-                        className="protocol-card-icon"
-                        style={{ background: protocol.gradient || protocol.color }}
-                      >
-                        <i className={protocol.icon}></i>
-                      </div>
-                    </div>
-                    <div className="protocol-card-info">
-                      <div className="protocol-card-header">
-                        <h4 className="protocol-card-name">{protocol.name}</h4>
-                        <div className="protocol-card-badges">
-                          {protocol.isRecommended && (
-                            <span className="protocol-card-badge protocol-card-badge-recommended" title="Recomendado">
-                              <i className="pi pi-star-fill"></i>
-                              <span>Recomendado</span>
-                            </span>
-                          )}
-                          {protocol.isInsecure && (
-                            <span className="protocol-card-badge protocol-card-badge-warning" title="Conexión no encriptada">
-                              <i className="pi pi-exclamation-triangle"></i>
-                              <span>No seguro</span>
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <p className="protocol-card-description">{protocol.description}</p>
-                    </div>
-                    <div className="protocol-card-arrow">
-                      <i className="pi pi-chevron-right"></i>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </Dialog>
   );

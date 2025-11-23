@@ -220,6 +220,18 @@ const PasswordManagerSidebar = ({
       }
     };
     window.addEventListener('import-passwords-to-manager', handler);
+    
+    // Listener para abrir diálogo de nueva contraseña desde el diálogo de selección de protocolo
+    const handleOpenNewPasswordDialog = () => {
+      resetForm();
+      setShowPasswordDialog(true);
+    };
+    window.addEventListener('open-new-password-dialog', handleOpenNewPasswordDialog);
+    
+    return () => {
+      window.removeEventListener('import-passwords-to-manager', handler);
+      window.removeEventListener('open-new-password-dialog', handleOpenNewPasswordDialog);
+    };
     return () => window.removeEventListener('import-passwords-to-manager', handler);
   }, [passwordNodes, iconTheme, showToast]);
 

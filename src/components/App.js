@@ -1689,8 +1689,16 @@ const App = () => {
 
   // Listener para abrir diálogo unificado de nueva conexión
   useEffect(() => {
-    const handleOpenNewUnifiedConnectionDialog = () => {
-      if (openNewUnifiedConnectionDialog) {
+    const handleOpenNewUnifiedConnectionDialog = (e) => {
+      const activeTab = e?.detail?.activeTab;
+      if (activeTab === 'password') {
+        // Abrir diálogo unificado directamente en pestaña Password
+        if (setShowUnifiedConnectionDialog) {
+          setShowUnifiedConnectionDialog(true);
+          // Guardar en window para que el diálogo sepa qué pestaña abrir
+          window.__unifiedDialogActiveTab = 'password';
+        }
+      } else if (openNewUnifiedConnectionDialog) {
         openNewUnifiedConnectionDialog();
       }
     };
@@ -1699,7 +1707,7 @@ const App = () => {
     return () => {
       window.removeEventListener('open-new-unified-connection-dialog', handleOpenNewUnifiedConnectionDialog);
     };
-  }, [openNewUnifiedConnectionDialog]);
+  }, [openNewUnifiedConnectionDialog, setShowUnifiedConnectionDialog]);
 
   // Desactivar reactivación automática al cambiar rdpTabs si hay activación forzada u orden explícito
   useEffect(() => {
