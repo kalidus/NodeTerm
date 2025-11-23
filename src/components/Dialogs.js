@@ -2754,7 +2754,7 @@ export function ProtocolSelectionDialog({
       header={headerTemplate}
       visible={visible}
       onHide={onHide}
-      style={{ width: '90vw', maxWidth: '1200px' }}
+      style={{ width: '70vw', maxWidth: '850px' }}
       modal
       className="protocol-selection-dialog-new"
       contentStyle={{ padding: '0', overflow: 'hidden' }}
