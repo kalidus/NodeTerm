@@ -2173,7 +2173,12 @@ export function ProtocolSelectionDialog({
         {/* Panel derecho: Protocolos */}
         <div className="protocol-options-panel">
           {currentSection.protocols.map((protocol) => (
-            <div key={protocol.id} className="protocol-option-card" data-protocol={protocol.id}>
+            <div 
+              key={protocol.id} 
+              className="protocol-option-card" 
+              data-protocol={protocol.id}
+              onClick={() => protocol.id !== 'vnc' && handleProtocolSelect(protocol.id)}
+            >
               <div className="protocol-option-icon" style={{ backgroundColor: protocol.iconColor }}>
                 <i className={protocol.icon}></i>
               </div>
@@ -2188,23 +2193,6 @@ export function ProtocolSelectionDialog({
                   </ul>
                 </div>
               </div>
-              {protocol.id !== 'vnc' && (
-                <div className="protocol-option-actions">
-                  <Button
-                    label={
-                      protocol.id === 'rdp' 
-                        ? 'Configurar RDP' 
-                        : protocol.id === 'password' 
-                          ? 'Nueva Contraseña' 
-                          : protocol.id === 'ssh'
-                            ? 'Configurar SSH'
-                            : `Configurar ${protocol.name}`
-                    }
-                    className={`protocol-option-button ${protocol.id === 'rdp' ? 'secondary' : 'primary'}`}
-                    onClick={() => handleProtocolSelect(protocol.id)}
-                  />
-                </div>
-              )}
             </div>
           ))}
         </div>
