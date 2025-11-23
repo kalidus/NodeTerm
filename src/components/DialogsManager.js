@@ -9,7 +9,7 @@ import { InputNumber } from 'primereact/inputnumber';
 
 import SettingsDialog from './SettingsDialog';
 import SyncSettingsDialog from './SyncSettingsDialog';
-import { SSHDialog, FolderDialog, GroupDialog, EditSSHConnectionDialog, EditRDPConnectionDialog, FileConnectionDialog, ProtocolSelectionDialog, NewSSHConnectionDialog, NewRDPConnectionDialog } from './Dialogs';
+import { SSHDialog, FolderDialog, GroupDialog, EditSSHConnectionDialog, EditRDPConnectionDialog, FileConnectionDialog, ProtocolSelectionDialog, NewSSHConnectionDialog, NewRDPConnectionDialog, NewVNCConnectionDialog } from './Dialogs';
 
 /**
  * DialogsManager - Componente que centraliza la gestión de todos los diálogos
@@ -146,8 +146,10 @@ const DialogsManager = ({
   saveEditFolder,
   createNewGroup,
   handleSaveRdpToSidebar,
+  handleSaveVncToSidebar,
   handleSaveFileConnectionToSidebar,
   closeRdpDialog,
+  openNewVncDialog,
   getAllFolders,
   nodes,
   
@@ -240,6 +242,7 @@ const DialogsManager = ({
   // Estados para los nuevos diálogos de creación
   const [showNewSSHDialog, setShowNewSSHDialog] = useState(false);
   const [showNewRDPDialog, setShowNewRDPDialog] = useState(false);
+  const [showNewVNCDialog, setShowNewVNCDialog] = useState(false);
 
   // Handler para cuando se selecciona un protocolo
   const handleProtocolSelect = useCallback((protocolId) => {
@@ -256,9 +259,8 @@ const DialogsManager = ({
         setShowNewRDPDialog(true);
         break;
       case 'vnc':
-        // Abrir nuevo diálogo RDP (Guacamole soporta VNC también)
-        // TODO: Crear diálogo específico para VNC en el futuro
-        setShowNewRDPDialog(true);
+        // Abrir nuevo diálogo VNC
+        setShowNewVNCDialog(true);
         break;
       case 'sftp':
       case 'ftp':
@@ -279,6 +281,7 @@ const DialogsManager = ({
     // Cerrar el diálogo actual
     setShowNewSSHDialog(false);
     setShowNewRDPDialog(false);
+    setShowNewVNCDialog(false);
     setShowFileConnectionDialog(false);
     // Abrir el diálogo de selección de protocolo
     setShowProtocolSelectionDialog(true);
@@ -549,6 +552,14 @@ const DialogsManager = ({
         setFileConnectionTargetFolder={setFileConnectionTargetFolder ?? (() => console.warn('setFileConnectionTargetFolder not provided'))}
         onFileConnectionConfirm={stableFileConnectionHandler}
         fileConnectionLoading={false}
+      />
+
+      {/* Diálogo: Nueva Conexión VNC */}
+      <NewVNCConnectionDialog
+        visible={showNewVNCDialog}
+        onHide={() => setShowNewVNCDialog(false)}
+        onGoBack={handleGoBackToProtocolSelection}
+        onSaveToSidebar={handleSaveVncToSidebar}
       />
 
       {/* Diálogo de selección de protocolo */}

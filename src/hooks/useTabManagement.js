@@ -194,7 +194,7 @@ export const useTabManagement = (toast, {
           groupId: newGroup.id
         };
         setSshTabs(prev => [...prev, sshTab]);
-      } else if (session.type === 'rdp' || session.type === 'rdp-guacamole') {
+      } else if (session.type === 'rdp' || session.type === 'rdp-guacamole' || session.type === 'vnc' || session.type === 'vnc-guacamole') {
         // Buscar el nodo original en el sidebar para obtener la configuración completa
         let matchedSidebarNode = null;
         if (session.host && session.username) {
@@ -578,8 +578,8 @@ export const useTabManagement = (toast, {
       }
       const newRdpTabs = rdpTabs.filter(t => t.key !== closedTab.key);
       setRdpTabs(newRdpTabs);
-    } else if (closedTab.type === 'rdp-guacamole') {
-      // Cerrar pestañas RDP-Guacamole
+    } else if (closedTab.type === 'rdp-guacamole' || closedTab.type === 'vnc-guacamole') {
+      // Cerrar pestañas RDP-Guacamole o VNC-Guacamole
       try {
         if (externalTerminalRefs?.current) {
           const ref = externalTerminalRefs.current[closedTab.key];

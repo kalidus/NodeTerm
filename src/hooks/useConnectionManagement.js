@@ -686,10 +686,169 @@ export const useConnectionManagement = ({
     }
   }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, setRdpTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setOpenTabOrder, rdpTabs, sshTabs, toast]);
 
+  // === FUNCIÓN PARA ABRIR CONEXIONES VNC ===
+  const onOpenVncConnection = useCallback((node, nodes) => {
+    // Si no estamos en el grupo Home, cambiar a Home primero
+    if (activeGroupId !== null) {
+      const currentGroupKey = activeGroupId || 'no-group';
+      setGroupActiveIndices(prev => ({
+        ...prev,
+        [currentGroupKey]: activeTabIndex
+      }));
+      setActiveGroupId(null);
+    }
+
+    // Manejar tanto conexiones desde sidebar (node.data) como desde ConnectionHistory (node directo)
+    const nodeData = node.data || node; // Fallback para ConnectionHistory
+
+    // Si viene desde Favoritos/Recientes (sin .data), usar la información guardada directamente
+    let baseVnc = nodeData;
+    if (!node.data) {
+      // Para conexiones de favoritos, usar la información guardada directamente
+      const hostValue = node.host || node.hostname || '';
+      baseVnc = {
+        server: hostValue,
+        host: hostValue,
+        hostname: hostValue,
+        password: node.password || '',
+        port: node.port || 5900,
+        clientType: node.clientType || 'guacamole',
+        type: node.type || 'vnc-guacamole',
+        resolution: node.resolution || '1024x768',
+        colors: node.colors || '32',
+        // Opciones avanzadas de VNC
+        readOnly: node.readOnly || false,
+        enableCompression: node.enableCompression !== false, // Por defecto true
+        imageQuality: node.imageQuality || 'lossless', // lossless, lossy-low, lossy-medium, lossy-high
+        autoReconnect: node.autoReconnect !== false, // Por defecto true
+        autoResize: node.autoResize !== false, // Por defecto true
+        redirectClipboard: node.redirectClipboard !== false,
+        guacDpi: node.guacDpi || 96
+      };
+      
+      // Solo si no hay password guardado, intentar buscar en la sidebar como fallback
+      if (!baseVnc.password) {
+        const matchesVnc = (n) => {
+          if (!n || !n.data) return false;
+          const isVnc = n.data.type === 'vnc' || n.data.type === 'vnc-guacamole';
+          if (!isVnc) return false;
+          const hostA = (n.data.server || n.data.host || n.data.hostname || '').toLowerCase();
+          const hostB = (baseVnc.server || baseVnc.host || baseVnc.hostname || '').toLowerCase();
+          const portA = n.data.port || 5900;
+          const portB = baseVnc.port || 5900;
+          return hostA === hostB && portA === portB;
+        };
+        const dfs = (list) => {
+          if (!Array.isArray(list)) return;
+          for (const n of list) {
+            if (matchesVnc(n)) { 
+              // Usar la información de la sidebar para completar los campos faltantes
+              baseVnc.password = n.data.password || baseVnc.password;
+              baseVnc.clientType = n.data.clientType || baseVnc.clientType;
+              baseVnc.resolution = n.data.resolution || baseVnc.resolution;
+              baseVnc.colors = n.data.colors || baseVnc.colors;
+              baseVnc.readOnly = n.data.readOnly !== undefined ? n.data.readOnly : baseVnc.readOnly;
+              baseVnc.enableCompression = n.data.enableCompression !== undefined ? n.data.enableCompression : baseVnc.enableCompression;
+              baseVnc.imageQuality = n.data.imageQuality || baseVnc.imageQuality;
+              baseVnc.autoReconnect = n.data.autoReconnect !== undefined ? n.data.autoReconnect : baseVnc.autoReconnect;
+              baseVnc.autoResize = n.data.autoResize !== undefined ? n.data.autoResize : baseVnc.autoResize;
+              baseVnc.redirectClipboard = n.data.redirectClipboard !== undefined ? n.data.redirectClipboard : baseVnc.redirectClipboard;
+              baseVnc.guacDpi = n.data.guacDpi || baseVnc.guacDpi;
+              return; 
+            }
+            if (n.children && n.children.length > 0) dfs(n.children);
+          }
+        };
+        dfs(nodes);
+      }
+    }
+    const isGuacamoleVNC = baseVnc.clientType === 'guacamole' || baseVnc.type === 'vnc-guacamole';
+    
+    // Registrar como reciente (VNC) - incluir todas las credenciales y configuración
+    try {
+      connectionStore.recordRecent({
+        type: 'vnc-guacamole',
+        name: node.label || node.name,
+        host: baseVnc.server || baseVnc.host || baseVnc.hostname,
+        port: baseVnc.port || 5900,
+        password: baseVnc.password || '',
+        clientType: baseVnc.clientType || 'guacamole',
+        resolution: baseVnc.resolution || '1024x768',
+        colors: baseVnc.colors || '32',
+        // Opciones avanzadas de VNC
+        readOnly: baseVnc.readOnly || false,
+        enableCompression: baseVnc.enableCompression !== false,
+        imageQuality: baseVnc.imageQuality || 'lossless',
+        autoReconnect: baseVnc.autoReconnect !== false,
+        autoResize: baseVnc.autoResize !== false,
+        redirectClipboard: baseVnc.redirectClipboard !== false,
+        guacDpi: baseVnc.guacDpi || 96
+      }, 10);
+    } catch (e) { /* noop */ }
+    
+    if (isGuacamoleVNC) {
+      // === VNC-Guacamole como pestañas independientes ===
+      // Calcular resolución dinámica si autoResize está activado
+      let dynamicWidth = parseInt(baseVnc.resolution?.split('x')[0]) || 1024;
+      let dynamicHeight = parseInt(baseVnc.resolution?.split('x')[1]) || 768;
+      
+      if (baseVnc.autoResize) {
+        // Usar dimensiones dinámicas basadas en la ventana
+        dynamicWidth = Math.floor(window.innerWidth * 0.8);
+        dynamicHeight = Math.floor(window.innerHeight * 0.7);
+      }
+      
+      const vncConfig = {
+        connectionType: 'vnc', // Indicar que es VNC
+        hostname: baseVnc.server || baseVnc.host || baseVnc.hostname,
+        password: baseVnc.password || '',
+        port: baseVnc.port || 5900,
+        width: dynamicWidth,  // ← NÚMEROS, no string
+        height: dynamicHeight, // ← NÚMEROS, no string
+        dpi: baseVnc.guacDpi || 96,
+        colorDepth: baseVnc.colorDepth || parseInt(baseVnc.colors) || 32,
+        // Campos específicos de VNC
+        autoResize: baseVnc.autoResize === true,
+        freezeInitialResize: true,
+        readOnly: baseVnc.readOnly === true,
+        enableCompression: baseVnc.enableCompression !== false,
+        imageQuality: baseVnc.imageQuality || 'lossless',
+        autoReconnect: baseVnc.autoReconnect !== false,
+        redirectClipboard: baseVnc.redirectClipboard === true
+      };
+
+      // Crear pestaña VNC-Guacamole igual que RDP-Guacamole
+      setRdpTabs(prevTabs => {
+        const tabId = `${node.key || node.id || 'vnc'}_${Date.now()}`;
+        const connectionName = node.label || node.name || 'VNC Connection';
+        const originalKey = node.key || node.id || tabId;
+        
+        const newTab = {
+          key: tabId,
+          label: connectionName,
+          originalKey: originalKey,
+          rdpConfig: vncConfig, // Reutilizar rdpConfig para mantener compatibilidad con GuacamoleTerminal
+          type: 'vnc-guacamole',
+          groupId: null
+        };
+        // Marcar y activar usando la clave REAL creada y registrar orden de apertura
+        setLastOpenedTabKey(tabId);
+        setOnCreateActivateTabKey(tabId);
+        setActiveTabIndex(1);
+        setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+        setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
+        return [newTab, ...prevTabs];
+      });
+      
+      return; // Salir aquí para VNC-Guacamole
+    }
+  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, setRdpTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setOpenTabOrder, toast]);
+
   // === RETORNO DEL HOOK ===
   return {
     onOpenSSHConnection,
     onOpenRdpConnection,
+    onOpenVncConnection,
     onOpenFileConnection,
     openFileExplorer
   };

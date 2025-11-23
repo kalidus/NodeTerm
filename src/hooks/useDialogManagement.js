@@ -43,6 +43,17 @@ export const useDialogManagement = () => {
   const [rdpName, setRdpName] = useState('');
   const [rdpServer, setRdpServer] = useState('');
   const [rdpUsername, setRdpUsername] = useState('');
+
+  // ============ ESTADOS DE FORMULARIOS VNC ============
+  
+  const [vncName, setVncName] = useState('');
+  const [vncServer, setVncServer] = useState('');
+  const [vncPassword, setVncPassword] = useState('');
+  const [vncPort, setVncPort] = useState(5900);
+  const [vncTargetFolder, setVncTargetFolder] = useState(null);
+  const [vncNodeData, setVncNodeData] = useState(null);
+  const [editingVncNode, setEditingVncNode] = useState(null);
+  const [showVncDialog, setShowVncDialog] = useState(false);
   const [rdpPassword, setRdpPassword] = useState('');
   const [rdpPort, setRdpPort] = useState(3389);
 
@@ -226,6 +237,16 @@ export const useDialogManagement = () => {
     rdpUsername, setRdpUsername,
     rdpPassword, setRdpPassword,
     rdpPort, setRdpPort,
+    
+    // Estados de formularios VNC
+    vncName, setVncName,
+    vncServer, setVncServer,
+    vncPassword, setVncPassword,
+    vncPort, setVncPort,
+    vncTargetFolder, setVncTargetFolder,
+    vncNodeData, setVncNodeData,
+    editingVncNode, setEditingVncNode,
+    showVncDialog, setShowVncDialog,
     rdpClientType, setRdpClientType,
     rdpGuacSecurity, setRdpGuacSecurity,
     rdpTargetFolder, setRdpTargetFolder,

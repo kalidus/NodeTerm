@@ -781,6 +781,7 @@ const App = () => {
   const {
     onOpenSSHConnection,
     onOpenRdpConnection,
+    onOpenVncConnection,
     onOpenFileConnection,
     openFileExplorer
   } = useConnectionManagement({
@@ -893,7 +894,7 @@ const App = () => {
   } = useSidebarManagement(toast, {
     activeGroupId, setActiveGroupId, activeTabIndex, setActiveTabIndex,
     setGroupActiveIndices, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey,
-    getFilteredTabs, openFileExplorer, openInSplit, onOpenRdpConnection,
+    getFilteredTabs, openFileExplorer, openInSplit, onOpenRdpConnection, onOpenVncConnection,
     homeTabs, fileExplorerTabs, sshTabs
   });
 
@@ -1090,9 +1091,11 @@ const App = () => {
     saveEditFolder,
     openEditSSHDialog,
     openNewRdpDialog,
+    openNewVncDialog,
     closeRdpDialog,
     openEditRdpDialog,
     handleSaveRdpToSidebar,
+    handleSaveVncToSidebar,
     handleSaveFileConnectionToSidebar,
     openEditFileConnectionDialog,
     openNewUnifiedConnectionDialog,
@@ -1988,7 +1991,7 @@ const App = () => {
     // Recording props
     setSshTabs
   }), [
-    onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, handleLoadGroupFromFavorites,
+    onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, onOpenVncConnection, handleLoadGroupFromFavorites,
     openEditRdpDialog, openEditSSHDialog, nodes, localFontFamily, localFontSize,
     localLinuxTerminalTheme, localPowerShellTheme, iconTheme, explorerFont,
     explorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
@@ -2013,6 +2016,7 @@ const App = () => {
         findAllConnections={findAllConnections}
         onOpenSSHConnection={onOpenSSHConnection}
         onOpenRdpConnection={onOpenRdpConnection}
+        onOpenVncConnection={onOpenVncConnection}
         onShowImportDialog={setShowImportDialog}
         masterKey={masterKey}
         secureStorage={secureStorage}
@@ -2031,6 +2035,7 @@ const App = () => {
         }}
         openEditSSHDialog={openEditSSHDialog}
         openEditRdpDialog={openEditRdpDialog}
+        openNewVncDialog={openNewVncDialog}
         onQuickImportFromSource={async (source) => {
           try {
             if (!source?.filePath) {
@@ -2296,6 +2301,7 @@ const App = () => {
         saveEditFolder={saveEditFolder}
         createNewGroup={createNewGroup}
         handleSaveRdpToSidebar={handleSaveRdpToSidebar}
+        handleSaveVncToSidebar={handleSaveVncToSidebar}
         handleSaveFileConnectionToSidebar={handleSaveFileConnectionToSidebar}
         // Exponer globalmente para acceso directo
         onFileConnectionSave={(fileData) => {

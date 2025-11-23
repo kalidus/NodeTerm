@@ -36,6 +36,8 @@ export const TAB_TYPES = {
   SPLIT: 'split',
   RDP: 'rdp',
   RDP_GUACAMOLE: 'rdp-guacamole',
+  VNC: 'vnc',
+  VNC_GUACAMOLE: 'vnc-guacamole',
   GUACAMOLE: 'guacamole',
   EXPLORER: 'explorer',
   PASSWORD: 'password',

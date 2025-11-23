@@ -28,6 +28,7 @@ const TabContentRenderer = React.memo(({
   onCreateSSHConnection,
   openFolderDialog,
   onOpenRdpConnection,
+  onOpenVncConnection,
   handleLoadGroupFromFavorites,
   openEditRdpDialog,
   openEditSSHDialog,
@@ -74,11 +75,12 @@ const TabContentRenderer = React.memo(({
         onCreateSSHConnection={onCreateSSHConnection}
         onCreateFolder={() => openFolderDialog(null)}
         onCreateRdpConnection={onOpenRdpConnection}
+        onCreateVncConnection={onOpenVncConnection}
         onLoadGroup={handleLoadGroupFromFavorites}
         onEditConnection={(connection) => {
           // Intentar construir un nodo temporal según el tipo para reutilizar los editores existentes
           if (!connection) return;
-          if (connection.type === 'rdp-guacamole' || connection.type === 'rdp') {
+          if (connection.type === 'rdp-guacamole' || connection.type === 'rdp' || connection.type === 'vnc-guacamole' || connection.type === 'vnc') {
             const tempNode = {
               key: `temp_rdp_${Date.now()}`,
               label: connection.name || `${connection.host}:${connection.port || 3389}`,
@@ -163,7 +165,7 @@ const TabContentRenderer = React.memo(({
           };
           const looksLikeRdp = (data) => {
             if (!data) return false;
-            if (data.type === 'rdp' || data.type === 'rdp-guacamole') return true;
+            if (data.type === 'rdp' || data.type === 'rdp-guacamole' || data.type === 'vnc' || data.type === 'vnc-guacamole') return true;
             // Fallback heurística: servidor+puerto/clientType guacamole y NO ssh
             const hasServer = (data.server || data.hostname || data.host);
             const maybeRdpPort = (data.port && Number(data.port) === 3389);
@@ -948,7 +950,7 @@ const TabContentRenderer = React.memo(({
     );
   }
 
-  if (tab.type === 'rdp-guacamole') {
+  if (tab.type === 'rdp-guacamole' || tab.type === 'vnc-guacamole') {
     return (
       <GuacamoleTerminal
         ref={el => terminalRefs.current[tab.key] = el}
