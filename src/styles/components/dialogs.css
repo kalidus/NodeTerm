@@ -1160,19 +1160,26 @@
   background: var(--ui-dialog-bg) !important;
 }
 
-/* Card de opción de protocolo - Compacta y elegante */
+/* Card de opción de protocolo - Profesional y elegante */
 .protocol-option-card {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  padding: 1.25rem 1.5rem;
-  background: var(--ui-content-bg) !important;
-  border: 1px solid var(--ui-dialog-border) !important;
-  border-radius: 12px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 1.5rem;
+  padding: 1.5rem 1.75rem;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.08) 0%, 
+    rgba(255, 255, 255, 0.03) 100%) !important;
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 16px;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .protocol-option-card::before {
@@ -1180,109 +1187,196 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 4px;
+  width: 5px;
   height: 100%;
-  background: var(--ui-button-primary);
+  background: linear-gradient(180deg, 
+    var(--ui-button-primary) 0%, 
+    rgba(33, 150, 243, 0.8) 100%);
   opacity: 0;
-  transition: opacity 0.3s ease;
-  border-radius: 12px 0 0 12px;
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 16px 0 0 16px;
+  box-shadow: 0 0 12px rgba(33, 150, 243, 0.4);
+}
+
+.protocol-option-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 30% 20%, 
+    rgba(255, 255, 255, 0.1) 0%, 
+    transparent 60%);
+  opacity: 0;
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
 }
 
 .protocol-option-card:hover {
-  border-color: var(--ui-button-primary) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
-  transform: translateY(-2px);
-  background: var(--ui-content-bg) !important;
+  border-color: rgba(33, 150, 243, 0.4) !important;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(33, 150, 243, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-3px) scale(1.01);
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.12) 0%, 
+    rgba(255, 255, 255, 0.05) 100%) !important;
 }
 
 .protocol-option-card:hover::before {
   opacity: 1;
 }
 
-/* Colores hover específicos por protocolo */
+.protocol-option-card:hover::after {
+  opacity: 1;
+}
+
+/* Colores hover específicos por protocolo - Mejorados */
 .protocol-option-card[data-protocol="ssh"]:hover {
-  border-color: #2196F3 !important;
-  background: rgba(33, 150, 243, 0.05) !important;
+  border-color: rgba(33, 150, 243, 0.5) !important;
+  background: linear-gradient(135deg, 
+    rgba(33, 150, 243, 0.12) 0%, 
+    rgba(33, 150, 243, 0.04) 100%) !important;
+  box-shadow: 
+    0 8px 24px rgba(33, 150, 243, 0.15),
+    0 4px 12px rgba(33, 150, 243, 0.1),
+    0 0 0 1px rgba(33, 150, 243, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .protocol-option-card[data-protocol="ssh"]:hover::before {
-  background: #2196F3;
+  background: linear-gradient(180deg, #2196F3 0%, rgba(33, 150, 243, 0.8) 100%);
+  box-shadow: 0 0 16px rgba(33, 150, 243, 0.5);
   opacity: 1;
 }
 
 .protocol-option-card[data-protocol="rdp"]:hover {
-  border-color: #4CAF50 !important;
-  background: rgba(76, 175, 80, 0.05) !important;
+  border-color: rgba(76, 175, 80, 0.5) !important;
+  background: linear-gradient(135deg, 
+    rgba(76, 175, 80, 0.12) 0%, 
+    rgba(76, 175, 80, 0.04) 100%) !important;
+  box-shadow: 
+    0 8px 24px rgba(76, 175, 80, 0.15),
+    0 4px 12px rgba(76, 175, 80, 0.1),
+    0 0 0 1px rgba(76, 175, 80, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .protocol-option-card[data-protocol="rdp"]:hover::before {
-  background: #4CAF50;
+  background: linear-gradient(180deg, #4CAF50 0%, rgba(76, 175, 80, 0.8) 100%);
+  box-shadow: 0 0 16px rgba(76, 175, 80, 0.5);
   opacity: 1;
 }
 
 .protocol-option-card[data-protocol="vnc"]:hover {
-  border-color: #FF5722 !important;
-  background: rgba(255, 87, 34, 0.05) !important;
+  border-color: rgba(255, 87, 34, 0.5) !important;
+  background: linear-gradient(135deg, 
+    rgba(255, 87, 34, 0.12) 0%, 
+    rgba(255, 87, 34, 0.04) 100%) !important;
+  box-shadow: 
+    0 8px 24px rgba(255, 87, 34, 0.15),
+    0 4px 12px rgba(255, 87, 34, 0.1),
+    0 0 0 1px rgba(255, 87, 34, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .protocol-option-card[data-protocol="vnc"]:hover::before {
-  background: #FF5722;
+  background: linear-gradient(180deg, #FF5722 0%, rgba(255, 87, 34, 0.8) 100%);
+  box-shadow: 0 0 16px rgba(255, 87, 34, 0.5);
   opacity: 1;
 }
 
 .protocol-option-card[data-protocol="sftp"]:hover {
-  border-color: #FF9800 !important;
-  background: rgba(255, 152, 0, 0.05) !important;
+  border-color: rgba(255, 152, 0, 0.5) !important;
+  background: linear-gradient(135deg, 
+    rgba(255, 152, 0, 0.12) 0%, 
+    rgba(255, 152, 0, 0.04) 100%) !important;
+  box-shadow: 
+    0 8px 24px rgba(255, 152, 0, 0.15),
+    0 4px 12px rgba(255, 152, 0, 0.1),
+    0 0 0 1px rgba(255, 152, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .protocol-option-card[data-protocol="sftp"]:hover::before {
-  background: #FF9800;
+  background: linear-gradient(180deg, #FF9800 0%, rgba(255, 152, 0, 0.8) 100%);
+  box-shadow: 0 0 16px rgba(255, 152, 0, 0.5);
   opacity: 1;
 }
 
 .protocol-option-card[data-protocol="ftp"]:hover {
-  border-color: #9C27B0 !important;
-  background: rgba(156, 39, 176, 0.05) !important;
+  border-color: rgba(156, 39, 176, 0.5) !important;
+  background: linear-gradient(135deg, 
+    rgba(156, 39, 176, 0.12) 0%, 
+    rgba(156, 39, 176, 0.04) 100%) !important;
+  box-shadow: 
+    0 8px 24px rgba(156, 39, 176, 0.15),
+    0 4px 12px rgba(156, 39, 176, 0.1),
+    0 0 0 1px rgba(156, 39, 176, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .protocol-option-card[data-protocol="ftp"]:hover::before {
-  background: #9C27B0;
+  background: linear-gradient(180deg, #9C27B0 0%, rgba(156, 39, 176, 0.8) 100%);
+  box-shadow: 0 0 16px rgba(156, 39, 176, 0.5);
   opacity: 1;
 }
 
 .protocol-option-card[data-protocol="scp"]:hover {
-  border-color: #00BCD4 !important;
-  background: rgba(0, 188, 212, 0.05) !important;
+  border-color: rgba(0, 188, 212, 0.5) !important;
+  background: linear-gradient(135deg, 
+    rgba(0, 188, 212, 0.12) 0%, 
+    rgba(0, 188, 212, 0.04) 100%) !important;
+  box-shadow: 
+    0 8px 24px rgba(0, 188, 212, 0.15),
+    0 4px 12px rgba(0, 188, 212, 0.1),
+    0 0 0 1px rgba(0, 188, 212, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .protocol-option-card[data-protocol="scp"]:hover::before {
-  background: #00BCD4;
+  background: linear-gradient(180deg, #00BCD4 0%, rgba(0, 188, 212, 0.8) 100%);
+  box-shadow: 0 0 16px rgba(0, 188, 212, 0.5);
   opacity: 1;
 }
 
 .protocol-option-card[data-protocol="password"]:hover {
-  border-color: #E91E63 !important;
-  background: rgba(233, 30, 99, 0.05) !important;
+  border-color: rgba(233, 30, 99, 0.5) !important;
+  background: linear-gradient(135deg, 
+    rgba(233, 30, 99, 0.12) 0%, 
+    rgba(233, 30, 99, 0.04) 100%) !important;
+  box-shadow: 
+    0 8px 24px rgba(233, 30, 99, 0.15),
+    0 4px 12px rgba(233, 30, 99, 0.1),
+    0 0 0 1px rgba(233, 30, 99, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .protocol-option-card[data-protocol="password"]:hover::before {
-  background: #E91E63;
+  background: linear-gradient(180deg, #E91E63 0%, rgba(233, 30, 99, 0.8) 100%);
+  box-shadow: 0 0 16px rgba(233, 30, 99, 0.5);
   opacity: 1;
 }
 
-/* Ícono del protocolo - Más compacto y bonito */
+/* Ícono del protocolo - Profesional y refinado */
 .protocol-option-icon {
-  width: 52px;
-  height: 52px;
-  min-width: 52px;
-  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.3rem;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 1.4rem;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
@@ -1295,18 +1389,44 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.25) 0%, 
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 100%);
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.protocol-option-icon::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, 
+    rgba(255, 255, 255, 0.3) 0%, 
+    transparent 70%);
+  opacity: 0;
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: scale(0);
 }
 
 .protocol-option-card:hover .protocol-option-icon {
-  transform: scale(1.08) rotate(2deg);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.15);
+  transform: scale(1.1) rotate(3deg);
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.25),
+    0 3px 10px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .protocol-option-card:hover .protocol-option-icon::before {
   opacity: 1;
+}
+
+.protocol-option-card:hover .protocol-option-icon::after {
+  opacity: 1;
+  transform: scale(1);
 }
 
 /* Efectos hover específicos en iconos por protocolo */
@@ -1364,22 +1484,34 @@
 .protocol-option-title {
   margin: 0;
   color: var(--ui-dialog-text) !important;
-  font-size: 1.1rem;
-  font-weight: 600;
-  line-height: 1.3;
-  letter-spacing: -0.01em;
+  font-size: 1.15rem;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: color 0.3s ease;
+}
+
+.protocol-option-card:hover .protocol-option-title {
+  color: var(--ui-dialog-text) !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 .protocol-option-description {
   margin: 0;
   color: var(--ui-dialog-text) !important;
-  opacity: 0.75;
-  font-size: 0.875rem;
-  line-height: 1.5;
+  opacity: 0.8;
+  font-size: 0.9rem;
+  line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  transition: opacity 0.3s ease;
+}
+
+.protocol-option-card:hover .protocol-option-description {
+  opacity: 0.95;
 }
 
 /* Sección de ventajas - Compacta */
@@ -1399,14 +1531,20 @@
 
 .protocol-advantages-list li {
   color: var(--ui-dialog-text) !important;
-  font-size: 0.8rem;
-  line-height: 1.4;
-  opacity: 0.85;
+  font-size: 0.825rem;
+  line-height: 1.5;
+  opacity: 0.9;
   position: relative;
-  padding-left: 1.2rem;
+  padding-left: 1.4rem;
   display: flex;
   align-items: center;
   white-space: nowrap;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.protocol-option-card:hover .protocol-advantages-list li {
+  opacity: 1;
+  transform: translateX(2px);
 }
 
 .protocol-advantages-list li::before {
@@ -1414,9 +1552,15 @@
   position: absolute;
   left: 0;
   color: #4CAF50;
-  font-weight: bold;
-  font-size: 0.8rem;
+  font-weight: 700;
+  font-size: 0.85rem;
   line-height: 1;
+  text-shadow: 0 1px 2px rgba(76, 175, 80, 0.3);
+  transition: transform 0.3s ease;
+}
+
+.protocol-option-card:hover .protocol-advantages-list li::before {
+  transform: scale(1.15);
 }
 
 /* Acciones (botón a la derecha) */
@@ -1427,38 +1571,52 @@
   padding-left: 0.5rem;
 }
 
-/* Botón de acción - Compacto y bonito */
+/* Botón de acción - Profesional y refinado */
 .protocol-option-button {
-  min-width: 140px;
-  height: 36px;
-  font-size: 0.875rem;
-  padding: 0.5rem 1.25rem;
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 150px;
+  height: 40px;
+  font-size: 0.9rem;
+  padding: 0.625rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
+  box-shadow: 
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  letter-spacing: 0.01em;
 }
 
 .protocol-option-button.primary {
-  background: var(--ui-button-primary) !important;
+  background: linear-gradient(135deg, 
+    var(--ui-button-primary) 0%, 
+    rgba(33, 150, 243, 0.9) 100%) !important;
   border-color: var(--ui-button-primary) !important;
   color: var(--ui-button-primary-text) !important;
 }
 
 .protocol-option-button.secondary {
-  background: var(--ui-button-secondary) !important;
+  background: linear-gradient(135deg, 
+    var(--ui-button-secondary) 0%, 
+    rgba(76, 175, 80, 0.9) 100%) !important;
   border-color: var(--ui-button-secondary) !important;
   color: var(--ui-button-secondary-text) !important;
 }
 
 .protocol-option-button:hover {
-  opacity: 0.95;
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+  opacity: 1;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    0 2px 6px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .protocol-option-button:active {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.98);
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.15),
+    inset 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* Responsive */
