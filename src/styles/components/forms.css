@@ -805,6 +805,94 @@ div[style*="borderTop"] .advanced-fieldset .p-fieldset-legend {
   border-color: var(--primary-color) !important;
 }
 
+/* ===== REGLAS ESPECÍFICAS PARA OPCIONES AVANZADAS - DIÁLOGO DE EDICIÓN RDP ===== */
+
+/* REGLA CRÍTICA: Checkboxes de opciones avanzadas en diálogo de edición RDP */
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-highlight,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked {
+  background: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* REGLA CRÍTICA: Ocultar icono completamente para rellenado sólido en opciones avanzadas - Diálogo edición RDP */
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-highlight .p-checkbox-icon,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked .p-checkbox-icon,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .p-checkbox-icon,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-highlight *,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked *,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .pi,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .pi-check {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  color: transparent !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  width: 0 !important;
+  height: 0 !important;
+  font-size: 0 !important;
+  content: "" !important;
+  text-indent: -9999px !important;
+}
+
+/* REGLA CRÍTICA: Contenedor de checkbox en opciones avanzadas - Diálogo edición RDP */
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox.p-checkbox-checked .p-checkbox-box {
+  background: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* REGLA CRÍTICA: Input nativo en opciones avanzadas - Diálogo edición RDP */
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox input[type="checkbox"]:checked {
+  background: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* REGLA CRÍTICA: Checkboxes de opciones avanzadas en diálogo de nueva conexión RDP */
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-highlight,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked {
+  background: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* REGLA CRÍTICA: Ocultar icono completamente para rellenado sólido en opciones avanzadas - Diálogo nueva conexión RDP */
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-highlight .p-checkbox-icon,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked .p-checkbox-icon,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .p-checkbox-icon,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-highlight *,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked *,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .pi,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .pi-check {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  color: transparent !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  width: 0 !important;
+  height: 0 !important;
+  font-size: 0 !important;
+  content: "" !important;
+  text-indent: -9999px !important;
+}
+
+/* REGLA CRÍTICA: Contenedor de checkbox en opciones avanzadas - Diálogo nueva conexión RDP */
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox.p-checkbox-checked .p-checkbox-box {
+  background: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* REGLA CRÍTICA: Input nativo en opciones avanzadas - Diálogo nueva conexión RDP */
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox input[type="checkbox"]:checked {
+  background: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
 /* ===== FIN DE REGLAS ESPECÍFICAS PARA OPCIONES AVANZADAS ===== */
 
 /* ===== ESTILOS PARA EL SCROLL DEL BUSCADOR ===== */

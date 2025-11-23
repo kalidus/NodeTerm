@@ -1228,3 +1228,514 @@
     font-size: 1rem;
   }
 }
+
+/* ========================================
+   ESTILOS PARA DIÁLOGO DE EDICIÓN RDP
+   (Aplicar mismos estilos que unified-connection-dialog)
+   ======================================== */
+
+/* Estilos del diálogo de edición RDP - Opciones avanzadas */
+.edit-rdp-connection-dialog .advanced-fieldset.p-fieldset,
+.edit-rdp-connection-dialog .p-fieldset.advanced-fieldset {
+  border: none !important;
+  background: transparent !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-legend,
+.edit-rdp-connection-dialog .p-fieldset.advanced-fieldset .p-fieldset-legend {
+  background: transparent !important;
+  color: var(--ui-dialog-text, var(--text-color)) !important;
+  padding: 0 !important;
+  margin: 0 0 6px 0 !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  gap: 16px !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-legend-text {
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  order: 1;
+  flex: 1;
+  padding-left: 8px !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-toggler {
+  color: var(--primary-color) !important;
+  margin-left: 16px !important;
+  order: 2;
+  flex-shrink: 0;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content {
+  padding: 0 !important;
+}
+
+.edit-rdp-connection-dialog .p-fieldset {
+  border: none !important;
+  background: transparent !important;
+  padding: 0;
+  margin: 0;
+}
+
+.edit-rdp-connection-dialog .p-fieldset .p-fieldset-legend {
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+.edit-rdp-connection-dialog .p-fieldset .p-fieldset-legend a,
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-legend a {
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  color: var(--text-color) !important;
+  background: transparent !important;
+  border: none !important;
+  text-decoration: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+}
+
+.edit-rdp-connection-dialog .p-fieldset .p-fieldset-legend a:hover {
+  background: transparent !important;
+  color: var(--text-color) !important;
+}
+
+.edit-rdp-connection-dialog .p-fieldset:not(.p-fieldset-collapsed) .p-fieldset-legend {
+  margin-bottom: 1rem !important;
+}
+
+.edit-rdp-connection-dialog .p-fieldset .p-fieldset-content {
+  padding: 0;
+}
+
+.edit-rdp-connection-dialog .p-fieldset h5 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--text-color-secondary);
+  padding-bottom: 0.2rem;
+  margin-bottom: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+/* Opciones avanzadas compactas */
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content {
+  margin: 0 8px !important;
+  padding: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 4px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div {
+    grid-template-columns: 1fr !important;
+    gap: 2px !important;
+  }
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div > div {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: unset !important;
+  flex: unset !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div > div > div {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content * {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .p-element,
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .p-component,
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content div {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset h4,
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content h4,
+.edit-rdp-connection-dialog .p-fieldset-content > div > div h4 {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  margin: 4px 0 2px 0 !important;
+  padding: 0 !important;
+  color: var(--text-color-secondary) !important;
+  border-bottom: none !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+  background: transparent !important;
+  height: auto !important;
+  line-height: 1.2 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content div[style*="flexDirection"] {
+  gap: 0px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox:first-child,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox:not(:first-child) {
+  margin: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox,
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .field-checkbox,
+.edit-rdp-connection-dialog .p-fieldset-content > div > div .field-checkbox {
+  margin: 0 !important;
+  padding: 4px 12px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  border-radius: 4px;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox {
+  margin: 0 !important;
+  order: 1;
+  display: flex !important;
+  align-items: center !important;
+  flex-shrink: 0;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox label {
+  margin: 0 !important;
+  white-space: nowrap;
+  order: 2;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  line-height: 1.3;
+  margin-left: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box {
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 4px !important;
+  border: 1.5px solid var(--surface-border) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-right: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .p-checkbox-icon {
+  font-size: 8px !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox label,
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .field-checkbox label,
+.edit-rdp-connection-dialog .p-fieldset-content > div > div .field-checkbox label {
+  font-size: 0.85rem !important;
+  line-height: 1.3 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: var(--text-color) !important;
+  background: transparent !important;
+  font-weight: 400 !important;
+}
+
+.edit-rdp-connection-dialog .field-checkbox {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.3rem;
+}
+
+.edit-rdp-connection-dialog .field-checkbox label {
+  margin-left: 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* Estilos del diálogo de nueva conexión RDP - Opciones avanzadas */
+.new-rdp-connection-dialog .advanced-fieldset.p-fieldset,
+.new-rdp-connection-dialog .p-fieldset.advanced-fieldset {
+  border: none !important;
+  background: transparent !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-legend,
+.new-rdp-connection-dialog .p-fieldset.advanced-fieldset .p-fieldset-legend {
+  background: transparent !important;
+  color: var(--ui-dialog-text, var(--text-color)) !important;
+  padding: 0 !important;
+  margin: 0 0 6px 0 !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  gap: 16px !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-legend-text {
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  order: 1;
+  flex: 1;
+  padding-left: 8px !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-toggler {
+  color: var(--primary-color) !important;
+  margin-left: 16px !important;
+  order: 2;
+  flex-shrink: 0;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content {
+  padding: 0 !important;
+}
+
+.new-rdp-connection-dialog .p-fieldset {
+  border: none !important;
+  background: transparent !important;
+  padding: 0;
+  margin: 0;
+}
+
+.new-rdp-connection-dialog .p-fieldset .p-fieldset-legend {
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+.new-rdp-connection-dialog .p-fieldset .p-fieldset-legend a,
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-legend a {
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  color: var(--text-color) !important;
+  background: transparent !important;
+  border: none !important;
+  text-decoration: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+}
+
+.new-rdp-connection-dialog .p-fieldset .p-fieldset-legend a:hover {
+  background: transparent !important;
+  color: var(--text-color) !important;
+}
+
+.new-rdp-connection-dialog .p-fieldset:not(.p-fieldset-collapsed) .p-fieldset-legend {
+  margin-bottom: 1rem !important;
+}
+
+.new-rdp-connection-dialog .p-fieldset .p-fieldset-content {
+  padding: 0;
+}
+
+.new-rdp-connection-dialog .p-fieldset h5 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--text-color-secondary);
+  padding-bottom: 0.2rem;
+  margin-bottom: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+/* Opciones avanzadas compactas */
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content {
+  margin: 0 8px !important;
+  padding: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 4px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div {
+    grid-template-columns: 1fr !important;
+    gap: 2px !important;
+  }
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div > div {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: unset !important;
+  flex: unset !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div > div > div {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content * {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .p-element,
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .p-component,
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content div {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset h4,
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content h4,
+.new-rdp-connection-dialog .p-fieldset-content > div > div h4 {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  margin: 4px 0 2px 0 !important;
+  padding: 0 !important;
+  color: var(--text-color-secondary) !important;
+  border-bottom: none !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+  background: transparent !important;
+  height: auto !important;
+  line-height: 1.2 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content div[style*="flexDirection"] {
+  gap: 0px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox:first-child,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox:not(:first-child) {
+  margin: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox,
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .field-checkbox,
+.new-rdp-connection-dialog .p-fieldset-content > div > div .field-checkbox {
+  margin: 0 !important;
+  padding: 4px 12px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  border-radius: 4px;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox {
+  margin: 0 !important;
+  order: 1;
+  display: flex !important;
+  align-items: center !important;
+  flex-shrink: 0;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox label {
+  margin: 0 !important;
+  white-space: nowrap;
+  order: 2;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  line-height: 1.3;
+  margin-left: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box {
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 4px !important;
+  border: 1.5px solid var(--surface-border) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-right: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .p-checkbox-icon {
+  font-size: 8px !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox label,
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .field-checkbox label,
+.new-rdp-connection-dialog .p-fieldset-content > div > div .field-checkbox label {
+  font-size: 0.85rem !important;
+  line-height: 1.3 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: var(--text-color) !important;
+  background: transparent !important;
+  font-weight: 400 !important;
+}
+
+.new-rdp-connection-dialog .field-checkbox {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.3rem;
+}
+
+.new-rdp-connection-dialog .field-checkbox label {
+  margin-left: 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}

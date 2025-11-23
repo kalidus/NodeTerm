@@ -747,7 +747,7 @@ export function EditRDPConnectionDialog({
                 {/* Fieldset: Opciones Avanzadas */}
                 {formData.clientType === 'guacamole' && (
                   <div style={{ marginTop: '1rem', paddingTop: '1rem' }}>
-                    <Fieldset legend="⚙️ Opciones Avanzadas" toggleable collapsed>
+                    <Fieldset legend="⚙️ Opciones Avanzadas" toggleable collapsed className="advanced-fieldset">
                       <div className="formgrid grid">
                         <div className="col-4">
                           <h5>Rendimiento</h5>
@@ -1866,7 +1866,7 @@ export function NewRDPConnectionDialog({
                 {/* Fieldset: Opciones Avanzadas */}
                 {formData.clientType === 'guacamole' && (
                   <div style={{ marginTop: '1rem', paddingTop: '1rem' }}>
-                    <Fieldset legend="⚙️ Opciones Avanzadas" toggleable collapsed>
+                    <Fieldset legend="⚙️ Opciones Avanzadas" toggleable collapsed className="advanced-fieldset">
                       <div className="formgrid grid">
                         <div className="col-4">
                           <h5>Rendimiento</h5>
