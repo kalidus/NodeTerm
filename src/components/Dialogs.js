@@ -72,7 +72,7 @@ export function SSHDialog({
               />
             </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'end' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'start' }}>
               <div className="p-field">
                 <label htmlFor="sshHost" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--ui-dialog-text)' }}>
                   Host <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
@@ -86,7 +86,7 @@ export function SSHDialog({
                 />
               </div>
               
-              <div className="p-field" style={{ width: '100px' }}>
+              <div className="p-field" style={{ minWidth: '100px', maxWidth: '120px' }}>
                 <label htmlFor="sshPort" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--ui-dialog-text)' }}>
                   Puerto
                 </label>
@@ -444,16 +444,25 @@ export function EditSSHConnectionDialog({
     }
   }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword]);
 
+  const headerTemplate = (
+    <div className="protocol-dialog-header-custom">
+      <div className="protocol-dialog-header-icon" style={{ background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', boxShadow: '0 2px 8px rgba(255, 152, 0, 0.3)' }}>
+        <i className="pi pi-terminal"></i>
+      </div>
+      <span className="protocol-dialog-header-title">Editar Conexión SSH</span>
+    </div>
+  );
+
   return (
     <Dialog
-      header="Editar Conexión SSH"
+      header={headerTemplate}
       visible={visible}
       style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
       modal
       resizable={true}
       onHide={onHide}
-      contentStyle={{ padding: '0', overflow: 'auto' }}
-      className="edit-ssh-connection-dialog"
+      contentStyle={{ padding: '0', overflow: 'hidden', background: 'var(--ui-dialog-bg)', color: 'var(--ui-dialog-text)' }}
+      className="edit-ssh-connection-dialog protocol-selection-dialog-new"
     >
       <div style={{ marginTop: '10px', height: '100%', display: 'flex', flexDirection: 'column' }}>
         <EnhancedSSHForm
@@ -1473,14 +1482,14 @@ export function EnhancedSSHForm({
                       Dirección IP o nombre del servidor
                     </p>
                   </div>
-                  <div className="general-setting-control" style={{ display: 'flex', gap: '0.5rem', width: '100%', alignItems: 'center' }}>
+                  <div className="general-setting-control general-setting-control-inputs" style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', maxWidth: '280px', flex: '1 1 auto' }}>
                     <InputText 
                       id="sshHost"
                       value={sshHost} 
                       onChange={(e) => setSSHHost(e.target.value)}
                       placeholder="IP o nombre del servidor"
                       className={validationErrors.host ? 'p-invalid' : ''}
-                      style={{ flex: 1, fontSize: '0.875rem' }}
+                      style={{ flex: '1 1 auto', minWidth: '120px', maxWidth: '200px', fontSize: '0.875rem' }}
                     />
                     <InputText 
                       id="sshPort"
@@ -1488,7 +1497,7 @@ export function EnhancedSSHForm({
                       onChange={(e) => setSSHPort(e.target.value)}
                       placeholder="22"
                       className={validationErrors.port ? 'p-invalid' : ''}
-                      style={{ width: '70px', fontSize: '0.875rem', flexShrink: 0 }}
+                      style={{ width: '70px', flexShrink: 0, fontSize: '0.875rem' }}
                     />
                   </div>
                 </div>

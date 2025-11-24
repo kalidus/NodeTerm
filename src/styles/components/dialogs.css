@@ -3137,6 +3137,12 @@
   flex: 1 1 auto;
 }
 
+/* Alinear arriba los controles que contienen inputs (no checkboxes) */
+.new-ssh-connection-dialog .general-setting-control.general-setting-control-inputs {
+  align-self: flex-start !important;
+  align-items: flex-start !important;
+}
+
 /* Reducir un poco el ancho del área de información para dar más espacio a los inputs */
 .new-ssh-connection-dialog .general-setting-info {
   max-width: 200px;
@@ -3153,4 +3159,33 @@
   min-width: auto;
   max-width: none;
   width: 100%;
+}
+
+/* ========================================
+   ESTILOS PARA DIÁLOGO DE EDICIÓN SSH
+   ======================================== */
+
+/* Ajustar el control para inputs en el diálogo de edición */
+.edit-ssh-connection-dialog .general-setting-control.general-setting-control-inputs {
+  max-width: 280px !important;
+  align-self: flex-start !important;
+  align-items: flex-start !important;
+}
+
+/* Limitar el ancho del input del Host */
+.edit-ssh-connection-dialog .general-setting-control-inputs input[id="sshHost"] {
+  max-width: 200px !important;
+  min-width: 120px !important;
+  flex: 1 1 auto !important;
+}
+
+/* Limitar el ancho del input del Puerto */
+.edit-ssh-connection-dialog .general-setting-control-inputs input[id="sshPort"] {
+  width: 70px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Asegurar que el contenedor no use width: 100% en inputs */
+.edit-ssh-connection-dialog .general-setting-control-inputs input {
+  width: auto !important;
 }
