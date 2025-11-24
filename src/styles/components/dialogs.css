@@ -3161,6 +3161,41 @@
   width: 100%;
 }
 
+/* Permitir que el control de clave SSH se expanda completamente */
+.new-ssh-connection-dialog .general-setting-control.general-setting-control-ssh-key {
+  max-width: none !important;
+  width: 100% !important;
+  min-width: 300px !important;
+  align-self: stretch !important;
+  flex-shrink: 1 !important;
+  flex-grow: 1 !important;
+  flex-basis: auto !important;
+}
+
+/* Cuando el card contiene clave SSH, ajustar el layout del contenedor */
+.new-ssh-connection-dialog .general-setting-card-ssh-key .general-setting-content {
+  align-items: stretch !important;
+}
+
+/* Reducir el espacio del info cuando hay control de clave SSH para dar más espacio */
+.new-ssh-connection-dialog .general-setting-card-ssh-key .general-setting-info {
+  flex: 0 1 auto !important;
+  max-width: 200px !important;
+  min-width: 150px !important;
+}
+
+/* Permitir que el control de clave SSH crezca */
+.new-ssh-connection-dialog .general-setting-card-ssh-key .general-setting-control-ssh-key {
+  flex: 1 1 auto !important;
+}
+
+/* Asegurar que el FileUpload y Textarea de clave SSH ocupen todo el ancho disponible */
+.new-ssh-connection-dialog .general-setting-control-ssh-key .p-fileupload,
+.new-ssh-connection-dialog .general-setting-control-ssh-key textarea[id="sshPrivateKey"] {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
 /* ========================================
    ESTILOS PARA DIÁLOGO DE EDICIÓN SSH
    ======================================== */
@@ -3188,4 +3223,39 @@
 /* Asegurar que el contenedor no use width: 100% en inputs */
 .edit-ssh-connection-dialog .general-setting-control-inputs input {
   width: auto !important;
+}
+
+/* Permitir que el control de clave SSH se expanda completamente - Mayor especificidad */
+.edit-ssh-connection-dialog .general-setting-control.general-setting-control-ssh-key {
+  max-width: none !important;
+  width: 100% !important;
+  min-width: 300px !important;
+  align-self: stretch !important;
+  flex-shrink: 1 !important;
+  flex-grow: 1 !important;
+  flex-basis: auto !important;
+}
+
+/* Cuando el card contiene clave SSH, ajustar el layout del contenedor */
+.edit-ssh-connection-dialog .general-setting-card-ssh-key .general-setting-content {
+  align-items: stretch !important;
+}
+
+/* Reducir el espacio del info cuando hay control de clave SSH para dar más espacio */
+.edit-ssh-connection-dialog .general-setting-card-ssh-key .general-setting-info {
+  flex: 0 1 auto !important;
+  max-width: 200px !important;
+  min-width: 150px !important;
+}
+
+/* Permitir que el control de clave SSH crezca */
+.edit-ssh-connection-dialog .general-setting-card-ssh-key .general-setting-control-ssh-key {
+  flex: 1 1 auto !important;
+}
+
+/* Asegurar que el FileUpload y Textarea de clave SSH ocupen todo el ancho disponible */
+.edit-ssh-connection-dialog .general-setting-control-ssh-key .p-fileupload,
+.edit-ssh-connection-dialog .general-setting-control-ssh-key textarea[id="sshPrivateKey"] {
+  width: 100% !important;
+  max-width: 100% !important;
 }

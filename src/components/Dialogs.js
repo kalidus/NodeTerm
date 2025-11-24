@@ -1636,7 +1636,7 @@ export function EnhancedSSHForm({
               )}
 
               {authMethod === 'key' && (
-                <div className="general-setting-card">
+                <div className="general-setting-card general-setting-card-ssh-key">
                   <div className="general-setting-content">
                     <div className="general-setting-icon lock">
                       <i className="pi pi-key"></i>
@@ -1649,7 +1649,7 @@ export function EnhancedSSHForm({
                         Archivo de clave privada o pega el contenido
                       </p>
                     </div>
-                    <div className="general-setting-control" style={{ width: '100%', flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}>
+                    <div className="general-setting-control general-setting-control-ssh-key" style={{ width: '100%', flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}>
                       <FileUpload
                         mode="basic"
                         name="sshPrivateKey"
