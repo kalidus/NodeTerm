@@ -3103,3 +3103,46 @@
   pointer-events: auto !important;
   cursor: pointer !important;
 }
+
+/* ========================================
+   ESTILOS PARA DIÁLOGO SSH CON CARDS ESTILO PROTOCOLO
+   ======================================== */
+
+/* Cards del formulario SSH - Sin efectos hover (no son clickeables) */
+.new-ssh-connection-dialog .protocol-option-card[style*="cursor: default"],
+.ssh-connection-dialog .protocol-option-card[style*="cursor: default"] {
+  cursor: default !important;
+  user-select: auto !important;
+}
+
+.new-ssh-connection-dialog .protocol-option-card[style*="cursor: default"]:hover,
+.ssh-connection-dialog .protocol-option-card[style*="cursor: default"]:hover {
+  transform: none !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.08) 0%, 
+    rgba(255, 255, 255, 0.03) 100%) !important;
+}
+
+.new-ssh-connection-dialog .protocol-option-card[style*="cursor: default"]:hover::before,
+.ssh-connection-dialog .protocol-option-card[style*="cursor: default"]:hover::before {
+  opacity: 0 !important;
+}
+
+.new-ssh-connection-dialog .protocol-option-card[style*="cursor: default"]:hover::after,
+.ssh-connection-dialog .protocol-option-card[style*="cursor: default"]:hover::after {
+  opacity: 0 !important;
+}
+
+.new-ssh-connection-dialog .protocol-option-card[style*="cursor: default"]:hover .protocol-option-icon,
+.ssh-connection-dialog .protocol-option-card[style*="cursor: default"]:hover .protocol-option-icon {
+  transform: none !important;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}

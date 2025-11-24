@@ -30,55 +30,179 @@ export function SSHDialog({
 }) {
   const isEdit = mode === 'edit';
   const [showPassword, setShowPassword] = useState(false);
+  
   return (
-    <Dialog header={isEdit ? 'Editar conexión SSH' : 'Nueva conexión SSH'} visible={visible} style={{ width: '370px', borderRadius: 16 }} modal onHide={onHide}>
-      <div className="p-fluid" style={{ padding: 8 }}>
-        <div className="p-field" style={{ marginBottom: 14 }}>
-          <label htmlFor="sshName">Nombre</label>
-          <InputText id="sshName" value={name} onChange={e => setName(e.target.value)} autoFocus />
+    <Dialog 
+      header={
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <i className="pi pi-terminal" style={{ fontSize: '1.25rem', color: 'var(--ui-button-primary)' }}></i>
+          <span>{isEdit ? 'Editar conexión SSH' : 'Nueva conexión SSH'}</span>
         </div>
-        <div className="p-field" style={{ marginBottom: 14 }}>
-          <label htmlFor="sshHost">Host</label>
-          <InputText id="sshHost" value={host} onChange={e => setHost(e.target.value)} />
-        </div>
-        <div className="p-field" style={{ marginBottom: 14 }}>
-          <label htmlFor="sshUser">Usuario</label>
-          <InputText id="sshUser" value={user} onChange={e => setUser(e.target.value)} />
-        </div>
-        <div className="p-field" style={{ marginBottom: 14 }}>
-          <label htmlFor="sshPassword">Contraseña</label>
-          <div className="p-inputgroup">
-            <InputText 
-              id="sshPassword" 
-              type={showPassword ? "text" : "password"} 
-              value={password} 
-              onChange={e => setPassword(e.target.value)} 
-            />
-            <Button 
-              type="button" 
-              icon={showPassword ? "pi pi-eye-slash" : "pi pi-eye"} 
-              className="p-button-outlined"
-              onClick={() => setShowPassword(!showPassword)}
-              tooltip={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-              tooltipOptions={{ position: 'top' }}
-            />
+      }
+      visible={visible} 
+      style={{ width: '600px', maxWidth: '95vw' }} 
+      modal 
+      onHide={onHide}
+      className="ssh-connection-dialog"
+      contentStyle={{
+        background: 'var(--ui-dialog-bg)',
+        color: 'var(--ui-dialog-text)',
+        padding: '0'
+      }}
+    >
+      <div className="general-settings-container" style={{ padding: '2rem' }}>
+        {/* Sección: Conexión */}
+        <div className="settings-section">
+          <div className="section-header">
+            <i className="pi pi-link section-icon"></i>
+            <h3 className="section-title">Conexión</h3>
+          </div>
+          <div className="settings-options">
+            <div className="p-field">
+              <label htmlFor="sshName" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--ui-dialog-text)' }}>
+                Nombre <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+              </label>
+              <InputText 
+                id="sshName" 
+                value={name} 
+                onChange={e => setName(e.target.value)} 
+                placeholder="Servidor de producción"
+                autoFocus
+                style={{ width: '100%' }}
+              />
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'end' }}>
+              <div className="p-field">
+                <label htmlFor="sshHost" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--ui-dialog-text)' }}>
+                  Host <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                </label>
+                <InputText 
+                  id="sshHost" 
+                  value={host} 
+                  onChange={e => setHost(e.target.value)} 
+                  placeholder="IP o nombre del servidor"
+                  style={{ width: '100%' }}
+                />
+              </div>
+              
+              <div className="p-field" style={{ width: '100px' }}>
+                <label htmlFor="sshPort" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--ui-dialog-text)' }}>
+                  Puerto
+                </label>
+                <InputText 
+                  id="sshPort" 
+                  value={port} 
+                  onChange={e => setPort(e.target.value)} 
+                  placeholder="22"
+                  style={{ width: '100%' }}
+                />
+              </div>
+            </div>
+            
+            <div className="p-field">
+              <label htmlFor="sshUser" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--ui-dialog-text)' }}>
+                Usuario <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+              </label>
+              <InputText 
+                id="sshUser" 
+                value={user} 
+                onChange={e => setUser(e.target.value)} 
+                placeholder="root"
+                style={{ width: '100%' }}
+              />
+            </div>
           </div>
         </div>
-        <div className="p-field" style={{ marginBottom: 14 }}>
-          <label htmlFor="sshPort">Puerto</label>
-          <InputText id="sshPort" value={port} onChange={e => setPort(e.target.value)} />
+
+        {/* Sección: Autenticación */}
+        <div className="settings-section">
+          <div className="section-header">
+            <i className="pi pi-lock section-icon"></i>
+            <h3 className="section-title">Autenticación</h3>
+          </div>
+          <div className="settings-options">
+            <div className="p-field">
+              <label htmlFor="sshPassword" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--ui-dialog-text)' }}>
+                Contraseña <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+              </label>
+              <div className="p-inputgroup" style={{ width: '100%' }}>
+                <InputText 
+                  id="sshPassword" 
+                  type={showPassword ? "text" : "password"} 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  placeholder="Contraseña"
+                  style={{ width: '100%' }}
+                />
+                <Button 
+                  type="button" 
+                  icon={showPassword ? "pi pi-eye-slash" : "pi pi-eye"} 
+                  className="p-button-outlined"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tooltip={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  tooltipOptions={{ position: 'top' }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="p-field" style={{ marginBottom: 14 }}>
-          <label htmlFor="sshTargetFolder">Carpeta destino (opcional)</label>
-          <Dropdown id="sshTargetFolder" value={targetFolder} options={foldersOptions} onChange={e => setTargetFolder(e.value)} placeholder="Selecciona una carpeta" showClear filter/>
+
+        {/* Sección: Carpetas */}
+        <div className="settings-section">
+          <div className="section-header">
+            <i className="pi pi-folder section-icon"></i>
+            <h3 className="section-title">Carpetas</h3>
+          </div>
+          <div className="settings-options">
+            <div className="p-field">
+              <label htmlFor="sshRemoteFolder" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--ui-dialog-text)' }}>
+                Carpeta remota <span style={{ opacity: 0.6, fontSize: '0.9rem' }}>(opcional)</span>
+              </label>
+              <InputText 
+                id="sshRemoteFolder" 
+                value={remoteFolder} 
+                onChange={e => setRemoteFolder(e.target.value)} 
+                placeholder="/home/usuario"
+                style={{ width: '100%' }}
+              />
+            </div>
+            
+            <div className="p-field">
+              <label htmlFor="sshTargetFolder" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--ui-dialog-text)' }}>
+                Carpeta destino <span style={{ opacity: 0.6, fontSize: '0.9rem' }}>(opcional)</span>
+              </label>
+              <Dropdown 
+                id="sshTargetFolder" 
+                value={targetFolder} 
+                options={foldersOptions} 
+                onChange={e => setTargetFolder(e.value)} 
+                placeholder="Seleccionar carpeta local"
+                showClear 
+                filter
+                style={{ width: '100%' }}
+              />
+            </div>
+          </div>
         </div>
-        <div className="p-field" style={{ marginBottom: 18 }}>
-          <label htmlFor="sshRemoteFolder">Carpeta remota (opcional)</label>
-          <InputText id="sshRemoteFolder" value={remoteFolder} onChange={e => setRemoteFolder(e.target.value)} />
-        </div>
-        <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 18, justifyContent: 'flex-end' }}>
-          <Button label="Cancelar" icon="pi pi-times" className="p-button-text" onClick={onHide} style={{ minWidth: 120 }} />
-          <Button label={isEdit ? 'Guardar' : 'Crear'} icon="pi pi-check" className="p-button-primary" onClick={onConfirm} style={{ minWidth: 120 }} loading={loading} />
+
+        {/* Botones de acción */}
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--ui-dialog-border)' }}>
+          <Button 
+            label="Cancelar" 
+            icon="pi pi-times" 
+            className="p-button-text" 
+            onClick={onHide} 
+            style={{ minWidth: '120px' }} 
+          />
+          <Button 
+            label={isEdit ? 'Guardar' : 'Crear'} 
+            icon="pi pi-check" 
+            className="p-button-primary" 
+            onClick={onConfirm} 
+            style={{ minWidth: '120px' }} 
+            loading={loading} 
+          />
         </div>
       </div>
     </Dialog>
@@ -1292,17 +1416,26 @@ export function EnhancedSSHForm({
 
   // Render del formulario
   return (
-    <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ padding: '1.25rem', height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--ui-dialog-bg)' }}>
       {/* Contenedor principal que se expande */}
-      <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+      <div style={{ flex: '1 1 auto', overflowY: 'auto' }}>
+        {/* Grid de 2 columnas con cards estilo protocolo */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
           
-          {/* --- COLUMNA IZQUIERDA: Conexión --- */}
-          <div style={{ flex: '1', minWidth: '320px' }}>
-            <Card title="🔗 Conexión">
-              <div className="formgrid grid">
-                <div className="field col-12">
-                  <label htmlFor="sshName">Nombre *</label>
+          {/* Card: Conexión - Columna Izquierda */}
+          <div className="protocol-option-card" data-protocol="ssh" style={{ cursor: 'default', userSelect: 'auto' }}>
+            <div className="protocol-option-icon" style={{ background: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)' }}>
+              <i className="pi pi-link"></i>
+            </div>
+            <div className="protocol-option-content" style={{ flex: 1, minWidth: 0 }}>
+              <div className="protocol-option-header">
+                <h3 className="protocol-option-title" style={{ fontSize: '1rem', fontWeight: '650', marginBottom: '0.75rem' }}>Conexión</h3>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                <div>
+                  <label htmlFor="sshName" style={{ display: 'block', marginBottom: '0.375rem', fontSize: '0.8125rem', fontWeight: '500', color: 'var(--ui-dialog-text)', opacity: 0.9 }}>
+                    Nombre <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                  </label>
                   <InputText 
                     id="sshName"
                     value={sshName} 
@@ -1310,69 +1443,89 @@ export function EnhancedSSHForm({
                     placeholder="Servidor de producción"
                     autoFocus={activeTabIndex === 0}
                     className={validationErrors.name ? 'p-invalid' : ''}
+                    style={{ width: '100%', fontSize: '0.875rem' }}
                   />
-                  {validationErrors.name && <small className="p-error">{validationErrors.name}</small>}
+                  {validationErrors.name && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>{validationErrors.name}</small>}
                 </div>
 
-                <div className="field col-8">
-                  <label htmlFor="sshHost">Host *</label>
-                  <InputText 
-                    id="sshHost"
-                    value={sshHost} 
-                    onChange={(e) => setSSHHost(e.target.value)}
-                    placeholder="IP o nombre del servidor"
-                    className={validationErrors.host ? 'p-invalid' : ''}
-                  />
-                  {validationErrors.host && <small className="p-error">{validationErrors.host}</small>}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.5rem' }}>
+                  <div>
+                    <label htmlFor="sshHost" style={{ display: 'block', marginBottom: '0.375rem', fontSize: '0.8125rem', fontWeight: '500', color: 'var(--ui-dialog-text)', opacity: 0.9 }}>
+                      Host <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                    </label>
+                    <InputText 
+                      id="sshHost"
+                      value={sshHost} 
+                      onChange={(e) => setSSHHost(e.target.value)}
+                      placeholder="IP o nombre del servidor"
+                      className={validationErrors.host ? 'p-invalid' : ''}
+                      style={{ width: '100%', fontSize: '0.875rem' }}
+                    />
+                    {validationErrors.host && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>{validationErrors.host}</small>}
+                  </div>
+                  
+                  <div style={{ width: '90px' }}>
+                    <label htmlFor="sshPort" style={{ display: 'block', marginBottom: '0.375rem', fontSize: '0.8125rem', fontWeight: '500', color: 'var(--ui-dialog-text)', opacity: 0.9 }}>
+                      Puerto
+                    </label>
+                    <InputText 
+                      id="sshPort"
+                      value={sshPort} 
+                      onChange={(e) => setSSHPort(e.target.value)}
+                      placeholder="22"
+                      className={validationErrors.port ? 'p-invalid' : ''}
+                      style={{ width: '100%', fontSize: '0.875rem' }}
+                    />
+                    {validationErrors.port && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>{validationErrors.port}</small>}
+                  </div>
                 </div>
 
-                <div className="field col-4">
-                  <label htmlFor="sshPort">Puerto</label>
-                  <InputText 
-                    id="sshPort"
-                    value={sshPort} 
-                    onChange={(e) => setSSHPort(e.target.value)}
-                    placeholder="22"
-                    className={validationErrors.port ? 'p-invalid' : ''}
-                  />
-                  {validationErrors.port && <small className="p-error">{validationErrors.port}</small>}
-                </div>
-
-                <div className="field col-12">
-                  <label htmlFor="sshUser">Usuario *</label>
+                <div>
+                  <label htmlFor="sshUser" style={{ display: 'block', marginBottom: '0.375rem', fontSize: '0.8125rem', fontWeight: '500', color: 'var(--ui-dialog-text)', opacity: 0.9 }}>
+                    Usuario <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                  </label>
                   <InputText 
                     id="sshUser"
                     value={sshUser} 
                     onChange={(e) => setSSHUser(e.target.value)}
                     placeholder="root"
                     className={validationErrors.user ? 'p-invalid' : ''}
+                    style={{ width: '100%', fontSize: '0.875rem' }}
                   />
-                  {validationErrors.user && <small className="p-error">{validationErrors.user}</small>}
+                  {validationErrors.user && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>{validationErrors.user}</small>}
                 </div>
               </div>
-            </Card>
+            </div>
           </div>
 
-          {/* --- COLUMNA DERECHA: Autenticación y Opciones --- */}
-          <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <Card title="🔐 Autenticación">
-              <div className="formgrid grid">
-                <div className="field col-12" style={{ display: 'flex', gap: '2rem' }}>
+          {/* Card: Autenticación - Columna Derecha */}
+          <div className="protocol-option-card" data-protocol="ssh" style={{ cursor: 'default', userSelect: 'auto' }}>
+            <div className="protocol-option-icon" style={{ background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)' }}>
+              <i className="pi pi-lock"></i>
+            </div>
+            <div className="protocol-option-content" style={{ flex: 1, minWidth: 0 }}>
+              <div className="protocol-option-header">
+                <h3 className="protocol-option-title" style={{ fontSize: '1rem', fontWeight: '650', marginBottom: '0.75rem' }}>Autenticación</h3>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '0.25rem' }}>
                   <div className="field-radiobutton">
                     <RadioButton inputId="authPassword" name="authMethod" value="password" onChange={(e) => setAuthMethod(e.value)} checked={authMethod === 'password'} />
-                    <label htmlFor="authPassword">Contraseña</label>
+                    <label htmlFor="authPassword" style={{ marginLeft: '0.5rem', cursor: 'pointer', fontSize: '0.8125rem' }}>Contraseña</label>
                   </div>
                   <div className="field-radiobutton">
                     <RadioButton inputId="authKey" name="authMethod" value="key" onChange={(e) => setAuthMethod(e.value)} checked={authMethod === 'key'} />
-                    <label htmlFor="authKey">Clave SSH</label>
+                    <label htmlFor="authKey" style={{ marginLeft: '0.5rem', cursor: 'pointer', fontSize: '0.8125rem' }}>Clave SSH</label>
                   </div>
                 </div>
 
                 {authMethod === 'password' && (
                   <>
-                    <div className="field col-12">
-                      <label htmlFor="sshPassword">Contraseña *</label>
-                      <div className="p-inputgroup">
+                    <div>
+                      <label htmlFor="sshPassword" style={{ display: 'block', marginBottom: '0.375rem', fontSize: '0.8125rem', fontWeight: '500', color: 'var(--ui-dialog-text)', opacity: 0.9 }}>
+                        Contraseña <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                      </label>
+                      <div className="p-inputgroup" style={{ width: '100%' }}>
                         <InputText 
                           id="sshPassword"
                           type={showPassword ? "text" : "password"}
@@ -1380,6 +1533,7 @@ export function EnhancedSSHForm({
                           onChange={(e) => setSSHPassword(e.target.value)}
                           placeholder="Contraseña"
                           className={validationErrors.password ? 'p-invalid' : ''}
+                          style={{ width: '100%', fontSize: '0.875rem' }}
                         />
                         <Button 
                           type="button" 
@@ -1387,18 +1541,19 @@ export function EnhancedSSHForm({
                           className="p-button-outlined"
                           onClick={() => setShowPassword(!showPassword)}
                           tooltip={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                          tooltipOptions={{ position: 'top' }}
                         />
                       </div>
-                      {validationErrors.password && <small className="p-error">{validationErrors.password}</small>}
+                      {validationErrors.password && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>{validationErrors.password}</small>}
                     </div>
-                    <div className="field col-12">
+                    <div>
                       <div className="field-checkbox">
                         <Checkbox 
                           inputId="autoCopyPassword" 
                           checked={autoCopyPassword} 
                           onChange={(e) => handleAutoCopyToggle(e.checked)} 
                         />
-                        <label htmlFor="autoCopyPassword">Copiar contraseña automáticamente al portapapeles</label>
+                        <label htmlFor="autoCopyPassword" style={{ marginLeft: '0.5rem', cursor: 'pointer', fontSize: '0.8125rem' }}>Copiar contraseña automáticamente al portapapeles</label>
                       </div>
                     </div>
                   </>
@@ -1406,8 +1561,10 @@ export function EnhancedSSHForm({
 
                 {authMethod === 'key' && (
                   <>
-                    <div className="field col-12">
-                      <label htmlFor="sshPrivateKey">Clave Privada SSH *</label>
+                    <div>
+                      <label htmlFor="sshPrivateKey" style={{ display: 'block', marginBottom: '0.375rem', fontSize: '0.8125rem', fontWeight: '500', color: 'var(--ui-dialog-text)', opacity: 0.9 }}>
+                        Clave Privada SSH <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                      </label>
                       <FileUpload
                         mode="basic"
                         name="sshPrivateKey"
@@ -1426,30 +1583,44 @@ export function EnhancedSSHForm({
                           rows={6}
                           placeholder="O pegar la clave privada aquí"
                           className={validationErrors.privateKey ? 'p-invalid' : ''}
-                          style={{ marginTop: '8px', fontFamily: 'monospace', fontSize: '12px' }}
+                          style={{ marginTop: '8px', fontFamily: 'monospace', fontSize: '12px', width: '100%' }}
                         />
                       )}
-                      {validationErrors.privateKey && <small className="p-error">{validationErrors.privateKey}</small>}
+                      {validationErrors.privateKey && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>{validationErrors.privateKey}</small>}
                     </div>
                   </>
                 )}
               </div>
-            </Card>
+            </div>
+          </div>
 
-            <Card title="📁 Carpetas">
-              <div className="formgrid grid">
-                <div className="field col-12">
-                  <label htmlFor="sshRemoteFolder">Carpeta remota (opcional)</label>
+          {/* Card: Carpetas - Ocupa ambas columnas */}
+          <div className="protocol-option-card" data-protocol="ssh" style={{ cursor: 'default', userSelect: 'auto', gridColumn: '1 / -1' }}>
+            <div className="protocol-option-icon" style={{ background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)' }}>
+              <i className="pi pi-folder"></i>
+            </div>
+            <div className="protocol-option-content" style={{ flex: 1, minWidth: 0 }}>
+              <div className="protocol-option-header">
+                <h3 className="protocol-option-title" style={{ fontSize: '1rem', fontWeight: '650', marginBottom: '0.75rem' }}>Carpetas</h3>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+                <div>
+                  <label htmlFor="sshRemoteFolder" style={{ display: 'block', marginBottom: '0.375rem', fontSize: '0.8125rem', fontWeight: '500', color: 'var(--ui-dialog-text)', opacity: 0.9 }}>
+                    Carpeta remota <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>(opcional)</span>
+                  </label>
                   <InputText 
                     id="sshRemoteFolder"
                     value={sshRemoteFolder} 
                     onChange={(e) => setSSHRemoteFolder(e.target.value)}
                     placeholder="/home/usuario"
+                    style={{ width: '100%', fontSize: '0.875rem' }}
                   />
                 </div>
 
-                <div className="field col-12">
-                  <label htmlFor="sshTargetFolder">Carpeta destino (opcional)</label>
+                <div>
+                  <label htmlFor="sshTargetFolder" style={{ display: 'block', marginBottom: '0.375rem', fontSize: '0.8125rem', fontWeight: '500', color: 'var(--ui-dialog-text)', opacity: 0.9 }}>
+                    Carpeta destino <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>(opcional)</span>
+                  </label>
                   <Dropdown
                     id="sshTargetFolder"
                     value={sshTargetFolder}
@@ -1458,34 +1629,35 @@ export function EnhancedSSHForm({
                     placeholder="Seleccionar carpeta local"
                     filter
                     showClear
+                    style={{ width: '100%', fontSize: '0.875rem' }}
                   />
                 </div>
               </div>
-            </Card>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Botones */}
-      <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'space-between', paddingTop: '12px' }}>
-        <div style={{ display: 'flex', gap: 12 }}>
+      <div style={{ display: 'flex', gap: '12px', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--ui-dialog-border)', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: '12px' }}>
           {onGoBack && (
             <Button 
               label="Volver" 
               icon="pi pi-arrow-left" 
               className="p-button-text" 
               onClick={onGoBack}
-              style={{ fontSize: '13px', padding: '8px 16px' }}
+              style={{ minWidth: '120px' }}
             />
           )}
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ display: 'flex', gap: '12px' }}>
           <Button 
             label="Cancelar" 
             icon="pi pi-times" 
             className="p-button-text" 
             onClick={onHide}
-            style={{ fontSize: '13px', padding: '8px 16px' }}
+            style={{ minWidth: '120px' }}
           />
           <Button 
             label="Guardar" 
@@ -1494,7 +1666,7 @@ export function EnhancedSSHForm({
             onClick={handleSubmit}
             disabled={!isFormValid()}
             loading={sshLoading}
-            style={{ fontSize: '13px', padding: '8px 16px' }}
+            style={{ minWidth: '120px' }}
           />
         </div>
       </div>
@@ -1521,13 +1693,18 @@ export function NewSSHConnectionDialog({
 }) {
   return (
     <Dialog
-      header="Nueva Conexión SSH"
+      header={
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <i className="pi pi-terminal" style={{ fontSize: '1.25rem', color: 'var(--ui-button-primary)' }}></i>
+          <span>Nueva Conexión SSH</span>
+        </div>
+      }
       visible={visible}
       style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
       modal
       resizable={true}
       onHide={onHide}
-      contentStyle={{ padding: '0', overflow: 'auto' }}
+      contentStyle={{ padding: '0', overflow: 'auto', background: 'var(--ui-dialog-bg)', color: 'var(--ui-dialog-text)' }}
       className="new-ssh-connection-dialog"
     >
       <div style={{ marginTop: '10px', height: '100%', display: 'flex', flexDirection: 'column' }}>
