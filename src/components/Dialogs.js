@@ -1416,43 +1416,64 @@ export function EnhancedSSHForm({
 
   // Render del formulario
   return (
-    <div style={{ padding: '1.25rem', height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--ui-dialog-bg)' }}>
+    <div className="general-settings-container" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingTop: '1rem' }}>
       {/* Contenedor principal que se expande */}
-      <div style={{ flex: '1 1 auto', overflowY: 'auto' }}>
-        {/* Grid de 2 columnas con cards estilo protocolo */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+      <div style={{ flex: '1 1 auto', overflowY: 'auto', overflowX: 'hidden' }}>
+        {/* Grid de 2 columnas para las secciones */}
+        <div className="general-settings-content">
           
-          {/* Card: Conexión - Columna Izquierda */}
-          <div className="protocol-option-card" data-protocol="ssh" style={{ cursor: 'default', userSelect: 'auto' }}>
-            <div className="protocol-option-icon" style={{ background: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)' }}>
-              <i className="pi pi-link"></i>
-            </div>
-            <div className="protocol-option-content" style={{ flex: 1, minWidth: 0 }}>
-              <div className="protocol-option-header">
-                <h3 className="protocol-option-title" style={{ fontSize: '1rem', fontWeight: '650', marginBottom: '0.75rem' }}>Conexión</h3>
+          {/* Sección: Conexión - Columna Izquierda */}
+          <div className="general-settings-section">
+            <div className="general-section-header">
+              <div className="general-section-icon">
+                <i className="pi pi-link"></i>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                <div>
-                  <label htmlFor="sshName" style={{ display: 'block', marginBottom: '0.375rem', fontSize: '0.8125rem', fontWeight: '500', color: 'var(--ui-dialog-text)', opacity: 0.9 }}>
-                    Nombre <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
-                  </label>
-                  <InputText 
-                    id="sshName"
-                    value={sshName} 
-                    onChange={(e) => setSSHName(e.target.value)}
-                    placeholder="Servidor de producción"
-                    autoFocus={activeTabIndex === 0}
-                    className={validationErrors.name ? 'p-invalid' : ''}
-                    style={{ width: '100%', fontSize: '0.875rem' }}
-                  />
-                  {validationErrors.name && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>{validationErrors.name}</small>}
+              <h4 className="general-section-title">Conexión</h4>
+            </div>
+            
+            <div className="general-settings-options">
+              <div className="general-setting-card">
+                <div className="general-setting-content">
+                  <div className="general-setting-icon lock">
+                    <i className="pi pi-tag"></i>
+                  </div>
+                  <div className="general-setting-info">
+                    <label htmlFor="sshName" className="general-setting-label">
+                      Nombre <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                    </label>
+                    <p className="general-setting-description">
+                      Identificador único para esta conexión
+                    </p>
+                  </div>
+                  <div className="general-setting-control">
+                    <InputText 
+                      id="sshName"
+                      value={sshName} 
+                      onChange={(e) => setSSHName(e.target.value)}
+                      placeholder="Servidor de producción"
+                      autoFocus={activeTabIndex === 0}
+                      className={validationErrors.name ? 'p-invalid' : ''}
+                      style={{ width: '100%', fontSize: '0.875rem' }}
+                    />
+                  </div>
                 </div>
+                {validationErrors.name && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem', marginLeft: '2.75rem' }}>{validationErrors.name}</small>}
+              </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.5rem' }}>
-                  <div>
-                    <label htmlFor="sshHost" style={{ display: 'block', marginBottom: '0.375rem', fontSize: '0.8125rem', fontWeight: '500', color: 'var(--ui-dialog-text)', opacity: 0.9 }}>
+              <div className="general-setting-card">
+                <div className="general-setting-content">
+                  <div className="general-setting-icon lock">
+                    <i className="pi pi-server"></i>
+                  </div>
+                  <div className="general-setting-info">
+                    <label htmlFor="sshHost" className="general-setting-label">
                       Host <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
                     </label>
+                    <p className="general-setting-description">
+                      Dirección IP o nombre del servidor
+                    </p>
+                  </div>
+                  <div className="general-setting-control" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.5rem', width: '100%' }}>
                     <InputText 
                       id="sshHost"
                       value={sshHost} 
@@ -1461,110 +1482,165 @@ export function EnhancedSSHForm({
                       className={validationErrors.host ? 'p-invalid' : ''}
                       style={{ width: '100%', fontSize: '0.875rem' }}
                     />
-                    {validationErrors.host && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>{validationErrors.host}</small>}
-                  </div>
-                  
-                  <div style={{ width: '90px' }}>
-                    <label htmlFor="sshPort" style={{ display: 'block', marginBottom: '0.375rem', fontSize: '0.8125rem', fontWeight: '500', color: 'var(--ui-dialog-text)', opacity: 0.9 }}>
-                      Puerto
-                    </label>
                     <InputText 
                       id="sshPort"
                       value={sshPort} 
                       onChange={(e) => setSSHPort(e.target.value)}
                       placeholder="22"
                       className={validationErrors.port ? 'p-invalid' : ''}
-                      style={{ width: '100%', fontSize: '0.875rem' }}
+                      style={{ width: '90px', fontSize: '0.875rem' }}
                     />
-                    {validationErrors.port && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>{validationErrors.port}</small>}
                   </div>
                 </div>
+                {validationErrors.host && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem', marginLeft: '2.75rem' }}>{validationErrors.host}</small>}
+                {validationErrors.port && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem', marginLeft: '2.75rem' }}>{validationErrors.port}</small>}
+              </div>
 
-                <div>
-                  <label htmlFor="sshUser" style={{ display: 'block', marginBottom: '0.375rem', fontSize: '0.8125rem', fontWeight: '500', color: 'var(--ui-dialog-text)', opacity: 0.9 }}>
-                    Usuario <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
-                  </label>
-                  <InputText 
-                    id="sshUser"
-                    value={sshUser} 
-                    onChange={(e) => setSSHUser(e.target.value)}
-                    placeholder="root"
-                    className={validationErrors.user ? 'p-invalid' : ''}
-                    style={{ width: '100%', fontSize: '0.875rem' }}
-                  />
-                  {validationErrors.user && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>{validationErrors.user}</small>}
+              <div className="general-setting-card">
+                <div className="general-setting-content">
+                  <div className="general-setting-icon lock">
+                    <i className="pi pi-user"></i>
+                  </div>
+                  <div className="general-setting-info">
+                    <label htmlFor="sshUser" className="general-setting-label">
+                      Usuario <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                    </label>
+                    <p className="general-setting-description">
+                      Nombre de usuario para la conexión
+                    </p>
+                  </div>
+                  <div className="general-setting-control">
+                    <InputText 
+                      id="sshUser"
+                      value={sshUser} 
+                      onChange={(e) => setSSHUser(e.target.value)}
+                      placeholder="root"
+                      className={validationErrors.user ? 'p-invalid' : ''}
+                      style={{ width: '100%', fontSize: '0.875rem' }}
+                    />
+                  </div>
                 </div>
+                {validationErrors.user && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem', marginLeft: '2.75rem' }}>{validationErrors.user}</small>}
               </div>
             </div>
           </div>
 
-          {/* Card: Autenticación - Columna Derecha */}
-          <div className="protocol-option-card" data-protocol="ssh" style={{ cursor: 'default', userSelect: 'auto' }}>
-            <div className="protocol-option-icon" style={{ background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)' }}>
-              <i className="pi pi-lock"></i>
-            </div>
-            <div className="protocol-option-content" style={{ flex: 1, minWidth: 0 }}>
-              <div className="protocol-option-header">
-                <h3 className="protocol-option-title" style={{ fontSize: '1rem', fontWeight: '650', marginBottom: '0.75rem' }}>Autenticación</h3>
+          {/* Sección: Autenticación - Columna Derecha */}
+          <div className="general-settings-section">
+            <div className="general-section-header">
+              <div className="general-section-icon">
+                <i className="pi pi-lock"></i>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '0.25rem' }}>
-                  <div className="field-radiobutton">
-                    <RadioButton inputId="authPassword" name="authMethod" value="password" onChange={(e) => setAuthMethod(e.value)} checked={authMethod === 'password'} />
-                    <label htmlFor="authPassword" style={{ marginLeft: '0.5rem', cursor: 'pointer', fontSize: '0.8125rem' }}>Contraseña</label>
+              <h4 className="general-section-title">Autenticación</h4>
+            </div>
+            
+            <div className="general-settings-options">
+              <div className="general-setting-card">
+                <div className="general-setting-content">
+                  <div className="general-setting-icon bolt">
+                    <i className="pi pi-key"></i>
                   </div>
-                  <div className="field-radiobutton">
-                    <RadioButton inputId="authKey" name="authMethod" value="key" onChange={(e) => setAuthMethod(e.value)} checked={authMethod === 'key'} />
-                    <label htmlFor="authKey" style={{ marginLeft: '0.5rem', cursor: 'pointer', fontSize: '0.8125rem' }}>Clave SSH</label>
+                  <div className="general-setting-info">
+                    <label className="general-setting-label">
+                      Método de Autenticación
+                    </label>
+                    <p className="general-setting-description">
+                      Selecciona cómo autenticarte en el servidor
+                    </p>
+                  </div>
+                  <div className="general-setting-control" style={{ display: 'flex', gap: '1rem' }}>
+                    <div className="field-radiobutton">
+                      <RadioButton inputId="authPassword" name="authMethod" value="password" onChange={(e) => setAuthMethod(e.value)} checked={authMethod === 'password'} />
+                      <label htmlFor="authPassword" style={{ marginLeft: '0.5rem', cursor: 'pointer', fontSize: '0.8125rem' }}>Contraseña</label>
+                    </div>
+                    <div className="field-radiobutton">
+                      <RadioButton inputId="authKey" name="authMethod" value="key" onChange={(e) => setAuthMethod(e.value)} checked={authMethod === 'key'} />
+                      <label htmlFor="authKey" style={{ marginLeft: '0.5rem', cursor: 'pointer', fontSize: '0.8125rem' }}>Clave SSH</label>
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                {authMethod === 'password' && (
-                  <>
-                    <div>
-                      <label htmlFor="sshPassword" style={{ display: 'block', marginBottom: '0.375rem', fontSize: '0.8125rem', fontWeight: '500', color: 'var(--ui-dialog-text)', opacity: 0.9 }}>
-                        Contraseña <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
-                      </label>
-                      <div className="p-inputgroup" style={{ width: '100%' }}>
-                        <InputText 
-                          id="sshPassword"
-                          type={showPassword ? "text" : "password"}
-                          value={sshPassword} 
-                          onChange={(e) => setSSHPassword(e.target.value)}
-                          placeholder="Contraseña"
-                          className={validationErrors.password ? 'p-invalid' : ''}
-                          style={{ width: '100%', fontSize: '0.875rem' }}
-                        />
-                        <Button 
-                          type="button" 
-                          icon={showPassword ? "pi pi-eye-slash" : "pi pi-eye"} 
-                          className="p-button-outlined"
-                          onClick={() => setShowPassword(!showPassword)}
-                          tooltip={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                          tooltipOptions={{ position: 'top' }}
-                        />
+              {authMethod === 'password' && (
+                <>
+                  <div className="general-setting-card">
+                    <div className="general-setting-content">
+                      <div className="general-setting-icon lock">
+                        <i className="pi pi-lock"></i>
                       </div>
-                      {validationErrors.password && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>{validationErrors.password}</small>}
+                      <div className="general-setting-info">
+                        <label htmlFor="sshPassword" className="general-setting-label">
+                          Contraseña <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                        </label>
+                        <p className="general-setting-description">
+                          Contraseña para autenticación
+                        </p>
+                      </div>
+                      <div className="general-setting-control">
+                        <div className="p-inputgroup" style={{ width: '100%' }}>
+                          <InputText 
+                            id="sshPassword"
+                            type={showPassword ? "text" : "password"}
+                            value={sshPassword} 
+                            onChange={(e) => setSSHPassword(e.target.value)}
+                            placeholder="Contraseña"
+                            className={validationErrors.password ? 'p-invalid' : ''}
+                            style={{ width: '100%', fontSize: '0.875rem' }}
+                          />
+                          <Button 
+                            type="button" 
+                            icon={showPassword ? "pi pi-eye-slash" : "pi pi-eye"} 
+                            className="p-button-outlined"
+                            onClick={() => setShowPassword(!showPassword)}
+                            tooltip={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                            tooltipOptions={{ position: 'top' }}
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="field-checkbox">
+                    {validationErrors.password && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem', marginLeft: '2.75rem' }}>{validationErrors.password}</small>}
+                  </div>
+
+                  <div className="general-setting-card">
+                    <div className="general-setting-content">
+                      <div className="general-setting-icon bolt">
+                        <i className="pi pi-copy"></i>
+                      </div>
+                      <div className="general-setting-info">
+                        <label htmlFor="autoCopyPassword" className="general-setting-label">
+                          Copiar contraseña automáticamente
+                        </label>
+                        <p className="general-setting-description">
+                          Copia la contraseña al portapapeles al conectar
+                        </p>
+                      </div>
+                      <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
                         <Checkbox 
                           inputId="autoCopyPassword" 
                           checked={autoCopyPassword} 
                           onChange={(e) => handleAutoCopyToggle(e.checked)} 
                         />
-                        <label htmlFor="autoCopyPassword" style={{ marginLeft: '0.5rem', cursor: 'pointer', fontSize: '0.8125rem' }}>Copiar contraseña automáticamente al portapapeles</label>
                       </div>
                     </div>
-                  </>
-                )}
+                  </div>
+                </>
+              )}
 
-                {authMethod === 'key' && (
-                  <>
-                    <div>
-                      <label htmlFor="sshPrivateKey" style={{ display: 'block', marginBottom: '0.375rem', fontSize: '0.8125rem', fontWeight: '500', color: 'var(--ui-dialog-text)', opacity: 0.9 }}>
+              {authMethod === 'key' && (
+                <div className="general-setting-card">
+                  <div className="general-setting-content">
+                    <div className="general-setting-icon lock">
+                      <i className="pi pi-key"></i>
+                    </div>
+                    <div className="general-setting-info">
+                      <label htmlFor="sshPrivateKey" className="general-setting-label">
                         Clave Privada SSH <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
                       </label>
+                      <p className="general-setting-description">
+                        Archivo de clave privada o pega el contenido
+                      </p>
+                    </div>
+                    <div className="general-setting-control" style={{ width: '100%', flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}>
                       <FileUpload
                         mode="basic"
                         name="sshPrivateKey"
@@ -1583,54 +1659,77 @@ export function EnhancedSSHForm({
                           rows={6}
                           placeholder="O pegar la clave privada aquí"
                           className={validationErrors.privateKey ? 'p-invalid' : ''}
-                          style={{ marginTop: '8px', fontFamily: 'monospace', fontSize: '12px', width: '100%' }}
+                          style={{ fontFamily: 'monospace', fontSize: '12px', width: '100%' }}
                         />
                       )}
-                      {validationErrors.privateKey && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem' }}>{validationErrors.privateKey}</small>}
                     </div>
-                  </>
-                )}
-              </div>
+                  </div>
+                  {validationErrors.privateKey && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem', marginLeft: '2.75rem' }}>{validationErrors.privateKey}</small>}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Card: Carpetas - Ocupa ambas columnas */}
-          <div className="protocol-option-card" data-protocol="ssh" style={{ cursor: 'default', userSelect: 'auto', gridColumn: '1 / -1' }}>
-            <div className="protocol-option-icon" style={{ background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)' }}>
-              <i className="pi pi-folder"></i>
-            </div>
-            <div className="protocol-option-content" style={{ flex: 1, minWidth: 0 }}>
-              <div className="protocol-option-header">
-                <h3 className="protocol-option-title" style={{ fontSize: '1rem', fontWeight: '650', marginBottom: '0.75rem' }}>Carpetas</h3>
+          {/* Sección: Carpetas - Ocupa ambas columnas */}
+          <div className="general-settings-section" style={{ gridColumn: '1 / -1' }}>
+            <div className="general-section-header">
+              <div className="general-section-icon">
+                <i className="pi pi-folder"></i>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
-                <div>
-                  <label htmlFor="sshRemoteFolder" style={{ display: 'block', marginBottom: '0.375rem', fontSize: '0.8125rem', fontWeight: '500', color: 'var(--ui-dialog-text)', opacity: 0.9 }}>
-                    Carpeta remota <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>(opcional)</span>
-                  </label>
-                  <InputText 
-                    id="sshRemoteFolder"
-                    value={sshRemoteFolder} 
-                    onChange={(e) => setSSHRemoteFolder(e.target.value)}
-                    placeholder="/home/usuario"
-                    style={{ width: '100%', fontSize: '0.875rem' }}
-                  />
+              <h4 className="general-section-title">Carpetas</h4>
+            </div>
+            
+            <div className="general-settings-options">
+              <div className="general-setting-card">
+                <div className="general-setting-content">
+                  <div className="general-setting-icon collapse">
+                    <i className="pi pi-folder-open"></i>
+                  </div>
+                  <div className="general-setting-info">
+                    <label htmlFor="sshRemoteFolder" className="general-setting-label">
+                      Carpeta remota <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>(opcional)</span>
+                    </label>
+                    <p className="general-setting-description">
+                      Ruta en el servidor remoto donde iniciar la sesión
+                    </p>
+                  </div>
+                  <div className="general-setting-control">
+                    <InputText 
+                      id="sshRemoteFolder"
+                      value={sshRemoteFolder} 
+                      onChange={(e) => setSSHRemoteFolder(e.target.value)}
+                      placeholder="/home/usuario"
+                      style={{ width: '100%', fontSize: '0.875rem' }}
+                    />
+                  </div>
                 </div>
+              </div>
 
-                <div>
-                  <label htmlFor="sshTargetFolder" style={{ display: 'block', marginBottom: '0.375rem', fontSize: '0.8125rem', fontWeight: '500', color: 'var(--ui-dialog-text)', opacity: 0.9 }}>
-                    Carpeta destino <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>(opcional)</span>
-                  </label>
-                  <Dropdown
-                    id="sshTargetFolder"
-                    value={sshTargetFolder}
-                    options={foldersOptions}
-                    onChange={(e) => setSSHTargetFolder(e.value)}
-                    placeholder="Seleccionar carpeta local"
-                    filter
-                    showClear
-                    style={{ width: '100%', fontSize: '0.875rem' }}
-                  />
+              <div className="general-setting-card">
+                <div className="general-setting-content">
+                  <div className="general-setting-icon collapse">
+                    <i className="pi pi-folder"></i>
+                  </div>
+                  <div className="general-setting-info">
+                    <label htmlFor="sshTargetFolder" className="general-setting-label">
+                      Carpeta destino <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>(opcional)</span>
+                    </label>
+                    <p className="general-setting-description">
+                      Carpeta local donde organizar esta conexión
+                    </p>
+                  </div>
+                  <div className="general-setting-control">
+                    <Dropdown
+                      id="sshTargetFolder"
+                      value={sshTargetFolder}
+                      options={foldersOptions}
+                      onChange={(e) => setSSHTargetFolder(e.value)}
+                      placeholder="Seleccionar carpeta local"
+                      filter
+                      showClear
+                      style={{ width: '100%', fontSize: '0.875rem' }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1639,7 +1738,7 @@ export function EnhancedSSHForm({
       </div>
 
       {/* Botones */}
-      <div style={{ display: 'flex', gap: '12px', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--ui-dialog-border)', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', gap: '12px', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--ui-dialog-border)', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: '12px' }}>
           {onGoBack && (
             <Button 
@@ -1691,21 +1790,25 @@ export function NewSSHConnectionDialog({
   onSSHConfirm,
   sshLoading = false
 }) {
+  const headerTemplate = (
+    <div className="protocol-dialog-header-custom">
+      <div className="protocol-dialog-header-icon" style={{ background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', boxShadow: '0 2px 8px rgba(255, 152, 0, 0.3)' }}>
+        <i className="pi pi-terminal"></i>
+      </div>
+      <span className="protocol-dialog-header-title">Nueva Conexión SSH</span>
+    </div>
+  );
+
   return (
     <Dialog
-      header={
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <i className="pi pi-terminal" style={{ fontSize: '1.25rem', color: 'var(--ui-button-primary)' }}></i>
-          <span>Nueva Conexión SSH</span>
-        </div>
-      }
+      header={headerTemplate}
       visible={visible}
       style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
       modal
       resizable={true}
       onHide={onHide}
-      contentStyle={{ padding: '0', overflow: 'auto', background: 'var(--ui-dialog-bg)', color: 'var(--ui-dialog-text)' }}
-      className="new-ssh-connection-dialog"
+      contentStyle={{ padding: '0', overflow: 'hidden', background: 'var(--ui-dialog-bg)', color: 'var(--ui-dialog-text)' }}
+      className="new-ssh-connection-dialog protocol-selection-dialog-new"
     >
       <div style={{ marginTop: '10px', height: '100%', display: 'flex', flexDirection: 'column' }}>
         <EnhancedSSHForm

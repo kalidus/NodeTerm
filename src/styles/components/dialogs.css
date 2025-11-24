@@ -3108,41 +3108,42 @@
    ESTILOS PARA DIÁLOGO SSH CON CARDS ESTILO PROTOCOLO
    ======================================== */
 
-/* Cards del formulario SSH - Sin efectos hover (no son clickeables) */
-.new-ssh-connection-dialog .protocol-option-card[style*="cursor: default"],
-.ssh-connection-dialog .protocol-option-card[style*="cursor: default"] {
+/* ========================================
+   ESTILOS PARA DIÁLOGO SSH CON CARDS ESTILO GENERAL SETTINGS
+   ======================================== */
+
+/* Header del diálogo SSH igual que ProtocolSelectionDialog */
+.new-ssh-connection-dialog.p-dialog-header,
+.new-ssh-connection-dialog .p-dialog-header {
+  padding: 0 !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-bottom: 1px solid var(--ui-dialog-border) !important;
+}
+
+/* Asegurar que las cards del formulario SSH no sean clickeables */
+.new-ssh-connection-dialog .general-setting-card {
   cursor: default !important;
-  user-select: auto !important;
 }
 
-.new-ssh-connection-dialog .protocol-option-card[style*="cursor: default"]:hover,
-.ssh-connection-dialog .protocol-option-card[style*="cursor: default"]:hover {
+.new-ssh-connection-dialog .general-setting-card:hover {
+  background: transparent !important;
   transform: none !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.08),
-    0 1px 3px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.08) 0%, 
-    rgba(255, 255, 255, 0.03) 100%) !important;
 }
 
-.new-ssh-connection-dialog .protocol-option-card[style*="cursor: default"]:hover::before,
-.ssh-connection-dialog .protocol-option-card[style*="cursor: default"]:hover::before {
-  opacity: 0 !important;
+/* Ajustar el control para inputs en las cards */
+.new-ssh-connection-dialog .general-setting-control {
+  min-width: 200px;
+  max-width: 300px;
 }
 
-.new-ssh-connection-dialog .protocol-option-card[style*="cursor: default"]:hover::after,
-.ssh-connection-dialog .protocol-option-card[style*="cursor: default"]:hover::after {
-  opacity: 0 !important;
+.new-ssh-connection-dialog .general-setting-control input,
+.new-ssh-connection-dialog .general-setting-control .p-inputgroup {
+  width: 100%;
 }
 
-.new-ssh-connection-dialog .protocol-option-card[style*="cursor: default"]:hover .protocol-option-icon,
-.ssh-connection-dialog .protocol-option-card[style*="cursor: default"]:hover .protocol-option-icon {
-  transform: none !important;
-  box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.15),
-    0 2px 6px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+/* Grid para Host y Puerto */
+.new-ssh-connection-dialog .general-setting-control[style*="grid"] {
+  min-width: auto;
+  max-width: none;
+  width: 100%;
 }
