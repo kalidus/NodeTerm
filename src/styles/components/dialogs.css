@@ -3132,8 +3132,15 @@
 
 /* Ajustar el control para inputs en las cards */
 .new-ssh-connection-dialog .general-setting-control {
-  min-width: 200px;
-  max-width: 300px;
+  min-width: 280px;
+  max-width: 400px;
+  flex: 1 1 auto;
+}
+
+/* Reducir un poco el ancho del área de información para dar más espacio a los inputs */
+.new-ssh-connection-dialog .general-setting-info {
+  max-width: 200px;
+  flex: 0 1 auto;
 }
 
 .new-ssh-connection-dialog .general-setting-control input,
