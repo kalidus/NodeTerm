@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
+import { FaWindows } from 'react-icons/fa';
 import PowerShellTerminal from './PowerShellTerminal';
 import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
@@ -1180,22 +1181,28 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 onDrop={(e) => handleLocalTabDrop(e, index)}
                                 onDragEnd={handleLocalTabDragEnd}
                             >
-                                <i 
-                                    className={tab.type === 'powershell' ? 'pi pi-desktop' : 
-                                              tab.type === 'wsl' ? 'pi pi-server' : 
-                                              tab.type === 'cygwin' ? 'pi pi-code' :
-                                              tab.type === 'docker' ? 'pi pi-box' :
-                                              tab.type === 'rdp-guacamole' ? 'pi pi-desktop' : 'pi pi-circle'} 
-                                    style={{ 
-                                        color: tab.type === 'powershell' ? '#4fc3f7' : 
-                                               tab.type === 'wsl' ? '#8ae234' : 
-                                               tab.type === 'cygwin' ? '#00FF00' :
-                                               tab.type === 'docker' ? '#2496ED' :
-                                               tab.type === 'rdp-guacamole' ? '#ff6b35' : '#e95420',
+                                {tab.type === 'powershell' ? (
+                                    <FaWindows style={{ 
+                                        color: '#4fc3f7',
                                         fontSize: '12px',
                                         marginRight: '6px'
-                                    }}
-                                />
+                                    }} />
+                                ) : (
+                                    <i 
+                                        className={tab.type === 'wsl' ? 'pi pi-server' : 
+                                                  tab.type === 'cygwin' ? 'pi pi-code' :
+                                                  tab.type === 'docker' ? 'pi pi-box' :
+                                                  tab.type === 'rdp-guacamole' ? 'pi pi-desktop' : 'pi pi-circle'} 
+                                        style={{ 
+                                            color: tab.type === 'wsl' ? '#8ae234' : 
+                                                   tab.type === 'cygwin' ? '#00FF00' :
+                                                   tab.type === 'docker' ? '#2496ED' :
+                                                   tab.type === 'rdp-guacamole' ? '#ff6b35' : '#e95420',
+                                            fontSize: '12px',
+                                            marginRight: '6px'
+                                        }}
+                                    />
+                                )}
                                 <span style={{
                                     color: tab.active ? tabActiveText : tabText,
                                     fontSize: '12px',
@@ -1339,8 +1346,13 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                                         option.value === 'wsl' ? '#8ae234' : 
                                                         option.value === 'cygwin' ? '#00FF00' : '#e95420';
                                         
+                                        // Usar icono de Windows para PowerShell, icono de PrimeReact para otros
+                                        const iconHTML = option.value === 'powershell' 
+                                            ? `<svg width="12" height="12" viewBox="0 0 448 512" fill="${iconColor}" style="margin-right: 0;"><path d="M0 93.7l183.6-25.3v177.4H0V93.7zm0 324.6l183.6 25.3V268.4H0v149.9zm203.8 28L448 480V268.4H203.8v177.9zm0-380.6v180.1H448V32L203.8 65.7z"/></svg>`
+                                            : `<i class="${option.icon}" style="color: ${iconColor}; font-size: 12px;"></i>`;
+                                        
                                         item.innerHTML = `
-                                            <i class="${option.icon}" style="color: ${iconColor}; font-size: 12px;"></i>
+                                            ${iconHTML}
                                             <span>${option.label}</span>
                                         `;
                                         

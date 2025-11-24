@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'primereact/button';
+import { FaWindows } from 'react-icons/fa';
 import DistroIcon from './DistroIcon';
 import { getHomeTabIcon } from '../themes/home-tab-icons';
 
@@ -134,25 +135,31 @@ const TabHeader = React.memo(({
       
       {/* Icono específico para terminales locales */}
       {tab.type === 'local-terminal' && (
-        <i 
-          className={
-            tab.terminalType === 'powershell' ? 'pi pi-desktop' :
-            tab.terminalType === 'wsl' ? 'pi pi-server' :
-            tab.terminalType?.startsWith('wsl-') ? 'pi pi-circle' :
-            tab.terminalType === 'linux-terminal' ? 'pi pi-desktop' :
-            'pi pi-desktop'
-          }
-          style={{ 
+        tab.terminalType === 'powershell' ? (
+          <FaWindows style={{ 
             fontSize: '12px', 
             marginRight: '6px',
-            color: 
-              tab.terminalType === 'powershell' ? '#4fc3f7' :
-              tab.terminalType === 'wsl' ? '#8ae234' :
-              tab.terminalType?.startsWith('wsl-') ? '#e95420' :
-              tab.terminalType === 'linux-terminal' ? '#4fc3f7' :
-              '#4fc3f7'
-          }}
-        ></i>
+            color: '#4fc3f7'
+          }} />
+        ) : (
+          <i 
+            className={
+              tab.terminalType === 'wsl' ? 'pi pi-server' :
+              tab.terminalType?.startsWith('wsl-') ? 'pi pi-circle' :
+              tab.terminalType === 'linux-terminal' ? 'pi pi-desktop' :
+              'pi pi-desktop'
+            }
+            style={{ 
+              fontSize: '12px', 
+              marginRight: '6px',
+              color: 
+                tab.terminalType === 'wsl' ? '#8ae234' :
+                tab.terminalType?.startsWith('wsl-') ? '#e95420' :
+                tab.terminalType === 'linux-terminal' ? '#4fc3f7' :
+                '#4fc3f7'
+            }}
+          ></i>
+        )
       )}
       
       {/* Mostrar label solo si NO es pestaña de inicio (las pestañas de inicio nunca muestran texto) */}
