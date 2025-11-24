@@ -881,13 +881,27 @@ const SettingsDialog = ({
       }
     >
       <Toast ref={setToast} />
+      <style>{`
+        .settings-dialog-tabview .p-tabview-panel {
+          height: 700px !important;
+          max-height: 700px !important;
+          min-height: 700px !important;
+          overflow: hidden !important;
+        }
+        .settings-dialog-tabview .p-tabview-panel > * {
+          height: 100% !important;
+          max-height: 100% !important;
+          min-height: 0 !important;
+        }
+      `}</style>
       <TabView
         activeIndex={activeIndex}
         onTabChange={(e) => setActiveIndex(e.index)}
         className="settings-dialog-tabview"
       >
         <TabPanel header="General" leftIcon="pi pi-sliders-h">
-          <div className="general-settings-container">
+          <div style={{ height: '700px', maxHeight: '700px', minHeight: '700px', overflow: 'hidden', position: 'relative' }}>
+            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
             {/* Header */}
             <div className="general-settings-header-wrapper" style={{ textAlign: 'center', marginBottom: '2rem' }}>
               <h3 className="general-header">
@@ -1035,6 +1049,7 @@ const SettingsDialog = ({
                   </div>
                 </div>
               </div>
+            </div>
             </div>
           </div>
         </TabPanel>
@@ -2805,7 +2820,11 @@ const SettingsDialog = ({
         </TabPanel>
 
         <TabPanel header="Clientes de IA" leftIcon="pi pi-comments">
-          <AIClientsTab themeColors={{ primary: 'var(--primary-color)' }} />
+          <div style={{ height: '700px', maxHeight: '700px', minHeight: '700px', overflow: 'hidden', position: 'relative' }}>
+            <div style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+              <AIClientsTab themeColors={{ primary: 'var(--primary-color)' }} />
+            </div>
+          </div>
         </TabPanel>
 
         <TabPanel header="Actualizaciones" leftIcon="pi pi-refresh">

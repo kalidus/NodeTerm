@@ -16,16 +16,33 @@
 
 .general-settings-container {
   padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
+  display: flex !important;
+  flex-direction: column !important;
   width: 100%;
   max-width: 100%;
-  height: 100%;
-  min-height: 100%;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
   position: relative;
-  overflow-y: auto;
-  overflow-x: hidden;
-  box-sizing: border-box;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* Asegurar que el contenedor respete la altura del panel padre */
+.settings-dialog .p-tabview-panel .general-settings-container,
+.p-dialog.settings-dialog .p-tabview-panel .general-settings-container {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+/* Asegurar que el contenido interno también respete la altura */
+.general-settings-container .general-settings-content {
+  flex: 0 1 auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
 }
 
 /* Contenedor para el grid de secciones */
@@ -36,6 +53,8 @@
   align-items: start;
   width: 100%;
   max-width: 100%;
+  min-height: 0;
+  flex-shrink: 1;
 }
 
 /* En pantallas medianas, mantener 2 columnas pero con menos gap */

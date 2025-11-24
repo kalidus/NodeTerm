@@ -3243,7 +3243,14 @@ const AIConfigDialog = ({ visible, onHide }) => {
       header="Configuración de IA"
       visible={visible}
       onHide={onHide}
-      style={{ width: '85vw', minWidth: '900px', maxWidth: '1200px' }}
+      style={{ 
+        width: '85vw', 
+        minWidth: '900px', 
+        maxWidth: '1200px',
+        maxHeight: '98vh',
+        minHeight: '800px',
+        height: '800px'
+      }}
       modal
     >
       {/* Estilos compactos para tabs solo dentro de este diálogo */}
@@ -3251,6 +3258,30 @@ const AIConfigDialog = ({ visible, onHide }) => {
         .ai-config-tabs .p-tabview-nav li .p-tabview-nav-link {
           font-size: 0.85rem;
           padding: 0.35rem 0.6rem;
+        }
+        .ai-config-tabs .p-tabview-panels {
+          width: 100% !important;
+          min-height: 700px !important;
+          height: 700px !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          background: transparent !important;
+          border: none !important;
+          overflow: hidden !important;
+        }
+        .ai-config-tabs .p-tabview-panel {
+          display: flex !important;
+          flex-direction: column !important;
+          justify-content: flex-start !important;
+          align-items: stretch !important;
+          min-height: 700px !important;
+          height: 700px !important;
+          width: 100% !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          background: transparent !important;
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
         }
       `}</style>
       {/* Banner superior eliminado; será mostrado dentro de la pestaña Inicio en versión compacta */}
