@@ -1473,14 +1473,14 @@ export function EnhancedSSHForm({
                       Dirección IP o nombre del servidor
                     </p>
                   </div>
-                  <div className="general-setting-control" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.5rem', width: '100%' }}>
+                  <div className="general-setting-control" style={{ display: 'flex', gap: '0.5rem', width: '100%', alignItems: 'center' }}>
                     <InputText 
                       id="sshHost"
                       value={sshHost} 
                       onChange={(e) => setSSHHost(e.target.value)}
                       placeholder="IP o nombre del servidor"
                       className={validationErrors.host ? 'p-invalid' : ''}
-                      style={{ width: '100%', fontSize: '0.875rem' }}
+                      style={{ flex: 1, fontSize: '0.875rem' }}
                     />
                     <InputText 
                       id="sshPort"
@@ -1488,7 +1488,7 @@ export function EnhancedSSHForm({
                       onChange={(e) => setSSHPort(e.target.value)}
                       placeholder="22"
                       className={validationErrors.port ? 'p-invalid' : ''}
-                      style={{ width: '90px', fontSize: '0.875rem' }}
+                      style={{ width: '70px', fontSize: '0.875rem', flexShrink: 0 }}
                     />
                   </div>
                 </div>
