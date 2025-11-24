@@ -837,9 +837,11 @@ const SettingsDialog = ({
   return (
     <Dialog
       header={
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <i className="pi pi-cog" style={{ fontSize: '1.5rem', color: 'var(--primary-color)' }}></i>
-          <span>Configuración</span>
+        <div className="settings-dialog-header-custom" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className="settings-dialog-header-icon">
+            <i className="pi pi-sliders-h"></i>
+          </div>
+          <span className="settings-dialog-header-title">Configuración</span>
         </div>
       }
       visible={visible}
@@ -848,14 +850,15 @@ const SettingsDialog = ({
         maxWidth: '98vw',
         maxHeight: '98vh',
         minWidth: '1000px',
-        minHeight: '500px'
+        minHeight: '800px',
+        height: '800px'
       }}
       contentStyle={{
         background: 'var(--ui-dialog-bg)',
         color: 'var(--ui-dialog-text)'
       }}
       headerStyle={{
-        background: 'var(--ui-dialog-bg)',
+        background: 'rgba(0, 0, 0, 0.3) !important',
         color: 'var(--ui-dialog-text)',
         borderBottom: '1px solid var(--ui-dialog-border)'
       }}
@@ -886,46 +889,10 @@ const SettingsDialog = ({
         <TabPanel header="General" leftIcon="pi pi-cog">
           <div className="general-settings-container">
             {/* Header */}
-            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <div className="general-settings-header-wrapper" style={{ textAlign: 'center', marginBottom: '2rem' }}>
               <h3 className="general-header">
-                <span className="general-header-icon">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                      <linearGradient id="generalSettingsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#667eea" />
-                        <stop offset="50%" stopColor="#764ba2" />
-                        <stop offset="100%" stopColor="#f093fb" />
-                      </linearGradient>
-                      <linearGradient id="gearGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#ffffff" />
-                        <stop offset="100%" stopColor="#e8e8f0" />
-                      </linearGradient>
-                    </defs>
-                    {/* Engranaje principal */}
-                    <g transform="translate(12, 12)">
-                      {/* Círculo exterior del engranaje */}
-                      <circle cx="0" cy="0" r="7" fill="url(#generalSettingsGradient)" stroke="rgba(255,255,255,0.35)" strokeWidth="0.6"/>
-                      
-                      {/* Dientes del engranaje (8 dientes) */}
-                      {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => {
-                        const rad = (angle * Math.PI) / 180;
-                        const x1 = Math.cos(rad) * 6;
-                        const y1 = Math.sin(rad) * 6;
-                        const x2 = Math.cos(rad) * 8.5;
-                        const y2 = Math.sin(rad) * 8.5;
-                        return (
-                          <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} 
-                                stroke="url(#gearGradient)" strokeWidth="1.2" strokeLinecap="round" opacity="0.98"/>
-                        );
-                      })}
-                      
-                      {/* Círculo interior */}
-                      <circle cx="0" cy="0" r="3.5" fill="url(#gearGradient)" opacity="0.98" stroke="rgba(102, 126, 234, 0.25)" strokeWidth="0.4"/>
-                      
-                      {/* Centro del engranaje */}
-                      <circle cx="0" cy="0" r="1.5" fill="url(#generalSettingsGradient)" opacity="0.8"/>
-                    </g>
-                  </svg>
+                <span className="general-header-icon protocol-dialog-header-icon">
+                  <i className="pi pi-cog"></i>
                 </span>
                 Configuración General
               </h3>
@@ -1941,10 +1908,14 @@ const SettingsDialog = ({
                   padding: '1rem 0',
                   display: 'flex',
                   flexDirection: 'column',
-                  justifyContent: 'center',
+                  justifyContent: 'flex-start',
                   alignItems: 'center',
-                  minHeight: '50vh',
-                  width: '100%'
+                  height: '100%',
+                  minHeight: '100%',
+                  width: '100%',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  boxSizing: 'border-box'
                 }}>
                   <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
                     <i className="pi pi-eye" style={{ marginRight: '0.5rem' }}></i>
@@ -1961,7 +1932,19 @@ const SettingsDialog = ({
                 </div>
               </TabPanel>
               <TabPanel header={<span><i className="pi pi-desktop" style={{ marginRight: 8 }}></i>Terminal</span>}>
-                <div style={{ padding: '1rem 0', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '50vh', width: '100%' }}>
+                <div style={{ 
+                  padding: '1rem 0', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'flex-start', 
+                  alignItems: 'center', 
+                  height: '100%',
+                  minHeight: '100%',
+                  width: '100%',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  boxSizing: 'border-box'
+                }}>
                   <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
                     <i className="pi pi-desktop" style={{ marginRight: '0.5rem' }}></i>
                     Configuración del Terminal SSH
@@ -2168,10 +2151,14 @@ const SettingsDialog = ({
                   padding: '1rem 0',
                   display: 'flex',
                   flexDirection: 'column',
-                  justifyContent: 'center',
+                  justifyContent: 'flex-start',
                   alignItems: 'center',
-                  minHeight: '50vh',
-                  width: '100%'
+                  height: '100%',
+                  minHeight: '100%',
+                  width: '100%',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  boxSizing: 'border-box'
                 }}>
                   <StatusBarThemeSelector
                     currentTheme={statusBarTheme}
@@ -2236,10 +2223,14 @@ const SettingsDialog = ({
                   padding: '1rem 0',
                   display: 'flex',
                   flexDirection: 'column',
-                  justifyContent: 'center',
+                  justifyContent: 'flex-start',
                   alignItems: 'center',
-                  minHeight: '50vh',
-                  width: '100%'
+                  height: '100%',
+                  minHeight: '100%',
+                  width: '100%',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  boxSizing: 'border-box'
                 }}>
                   <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
                     <i className="pi pi-sitemap" style={{ marginRight: '0.5rem' }}></i>
@@ -2441,10 +2432,14 @@ const SettingsDialog = ({
                   padding: '1rem 0',
                   display: 'flex',
                   flexDirection: 'column',
-                  justifyContent: 'center',
+                  justifyContent: 'flex-start',
                   alignItems: 'center',
-                  minHeight: '50vh',
-                  width: '100%'
+                  height: '100%',
+                  minHeight: '100%',
+                  width: '100%',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  boxSizing: 'border-box'
                 }}>
                   <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
                     <i className="pi pi-folder-open" style={{ marginRight: '0.5rem' }}></i>
@@ -2599,7 +2594,18 @@ const SettingsDialog = ({
         </TabPanel>
 
         <TabPanel header={<span><i className="pi pi-desktop" style={{ marginRight: 8 }}></i>RDP</span>}>
-          <div style={{ padding: '1rem 0', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '40vh', width: '100%' }}>
+          <div style={{ 
+            padding: '1rem 0', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            height: '100%',
+            minHeight: '100%',
+            width: '100%',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            boxSizing: 'border-box'
+          }}>
             {/* Backend RDP (Guacamole) */}
             <div style={{ width: '100%', maxWidth: 520, marginBottom: '1.25rem' }}>
               <h3 style={{ margin: '0 0 0.75rem 0', color: 'var(--text-color)' }}>
@@ -2811,10 +2817,14 @@ const SettingsDialog = ({
             padding: '2rem 0',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'center',
+            justifyContent: 'flex-start',
             alignItems: 'center',
-            minHeight: '50vh',
-            width: '100%'
+            height: '100%',
+            minHeight: '100%',
+            width: '100%',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            boxSizing: 'border-box'
           }}>
             <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
               <i className="pi pi-cloud" style={{
@@ -2881,10 +2891,14 @@ const SettingsDialog = ({
             padding: '1rem 0',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'center',
+            justifyContent: 'flex-start',
             alignItems: 'center',
-            minHeight: '50vh',
-            width: '100%'
+            height: '100%',
+            minHeight: '100%',
+            width: '100%',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            boxSizing: 'border-box'
           }}>
             {/* Logo o Icono de la App */}
             <div style={{ marginBottom: '1rem' }}>

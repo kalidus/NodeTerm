@@ -20,9 +20,12 @@
   flex-direction: column;
   width: 100%;
   max-width: 100%;
+  height: 100%;
+  min-height: 100%;
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 /* Contenedor para el grid de secciones */
@@ -54,79 +57,42 @@
    HEADER
    ======================================== */
 
+.general-settings-header-wrapper {
+  background: rgba(0, 0, 0, 0.3) !important;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
 .general-header {
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.75rem 0;
   color: var(--ui-dialog-text);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  font-size: 1.75rem;
-  font-weight: 700;
-  /* Usar color primario del tema con gradiente sutil */
-  background: linear-gradient(135deg, var(--ui-button-primary) 0%, color-mix(in srgb, var(--ui-button-primary) 80%, transparent) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  gap: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
-.general-header-icon {
-  color: var(--ui-button-primary-text);
-  font-size: 1.75rem;
+.general-header-icon.protocol-dialog-header-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  background: var(--ui-button-primary);
-  border-radius: 16px;
-  padding: 0.65rem;
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.25),
-    0 0 0 4px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  position: relative;
-  overflow: hidden;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  color: white;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 6px rgba(33, 150, 243, 0.3);
+  padding: 0;
 }
 
-.general-header-icon i {
-  color: var(--ui-button-primary-text);
-  font-size: 1.75rem;
-  position: relative;
-  z-index: 2;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-  display: block;
-}
-
-.general-header-icon::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  transform: rotate(45deg);
-  animation: shine 3s infinite;
-  z-index: 1;
-}
-
-@keyframes shine {
-  0% {
-    left: -100%;
-  }
-  100% {
-    left: 100%;
-  }
-}
-
-.general-header-icon:hover {
-  transform: scale(1.1) rotate(5deg);
-  box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.3),
-    0 0 0 6px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+.general-header-icon.protocol-dialog-header-icon i {
+  font-size: 1rem;
+  color: white;
 }
 
 .general-description {

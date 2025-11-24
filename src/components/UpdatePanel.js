@@ -355,10 +355,14 @@ const UpdatePanel = () => {
       padding: '2rem 0',
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'center',
+      justifyContent: 'flex-start',
       alignItems: 'center',
-      minHeight: '50vh',
-      width: '100%'
+      height: '100%',
+      minHeight: '100%',
+      width: '100%',
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      boxSizing: 'border-box'
     }}>
       <Toast ref={toast} />
 
