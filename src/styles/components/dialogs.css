@@ -842,10 +842,10 @@
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 6px;
-  background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+  background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
   color: white;
   font-size: 0.9rem;
-  box-shadow: 0 2px 6px rgba(156, 39, 176, 0.3);
+  box-shadow: 0 2px 6px rgba(255, 152, 0, 0.3);
   padding: 0;
 }
 

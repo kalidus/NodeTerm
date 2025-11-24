@@ -839,7 +839,7 @@ const SettingsDialog = ({
       header={
         <div className="settings-dialog-header-custom" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div className="settings-dialog-header-icon">
-            <i className="pi pi-sliders-h"></i>
+            <i className="pi pi-cog"></i>
           </div>
           <span className="settings-dialog-header-title">Configuración</span>
         </div>
@@ -886,13 +886,13 @@ const SettingsDialog = ({
         onTabChange={(e) => setActiveIndex(e.index)}
         className="settings-dialog-tabview"
       >
-        <TabPanel header="General" leftIcon="pi pi-cog">
+        <TabPanel header="General" leftIcon="pi pi-sliders-h">
           <div className="general-settings-container">
             {/* Header */}
             <div className="general-settings-header-wrapper" style={{ textAlign: 'center', marginBottom: '2rem' }}>
               <h3 className="general-header">
                 <span className="general-header-icon protocol-dialog-header-icon">
-                  <i className="pi pi-cog"></i>
+                  <i className="pi pi-sliders-h"></i>
                 </span>
                 Configuración General
               </h3>
