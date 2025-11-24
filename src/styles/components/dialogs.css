@@ -609,14 +609,13 @@
 .settings-dialog .settings-dialog-tabview .p-tabview-panels,
 .p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-panels {
   width: 100% !important;
-  min-height: unset !important;
-  max-height: unset !important;
-  height: auto !important;
+  min-height: 700px !important;
+  height: 700px !important;
   padding: 0 !important;
   margin: 0 !important;
   background: transparent !important;
   border: none !important;
-  overflow: visible !important;
+  overflow: hidden !important;
 }
 
 .settings-dialog .settings-dialog-tabview .p-tabview-panel,
@@ -625,11 +624,14 @@
   flex-direction: column !important;
   justify-content: flex-start !important;
   align-items: stretch !important;
-  min-height: 40vh !important;
+  min-height: 700px !important;
+  height: 700px !important;
   width: 100% !important;
   padding: 0 !important;
   margin: 0 !important;
   background: transparent !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
 }
 
 /* ========================================
@@ -815,6 +817,48 @@
   background: var(--ui-dialog-bg) !important;
   color: var(--ui-dialog-text) !important;
   border-bottom: 1px solid var(--ui-dialog-border) !important;
+}
+
+.settings-dialog .p-dialog-header {
+  background: rgba(0, 0, 0, 0.3) !important;
+  color: var(--ui-dialog-text) !important;
+  border-bottom: 1px solid var(--ui-dialog-border) !important;
+  padding: 0 !important;
+}
+
+/* Header personalizado del diálogo de configuración */
+.settings-dialog-header-custom {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  width: 100%;
+}
+
+.settings-dialog-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+  color: white;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 6px rgba(156, 39, 176, 0.3);
+  padding: 0;
+}
+
+.settings-dialog-header-icon i {
+  font-size: 1rem;
+  color: white;
+}
+
+.settings-dialog-header-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ui-text-primary);
+  letter-spacing: 0.01em;
 }
 
 .p-dialog .p-dialog-content {
