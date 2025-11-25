@@ -2068,11 +2068,7 @@ const SettingsDialog = ({
                   flexDirection: 'column',
                   justifyContent: 'flex-start',
                   alignItems: 'center',
-                  height: '100%',
-                  minHeight: '100%',
                   width: '100%',
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
                   boxSizing: 'border-box'
                 }}>
                   <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
@@ -2096,11 +2092,7 @@ const SettingsDialog = ({
                   flexDirection: 'column', 
                   justifyContent: 'flex-start', 
                   alignItems: 'center', 
-                  height: '100%',
-                  minHeight: '100%',
                   width: '100%',
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
                   boxSizing: 'border-box'
                 }}>
                   <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
@@ -2311,11 +2303,7 @@ const SettingsDialog = ({
                   flexDirection: 'column',
                   justifyContent: 'flex-start',
                   alignItems: 'center',
-                  height: '100%',
-                  minHeight: '100%',
                   width: '100%',
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
                   boxSizing: 'border-box'
                 }}>
                   <StatusBarThemeSelector
@@ -2383,11 +2371,7 @@ const SettingsDialog = ({
                   flexDirection: 'column',
                   justifyContent: 'flex-start',
                   alignItems: 'center',
-                  height: '100%',
-                  minHeight: '100%',
                   width: '100%',
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
                   boxSizing: 'border-box'
                 }}>
                   <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
@@ -2592,11 +2576,7 @@ const SettingsDialog = ({
                   flexDirection: 'column',
                   justifyContent: 'flex-start',
                   alignItems: 'center',
-                  height: '100%',
-                  minHeight: '100%',
                   width: '100%',
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
                   boxSizing: 'border-box'
                 }}>
                   <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
