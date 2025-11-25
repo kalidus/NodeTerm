@@ -2736,24 +2736,22 @@ const SettingsDialog = ({
 
         <TabPanel header={<span><i className="pi pi-desktop" style={{ marginRight: 8 }}></i>RDP</span>}>
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
-            <div style={{ 
-              height: '100%', 
-              maxHeight: '100%', 
-              minHeight: 0,
-              overflowY: 'auto', 
-              overflowX: 'hidden', 
-              position: 'absolute', 
-              top: 0, 
-              left: 0, 
-              right: 0, 
-              bottom: 0,
-              padding: '1rem 0', 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center',
-              width: '100%',
-              boxSizing: 'border-box'
-            }}>
+            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            {/* Header */}
+            <div className="general-settings-header-wrapper">
+              <div className="general-header-content">
+                <span className="general-header-icon protocol-dialog-header-icon">
+                  <i className="pi pi-desktop"></i>
+                </span>
+                <div className="general-header-text">
+                  <h3 className="general-header">Configuración RDP</h3>
+                  <p className="general-description">Personaliza la configuración de conexiones RDP y el backend Guacamole</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Contenido */}
+            <div className="general-settings-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             {/* Backend RDP (Guacamole) */}
             <div style={{ width: '100%', maxWidth: 520, marginBottom: '1.25rem' }}>
               <h3 style={{ margin: '0 0 0.75rem 0', color: 'var(--text-color)' }}>
@@ -2948,6 +2946,7 @@ const SettingsDialog = ({
                   {Math.floor((rdpGuacdInactivityMs || 0) / 60000)} min {rdpGuacdInactivityMs === 0 ? '(desactivado)' : ''}
                 </div>
               </div>
+            </div>
             </div>
             </div>
           </div>
