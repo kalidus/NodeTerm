@@ -30,6 +30,8 @@ import { STORAGE_KEYS } from '../utils/constants';
 import { homeTabIcons, setHomeTabIcon, getHomeTabIconGroups } from '../themes/home-tab-icons';
 import { groupTabIcons, setGroupTabIcon } from '../themes/group-tab-icons';
 import AIClientsTab from './AIClientsTab';
+import SettingsSidebarNav from './SettingsSidebarNav';
+import '../styles/components/settings-sidebar.css';
 
 const STATUSBAR_HEIGHT_STORAGE_KEY = 'basicapp_statusbar_height';
 const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
@@ -94,6 +96,47 @@ const SettingsDialog = ({
   onMasterPasswordChanged
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  
+  // Estados para navegación con sidebar vertical
+  const [activeMainTab, setActiveMainTab] = useState('general');
+  const [activeSubTab, setActiveSubTab] = useState(null);
+  
+  // Función para convertir el tab seleccionado al índice del TabView
+  const getTabIndexFromTab = (mainTab, subTab) => {
+    if (subTab) {
+      // Subitems
+      const subTabMap = {
+        'clave-maestra': 1, // Seguridad -> Clave Maestra
+        'auditoria': 1,      // Seguridad -> Auditoría
+        'interfaz': 2,       // Apariencia -> Interfaz
+        'terminal': 2,       // Apariencia -> Terminal
+        'status-bar': 2,     // Apariencia -> Status Bar
+        'explorador-sesiones': 2,  // Apariencia -> Expl. Sesiones
+        'explorador-archivos': 2,  // Apariencia -> Expl. Archivos
+        'pestanas': 2        // Apariencia -> Pestañas
+      };
+      return subTabMap[subTab] || 0;
+    }
+    
+    // Tabs principales
+    const mainTabMap = {
+      'general': 0,
+      'seguridad': 1,
+      'apariencia': 2,
+      'rdp': 3,
+      'clientes-ia': 4,
+      'actualizaciones': 5,
+      'sincronizacion': 6,
+      'informacion': 7
+    };
+    return mainTabMap[mainTab] || 0;
+  };
+  
+  // Actualizar activeIndex cuando cambia el tab seleccionado
+  React.useEffect(() => {
+    const newIndex = getTabIndexFromTab(activeMainTab, activeSubTab);
+    setActiveIndex(newIndex);
+  }, [activeMainTab, activeSubTab]);
   
   const [versionInfo, setVersionInfo] = useState({ appVersion: '' });
   const [syncDialogVisible, setSyncDialogVisible] = useState(false);
@@ -881,24 +924,40 @@ const SettingsDialog = ({
       }
     >
       <Toast ref={setToast} />
-      <style>{`
-        .settings-dialog-tabview .p-tabview-panel {
-          height: 700px !important;
-          max-height: 700px !important;
-          min-height: 700px !important;
-          overflow: hidden !important;
-        }
-        .settings-dialog-tabview .p-tabview-panel > * {
-          height: 100% !important;
-          max-height: 100% !important;
-          min-height: 0 !important;
-        }
-      `}</style>
-      <TabView
-        activeIndex={activeIndex}
-        onTabChange={(e) => setActiveIndex(e.index)}
-        className="settings-dialog-tabview"
-      >
+      
+      {/* Layout con Sidebar Vertical */}
+      <div className="settings-dialog-vertical">
+        {/* Sidebar Navigation */}
+        <SettingsSidebarNav
+          activeMainTab={activeMainTab}
+          activeSubTab={activeSubTab}
+          onMainTabChange={setActiveMainTab}
+          onSubTabChange={setActiveSubTab}
+        />
+        
+        {/* Contenedor de Contenido */}
+        <div className="settings-content-wrapper">
+          {/* TabView renderizado dinámicamente */}
+          <style>{`
+            .settings-dialog-tabview .p-tabview-nav {
+              display: none !important;
+            }
+            .settings-dialog-tabview .p-tabview-panels {
+              height: 100% !important;
+              padding: 0 !important;
+              background: transparent !important;
+            }
+            .settings-dialog-tabview .p-tabview-panel {
+              height: 100% !important;
+              padding: 0 !important;
+              background: transparent !important;
+            }
+          `}</style>
+          <TabView
+            activeIndex={activeIndex}
+            onTabChange={(e) => setActiveIndex(e.index)}
+            className="settings-dialog-tabview"
+          >
         <TabPanel header="General" leftIcon="pi pi-sliders-h">
           <div style={{ height: '700px', maxHeight: '700px', minHeight: '700px', overflow: 'hidden', position: 'relative' }}>
             <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
@@ -3048,6 +3107,8 @@ const SettingsDialog = ({
           </div>
         </TabPanel>
       </TabView>
+        </div>
+      </div>
 
       {/* Diálogo de Sincronización */}
       <SyncSettingsDialog
