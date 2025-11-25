@@ -907,6 +907,12 @@
   padding-top: 8px !important; /* Compactar separación superior por defecto */
 }
 
+/* Sobrescribir padding-top para settings-dialog */
+.settings-dialog.p-dialog .p-dialog-content,
+.p-dialog.settings-dialog .p-dialog-content {
+  padding-top: 0 !important;
+}
+
 .p-dialog .p-dialog-footer {
   background: var(--ui-dialog-bg) !important;
   color: var(--ui-dialog-text) !important;
