@@ -77,51 +77,67 @@
    ======================================== */
 
 .general-settings-header-wrapper {
-  background: rgba(0, 0, 0, 0.3) !important;
-  padding: 1rem 1.25rem;
-  border-radius: 8px;
-  margin-bottom: 2rem;
+  background: rgba(0, 0, 0, 0.2) !important;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
 }
 
-.general-header {
-  margin: 0 0 0.75rem 0;
-  color: var(--ui-dialog-text);
+.general-header-content {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  gap: 0.875rem;
 }
 
 .general-header-icon.protocol-dialog-header-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
   color: white;
-  font-size: 0.9rem;
-  box-shadow: 0 2px 6px rgba(33, 150, 243, 0.3);
+  font-size: 0.875rem;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.25);
   padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.general-header-icon.protocol-dialog-header-icon:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.35);
 }
 
 .general-header-icon.protocol-dialog-header-icon i {
-  font-size: 1rem;
+  font-size: 0.875rem;
   color: white;
 }
 
+.general-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.general-header {
+  margin: 0 0 0.25rem 0;
+  color: var(--ui-dialog-text);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
 .general-description {
-  margin: 0 auto;
+  margin: 0;
   color: var(--text-color-secondary);
-  font-size: 0.95rem;
-  line-height: 1.6;
-  opacity: 0.9;
-  max-width: 600px;
-  text-align: center;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  opacity: 0.75;
+  text-align: left;
 }
 
 /* ========================================
