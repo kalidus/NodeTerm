@@ -922,11 +922,19 @@ const SettingsDialog = ({
         maxHeight: '98vh',
         minWidth: '1000px',
         minHeight: '800px',
-        height: '800px'
+        height: '800px',
+        width: '1200px'
       }}
       contentStyle={{
         background: 'var(--ui-dialog-bg)',
-        color: 'var(--ui-dialog-text)'
+        color: 'var(--ui-dialog-text)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '700px',
+        maxHeight: '700px',
+        minHeight: '700px',
+        padding: '0',
+        overflow: 'hidden'
       }}
       headerStyle={{
         background: 'rgba(0, 0, 0, 0.3) !important',

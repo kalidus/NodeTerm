@@ -2,16 +2,35 @@
    SETTINGS DIALOG SIDEBAR - VERTICAL LAYOUT
    ======================================== */
 
-/* Contenedor principal con layout flex */
+/* Estilos para el Dialog de Configuración */
+.settings-dialog {
+  width: 1200px !important;
+  height: 800px !important;
+  max-height: 800px !important;
+  min-height: 800px !important;
+}
+
+.settings-dialog .p-dialog-content {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 700px !important;
+  max-height: 700px !important;
+  min-height: 700px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Contenedor principal con layout flex - ALTURA FIJA */
 .settings-dialog-vertical {
   display: flex !important;
   flex-direction: row !important;
-  height: 100% !important;
-  max-height: 100% !important;
+  height: 700px !important;
+  max-height: 700px !important;
+  min-height: 700px !important;
   width: 100% !important;
   gap: 0 !important;
   background: var(--ui-dialog-bg) !important;
-  min-height: 700px;
 }
 
 /* Sidebar vertical */
@@ -205,15 +224,15 @@
   justify-content: center;
 }
 
-/* Contenedor de contenido */
+/* Contenedor de contenido - ALTURA FIJA */
 .settings-content-wrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100% !important;
-  max-height: 100% !important;
-  min-height: 0;
-  overflow: hidden;
+  height: 700px !important;
+  max-height: 700px !important;
+  min-height: 700px !important;
+  overflow: hidden !important;
   background: var(--ui-dialog-bg) !important;
   border: none !important;
   padding: 0 !important;
@@ -426,8 +445,16 @@
   overflow: hidden !important;
 }
 
+.settings-content-wrapper .p-tabview {
+  height: 700px !important;
+  max-height: 700px !important;
+  min-height: 700px !important;
+}
+
 .settings-content-wrapper .p-tabview-panels {
-  height: 100% !important;
+  height: 700px !important;
+  max-height: 700px !important;
+  min-height: 700px !important;
   flex: 1;
   overflow: hidden !important;
   border: none !important;
@@ -437,7 +464,9 @@
 }
 
 .settings-content-wrapper .p-tabview-panel {
-  height: 100% !important;
+  height: 700px !important;
+  max-height: 700px !important;
+  min-height: 700px !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
   padding: 0 !important;
@@ -468,12 +497,27 @@
   padding: 0 !important;
 }
 
+/* TabViews anidados (dentro de Seguridad, Apariencia, etc.) - ALTURA FIJA */
+.settings-content-wrapper .p-tabview-panel .p-tabview {
+  height: 700px !important;
+  max-height: 700px !important;
+  min-height: 700px !important;
+}
+
 .settings-content-wrapper .p-tabview-panel .p-tabview-panels {
+  height: 700px !important;
+  max-height: 700px !important;
+  min-height: 700px !important;
   padding: 0 !important;
   margin: 0 !important;
 }
 
 .settings-content-wrapper .p-tabview-panel .p-tabview-panel {
+  height: 700px !important;
+  max-height: 700px !important;
+  min-height: 700px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   padding: 0 !important;
   margin: 0 !important;
 }
