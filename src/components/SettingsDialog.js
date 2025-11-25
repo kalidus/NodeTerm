@@ -1044,16 +1044,16 @@ const SettingsDialog = ({
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
             <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
             {/* Header */}
-            <div className="general-settings-header-wrapper" style={{ textAlign: 'center', marginBottom: '2rem' }}>
-              <h3 className="general-header">
+            <div className="general-settings-header-wrapper">
+              <div className="general-header-content">
                 <span className="general-header-icon protocol-dialog-header-icon">
                   <i className="pi pi-sliders-h"></i>
                 </span>
-                Configuración General
-              </h3>
-              <p className="general-description">
-                Personaliza el comportamiento y la apariencia básica de NodeTerm
-              </p>
+                <div className="general-header-text">
+                  <h3 className="general-header">Configuración General</h3>
+                  <p className="general-description">Personaliza el comportamiento y la apariencia básica de NodeTerm</p>
+                </div>
+              </div>
             </div>
             
             {/* Grid de 2 columnas para las secciones */}
