@@ -101,24 +101,14 @@ const SettingsDialog = ({
   const [activeMainTab, setActiveMainTab] = useState('general');
   const [activeSubTab, setActiveSubTab] = useState(null);
   
-  // Función para convertir el tab seleccionado al índice del TabView
-  const getTabIndexFromTab = (mainTab, subTab) => {
-    if (subTab) {
-      // Subitems
-      const subTabMap = {
-        'clave-maestra': 1, // Seguridad -> Clave Maestra
-        'auditoria': 1,      // Seguridad -> Auditoría
-        'interfaz': 2,       // Apariencia -> Interfaz
-        'terminal': 2,       // Apariencia -> Terminal
-        'status-bar': 2,     // Apariencia -> Status Bar
-        'explorador-sesiones': 2,  // Apariencia -> Expl. Sesiones
-        'explorador-archivos': 2,  // Apariencia -> Expl. Archivos
-        'pestanas': 2        // Apariencia -> Pestañas
-      };
-      return subTabMap[subTab] || 0;
-    }
-    
-    // Tabs principales
+  // Estados para TabViews ANIDADOS (dentro de Seguridad, Apariencia, etc.)
+  const [securityActiveIndex, setSecurityActiveIndex] = useState(0);
+  const [appearanceActiveIndex, setAppearanceActiveIndex] = useState(0);
+  
+  // Función para convertir el tab seleccionado al índice del TabView PRINCIPAL
+  // IMPORTANTE: Los TabPanels anidados (subitems) están dentro de sus padres,
+  // así que necesitamos cambiar al padre y luego al subitem
+  const getMainTabIndexFromTab = (mainTab) => {
     const mainTabMap = {
       'general': 0,
       'seguridad': 1,
@@ -132,10 +122,48 @@ const SettingsDialog = ({
     return mainTabMap[mainTab] || 0;
   };
   
+  // Función para obtener el índice del TabPanel anidado DENTRO de su padre
+  const getSubTabIndexFromTab = (mainTab, subTab) => {
+    if (!subTab) return null;
+    
+    // Map de subitems a sus índices dentro del TabView padre
+    const subTabMap = {
+      // Dentro de Seguridad (índice 1)
+      'clave-maestra': { parent: 'seguridad', index: 0 },
+      'auditoria': { parent: 'seguridad', index: 1 },
+      // Dentro de Apariencia (índice 2)
+      'interfaz': { parent: 'apariencia', index: 0 },
+      'terminal': { parent: 'apariencia', index: 1 },
+      'status-bar': { parent: 'apariencia', index: 2 },
+      'explorador-sesiones': { parent: 'apariencia', index: 3 },
+      'explorador-archivos': { parent: 'apariencia', index: 4 },
+      'pestanas': { parent: 'apariencia', index: 5 }
+    };
+    return subTabMap[subTab];
+  };
+  
   // Actualizar activeIndex cuando cambia el tab seleccionado
   React.useEffect(() => {
-    const newIndex = getTabIndexFromTab(activeMainTab, activeSubTab);
-    setActiveIndex(newIndex);
+    const mainIndex = getMainTabIndexFromTab(activeMainTab);
+    setActiveIndex(mainIndex);
+    
+    // Si hay un subTab, también actualizar el índice del TabView anidado
+    if (activeSubTab) {
+      const subInfo = getSubTabIndexFromTab(activeMainTab, activeSubTab);
+      if (subInfo) {
+        console.log(`[SettingsDialog] Actualizando TabView anidado para ${activeMainTab}: index=${subInfo.index}`);
+        
+        // Actualizar el índice del TabView anidado según el parent
+        if (activeMainTab === 'seguridad') {
+          setSecurityActiveIndex(subInfo.index);
+        } else if (activeMainTab === 'apariencia') {
+          setAppearanceActiveIndex(subInfo.index);
+        }
+      }
+    }
+    
+    // Log para debug
+    console.log(`[SettingsDialog] Tab seleccionado: mainTab=${activeMainTab}, subTab=${activeSubTab}, mainIndex=${mainIndex}`);
   }, [activeMainTab, activeSubTab]);
   
   const [versionInfo, setVersionInfo] = useState({ appVersion: '' });
@@ -1114,7 +1142,12 @@ const SettingsDialog = ({
         </TabPanel>
         <TabPanel header="Seguridad" leftIcon="pi pi-shield">
           <div style={{ marginTop: 0, padding: 0, width: '100%' }}>
-            <TabView className="settings-dialog-subtabview" style={{ marginTop: 0, width: '100%', overflow: 'visible' }}>
+            <TabView 
+              activeIndex={securityActiveIndex}
+              onTabChange={(e) => setSecurityActiveIndex(e.index)}
+              className="settings-dialog-subtabview" 
+              style={{ marginTop: 0, width: '100%', overflow: 'visible' }}
+            >
               <TabPanel header={<span><i className="pi pi-key" style={{ marginRight: 8 }}></i>Clave Maestra</span>}>
                 <div className="security-settings-container">
                   <div className="security-settings-content">
@@ -1976,7 +2009,12 @@ const SettingsDialog = ({
 
         <TabPanel header="Apariencia" leftIcon="pi pi-palette">
           <div style={{ marginTop: 0, padding: 0, width: '100%' }}>
-            <TabView className="settings-dialog-subtabview" style={{ marginTop: 0, width: '100%', overflow: 'visible' }}>
+            <TabView 
+              activeIndex={appearanceActiveIndex}
+              onTabChange={(e) => setAppearanceActiveIndex(e.index)}
+              className="settings-dialog-subtabview" 
+              style={{ marginTop: 0, width: '100%', overflow: 'visible' }}
+            >
               <TabPanel header={<span><i className="pi pi-eye" style={{ marginRight: 8 }}></i>Interfaz</span>}>
                 <div style={{
                   padding: '1rem 0',
