@@ -41,37 +41,55 @@
   height: 100% !important;
   background: var(--ui-content-bg) !important;
   border-right: 1px solid var(--ui-dialog-border) !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+  overflow: hidden !important;
   padding: 0 !important;
   margin: 0 !important;
   box-sizing: border-box !important;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-sidebar * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-sidebar *::-webkit-scrollbar,
+.settings-sidebar *::-webkit-scrollbar-track,
+.settings-sidebar *::-webkit-scrollbar-thumb {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
 }
 
 /* Scroll suave en sidebar - INVISIBLE */
 .settings-sidebar::-webkit-scrollbar {
-  width: 0px;
-  display: none;
+  width: 0px !important;
+  display: none !important;
+  height: 0 !important;
+  visibility: hidden !important;
 }
 
 .settings-sidebar::-webkit-scrollbar-track {
-  background: transparent;
-  display: none;
+  background: transparent !important;
+  display: none !important;
+  visibility: hidden !important;
 }
 
 .settings-sidebar::-webkit-scrollbar-thumb {
-  background: transparent;
+  background: transparent !important;
   border-radius: 0;
-  display: none;
+  display: none !important;
+  visibility: hidden !important;
 }
 
 .settings-sidebar::-webkit-scrollbar-thumb:hover {
-  background: transparent;
+  background: transparent !important;
+  display: none !important;
 }
 
 /* Contenedor de items del sidebar */
@@ -84,16 +102,32 @@
   overflow: hidden !important;
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
+}
+
+.settings-nav-items * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-nav-items *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
 }
 
 .settings-nav-items::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
+  height: 0 !important;
 }
 
 .settings-nav-items:hover::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
+  height: 0 !important;
 }
 
 /* Item de navegación principal */
@@ -136,16 +170,8 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-.settings-nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 0 4px 4px 0;
-}
+/* .settings-nav-item.active::before - ELIMINADO PORQUE GENERA LÍNEA BLANCA */
+/* No usar pseudo-elementos para indicar estado activo */
 
 /* Icono del item de navegación */
 .settings-nav-item-icon {
@@ -188,22 +214,40 @@
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
   flex-shrink: 0;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.settings-nav-subitems * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-nav-subitems *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .settings-nav-subitems::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
 }
 
 .settings-nav-subitems:hover::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
 }
 
 .settings-nav-item.expanded ~ .settings-nav-subitems,
 .settings-nav-item.expanded .settings-nav-subitems {
   max-height: 500px;
   overflow: visible !important;
+  pointer-events: auto;
 }
 
 /* Estilo de los items secundarios */
@@ -225,11 +269,35 @@
   overflow: hidden !important;
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
+  flex-shrink: 0;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  white-space: nowrap;
+}
+
+.settings-nav-subitem * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-nav-subitem *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .settings-nav-subitem::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
+}
+
+.settings-nav-subitem:hover::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
 }
 
 .settings-nav-subitem:hover {
@@ -246,16 +314,8 @@
   border-color: var(--ui-button-primary);
 }
 
-.settings-nav-subitem.active::before {
-  content: '';
-  position: absolute;
-  left: 2.5rem;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 0 3px 3px 0;
-}
+/* .settings-nav-subitem.active::before - ELIMINADO PORQUE GENERA LÍNEA BLANCA */
+/* No usar pseudo-elementos para indicar estado activo */
 
 /* Icono del subitem */
 .settings-nav-subitem-icon {
