@@ -1150,13 +1150,8 @@ const SettingsDialog = ({
         </TabPanel>
         <TabPanel header="Seguridad" leftIcon="pi pi-shield">
           <div style={{ marginTop: 0, padding: 0, width: '100%' }}>
-            <TabView 
-              activeIndex={securityActiveIndex}
-              onTabChange={(e) => setSecurityActiveIndex(e.index)}
-              className="settings-dialog-subtabview" 
-              style={{ marginTop: 0, width: '100%', overflow: 'visible' }}
-            >
-              <TabPanel header={<span><i className="pi pi-key" style={{ marginRight: 8 }}></i>Clave Maestra</span>}>
+            {/* Renderizado condicional basado en activeSubTab */}
+            {activeSubTab === 'clave-maestra' && (
                 <div className="security-settings-container">
                   <div className="security-settings-content">
                     <h3 className="security-header">
@@ -1517,8 +1512,8 @@ const SettingsDialog = ({
                     </div>
                   </div>
                 </div>
-              </TabPanel>
-              <TabPanel header={<span><i className="pi pi-video" style={{ marginRight: 8 }}></i>Auditoría</span>}>
+            )}
+            {activeSubTab === 'auditoria' && (
                 <div className="general-settings-container">
                   {/* Header */}
                   <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -2010,20 +2005,14 @@ const SettingsDialog = ({
                     </div>
                   </div>
                 </div>
-              </TabPanel>
-            </TabView>
+            )}
           </div>
         </TabPanel>
 
         <TabPanel header="Apariencia" leftIcon="pi pi-palette">
           <div style={{ marginTop: 0, padding: 0, width: '100%' }}>
-            <TabView 
-              activeIndex={appearanceActiveIndex}
-              onTabChange={(e) => setAppearanceActiveIndex(e.index)}
-              className="settings-dialog-subtabview" 
-              style={{ marginTop: 0, width: '100%', overflow: 'visible' }}
-            >
-              <TabPanel header={<span><i className="pi pi-eye" style={{ marginRight: 8 }}></i>Interfaz</span>}>
+            {/* Renderizado condicional basado en activeSubTab */}
+            {activeSubTab === 'interfaz' && (
                 <div style={{
                   padding: '1rem 0',
                   display: 'flex',
@@ -2050,8 +2039,8 @@ const SettingsDialog = ({
                   </p>
                   <ThemeSelector showPreview={true} />
                 </div>
-              </TabPanel>
-              <TabPanel header={<span><i className="pi pi-desktop" style={{ marginRight: 8 }}></i>Terminal</span>}>
+            )}
+            {activeSubTab === 'terminal' && (
                 <div style={{ 
                   padding: '1rem 0', 
                   display: 'flex', 
@@ -2265,8 +2254,8 @@ const SettingsDialog = ({
                     </div>
                   </div>
                 </div>
-              </TabPanel>
-              <TabPanel header={<span><i className="pi pi-sliders-h" style={{ marginRight: 8 }}></i>Status Bar</span>}>
+            )}
+            {activeSubTab === 'status-bar' && (
                 <div style={{
                   padding: '1rem 0',
                   display: 'flex',
@@ -2337,8 +2326,8 @@ const SettingsDialog = ({
                     </div>
                   </div>
                 </div>
-              </TabPanel>
-              <TabPanel header={<span><i className="pi pi-sitemap" style={{ marginRight: 8 }}></i>Explorador de Sesiones</span>}>
+            )}
+            {activeSubTab === 'explorador-sesiones' && (
                 <div style={{
                   padding: '1rem 0',
                   display: 'flex',
@@ -2546,8 +2535,8 @@ const SettingsDialog = ({
                     </div>
                   </div>
                 </div>
-              </TabPanel>
-              <TabPanel header={<span><i className="pi pi-folder-open" style={{ marginRight: 8 }}></i>Explorador de Archivos</span>}>
+            )}
+            {activeSubTab === 'explorador-archivos' && (
                 <div style={{
                   padding: '1rem 0',
                   display: 'flex',
@@ -2705,11 +2694,10 @@ const SettingsDialog = ({
                     </div>
                   </div>
                 </div>
-              </TabPanel>
-              <TabPanel header={<span><i className="pi pi-palette" style={{ marginRight: 8 }}></i>Pestañas</span>}>
+            )}
+            {activeSubTab === 'pestanas' && (
                 <TabThemeSelector />
-              </TabPanel>
-            </TabView>
+            )}
           </div>
         </TabPanel>
 
