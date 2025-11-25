@@ -655,73 +655,10 @@
 }
 
 /* ========================================
-   OCULTAR TAMBIÉN TABS ANIDADOS DENTRO
+   TABS ANIDADOS ELIMINADOS (RENDERIZADO CONDICIONAL)
    ======================================== */
 
-/* Ocultar tabs dentro de los panels - SOLO Seguridad y Apariencia */
-.settings-content-wrapper .general-settings-container .p-tabview-nav,
-.settings-content-wrapper .general-settings-container .p-tabview-nav-container {
-  display: none !important;
-  height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-/* NO ocultar TODOS los tabs anidados. Usar selectores más específicos si es necesario */
-
-/* TabViews anidados SOLO para Seguridad y Apariencia (nivel 2) */
-/* Estos son TabViews que controlan Clave-Maestra/Auditoría y Terminal/Status Bar/etc */
-.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > .p-tabview {
-  height: 700px !important;
-  max-height: 700px !important;
-  min-height: 700px !important;
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-
-.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > .p-tabview::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-}
-
-.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > .p-tabview > .p-tabview-panels {
-  height: 700px !important;
-  max-height: 700px !important;
-  min-height: 700px !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-
-.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > .p-tabview > .p-tabview-panels::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-}
-
-.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > .p-tabview > .p-tabview-panels > .p-tabview-panel {
-  height: 700px !important;
-  max-height: 700px !important;
-  min-height: 700px !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-
-.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > .p-tabview > .p-tabview-panels > .p-tabview-panel::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  visibility: hidden !important;
-}
-
-.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > .p-tabview > .p-tabview-panels > .p-tabview-panel:hover::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  visibility: hidden !important;
-}
+/* Los TabViews anidados de Seguridad y Apariencia fueron removidos.
+   Ahora se usa renderizado condicional basado en activeSubTab.
+   No hay necesidad de ocultar tabs con CSS. */
 
