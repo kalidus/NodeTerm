@@ -32,22 +32,28 @@
   flex-direction: column;
 }
 
-/* Scroll suave en sidebar */
+/* Scroll suave en sidebar - MINIMALISTA */
 .settings-sidebar::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .settings-sidebar::-webkit-scrollbar-track {
   background: transparent;
+  display: none;
 }
 
 .settings-sidebar::-webkit-scrollbar-thumb {
-  background: var(--ui-dialog-border);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  display: none;
 }
 
 .settings-sidebar::-webkit-scrollbar-thumb:hover {
-  background: var(--ui-button-primary);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.settings-sidebar:hover::-webkit-scrollbar-thumb {
+  display: block;
 }
 
 /* Contenedor de items del sidebar */
@@ -379,16 +385,23 @@
   background: var(--ui-button-primary);
 }
 
-/* Firefox scrollbars */
-.settings-sidebar,
-.settings-content-panel {
+/* Firefox scrollbars - MINIMALISTA */
+.settings-sidebar {
   scrollbar-width: thin;
-  scrollbar-color: var(--ui-dialog-border) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
-.settings-sidebar:hover,
+.settings-sidebar:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.settings-content-panel {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
 .settings-content-panel:hover {
-  scrollbar-color: var(--ui-button-primary) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 /* ========================================

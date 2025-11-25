@@ -85,6 +85,7 @@ const SettingsSidebarNav = ({
 
   const handleMainItemClick = (tabId) => {
     onMainTabChange(tabId);
+    onSubTabChange(null); // Limpiar subTab cuando se selecciona un main tab
     
     // Expandir el item si tiene subitems
     const item = navigationStructure.find(i => i.id === tabId);
@@ -94,10 +95,17 @@ const SettingsSidebarNav = ({
         [tabId]: true
       }));
     }
+    
+    console.log(`[SettingsSidebarNav] Main item clicked: ${tabId}`);
   };
 
-  const handleSubItemClick = (subitemId) => {
+  const handleSubItemClick = (subitemId, parentId) => {
+    // Primero cambiar al tab principal (para que se abra el TabPanel padre)
+    onMainTabChange(parentId);
+    // Luego cambiar al subitem
     onSubTabChange(subitemId);
+    
+    console.log(`[SettingsSidebarNav] Sub item clicked: ${subitemId} (parent: ${parentId})`);
   };
 
   return (
@@ -131,7 +139,7 @@ const SettingsSidebarNav = ({
                     className={`settings-nav-subitem ${activeSubTab === subitem.id ? 'active' : ''}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleSubItemClick(subitem.id);
+                      handleSubItemClick(subitem.id, item.id);
                     }}
                   >
                     <i className={`${subitem.icon} settings-nav-subitem-icon`}></i>
