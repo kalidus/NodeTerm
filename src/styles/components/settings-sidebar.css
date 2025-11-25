@@ -602,22 +602,28 @@
   background: transparent !important;
 }
 
-/* OCULTAR TODAS LAS BARRAS DE NAVEGACIÓN DE TABS */
-.settings-content-wrapper .p-tabview-nav,
-.settings-content-wrapper .p-tabview-nav-container {
+/* OCULTAR SOLO LA BARRA DE NAVEGACIÓN DEL TABVIEW PRINCIPAL */
+/* SOLO usar descendencia DIRECTA (>) para NO afectar TabViews anidados dentro de ThemeSelector */
+.settings-content-wrapper > .p-tabview > .p-tabview-nav,
+.settings-content-wrapper > .p-tabview > .p-tabview-nav-container,
+.settings-content-wrapper > .settings-dialog-tabview > .p-tabview-nav,
+.settings-content-wrapper > .settings-dialog-tabview > .p-tabview-nav-container {
   display: none !important;
   visibility: hidden !important;
   height: 0 !important;
   overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
-.settings-content-wrapper .p-tabview {
+/* SOLO el TabView principal (nivel 1) */
+.settings-content-wrapper > .p-tabview {
   height: 700px !important;
   max-height: 700px !important;
   min-height: 700px !important;
 }
 
-.settings-content-wrapper .p-tabview-panels {
+.settings-content-wrapper > .p-tabview > .p-tabview-panels {
   height: 700px !important;
   max-height: 700px !important;
   min-height: 700px !important;
@@ -629,7 +635,7 @@
   margin: 0 !important;
 }
 
-.settings-content-wrapper .p-tabview-panel {
+.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel {
   height: 700px !important;
   max-height: 700px !important;
   min-height: 700px !important;
@@ -641,8 +647,8 @@
   margin: 0 !important;
 }
 
-/* Asegurar que el contenido dentro del panel sea scrolleable */
-.settings-content-wrapper .p-tabview-panel > div {
+/* Asegurar que el contenido dentro del panel principal sea scrolleable */
+.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > div {
   height: 100% !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
@@ -652,19 +658,20 @@
    OCULTAR TAMBIÉN TABS ANIDADOS DENTRO
    ======================================== */
 
-/* Ocultar tabs dentro de los panels */
+/* Ocultar tabs dentro de los panels - SOLO Seguridad y Apariencia */
 .settings-content-wrapper .general-settings-container .p-tabview-nav,
-.settings-content-wrapper .general-settings-container .p-tabview-nav-container,
-.settings-content-wrapper .p-tabview-panel .p-tabview-nav,
-.settings-content-wrapper .p-tabview-panel .p-tabview-nav-container {
+.settings-content-wrapper .general-settings-container .p-tabview-nav-container {
   display: none !important;
   height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
 }
 
-/* TabViews anidados (dentro de Seguridad, Apariencia, etc.) - ALTURA FIJA */
-.settings-content-wrapper .p-tabview-panel .p-tabview {
+/* NO ocultar TODOS los tabs anidados. Usar selectores más específicos si es necesario */
+
+/* TabViews anidados SOLO para Seguridad y Apariencia (nivel 2) */
+/* Estos son TabViews que controlan Clave-Maestra/Auditoría y Terminal/Status Bar/etc */
+.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > .p-tabview {
   height: 700px !important;
   max-height: 700px !important;
   min-height: 700px !important;
@@ -672,12 +679,12 @@
   -ms-overflow-style: none !important;
 }
 
-.settings-content-wrapper .p-tabview-panel .p-tabview::-webkit-scrollbar {
+.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > .p-tabview::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
 }
 
-.settings-content-wrapper .p-tabview-panel .p-tabview-panels {
+.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > .p-tabview > .p-tabview-panels {
   height: 700px !important;
   max-height: 700px !important;
   min-height: 700px !important;
@@ -687,12 +694,12 @@
   -ms-overflow-style: none !important;
 }
 
-.settings-content-wrapper .p-tabview-panel .p-tabview-panels::-webkit-scrollbar {
+.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > .p-tabview > .p-tabview-panels::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
 }
 
-.settings-content-wrapper .p-tabview-panel .p-tabview-panel {
+.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > .p-tabview > .p-tabview-panels > .p-tabview-panel {
   height: 700px !important;
   max-height: 700px !important;
   min-height: 700px !important;
@@ -704,14 +711,14 @@
   -ms-overflow-style: none !important;
 }
 
-.settings-content-wrapper .p-tabview-panel .p-tabview-panel::-webkit-scrollbar {
+.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > .p-tabview > .p-tabview-panels > .p-tabview-panel::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
   visibility: hidden !important;
 }
 
-.settings-content-wrapper .p-tabview-panel .p-tabview-panel:hover::-webkit-scrollbar {
+.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > .p-tabview > .p-tabview-panels > .p-tabview-panel:hover::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
