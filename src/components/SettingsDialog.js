@@ -31,6 +31,7 @@ import { homeTabIcons, setHomeTabIcon, getHomeTabIconGroups } from '../themes/ho
 import { groupTabIcons, setGroupTabIcon } from '../themes/group-tab-icons';
 import AIClientsTab from './AIClientsTab';
 import SettingsSidebarNav from './SettingsSidebarNav';
+import { useDialogResize } from '../hooks/useDialogResize';
 import '../styles/components/settings-sidebar.css';
 
 const STATUSBAR_HEIGHT_STORAGE_KEY = 'basicapp_statusbar_height';
@@ -96,6 +97,13 @@ const SettingsDialog = ({
   onMasterPasswordChanged
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  
+  // Hook para redimensionamiento del diálogo
+  const { dialogRef, size, startResize } = useDialogResize(
+    'settings-dialog-size',
+    { width: 1200, height: 800 },
+    { minWidth: 1000, minHeight: 600, maxWidth: window.innerWidth * 0.98, maxHeight: window.innerHeight * 0.98 }
+  );
   
   // Estados para navegación con sidebar vertical
   const [activeMainTab, setActiveMainTab] = useState('general');
@@ -905,8 +913,12 @@ const SettingsDialog = ({
     );
   };
 
+  // Calcular altura del contenido (altura total - header - footer)
+  const contentHeight = size.height - 120; // Aproximadamente 60px header + 60px footer
+
   return (
     <Dialog
+      ref={dialogRef}
       header={
         <div className="settings-dialog-header-custom" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div className="settings-dialog-header-icon">
@@ -921,20 +933,21 @@ const SettingsDialog = ({
         maxWidth: '98vw',
         maxHeight: '98vh',
         minWidth: '1000px',
-        minHeight: '800px',
-        height: '800px',
-        width: '1200px'
+        minHeight: '600px',
+        height: `${size.height}px`,
+        width: `${size.width}px`
       }}
       contentStyle={{
         background: 'var(--ui-dialog-bg)',
         color: 'var(--ui-dialog-text)',
         display: 'flex',
         flexDirection: 'column',
-        height: '700px',
-        maxHeight: '700px',
-        minHeight: '700px',
+        height: `${contentHeight}px`,
+        maxHeight: `${contentHeight}px`,
+        minHeight: `${contentHeight}px`,
         padding: '0',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        position: 'relative'
       }}
       headerStyle={{
         background: 'rgba(0, 0, 0, 0.3) !important',
@@ -960,6 +973,53 @@ const SettingsDialog = ({
       }
     >
       <Toast ref={setToast} />
+      
+      {/* Handles de redimensionamiento - posicionados relativos al contenido */}
+      <div
+        className="resize-handle resize-handle-right"
+        onMouseDown={(e) => startResize(e, 'right')}
+        style={{
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: '4px',
+          cursor: 'ew-resize',
+          zIndex: 1000,
+          backgroundColor: 'transparent',
+          pointerEvents: 'auto'
+        }}
+      />
+      <div
+        className="resize-handle resize-handle-bottom"
+        onMouseDown={(e) => startResize(e, 'bottom')}
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '4px',
+          cursor: 'ns-resize',
+          zIndex: 1000,
+          backgroundColor: 'transparent',
+          pointerEvents: 'auto'
+        }}
+      />
+      <div
+        className="resize-handle resize-handle-bottom-right"
+        onMouseDown={(e) => startResize(e, 'bottom-right')}
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          right: 0,
+          width: '12px',
+          height: '12px',
+          cursor: 'se-resize',
+          zIndex: 1001,
+          backgroundColor: 'transparent',
+          pointerEvents: 'auto'
+        }}
+      />
       
       {/* Layout con Sidebar Vertical */}
       <div className="settings-dialog-vertical">
@@ -995,7 +1055,7 @@ const SettingsDialog = ({
             className="settings-dialog-tabview"
           >
         <TabPanel header="General" leftIcon="pi pi-sliders-h">
-          <div style={{ height: '700px', maxHeight: '700px', minHeight: '700px', overflow: 'hidden', position: 'relative' }}>
+          <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
             <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
             {/* Header */}
             <div className="general-settings-header-wrapper" style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -2913,7 +2973,7 @@ const SettingsDialog = ({
         </TabPanel>
 
         <TabPanel header="Clientes de IA" leftIcon="pi pi-comments">
-          <div style={{ height: '700px', maxHeight: '700px', minHeight: '700px', overflow: 'hidden', position: 'relative' }}>
+          <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
             <div style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
               <AIClientsTab themeColors={{ primary: 'var(--primary-color)' }} />
             </div>

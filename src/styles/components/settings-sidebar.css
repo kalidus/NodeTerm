@@ -4,30 +4,27 @@
 
 /* Estilos para el Dialog de Configuración */
 .settings-dialog {
-  width: 1200px !important;
-  height: 800px !important;
-  max-height: 800px !important;
-  min-height: 800px !important;
+  /* Los tamaños ahora se controlan dinámicamente desde el componente */
+  /* width y height se establecen inline desde useDialogResize */
 }
 
 .settings-dialog .p-dialog-content {
   display: flex !important;
   flex-direction: column !important;
-  height: 700px !important;
-  max-height: 700px !important;
-  min-height: 700px !important;
+  /* height se establece dinámicamente desde el componente */
   padding: 0 !important;
   margin: 0 !important;
   overflow: hidden !important;
+  position: relative !important;
 }
 
-/* Contenedor principal con layout flex - ALTURA FIJA */
+/* Contenedor principal con layout flex - ALTURA DINÁMICA */
 .settings-dialog-vertical {
   display: flex !important;
   flex-direction: row !important;
-  height: 700px !important;
-  max-height: 700px !important;
-  min-height: 700px !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
   width: 100% !important;
   gap: 0 !important;
   background: var(--ui-dialog-bg) !important;
@@ -327,14 +324,14 @@
   justify-content: center;
 }
 
-/* Contenedor de contenido - ALTURA FIJA */
+/* Contenedor de contenido - ALTURA DINÁMICA */
 .settings-content-wrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 700px !important;
-  max-height: 700px !important;
-  min-height: 700px !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
   overflow: hidden !important;
   background: var(--ui-dialog-bg) !important;
   border: none !important;
@@ -617,17 +614,17 @@
   padding: 0 !important;
 }
 
-/* SOLO el TabView principal (nivel 1) */
+/* SOLO el TabView principal (nivel 1) - ALTURA DINÁMICA */
 .settings-content-wrapper > .p-tabview {
-  height: 700px !important;
-  max-height: 700px !important;
-  min-height: 700px !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
 }
 
 .settings-content-wrapper > .p-tabview > .p-tabview-panels {
-  height: 700px !important;
-  max-height: 700px !important;
-  min-height: 700px !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
   flex: 1;
   overflow: hidden !important;
   border: none !important;
@@ -637,9 +634,9 @@
 }
 
 .settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel {
-  height: 700px !important;
-  max-height: 700px !important;
-  min-height: 700px !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
   padding: 0 !important;
@@ -662,4 +659,37 @@
 /* Los TabViews anidados de Seguridad y Apariencia fueron removidos.
    Ahora se usa renderizado condicional basado en activeSubTab.
    No hay necesidad de ocultar tabs con CSS. */
+
+/* ========================================
+   HANDLES DE REDIMENSIONAMIENTO
+   ======================================== */
+
+.resize-handle {
+  transition: background-color 0.2s ease;
+}
+
+.resize-handle:hover {
+  background-color: var(--ui-button-primary, #2196F3) !important;
+  opacity: 0.6;
+}
+
+.resize-handle-right:hover {
+  background-color: var(--ui-button-primary, #2196F3) !important;
+  opacity: 0.6;
+}
+
+.resize-handle-bottom:hover {
+  background-color: var(--ui-button-primary, #2196F3) !important;
+  opacity: 0.6;
+}
+
+.resize-handle-bottom-right {
+  border-bottom-right-radius: 8px;
+}
+
+.resize-handle-bottom-right:hover {
+  background-color: var(--ui-button-primary, #2196F3) !important;
+  opacity: 0.8;
+  border-bottom-right-radius: 8px;
+}
 
