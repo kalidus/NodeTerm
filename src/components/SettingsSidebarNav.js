@@ -84,19 +84,19 @@ const SettingsSidebarNav = ({
   };
 
   const handleMainItemClick = (tabId) => {
-    onMainTabChange(tabId);
-    onSubTabChange(null); // Limpiar subTab cuando se selecciona un main tab
-    
-    // Expandir el item si tiene subitems
+    // Solo cambiar el tab si NO tiene subitems
+    // Si tiene subitems, solo expandir/contraer sin cambiar tab
     const item = navigationStructure.find(i => i.id === tabId);
-    if (item && item.subitems.length > 0) {
-      setExpandedItems(prev => ({
-        ...prev,
-        [tabId]: true
-      }));
-    }
     
-    console.log(`[SettingsSidebarNav] Main item clicked: ${tabId}`);
+    if (item && item.subitems.length === 0) {
+      // Item SIN subitems: cambiar el tab
+      onMainTabChange(tabId);
+      onSubTabChange(null);
+      console.log(`[SettingsSidebarNav] Main item clicked (sin subitems): ${tabId}`);
+    } else {
+      // Item CON subitems: solo log
+      console.log(`[SettingsSidebarNav] Item con subitems clickeado (expandir/contraer): ${tabId}`);
+    }
   };
 
   const handleSubItemClick = (subitemId, parentId) => {

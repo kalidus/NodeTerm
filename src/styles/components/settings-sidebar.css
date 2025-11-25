@@ -49,11 +49,14 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-/* Scroll suave en sidebar - MINIMALISTA */
+/* Scroll suave en sidebar - INVISIBLE */
 .settings-sidebar::-webkit-scrollbar {
-  width: 4px;
+  width: 0px;
+  display: none;
 }
 
 .settings-sidebar::-webkit-scrollbar-track {
@@ -62,17 +65,13 @@
 }
 
 .settings-sidebar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
+  background: transparent;
+  border-radius: 0;
   display: none;
 }
 
 .settings-sidebar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.settings-sidebar:hover::-webkit-scrollbar-thumb {
-  display: block;
+  background: transparent;
 }
 
 /* Contenedor de items del sidebar */
@@ -82,6 +81,19 @@
   gap: 0.5rem;
   padding: 1rem 0.75rem;
   flex: 1;
+  overflow: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-nav-items::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+}
+
+.settings-nav-items:hover::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
 }
 
 /* Item de navegación principal */
@@ -101,6 +113,14 @@
   font-weight: 500;
   border: 1px solid transparent;
   min-height: 40px;
+  overflow: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-nav-item::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
 }
 
 .settings-nav-item:hover {
@@ -163,13 +183,27 @@
   flex-direction: column;
   gap: 0.25rem;
   max-height: 0;
-  overflow: hidden;
+  overflow: hidden !important;
   transition: max-height 0.3s ease;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  flex-shrink: 0;
+}
+
+.settings-nav-subitems::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+}
+
+.settings-nav-subitems:hover::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
 }
 
 .settings-nav-item.expanded ~ .settings-nav-subitems,
 .settings-nav-item.expanded .settings-nav-subitems {
-  max-height: 1000px;
+  max-height: 500px;
+  overflow: visible !important;
 }
 
 /* Estilo de los items secundarios */
@@ -188,6 +222,14 @@
   font-weight: 400;
   border: 1px solid transparent;
   opacity: 0.8;
+  overflow: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-nav-subitem::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
 }
 
 .settings-nav-subitem:hover {
@@ -252,6 +294,8 @@
   border: none !important;
   padding: 0 !important;
   margin: 0 !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 /* Contenedores internos del contenido */
@@ -380,47 +424,109 @@
 }
 
 /* ========================================
-   SCROLL BARS PERSONALIZADAS
+   OCULTAR TODOS LOS SCROLLBARS (INVISIBLE)
    ======================================== */
 
+/* WebKit (Chrome, Safari, Edge) - TODOS los selectores */
 .settings-sidebar::-webkit-scrollbar,
-.settings-content-panel::-webkit-scrollbar {
-  width: 6px;
+.settings-content-panel::-webkit-scrollbar,
+.settings-content-wrapper::-webkit-scrollbar,
+.p-tabview-panel::-webkit-scrollbar,
+.settings-dialog-vertical::-webkit-scrollbar,
+.settings-sidebar:hover::-webkit-scrollbar,
+.settings-content-panel:hover::-webkit-scrollbar,
+.settings-content-wrapper:hover::-webkit-scrollbar,
+.p-tabview-panel:hover::-webkit-scrollbar,
+.settings-dialog-vertical:hover::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
 }
 
 .settings-sidebar::-webkit-scrollbar-track,
-.settings-content-panel::-webkit-scrollbar-track {
-  background: transparent;
+.settings-content-panel::-webkit-scrollbar-track,
+.settings-content-wrapper::-webkit-scrollbar-track,
+.p-tabview-panel::-webkit-scrollbar-track,
+.settings-dialog-vertical::-webkit-scrollbar-track,
+.settings-sidebar:hover::-webkit-scrollbar-track,
+.settings-content-panel:hover::-webkit-scrollbar-track,
+.settings-content-wrapper:hover::-webkit-scrollbar-track,
+.p-tabview-panel:hover::-webkit-scrollbar-track,
+.settings-dialog-vertical:hover::-webkit-scrollbar-track {
+  display: none !important;
+  visibility: hidden !important;
 }
 
 .settings-sidebar::-webkit-scrollbar-thumb,
-.settings-content-panel::-webkit-scrollbar-thumb {
-  background: var(--ui-dialog-border);
-  border-radius: 3px;
+.settings-content-panel::-webkit-scrollbar-thumb,
+.settings-content-wrapper::-webkit-scrollbar-thumb,
+.p-tabview-panel::-webkit-scrollbar-thumb,
+.settings-dialog-vertical::-webkit-scrollbar-thumb,
+.settings-sidebar:hover::-webkit-scrollbar-thumb,
+.settings-content-panel:hover::-webkit-scrollbar-thumb,
+.settings-content-wrapper:hover::-webkit-scrollbar-thumb,
+.p-tabview-panel:hover::-webkit-scrollbar-thumb,
+.settings-dialog-vertical:hover::-webkit-scrollbar-thumb {
+  display: none !important;
+  visibility: hidden !important;
+  background: transparent !important;
 }
 
-.settings-sidebar::-webkit-scrollbar-thumb:hover,
-.settings-content-panel::-webkit-scrollbar-thumb:hover {
-  background: var(--ui-button-primary);
+/* Firefox */
+.settings-sidebar,
+.settings-content-panel,
+.settings-content-wrapper,
+.p-tabview-panel,
+.settings-dialog-vertical,
+.settings-sidebar:hover,
+.settings-content-panel:hover,
+.settings-content-wrapper:hover,
+.p-tabview-panel:hover,
+.settings-dialog-vertical:hover {
+  scrollbar-width: none !important;
 }
 
-/* Firefox scrollbars - MINIMALISTA */
+/* IE y Edge legacy */
+.settings-sidebar,
+.settings-content-panel,
+.settings-content-wrapper,
+.p-tabview-panel,
+.settings-dialog-vertical,
+.settings-sidebar:hover,
+.settings-content-panel:hover,
+.settings-content-wrapper:hover,
+.p-tabview-panel:hover,
+.settings-dialog-vertical:hover {
+  -ms-overflow-style: none !important;
+}
+
+/* Firefox scrollbars - INVISIBLE */
 .settings-sidebar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  scrollbar-width: none;
+  overflow: -moz-scrollbars-none;
 }
 
-.settings-sidebar:hover {
-  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+.settings-sidebar::-webkit-scrollbar {
+  display: none;
 }
 
 .settings-content-panel {
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
+  scrollbar-width: none;
+  overflow: -moz-scrollbars-none;
 }
 
-.settings-content-panel:hover {
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+.settings-content-panel::-webkit-scrollbar {
+  display: none;
+}
+
+.p-tabview-panel {
+  scrollbar-width: none;
+  overflow: -moz-scrollbars-none;
+}
+
+.p-tabview-panel::-webkit-scrollbar {
+  display: none;
 }
 
 /* ========================================
@@ -502,6 +608,13 @@
   height: 700px !important;
   max-height: 700px !important;
   min-height: 700px !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-content-wrapper .p-tabview-panel .p-tabview::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
 }
 
 .settings-content-wrapper .p-tabview-panel .p-tabview-panels {
@@ -510,6 +623,13 @@
   min-height: 700px !important;
   padding: 0 !important;
   margin: 0 !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-content-wrapper .p-tabview-panel .p-tabview-panels::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
 }
 
 .settings-content-wrapper .p-tabview-panel .p-tabview-panel {
@@ -520,5 +640,21 @@
   overflow-x: hidden !important;
   padding: 0 !important;
   margin: 0 !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-content-wrapper .p-tabview-panel .p-tabview-panel::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
+}
+
+.settings-content-wrapper .p-tabview-panel .p-tabview-panel:hover::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
 }
 
