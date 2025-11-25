@@ -1196,60 +1196,61 @@ const SettingsDialog = ({
         </TabPanel>
         <TabPanel header="Seguridad" leftIcon="pi pi-shield">
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
-            <div style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '1.5rem' }}>
+            <div style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '1rem 1.5rem 1.5rem 1.5rem' }}>
             {/* Renderizado condicional basado en activeSubTab */}
             {activeSubTab === 'clave-maestra' && (
                 <div className="security-settings-container">
                   <div className="security-settings-content">
-                    <h3 className="security-header">
-                      <span className="security-header-icon">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <defs>
-                            <linearGradient id="masterKeyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" stopColor="#667eea" />
-                              <stop offset="50%" stopColor="#764ba2" />
-                              <stop offset="100%" stopColor="#f093fb" />
-                            </linearGradient>
-                            <linearGradient id="keyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" stopColor="#ffffff" />
-                              <stop offset="100%" stopColor="#e8e8f0" />
-                            </linearGradient>
-                          </defs>
-                          {/* Escudo de fondo */}
-                          <path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z" 
-                                fill="url(#masterKeyGradient)" 
-                                stroke="rgba(255,255,255,0.35)" 
-                                strokeWidth="0.6"/>
-                          {/* Llave maestra estilizada */}
-                          <g transform="translate(12, 11)">
-                            {/* Anillo de la llave */}
-                            <circle cx="0" cy="-1" r="2.2" 
-                                    fill="none" 
-                                    stroke="url(#keyGradient)" 
-                                    strokeWidth="1.4" 
+                    {/* Header */}
+                    <div className="security-settings-header-wrapper">
+                      <div className="security-header-content">
+                        <span className="security-header-icon protocol-dialog-header-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                              <linearGradient id="masterKeyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#667eea" />
+                                <stop offset="50%" stopColor="#764ba2" />
+                                <stop offset="100%" stopColor="#f093fb" />
+                              </linearGradient>
+                              <linearGradient id="keyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#ffffff" />
+                                <stop offset="100%" stopColor="#e8e8f0" />
+                              </linearGradient>
+                            </defs>
+                            {/* Escudo de fondo */}
+                            <path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z" 
+                                  fill="url(#masterKeyGradient)" 
+                                  stroke="rgba(255,255,255,0.35)" 
+                                  strokeWidth="0.6"/>
+                            {/* Llave maestra estilizada */}
+                            <g transform="translate(12, 11)">
+                              {/* Anillo de la llave */}
+                              <circle cx="0" cy="-1" r="2.2" 
+                                      fill="none" 
+                                      stroke="url(#keyGradient)" 
+                                      strokeWidth="1.4" 
+                                      opacity="0.98"/>
+                              {/* Cuerpo de la llave */}
+                              <rect x="-1.8" y="0.5" width="3.6" height="5.5" rx="1.2" 
+                                    fill="url(#keyGradient)" 
+                                    opacity="0.98"
+                                    stroke="rgba(102, 126, 234, 0.25)" 
+                                    strokeWidth="0.4"/>
+                              {/* Dientes de la llave (patrón de seguridad) */}
+                              <rect x="-1" y="3.5" width="2" height="2.5" rx="0.5" 
+                                    fill="url(#keyGradient)" 
                                     opacity="0.98"/>
-                            {/* Cuerpo de la llave */}
-                            <rect x="-1.8" y="0.5" width="3.6" height="5.5" rx="1.2" 
-                                  fill="url(#keyGradient)" 
-                                  opacity="0.98"
-                                  stroke="rgba(102, 126, 234, 0.25)" 
-                                  strokeWidth="0.4"/>
-                            {/* Dientes de la llave (patrón de seguridad) */}
-                            <rect x="-1" y="3.5" width="2" height="2.5" rx="0.5" 
-                                  fill="url(#keyGradient)" 
-                                  opacity="0.98"/>
-                            <rect x="-0.4" y="5" width="0.8" height="1.2" rx="0.2" 
-                                  fill="rgba(102, 126, 234, 0.5)"/>
-                          </g>
-                        </svg>
-                      </span>
-                      Gestión de Clave Maestra
-                    </h3>
-
-                    <p className="security-description">
-                      La clave maestra protege tus credenciales de sesión con cifrado AES-256. 
-                      Se requiere para sincronizar sesiones de forma segura.
-                    </p>
+                              <rect x="-0.4" y="5" width="0.8" height="1.2" rx="0.2" 
+                                    fill="rgba(102, 126, 234, 0.5)"/>
+                            </g>
+                          </svg>
+                        </span>
+                        <div className="security-header-text">
+                          <h3 className="security-header">Gestión de Clave Maestra</h3>
+                          <p className="security-description">La clave maestra protege tus credenciales de sesión con cifrado AES-256. Se requiere para sincronizar sesiones de forma segura.</p>
+                        </div>
+                      </div>
+                    </div>
 
                     {/* Layout de 2 columnas */}
                     <div className="security-layout-grid">
@@ -1561,53 +1562,54 @@ const SettingsDialog = ({
                 </div>
             )}
             {activeSubTab === 'auditoria' && (
-                <div className="general-settings-container">
-                  {/* Header */}
-                  <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                    <h3 className="general-header">
-                      <span className="general-header-icon">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <defs>
-                            <linearGradient id="auditSettingsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" stopColor="#667eea" />
-                              <stop offset="50%" stopColor="#764ba2" />
-                              <stop offset="100%" stopColor="#f093fb" />
-                            </linearGradient>
-                            <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" stopColor="#ffffff" />
-                              <stop offset="100%" stopColor="#e8e8f0" />
-                            </linearGradient>
-                          </defs>
-                          {/* Escudo principal */}
-                          <path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z" 
-                                fill="url(#auditSettingsGradient)" 
-                                stroke="rgba(255,255,255,0.35)" 
-                                strokeWidth="0.6"/>
-                          {/* Icono de video/cámara dentro del escudo */}
-                          <g transform="translate(12, 12)">
-                            <circle cx="0" cy="0" r="3.5" 
-                                    fill="none" 
-                                    stroke="url(#shieldGradient)" 
-                                    strokeWidth="1.2" 
-                                    opacity="0.98"/>
-                            <circle cx="0" cy="0" r="1.8" 
-                                    fill="url(#shieldGradient)" 
-                                    opacity="0.98"/>
-                            <path d="M-2.5,-1.5 L2.5,-1.5 L2.5,1.5 L-2.5,1.5 Z" 
+                <div className="security-settings-container">
+                  <div className="security-settings-content">
+                    {/* Header */}
+                    <div className="security-settings-header-wrapper">
+                      <div className="security-header-content">
+                        <span className="security-header-icon protocol-dialog-header-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                              <linearGradient id="auditSettingsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#667eea" />
+                                <stop offset="50%" stopColor="#764ba2" />
+                                <stop offset="100%" stopColor="#f093fb" />
+                              </linearGradient>
+                              <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#ffffff" />
+                                <stop offset="100%" stopColor="#e8e8f0" />
+                              </linearGradient>
+                            </defs>
+                            {/* Escudo principal */}
+                            <path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z" 
                                   fill="url(#auditSettingsGradient)" 
-                                  opacity="0.6"/>
-                          </g>
-                        </svg>
-                      </span>
-                      Configuración de Auditoría
-                    </h3>
-                    <p className="general-description">
-                      Configura el grabado automático de sesiones SSH y la gestión de archivos de auditoría
-                    </p>
-                  </div>
+                                  stroke="rgba(255,255,255,0.35)" 
+                                  strokeWidth="0.6"/>
+                            {/* Icono de video/cámara dentro del escudo */}
+                            <g transform="translate(12, 12)">
+                              <circle cx="0" cy="0" r="3.5" 
+                                      fill="none" 
+                                      stroke="url(#shieldGradient)" 
+                                      strokeWidth="1.2" 
+                                      opacity="0.98"/>
+                              <circle cx="0" cy="0" r="1.8" 
+                                      fill="url(#shieldGradient)" 
+                                      opacity="0.98"/>
+                              <path d="M-2.5,-1.5 L2.5,-1.5 L2.5,1.5 L-2.5,1.5 Z" 
+                                    fill="url(#auditSettingsGradient)" 
+                                    opacity="0.6"/>
+                            </g>
+                          </svg>
+                        </span>
+                        <div className="security-header-text">
+                          <h3 className="security-header">Configuración de Auditoría</h3>
+                          <p className="security-description">Configura el grabado automático de sesiones SSH y la gestión de archivos de auditoría</p>
+                        </div>
+                      </div>
+                    </div>
 
-                  {/* Grid de 2 columnas para las secciones */}
-                  <div className="general-settings-content">
+                    {/* Grid de 2 columnas para las secciones */}
+                    <div className="security-layout-grid">
                     {/* Sección de Grabación Automática */}
                     <div className="general-settings-section">
                       <div className="general-section-header">
@@ -2049,6 +2051,7 @@ const SettingsDialog = ({
                           />
                         </div>
                       </div>
+                    </div>
                     </div>
                   </div>
                 </div>
