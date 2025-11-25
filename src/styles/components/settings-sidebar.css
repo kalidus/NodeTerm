@@ -404,8 +404,13 @@
   background: transparent !important;
 }
 
-.settings-content-wrapper .p-tabview-nav {
+/* OCULTAR TODAS LAS BARRAS DE NAVEGACIÓN DE TABS */
+.settings-content-wrapper .p-tabview-nav,
+.settings-content-wrapper .p-tabview-nav-container {
   display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
 }
 
 .settings-content-wrapper .p-tabview-panels {
@@ -425,6 +430,7 @@
   padding: 0 !important;
   background: transparent !important;
   border: none !important;
+  margin: 0 !important;
 }
 
 /* Asegurar que el contenido dentro del panel sea scrolleable */
@@ -432,5 +438,30 @@
   height: 100% !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
+}
+
+/* ========================================
+   OCULTAR TAMBIÉN TABS ANIDADOS DENTRO
+   ======================================== */
+
+/* Ocultar tabs dentro de los panels */
+.settings-content-wrapper .general-settings-container .p-tabview-nav,
+.settings-content-wrapper .general-settings-container .p-tabview-nav-container,
+.settings-content-wrapper .p-tabview-panel .p-tabview-nav,
+.settings-content-wrapper .p-tabview-panel .p-tabview-nav-container {
+  display: none !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.settings-content-wrapper .p-tabview-panel .p-tabview-panels {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.settings-content-wrapper .p-tabview-panel .p-tabview-panel {
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
