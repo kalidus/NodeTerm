@@ -957,20 +957,6 @@ const SettingsDialog = ({
       onHide={onHide}
       modal
       maximizable
-      footer={
-        <div style={{
-          background: 'var(--ui-dialog-bg)',
-          color: 'var(--ui-dialog-text)',
-          borderTop: '1px solid var(--ui-dialog-border)'
-        }}>
-          <Button
-            label="Cerrar"
-            icon="pi pi-times"
-            onClick={onHide}
-            className="p-button-text"
-          />
-        </div>
-      }
     >
       <Toast ref={setToast} />
       
