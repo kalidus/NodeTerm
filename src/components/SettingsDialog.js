@@ -2954,43 +2954,70 @@ const SettingsDialog = ({
 
         <TabPanel header="Clientes de IA" leftIcon="pi pi-comments">
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
-            <div style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            {/* Header */}
+            <div className="general-settings-header-wrapper">
+              <div className="general-header-content">
+                <span className="general-header-icon protocol-dialog-header-icon">
+                  <i className="pi pi-comments"></i>
+                </span>
+                <div className="general-header-text">
+                  <h3 className="general-header">Clientes de IA</h3>
+                  <p className="general-description">Configura y gestiona los clientes de inteligencia artificial disponibles</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Contenido */}
+            <div className="general-settings-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
               <AIClientsTab themeColors={{ primary: 'var(--primary-color)' }} />
+            </div>
             </div>
           </div>
         </TabPanel>
 
         <TabPanel header="Actualizaciones" leftIcon="pi pi-refresh">
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
-            <div style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            {/* Header */}
+            <div className="general-settings-header-wrapper">
+              <div className="general-header-content">
+                <span className="general-header-icon protocol-dialog-header-icon">
+                  <i className="pi pi-refresh"></i>
+                </span>
+                <div className="general-header-text">
+                  <h3 className="general-header">Actualizaciones</h3>
+                  <p className="general-description">Gestiona las actualizaciones de NodeTerm y mantén la aplicación al día</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Contenido */}
+            <div className="general-settings-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
               <UpdatePanel />
+            </div>
             </div>
           </div>
         </TabPanel>
 
         <TabPanel header="Sincronización" leftIcon="pi pi-cloud">
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
-            <div style={{
-              height: '100%',
-              maxHeight: '100%',
-              minHeight: 0,
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              padding: '2rem 0',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'flex-start',
-              alignItems: 'center',
-              width: '100%',
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            boxSizing: 'border-box'
-          }}>
+            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            {/* Header */}
+            <div className="general-settings-header-wrapper">
+              <div className="general-header-content">
+                <span className="general-header-icon protocol-dialog-header-icon">
+                  <i className="pi pi-cloud"></i>
+                </span>
+                <div className="general-header-text">
+                  <h3 className="general-header">Sincronización</h3>
+                  <p className="general-description">Sincroniza tu configuración personal entre todos tus dispositivos usando Nextcloud</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Contenido */}
+            <div className="general-settings-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem 0' }}>
             <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
               <i className="pi pi-cloud" style={{
                 fontSize: '4rem',
@@ -3047,6 +3074,7 @@ const SettingsDialog = ({
                   </p>
                 </div>
               </div>
+            </div>
             </div>
             </div>
           </div>
