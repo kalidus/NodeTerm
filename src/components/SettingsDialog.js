@@ -913,8 +913,8 @@ const SettingsDialog = ({
     );
   };
 
-  // Calcular altura del contenido (altura total - header - footer)
-  const contentHeight = size.height - 120; // Aproximadamente 60px header + 60px footer
+  // Calcular altura del contenido (altura total - header)
+  const contentHeight = size.height - 60; // Aproximadamente 60px header
 
   return (
     <Dialog
@@ -1195,7 +1195,8 @@ const SettingsDialog = ({
           </div>
         </TabPanel>
         <TabPanel header="Seguridad" leftIcon="pi pi-shield">
-          <div style={{ marginTop: 0, padding: 0, width: '100%' }}>
+          <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
+            <div style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '1.5rem' }}>
             {/* Renderizado condicional basado en activeSubTab */}
             {activeSubTab === 'clave-maestra' && (
                 <div className="security-settings-container">
@@ -2052,11 +2053,13 @@ const SettingsDialog = ({
                   </div>
                 </div>
             )}
+            </div>
           </div>
         </TabPanel>
 
         <TabPanel header="Apariencia" leftIcon="pi pi-palette">
-          <div style={{ marginTop: 0, padding: 0, width: '100%' }}>
+          <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
+            <div style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '1.5rem' }}>
             {/* Renderizado condicional basado en activeSubTab */}
             {activeSubTab === 'interfaz' && (
                 <div style={{
@@ -2744,22 +2747,30 @@ const SettingsDialog = ({
             {activeSubTab === 'pestanas' && (
                 <TabThemeSelector />
             )}
+            </div>
           </div>
         </TabPanel>
 
         <TabPanel header={<span><i className="pi pi-desktop" style={{ marginRight: 8 }}></i>RDP</span>}>
-          <div style={{ 
-            padding: '1rem 0', 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            height: '100%',
-            minHeight: '100%',
-            width: '100%',
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            boxSizing: 'border-box'
-          }}>
+          <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
+            <div style={{ 
+              height: '100%', 
+              maxHeight: '100%', 
+              minHeight: 0,
+              overflowY: 'auto', 
+              overflowX: 'hidden', 
+              position: 'absolute', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0,
+              padding: '1rem 0', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center',
+              width: '100%',
+              boxSizing: 'border-box'
+            }}>
             {/* Backend RDP (Guacamole) */}
             <div style={{ width: '100%', maxWidth: 520, marginBottom: '1.25rem' }}>
               <h3 style={{ margin: '0 0 0.75rem 0', color: 'var(--text-color)' }}>
@@ -2955,6 +2966,7 @@ const SettingsDialog = ({
                 </div>
               </div>
             </div>
+            </div>
           </div>
         </TabPanel>
 
@@ -2967,19 +2979,32 @@ const SettingsDialog = ({
         </TabPanel>
 
         <TabPanel header="Actualizaciones" leftIcon="pi pi-refresh">
-          <UpdatePanel />
+          <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
+            <div style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+              <UpdatePanel />
+            </div>
+          </div>
         </TabPanel>
 
         <TabPanel header="Sincronización" leftIcon="pi pi-cloud">
-          <div style={{
-            padding: '2rem 0',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'flex-start',
-            alignItems: 'center',
-            height: '100%',
-            minHeight: '100%',
-            width: '100%',
+          <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
+            <div style={{
+              height: '100%',
+              maxHeight: '100%',
+              minHeight: 0,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              padding: '2rem 0',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-start',
+              alignItems: 'center',
+              width: '100%',
             overflowY: 'auto',
             overflowX: 'hidden',
             boxSizing: 'border-box'
@@ -3041,19 +3066,29 @@ const SettingsDialog = ({
                 </div>
               </div>
             </div>
+            </div>
           </div>
         </TabPanel>
 
         <TabPanel header="Información" leftIcon="pi pi-info-circle">
-          <div style={{
-            padding: '1rem 0',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'flex-start',
-            alignItems: 'center',
-            height: '100%',
-            minHeight: '100%',
-            width: '100%',
+          <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
+            <div style={{
+              height: '100%',
+              maxHeight: '100%',
+              minHeight: 0,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              padding: '1rem 0',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-start',
+              alignItems: 'center',
+              width: '100%',
             overflowY: 'auto',
             overflowX: 'hidden',
             boxSizing: 'border-box'
@@ -3183,6 +3218,7 @@ const SettingsDialog = ({
               <p style={{ margin: '0' }}>
                 © 2025 NodeTerm - Desarrollado con ❤️ usando Electron y React
               </p>
+            </div>
             </div>
           </div>
         </TabPanel>
