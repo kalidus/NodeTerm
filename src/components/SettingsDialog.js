@@ -3154,8 +3154,21 @@ const SettingsDialog = ({
         <TabPanel header="Clientes de IA" leftIcon="pi pi-comments">
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
             <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-            {/* Contenido */}
-            <div className="general-settings-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+            {/* Header */}
+            <div className="general-settings-header-wrapper" style={{ flexShrink: 0 }}>
+              <div className="general-header-content">
+                <span className="general-header-icon protocol-dialog-header-icon">
+                  <i className="pi pi-comments"></i>
+                </span>
+                <div className="general-header-text">
+                  <h3 className="general-header">Clientes de IA</h3>
+                  <p className="general-description">Configura tus clientes de IA y modelos locales para el procesamiento inteligente</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Contenido - sin general-settings-content para permitir grid responsivo */}
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
               <AIClientsTab themeColors={{ primary: 'var(--primary-color)' }} />
             </div>
             </div>
@@ -3497,8 +3510,8 @@ const SettingsDialog = ({
             </div>
             
             {/* Contenido */}
-            <div className="general-settings-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem 0' }}>
-            <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+            <div className="general-settings-content">
+            <div style={{ marginBottom: '2rem' }}>
               <i className="pi pi-cloud" style={{
                 fontSize: '4rem',
                 color: 'var(--primary-color)',
@@ -3511,26 +3524,27 @@ const SettingsDialog = ({
               <p style={{
                 margin: '0 0 2rem 0',
                 color: 'var(--text-color-secondary)',
-                fontSize: '1rem',
-                maxWidth: '600px'
+                fontSize: '1rem'
               }}>
                 Sincroniza tu configuración personal entre todos tus dispositivos usando Nextcloud.
                 Nunca pierdas tus temas, fuentes y configuraciones personalizadas.
               </p>
             </div>
 
-            <Button
-              label="Configurar Sincronización"
-              icon="pi pi-cog"
-              onClick={() => setSyncDialogVisible(true)}
-              className="p-button-lg"
-              style={{
-                padding: '1rem 2rem',
-                fontSize: '1.1rem'
-              }}
-            />
+            <div style={{ marginBottom: '2rem' }}>
+              <Button
+                label="Configurar Sincronización"
+                icon="pi pi-cog"
+                onClick={() => setSyncDialogVisible(true)}
+                className="p-button-lg"
+                style={{
+                  padding: '1rem 2rem',
+                  fontSize: '1.1rem'
+                }}
+              />
+            </div>
 
-            <div style={{ marginTop: '3rem', maxWidth: '800px', width: '100%' }}>
+            <div style={{ marginTop: '2rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2rem', textAlign: 'center' }}>
                 <div>
                   <i className="pi pi-shield" style={{ fontSize: '2rem', color: 'var(--green-500)', marginBottom: '1rem', display: 'block' }}></i>
