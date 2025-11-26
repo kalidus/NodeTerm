@@ -2284,28 +2284,37 @@ const SettingsDialog = ({
             <div style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '1.5rem' }}>
             {/* Renderizado condicional basado en activeSubTab */}
             {activeSubTab === 'interfaz' && (
-                <div style={{
-                  padding: '1rem 0',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'flex-start',
-                  alignItems: 'center',
-                  width: '100%',
-                  boxSizing: 'border-box'
-                }}>
-                  <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                    <i className="pi pi-eye" style={{ marginRight: '0.5rem' }}></i>
-                    Tema de la Interfaz
-                  </h3>
-                  <p style={{
-                    marginBottom: '1rem',
-                    color: 'var(--text-color-secondary)',
-                    fontSize: '0.9rem'
-                  }}>
-                    Personaliza los colores de la interfaz de usuario (sidebar, menús, pestañas, etc.)
-                  </p>
-                  <ThemeSelector showPreview={true} />
+              <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                {/* Header */}
+                <div className="general-settings-header-wrapper" style={{ flexShrink: 0 }}>
+                  <div className="general-header-content">
+                    <span className="general-header-icon protocol-dialog-header-icon">
+                      <i className="pi pi-palette"></i>
+                    </span>
+                    <div className="general-header-text">
+                      <h3 className="general-header">Tema de la Interfaz</h3>
+                      <p className="general-description">Personaliza los colores de la interfaz de usuario (sidebar, menús, pestañas, etc.)</p>
+                    </div>
+                  </div>
                 </div>
+                
+                {/* Grid de 2 columnas para las secciones */}
+                <div className="general-settings-content">
+                  {/* Sección de Tema de Interfaz */}
+                  <div className="general-settings-section" style={{ gridColumn: '1 / -1' }}>
+                    <div className="general-section-header">
+                      <div className="general-section-icon">
+                        <i className="pi pi-palette"></i>
+                      </div>
+                      <h4 className="general-section-title">Selector de Tema</h4>
+                    </div>
+                    
+                    <div className="general-settings-options" style={{ padding: '1.5rem 1.25rem' }}>
+                      <ThemeSelector showPreview={true} />
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
             {activeSubTab === 'terminal' && (
                 <div style={{ 
