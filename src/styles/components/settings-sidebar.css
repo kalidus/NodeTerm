@@ -636,20 +636,45 @@
 .settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel {
   height: 100% !important;
   max-height: 100% !important;
-  min-height: 100% !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
   padding: 0 !important;
   background: transparent !important;
   border: none !important;
   margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
-/* Asegurar que el contenido dentro del panel principal sea scrolleable */
+/* Contenedor hijo - debe ocupar todo el espacio disponible */
 .settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > div {
+  flex: 1 !important;
   height: 100% !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Contenedor específico para el tab de Apariencia */
+.apariencia-tab-container {
+  height: 100% !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Cuando muestra ThemeSelector */
+.apariencia-tab-container > .theme-selector-container {
+  flex: 1 !important;
+  min-height: 0 !important;
+}
+
+/* Cuando muestra otros subtabs (terminal, explorador, etc) - permitir scroll */
+.apariencia-tab-container > div:not(.theme-selector-container) {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* ========================================
