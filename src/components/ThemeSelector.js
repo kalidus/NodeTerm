@@ -228,52 +228,46 @@ const ThemeSelector = ({ showPreview = false }) => {
           
           <div className="theme-hero-info">
             {/* Panel de opciones a la derecha */}
-            <div className="theme-options-panel">
-              <div className="theme-options-panel-header">
-                <div className="theme-options-panel-title">
-                  <span>🎬</span>
-                  Animaciones
+            <div className="theme-options-wrapper">
+              {/* Card de Animaciones */}
+              <div className="theme-anim-card">
+                <div className="theme-anim-card-header">
+                  <span className="theme-anim-card-title">🎬 Animaciones</span>
+                  <span className="theme-anim-card-badge">Solo animados</span>
                 </div>
-                <span className="theme-option-anim-badge">Temas animados</span>
+                <div className="theme-anim-card-options">
+                  <button 
+                    className={`theme-anim-option ${reducedMotion ? 'active' : ''}`}
+                    onClick={handleReducedMotionToggle}
+                  >
+                    <i className="pi pi-eye-slash"></i>
+                    <span>Reducir</span>
+                    <div className={`theme-mini-toggle ${reducedMotion ? 'on' : ''}`}></div>
+                  </button>
+                  <div className="theme-anim-speed">
+                    <i className="pi pi-forward"></i>
+                    <select 
+                      className="theme-speed-select-mini"
+                      value={animSpeed} 
+                      onChange={handleAnimSpeedChange}
+                    >
+                      <option value="slow">Lento</option>
+                      <option value="normal">Normal</option>
+                      <option value="fast">Rápido</option>
+                      <option value="turbo">Turbo</option>
+                    </select>
+                  </div>
+                </div>
               </div>
               
+              {/* Botón Titlebar separado */}
               <button 
-                className={`theme-option-compact ${reducedMotion ? 'active' : ''}`}
-                onClick={handleReducedMotionToggle}
-              >
-                <i className="pi pi-eye-slash"></i>
-                <span>Reducir</span>
-                <div className={`theme-option-toggle ${reducedMotion ? 'on' : ''}`}>
-                  <div className="theme-option-toggle-dot"></div>
-                </div>
-              </button>
-              
-              <div className="theme-option-speed">
-                <i className="pi pi-forward"></i>
-                <span>Velocidad</span>
-                <select 
-                  className="theme-speed-select-compact"
-                  value={animSpeed} 
-                  onChange={handleAnimSpeedChange}
-                >
-                  <option value="slow">Lento</option>
-                  <option value="normal">Normal</option>
-                  <option value="fast">Rápido</option>
-                  <option value="turbo">Turbo</option>
-                </select>
-              </div>
-              
-              <div className="theme-option-divider"></div>
-              
-              <button 
-                className={`theme-option-compact ${usePrimaryColorsForTitlebar ? 'active' : ''}`}
+                className={`theme-titlebar-btn ${usePrimaryColorsForTitlebar ? 'active' : ''}`}
                 onClick={handleTitlebarColorPreferenceChange}
               >
                 <i className="pi pi-window-maximize"></i>
                 <span>Titlebar</span>
-                <div className={`theme-option-toggle ${usePrimaryColorsForTitlebar ? 'on' : ''}`}>
-                  <div className="theme-option-toggle-dot"></div>
-                </div>
+                <div className={`theme-mini-toggle ${usePrimaryColorsForTitlebar ? 'on' : ''}`}></div>
               </button>
             </div>
             <div className="theme-hero-badge">
