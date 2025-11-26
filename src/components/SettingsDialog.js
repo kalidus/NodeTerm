@@ -3043,153 +3043,160 @@ const SettingsDialog = ({
 
         <TabPanel header="Información" leftIcon="pi pi-info-circle">
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
-            <div style={{
-              height: '100%',
-              maxHeight: '100%',
-              minHeight: 0,
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              padding: '1rem 0',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'flex-start',
-              alignItems: 'center',
-              width: '100%',
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            boxSizing: 'border-box'
-          }}>
-            {/* Logo o Icono de la App */}
-            <div style={{ marginBottom: '1rem' }}>
-              <i
-                className="pi pi-desktop"
-                style={{
-                  fontSize: '4rem',
-                  color: 'var(--primary-color)',
-                  background: 'var(--surface-100)',
-                  padding: '1rem',
-                  borderRadius: '50%',
-                  width: '6rem',
-                  height: '6rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto'
-                }}
-              ></i>
-            </div>
-
-            {/* Información Principal */}
-            <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>
-              NodeTerm
-            </h2>
-            <p style={{
-              margin: '0 0 1rem 0',
-              color: 'var(--text-color-secondary)',
-              fontSize: '0.9rem'
-            }}>
-              Terminal SSH multiplataforma con gestión avanzada de pestañas
-            </p>
-
-            {/* Versión Principal */}
-            <div style={{
-              background: 'var(--primary-color)',
-              color: 'white',
-              padding: '0.5rem 1rem',
-              borderRadius: '20px',
-              display: 'inline-block',
-              fontWeight: 'bold',
-              fontSize: '1.1rem',
-              marginBottom: '1.5rem'
-            }}>
-              {versionInfo.appVersion ? `v${versionInfo.appVersion}` : 'v1.3.1'}
-            </div>
-
-            <Divider />
-
-            {/* Información Técnica */}
-            <div style={{ textAlign: 'left', marginTop: '1rem' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                <i className="pi pi-cog" style={{ marginRight: '0.5rem' }}></i>
-                Información Técnica
-              </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.9rem' }}>
-                <div>
-                  <strong>Electron:</strong>
-                  <br />
-                  <span style={{ color: 'var(--text-color-secondary)' }}>
-                    {versionInfo.electronVersion || 'N/A'}
+            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+              {/* Header */}
+              <div className="general-settings-header-wrapper">
+                <div className="general-header-content">
+                  <span className="general-header-icon protocol-dialog-header-icon">
+                    <i className="pi pi-info-circle"></i>
                   </span>
-                </div>
-                <div>
-                  <strong>Node.js:</strong>
-                  <br />
-                  <span style={{ color: 'var(--text-color-secondary)' }}>
-                    {versionInfo.nodeVersion || 'N/A'}
-                  </span>
-                </div>
-                <div>
-                  <strong>Chromium:</strong>
-                  <br />
-                  <span style={{ color: 'var(--text-color-secondary)' }}>
-                    {versionInfo.chromeVersion || 'N/A'}
-                  </span>
-                </div>
-                <div>
-                  <strong>Compilación:</strong>
-                  <br />
-                  <span style={{ color: 'var(--text-color-secondary)' }}>
-                    {versionInfo.buildDate || new Date().toLocaleDateString()}
-                  </span>
+                  <div className="general-header-text">
+                    <h3 className="general-header">Información de NodeTerm</h3>
+                    <p className="general-description">Versión, detalles técnicos y características de tu aplicación</p>
+                  </div>
                 </div>
               </div>
-            </div>
+              
+              {/* Grid de 2 columnas para las secciones */}
+              <div className="general-settings-content">
+                {/* Sección: Versión de la App */}
+                <div className="general-settings-section">
+                  <div className="general-section-header">
+                    <div className="general-section-icon">
+                      <i className="pi pi-tag"></i>
+                    </div>
+                    <h4 className="general-section-title">Versión de la Aplicación</h4>
+                  </div>
+                  
+                  <div className="general-settings-options">
+                    <div style={{ padding: '0.75rem 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                      <div>
+                        <label style={{ display: 'block', color: 'var(--ui-dialog-text)', fontWeight: '600', fontSize: '0.9375rem', margin: '0' }}>
+                          NodeTerm
+                        </label>
+                        <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-color-secondary)', fontSize: '0.8125rem' }}>
+                          Terminal SSH multiplataforma
+                        </p>
+                      </div>
+                      <div style={{
+                        background: 'var(--primary-color)',
+                        color: 'white',
+                        padding: '0.4rem 0.8rem',
+                        borderRadius: '20px',
+                        fontWeight: 'bold',
+                        fontSize: '0.85rem',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0
+                      }}>
+                        {versionInfo.appVersion ? `v${versionInfo.appVersion}` : 'v1.3.1'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-            <Divider />
+                {/* Sección: Información Técnica */}
+                <div className="general-settings-section">
+                  <div className="general-section-header">
+                    <div className="general-section-icon">
+                      <i className="pi pi-cog"></i>
+                    </div>
+                    <h4 className="general-section-title">Información Técnica</h4>
+                  </div>
+                  
+                  <div className="general-settings-options" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '1rem 1.25rem' }}>
+                    <div>
+                      <label style={{ display: 'block', color: 'var(--ui-dialog-text)', fontWeight: '600', fontSize: '0.8125rem', margin: '0 0 0.25rem 0' }}>
+                        Electron
+                      </label>
+                      <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.8rem' }}>
+                        {versionInfo.electronVersion || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', color: 'var(--ui-dialog-text)', fontWeight: '600', fontSize: '0.8125rem', margin: '0 0 0.25rem 0' }}>
+                        Node.js
+                      </label>
+                      <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.8rem' }}>
+                        {versionInfo.nodeVersion || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', color: 'var(--ui-dialog-text)', fontWeight: '600', fontSize: '0.8125rem', margin: '0 0 0.25rem 0' }}>
+                        Chromium
+                      </label>
+                      <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.8rem' }}>
+                        {versionInfo.chromeVersion || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', color: 'var(--ui-dialog-text)', fontWeight: '600', fontSize: '0.8125rem', margin: '0 0 0.25rem 0' }}>
+                        Compilación
+                      </label>
+                      <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.8rem' }}>
+                        {versionInfo.buildDate || new Date().toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
-            {/* Funcionalidades */}
-            <div style={{ textAlign: 'left', marginTop: '1rem' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                <i className="pi pi-star" style={{ marginRight: '0.5rem' }}></i>
-                Características Principales
-              </h4>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-color-secondary)' }}>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <i className="pi pi-check" style={{ color: 'var(--green-500)', marginRight: '0.5rem' }}></i>
-                  Conexiones SSH múltiples con pestañas
+                {/* Sección: Características */}
+                <div className="general-settings-section">
+                  <div className="general-section-header">
+                    <div className="general-section-icon">
+                      <i className="pi pi-star"></i>
+                    </div>
+                    <h4 className="general-section-title">Características Principales</h4>
+                  </div>
+                  
+                  <div className="general-settings-options" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', padding: '1rem 1.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.8125rem' }}>
+                      <i className="pi pi-check" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
+                      <span style={{ color: 'var(--text-color-secondary)' }}>SSH múltiples</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.8125rem' }}>
+                      <i className="pi pi-check" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
+                      <span style={{ color: 'var(--text-color-secondary)' }}>Explorador remoto</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.8125rem' }}>
+                      <i className="pi pi-check" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
+                      <span style={{ color: 'var(--text-color-secondary)' }}>Drag & drop</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.8125rem' }}>
+                      <i className="pi pi-check" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
+                      <span style={{ color: 'var(--text-color-secondary)' }}>Iconos Linux</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.8125rem' }}>
+                      <i className="pi pi-check" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
+                      <span style={{ color: 'var(--text-color-secondary)' }}>Gestión inteligente</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.8125rem' }}>
+                      <i className="pi pi-check" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
+                      <span style={{ color: 'var(--text-color-secondary)' }}>Sincronización</span>
+                    </div>
+                  </div>
                 </div>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <i className="pi pi-check" style={{ color: 'var(--green-500)', marginRight: '0.5rem' }}></i>
-                  Explorador de archivos remoto integrado
-                </div>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <i className="pi pi-check" style={{ color: 'var(--green-500)', marginRight: '0.5rem' }}></i>
-                  Drag & drop para organización de pestañas
-                </div>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <i className="pi pi-check" style={{ color: 'var(--green-500)', marginRight: '0.5rem' }}></i>
-                  Iconos automáticos por distribución Linux
-                </div>
-                <div>
-                  <i className="pi pi-check" style={{ color: 'var(--green-500)', marginRight: '0.5rem' }}></i>
-                  Sistema de overflow inteligente para pestañas
+
+                {/* Sección: Acerca de */}
+                <div className="general-settings-section">
+                  <div className="general-section-header">
+                    <div className="general-section-icon">
+                      <i className="pi pi-info"></i>
+                    </div>
+                    <h4 className="general-section-title">Acerca de NodeTerm</h4>
+                  </div>
+                  
+                  <div className="general-settings-options">
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)', lineHeight: '1.5' }}>
+                      <p style={{ margin: '0' }}>
+                        NodeTerm es una terminal SSH multiplataforma moderna desarrollada con Electron y React, diseñada para proporcionar una experiencia de conexión remota fluida y eficiente.
+                      </p>
+                      <p style={{ margin: '0.75rem 0 0 0' }}>
+                        © 2025 NodeTerm - Desarrollado con ❤️
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <Divider />
-
-            {/* Footer */}
-            <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>
-              <p style={{ margin: '0' }}>
-                © 2025 NodeTerm - Desarrollado con ❤️ usando Electron y React
-              </p>
-            </div>
             </div>
           </div>
         </TabPanel>
