@@ -233,42 +233,61 @@ const ThemeSelector = ({ showPreview = false }) => {
               <div className="theme-anim-card">
                 <div className="theme-anim-card-header">
                   <span className="theme-anim-card-title">🎬 Animaciones</span>
-                  <span className="theme-anim-card-badge">Solo animados</span>
+                  <span 
+                    className="theme-anim-card-badge" 
+                    title="Muestra solo temas con animaciones activas"
+                  >
+                    Solo animados
+                  </span>
                 </div>
                 <div className="theme-anim-card-options">
-                  <button 
-                    className={`theme-anim-option ${reducedMotion ? 'active' : ''}`}
-                    onClick={handleReducedMotionToggle}
-                  >
-                    <i className="pi pi-eye-slash"></i>
-                    <span>Reducir</span>
-                    <div className={`theme-mini-toggle ${reducedMotion ? 'on' : ''}`}></div>
-                  </button>
-                  <div className="theme-anim-speed">
-                    <i className="pi pi-forward"></i>
-                    <select 
-                      className="theme-speed-select-mini"
-                      value={animSpeed} 
-                      onChange={handleAnimSpeedChange}
+                  <div className="theme-anim-option-wrapper">
+                    <button 
+                      className={`theme-anim-option ${!reducedMotion ? 'active' : ''}`}
+                      onClick={handleReducedMotionToggle}
+                      title={reducedMotion ? "Activa las animaciones de la interfaz" : "Desactiva las animaciones para mejorar el rendimiento y reducir distracciones"}
                     >
-                      <option value="slow">Lento</option>
-                      <option value="normal">Normal</option>
-                      <option value="fast">Rápido</option>
-                      <option value="turbo">Turbo</option>
-                    </select>
+                      <i className="pi pi-eye-slash"></i>
+                      <span>Animaciones</span>
+                      <div className={`theme-mini-toggle ${!reducedMotion ? 'on' : ''}`}></div>
+                    </button>
+                    <span className="theme-option-hint">{reducedMotion ? 'Desactivadas' : 'Activadas'}</span>
+                  </div>
+                  <div className="theme-anim-speed-wrapper">
+                    <div 
+                      className="theme-anim-speed"
+                      title="Controla la velocidad de las animaciones de la interfaz"
+                    >
+                      <i className="pi pi-forward"></i>
+                      <select 
+                        className="theme-speed-select-mini"
+                        value={animSpeed} 
+                        onChange={handleAnimSpeedChange}
+                      >
+                        <option value="slow">Lento</option>
+                        <option value="normal">Normal</option>
+                        <option value="fast">Rápido</option>
+                        <option value="turbo">Turbo</option>
+                      </select>
+                    </div>
+                    <span className="theme-option-hint">Velocidad animaciones</span>
                   </div>
                 </div>
               </div>
               
               {/* Botón Titlebar separado */}
-              <button 
-                className={`theme-titlebar-btn ${usePrimaryColorsForTitlebar ? 'active' : ''}`}
-                onClick={handleTitlebarColorPreferenceChange}
-              >
-                <i className="pi pi-window-maximize"></i>
-                <span>Titlebar</span>
-                <div className={`theme-mini-toggle ${usePrimaryColorsForTitlebar ? 'on' : ''}`}></div>
-              </button>
+              <div className="theme-titlebar-wrapper">
+                <button 
+                  className={`theme-titlebar-btn ${usePrimaryColorsForTitlebar ? 'active' : ''}`}
+                  onClick={handleTitlebarColorPreferenceChange}
+                  title="Usa los colores primarios del tema en la barra de título"
+                >
+                  <i className="pi pi-window-maximize"></i>
+                  <span>Titlebar</span>
+                  <div className={`theme-mini-toggle ${usePrimaryColorsForTitlebar ? 'on' : ''}`}></div>
+                </button>
+                <span className="theme-option-hint">Colores primarios</span>
+              </div>
             </div>
             <div className="theme-hero-badge">
               <i className="pi pi-check"></i>
