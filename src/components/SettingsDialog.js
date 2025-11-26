@@ -2280,20 +2280,10 @@ const SettingsDialog = ({
         </TabPanel>
 
         <TabPanel header="Apariencia" leftIcon="pi pi-palette">
-          <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
-            <div style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: activeSubTab === 'interfaz' ? '0' : '1.5rem' }}>
+          <div className="apariencia-tab-container">
             {/* Renderizado condicional basado en activeSubTab */}
             {activeSubTab === 'interfaz' && (
-              <div style={{ 
-                height: '100%', 
-                width: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                minHeight: 0,
-                overflow: 'hidden'
-              }}>
-                <ThemeSelector showPreview={true} />
-              </div>
+              <ThemeSelector showPreview={true} />
             )}
             {activeSubTab === 'terminal' && (
                 <div style={{ 
@@ -2937,7 +2927,6 @@ const SettingsDialog = ({
             {activeSubTab === 'pestanas' && (
                 <TabThemeSelector />
             )}
-            </div>
           </div>
         </TabPanel>
 
