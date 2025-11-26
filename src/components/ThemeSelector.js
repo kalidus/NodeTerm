@@ -227,6 +227,57 @@ const ThemeSelector = ({ showPreview = false }) => {
           <HeroPreview theme={activeTheme} />
           
           <div className="theme-hero-info">
+            {/* Panel de opciones a la derecha */}
+            <div className="theme-options-panel">
+              <div className="theme-options-panel-title">
+                <i className="pi pi-cog"></i>
+                Opciones
+              </div>
+              
+              <button 
+                className={`theme-option-compact ${usePrimaryColorsForTitlebar ? 'active' : ''}`}
+                onClick={handleTitlebarColorPreferenceChange}
+              >
+                <i className="pi pi-window-maximize"></i>
+                <span>Titlebar</span>
+                <div className={`theme-option-toggle ${usePrimaryColorsForTitlebar ? 'on' : ''}`}>
+                  <div className="theme-option-toggle-dot"></div>
+                </div>
+              </button>
+              
+              <div className="theme-option-divider"></div>
+              
+              <div className="theme-option-anim-header">
+                <span>🎬 Animaciones</span>
+                <span className="theme-option-anim-badge">Temas animados</span>
+              </div>
+              
+              <button 
+                className={`theme-option-compact ${reducedMotion ? 'active' : ''}`}
+                onClick={handleReducedMotionToggle}
+              >
+                <i className="pi pi-eye-slash"></i>
+                <span>Reducir</span>
+                <div className={`theme-option-toggle ${reducedMotion ? 'on' : ''}`}>
+                  <div className="theme-option-toggle-dot"></div>
+                </div>
+              </button>
+              
+              <div className="theme-option-speed">
+                <i className="pi pi-forward"></i>
+                <span>Velocidad</span>
+                <select 
+                  className="theme-speed-select-compact"
+                  value={animSpeed} 
+                  onChange={handleAnimSpeedChange}
+                >
+                  <option value="slow">Lento</option>
+                  <option value="normal">Normal</option>
+                  <option value="fast">Rápido</option>
+                  <option value="turbo">Turbo</option>
+                </select>
+              </div>
+            </div>
             <div className="theme-hero-badge">
               <i className="pi pi-check"></i>
               Tema Activo
@@ -256,40 +307,6 @@ const ThemeSelector = ({ showPreview = false }) => {
                     title={color}
                   />
                 ))}
-              </div>
-            </div>
-
-            <div className="theme-hero-actions">
-              <button 
-                className={`theme-hero-action-btn ${usePrimaryColorsForTitlebar ? 'active' : ''}`}
-                onClick={handleTitlebarColorPreferenceChange}
-              >
-                <i className="pi pi-window-maximize"></i>
-                Titlebar Colors
-              </button>
-              
-              <button 
-                className={`theme-hero-action-btn ${reducedMotion ? 'active' : ''}`}
-                onClick={handleReducedMotionToggle}
-              >
-                <i className="pi pi-bolt"></i>
-                Reducir Animaciones
-              </button>
-              
-              <div className="theme-hero-action-btn" style={{ cursor: 'default' }}>
-                <i className="pi pi-forward"></i>
-                <span>Velocidad:</span>
-                <select 
-                  className="theme-speed-select"
-                  value={animSpeed} 
-                  onChange={handleAnimSpeedChange}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <option value="slow">Lento</option>
-                  <option value="normal">Normal</option>
-                  <option value="fast">Rápido</option>
-                  <option value="turbo">Turbo</option>
-                </select>
               </div>
             </div>
           </div>
