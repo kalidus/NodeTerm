@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Checkbox } from 'primereact/checkbox';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS, ANIMATED_UI_KEYS, NATURE_UI_KEYS } from '../themes/ui-themes';
 import '../styles/components/theme-selector.css';
@@ -9,6 +8,7 @@ const REDUCED_MOTION_KEY = 'nodeterm_ui_reduced_motion';
 
 // Definición de categorías
 const CATEGORIES = [
+  { id: 'all', name: 'Todos', icon: '🎯', keys: [...CLASSIC_UI_KEYS, ...FUTURISTIC_UI_KEYS, ...MODERN_UI_KEYS, ...ANIMATED_UI_KEYS, ...NATURE_UI_KEYS] },
   { id: 'classic', name: 'Clásicos', icon: '🎨', keys: CLASSIC_UI_KEYS },
   { id: 'futuristic', name: 'Futuristas', icon: '🚀', keys: FUTURISTIC_UI_KEYS },
   { id: 'modern', name: 'Modernos', icon: '✨', keys: MODERN_UI_KEYS },
@@ -16,30 +16,40 @@ const CATEGORIES = [
   { id: 'nature', name: 'Naturaleza', icon: '🌿', keys: NATURE_UI_KEYS }
 ];
 
+// Descripciones de temas
+const THEME_DESCRIPTIONS = {
+  'Light': 'Tema claro y limpio, ideal para ambientes bien iluminados',
+  'Dark': 'Tema oscuro elegante para reducir fatiga visual',
+  'Solarized Light': 'Paleta Solarized clara, equilibrada y suave',
+  'Solarized Dark': 'Paleta Solarized oscura, fácil para los ojos',
+  'Dracula': 'Colores vibrantes sobre fondo oscuro púrpura',
+  'Monokai': 'Inspirado en el clásico tema de Sublime Text',
+  'Gruvbox Dark': 'Tonos retro cálidos sobre fondo oscuro',
+  'Nord': 'Paleta ártica fría y minimalista',
+  'One Dark': 'Inspirado en Atom, moderno y profesional',
+  'default': 'Un tema personalizado para tu terminal'
+};
+
 const ThemeSelector = ({ showPreview = false }) => {
   const [currentTheme, setCurrentTheme] = useState('Light');
   const [usePrimaryColorsForTitlebar, setUsePrimaryColorsForTitlebar] = useState(false);
   const [animSpeed, setAnimSpeed] = useState('normal');
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('classic');
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   useEffect(() => {
-    // Cargar el tema actual
     const savedTheme = localStorage.getItem('ui_theme') || 'Light';
     setCurrentTheme(savedTheme);
     
-    // Cargar la preferencia de colores primarios para titlebar
     const savedTitlebarPreference = localStorage.getItem('use_primary_colors_titlebar') === 'true';
     setUsePrimaryColorsForTitlebar(savedTitlebarPreference);
     
-    // Cargar preferencias de animación
     const savedSpeed = localStorage.getItem(ANIM_SPEED_KEY) || 'normal';
     setAnimSpeed(savedSpeed);
     if (!document.documentElement.hasAttribute('data-ui-anim-speed')) {
       document.documentElement.setAttribute('data-ui-anim-speed', savedSpeed);
     }
     
-    // Reduced motion inicial
     const savedReduced = localStorage.getItem(REDUCED_MOTION_KEY);
     let initialReduced = false;
     if (savedReduced === 'true' || savedReduced === 'false') {
@@ -49,29 +59,17 @@ const ThemeSelector = ({ showPreview = false }) => {
     }
     setReducedMotion(initialReduced);
     document.documentElement.setAttribute('data-ui-reduced-motion', initialReduced ? 'true' : 'false');
-
-    // Detectar categoría del tema actual
-    detectCategoryForTheme(savedTheme);
   }, []);
-
-  const detectCategoryForTheme = (themeName) => {
-    for (const category of CATEGORIES) {
-      const hasTheme = category.keys.some(key => uiThemes[key]?.name === themeName);
-      if (hasTheme) {
-        setSelectedCategory(category.id);
-        break;
-      }
-    }
-  };
 
   const handleThemeChange = (themeName) => {
     setCurrentTheme(themeName);
     themeManager.applyTheme(themeName);
   };
 
-  const handleTitlebarColorPreferenceChange = (usePrimary) => {
-    setUsePrimaryColorsForTitlebar(usePrimary);
-    localStorage.setItem('use_primary_colors_titlebar', usePrimary.toString());
+  const handleTitlebarColorPreferenceChange = () => {
+    const newValue = !usePrimaryColorsForTitlebar;
+    setUsePrimaryColorsForTitlebar(newValue);
+    localStorage.setItem('use_primary_colors_titlebar', newValue.toString());
     themeManager.applyTheme(currentTheme);
   };
 
@@ -82,276 +80,210 @@ const ThemeSelector = ({ showPreview = false }) => {
     document.documentElement.setAttribute('data-ui-anim-speed', speed);
   };
 
-  const handleReducedMotionToggle = (e) => {
-    const reduced = e.target.checked;
-    setReducedMotion(reduced);
-    localStorage.setItem(REDUCED_MOTION_KEY, reduced.toString());
-    document.documentElement.setAttribute('data-ui-reduced-motion', reduced ? 'true' : 'false');
+  const handleReducedMotionToggle = () => {
+    const newValue = !reducedMotion;
+    setReducedMotion(newValue);
+    localStorage.setItem(REDUCED_MOTION_KEY, newValue.toString());
+    document.documentElement.setAttribute('data-ui-reduced-motion', newValue ? 'true' : 'false');
   };
 
-  // Obtener temas de la categoría seleccionada
-  const getCurrentCategoryThemes = () => {
+  // Obtener tema actual
+  const getCurrentThemeData = () => {
+    for (const category of CATEGORIES) {
+      for (const key of category.keys) {
+        if (uiThemes[key]?.name === currentTheme) {
+          return uiThemes[key];
+        }
+      }
+    }
+    return uiThemes[CLASSIC_UI_KEYS[0]];
+  };
+
+  // Obtener temas filtrados (excluyendo el actual)
+  const getFilteredThemes = () => {
     const category = CATEGORIES.find(c => c.id === selectedCategory);
     if (!category) return [];
-    return category.keys.filter(key => uiThemes[key]).map(key => uiThemes[key]);
+    return category.keys
+      .filter(key => uiThemes[key] && uiThemes[key].name !== currentTheme)
+      .map(key => uiThemes[key]);
   };
 
-  const getCurrentCategoryName = () => {
-    const category = CATEGORIES.find(c => c.id === selectedCategory);
-    return category ? category.name : '';
-  };
+  const activeTheme = getCurrentThemeData();
+  const themes = getFilteredThemes();
 
-  // Componente ThemeCard compacto
-  const ThemeCardCompact = ({ theme, isActive, onClick }) => {
+  // Preview del tema hero (grande)
+  const HeroPreview = ({ theme }) => {
     const colors = theme.colors;
-    
     return (
-      <div 
-        className={`theme-card-compact ${isActive ? 'active' : ''}`}
-        onClick={onClick}
-      >
-        {isActive && (
-          <div className="theme-card-active-badge">
-            <i className="pi pi-check"></i>
-            Activo
-          </div>
-        )}
-
-        {/* Preview del tema */}
-        <div className="theme-card-preview">
-          {/* Menubar */}
+      <div className="theme-hero-preview">
+        <div 
+          className="theme-hero-menubar"
+          style={{ background: colors.menuBarBackground, color: colors.menuBarText }}
+        >
+          <span className="theme-hero-menubar-icons">🏠 📁 ⚙️</span>
+          <span className="theme-hero-menubar-title">NodeTerm</span>
+        </div>
+        <div className="theme-hero-main">
           <div 
-            className="theme-preview-menubar"
-            style={{
-              background: colors.menuBarBackground,
-              color: colors.menuBarText,
-              borderColor: colors.menuBarBorder
-            }}
+            className="theme-hero-sidebar"
+            style={{ background: colors.sidebarBackground, color: colors.sidebarText, borderRight: `1px solid ${colors.sidebarBorder}` }}
           >
-            <span className="theme-preview-menubar-icons">🏠 📁 ⚙️</span>
-            <span className="theme-preview-menubar-title">NodeTerm</span>
+            <div className="theme-hero-sidebar-item" style={{ background: colors.sidebarSelected }}>📁 Projects</div>
+            <div className="theme-hero-sidebar-item">🖥️ SSH-Server</div>
+            <div className="theme-hero-sidebar-item">🖥️ Database</div>
+            <div className="theme-hero-sidebar-item">📂 Config</div>
           </div>
-
-          {/* Main area */}
-          <div className="theme-preview-main">
-            {/* Sidebar */}
+          <div className="theme-hero-content-area">
             <div 
-              className="theme-preview-sidebar"
-              style={{
-                background: colors.sidebarBackground,
-                color: colors.sidebarText,
-                borderColor: colors.sidebarBorder
-              }}
+              className="theme-hero-tabs"
+              style={{ background: colors.tabBackground, borderBottom: `1px solid ${colors.tabBorder}` }}
             >
               <div 
-                className="theme-preview-sidebar-item"
-                style={{ background: colors.sidebarSelected }}
+                className="theme-hero-tab active"
+                style={{ background: colors.tabActiveBackground, color: colors.tabActiveText }}
               >
-                📁 Projects
+                Terminal
               </div>
-              <div className="theme-preview-sidebar-item">🖥️ SSH-1</div>
-              <div className="theme-preview-sidebar-item">🖥️ SSH-2</div>
+              <div className="theme-hero-tab" style={{ color: colors.tabText }}>Explorer</div>
+              <div className="theme-hero-tab" style={{ color: colors.tabText }}>Logs</div>
             </div>
-
-            {/* Content */}
-            <div className="theme-preview-content-area">
-              {/* Tabs */}
-              <div 
-                className="theme-preview-tabs"
-                style={{
-                  background: colors.tabBackground,
-                  borderColor: colors.tabBorder
-                }}
-              >
-                <div 
-                  className="theme-preview-tab active"
-                  style={{
-                    background: colors.tabActiveBackground,
-                    color: colors.tabActiveText,
-                    borderColor: colors.tabBorder
-                  }}
-                >
-                  Terminal
-                </div>
-                <div 
-                  className="theme-preview-tab"
-                  style={{
-                    color: colors.tabText
-                  }}
-                >
-                  Explorer
-                </div>
-              </div>
-
-              {/* Terminal content */}
-              <div 
-                className="theme-preview-terminal"
-                style={{
-                  background: colors.contentBackground,
-                  color: colors.dialogText
-                }}
-              >
-                <div 
-                  className="theme-preview-prompt"
-                  style={{ color: colors.buttonPrimary }}
-                >
-                  user@server:~$
-                </div>
-                <div style={{ opacity: 0.8 }}>Welcome to {theme.name}</div>
-                <div style={{ opacity: 0.6 }}>ls -la</div>
-              </div>
+            <div 
+              className="theme-hero-terminal"
+              style={{ background: colors.contentBackground, color: colors.dialogText }}
+            >
+              <div style={{ color: colors.buttonPrimary, marginBottom: '4px' }}>user@server:~$</div>
+              <div style={{ opacity: 0.9 }}>Welcome to {theme.name} theme</div>
+              <div style={{ opacity: 0.7 }}>Last login: Today at 10:30</div>
+              <div style={{ opacity: 0.6, marginTop: '4px' }}>$ ls -la</div>
             </div>
-          </div>
-
-          {/* Statusbar */}
-          <div 
-            className="theme-preview-statusbar"
-            style={{
-              background: colors.statusBarBackground,
-              color: colors.statusBarText,
-              borderColor: colors.statusBarBorder
-            }}
-          >
-            <span>✓ Connected</span>
-            <span>{theme.name}</span>
           </div>
         </div>
-
-        {/* Info */}
-        <div className="theme-card-info">
-          <span className="theme-card-name">{theme.name}</span>
-          <div className="theme-card-palette">
-            {[
-              colors.sidebarBackground,
-              colors.contentBackground,
-              colors.buttonPrimary,
-              colors.tabActiveBackground
-            ].map((color, index) => (
-              <div
-                key={index}
-                className="theme-palette-dot"
-                style={{ backgroundColor: color }}
-                title={color}
-              />
-            ))}
-          </div>
+        <div 
+          className="theme-hero-statusbar"
+          style={{ background: colors.statusBarBackground, color: colors.statusBarText, borderTop: `1px solid ${colors.statusBarBorder}` }}
+        >
+          <span>✓ Connected • SSH</span>
+          <span>UTF-8 • LF</span>
         </div>
       </div>
     );
   };
 
-  const themes = getCurrentCategoryThemes();
+  // Preview miniatura
+  const ThumbnailPreview = ({ theme }) => {
+    const colors = theme.colors;
+    return (
+      <div className="theme-thumbnail-preview">
+        <div 
+          className="theme-thumbnail-menubar"
+          style={{ background: colors.menuBarBackground, color: colors.menuBarText }}
+        >
+          🏠📁⚙️ NodeTerm
+        </div>
+        <div className="theme-thumbnail-main">
+          <div 
+            className="theme-thumbnail-sidebar"
+            style={{ background: colors.sidebarBackground, color: colors.sidebarText }}
+          >
+            <div className="theme-thumbnail-sidebar-item" style={{ background: colors.sidebarSelected }}>📁 Proj</div>
+            <div className="theme-thumbnail-sidebar-item">🖥️ SSH</div>
+          </div>
+          <div className="theme-thumbnail-content">
+            <div 
+              className="theme-thumbnail-tabs"
+              style={{ background: colors.tabBackground }}
+            >
+              <div 
+                className="theme-thumbnail-tab"
+                style={{ background: colors.tabActiveBackground, color: colors.tabActiveText }}
+              >
+                Term
+              </div>
+            </div>
+            <div 
+              className="theme-thumbnail-terminal"
+              style={{ background: colors.contentBackground, color: colors.dialogText }}
+            >
+              <span style={{ color: colors.buttonPrimary }}>$</span> ls
+            </div>
+          </div>
+        </div>
+        <div 
+          className="theme-thumbnail-statusbar"
+          style={{ background: colors.statusBarBackground, color: colors.statusBarText }}
+        >
+          <span>✓</span>
+          <span>{theme.name}</span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="theme-selector-container">
-      {/* Panel Lateral */}
-      <div className="theme-selector-sidebar">
-        {/* Header */}
-        <div className="theme-sidebar-header">
-          <h3 className="theme-sidebar-title">
-            <i className="pi pi-palette theme-sidebar-title-icon"></i>
-            Temas de Interfaz
-          </h3>
-          <p className="theme-sidebar-subtitle">
-            Personaliza la apariencia de tu entorno de trabajo
-          </p>
-        </div>
+      {/* Hero Section - Tema Activo */}
+      <div className="theme-hero-section">
+        <div className="theme-hero-content">
+          <HeroPreview theme={activeTheme} />
+          
+          <div className="theme-hero-info">
+            <div className="theme-hero-badge">
+              <i className="pi pi-check"></i>
+              Tema Activo
+            </div>
+            
+            <h2 className="theme-hero-name">{activeTheme.name}</h2>
+            
+            <p className="theme-hero-description">
+              {THEME_DESCRIPTIONS[activeTheme.name] || THEME_DESCRIPTIONS['default']}
+            </p>
+            
+            <div className="theme-hero-palette">
+              <span className="theme-hero-palette-label">Paleta:</span>
+              <div className="theme-hero-palette-colors">
+                {[
+                  activeTheme.colors.sidebarBackground,
+                  activeTheme.colors.contentBackground,
+                  activeTheme.colors.buttonPrimary,
+                  activeTheme.colors.tabActiveBackground,
+                  activeTheme.colors.statusBarBackground,
+                  activeTheme.colors.menuBarBackground
+                ].map((color, index) => (
+                  <div
+                    key={index}
+                    className="theme-hero-palette-dot"
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                ))}
+              </div>
+            </div>
 
-        {/* Categorías */}
-        <div className="theme-categories-section">
-          <div className="theme-section-label">
-            <i className="pi pi-folder"></i>
-            Categorías
-          </div>
-          <div className="theme-category-list">
-            {CATEGORIES.map(category => {
-              const count = category.keys.filter(key => uiThemes[key]).length;
-              return (
-                <div
-                  key={category.id}
-                  className={`theme-category-item ${selectedCategory === category.id ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory(category.id)}
-                >
-                  <div className="theme-category-info">
-                    <span className="theme-category-icon">{category.icon}</span>
-                    <span className="theme-category-name">{category.name}</span>
-                  </div>
-                  <span className="theme-category-count">{count}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Configuración */}
-        <div className="theme-config-section">
-          <div className="theme-section-label">
-            <i className="pi pi-cog"></i>
-            Configuración
-          </div>
-
-          {/* Card: Titlebar */}
-          <div className="theme-config-card">
-            <div className="theme-config-header">
-              <div className="theme-config-icon">
+            <div className="theme-hero-actions">
+              <button 
+                className={`theme-hero-action-btn ${usePrimaryColorsForTitlebar ? 'active' : ''}`}
+                onClick={handleTitlebarColorPreferenceChange}
+              >
                 <i className="pi pi-window-maximize"></i>
-              </div>
-              <span className="theme-config-title">Barra de Título</span>
-            </div>
-            <div className="theme-config-content">
-              <div 
-                className="theme-config-option"
-                onClick={() => handleTitlebarColorPreferenceChange(!usePrimaryColorsForTitlebar)}
+                Titlebar Colors
+              </button>
+              
+              <button 
+                className={`theme-hero-action-btn ${reducedMotion ? 'active' : ''}`}
+                onClick={handleReducedMotionToggle}
               >
-                <div className="theme-config-option-info">
-                  <label className="theme-config-option-label">
-                    Usar colores del tema
-                  </label>
-                  <span className="theme-config-option-desc">
-                    Aplica los colores primarios a la titlebar
-                  </span>
-                </div>
-                <Checkbox
-                  checked={usePrimaryColorsForTitlebar}
-                  onChange={(e) => handleTitlebarColorPreferenceChange(e.checked)}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Card: Animaciones */}
-          <div className="theme-config-card">
-            <div className="theme-config-header">
-              <div className="theme-config-icon">
                 <i className="pi pi-bolt"></i>
-              </div>
-              <span className="theme-config-title">Animaciones</span>
-            </div>
-            <div className="theme-config-content">
-              <div 
-                className="theme-config-option"
-                onClick={() => handleReducedMotionToggle({ target: { checked: !reducedMotion } })}
-              >
-                <div className="theme-config-option-info">
-                  <label className="theme-config-option-label">
-                    Reducir movimiento
-                  </label>
-                  <span className="theme-config-option-desc">
-                    Minimiza las animaciones
-                  </span>
-                </div>
-                <Checkbox
-                  checked={reducedMotion}
-                  onChange={handleReducedMotionToggle}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-              <div className="theme-config-dropdown">
-                <span className="theme-config-dropdown-label">Velocidad:</span>
+                Reducir Animaciones
+              </button>
+              
+              <div className="theme-hero-action-btn" style={{ cursor: 'default' }}>
+                <i className="pi pi-forward"></i>
+                <span>Velocidad:</span>
                 <select 
+                  className="theme-speed-select"
                   value={animSpeed} 
                   onChange={handleAnimSpeedChange}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <option value="slow">Lento</option>
                   <option value="normal">Normal</option>
@@ -364,26 +296,65 @@ const ThemeSelector = ({ showPreview = false }) => {
         </div>
       </div>
 
-      {/* Panel Principal */}
-      <div className="theme-selector-main">
-        {/* Header */}
-        <div className="theme-main-header">
-          <div className="theme-main-title">
-            Temas <span className="theme-main-title-category">{getCurrentCategoryName()}</span>
+      {/* Sección de Exploración */}
+      <div className="theme-explore-section">
+        <div className="theme-explore-header">
+          <div className="theme-explore-title">
+            <i className="pi pi-th-large"></i>
+            Explorar Temas
           </div>
-          <span className="theme-count-badge">{themes.length} temas</span>
+          
+          <div className="theme-category-filters">
+            {CATEGORIES.map(category => {
+              const count = category.keys.filter(key => uiThemes[key]).length;
+              return (
+                <button
+                  key={category.id}
+                  className={`theme-category-pill ${selectedCategory === category.id ? 'active' : ''}`}
+                  onClick={() => setSelectedCategory(category.id)}
+                >
+                  <span className="theme-category-pill-icon">{category.icon}</span>
+                  <span>{category.name}</span>
+                  <span className="theme-category-pill-count">{count}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Grid de temas */}
-        <div className="theme-grid-container">
-          <div className="theme-grid">
+        <div className="theme-thumbnails-container">
+          <div className="theme-thumbnails-grid">
             {themes.map((theme) => (
-              <ThemeCardCompact
+              <div
                 key={theme.name}
-                theme={theme}
-                isActive={currentTheme === theme.name}
+                className={`theme-thumbnail ${currentTheme === theme.name ? 'active' : ''}`}
                 onClick={() => handleThemeChange(theme.name)}
-              />
+              >
+                {currentTheme === theme.name && (
+                  <div className="theme-thumbnail-check">
+                    <i className="pi pi-check"></i>
+                  </div>
+                )}
+                
+                <ThumbnailPreview theme={theme} />
+                
+                <div className="theme-thumbnail-info">
+                  <span className="theme-thumbnail-name">{theme.name}</span>
+                  <div className="theme-thumbnail-palette">
+                    {[
+                      theme.colors.sidebarBackground,
+                      theme.colors.buttonPrimary,
+                      theme.colors.contentBackground
+                    ].map((color, index) => (
+                      <div
+                        key={index}
+                        className="theme-thumbnail-dot"
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         </div>
