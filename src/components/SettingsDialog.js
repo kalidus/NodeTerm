@@ -1263,7 +1263,7 @@ const SettingsDialog = ({
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
             <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
             {/* Header */}
-            <div className="general-settings-header-wrapper">
+            <div className="general-settings-header-wrapper" style={{ flexShrink: 0 }}>
               <div className="general-header-content">
                 <span className="general-header-icon protocol-dialog-header-icon">
                   <i className="pi pi-sliders-h"></i>
@@ -2956,204 +2956,250 @@ const SettingsDialog = ({
         <TabPanel header={<span><i className="pi pi-desktop" style={{ marginRight: 8 }}></i>RDP</span>}>
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
             <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-            {/* Contenido */}
-            <div className="general-settings-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            {/* Backend RDP (Guacamole) */}
-            <div style={{ width: '100%', maxWidth: 520, marginBottom: '1.25rem' }}>
-              <h3 style={{ margin: '0 0 0.75rem 0', color: 'var(--text-color)' }}>
-                <i className="pi pi-sitemap" style={{ marginRight: '0.5rem', color: '#4fc3f7' }}></i>
-                Backend para RDP (Guacamole)
-              </h3>
-              <label htmlFor="guacd-preferred-method" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                Método preferido
-              </label>
-              <Dropdown
-                id="guacd-preferred-method"
-                value={guacdPreferredMethod}
-                options={methodOptions}
-                onChange={(e) => setGuacdPreferredMethod(e.value)}
-                style={{ width: '100%' }}
-              />
-              <small style={{ display: 'block', marginTop: 8, color: 'var(--text-color-secondary)' }}>
-                El orden será: tu preferencia → alternativa. En Windows: Docker/WSL. En Linux: Docker/Nativo.
-              </small>
-            </div>
-
-            <div style={{
-              width: '100%',
-              maxWidth: 520,
-              marginTop: '0.5rem',
-              border: '1px solid var(--surface-border)',
-              borderRadius: 8,
-              padding: '0.75rem 1rem',
-              background: 'var(--surface-card)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 12
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span
-                  title={guacdStatus.isRunning ? 'Activo' : 'Inactivo'}
-                  style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: '50%',
-                    background: guacdStatus.isRunning ? 'var(--green-500)' : 'var(--red-500)',
-                    boxShadow: guacdStatus.isRunning ? '0 0 0 3px rgba(34,197,94,0.15)' : '0 0 0 3px rgba(239,68,68,0.15)'
-                  }}
-                ></span>
-                <strong style={{ color: 'var(--text-color)' }}>Servidor Guacd</strong>
-                <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>
-                  {guacdStatus.isRunning ? 'Activo' : 'Inactivo'}
-                </span>
-              </div>
-              <div style={{ color: 'var(--text-color-secondary)', fontSize: '0.9rem', textAlign: 'right' }}>
-                <div style={{ textTransform: 'uppercase' }}>{guacdStatus.method || '—'}</div>
-                <div style={{ fontFamily: 'monospace' }}>{guacdStatus.host}:{guacdStatus.port}</div>
-              </div>
-            </div>
-            {/* General */}
-            <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>
-              <i className="pi pi-cog" style={{ marginRight: '0.5rem', color: '#4fc3f7' }}></i>
-              General
-            </h3>
-            <div style={{ width: '100%', maxWidth: 520, display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
-              <div>
-                <label htmlFor="rdp-session-activity-min" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                  Umbral de actividad de la sesión (minutos)
-                </label>
-                <small style={{ display: 'block', marginBottom: 8, color: 'var(--text-color-secondary)' }}>
-                  Si no hay actividad durante este tiempo, puede intentarse una reconexión automática.
-                </small>
-                <InputNumber
-                  id="rdp-session-activity-min"
-                  value={rdpSessionActivityMinutes}
-                  onValueChange={e => setRdpSessionActivityMinutes(Math.max(1, Math.min(1440, e.value || 1)))}
-                  min={1}
-                  max={1440}
-                  showButtons
-                  buttonLayout="horizontal"
-                  style={{ width: '100%' }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 28 }}>
-                  {rdpSessionActivityMinutes} min (mín. 1)
+              {/* Header */}
+              <div className="general-settings-header-wrapper" style={{ flexShrink: 0 }}>
+                <div className="general-header-content">
+                  <span className="general-header-icon protocol-dialog-header-icon">
+                    <i className="pi pi-desktop"></i>
+                  </span>
+                  <div className="general-header-text">
+                    <h3 className="general-header">Configuración RDP</h3>
+                    <p className="general-description">Personaliza el comportamiento, conectividad y rendimiento de las sesiones RDP</p>
+                  </div>
                 </div>
               </div>
-            </div>
+              
+              {/* Grid de 2 columnas para las secciones */}
+              <div className="general-settings-content">
+                {/* Sección: Backend Guacamole */}
+                <div className="general-settings-section">
+                  <div className="general-section-header">
+                    <div className="general-section-icon">
+                      <i className="pi pi-sitemap"></i>
+                    </div>
+                    <h4 className="general-section-title">Backend para RDP (Guacamole)</h4>
+                  </div>
+                  
+                  <div className="general-settings-options" style={{ padding: '0.75rem 1.25rem', gap: '0.5rem' }}>
+                    <div>
+                      <label htmlFor="guacd-preferred-method" style={{ display: 'block', marginBottom: '0.35rem', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                        Método preferido
+                      </label>
+                      <Dropdown
+                        id="guacd-preferred-method"
+                        value={guacdPreferredMethod}
+                        options={methodOptions}
+                        onChange={(e) => setGuacdPreferredMethod(e.value)}
+                        style={{ width: '100%' }}
+                      />
+                      <small style={{ display: 'block', marginTop: 4, color: 'var(--text-color-secondary)', fontSize: '0.75rem' }}>
+                        El orden será: tu preferencia → alternativa. En Windows: Docker/WSL. En Linux: Docker/Nativo.
+                      </small>
+                    </div>
 
-            {/* Configuración Resize */}
-            <h3 style={{ margin: '0.5rem 0 0.5rem 0', color: 'var(--text-color)' }}>
-              <i className="pi pi-sliders-h" style={{ marginRight: '0.5rem', color: '#4fc3f7' }}></i>
-              Configuración Resize
-            </h3>
-            <div style={{ width: '100%', maxWidth: 520, display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
-              <div>
-                <label htmlFor="rdp-resize-debounce" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                  Debounce del resize (ms)
-                </label>
-                <small style={{ display: 'block', marginBottom: 8, color: 'var(--text-color-secondary)' }}>
-                  Solo se envía el tamaño final tras parar de arrastrar. Ajusta el retardo del envío final.
-                </small>
-                <InputNumber
-                  id="rdp-resize-debounce"
-                  value={rdpResizeDebounceMs}
-                  onValueChange={e => setRdpResizeDebounceMs(Math.max(100, Math.min(2000, e.value || 300)))}
-                  min={100}
-                  max={2000}
-                  showButtons
-                  buttonLayout="horizontal"
-                  style={{ width: '100%' }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 28 }}>
-                  {rdpResizeDebounceMs} ms (100–2000)
+                    <div style={{
+                      marginTop: '0.75rem',
+                      border: '1px solid var(--surface-border)',
+                      borderRadius: 6,
+                      padding: '0.5rem 0.75rem',
+                      background: 'var(--surface-card)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 8,
+                      fontSize: '0.8rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span
+                          title={guacdStatus.isRunning ? 'Activo' : 'Inactivo'}
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            background: guacdStatus.isRunning ? 'var(--green-500)' : 'var(--red-500)',
+                            boxShadow: guacdStatus.isRunning ? '0 0 0 2px rgba(34,197,94,0.15)' : '0 0 0 2px rgba(239,68,68,0.15)',
+                            flexShrink: 0
+                          }}
+                        ></span>
+                        <strong style={{ color: 'var(--text-color)' }}>Guacd</strong>
+                        <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.75rem' }}>
+                          {guacdStatus.isRunning ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </div>
+                      <div style={{ color: 'var(--text-color-secondary)', fontSize: '0.75rem', textAlign: 'right' }}>
+                        <div style={{ textTransform: 'uppercase', fontWeight: 500 }}>{guacdStatus.method || '—'}</div>
+                        <div style={{ fontFamily: 'monospace', fontSize: '0.7rem' }}>{guacdStatus.host}:{guacdStatus.port}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección: General */}
+                <div className="general-settings-section">
+                  <div className="general-section-header">
+                    <div className="general-section-icon">
+                      <i className="pi pi-cog"></i>
+                    </div>
+                    <h4 className="general-section-title">General</h4>
+                  </div>
+                  
+                  <div className="general-settings-options" style={{ padding: '0.75rem 1.25rem', gap: '0.5rem' }}>
+                    <div>
+                      <label htmlFor="rdp-session-activity-min" style={{ display: 'block', marginBottom: '0.35rem', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                        Umbral de actividad (min)
+                      </label>
+                      <small style={{ display: 'block', marginBottom: 4, color: 'var(--text-color-secondary)', fontSize: '0.75rem' }}>
+                        Reconexión automática si no hay actividad.
+                      </small>
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem', alignItems: 'flex-start' }}>
+                        <div>
+                          <InputNumber
+                            id="rdp-session-activity-min"
+                            value={rdpSessionActivityMinutes}
+                            onValueChange={e => setRdpSessionActivityMinutes(Math.max(1, Math.min(1440, e.value || 1)))}
+                            min={1}
+                            max={1440}
+                            showButtons
+                            buttonLayout="horizontal"
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#888', marginTop: 4 }}>
+                          {rdpSessionActivityMinutes} min
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección: Configuración Resize */}
+                <div className="general-settings-section">
+                  <div className="general-section-header">
+                    <div className="general-section-icon">
+                      <i className="pi pi-sliders-h"></i>
+                    </div>
+                    <h4 className="general-section-title">Resize</h4>
+                  </div>
+                  
+                  <div className="general-settings-options" style={{ padding: '0.75rem 1.25rem', gap: '0.5rem' }}>
+                    <div>
+                      <label htmlFor="rdp-resize-debounce" style={{ display: 'block', marginBottom: '0.35rem', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                        Debounce (ms)
+                      </label>
+                      <small style={{ display: 'block', marginBottom: 4, color: 'var(--text-color-secondary)', fontSize: '0.75rem' }}>
+                        Retardo del envío final tras arrastrar.
+                      </small>
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem', alignItems: 'flex-start' }}>
+                        <div>
+                          <InputNumber
+                            id="rdp-resize-debounce"
+                            value={rdpResizeDebounceMs}
+                            onValueChange={e => setRdpResizeDebounceMs(Math.max(100, Math.min(2000, e.value || 300)))}
+                            min={100}
+                            max={2000}
+                            showButtons
+                            buttonLayout="horizontal"
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#888', marginTop: 4 }}>
+                          {rdpResizeDebounceMs} ms
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                      <label htmlFor="rdp-idle-min" style={{ display: 'block', marginBottom: '0.35rem', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                        Umbral inactividad (min)
+                      </label>
+                      <small style={{ display: 'block', marginBottom: 4, color: 'var(--text-color-secondary)', fontSize: '0.75rem' }}>
+                        Warm-up o reconexión tras inactividad.
+                      </small>
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem', alignItems: 'flex-start' }}>
+                        <div>
+                          <InputNumber
+                            id="rdp-idle-min"
+                            value={rdpIdleMinutes}
+                            onValueChange={e => setRdpIdleMinutes(Math.max(1, Math.min(1440, e.value || 1)))}
+                            min={1}
+                            max={1440}
+                            showButtons
+                            buttonLayout="horizontal"
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#888', marginTop: 4 }}>
+                          {rdpIdleMinutes} min
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                      <label htmlFor="rdp-resize-ack-timeout" style={{ display: 'block', marginBottom: '0.35rem', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                        Timeout ACK (ms)
+                      </label>
+                      <small style={{ display: 'block', marginBottom: 4, color: 'var(--text-color-secondary)', fontSize: '0.75rem' }}>
+                        Espera máxima de respuesta del display.
+                      </small>
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem', alignItems: 'flex-start' }}>
+                        <div>
+                          <InputNumber
+                            id="rdp-resize-ack-timeout"
+                            value={rdpResizeAckTimeoutMs}
+                            onValueChange={e => setRdpResizeAckTimeoutMs(Math.max(600, Math.min(5000, e.value || 1500)))}
+                            min={600}
+                            max={5000}
+                            showButtons
+                            buttonLayout="horizontal"
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#888', marginTop: 4 }}>
+                          {rdpResizeAckTimeoutMs} ms
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección: Configuración Guacamole */}
+                <div className="general-settings-section">
+                  <div className="general-section-header">
+                    <div className="general-section-icon">
+                      <i className="pi pi-sitemap"></i>
+                    </div>
+                    <h4 className="general-section-title">Guacamole</h4>
+                  </div>
+                  
+                  <div className="general-settings-options" style={{ padding: '0.75rem 1.25rem', gap: '0.5rem' }}>
+                    <div>
+                      <label htmlFor="rdp-guacd-inactivity-min" style={{ display: 'block', marginBottom: '0.35rem', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                        Watchdog inactividad (min)
+                      </label>
+                      <small style={{ display: 'block', marginBottom: 4, color: 'var(--text-color-secondary)', fontSize: '0.75rem' }}>
+                        Cierre por inactividad (0 = desactivado).
+                      </small>
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem', alignItems: 'flex-start' }}>
+                        <div>
+                          <InputNumber
+                            id="rdp-guacd-inactivity-min"
+                            value={Math.floor((rdpGuacdInactivityMs || 0) / 60000)}
+                            onValueChange={e => handleGuacdInactivityChange(Math.max(0, Math.min(1440, Number(e.value || 0))) * 60000)}
+                            min={0}
+                            max={1440}
+                            showButtons
+                            buttonLayout="horizontal"
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#888', marginTop: 4 }}>
+                          {Math.floor((rdpGuacdInactivityMs || 0) / 60000)} min
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              <div>
-                <label htmlFor="rdp-idle-min" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                  Umbral de inactividad (minutos)
-                </label>
-                <small style={{ display: 'block', marginBottom: 8, color: 'var(--text-color-secondary)' }}>
-                  Tras superar este tiempo sin actividad (teclado/ratón/sync), el siguiente resize hará un warm‑up o reconexión.
-                </small>
-                <InputNumber
-                  id="rdp-idle-min"
-                  value={rdpIdleMinutes}
-                  onValueChange={e => setRdpIdleMinutes(Math.max(1, Math.min(1440, e.value || 1)))}
-                  min={1}
-                  max={1440}
-                  showButtons
-                  buttonLayout="horizontal"
-                  style={{ width: '100%' }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 28 }}>
-                  {rdpIdleMinutes} min (mín. 1)
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="rdp-resize-ack-timeout" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                  Timeout de ACK de resize (ms)
-                </label>
-                <small style={{ display: 'block', marginBottom: 8, color: 'var(--text-color-secondary)' }}>
-                  Tiempo máximo esperando respuesta del display tras enviar un tamaño, antes de permitir otro envío.
-                </small>
-                <InputNumber
-                  id="rdp-resize-ack-timeout"
-                  value={rdpResizeAckTimeoutMs}
-                  onValueChange={e => setRdpResizeAckTimeoutMs(Math.max(600, Math.min(5000, e.value || 1500)))}
-                  min={600}
-                  max={5000}
-                  showButtons
-                  buttonLayout="horizontal"
-                  style={{ width: '100%' }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 28 }}>
-                  {rdpResizeAckTimeoutMs} ms (600–5000)
-                </div>
-              </div>
-            </div>
-
-            {/* Configuración Guacamole */}
-            <h3 style={{ margin: '0.5rem 0 0.5rem 0', color: 'var(--text-color)' }}>
-              <i className="pi pi-sitemap" style={{ marginRight: '0.5rem', color: '#4fc3f7' }}></i>
-              Configuración Guacamole
-            </h3>
-            <div style={{ width: '100%', maxWidth: 520, display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
-              <div>
-                <label htmlFor="rdp-guacd-inactivity-min" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                  Watchdog de inactividad del servidor guacd (minutos)
-                </label>
-                <small style={{ display: 'block', marginBottom: 8, color: 'var(--text-color-secondary)' }}>
-                  0 para desactivarlo. Controla el cierre por inactividad entre guacamole‑lite y guacd (backend).
-                </small>
-                <InputNumber
-                  id="rdp-guacd-inactivity-min"
-                  value={Math.floor((rdpGuacdInactivityMs || 0) / 60000)}
-                  onValueChange={e => handleGuacdInactivityChange(Math.max(0, Math.min(1440, Number(e.value || 0))) * 60000)}
-                  min={0}
-                  max={1440}
-                  showButtons
-                  buttonLayout="horizontal"
-                  style={{ width: '100%' }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 28 }}>
-                  {Math.floor((rdpGuacdInactivityMs || 0) / 60000)} min {rdpGuacdInactivityMs === 0 ? '(desactivado)' : ''}
-                </div>
-              </div>
-            </div>
-            </div>
             </div>
           </div>
         </TabPanel>
@@ -3173,7 +3219,7 @@ const SettingsDialog = ({
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
             <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
               {/* Header */}
-              <div className="general-settings-header-wrapper">
+              <div className="general-settings-header-wrapper" style={{ flexShrink: 0 }}>
                 <div className="general-header-content">
                   <span className="general-header-icon protocol-dialog-header-icon">
                     <i className="pi pi-refresh"></i>
