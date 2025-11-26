@@ -147,8 +147,8 @@
 
 /* Card de Animaciones */
 .theme-anim-card {
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid rgba(139, 92, 246, 0.25);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--ui-dialog-border);
   border-radius: 8px;
   padding: 0.5rem;
   min-width: 155px;
@@ -161,7 +161,7 @@
   gap: 0.375rem;
   margin-bottom: 0.375rem;
   padding-bottom: 0.375rem;
-  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+  border-bottom: 1px solid var(--ui-dialog-border);
 }
 
 .theme-anim-card-title {
@@ -173,10 +173,11 @@
 .theme-anim-card-badge {
   font-size: 0.5rem;
   padding: 0.125rem 0.3125rem;
-  background: rgba(139, 92, 246, 0.3);
-  color: rgb(190, 170, 255);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ui-dialog-text);
   border-radius: 4px;
   font-weight: 500;
+  opacity: 0.8;
 }
 
 .theme-anim-card-options {
@@ -232,7 +233,7 @@
   flex: 1;
   padding: 0.1875rem 0.25rem;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  border: 1px solid var(--ui-dialog-border);
   border-radius: 4px;
   color: var(--ui-dialog-text);
   font-size: 0.625rem;
@@ -243,7 +244,7 @@
 
 .theme-speed-select-mini:hover,
 .theme-speed-select-mini:focus {
-  border-color: rgb(139, 92, 246);
+  border-color: var(--ui-button-primary);
 }
 
 .theme-speed-select-mini option {
