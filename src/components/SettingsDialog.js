@@ -236,7 +236,7 @@ const SettingsDialog = ({
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [hasMasterKey, setHasMasterKey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [toast, setToast] = useState(null);
+  const toastRef = useRef(null);
 
   // Estados para configuración de auditoría
   const [autoRecordingEnabled, setAutoRecordingEnabled] = useState(() => {
@@ -267,6 +267,225 @@ const SettingsDialog = ({
     return localStorage.getItem('audit_cleanup_frequency') || 'weekly';
   });
   const [auditStats, setAuditStats] = useState(null);
+
+  // Estados para actualizaciones
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState('idle'); // idle, checking, available, downloaded
+  const [autoCheckEnabled, setAutoCheckEnabled] = useState(() => {
+    const stored = localStorage.getItem('update_auto_check');
+    return stored !== null ? stored === 'true' : true;
+  });
+  const [autoDownloadEnabled, setAutoDownloadEnabled] = useState(() => {
+    const stored = localStorage.getItem('update_auto_download');
+    return stored !== null ? stored === 'true' : true;
+  });
+  const [updateChannel, setUpdateChannel] = useState(() => {
+    const stored = localStorage.getItem('update_channel');
+    return stored || 'latest';
+  });
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isInstalling, setIsInstalling] = useState(false);
+
+  // Función para cambiar el canal de actualizaciones
+  const handleChannelChange = (channel) => {
+    setUpdateChannel(channel);
+    localStorage.setItem('update_channel', channel);
+    
+    if (toastRef && toastRef.current) {
+      const channelLabel = channel === 'latest' ? 'Estable' : 'Beta';
+      toastRef.current.show({
+        severity: 'success',
+        summary: 'Canal actualizado',
+        detail: `Ahora recibirás actualizaciones del canal ${channelLabel}`,
+        life: 2000,
+      });
+    }
+  };
+
+  // Función para verificar actualizaciones
+  const checkForUpdates = async () => {
+    setIsCheckingUpdates(true);
+    setUpdateStatus('checking');
+    
+    try {
+      if (window.electron?.updater) {
+        console.log('🔍 Buscando actualizaciones en canal:', updateChannel);
+        const result = await window.electron.updater.checkForUpdates();
+        
+        console.log('📦 Resultado de búsqueda:', result);
+        
+        if (result?.updateAvailable) {
+          setUpdateStatus('available');
+          setUpdateInfo(result.updateInfo);
+          
+          if (toastRef && toastRef.current) {
+            toastRef.current.show({
+              severity: 'success',
+              summary: 'Actualización Disponible',
+              detail: `Nueva versión disponible: ${result.updateInfo?.version || 'desconocida'}`,
+              life: 5000,
+            });
+          }
+        } else {
+          setUpdateStatus('idle');
+          setUpdateInfo(null);
+          
+          if (toastRef && toastRef.current) {
+            toastRef.current.show({
+              severity: 'success',
+              summary: 'Sistema Actualizado',
+              detail: 'Ya tienes la última versión disponible',
+              life: 3000,
+            });
+          }
+        }
+      } else {
+        throw new Error('Sistema de actualización no disponible');
+      }
+    } catch (error) {
+      console.error('❌ Error al verificar actualizaciones:', error);
+      setUpdateStatus('error');
+      
+      if (toastRef && toastRef.current) {
+        toastRef.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: error.message || 'No se pudo comprobar actualizaciones',
+          life: 5000,
+        });
+      }
+    } finally {
+      setIsCheckingUpdates(false);
+    }
+  };
+
+  // Función para descargar la actualización
+  const downloadUpdate = async () => {
+    setIsDownloading(true);
+    setUpdateStatus('downloading');
+    setDownloadProgress(0);
+    
+    try {
+      if (window.electron?.updater) {
+        console.log('⬇️ Descargando actualización...');
+        
+        // Suscribirse a eventos de progreso
+        const handleProgressEvent = (data) => {
+          console.log('📊 Progreso de descarga:', data.percent);
+          setDownloadProgress(data.percent || 0);
+        };
+        
+        if (window.electron?.ipcRenderer) {
+          const unsubscribe = window.electron.ipcRenderer.on('updater-event', (event) => {
+            if (event.event === 'download-progress') {
+              handleProgressEvent(event.data);
+            }
+          });
+          
+          await window.electron.updater.downloadUpdate();
+          
+          // Esperar un poco para asegurar que se completa la descarga
+          setTimeout(() => {
+            setUpdateStatus('downloaded');
+            setDownloadProgress(100);
+            setIsDownloading(false);
+            
+            if (toastRef && toastRef.current) {
+              toastRef.current.show({
+                severity: 'success',
+                summary: 'Descarga Completa',
+                detail: 'La actualización está lista para instalar',
+                life: 3000,
+              });
+            }
+            
+            if (unsubscribe && typeof unsubscribe === 'function') {
+              unsubscribe();
+            }
+          }, 1000);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error descargando actualización:', error);
+      setUpdateStatus('error');
+      setIsDownloading(false);
+      
+      if (toastRef && toastRef.current) {
+        toastRef.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudo descargar la actualización',
+          life: 5000,
+        });
+      }
+    }
+  };
+
+  // Función para instalar la actualización
+  const installUpdate = async () => {
+    setIsInstalling(true);
+    
+    try {
+      if (window.electron?.updater) {
+        console.log('📦 Instalando actualización e reiniciando...');
+        
+        if (toastRef && toastRef.current) {
+          toastRef.current.show({
+            severity: 'info',
+            summary: 'Instalando',
+            detail: 'La aplicación se reiniciará para aplicar la actualización...',
+            life: 3000,
+          });
+        }
+        
+        await window.electron.updater.quitAndInstall();
+      }
+    } catch (error) {
+      console.error('❌ Error instalando actualización:', error);
+      setIsInstalling(false);
+      
+      if (toastRef && toastRef.current) {
+        toastRef.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudo instalar la actualización',
+          life: 5000,
+        });
+      }
+    }
+  };
+
+  // Guardar configuración de actualizaciones
+  const handleAutoCheckChange = (enabled) => {
+    setAutoCheckEnabled(enabled);
+    localStorage.setItem('update_auto_check', enabled.toString());
+    
+    if (toastRef && toastRef.current) {
+      toastRef.current.show({
+        severity: 'success',
+        summary: 'Guardado',
+        detail: enabled ? 'Búsqueda automática activada' : 'Búsqueda automática desactivada',
+        life: 2000,
+      });
+    }
+  };
+
+  const handleAutoDownloadChange = (enabled) => {
+    setAutoDownloadEnabled(enabled);
+    localStorage.setItem('update_auto_download', enabled.toString());
+    
+    if (toastRef && toastRef.current) {
+      toastRef.current.show({
+        severity: 'success',
+        summary: 'Guardado',
+        detail: enabled ? 'Descarga automática activada' : 'Descarga automática desactivada',
+        life: 2000,
+      });
+    }
+  };
+
   const HomeIconSelectorGrid = useMemo(() => {
     return function HomeIconSelectorGrid({ selected, onSelect }) {
       const opRef = useRef(null);
@@ -958,7 +1177,7 @@ const SettingsDialog = ({
       modal
       maximizable
     >
-      <Toast ref={setToast} />
+      <Toast ref={toastRef} />
       
       {/* Handles de redimensionamiento - posicionados relativos al contenido */}
       <div
@@ -2980,9 +3199,10 @@ const SettingsDialog = ({
                   <div className="general-settings-options">
                     <div style={{ padding: '1rem 0' }}>
                       <Button
-                        label="Verificar Ahora"
-                        icon="pi pi-search"
-                        onClick={() => {}}
+                        label={isCheckingUpdates ? "Buscando..." : "Verificar Ahora"}
+                        icon={isCheckingUpdates ? "pi pi-spin pi-spinner" : "pi pi-search"}
+                        onClick={checkForUpdates}
+                        disabled={isCheckingUpdates}
                         className="p-button-outlined"
                         style={{ width: '100%' }}
                       />
@@ -2990,6 +3210,110 @@ const SettingsDialog = ({
                     <p style={{ margin: '0.75rem 0 0 0', color: 'var(--text-color-secondary)', fontSize: '0.8125rem' }}>
                       Versión actual: <strong style={{ color: 'var(--ui-dialog-text)' }}>v1.6.1</strong>
                     </p>
+                    
+                    {/* Mostrar cuando hay actualización disponible */}
+                    {updateStatus === 'downloading' && (
+                      <div style={{
+                        marginTop: '1rem',
+                        padding: '1rem',
+                        background: 'rgba(33, 150, 243, 0.1)',
+                        border: '1px solid rgba(33, 150, 243, 0.3)',
+                        borderRadius: '8px'
+                      }}>
+                        <div style={{ marginBottom: '0.75rem' }}>
+                          <p style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color-secondary)', fontSize: '0.85rem' }}>
+                            Descargando actualización... {downloadProgress.toFixed(1)}%
+                          </p>
+                          <div style={{
+                            height: '6px',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            borderRadius: '3px',
+                            overflow: 'hidden'
+                          }}>
+                            <div style={{
+                              height: '100%',
+                              background: 'var(--primary-color)',
+                              width: `${downloadProgress}%`,
+                              transition: 'width 0.3s ease'
+                            }}></div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {updateStatus === 'available' && updateInfo && !isDownloading && (
+                      <div style={{
+                        marginTop: '1rem',
+                        padding: '1rem',
+                        background: 'rgba(76, 175, 80, 0.1)',
+                        border: '1px solid rgba(76, 175, 80, 0.3)',
+                        borderRadius: '8px'
+                      }}>
+                        <div style={{ marginBottom: '0.75rem' }}>
+                          <p style={{ margin: '0 0 0.25rem 0', color: 'var(--green-500)', fontWeight: '600' }}>
+                            ✓ Nueva versión disponible
+                          </p>
+                          <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.85rem' }}>
+                            v{updateInfo.version || 'desconocida'}
+                          </p>
+                        </div>
+                        {!autoDownloadEnabled && (
+                          <Button
+                            label="Descargar"
+                            icon="pi pi-download"
+                            onClick={downloadUpdate}
+                            disabled={isDownloading}
+                            className="p-button-success p-button-sm"
+                            style={{ width: '100%' }}
+                          />
+                        )}
+                      </div>
+                    )}
+                    
+                    {updateStatus === 'downloaded' && (
+                      <div style={{
+                        marginTop: '1rem',
+                        padding: '1rem',
+                        background: 'rgba(76, 175, 80, 0.1)',
+                        border: '1px solid rgba(76, 175, 80, 0.3)',
+                        borderRadius: '8px'
+                      }}>
+                        <div style={{ marginBottom: '0.75rem' }}>
+                          <p style={{ margin: '0 0 0.25rem 0', color: 'var(--green-500)', fontWeight: '600' }}>
+                            ✓ Actualización descargada y lista para instalar
+                          </p>
+                        </div>
+                        <Button
+                          label="Instalar y Reiniciar"
+                          icon="pi pi-check"
+                          onClick={installUpdate}
+                          disabled={isInstalling}
+                          className="p-button-success p-button-sm"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                    )}
+                    
+                    {updateStatus === 'error' && (
+                      <div style={{
+                        marginTop: '1rem',
+                        padding: '1rem',
+                        background: 'rgba(244, 67, 54, 0.1)',
+                        border: '1px solid rgba(244, 67, 54, 0.3)',
+                        borderRadius: '8px'
+                      }}>
+                        <p style={{ margin: '0 0 0.75rem 0', color: 'var(--red-500)', fontWeight: '600' }}>
+                          ✗ Error al buscar actualizaciones
+                        </p>
+                        <Button
+                          label="Reintentar"
+                          icon="pi pi-refresh"
+                          onClick={checkForUpdates}
+                          className="p-button-outlined p-button-sm"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -3003,7 +3327,7 @@ const SettingsDialog = ({
                   </div>
                   
                   <div className="general-settings-options">
-                    <div className="general-setting-card" onClick={() => {}}>
+                    <div className="general-setting-card" onClick={() => handleAutoCheckChange(!autoCheckEnabled)}>
                       <div className="general-setting-content">
                         <div className="general-setting-icon lock">
                           <i className="pi pi-check"></i>
@@ -3018,14 +3342,14 @@ const SettingsDialog = ({
                         </div>
                         <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
-                            checked={true}
-                            onChange={() => {}}
+                            checked={autoCheckEnabled}
+                            onChange={(e) => handleAutoCheckChange(e.checked)}
                           />
                         </div>
                       </div>
                     </div>
 
-                    <div className="general-setting-card" onClick={() => {}}>
+                    <div className="general-setting-card" onClick={() => handleAutoDownloadChange(!autoDownloadEnabled)}>
                       <div className="general-setting-content">
                         <div className="general-setting-icon bolt">
                           <i className="pi pi-download"></i>
@@ -3040,8 +3364,8 @@ const SettingsDialog = ({
                         </div>
                         <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
-                            checked={true}
-                            onChange={() => {}}
+                            checked={autoDownloadEnabled}
+                            onChange={(e) => handleAutoDownloadChange(e.checked)}
                           />
                         </div>
                       </div>
@@ -3059,7 +3383,7 @@ const SettingsDialog = ({
                   </div>
                   
                   <div className="general-settings-options">
-                    <div className="general-setting-card" onClick={() => {}}>
+                    <div className="general-setting-card" onClick={() => handleChannelChange('latest')}>
                       <div className="general-setting-content">
                         <div className="general-setting-icon lock">
                           <i className="pi pi-shield"></i>
@@ -3074,14 +3398,14 @@ const SettingsDialog = ({
                         </div>
                         <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
-                            checked={true}
-                            onChange={() => {}}
+                            checked={updateChannel === 'latest'}
+                            onChange={() => handleChannelChange('latest')}
                           />
                         </div>
                       </div>
                     </div>
 
-                    <div className="general-setting-card" onClick={() => {}}>
+                    <div className="general-setting-card" onClick={() => handleChannelChange('beta')}>
                       <div className="general-setting-content">
                         <div className="general-setting-icon bolt">
                           <i className="pi pi-flask"></i>
@@ -3096,8 +3420,8 @@ const SettingsDialog = ({
                         </div>
                         <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
-                            checked={false}
-                            onChange={() => {}}
+                            checked={updateChannel === 'beta'}
+                            onChange={() => handleChannelChange('beta')}
                           />
                         </div>
                       </div>
@@ -3115,18 +3439,45 @@ const SettingsDialog = ({
                   </div>
                   
                   <div className="general-settings-options" style={{ padding: '1rem 1.25rem' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.8125rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                        <i className="pi pi-check" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
-                        <span style={{ color: 'var(--text-color-secondary)' }}>Actualizaciones desde GitHub</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.8125rem' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                          <i className="pi pi-shield" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
+                          <span style={{ color: 'var(--ui-dialog-text)', fontWeight: '600' }}>Seguridad</span>
+                        </div>
+                        <div style={{ marginLeft: '1.2rem', color: 'var(--text-color-secondary)', fontSize: '0.75rem', lineHeight: '1.4' }}>
+                          Todas las actualizaciones están firmadas y verificadas
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                        <i className="pi pi-check" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
-                        <span style={{ color: 'var(--text-color-secondary)' }}>Firmadas y verificadas</span>
+                      
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                          <i className="pi pi-server" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
+                          <span style={{ color: 'var(--ui-dialog-text)', fontWeight: '600' }}>Distribución</span>
+                        </div>
+                        <div style={{ marginLeft: '1.2rem', color: 'var(--text-color-secondary)', fontSize: '0.75rem', lineHeight: '1.4' }}>
+                          Descargadas desde GitHub Releases
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                        <i className="pi pi-check" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
-                        <span style={{ color: 'var(--text-color-secondary)' }}>Notificaciones automáticas</span>
+                      
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                          <i className="pi pi-bell" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
+                          <span style={{ color: 'var(--ui-dialog-text)', fontWeight: '600' }}>Notificaciones</span>
+                        </div>
+                        <div style={{ marginLeft: '1.2rem', color: 'var(--text-color-secondary)', fontSize: '0.75rem', lineHeight: '1.4' }}>
+                          Recibirás alertas automáticas de seguridad
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                          <i className="pi pi-cog" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
+                          <span style={{ color: 'var(--ui-dialog-text)', fontWeight: '600' }}>Configuración</span>
+                        </div>
+                        <div style={{ marginLeft: '1.2rem', color: 'var(--text-color-secondary)', fontSize: '0.75rem', lineHeight: '1.4' }}>
+                          Personaliza la búsqueda y descarga automática
+                        </div>
                       </div>
                     </div>
                   </div>
