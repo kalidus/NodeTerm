@@ -3203,74 +3203,223 @@ const SettingsDialog = ({
                   </div>
                   
                   <div className="general-settings-options">
-                    <div style={{ padding: '1rem 0' }}>
-                      <Button
-                        label={isCheckingUpdates ? "Buscando..." : "Verificar Ahora"}
-                        icon={isCheckingUpdates ? "pi pi-spin pi-spinner" : "pi pi-search"}
-                        onClick={checkForUpdates}
-                        disabled={isCheckingUpdates}
-                        className="p-button-outlined"
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                    <p style={{ margin: '0.75rem 0 0 0', color: 'var(--text-color-secondary)', fontSize: '0.8125rem' }}>
-                      Versión actual: <strong style={{ color: 'var(--ui-dialog-text)' }}>v1.6.1</strong>
-                    </p>
-                    
-                    {/* Mostrar cuando hay actualización disponible */}
-                    {updateStatus === 'downloading' && (
+                    {/* Card principal de actualizaciones */}
+                    <div style={{
+                      background: 'linear-gradient(135deg, rgba(var(--primary-color-rgb, 33, 150, 243), 0.08) 0%, rgba(var(--primary-color-rgb, 33, 150, 243), 0.03) 100%)',
+                      border: '1px solid rgba(var(--primary-color-rgb, 33, 150, 243), 0.2)',
+                      borderRadius: '12px',
+                      padding: '1.25rem',
+                      marginBottom: '0.5rem',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+                    }}>
+                      {/* Decoración de fondo sutil */}
                       <div style={{
-                        marginTop: '1rem',
-                        padding: '1rem',
-                        background: 'rgba(33, 150, 243, 0.1)',
-                        border: '1px solid rgba(33, 150, 243, 0.3)',
-                        borderRadius: '8px'
+                        position: 'absolute',
+                        top: '-40%',
+                        right: '-15%',
+                        width: '120px',
+                        height: '120px',
+                        background: 'radial-gradient(circle, rgba(var(--primary-color-rgb, 33, 150, 243), 0.08) 0%, transparent 70%)',
+                        borderRadius: '50%',
+                        pointerEvents: 'none'
+                      }}></div>
+                      
+                      {/* Versión actual destacada */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '1rem',
+                        position: 'relative',
+                        zIndex: 1
                       }}>
-                        <div style={{ marginBottom: '0.75rem' }}>
-                          <p style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color-secondary)', fontSize: '0.85rem' }}>
-                            Descargando actualización... {downloadProgress.toFixed(1)}%
-                          </p>
+                        <div style={{ flex: 1 }}>
                           <div style={{
-                            height: '6px',
-                            background: 'rgba(255, 255, 255, 0.1)',
-                            borderRadius: '3px',
-                            overflow: 'hidden'
+                            fontSize: '0.6875rem',
+                            fontWeight: '600',
+                            color: 'var(--text-color-secondary)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            marginBottom: '0.375rem'
+                          }}>
+                            Versión Actual
+                          </div>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.625rem'
                           }}>
                             <div style={{
-                              height: '100%',
-                              background: 'var(--primary-color)',
-                              width: `${downloadProgress}%`,
-                              transition: 'width 0.3s ease'
-                            }}></div>
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '10px',
+                              background: 'linear-gradient(135deg, var(--primary-color) 0%, rgba(var(--primary-color-rgb, 33, 150, 243), 0.8) 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: '0 3px 10px rgba(var(--primary-color-rgb, 33, 150, 243), 0.25)',
+                              flexShrink: 0
+                            }}>
+                              <i className="pi pi-check-circle" style={{ fontSize: '1.25rem', color: '#ffffff' }}></i>
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{
+                                fontSize: '1.375rem',
+                                fontWeight: '700',
+                                color: 'var(--ui-dialog-text)',
+                                lineHeight: '1.2',
+                                letterSpacing: '-0.3px',
+                                marginBottom: '0.125rem'
+                              }}>
+                                v1.6.1
+                              </div>
+                              <div style={{
+                                fontSize: '0.75rem',
+                                color: 'var(--text-color-secondary)',
+                                lineHeight: '1.3'
+                              }}>
+                                Instalada y actualizada
+                              </div>
+                            </div>
                           </div>
+                        </div>
+                      </div>
+                      
+                      {/* Botón de verificación */}
+                      <div style={{ position: 'relative', zIndex: 1 }}>
+                        <Button
+                          label={isCheckingUpdates ? "Buscando actualizaciones..." : "Verificar Ahora"}
+                          icon={isCheckingUpdates ? "pi pi-spin pi-spinner" : "pi pi-search"}
+                          onClick={checkForUpdates}
+                          disabled={isCheckingUpdates}
+                          className="p-button-primary"
+                          style={{
+                            width: '100%',
+                            height: '42px',
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                            borderRadius: '10px',
+                            boxShadow: '0 3px 10px rgba(var(--primary-color-rgb, 33, 150, 243), 0.2)',
+                            transition: 'all 0.3s ease'
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Estados de actualización */}
+                    {updateStatus === 'downloading' && (
+                      <div style={{
+                        marginTop: '0.5rem',
+                        padding: '1rem',
+                        background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.12) 0%, rgba(33, 150, 243, 0.05) 100%)',
+                        border: '1px solid rgba(33, 150, 243, 0.3)',
+                        borderRadius: '12px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            background: 'rgba(33, 150, 243, 0.2)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <i className="pi pi-spin pi-spinner" style={{ fontSize: '1.125rem', color: 'var(--primary-color)' }}></i>
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--ui-dialog-text)', marginBottom: '0.125rem' }}>
+                              Descargando actualización
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-color-secondary)' }}>
+                              {downloadProgress.toFixed(1)}% completado
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{
+                          height: '6px',
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          borderRadius: '3px',
+                          overflow: 'hidden',
+                          position: 'relative'
+                        }}>
+                          <div style={{
+                            height: '100%',
+                            background: 'linear-gradient(90deg, var(--primary-color) 0%, rgba(var(--primary-color-rgb, 33, 150, 243), 0.8) 100%)',
+                            width: `${downloadProgress}%`,
+                            transition: 'width 0.3s ease',
+                            borderRadius: '3px',
+                            boxShadow: '0 0 6px rgba(var(--primary-color-rgb, 33, 150, 243), 0.4)'
+                          }}></div>
                         </div>
                       </div>
                     )}
                     
                     {updateStatus === 'available' && updateInfo && !isDownloading && (
                       <div style={{
-                        marginTop: '1rem',
+                        marginTop: '0.5rem',
                         padding: '1rem',
-                        background: 'rgba(76, 175, 80, 0.1)',
+                        background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.12) 0%, rgba(76, 175, 80, 0.05) 100%)',
                         border: '1px solid rgba(76, 175, 80, 0.3)',
-                        borderRadius: '8px'
+                        borderRadius: '12px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
                       }}>
-                        <div style={{ marginBottom: '0.75rem' }}>
-                          <p style={{ margin: '0 0 0.25rem 0', color: 'var(--green-500)', fontWeight: '600' }}>
-                            ✓ Nueva versión disponible
-                          </p>
-                          <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.85rem' }}>
-                            v{updateInfo.version || 'desconocida'}
-                          </p>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            background: 'rgba(76, 175, 80, 0.2)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <i className="pi pi-check-circle" style={{ fontSize: '1.125rem', color: 'var(--green-500)' }}></i>
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--green-500)', marginBottom: '0.375rem' }}>
+                              Nueva versión disponible
+                            </div>
+                            <div style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              padding: '0.25rem 0.625rem',
+                              background: 'rgba(76, 175, 80, 0.15)',
+                              borderRadius: '6px',
+                              fontSize: '0.8125rem',
+                              fontWeight: '600',
+                              color: 'var(--green-600)',
+                              marginBottom: '0.5rem'
+                            }}>
+                              <i className="pi pi-arrow-up" style={{ fontSize: '0.6875rem' }}></i>
+                              <span>v{updateInfo.version || 'desconocida'}</span>
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-color-secondary)', lineHeight: '1.4' }}>
+                              Hay una nueva versión disponible para descargar e instalar.
+                            </div>
+                          </div>
                         </div>
                         {!autoDownloadEnabled && (
                           <Button
-                            label="Descargar"
+                            label="Descargar Actualización"
                             icon="pi pi-download"
                             onClick={downloadUpdate}
                             disabled={isDownloading}
-                            className="p-button-success p-button-sm"
-                            style={{ width: '100%' }}
+                            className="p-button-success"
+                            style={{
+                              width: '100%',
+                              height: '40px',
+                              fontSize: '0.875rem',
+                              fontWeight: '600',
+                              borderRadius: '10px',
+                              boxShadow: '0 3px 10px rgba(76, 175, 80, 0.2)'
+                            }}
                           />
                         )}
                       </div>
@@ -3278,45 +3427,96 @@ const SettingsDialog = ({
                     
                     {updateStatus === 'downloaded' && (
                       <div style={{
-                        marginTop: '1rem',
+                        marginTop: '0.5rem',
                         padding: '1rem',
-                        background: 'rgba(76, 175, 80, 0.1)',
+                        background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.12) 0%, rgba(76, 175, 80, 0.05) 100%)',
                         border: '1px solid rgba(76, 175, 80, 0.3)',
-                        borderRadius: '8px'
+                        borderRadius: '12px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
                       }}>
-                        <div style={{ marginBottom: '0.75rem' }}>
-                          <p style={{ margin: '0 0 0.25rem 0', color: 'var(--green-500)', fontWeight: '600' }}>
-                            ✓ Actualización descargada y lista para instalar
-                          </p>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            background: 'rgba(76, 175, 80, 0.2)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <i className="pi pi-check-circle" style={{ fontSize: '1.125rem', color: 'var(--green-500)' }}></i>
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--green-500)', marginBottom: '0.375rem' }}>
+                              Actualización lista para instalar
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-color-secondary)', lineHeight: '1.4' }}>
+                              La actualización se ha descargado correctamente. Haz clic en el botón para instalar y reiniciar la aplicación.
+                            </div>
+                          </div>
                         </div>
                         <Button
                           label="Instalar y Reiniciar"
                           icon="pi pi-check"
                           onClick={installUpdate}
                           disabled={isInstalling}
-                          className="p-button-success p-button-sm"
-                          style={{ width: '100%' }}
+                          className="p-button-success"
+                          style={{
+                            width: '100%',
+                            height: '40px',
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                            borderRadius: '10px',
+                            boxShadow: '0 3px 10px rgba(76, 175, 80, 0.2)'
+                          }}
                         />
                       </div>
                     )}
                     
                     {updateStatus === 'error' && (
                       <div style={{
-                        marginTop: '1rem',
+                        marginTop: '0.5rem',
                         padding: '1rem',
-                        background: 'rgba(244, 67, 54, 0.1)',
+                        background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.12) 0%, rgba(244, 67, 54, 0.05) 100%)',
                         border: '1px solid rgba(244, 67, 54, 0.3)',
-                        borderRadius: '8px'
+                        borderRadius: '12px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
                       }}>
-                        <p style={{ margin: '0 0 0.75rem 0', color: 'var(--red-500)', fontWeight: '600' }}>
-                          ✗ Error al buscar actualizaciones
-                        </p>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            background: 'rgba(244, 67, 54, 0.2)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <i className="pi pi-times-circle" style={{ fontSize: '1.125rem', color: 'var(--red-500)' }}></i>
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--red-500)', marginBottom: '0.375rem' }}>
+                              Error al buscar actualizaciones
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-color-secondary)', lineHeight: '1.4' }}>
+                              No se pudo conectar con el servidor de actualizaciones. Verifica tu conexión a internet e intenta nuevamente.
+                            </div>
+                          </div>
+                        </div>
                         <Button
                           label="Reintentar"
                           icon="pi pi-refresh"
                           onClick={checkForUpdates}
-                          className="p-button-outlined p-button-sm"
-                          style={{ width: '100%' }}
+                          className="p-button-outlined"
+                          style={{
+                            width: '100%',
+                            height: '40px',
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                            borderRadius: '10px'
+                          }}
                         />
                       </div>
                     )}
