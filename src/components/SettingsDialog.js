@@ -3696,66 +3696,14 @@ const SettingsDialog = ({
                   </div>
                   
                   <div className="general-settings-options">
-                    {/* Subsección: Canal */}
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <div style={{
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        color: 'var(--text-color-secondary)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                        marginBottom: '0.75rem',
-                        paddingLeft: '0.25rem'
-                      }}>
-                        Canal
-                      </div>
-                      <div className="general-setting-card" onClick={() => handleChannelChange('latest')}>
-                        <div className="general-setting-content">
-                          <div className="general-setting-icon lock">
-                            <i className="pi pi-shield"></i>
-                          </div>
-                          <div className="general-setting-info">
-                            <label className="general-setting-label">
-                              Estable (Recomendado)
-                            </label>
-                            <p className="general-setting-description">
-                              Versiones probadas y seguras
-                            </p>
-                          </div>
-                          <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={updateChannel === 'latest'}
-                              onChange={() => handleChannelChange('latest')}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="general-setting-card" onClick={() => handleChannelChange('beta')}>
-                        <div className="general-setting-content">
-                          <div className="general-setting-icon bolt">
-                            <i className="pi pi-flask"></i>
-                          </div>
-                          <div className="general-setting-info">
-                            <label className="general-setting-label">
-                              Beta
-                            </label>
-                            <p className="general-setting-description">
-                              Nuevas características (puede contener bugs)
-                            </p>
-                          </div>
-                          <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={updateChannel === 'beta'}
-                              onChange={() => handleChannelChange('beta')}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
                     {/* Subsección: Búsqueda Automática */}
-                    <div>
+                    <div style={{
+                      marginBottom: '1rem',
+                      padding: '1rem',
+                      background: 'rgba(var(--primary-color-rgb, 33, 150, 243), 0.04)',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(var(--primary-color-rgb, 33, 150, 243), 0.12)'
+                    }}>
                       <div style={{
                         fontSize: '0.75rem',
                         fontWeight: '600',
@@ -3763,9 +3711,12 @@ const SettingsDialog = ({
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px',
                         marginBottom: '0.75rem',
-                        paddingLeft: '0.25rem'
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
                       }}>
-                        Búsqueda Automática
+                        <i className="pi pi-clock" style={{ fontSize: '0.875rem' }}></i>
+                        <span>Búsqueda Automática</span>
                       </div>
                       <div className="general-setting-card" onClick={() => handleAutoCheckChange(!autoCheckEnabled)}>
                         <div className="general-setting-content">
@@ -3806,6 +3757,72 @@ const SettingsDialog = ({
                             <Checkbox
                               checked={autoDownloadEnabled}
                               onChange={(e) => handleAutoDownloadChange(e.checked)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Subsección: Canal */}
+                    <div style={{
+                      padding: '1rem',
+                      background: 'rgba(var(--primary-color-rgb, 33, 150, 243), 0.04)',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(var(--primary-color-rgb, 33, 150, 243), 0.12)'
+                    }}>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        color: 'var(--text-color-secondary)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        marginBottom: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        <i className="pi pi-sitemap" style={{ fontSize: '0.875rem' }}></i>
+                        <span>Canal</span>
+                      </div>
+                      <div className="general-setting-card" onClick={() => handleChannelChange('latest')}>
+                        <div className="general-setting-content">
+                          <div className="general-setting-icon lock">
+                            <i className="pi pi-shield"></i>
+                          </div>
+                          <div className="general-setting-info">
+                            <label className="general-setting-label">
+                              Estable (Recomendado)
+                            </label>
+                            <p className="general-setting-description">
+                              Versiones probadas y seguras
+                            </p>
+                          </div>
+                          <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={updateChannel === 'latest'}
+                              onChange={() => handleChannelChange('latest')}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="general-setting-card" onClick={() => handleChannelChange('beta')}>
+                        <div className="general-setting-content">
+                          <div className="general-setting-icon bolt">
+                            <i className="pi pi-flask"></i>
+                          </div>
+                          <div className="general-setting-info">
+                            <label className="general-setting-label">
+                              Beta
+                            </label>
+                            <p className="general-setting-description">
+                              Nuevas características (puede contener bugs)
+                            </p>
+                          </div>
+                          <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={updateChannel === 'beta'}
+                              onChange={() => handleChannelChange('beta')}
                             />
                           </div>
                         </div>
