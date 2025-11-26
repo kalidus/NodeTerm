@@ -3510,62 +3510,65 @@ const SettingsDialog = ({
             </div>
             
             {/* Contenido */}
-            <div className="general-settings-content">
-            <div style={{ marginBottom: '2rem' }}>
-              <i className="pi pi-cloud" style={{
-                fontSize: '4rem',
-                color: 'var(--primary-color)',
-                marginBottom: '1rem',
-                display: 'block'
-              }}></i>
-              <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                Sincronización en la Nube
-              </h3>
-              <p style={{
-                margin: '0 0 2rem 0',
-                color: 'var(--text-color-secondary)',
-                fontSize: '1rem'
-              }}>
-                Sincroniza tu configuración personal entre todos tus dispositivos usando Nextcloud.
-                Nunca pierdas tus temas, fuentes y configuraciones personalizadas.
-              </p>
-            </div>
+            <div className="general-settings-content sync-settings-content">
+            <div className="sync-main-content">
+              <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+                <i className="pi pi-cloud" style={{
+                  fontSize: '4rem',
+                  color: 'var(--primary-color)',
+                  marginBottom: '1rem',
+                  display: 'block'
+                }}></i>
+                <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)', textAlign: 'center' }}>
+                  Sincronización en la Nube
+                </h3>
+                <p style={{
+                  margin: '0 0 2rem 0',
+                  color: 'var(--text-color-secondary)',
+                  fontSize: '1rem',
+                  textAlign: 'center'
+                }}>
+                  Sincroniza tu configuración personal entre todos tus dispositivos usando Nextcloud.
+                  Nunca pierdas tus temas, fuentes y configuraciones personalizadas.
+                </p>
+              </div>
 
-            <div style={{ marginBottom: '2rem' }}>
-              <Button
-                label="Configurar Sincronización"
-                icon="pi pi-cog"
-                onClick={() => setSyncDialogVisible(true)}
-                className="p-button-lg"
-                style={{
-                  padding: '1rem 2rem',
-                  fontSize: '1.1rem'
-                }}
-              />
-            </div>
+              <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'center' }}>
+                <Button
+                  label="Configurar Sincronización"
+                  icon="pi pi-cog"
+                  onClick={() => setSyncDialogVisible(true)}
+                  className="p-button-lg"
+                  style={{
+                    padding: '1rem 2rem',
+                    fontSize: '1.1rem'
+                  }}
+                />
+              </div>
 
-            <div style={{ marginTop: '2rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2rem', textAlign: 'center' }}>
-                <div>
-                  <i className="pi pi-shield" style={{ fontSize: '2rem', color: 'var(--green-500)', marginBottom: '1rem', display: 'block' }}></i>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>Seguro</h4>
-                  <p style={{ margin: 0, color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>
-                    Tus datos se cifran y almacenan de forma segura en tu instancia de Nextcloud
-                  </p>
-                </div>
-                <div>
-                  <i className="pi pi-sync" style={{ fontSize: '2rem', color: 'var(--blue-500)', marginBottom: '1rem', display: 'block' }}></i>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>Automático</h4>
-                  <p style={{ margin: 0, color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>
-                    Sincronización automática cada 5 minutos o manual cuando lo necesites
-                  </p>
-                </div>
-                <div>
-                  <i className="pi pi-mobile" style={{ fontSize: '2rem', color: 'var(--orange-500)', marginBottom: '1rem', display: 'block' }}></i>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>Multiplataforma</h4>
-                  <p style={{ margin: 0, color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>
-                    Funciona en Windows, macOS y Linux con la misma configuración
-                  </p>
+              <div style={{ marginTop: '2rem', width: '100%' }}>
+                <div className="sync-features-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2rem', textAlign: 'center' }}>
+                  <div>
+                    <i className="pi pi-shield" style={{ fontSize: '2rem', color: 'var(--green-500)', marginBottom: '1rem', display: 'block' }}></i>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>Seguro</h4>
+                    <p style={{ margin: 0, color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>
+                      Tus datos se cifran y almacenan de forma segura en tu instancia de Nextcloud
+                    </p>
+                  </div>
+                  <div>
+                    <i className="pi pi-sync" style={{ fontSize: '2rem', color: 'var(--blue-500)', marginBottom: '1rem', display: 'block' }}></i>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>Automático</h4>
+                    <p style={{ margin: 0, color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>
+                      Sincronización automática cada 5 minutos o manual cuando lo necesites
+                    </p>
+                  </div>
+                  <div>
+                    <i className="pi pi-mobile" style={{ fontSize: '2rem', color: 'var(--orange-500)', marginBottom: '1rem', display: 'block' }}></i>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>Multiplataforma</h4>
+                    <p style={{ margin: 0, color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>
+                      Funciona en Windows, macOS y Linux con la misma configuración
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
