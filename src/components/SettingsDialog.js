@@ -3209,7 +3209,7 @@ const SettingsDialog = ({
                       border: '1px solid rgba(var(--primary-color-rgb, 33, 150, 243), 0.2)',
                       borderRadius: '12px',
                       padding: '1.25rem',
-                      marginBottom: '1.5rem',
+                      marginBottom: '0.5rem',
                       position: 'relative',
                       overflow: 'hidden',
                       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
@@ -3527,7 +3527,7 @@ const SettingsDialog = ({
 
                     {/* Sección: Información */}
                     <div style={{
-                      marginTop: '1.5rem',
+                      marginTop: '0.5rem',
                       padding: '1rem',
                       background: 'rgba(var(--primary-color-rgb, 33, 150, 243), 0.04)',
                       borderRadius: '10px',
