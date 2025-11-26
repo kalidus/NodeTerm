@@ -3193,7 +3193,7 @@ const SettingsDialog = ({
               
               {/* Grid de 2 columnas para las secciones */}
               <div className="general-settings-content">
-                {/* Sección: Buscar Actualizaciones */}
+                {/* Card 1: Buscar Actualizaciones e Información */}
                 <div className="general-settings-section">
                   <div className="general-section-header">
                     <div className="general-section-icon">
@@ -3209,7 +3209,7 @@ const SettingsDialog = ({
                       border: '1px solid rgba(var(--primary-color-rgb, 33, 150, 243), 0.2)',
                       borderRadius: '12px',
                       padding: '1.25rem',
-                      marginBottom: '0.5rem',
+                      marginBottom: '1.5rem',
                       position: 'relative',
                       overflow: 'hidden',
                       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
@@ -3316,7 +3316,8 @@ const SettingsDialog = ({
                         background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.12) 0%, rgba(33, 150, 243, 0.05) 100%)',
                         border: '1px solid rgba(33, 150, 243, 0.3)',
                         borderRadius: '12px',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+                        marginBottom: '1.5rem'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
                           <div style={{
@@ -3366,7 +3367,8 @@ const SettingsDialog = ({
                         background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.12) 0%, rgba(76, 175, 80, 0.05) 100%)',
                         border: '1px solid rgba(76, 175, 80, 0.3)',
                         borderRadius: '12px',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+                        marginBottom: '1.5rem'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem' }}>
                           <div style={{
@@ -3432,7 +3434,8 @@ const SettingsDialog = ({
                         background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.12) 0%, rgba(76, 175, 80, 0.05) 100%)',
                         border: '1px solid rgba(76, 175, 80, 0.3)',
                         borderRadius: '12px',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+                        marginBottom: '1.5rem'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem' }}>
                           <div style={{
@@ -3481,7 +3484,8 @@ const SettingsDialog = ({
                         background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.12) 0%, rgba(244, 67, 54, 0.05) 100%)',
                         border: '1px solid rgba(244, 67, 54, 0.3)',
                         borderRadius: '12px',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+                        marginBottom: '1.5rem'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem' }}>
                           <div style={{
@@ -3520,169 +3524,290 @@ const SettingsDialog = ({
                         />
                       </div>
                     )}
+
+                    {/* Sección: Información */}
+                    <div style={{
+                      marginTop: '1.5rem',
+                      padding: '1rem',
+                      background: 'rgba(var(--primary-color-rgb, 33, 150, 243), 0.04)',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(var(--primary-color-rgb, 33, 150, 243), 0.12)'
+                    }}>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, 1fr)',
+                        gap: '1rem'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '0.625rem'
+                        }}>
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '8px',
+                            background: 'rgba(76, 175, 80, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <i className="pi pi-shield" style={{ fontSize: '0.875rem', color: 'var(--green-500)' }}></i>
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              fontSize: '0.8125rem',
+                              fontWeight: '600',
+                              color: 'var(--ui-dialog-text)',
+                              marginBottom: '0.25rem'
+                            }}>
+                              Seguridad
+                            </div>
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: 'var(--text-color-secondary)',
+                              lineHeight: '1.4'
+                            }}>
+                              Actualizaciones firmadas y verificadas
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '0.625rem'
+                        }}>
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '8px',
+                            background: 'rgba(33, 150, 243, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <i className="pi pi-server" style={{ fontSize: '0.875rem', color: 'var(--primary-color)' }}></i>
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              fontSize: '0.8125rem',
+                              fontWeight: '600',
+                              color: 'var(--ui-dialog-text)',
+                              marginBottom: '0.25rem'
+                            }}>
+                              Distribución
+                            </div>
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: 'var(--text-color-secondary)',
+                              lineHeight: '1.4'
+                            }}>
+                              GitHub Releases
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '0.625rem'
+                        }}>
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '8px',
+                            background: 'rgba(255, 193, 7, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <i className="pi pi-bell" style={{ fontSize: '0.875rem', color: 'var(--yellow-500)' }}></i>
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              fontSize: '0.8125rem',
+                              fontWeight: '600',
+                              color: 'var(--ui-dialog-text)',
+                              marginBottom: '0.25rem'
+                            }}>
+                              Notificaciones
+                            </div>
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: 'var(--text-color-secondary)',
+                              lineHeight: '1.4'
+                            }}>
+                              Alertas automáticas de seguridad
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '0.625rem'
+                        }}>
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '8px',
+                            background: 'rgba(156, 39, 176, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <i className="pi pi-cog" style={{ fontSize: '0.875rem', color: 'var(--purple-500)' }}></i>
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              fontSize: '0.8125rem',
+                              fontWeight: '600',
+                              color: 'var(--ui-dialog-text)',
+                              marginBottom: '0.25rem'
+                            }}>
+                              Configuración
+                            </div>
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: 'var(--text-color-secondary)',
+                              lineHeight: '1.4'
+                            }}>
+                              Personaliza búsqueda y descarga
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Sección: Búsqueda Automática */}
+                {/* Card 2: Configuración de Actualizaciones (Canal + Búsqueda Automática) */}
                 <div className="general-settings-section">
                   <div className="general-section-header">
                     <div className="general-section-icon">
-                      <i className="pi pi-clock"></i>
+                      <i className="pi pi-cog"></i>
                     </div>
-                    <h4 className="general-section-title">Búsqueda Automática</h4>
+                    <h4 className="general-section-title">Configuración de Actualizaciones</h4>
                   </div>
                   
                   <div className="general-settings-options">
-                    <div className="general-setting-card" onClick={() => handleAutoCheckChange(!autoCheckEnabled)}>
-                      <div className="general-setting-content">
-                        <div className="general-setting-icon lock">
-                          <i className="pi pi-check"></i>
+                    {/* Subsección: Canal */}
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        color: 'var(--text-color-secondary)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        marginBottom: '0.75rem',
+                        paddingLeft: '0.25rem'
+                      }}>
+                        Canal
+                      </div>
+                      <div className="general-setting-card" onClick={() => handleChannelChange('latest')}>
+                        <div className="general-setting-content">
+                          <div className="general-setting-icon lock">
+                            <i className="pi pi-shield"></i>
+                          </div>
+                          <div className="general-setting-info">
+                            <label className="general-setting-label">
+                              Estable (Recomendado)
+                            </label>
+                            <p className="general-setting-description">
+                              Versiones probadas y seguras
+                            </p>
+                          </div>
+                          <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={updateChannel === 'latest'}
+                              onChange={() => handleChannelChange('latest')}
+                            />
+                          </div>
                         </div>
-                        <div className="general-setting-info">
-                          <label className="general-setting-label">
-                            Buscar automáticamente
-                          </label>
-                          <p className="general-setting-description">
-                            Cada 24 horas
-                          </p>
-                        </div>
-                        <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={autoCheckEnabled}
-                            onChange={(e) => handleAutoCheckChange(e.checked)}
-                          />
+                      </div>
+
+                      <div className="general-setting-card" onClick={() => handleChannelChange('beta')}>
+                        <div className="general-setting-content">
+                          <div className="general-setting-icon bolt">
+                            <i className="pi pi-flask"></i>
+                          </div>
+                          <div className="general-setting-info">
+                            <label className="general-setting-label">
+                              Beta
+                            </label>
+                            <p className="general-setting-description">
+                              Nuevas características (puede contener bugs)
+                            </p>
+                          </div>
+                          <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={updateChannel === 'beta'}
+                              onChange={() => handleChannelChange('beta')}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="general-setting-card" onClick={() => handleAutoDownloadChange(!autoDownloadEnabled)}>
-                      <div className="general-setting-content">
-                        <div className="general-setting-icon bolt">
-                          <i className="pi pi-download"></i>
-                        </div>
-                        <div className="general-setting-info">
-                          <label className="general-setting-label">
-                            Descargar automáticamente
-                          </label>
-                          <p className="general-setting-description">
-                            En segundo plano
-                          </p>
-                        </div>
-                        <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={autoDownloadEnabled}
-                            onChange={(e) => handleAutoDownloadChange(e.checked)}
-                          />
+                    {/* Subsección: Búsqueda Automática */}
+                    <div>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        color: 'var(--text-color-secondary)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        marginBottom: '0.75rem',
+                        paddingLeft: '0.25rem'
+                      }}>
+                        Búsqueda Automática
+                      </div>
+                      <div className="general-setting-card" onClick={() => handleAutoCheckChange(!autoCheckEnabled)}>
+                        <div className="general-setting-content">
+                          <div className="general-setting-icon lock">
+                            <i className="pi pi-check"></i>
+                          </div>
+                          <div className="general-setting-info">
+                            <label className="general-setting-label">
+                              Buscar automáticamente
+                            </label>
+                            <p className="general-setting-description">
+                              Cada 24 horas
+                            </p>
+                          </div>
+                          <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={autoCheckEnabled}
+                              onChange={(e) => handleAutoCheckChange(e.checked)}
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Sección: Canal de Actualizaciones */}
-                <div className="general-settings-section">
-                  <div className="general-section-header">
-                    <div className="general-section-icon">
-                      <i className="pi pi-sitemap"></i>
-                    </div>
-                    <h4 className="general-section-title">Canal</h4>
-                  </div>
-                  
-                  <div className="general-settings-options">
-                    <div className="general-setting-card" onClick={() => handleChannelChange('latest')}>
-                      <div className="general-setting-content">
-                        <div className="general-setting-icon lock">
-                          <i className="pi pi-shield"></i>
-                        </div>
-                        <div className="general-setting-info">
-                          <label className="general-setting-label">
-                            Estable (Recomendado)
-                          </label>
-                          <p className="general-setting-description">
-                            Versiones probadas y seguras
-                          </p>
-                        </div>
-                        <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={updateChannel === 'latest'}
-                            onChange={() => handleChannelChange('latest')}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="general-setting-card" onClick={() => handleChannelChange('beta')}>
-                      <div className="general-setting-content">
-                        <div className="general-setting-icon bolt">
-                          <i className="pi pi-flask"></i>
-                        </div>
-                        <div className="general-setting-info">
-                          <label className="general-setting-label">
-                            Beta
-                          </label>
-                          <p className="general-setting-description">
-                            Nuevas características (puede contener bugs)
-                          </p>
-                        </div>
-                        <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={updateChannel === 'beta'}
-                            onChange={() => handleChannelChange('beta')}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sección: Información */}
-                <div className="general-settings-section">
-                  <div className="general-section-header">
-                    <div className="general-section-icon">
-                      <i className="pi pi-info-circle"></i>
-                    </div>
-                    <h4 className="general-section-title">Información</h4>
-                  </div>
-                  
-                  <div className="general-settings-options" style={{ padding: '1rem 1.25rem' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.8125rem' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                          <i className="pi pi-shield" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
-                          <span style={{ color: 'var(--ui-dialog-text)', fontWeight: '600' }}>Seguridad</span>
-                        </div>
-                        <div style={{ marginLeft: '1.2rem', color: 'var(--text-color-secondary)', fontSize: '0.75rem', lineHeight: '1.4' }}>
-                          Todas las actualizaciones están firmadas y verificadas
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                          <i className="pi pi-server" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
-                          <span style={{ color: 'var(--ui-dialog-text)', fontWeight: '600' }}>Distribución</span>
-                        </div>
-                        <div style={{ marginLeft: '1.2rem', color: 'var(--text-color-secondary)', fontSize: '0.75rem', lineHeight: '1.4' }}>
-                          Descargadas desde GitHub Releases
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                          <i className="pi pi-bell" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
-                          <span style={{ color: 'var(--ui-dialog-text)', fontWeight: '600' }}>Notificaciones</span>
-                        </div>
-                        <div style={{ marginLeft: '1.2rem', color: 'var(--text-color-secondary)', fontSize: '0.75rem', lineHeight: '1.4' }}>
-                          Recibirás alertas automáticas de seguridad
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                          <i className="pi pi-cog" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
-                          <span style={{ color: 'var(--ui-dialog-text)', fontWeight: '600' }}>Configuración</span>
-                        </div>
-                        <div style={{ marginLeft: '1.2rem', color: 'var(--text-color-secondary)', fontSize: '0.75rem', lineHeight: '1.4' }}>
-                          Personaliza la búsqueda y descarga automática
+                      <div className="general-setting-card" onClick={() => handleAutoDownloadChange(!autoDownloadEnabled)}>
+                        <div className="general-setting-content">
+                          <div className="general-setting-icon bolt">
+                            <i className="pi pi-download"></i>
+                          </div>
+                          <div className="general-setting-info">
+                            <label className="general-setting-label">
+                              Descargar automáticamente
+                            </label>
+                            <p className="general-setting-description">
+                              En segundo plano
+                            </p>
+                          </div>
+                          <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={autoDownloadEnabled}
+                              onChange={(e) => handleAutoDownloadChange(e.checked)}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
