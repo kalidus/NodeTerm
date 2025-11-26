@@ -2289,6 +2289,7 @@ const SettingsDialog = ({
                 width: '100%',
                 display: 'flex',
                 flexDirection: 'column',
+                minHeight: 0,
                 overflow: 'hidden'
               }}>
                 <ThemeSelector showPreview={true} />
