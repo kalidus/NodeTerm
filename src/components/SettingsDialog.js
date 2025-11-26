@@ -2953,10 +2953,185 @@ const SettingsDialog = ({
         <TabPanel header="Actualizaciones" leftIcon="pi pi-refresh">
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
             <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-            {/* Contenido */}
-            <div className="general-settings-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-              <UpdatePanel />
-            </div>
+              {/* Header */}
+              <div className="general-settings-header-wrapper">
+                <div className="general-header-content">
+                  <span className="general-header-icon protocol-dialog-header-icon">
+                    <i className="pi pi-refresh"></i>
+                  </span>
+                  <div className="general-header-text">
+                    <h3 className="general-header">Actualizaciones</h3>
+                    <p className="general-description">Gestiona las actualizaciones automáticas y el canal de versiones de NodeTerm</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Grid de 2 columnas para las secciones */}
+              <div className="general-settings-content">
+                {/* Sección: Buscar Actualizaciones */}
+                <div className="general-settings-section">
+                  <div className="general-section-header">
+                    <div className="general-section-icon">
+                      <i className="pi pi-search"></i>
+                    </div>
+                    <h4 className="general-section-title">Buscar Actualizaciones</h4>
+                  </div>
+                  
+                  <div className="general-settings-options">
+                    <div style={{ padding: '1rem 0' }}>
+                      <Button
+                        label="Verificar Ahora"
+                        icon="pi pi-search"
+                        onClick={() => {}}
+                        className="p-button-outlined"
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <p style={{ margin: '0.75rem 0 0 0', color: 'var(--text-color-secondary)', fontSize: '0.8125rem' }}>
+                      Versión actual: <strong style={{ color: 'var(--ui-dialog-text)' }}>v1.6.1</strong>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Sección: Búsqueda Automática */}
+                <div className="general-settings-section">
+                  <div className="general-section-header">
+                    <div className="general-section-icon">
+                      <i className="pi pi-clock"></i>
+                    </div>
+                    <h4 className="general-section-title">Búsqueda Automática</h4>
+                  </div>
+                  
+                  <div className="general-settings-options">
+                    <div className="general-setting-card" onClick={() => {}}>
+                      <div className="general-setting-content">
+                        <div className="general-setting-icon lock">
+                          <i className="pi pi-check"></i>
+                        </div>
+                        <div className="general-setting-info">
+                          <label className="general-setting-label">
+                            Buscar automáticamente
+                          </label>
+                          <p className="general-setting-description">
+                            Cada 24 horas
+                          </p>
+                        </div>
+                        <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={true}
+                            onChange={() => {}}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="general-setting-card" onClick={() => {}}>
+                      <div className="general-setting-content">
+                        <div className="general-setting-icon bolt">
+                          <i className="pi pi-download"></i>
+                        </div>
+                        <div className="general-setting-info">
+                          <label className="general-setting-label">
+                            Descargar automáticamente
+                          </label>
+                          <p className="general-setting-description">
+                            En segundo plano
+                          </p>
+                        </div>
+                        <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={true}
+                            onChange={() => {}}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección: Canal de Actualizaciones */}
+                <div className="general-settings-section">
+                  <div className="general-section-header">
+                    <div className="general-section-icon">
+                      <i className="pi pi-sitemap"></i>
+                    </div>
+                    <h4 className="general-section-title">Canal</h4>
+                  </div>
+                  
+                  <div className="general-settings-options">
+                    <div className="general-setting-card" onClick={() => {}}>
+                      <div className="general-setting-content">
+                        <div className="general-setting-icon lock">
+                          <i className="pi pi-shield"></i>
+                        </div>
+                        <div className="general-setting-info">
+                          <label className="general-setting-label">
+                            Estable (Recomendado)
+                          </label>
+                          <p className="general-setting-description">
+                            Versiones probadas y seguras
+                          </p>
+                        </div>
+                        <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={true}
+                            onChange={() => {}}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="general-setting-card" onClick={() => {}}>
+                      <div className="general-setting-content">
+                        <div className="general-setting-icon bolt">
+                          <i className="pi pi-flask"></i>
+                        </div>
+                        <div className="general-setting-info">
+                          <label className="general-setting-label">
+                            Beta
+                          </label>
+                          <p className="general-setting-description">
+                            Nuevas características (puede contener bugs)
+                          </p>
+                        </div>
+                        <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={false}
+                            onChange={() => {}}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección: Información */}
+                <div className="general-settings-section">
+                  <div className="general-section-header">
+                    <div className="general-section-icon">
+                      <i className="pi pi-info-circle"></i>
+                    </div>
+                    <h4 className="general-section-title">Información</h4>
+                  </div>
+                  
+                  <div className="general-settings-options" style={{ padding: '1rem 1.25rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.8125rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                        <i className="pi pi-check" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
+                        <span style={{ color: 'var(--text-color-secondary)' }}>Actualizaciones desde GitHub</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                        <i className="pi pi-check" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
+                        <span style={{ color: 'var(--text-color-secondary)' }}>Firmadas y verificadas</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                        <i className="pi pi-check" style={{ color: 'var(--green-500)', flexShrink: 0, marginTop: '0.15rem', fontSize: '0.7rem' }}></i>
+                        <span style={{ color: 'var(--text-color-secondary)' }}>Notificaciones automáticas</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </TabPanel>
