@@ -11,6 +11,7 @@
   width: 100%;
   background: var(--ui-dialog-bg);
   overflow: hidden;
+  min-height: 0;
 }
 
 /* ========================================
