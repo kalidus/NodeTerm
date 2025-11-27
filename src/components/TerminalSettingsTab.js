@@ -168,6 +168,15 @@ const TerminalSettingsTab = ({
       case 'docker':
         setDockerFontFamily(font);
         localStorage.setItem(STORAGE_KEYS.DOCKER_FONT_FAMILY, font);
+        // Dispatch custom event to notify App.js
+        window.dispatchEvent(new CustomEvent('localStorageChange', {
+          detail: { key: 'nodeterm_docker_font_family', value: font }
+        }));
+        // Also dispatch storage event for cross-tab sync
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'nodeterm_docker_font_family',
+          newValue: font
+        }));
         break;
       default: break;
     }
@@ -190,6 +199,15 @@ const TerminalSettingsTab = ({
       case 'docker':
         setDockerFontSize(size);
         localStorage.setItem(STORAGE_KEYS.DOCKER_FONT_SIZE, size.toString());
+        // Dispatch custom event to notify App.js
+        window.dispatchEvent(new CustomEvent('localStorageChange', {
+          detail: { key: 'nodeterm_docker_font_size', value: size.toString() }
+        }));
+        // Also dispatch storage event for cross-tab sync
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'nodeterm_docker_font_size',
+          newValue: size.toString()
+        }));
         break;
       default: break;
     }
@@ -224,6 +242,15 @@ const TerminalSettingsTab = ({
       case 'docker':
         setDockerTheme(themeName);
         localStorage.setItem(STORAGE_KEYS.DOCKER_THEME, themeName);
+        // Dispatch custom event to notify App.js
+        window.dispatchEvent(new CustomEvent('localStorageChange', {
+          detail: { key: 'localDockerTerminalTheme', value: themeName }
+        }));
+        // Also dispatch storage event for cross-tab sync
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'localDockerTerminalTheme',
+          newValue: themeName
+        }));
         break;
       default: break;
     }

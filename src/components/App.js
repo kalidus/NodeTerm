@@ -823,6 +823,74 @@ const App = () => {
     updateThemesFromSync
   } = useThemeManagement();
 
+  // Docker terminal theme state
+  const [localDockerTerminalTheme, setLocalDockerTerminalTheme] = useState(() => {
+    try {
+      return localStorage.getItem('localDockerTerminalTheme') || 'Default Dark';
+    } catch {
+      return 'Default Dark';
+    }
+  });
+
+  // Docker terminal font family state
+  const [dockerFontFamily, setDockerFontFamily] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nodeterm_docker_font_family');
+      if (saved) return saved;
+      // Fallback to localFontFamily if available, otherwise default
+      return localFontFamily || 'Consolas';
+    } catch {
+      return 'Consolas';
+    }
+  });
+
+  // Docker terminal font size state
+  const [dockerFontSize, setDockerFontSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nodeterm_docker_font_size');
+      if (saved) return parseInt(saved, 10);
+      // Fallback to localFontSize if available, otherwise default
+      return localFontSize || 14;
+    } catch {
+      return 14;
+    }
+  });
+
+  // Listen for Docker settings changes
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'localDockerTerminalTheme') {
+        setLocalDockerTerminalTheme(e.newValue || 'Default Dark');
+      } else if (e.key === 'nodeterm_docker_font_family') {
+        const newValue = e.newValue || localStorage.getItem('nodeterm_docker_font_family') || localFontFamily || 'Consolas';
+        setDockerFontFamily(newValue);
+      } else if (e.key === 'nodeterm_docker_font_size') {
+        const saved = e.newValue || localStorage.getItem('nodeterm_docker_font_size');
+        const newValue = saved ? parseInt(saved, 10) : (localFontSize || 14);
+        setDockerFontSize(newValue);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    // Also listen for custom events (for same-window updates)
+    const handleCustomStorageChange = (e) => {
+      if (e.detail?.key === 'localDockerTerminalTheme') {
+        setLocalDockerTerminalTheme(e.detail.value || 'Default Dark');
+      } else if (e.detail?.key === 'nodeterm_docker_font_family') {
+        const newValue = e.detail.value || localStorage.getItem('nodeterm_docker_font_family') || localFontFamily || 'Consolas';
+        setDockerFontFamily(newValue);
+      } else if (e.detail?.key === 'nodeterm_docker_font_size') {
+        const saved = e.detail.value || localStorage.getItem('nodeterm_docker_font_size');
+        const newValue = saved ? parseInt(saved, 10) : (localFontSize || 14);
+        setDockerFontSize(newValue);
+      }
+    };
+    window.addEventListener('localStorageChange', handleCustomStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('localStorageChange', handleCustomStorageChange);
+    };
+  }, [localFontFamily, localFontSize]);
+
   // Usar el hook de drag & drop
   const {
     draggedTabIndex, dragOverTabIndex, dragStartTimer,
@@ -2001,6 +2069,9 @@ const App = () => {
     activeTabIndex,
     localLinuxTerminalTheme,
     localPowerShellTheme,
+    localDockerTerminalTheme,
+    dockerFontFamily,
+    dockerFontSize,
     // FileExplorer props
     iconTheme,
     explorerFont,
@@ -2024,7 +2095,7 @@ const App = () => {
   }), [
     onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, onOpenVncConnection, handleLoadGroupFromFavorites,
     openEditRdpDialog, openEditSSHDialog, nodes, localFontFamily, localFontSize,
-    localLinuxTerminalTheme, localPowerShellTheme, iconTheme, explorerFont,
+    localLinuxTerminalTheme, localPowerShellTheme, localDockerTerminalTheme, dockerFontFamily, dockerFontSize, iconTheme, explorerFont,
     explorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
     handleTerminalContextMenu, showTerminalContextMenu, sshStatsByTabId,
     terminalRefs, statusBarIconTheme, handleCloseSplitPanel, rdpTabs, findNodeByKey,
