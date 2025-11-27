@@ -99,9 +99,16 @@
 
 .statusbar-global-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
   align-items: flex-start;
+}
+
+@media (max-width: 1200px) {
+  .statusbar-global-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
 }
 
 @media (max-width: 900px) {
