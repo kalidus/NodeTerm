@@ -14,8 +14,7 @@ import { Checkbox } from 'primereact/checkbox';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Card } from 'primereact/card';
 import ThemeSelector from './ThemeSelector';
-import StatusBarThemeSelector from './StatusBarThemeSelector';
-import StatusBarIconThemeSelector from './StatusBarIconThemeSelector';
+import StatusBarSettingsTab from './StatusBarSettingsTab';
 import TabThemeSelector from './TabThemeSelector';
 import SyncSettingsDialog from './SyncSettingsDialog';
 import UpdatePanel from './UpdatePanel';
@@ -25,7 +24,6 @@ import { iconThemes } from '../themes/icon-themes';
 import { explorerFonts } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
 import SecureStorage from '../services/SecureStorage';
-import { statusBarThemes } from '../themes/status-bar-themes';
 import FontPreview, { MonospaceFontPreview } from './FontPreview';
 import { STORAGE_KEYS } from '../utils/constants';
 import { homeTabIcons, setHomeTabIcon, getHomeTabIconGroups } from '../themes/home-tab-icons';
@@ -36,15 +34,11 @@ import TerminalSettingsTab from './TerminalSettingsTab';
 import { useDialogResize } from '../hooks/useDialogResize';
 import '../styles/components/settings-sidebar.css';
 
-const STATUSBAR_HEIGHT_STORAGE_KEY = 'basicapp_statusbar_height';
 const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
 const LOCAL_FONT_SIZE_STORAGE_KEY = 'basicapp_local_terminal_font_size';
 const LOCAL_POWERSHELL_THEME_STORAGE_KEY = 'localPowerShellTheme';
 const LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY = 'localLinuxTerminalTheme';
-  const LOCAL_POWERSHELL_STATUSBAR_THEME_STORAGE_KEY = 'localPowerShellStatusBarTheme';
-  const LOCAL_LINUX_STATUSBAR_THEME_STORAGE_KEY = 'localLinuxStatusBarTheme';
-  const LOCAL_SHOW_NETWORK_DISKS_STORAGE_KEY = 'localShowNetworkDisks';
-  const INTERACTIVE_ICON_STORAGE_KEY = 'nodeterm_interactive_icon';
+const INTERACTIVE_ICON_STORAGE_KEY = 'nodeterm_interactive_icon';
 
 const SettingsDialog = ({
   visible,
@@ -179,22 +173,6 @@ const SettingsDialog = ({
   
   const [versionInfo, setVersionInfo] = useState({ appVersion: '' });
   const [syncDialogVisible, setSyncDialogVisible] = useState(false);
-  const [statusBarHeight, setStatusBarHeight] = useState(() => {
-    const saved = localStorage.getItem(STATUSBAR_HEIGHT_STORAGE_KEY);
-    return saved ? parseInt(saved, 10) : 40;
-  });
-
-  // Estados para opciones avanzadas de Status Bar
-  const [powerShellStatusBar, setPowerShellStatusBar] = useState(() => 
-    localStorage.getItem(LOCAL_POWERSHELL_STATUSBAR_THEME_STORAGE_KEY) || 'Default Dark'
-  );
-  const [linuxStatusBar, setLinuxStatusBar] = useState(() => 
-    localStorage.getItem(LOCAL_LINUX_STATUSBAR_THEME_STORAGE_KEY) || 'Default Dark'
-  );
-  const [showNetworkDisks, setShowNetworkDisks] = useState(() => {
-    const saved = localStorage.getItem(LOCAL_SHOW_NETWORK_DISKS_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : true;
-  });
 
   // Configuración para bloquear el botón de inicio
   const [lockHomeButton, setLockHomeButton] = useState(() => {
@@ -821,11 +799,6 @@ const SettingsDialog = ({
     }
   };
 
-  useEffect(() => {
-    localStorage.setItem(STATUSBAR_HEIGHT_STORAGE_KEY, statusBarHeight);
-    document.documentElement.style.setProperty('--statusbar-height', `${statusBarHeight}px`);
-  }, [statusBarHeight]);
-
   // Persistir configuración de auditoría
   useEffect(() => {
     localStorage.setItem('audit_auto_recording', String(autoRecordingEnabled));
@@ -930,11 +903,6 @@ const SettingsDialog = ({
     value: themeName
   }));
 
-  // Opciones de temas de Status Bar
-  const statusBarThemeOptions = useMemo(() => 
-    Object.keys(statusBarThemes).map(name => ({ label: name, value: name })), []
-  );
-
   const handleTerminalThemeChange = (e) => {
     const newThemeName = e.value;
     const newTheme = themes[newThemeName];
@@ -971,29 +939,6 @@ const SettingsDialog = ({
   const handleLinuxTerminalThemeChange = (e) => {
     setLocalLinuxTerminalTheme(e.value);
     localStorage.setItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY, e.value);
-  };
-  const handlePowerShellStatusBarThemeChange = (e) => {
-    try {
-      setPowerShellStatusBar(e.value);
-      localStorage.setItem(LOCAL_POWERSHELL_STATUSBAR_THEME_STORAGE_KEY, e.value);
-      // Disparar evento de storage local (para misma pestaña)
-      window.dispatchEvent(new StorageEvent('storage', { key: LOCAL_POWERSHELL_STATUSBAR_THEME_STORAGE_KEY, newValue: e.value }));
-    } catch {}
-  };
-  const handleLinuxStatusBarThemeChange = (e) => {
-    try {
-      setLinuxStatusBar(e.value);
-      localStorage.setItem(LOCAL_LINUX_STATUSBAR_THEME_STORAGE_KEY, e.value);
-      window.dispatchEvent(new StorageEvent('storage', { key: LOCAL_LINUX_STATUSBAR_THEME_STORAGE_KEY, newValue: e.value }));
-    } catch {}
-  };
-  const handleLocalShowNetworkDisksChange = (value) => {
-    try {
-      const normalized = !!value;
-      setShowNetworkDisks(normalized);
-      localStorage.setItem(LOCAL_SHOW_NETWORK_DISKS_STORAGE_KEY, String(normalized));
-      window.dispatchEvent(new StorageEvent('storage', { key: LOCAL_SHOW_NETWORK_DISKS_STORAGE_KEY, newValue: String(normalized) }));
-    } catch {}
   };
 
   const handleSidebarFontSizeChange = (value) => {
@@ -2517,227 +2462,14 @@ const SettingsDialog = ({
               />
             )}
             {activeSubTab === 'status-bar' && (
-                <div style={{
-                  padding: '1rem 0',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'flex-start',
-                  alignItems: 'center',
-                  width: '100%',
-                  boxSizing: 'border-box'
-                }}>
-                  {/* Opciones Avanzadas - Movidas desde Terminal */}
-                  <div style={{
-                    width: '100%',
-                    maxWidth: '600px',
-                    marginBottom: '2rem',
-                    padding: '1.5rem',
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '12px'
-                  }}>
-                    <h3 style={{
-                      margin: '0 0 1.5rem 0',
-                      color: 'var(--text-color)',
-                      fontSize: '1.1rem',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}>
-                      <i className="pi pi-sliders-h" style={{ fontSize: '1rem' }}></i>
-                      Opciones Avanzadas
-                    </h3>
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '1rem'
-                    }}>
-                      {/* Status Bar PowerShell */}
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.75rem',
-                        background: 'rgba(255, 255, 255, 0.02)',
-                        borderRadius: '8px',
-                        border: '1px solid rgba(255, 255, 255, 0.05)'
-                      }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.75rem'
-                        }}>
-                          <div style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '8px',
-                            background: 'rgba(33, 150, 243, 0.15)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            <i className="pi pi-chart-bar" style={{ color: 'var(--primary-color)', fontSize: '1rem' }}></i>
-                          </div>
-                          <span style={{
-                            color: 'var(--text-color)',
-                            fontWeight: '500',
-                            fontSize: '0.9rem'
-                          }}>
-                            Status Bar PowerShell
-                          </span>
-                        </div>
-                        <Dropdown
-                          value={powerShellStatusBar}
-                          options={statusBarThemeOptions}
-                          onChange={handlePowerShellStatusBarThemeChange}
-                          style={{ width: '180px' }}
-                        />
-                      </div>
-
-                      {/* Status Bar Linux */}
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.75rem',
-                        background: 'rgba(255, 255, 255, 0.02)',
-                        borderRadius: '8px',
-                        border: '1px solid rgba(255, 255, 255, 0.05)'
-                      }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.75rem'
-                        }}>
-                          <div style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '8px',
-                            background: 'rgba(33, 150, 243, 0.15)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            <i className="pi pi-chart-bar" style={{ color: 'var(--primary-color)', fontSize: '1rem' }}></i>
-                          </div>
-                          <span style={{
-                            color: 'var(--text-color)',
-                            fontWeight: '500',
-                            fontSize: '0.9rem'
-                          }}>
-                            Status Bar Linux
-                          </span>
-                        </div>
-                        <Dropdown
-                          value={linuxStatusBar}
-                          options={statusBarThemeOptions}
-                          onChange={handleLinuxStatusBarThemeChange}
-                          style={{ width: '180px' }}
-                        />
-                      </div>
-
-                      {/* Mostrar Discos de Red */}
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.75rem',
-                        background: 'rgba(255, 255, 255, 0.02)',
-                        borderRadius: '8px',
-                        border: '1px solid rgba(255, 255, 255, 0.05)'
-                      }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.75rem'
-                        }}>
-                          <div style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '8px',
-                            background: 'rgba(33, 150, 243, 0.15)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            <i className="pi pi-folder" style={{ color: 'var(--primary-color)', fontSize: '1rem' }}></i>
-                          </div>
-                          <span style={{
-                            color: 'var(--text-color)',
-                            fontWeight: '500',
-                            fontSize: '0.9rem'
-                          }}>
-                            Mostrar Discos de Red
-                          </span>
-                        </div>
-                        <Checkbox
-                          checked={showNetworkDisks}
-                          onChange={(e) => handleLocalShowNetworkDisksChange(e.checked)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <Divider style={{ margin: '0 0 2rem 0', width: '100%', maxWidth: '600px' }} />
-
-                  <StatusBarThemeSelector
-                    currentTheme={statusBarTheme}
-                    onThemeChange={setStatusBarTheme}
-                  />
-
-                  <Divider style={{ margin: '2rem 0' }} />
-
-                  <StatusBarIconThemeSelector
-                    currentTheme={statusBarIconTheme}
-                    onThemeChange={setStatusBarIconTheme}
-                  />
-                  <div style={{ marginTop: 24, width: 320 }}>
-                    <label htmlFor="statusbar-height-slider" style={{
-                      display: 'block',
-                      marginBottom: '0.5rem',
-                      fontWeight: 'bold',
-                      fontSize: '0.9rem'
-                    }}>
-                      Altura de la Status Bar (px)
-                    </label>
-                    <Slider
-                      id="statusbar-height-slider"
-                      value={statusBarHeight}
-                      onChange={e => setStatusBarHeight(e.value)}
-                      min={20}
-                      max={64}
-                      step={1}
-                      style={{ width: '100%' }}
-                    />
-                    <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 4 }}>
-                      {statusBarHeight} px (mínimo 20, máximo 64)
-                    </div>
-                  </div>
-                  <div style={{ marginTop: 24, width: 320 }}>
-                    <label htmlFor="statusbar-polling-interval" style={{
-                      display: 'block',
-                      marginBottom: '0.5rem',
-                      fontWeight: 'bold',
-                      fontSize: '0.9rem'
-                    }}>
-                      Intervalo de actualización de la Status Bar (segundos)
-                    </label>
-                    <InputNumber
-                      id="statusbar-polling-interval"
-                      value={statusBarPollingInterval}
-                      onValueChange={e => setStatusBarPollingInterval(Math.max(1, Math.min(20, e.value || 1)))}
-                      min={1}
-                      max={20}
-                      showButtons
-                      buttonLayout="horizontal"
-                      style={{ width: '100%' }}
-                    />
-                    <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 4 }}>
-                      Puedes elegir entre 1 y 20 segundos. Aplica a todas las conexiones.
-                    </div>
-                  </div>
-                </div>
+              <StatusBarSettingsTab
+                statusBarTheme={statusBarTheme}
+                setStatusBarTheme={setStatusBarTheme}
+                statusBarIconTheme={statusBarIconTheme}
+                setStatusBarIconTheme={setStatusBarIconTheme}
+                statusBarPollingInterval={statusBarPollingInterval}
+                setStatusBarPollingInterval={setStatusBarPollingInterval}
+              />
             )}
             {activeSubTab === 'explorador-sesiones' && (
                 <div style={{
