@@ -1202,25 +1202,67 @@ const SettingsDialog = ({
   useEffect(() => {
     if (!visible) return;
     
+    let lastWindowWidth = window.innerWidth;
+    let lastWindowHeight = window.innerHeight;
+    let checkInterval = null;
+    
     const handleResize = () => {
-      // Pequeño delay para que el DOM se actualice después de maximizar
-      setTimeout(() => {
-        recalculateContentHeight();
-      }, 100);
+      const currentWidth = window.innerWidth;
+      const currentHeight = window.innerHeight;
+      
+      // Detectar si fue una maximización (cambio grande de tamaño)
+      const widthChange = Math.abs(currentWidth - lastWindowWidth);
+      const heightChange = Math.abs(currentHeight - lastWindowHeight);
+      const isMaximize = widthChange > 200 || heightChange > 200;
+      
+      if (isMaximize) {
+        // Si fue una maximización, dar más tiempo para que el DOM se actualice
+        setTimeout(() => {
+          recalculateContentHeight();
+        }, 200);
+      } else {
+        // Cambio normal, delay más corto
+        setTimeout(() => {
+          recalculateContentHeight();
+        }, 50);
+      }
+      
+      lastWindowWidth = currentWidth;
+      lastWindowHeight = currentHeight;
     };
     
     // Escuchar cambios de tamaño de la ventana
     window.addEventListener('resize', handleResize);
+    
+    // También usar un intervalo para verificar cambios cuando se maximiza directamente
+    // (porque a veces el evento resize no se dispara correctamente)
+    checkInterval = setInterval(() => {
+      const dialogElement = getDialogElement();
+      if (dialogElement) {
+        const currentDialogHeight = dialogElement.offsetHeight;
+        const expectedHeight = size.height;
+        // Si hay una diferencia significativa, recalcular
+        if (Math.abs(currentDialogHeight - expectedHeight) > 50) {
+          recalculateContentHeight();
+        }
+      }
+    }, 500); // Verificar cada 500ms
     
     // También escuchar cuando el diálogo cambia de tamaño (usando ResizeObserver)
     const dialogElement = getDialogElement();
     let resizeObserver = null;
     
     if (dialogElement && window.ResizeObserver) {
-      resizeObserver = new ResizeObserver(() => {
-        setTimeout(() => {
-          recalculateContentHeight();
-        }, 50);
+      resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const newHeight = entry.contentRect.height;
+          // Si el diálogo cambió de tamaño significativamente, recalcular
+          if (Math.abs(newHeight - size.height) > 50) {
+            setTimeout(() => {
+              recalculateContentHeight();
+            }, 100);
+          }
+        }
       });
       resizeObserver.observe(dialogElement);
     }
@@ -1230,8 +1272,11 @@ const SettingsDialog = ({
       if (resizeObserver) {
         resizeObserver.disconnect();
       }
+      if (checkInterval) {
+        clearInterval(checkInterval);
+      }
     };
-  }, [visible, getDialogElement, recalculateContentHeight]);
+  }, [visible, getDialogElement, recalculateContentHeight, size.height]);
 
   // Actualizar variables CSS cuando cambie contentHeight (al maximizar/redimensionar)
   useEffect(() => {
