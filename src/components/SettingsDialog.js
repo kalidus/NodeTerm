@@ -2472,207 +2472,235 @@ const SettingsDialog = ({
               />
             )}
             {activeSubTab === 'explorador-sesiones' && (
-                <div style={{
-                  padding: '1rem 0',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'flex-start',
-                  alignItems: 'center',
-                  width: '100%',
-                  boxSizing: 'border-box'
-                }}>
-                  <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                    <i className="pi pi-sitemap" style={{ marginRight: '0.5rem' }}></i>
-                    Apariencia del Explorador de Sesiones
-                  </h3>
-                  <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>
-                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                      Tema de Iconos
-                    </h4>
-                    <Dropdown
-                      id="icon-theme-sidebar"
-                      value={iconThemeSidebar}
-                      options={Object.entries(iconThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
-                      onChange={e => setIconThemeSidebar(e.value)}
-                      placeholder="Selecciona un tema de iconos"
-                      style={{ width: '100%' }}
-                      itemTemplate={option => (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {iconThemes[option.value]?.icons.folder}
-                          {iconThemes[option.value]?.name}
-                        </span>
-                      )}
-                    />
-                    <div style={{ marginTop: 12, display: 'flex', gap: 16, justifyContent: 'center' }}>
-                      {iconThemes[iconThemeSidebar] && Object.values(iconThemes[iconThemeSidebar].icons).map((icon, idx) => (
-                        <span key={idx}>
-                          {React.cloneElement(icon, {
-                            width: iconSize,
-                            height: iconSize,
-                            style: { 
-                              ...icon.props.style,
-                              width: `${iconSize}px`,
-                              height: `${iconSize}px`
-                            }
-                          })}
-                        </span>
-                      ))}
+                <div className="general-settings-container" style={{ maxWidth: '600px', margin: '0 auto' }}>
+                  {/* Header */}
+                  <div className="general-settings-header-wrapper">
+                    <div className="general-header-content">
+                      <span className="general-header-icon protocol-dialog-header-icon" style={{
+                        background: 'linear-gradient(135deg, #00ACC1 0%, #0097A7 100%)',
+                        boxShadow: '0 2px 8px rgba(0, 172, 193, 0.25)'
+                      }}>
+                        <i className="pi pi-sitemap"></i>
+                      </span>
+                      <div className="general-header-text">
+                        <h3 className="general-header">Explorador de Sesiones</h3>
+                        <p className="general-description">Personaliza iconos, tamaños y tipografía del árbol</p>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 500 }}>
-                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                      Tamaño de Iconos
-                    </h4>
+
+                  {/* Contenido en una columna */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     
-                    {/* Tamaño de iconos de carpetas */}
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-                        <label htmlFor="folder-icon-size" style={{
-                          display: 'block',
-                          fontWeight: 'bold',
-                          fontSize: '0.9rem',
-                          minWidth: '120px'
-                        }}>
-                          Carpetas (px)
-                        </label>
-                        <InputNumber
-                          id="folder-icon-size"
-                          value={folderIconSize || 20}
-                          onValueChange={(e) => setFolderIconSize && setFolderIconSize(e.value)}
-                          min={12}
-                          max={32}
-                          style={{ width: '120px' }}
-                        />
+                    {/* Sección: Tema de Iconos */}
+                    <div className="general-settings-section" style={{ marginBottom: 0 }}>
+                      <div className="general-section-header">
+                        <div className="general-section-icon">
+                          <i className="pi pi-palette"></i>
+                        </div>
+                        <h4 className="general-section-title">Tema de Iconos</h4>
+                      </div>
+                      <div className="general-settings-options">
+                        <div style={{ marginBottom: '0.75rem' }}>
+                          <Dropdown
+                            id="icon-theme-sidebar"
+                            value={iconThemeSidebar}
+                            options={Object.entries(iconThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
+                            onChange={e => setIconThemeSidebar(e.value)}
+                            placeholder="Selecciona un tema de iconos"
+                            style={{ width: '100%' }}
+                            itemTemplate={option => (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                {iconThemes[option.value]?.icons.folder}
+                                {iconThemes[option.value]?.name}
+                              </span>
+                            )}
+                          />
+                        </div>
                         <div style={{ 
                           display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '8px',
-                          marginLeft: '1rem'
+                          gap: '12px', 
+                          justifyContent: 'center',
+                          padding: '0.75rem',
+                          background: 'rgba(0, 0, 0, 0.15)',
+                          borderRadius: '8px'
                         }}>
-                          {iconThemes[iconThemeSidebar]?.icons.folder && 
-                            React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
-                              width: folderIconSize,
-                              height: folderIconSize,
-                              style: { 
-                                ...iconThemes[iconThemeSidebar].icons.folder.props.style,
-                                width: `${folderIconSize}px`,
-                                height: `${folderIconSize}px`
-                              }
-                            })
-                          }
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>
-                            Vista previa
-                          </span>
+                          {iconThemes[iconThemeSidebar] && Object.values(iconThemes[iconThemeSidebar].icons).map((icon, idx) => (
+                            <span key={idx}>
+                              {React.cloneElement(icon, {
+                                width: 22,
+                                height: 22,
+                                style: { 
+                                  ...icon.props.style,
+                                  width: '22px',
+                                  height: '22px'
+                                }
+                              })}
+                            </span>
+                          ))}
                         </div>
                       </div>
                     </div>
 
-                    {/* Tamaño de iconos de conexiones */}
-                    <div style={{ marginBottom: '1rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-                        <label htmlFor="connection-icon-size" style={{
-                          display: 'block',
-                          fontWeight: 'bold',
-                          fontSize: '0.9rem',
-                          minWidth: '120px'
-                        }}>
-                          Conexiones (px)
-                        </label>
-                        <InputNumber
-                          id="connection-icon-size"
-                          value={connectionIconSize || 20}
-                          onValueChange={(e) => setConnectionIconSize && setConnectionIconSize(e.value)}
-                          min={12}
-                          max={32}
-                          style={{ width: '120px' }}
-                        />
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '8px',
-                          marginLeft: '1rem'
-                        }}>
-                          {iconThemes[iconThemeSidebar]?.icons.ssh && 
-                            React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
-                              width: connectionIconSize,
-                              height: connectionIconSize,
-                              style: { 
-                                ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
-                                width: `${connectionIconSize}px`,
-                                height: `${connectionIconSize}px`
+                    {/* Sección: Tamaño de Iconos */}
+                    <div className="general-settings-section" style={{ marginBottom: 0 }}>
+                      <div className="general-section-header">
+                        <div className="general-section-icon">
+                          <i className="pi pi-expand"></i>
+                        </div>
+                        <h4 className="general-section-title">Tamaño de Iconos</h4>
+                      </div>
+                      <div className="general-settings-options">
+                        {/* Carpetas */}
+                        <div className="general-setting-card">
+                          <div className="general-setting-content">
+                            <div className="general-setting-icon" style={{ background: 'var(--ui-button-primary)' }}>
+                              <i className="pi pi-folder"></i>
+                            </div>
+                            <div className="general-setting-info">
+                              <label className="general-setting-label">Carpetas</label>
+                              <p className="general-setting-description">Tamaño de iconos de carpetas</p>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <InputNumber
+                                id="folder-icon-size"
+                                value={folderIconSize || 20}
+                                onValueChange={(e) => setFolderIconSize && setFolderIconSize(e.value)}
+                                min={12}
+                                max={32}
+                                suffix=" px"
+                                style={{ width: '80px' }}
+                              />
+                              {iconThemes[iconThemeSidebar]?.icons.folder && 
+                                React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
+                                  width: folderIconSize,
+                                  height: folderIconSize,
+                                  style: { 
+                                    ...iconThemes[iconThemeSidebar].icons.folder.props.style,
+                                    width: `${folderIconSize}px`,
+                                    height: `${folderIconSize}px`
+                                  }
+                                })
                               }
-                            })
-                          }
-                          {iconThemes[iconThemeSidebar]?.icons.rdp && 
-                            React.cloneElement(iconThemes[iconThemeSidebar].icons.rdp, {
-                              width: connectionIconSize,
-                              height: connectionIconSize,
-                              style: { 
-                                ...iconThemes[iconThemeSidebar].icons.rdp.props.style,
-                                width: `${connectionIconSize}px`,
-                                height: `${connectionIconSize}px`
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Conexiones */}
+                        <div className="general-setting-card">
+                          <div className="general-setting-content">
+                            <div className="general-setting-icon" style={{ background: 'var(--ui-button-primary)', opacity: 0.9 }}>
+                              <i className="pi pi-link"></i>
+                            </div>
+                            <div className="general-setting-info">
+                              <label className="general-setting-label">Conexiones</label>
+                              <p className="general-setting-description">Tamaño de iconos SSH, RDP, etc.</p>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <InputNumber
+                                id="connection-icon-size"
+                                value={connectionIconSize || 20}
+                                onValueChange={(e) => setConnectionIconSize && setConnectionIconSize(e.value)}
+                                min={12}
+                                max={32}
+                                suffix=" px"
+                                style={{ width: '80px' }}
+                              />
+                              {iconThemes[iconThemeSidebar]?.icons.ssh && 
+                                React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
+                                  width: connectionIconSize,
+                                  height: connectionIconSize,
+                                  style: { 
+                                    ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
+                                    width: `${connectionIconSize}px`,
+                                    height: `${connectionIconSize}px`
+                                  }
+                                })
                               }
-                            })
-                          }
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>
-                            Vista previa
-                          </span>
+                              {iconThemes[iconThemeSidebar]?.icons.rdp && 
+                                React.cloneElement(iconThemes[iconThemeSidebar].icons.rdp, {
+                                  width: connectionIconSize,
+                                  height: connectionIconSize,
+                                  style: { 
+                                    ...iconThemes[iconThemeSidebar].icons.rdp.props.style,
+                                    width: `${connectionIconSize}px`,
+                                    height: `${connectionIconSize}px`
+                                  }
+                                })
+                              }
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>
-                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                      Fuente del Explorador de Sesiones
-                    </h4>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                      <div>
-                        <label htmlFor="sidebar-font" style={{
-                          display: 'block',
-                          marginBottom: '0.5rem',
-                          fontWeight: 'bold',
-                          fontSize: '0.9rem'
-                        }}>
-                          Familia de fuente
-                        </label>
-                        <Dropdown
-                          id="sidebar-font"
-                          value={sidebarFont}
-                          options={explorerFonts.map(f => ({ label: f, value: f }))}
-                          onChange={e => setSidebarFont(e.value)}
-                          placeholder="Selecciona una fuente"
-                          style={{ width: '100%' }}
-                          itemTemplate={option => (
-                            <span style={{ fontFamily: option.value }}>{option.label}</span>
-                          )}
-                        />
+                    {/* Sección: Tipografía */}
+                    <div className="general-settings-section" style={{ marginBottom: 0 }}>
+                      <div className="general-section-header">
+                        <div className="general-section-icon">
+                          <i className="pi pi-pencil"></i>
+                        </div>
+                        <h4 className="general-section-title">Tipografía</h4>
                       </div>
-
-                      <div>
-                        <label htmlFor="sidebar-font-size" style={{
-                          display: 'block',
-                          marginBottom: '0.5rem',
-                          fontWeight: 'bold',
-                          fontSize: '0.9rem'
+                      <div className="general-settings-options">
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: '1rem', marginBottom: '0.75rem' }}>
+                          <div>
+                            <label style={{
+                              display: 'block',
+                              marginBottom: '0.4rem',
+                              fontSize: '0.8125rem',
+                              color: 'var(--text-color-secondary)',
+                              fontWeight: 500
+                            }}>
+                              Familia de fuente
+                            </label>
+                            <Dropdown
+                              id="sidebar-font"
+                              value={sidebarFont}
+                              options={explorerFonts.map(f => ({ label: f, value: f }))}
+                              onChange={e => setSidebarFont(e.value)}
+                              placeholder="Selecciona una fuente"
+                              style={{ width: '100%' }}
+                              itemTemplate={option => (
+                                <span style={{ fontFamily: option.value }}>{option.label}</span>
+                              )}
+                            />
+                          </div>
+                          <div>
+                            <label style={{
+                              display: 'block',
+                              marginBottom: '0.4rem',
+                              fontSize: '0.8125rem',
+                              color: 'var(--text-color-secondary)',
+                              fontWeight: 500
+                            }}>
+                              Tamaño
+                            </label>
+                            <InputNumber
+                              id="sidebar-font-size"
+                              value={sidebarFontSize}
+                              onValueChange={(e) => handleSidebarFontSizeChange(e.value)}
+                              min={8}
+                              max={32}
+                              suffix=" px"
+                              style={{ width: '100%' }}
+                            />
+                          </div>
+                        </div>
+                        <div style={{ 
+                          padding: '0.75rem 1rem',
+                          background: 'rgba(0, 0, 0, 0.15)',
+                          borderRadius: '8px',
+                          fontFamily: sidebarFont, 
+                          fontSize: `${sidebarFontSize}px`,
+                          textAlign: 'center',
+                          color: 'var(--ui-dialog-text)'
                         }}>
-                          Tamaño (px)
-                        </label>
-                        <InputNumber
-                          id="sidebar-font-size"
-                          value={sidebarFontSize}
-                          onValueChange={(e) => handleSidebarFontSizeChange(e.value)}
-                          min={8}
-                          max={32}
-                          style={{ width: '100%' }}
-                        />
+                          <span style={{ opacity: 0.7 }}>Vista previa:</span> <span style={{ fontWeight: 600 }}>{sidebarFont}</span>
+                        </div>
                       </div>
                     </div>
 
-                    <div style={{ marginTop: 12, fontFamily: sidebarFont, fontSize: `${sidebarFontSize}px`, textAlign: 'center' }}>
-                      Ejemplo de fuente: <span style={{ fontWeight: 'bold' }}>{sidebarFont}</span>
-                    </div>
                   </div>
                 </div>
             )}
