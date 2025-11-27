@@ -12,6 +12,8 @@
   background: var(--ui-dialog-bg);
   overflow: hidden;
   min-height: 0;
+  /* Optimización de rendimiento durante resize */
+  contain: layout style;
 }
 
 /* ========================================
@@ -583,14 +585,22 @@
   overflow-y: auto;
   padding: 1.25rem 1.5rem;
   min-height: 0;
+  /* Optimización de scroll durante resize */
+  contain: layout style paint;
+  /* Mejorar rendimiento de scroll */
+  -webkit-overflow-scrolling: touch;
 }
 
 .theme-thumbnails-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 1rem;
-  /* Optimización de rendimiento */
-  contain: layout style;
+  /* Optimización de rendimiento durante resize */
+  contain: layout style paint;
+  /* Forzar aceleración por hardware para mejor rendimiento */
+  transform: translateZ(0);
+  /* Evitar reflows durante resize */
+  backface-visibility: hidden;
 }
 
 /* ========================================
@@ -605,6 +615,11 @@
   position: relative;
   /* Transiciones solo en hover para mejor rendimiento */
   transition: none;
+  /* Optimización de rendimiento durante resize */
+  contain: layout style paint;
+  /* Forzar aceleración por hardware */
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .theme-thumbnail:hover {

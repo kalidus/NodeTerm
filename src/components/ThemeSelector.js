@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS, ANIMATED_UI_KEYS, NATURE_UI_KEYS } from '../themes/ui-themes';
 import '../styles/components/theme-selector.css';
@@ -61,34 +61,34 @@ const ThemeSelector = ({ showPreview = false }) => {
     document.documentElement.setAttribute('data-ui-reduced-motion', initialReduced ? 'true' : 'false');
   }, []);
 
-  const handleThemeChange = (themeName) => {
+  const handleThemeChange = useCallback((themeName) => {
     setCurrentTheme(themeName);
     themeManager.applyTheme(themeName);
-  };
+  }, []);
 
-  const handleTitlebarColorPreferenceChange = () => {
+  const handleTitlebarColorPreferenceChange = useCallback(() => {
     const newValue = !usePrimaryColorsForTitlebar;
     setUsePrimaryColorsForTitlebar(newValue);
     localStorage.setItem('use_primary_colors_titlebar', newValue.toString());
     themeManager.applyTheme(currentTheme);
-  };
+  }, [usePrimaryColorsForTitlebar, currentTheme]);
 
-  const handleAnimSpeedChange = (e) => {
+  const handleAnimSpeedChange = useCallback((e) => {
     const speed = e.target.value;
     setAnimSpeed(speed);
     localStorage.setItem(ANIM_SPEED_KEY, speed);
     document.documentElement.setAttribute('data-ui-anim-speed', speed);
-  };
+  }, []);
 
-  const handleReducedMotionToggle = () => {
+  const handleReducedMotionToggle = useCallback(() => {
     const newValue = !reducedMotion;
     setReducedMotion(newValue);
     localStorage.setItem(REDUCED_MOTION_KEY, newValue.toString());
     document.documentElement.setAttribute('data-ui-reduced-motion', newValue ? 'true' : 'false');
-  };
+  }, [reducedMotion]);
 
-  // Obtener tema actual
-  const getCurrentThemeData = () => {
+  // Obtener tema actual (memoizado)
+  const activeTheme = useMemo(() => {
     for (const category of CATEGORIES) {
       for (const key of category.keys) {
         if (uiThemes[key]?.name === currentTheme) {
@@ -97,22 +97,19 @@ const ThemeSelector = ({ showPreview = false }) => {
       }
     }
     return uiThemes[CLASSIC_UI_KEYS[0]];
-  };
+  }, [currentTheme]);
 
-  // Obtener temas filtrados (excluyendo el actual)
-  const getFilteredThemes = () => {
+  // Obtener temas filtrados (memoizado para evitar recálculos durante resize)
+  const themes = useMemo(() => {
     const category = CATEGORIES.find(c => c.id === selectedCategory);
     if (!category) return [];
     return category.keys
       .filter(key => uiThemes[key] && uiThemes[key].name !== currentTheme)
       .map(key => uiThemes[key]);
-  };
+  }, [selectedCategory, currentTheme]);
 
-  const activeTheme = getCurrentThemeData();
-  const themes = getFilteredThemes();
-
-  // Preview del tema hero (grande)
-  const HeroPreview = ({ theme }) => {
+  // Preview del tema hero (grande) - Memoizado para evitar re-renders innecesarios
+  const HeroPreview = memo(({ theme }) => {
     const colors = theme.colors;
     return (
       <div className="theme-hero-preview">
@@ -167,10 +164,10 @@ const ThemeSelector = ({ showPreview = false }) => {
         </div>
       </div>
     );
-  };
+  });
 
-  // Preview miniatura
-  const ThumbnailPreview = ({ theme }) => {
+  // Preview miniatura - Memoizado para evitar re-renders durante resize
+  const ThumbnailPreview = memo(({ theme }) => {
     const colors = theme.colors;
     return (
       <div className="theme-thumbnail-preview">
@@ -217,7 +214,46 @@ const ThemeSelector = ({ showPreview = false }) => {
         </div>
       </div>
     );
-  };
+  });
+
+  // Componente memoizado para las tarjetas de tema - Evita re-renders durante resize
+  const ThemeThumbnailCard = memo(({ theme, isActive, onSelect }) => {
+    return (
+      <div
+        className={`theme-thumbnail ${isActive ? 'active' : ''}`}
+        onClick={onSelect}
+      >
+        {isActive && (
+          <div className="theme-thumbnail-check">
+            <i className="pi pi-check"></i>
+          </div>
+        )}
+        
+        <ThumbnailPreview theme={theme} />
+        
+        <div className="theme-thumbnail-info">
+          <span className="theme-thumbnail-name">{theme.name}</span>
+          <div className="theme-thumbnail-palette">
+            {[
+              theme.colors.sidebarBackground,
+              theme.colors.buttonPrimary,
+              theme.colors.contentBackground
+            ].map((color, index) => (
+              <div
+                key={index}
+                className="theme-thumbnail-dot"
+                style={{ backgroundColor: color }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }, (prevProps, nextProps) => {
+    // Comparación personalizada: solo re-renderizar si cambia el tema activo o el tema mismo
+    return prevProps.isActive === nextProps.isActive && 
+           prevProps.theme.name === nextProps.theme.name;
+  });
 
   return (
     <div className="theme-selector-container">
@@ -365,36 +401,12 @@ const ThemeSelector = ({ showPreview = false }) => {
         <div className="theme-thumbnails-container">
           <div className="theme-thumbnails-grid">
             {themes.map((theme) => (
-              <div
+              <ThemeThumbnailCard
                 key={theme.name}
-                className={`theme-thumbnail ${currentTheme === theme.name ? 'active' : ''}`}
-                onClick={() => handleThemeChange(theme.name)}
-              >
-                {currentTheme === theme.name && (
-                  <div className="theme-thumbnail-check">
-                    <i className="pi pi-check"></i>
-                  </div>
-                )}
-                
-                <ThumbnailPreview theme={theme} />
-                
-                <div className="theme-thumbnail-info">
-                  <span className="theme-thumbnail-name">{theme.name}</span>
-                  <div className="theme-thumbnail-palette">
-                    {[
-                      theme.colors.sidebarBackground,
-                      theme.colors.buttonPrimary,
-                      theme.colors.contentBackground
-                    ].map((color, index) => (
-                      <div
-                        key={index}
-                        className="theme-thumbnail-dot"
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
+                theme={theme}
+                isActive={currentTheme === theme.name}
+                onSelect={() => handleThemeChange(theme.name)}
+              />
             ))}
           </div>
         </div>
