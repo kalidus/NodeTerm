@@ -3,7 +3,6 @@ import { Dropdown } from 'primereact/dropdown';
 import { InputNumber } from 'primereact/inputnumber';
 import { Checkbox } from 'primereact/checkbox';
 import { themes } from '../themes';
-import { statusBarThemes } from '../themes/status-bar-themes';
 import '../styles/components/terminal-settings.css';
 
 // Storage keys
@@ -105,26 +104,12 @@ const TerminalSettingsTab = ({
     localStorage.getItem(STORAGE_KEYS.DOCKER_THEME) || 'Default Dark'
   );
 
-  // Advanced settings
-  const [advancedExpanded, setAdvancedExpanded] = useState(false);
+  // Preview settings
   const [activePreviewTab, setActivePreviewTab] = useState('ssh');
-  const [powerShellStatusBar, setPowerShellStatusBar] = useState(() => 
-    localStorage.getItem(STORAGE_KEYS.POWERSHELL_STATUSBAR) || 'Default Dark'
-  );
-  const [linuxStatusBar, setLinuxStatusBar] = useState(() => 
-    localStorage.getItem(STORAGE_KEYS.LINUX_STATUSBAR) || 'Default Dark'
-  );
-  const [showNetworkDisks, setShowNetworkDisks] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_NETWORK_DISKS);
-    return saved ? JSON.parse(saved) : true;
-  });
 
   // Options
   const terminalThemeOptions = useMemo(() => 
     Object.keys(themes).map(name => ({ label: name, value: name })), []
-  );
-  const statusBarThemeOptions = useMemo(() => 
-    Object.keys(statusBarThemes).map(name => ({ label: name, value: name })), []
   );
 
   // Handlers
@@ -244,15 +229,6 @@ const TerminalSettingsTab = ({
     }
   }, [setTerminalTheme, setLocalPowerShellTheme, setLocalLinuxTerminalTheme]);
 
-  const handleStatusBarThemeChange = useCallback((type, themeName) => {
-    if (type === 'powershell') {
-      setPowerShellStatusBar(themeName);
-      localStorage.setItem(STORAGE_KEYS.POWERSHELL_STATUSBAR, themeName);
-    } else if (type === 'linux') {
-      setLinuxStatusBar(themeName);
-      localStorage.setItem(STORAGE_KEYS.LINUX_STATUSBAR, themeName);
-    }
-  }, []);
 
   // Preview helpers
   const getPreviewTheme = useCallback((type) => {
@@ -323,53 +299,7 @@ const TerminalSettingsTab = ({
         </div>
       </div>
 
-      {/* Sección 2: Personalización Avanzada (colapsable) */}
-      <div className="terminal-settings-section">
-        <div 
-          className={`terminal-advanced-toggle ${advancedExpanded ? 'expanded' : ''}`}
-          onClick={() => setAdvancedExpanded(!advancedExpanded)}
-        >
-          <div className="terminal-advanced-toggle-info">
-            <div className="terminal-advanced-toggle-icon">
-              <i className="pi pi-sliders-h"></i>
-            </div>
-            <span className="terminal-advanced-toggle-title">Opciones Avanzadas</span>
-          </div>
-          <i className="pi pi-chevron-down terminal-advanced-chevron"></i>
-        </div>
-        <div className={`terminal-advanced-content ${advancedExpanded ? 'expanded' : ''}`}>
-          <div className="terminal-advanced-inner">
-            <div className="terminal-override-card">
-              <div className="terminal-override-info">
-                <div className="terminal-override-icon"><i className="pi pi-chart-bar"></i></div>
-                <span className="terminal-override-label">Status Bar PowerShell</span>
-              </div>
-              <Dropdown value={powerShellStatusBar} options={statusBarThemeOptions} 
-                onChange={(e) => handleStatusBarThemeChange('powershell', e.value)} style={{ width: '150px' }} />
-            </div>
-            <div className="terminal-override-card">
-              <div className="terminal-override-info">
-                <div className="terminal-override-icon"><i className="pi pi-chart-bar"></i></div>
-                <span className="terminal-override-label">Status Bar Linux</span>
-              </div>
-              <Dropdown value={linuxStatusBar} options={statusBarThemeOptions} 
-                onChange={(e) => handleStatusBarThemeChange('linux', e.value)} style={{ width: '150px' }} />
-            </div>
-            <div className="terminal-override-card">
-              <div className="terminal-override-info">
-                <div className="terminal-override-icon"><i className="pi pi-folder"></i></div>
-                <span className="terminal-override-label">Mostrar Discos de Red</span>
-              </div>
-              <Checkbox checked={showNetworkDisks} onChange={(e) => {
-                setShowNetworkDisks(e.checked);
-                localStorage.setItem(STORAGE_KEYS.SHOW_NETWORK_DISKS, JSON.stringify(e.checked));
-              }} />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sección 3: Configuración por Tipo de Terminal */}
+      {/* Sección 2: Configuración por Tipo de Terminal */}
       <div className="terminal-settings-section">
         <div className="terminal-section-header">
           <div className="terminal-section-icon">
@@ -422,7 +352,7 @@ const TerminalSettingsTab = ({
         </div>
       </div>
 
-      {/* Sección 4: Vista Previa */}
+      {/* Sección 3: Vista Previa */}
       <div className="terminal-settings-section terminal-preview-section">
         <div className="terminal-section-header">
           <div className="terminal-section-icon">
