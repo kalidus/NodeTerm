@@ -247,18 +247,29 @@ const ThemeSelector = ({ showPreview = false }) => {
                       onClick={handleReducedMotionToggle}
                       title={reducedMotion ? "Activa las animaciones de la interfaz" : "Desactiva las animaciones para mejorar el rendimiento y reducir distracciones"}
                     >
-                      <i className="pi pi-eye-slash"></i>
+                      <i className="pi pi-eye-slash" style={{ width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
                       <span>Animaciones</span>
-                      <div className={`theme-mini-toggle ${!reducedMotion ? 'on' : ''}`}></div>
+                      <div className={`theme-mini-toggle ${!reducedMotion ? 'on' : ''}`} style={{ marginLeft: 'auto' }}></div>
                     </button>
-                    <span className="theme-option-hint">{reducedMotion ? 'Desactivadas' : 'Activadas'}</span>
                   </div>
                   <div className="theme-anim-speed-wrapper">
+                    <span style={{ 
+                      fontSize: '0.6875rem', 
+                      fontWeight: 500, 
+                      color: 'var(--ui-dialog-text)',
+                      marginBottom: '0.25rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.375rem',
+                      paddingLeft: '0.375rem'
+                    }}>
+                      <i className="pi pi-forward" style={{ fontSize: '0.6875rem', opacity: 0.7, width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
+                      Velocidad animaciones
+                    </span>
                     <div 
                       className="theme-anim-speed"
                       title="Controla la velocidad de las animaciones de la interfaz"
                     >
-                      <i className="pi pi-forward"></i>
                       <select 
                         className="theme-speed-select-mini"
                         value={animSpeed} 
@@ -270,7 +281,6 @@ const ThemeSelector = ({ showPreview = false }) => {
                         <option value="turbo">Turbo</option>
                       </select>
                     </div>
-                    <span className="theme-option-hint">Velocidad animaciones</span>
                   </div>
                 </div>
               </div>
