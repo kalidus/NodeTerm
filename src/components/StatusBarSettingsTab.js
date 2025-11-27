@@ -363,23 +363,37 @@ const StatusBarSettingsTab = ({
             </div>
             <div className="statusbar-setting-group">
               <span className="statusbar-mini-label">Actualización</span>
-              <InputNumber
-                value={statusBarPollingInterval}
-                onValueChange={(e) => handlePollingIntervalChange(e.value)}
-                min={1}
-                max={20}
-                suffix="s"
-                showButtons
-                buttonLayout="horizontal"
-                className="statusbar-interval-input"
-              />
+              <div className="statusbar-update-control">
+                <Dropdown
+                  value={statusBarPollingInterval}
+                  options={[
+                    { label: '1s', value: 1 },
+                    { label: '2s', value: 2 },
+                    { label: '3s', value: 3 },
+                    { label: '4s', value: 4 },
+                    { label: '5s', value: 5 },
+                    { label: '6s', value: 6 },
+                    { label: '8s', value: 8 },
+                    { label: '10s', value: 10 },
+                    { label: '15s', value: 15 },
+                    { label: '20s', value: 20 }
+                  ]}
+                  onChange={(e) => handlePollingIntervalChange(e.value)}
+                  className="statusbar-update-dropdown"
+                  placeholder="Seleccionar"
+                />
+                <span className="statusbar-setting-description">Intervalo de actualización de estadísticas</span>
+              </div>
             </div>
             <div className="statusbar-setting-group">
-              <span className="statusbar-mini-label">Discos de Red</span>
-              <div 
-                className={`statusbar-toggle-switch ${showNetworkDisks ? 'active' : ''}`}
-                onClick={() => handleShowNetworkDisksChange(!showNetworkDisks)}
-              />
+              <span className="statusbar-mini-label statusbar-label-normal">Mostrar discos de red</span>
+              <div className="statusbar-network-disks-control">
+                <div 
+                  className={`statusbar-toggle-switch ${showNetworkDisks ? 'active' : ''}`}
+                  onClick={() => handleShowNetworkDisksChange(!showNetworkDisks)}
+                  title={showNetworkDisks ? 'Ocultar discos de red' : 'Mostrar discos de red'}
+                />
+              </div>
             </div>
           </div>
         </div>
