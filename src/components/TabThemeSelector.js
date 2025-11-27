@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
-import { TabView, TabPanel } from 'primereact/tabview';
+import React, { useState, useEffect, useMemo } from 'react';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 import { generateAdvancedCSS } from '../utils/tabThemeStyles';
 import { applyTabTheme } from '../utils/tabThemeLoader';
+import '../styles/components/tab-theme-selector.css';
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
 const REDUCED_MOTION_KEY = 'nodeterm_tab_reduced_motion';
@@ -2294,11 +2292,29 @@ Object.assign(tabThemes, {
   },
 });
 
+// Storage key para columnas
+const COLS_PER_ROW_KEY = 'nodeterm_tab_themes_cols';
+
+// Definición de categorías
+const CATEGORIES = [
+  { id: 'clasicos', name: 'Clásicos', icon: '🎨', getKeys: () => Object.keys(tabThemes).filter(k => ![...NEW_FUTURISTIC_KEYS, ...NEW_PRO_KEYS, ...NEW_MINIMAL_KEYS, ...NEW_ANIMATED_KEYS, ...NEW_OTHERS_KEYS].includes(k)) },
+  { id: 'futuristas', name: 'Futuristas', icon: '🚀', getKeys: () => NEW_FUTURISTIC_KEYS.filter(k => tabThemes[k]) },
+  { id: 'modernos', name: 'Modernos', icon: '✨', getKeys: () => NEW_PRO_KEYS.filter(k => tabThemes[k]) },
+  { id: 'minimal', name: 'Minimal', icon: '◻️', getKeys: () => NEW_MINIMAL_KEYS.filter(k => tabThemes[k]) },
+  { id: 'animados', name: 'Animados', icon: '🎬', getKeys: () => NEW_ANIMATED_KEYS.filter(k => tabThemes[k]) },
+  { id: 'otros', name: 'Otros', icon: '🔮', getKeys: () => NEW_OTHERS_KEYS.filter(k => tabThemes[k]) }
+];
+
 const TabThemeSelector = () => {
   const [selectedTheme, setSelectedTheme] = useState('default');
   const [currentUITheme, setCurrentUITheme] = useState('Light');
   const [reducedMotion, setReducedMotion] = useState(false);
   const [animSpeed, setAnimSpeed] = useState('normal');
+  const [selectedCategory, setSelectedCategory] = useState('clasicos');
+  const [colsPerRow, setColsPerRow] = useState(() => {
+    const saved = localStorage.getItem(COLS_PER_ROW_KEY);
+    return saved ? parseInt(saved, 10) : 3;
+  });
 
   useEffect(() => {
     // Cargar tema guardado al inicializar
@@ -2385,11 +2401,11 @@ const TabThemeSelector = () => {
     applyTabThemeWithAnimations(themeName);
   };
 
-  const handleReducedMotionToggle = (e) => {
-    const value = e.target.checked;
-    setReducedMotion(value);
-    localStorage.setItem(REDUCED_MOTION_KEY, value ? 'true' : 'false');
-    document.documentElement.setAttribute('data-tab-reduced-motion', value ? 'true' : 'false');
+  const handleReducedMotionToggle = () => {
+    const newValue = !reducedMotion;
+    setReducedMotion(newValue);
+    localStorage.setItem(REDUCED_MOTION_KEY, newValue ? 'true' : 'false');
+    document.documentElement.setAttribute('data-tab-reduced-motion', newValue ? 'true' : 'false');
   };
 
   const handleAnimSpeedChange = (e) => {
@@ -2399,347 +2415,215 @@ const TabThemeSelector = () => {
     document.documentElement.setAttribute('data-tab-anim-speed', value);
   };
 
-  const TabPreview = ({ theme, isSelected, onClick }) => {
-    const previewStyle = {
-      ...theme.preview,
-      width: '100%',
-      height: '60px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      position: 'relative',
-      cursor: 'pointer',
-      border: isSelected ? '2px solid var(--primary-color)' : theme.preview.border || '1px solid #ddd',
-      marginBottom: '8px'
-    };
+  const handleColsPerRowToggle = () => {
+    const nextCols = colsPerRow === 2 ? 3 : colsPerRow === 3 ? 4 : colsPerRow === 4 ? 5 : 2;
+    setColsPerRow(nextCols);
+    localStorage.setItem(COLS_PER_ROW_KEY, String(nextCols));
+  };
 
-    return (
-      <div style={previewStyle} onClick={onClick}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '0 12px'
-        }}>
-          <i className="pi pi-desktop" style={{ 
-            fontSize: '14px',
-            color: theme.styles?.['--ui-tab-text'] || '#666'
-          }} />
-          <span style={{ 
-            fontSize: '12px',
-            color: theme.styles?.['--ui-tab-text'] || '#666',
-            fontWeight: '500'
-          }}>
-            Terminal
-          </span>
-          <i className="pi pi-times" style={{ 
-            fontSize: '10px',
-            color: theme.styles?.['--ui-tab-text'] || '#666',
-            opacity: 0.7
-          }} />
-        </div>
-        
-        {isSelected && (
-          <div style={{
-            position: 'absolute',
-            top: '-2px',
-            right: '-2px',
-            width: '16px',
-            height: '16px',
-            backgroundColor: 'var(--primary-color)',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <i className="pi pi-check" style={{ 
-              fontSize: '8px',
-              color: 'white'
-            }} />
-          </div>
-        )}
-      </div>
-    );
+  // Obtener tema actual para el hero
+  const activeTheme = tabThemes[selectedTheme] || tabThemes.default;
+
+  // Obtener temas filtrados por categoría
+  const filteredThemes = useMemo(() => {
+    const category = CATEGORIES.find(c => c.id === selectedCategory);
+    if (!category) return [];
+    return category.getKeys().map(key => ({ key, theme: tabThemes[key] })).filter(t => t.theme);
+  }, [selectedCategory]);
+
+  // Estilo para el preview de la pestaña
+  const getTabSampleStyle = (theme) => {
+    return {
+      background: theme.preview?.background || theme.styles?.['--ui-tab-bg'] || 'var(--ui-tab-bg)',
+      color: theme.styles?.['--ui-tab-text'] || 'var(--ui-tab-text)',
+      borderRadius: theme.preview?.borderRadius || theme.styles?.['--tab-border-radius'] || '4px 4px 0 0',
+      border: theme.preview?.border || `1px solid ${theme.styles?.['--ui-tab-border'] || 'var(--ui-tab-border)'}`,
+      boxShadow: theme.preview?.boxShadow || theme.styles?.['--tab-box-shadow'] || 'none'
+    };
   };
 
   return (
-    <div style={{
-      padding: '1rem 0',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '50vh',
-      width: '100%'
-    }}>
-      <h3 style={{ 
-        margin: '0 0 1rem 0', 
-        color: 'var(--text-color)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem'
-      }}>
-        <i className="pi pi-palette" style={{ color: 'var(--primary-color)' }}></i>
-        Estilos de Pestañas
-      </h3>
-      
-      <p style={{
-        marginBottom: '2rem',
-        color: 'var(--text-color-secondary)',
-        fontSize: '0.9rem',
-        textAlign: 'center',
-        maxWidth: '600px'
-      }}>
-        Personaliza el aspecto de las pestañas con diferentes estilos. Los cambios se aplican inmediatamente.
-      </p>
-
-      {/* Preferencias */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '1rem',
-        width: '100%',
-        maxWidth: '1200px',
-        padding: '0 1rem 0.75rem 1rem'
-      }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-color)' }}>
-          <input type="checkbox" checked={reducedMotion} onChange={handleReducedMotionToggle} />
-          Reducir animaciones
-        </label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-color)' }}>
-          <span style={{ fontSize: '0.9rem' }}>Velocidad:</span>
-          <select value={animSpeed} onChange={handleAnimSpeedChange} style={{
-            background: 'var(--surface-card)',
-            color: 'var(--text-color)',
-            border: '1px solid var(--surface-border)',
-            borderRadius: '6px',
-            padding: '0.25rem 0.5rem'
-          }}>
-            <option value="slow">Lento</option>
-            <option value="normal">Normal</option>
-            <option value="fast">Rápido</option>
-            <option value="turbo">Turbo</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Categorías en pestañas */}
-      <div style={{ width: '100%', maxWidth: '1200px', padding: '0 1rem' }}>
-        <TabView>
-          <TabPanel header="Clásicos">
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-              gap: '1.5rem',
-              width: '100%'
-            }}>
-              {Object.keys(tabThemes)
-                .filter(k => ![...NEW_FUTURISTIC_KEYS, ...NEW_PRO_KEYS, ...NEW_MINIMAL_KEYS, ...NEW_ANIMATED_KEYS, ...NEW_OTHERS_KEYS].includes(k))
-                .map((key) => {
-                  const theme = tabThemes[key];
-                  return (
-                    <Card key={key} style={{ background: 'var(--surface-card)', border: selectedTheme === key ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)', borderRadius: '8px', padding: '0', cursor: 'pointer', transition: 'all 0.2s ease', transform: selectedTheme === key ? 'translateY(-2px)' : 'none', boxShadow: selectedTheme === key ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.1)' }} onClick={() => handleThemeSelect(key)}>
-                      <div style={{ padding: '1rem' }}>
-                        <TabPreview theme={theme} isSelected={selectedTheme === key} onClick={() => handleThemeSelect(key)} />
-                        <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)', fontSize: '1rem', fontWeight: '600' }}>{theme.name}</h4>
-                        <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.85rem', lineHeight: '1.4' }}>{theme.description}</p>
-                        {selectedTheme === key && (
-                          <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-color)', fontSize: '0.8rem', fontWeight: '500' }}>
-                            <i className="pi pi-check-circle" style={{ fontSize: '0.8rem' }} />
-                            Tema activo
-                          </div>
-                        )}
-                      </div>
-                    </Card>
-                  );
-                })}
+    <div className="tab-theme-selector-container">
+      {/* Hero Section - Tema Activo */}
+      <div className="tab-theme-hero-section">
+        <div className="tab-theme-hero-content">
+          {/* Preview grande del tema activo */}
+          <div className="tab-theme-hero-preview">
+            <div className="tab-theme-hero-tab-preview" style={{ background: 'var(--ui-content-bg)' }}>
+              <div 
+                className="tab-theme-hero-tab-sample"
+                style={getTabSampleStyle(activeTheme)}
+              >
+                <i className="pi pi-desktop" />
+                <span>Terminal</span>
+                <i className="pi pi-times close-icon" />
+              </div>
             </div>
-          </TabPanel>
-          <TabPanel header="Futuristas">
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-              gap: '1.5rem',
-              width: '100%'
-            }}>
-              {NEW_FUTURISTIC_KEYS.filter((key) => tabThemes[key]).map((key) => {
-                const theme = tabThemes[key];
-                return (
-                  <Card
-                    key={key}
-                    style={{
-                      background: 'var(--surface-card)',
-                      border: selectedTheme === key ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)',
-                      borderRadius: '8px',
-                      padding: '0',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      transform: selectedTheme === key ? 'translateY(-2px)' : 'none',
-                      boxShadow: selectedTheme === key ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.1)'
-                    }}
-                    onClick={() => handleThemeSelect(key)}
+            <div className="tab-theme-hero-tabs-bar">
+              <div 
+                className="tab-theme-hero-mini-tab active"
+                style={getTabSampleStyle(activeTheme)}
+              >
+                <i className="pi pi-desktop" />
+                <span>Terminal</span>
+              </div>
+              <div 
+                className="tab-theme-hero-mini-tab"
+                style={{
+                  ...getTabSampleStyle(activeTheme),
+                  opacity: 0.5,
+                  background: activeTheme.styles?.['--ui-tab-bg'] || 'transparent'
+                }}
+              >
+                <i className="pi pi-folder" />
+                <span>SFTP</span>
+              </div>
+              <div 
+                className="tab-theme-hero-mini-tab"
+                style={{
+                  ...getTabSampleStyle(activeTheme),
+                  opacity: 0.5,
+                  background: activeTheme.styles?.['--ui-tab-bg'] || 'transparent'
+                }}
+              >
+                <i className="pi pi-code" />
+                <span>Editor</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Info del tema activo */}
+          <div className="tab-theme-hero-info">
+            <div className="tab-theme-hero-badge">
+              <i className="pi pi-check" />
+              Tema Activo
+            </div>
+            <h2 className="tab-theme-hero-name">{activeTheme.name}</h2>
+            <p className="tab-theme-hero-description">{activeTheme.description}</p>
+
+            {/* Panel de opciones */}
+            <div className="tab-theme-options-wrapper">
+              <div className="tab-theme-anim-card">
+                <div className="tab-theme-anim-card-header">
+                  <span className="tab-theme-anim-card-title">
+                    <i className="pi pi-sliders-h" />
+                    Animaciones
+                  </span>
+                </div>
+                <div className="tab-theme-anim-card-options">
+                  <div 
+                    className="tab-theme-anim-option"
+                    onClick={handleReducedMotionToggle}
                   >
-                    <div style={{ padding: '1rem' }}>
-                      <TabPreview theme={theme} isSelected={selectedTheme === key} onClick={() => handleThemeSelect(key)} />
-                      <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)', fontSize: '1rem', fontWeight: '600' }}>{theme.name}</h4>
-                      <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.85rem', lineHeight: '1.4' }}>{theme.description}</p>
-                      {selectedTheme === key && (
-                        <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-color)', fontSize: '0.8rem', fontWeight: '500' }}>
-                          <i className="pi pi-check-circle" style={{ fontSize: '0.8rem' }} />
-                          Tema activo
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                );
-              })}
+                    <span>Reducir movimiento</span>
+                    <div className={`tab-theme-mini-toggle ${reducedMotion ? 'on' : ''}`} />
+                  </div>
+                  <div className="tab-theme-speed-row">
+                    <span>Velocidad:</span>
+                    <select 
+                      className="tab-theme-speed-select"
+                      value={animSpeed} 
+                      onChange={handleAnimSpeedChange}
+                    >
+                      <option value="slow">Lento</option>
+                      <option value="normal">Normal</option>
+                      <option value="fast">Rápido</option>
+                      <option value="turbo">Turbo</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
-          </TabPanel>
-          <TabPanel header="Modernos">
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-              gap: '1.5rem',
-              width: '100%'
-            }}>
-              {NEW_PRO_KEYS.filter((key) => tabThemes[key]).map((key) => {
-                const theme = tabThemes[key];
-                return (
-                  <Card key={key} style={{ background: 'var(--surface-card)', border: selectedTheme === key ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)', borderRadius: '8px', padding: '0', cursor: 'pointer', transition: 'all 0.2s ease', transform: selectedTheme === key ? 'translateY(-2px)' : 'none', boxShadow: selectedTheme === key ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.1)' }} onClick={() => handleThemeSelect(key)}>
-                    <div style={{ padding: '1rem' }}>
-                      <TabPreview theme={theme} isSelected={selectedTheme === key} onClick={() => handleThemeSelect(key)} />
-                      <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)', fontSize: '1rem', fontWeight: '600' }}>{theme.name}</h4>
-                      <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.85rem', lineHeight: '1.4' }}>{theme.description}</p>
-                      {selectedTheme === key && (
-                        <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-color)', fontSize: '0.8rem', fontWeight: '500' }}>
-                          <i className="pi pi-check-circle" style={{ fontSize: '0.8rem' }} />
-                          Tema activo
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          </TabPanel>
-          <TabPanel header="Minimal">
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-              gap: '1.5rem',
-              width: '100%'
-            }}>
-              {NEW_MINIMAL_KEYS.filter((key) => tabThemes[key]).map((key) => {
-                const theme = tabThemes[key];
-                return (
-                  <Card key={key} style={{ background: 'var(--surface-card)', border: selectedTheme === key ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)', borderRadius: '8px', padding: '0', cursor: 'pointer', transition: 'all 0.2s ease', transform: selectedTheme === key ? 'translateY(-2px)' : 'none', boxShadow: selectedTheme === key ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.1)' }} onClick={() => handleThemeSelect(key)}>
-                    <div style={{ padding: '1rem' }}>
-                      <TabPreview theme={theme} isSelected={selectedTheme === key} onClick={() => handleThemeSelect(key)} />
-                      <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)', fontSize: '1rem', fontWeight: '600' }}>{theme.name}</h4>
-                      <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.85rem', lineHeight: '1.4' }}>{theme.description}</p>
-                      {selectedTheme === key && (
-                        <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-color)', fontSize: '0.8rem', fontWeight: '500' }}>
-                          <i className="pi pi-check-circle" style={{ fontSize: '0.8rem' }} />
-                          Tema activo
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          </TabPanel>
-          <TabPanel header="Animados">
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-              gap: '1.5rem',
-              width: '100%'
-            }}>
-              {NEW_ANIMATED_KEYS.filter((key) => tabThemes[key]).map((key) => {
-                const theme = tabThemes[key];
-                return (
-                  <Card key={key} style={{ background: 'var(--surface-card)', border: selectedTheme === key ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)', borderRadius: '8px', padding: '0', cursor: 'pointer', transition: 'all 0.2s ease', transform: selectedTheme === key ? 'translateY(-2px)' : 'none', boxShadow: selectedTheme === key ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.1)' }} onClick={() => handleThemeSelect(key)}>
-                    <div style={{ padding: '1rem' }}>
-                      <TabPreview theme={theme} isSelected={selectedTheme === key} onClick={() => handleThemeSelect(key)} />
-                      <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)', fontSize: '1rem', fontWeight: '600' }}>{theme.name}</h4>
-                      <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.85rem', lineHeight: '1.4' }}>{theme.description}</p>
-                      {selectedTheme === key && (
-                        <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-color)', fontSize: '0.8rem', fontWeight: '500' }}>
-                          <i className="pi pi-check-circle" style={{ fontSize: '0.8rem' }} />
-                          Tema activo
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          </TabPanel>
-          <TabPanel header="Otros">
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-              gap: '1.5rem',
-              width: '100%'
-            }}>
-              {NEW_OTHERS_KEYS.filter((key) => tabThemes[key]).map((key) => {
-                const theme = tabThemes[key];
-                return (
-                  <Card key={key} style={{ background: 'var(--surface-card)', border: selectedTheme === key ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)', borderRadius: '8px', padding: '0', cursor: 'pointer', transition: 'all 0.2s ease', transform: selectedTheme === key ? 'translateY(-2px)' : 'none', boxShadow: selectedTheme === key ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.1)' }} onClick={() => handleThemeSelect(key)}>
-                    <div style={{ padding: '1rem' }}>
-                      <TabPreview theme={theme} isSelected={selectedTheme === key} onClick={() => handleThemeSelect(key)} />
-                      <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)', fontSize: '1rem', fontWeight: '600' }}>{theme.name}</h4>
-                      <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.85rem', lineHeight: '1.4' }}>{theme.description}</p>
-                      {selectedTheme === key && (
-                        <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-color)', fontSize: '0.8rem', fontWeight: '500' }}>
-                          <i className="pi pi-check-circle" style={{ fontSize: '0.8rem' }} />
-                          Tema activo
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          </TabPanel>
-        </TabView>
+          </div>
+        </div>
       </div>
 
-      <div style={{
-        marginTop: '2rem',
-        padding: '1rem',
-        background: 'var(--surface-100)',
-        borderRadius: '8px',
-        maxWidth: '600px',
-        width: '100%'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          marginBottom: '0.5rem'
-        }}>
-          <i className="pi pi-info-circle" style={{ 
-            color: 'var(--primary-color)',
-            fontSize: '0.9rem'
-          }} />
-          <strong style={{ 
-            color: 'var(--text-color)',
-            fontSize: '0.9rem'
-          }}>
-            Información
-          </strong>
+      {/* Sección de Exploración */}
+      <div className="tab-theme-explore-section">
+        {/* Header con filtros */}
+        <div className="tab-theme-explore-header">
+          <div className="tab-theme-explore-title">
+            <i className="pi pi-th-large" />
+            Explorar Estilos
+          </div>
+
+          {/* Pills de categoría */}
+          <div className="tab-theme-category-filters">
+            {CATEGORIES.map(category => {
+              const count = category.getKeys().length;
+              return (
+                <button
+                  key={category.id}
+                  className={`tab-theme-category-pill ${selectedCategory === category.id ? 'active' : ''}`}
+                  onClick={() => setSelectedCategory(category.id)}
+                >
+                  <span className="tab-theme-category-pill-icon">{category.icon}</span>
+                  <span>{category.name}</span>
+                  <span className="tab-theme-category-pill-count">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Botón de columnas */}
+          <button
+            className="tab-theme-per-row-btn"
+            onClick={handleColsPerRowToggle}
+            title={`${colsPerRow} columnas. Clic para cambiar: 2 → 3 → 4 → 5 → 2...`}
+          >
+            <i className="pi pi-th-large" />
+          </button>
         </div>
-        <p style={{
-          margin: '0',
-          color: 'var(--text-color-secondary)',
-          fontSize: '0.8rem',
-          lineHeight: '1.4'
-        }}>
-          El tema "Por Defecto" adapta automáticamente el estilo de las pestañas al tema de interfaz seleccionado. 
-          Los demás temas son independientes y conservan su apariencia sin importar el tema de la interfaz.
-        </p>
+
+        {/* Grid de temas */}
+        <div className="tab-theme-thumbnails-container">
+          <div className={`tab-theme-thumbnails-grid cols-${colsPerRow}`}>
+            {filteredThemes.map(({ key, theme }) => (
+              <div 
+                key={key}
+                className={`tab-theme-thumbnail ${selectedTheme === key ? 'active' : ''}`}
+                onClick={() => handleThemeSelect(key)}
+              >
+                {selectedTheme === key && (
+                  <div className="tab-theme-thumbnail-check">
+                    <i className="pi pi-check" />
+                  </div>
+                )}
+                
+                <div 
+                  className="tab-theme-thumbnail-preview"
+                  style={{ background: theme.preview?.background || theme.styles?.['--ui-tab-bg'] || 'var(--ui-content-bg)' }}
+                >
+                  <div 
+                    className="tab-theme-thumbnail-tab-sample"
+                    style={getTabSampleStyle(theme)}
+                  >
+                    <i className="pi pi-desktop" />
+                    <span>Terminal</span>
+                    <i className="pi pi-times close-icon" />
+                  </div>
+                </div>
+
+                <div className="tab-theme-thumbnail-info">
+                  <div className="tab-theme-thumbnail-name">{theme.name}</div>
+                  <div className="tab-theme-thumbnail-description">{theme.description}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Info Box */}
+        <div className="tab-theme-info-box">
+          <i className="pi pi-info-circle" />
+          <div className="tab-theme-info-box-content">
+            <div className="tab-theme-info-box-title">Información</div>
+            <p className="tab-theme-info-box-text">
+              El tema "Por Defecto" adapta automáticamente el estilo de las pestañas al tema de interfaz seleccionado. 
+              Los demás temas son independientes y conservan su apariencia sin importar el tema de la interfaz.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
