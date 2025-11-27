@@ -620,6 +620,19 @@ export const useTabManagement = (toast, {
       // Cerrar pestañas de Open WebUI (almacenadas en sshTabs)
       const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
       setSshTabs(newSshTabs);
+    } else if (closedTab.type === 'docker') {
+      // Cerrar pestañas de Docker
+      if (window.electron && window.electron.ipcRenderer) {
+        // Detener el proceso Docker
+        window.electron.ipcRenderer.send(`docker:stop:${closedTab.key}`);
+      }
+      // Limpiar referencia del terminal si existe
+      if (externalTerminalRefs?.current) {
+        delete externalTerminalRefs.current[closedTab.key];
+      }
+      // Eliminar la pestaña de sshTabs
+      const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+      setSshTabs(newSshTabs);
     } else {
       if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
         window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
