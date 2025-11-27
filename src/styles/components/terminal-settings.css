@@ -90,7 +90,7 @@
 
 /* Contenido de sección */
 .terminal-section-content {
-  padding: 1rem 1.25rem;
+  padding: 0.875rem 1rem;
 }
 
 /* ========================================
@@ -229,28 +229,29 @@
 }
 
 /* ========================================
-   GRID DE CONFIGURACIÓN POR TIPO - MEJORADO
+   GRID DE CONFIGURACIÓN POR TIPO - COMPACTO
    ======================================== */
 
 .terminal-themes-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
+  gap: 0.625rem;
 }
 
 .terminal-theme-card {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  border-radius: 12px;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: linear-gradient(
     145deg,
-    rgba(255, 255, 255, 0.04) 0%,
-    rgba(0, 0, 0, 0.15) 100%
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(0, 0, 0, 0.12) 100%
   );
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
 }
@@ -260,62 +261,61 @@
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  height: 3px;
-  opacity: 0;
-  transition: opacity 0.25s ease;
+  bottom: 0;
+  width: 3px;
+  opacity: 0.7;
 }
 
 .terminal-theme-card.ssh::before {
-  background: linear-gradient(90deg, #22c55e, #16a34a);
+  background: linear-gradient(180deg, #22c55e, #16a34a);
 }
 
 .terminal-theme-card.powershell::before {
-  background: linear-gradient(90deg, #0078d4, #106ebe);
+  background: linear-gradient(180deg, #0078d4, #106ebe);
 }
 
 .terminal-theme-card.linux::before {
-  background: linear-gradient(90deg, #f97316, #ea580c);
+  background: linear-gradient(180deg, #f97316, #ea580c);
 }
 
 .terminal-theme-card.docker::before {
-  background: linear-gradient(90deg, #2496ed, #1d7dc2);
+  background: linear-gradient(180deg, #2496ed, #1d7dc2);
 }
 
 .terminal-theme-card:hover {
   border-color: rgba(255, 255, 255, 0.15);
   background: linear-gradient(
     145deg,
-    rgba(255, 255, 255, 0.06) 0%,
-    rgba(0, 0, 0, 0.2) 100%
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(0, 0, 0, 0.18) 100%
   );
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .terminal-theme-card:hover::before {
   opacity: 1;
 }
 
-/* Header de la card con icono grande */
+/* Header de la card - compacto */
 .terminal-theme-card-header {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  min-width: 100px;
 }
 
 .terminal-theme-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 1.1rem;
+  font-size: 0.85rem;
   box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .terminal-theme-icon.ssh {
@@ -340,44 +340,24 @@
 
 .terminal-theme-name {
   color: var(--ui-dialog-text);
-  font-weight: 700;
-  font-size: 1rem;
+  font-weight: 600;
+  font-size: 0.8rem;
   letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
-/* Controles de la card - Layout vertical mejorado */
+/* Controles de la card - Layout horizontal compacto */
 .terminal-theme-controls {
   display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-}
-
-.terminal-theme-control-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.terminal-theme-control-row .terminal-control-label {
-  font-size: 0.7rem;
-  color: var(--text-color-secondary);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  width: 50px;
-  flex-shrink: 0;
-}
-
-.terminal-theme-control-row .terminal-control-input {
   flex: 1;
   min-width: 0;
 }
 
-/* Layout alternativo: controles en fila */
 .terminal-theme-controls-row {
   display: flex;
-  gap: 0.625rem;
-  align-items: stretch;
+  gap: 0.5rem;
+  align-items: flex-end;
+  flex: 1;
 }
 
 .terminal-theme-selector {
@@ -385,16 +365,17 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.125rem;
 }
 
 .terminal-theme-selector .terminal-selector-label {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: var(--text-color-secondary);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  opacity: 0.8;
+  letter-spacing: 0.4px;
+  opacity: 0.7;
+  padding-left: 2px;
 }
 
 .terminal-theme-selector .p-dropdown,
@@ -403,24 +384,24 @@
 }
 
 .terminal-theme-selector.font-selector {
-  flex: 1.3;
+  flex: 1.4;
 }
 
 .terminal-theme-selector.size-selector {
-  flex: 0 0 75px;
+  flex: 0 0 65px;
 }
 
 .terminal-theme-selector.theme-selector {
-  flex: 1.1;
+  flex: 1.2;
 }
 
 /* ========================================
-   VISTA PREVIA - EXPANDIDA Y FLEXIBLE
+   VISTA PREVIA - GRANDE Y FLEXIBLE
    ======================================== */
 
 .terminal-preview-section {
-  flex: 1;
-  min-height: 200px;
+  flex: 2;
+  min-height: 280px;
   display: flex;
   flex-direction: column;
 }
@@ -435,8 +416,8 @@
 .terminal-preview-tabs {
   display: flex;
   gap: 0.25rem;
-  padding: 0.5rem 0.75rem;
-  background: rgba(0, 0, 0, 0.2);
+  padding: 0.5rem 0.875rem;
+  background: rgba(0, 0, 0, 0.25);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -444,7 +425,7 @@
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.5rem 0.875rem;
+  padding: 0.5rem 1rem;
   border-radius: 7px;
   border: none;
   background: transparent;
@@ -467,10 +448,10 @@
 }
 
 .terminal-preview-tab i {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
 }
 
-/* Contenedor de preview - ocupa todo el espacio */
+/* Contenedor de preview - ocupa todo el espacio disponible */
 .terminal-preview-content {
   flex: 1;
   display: flex;
@@ -478,19 +459,19 @@
   background: #0d1117;
   border-radius: 0 0 12px 12px;
   overflow: hidden;
-  min-height: 180px;
+  min-height: 220px;
 }
 
-/* Ventana de terminal con barra de título */
+/* Ventana de terminal grande */
 .terminal-preview-window {
   flex: 1;
-  padding: 1rem 1.25rem;
+  padding: 1.25rem 1.5rem;
   font-family: 'JetBrains Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.7;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.125rem;
 }
 
 .terminal-preview-line {
@@ -540,151 +521,150 @@
 }
 
 /* ========================================
-   DROPDOWNS Y INPUTS MEJORADOS
+   DROPDOWNS Y INPUTS COMPACTOS
    ======================================== */
 
 .terminal-settings-container .p-dropdown {
-  height: 36px;
-  font-size: 0.8rem;
-  border-radius: 8px;
+  height: 32px;
+  font-size: 0.75rem;
+  border-radius: 6px;
 }
 
 .terminal-settings-container .p-dropdown .p-dropdown-label {
-  padding: 0.5rem 0.625rem;
-  font-size: 0.8rem;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
 }
 
 .terminal-settings-container .p-dropdown .p-dropdown-trigger {
-  width: 2.25rem;
+  width: 1.75rem;
 }
 
 .terminal-settings-container .p-inputnumber {
-  height: 36px;
+  height: 32px;
 }
 
 .terminal-settings-container .p-inputnumber input {
-  font-size: 0.8rem;
-  padding: 0.5rem 0.625rem;
-  border-radius: 8px;
+  font-size: 0.75rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 6px;
 }
 
 .terminal-settings-container .p-inputnumber-button {
-  width: 1.75rem;
+  width: 1.5rem;
 }
 
 /* ========================================
    RESPONSIVE - ADAPTA A TODOS LOS TAMAÑOS
    ======================================== */
 
-@media (max-width: 1200px) {
-  .terminal-themes-grid {
-    gap: 0.875rem;
-  }
-}
-
-@media (max-width: 1000px) {
+@media (max-width: 1100px) {
   .terminal-themes-grid {
     grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
   
   .terminal-theme-card {
     flex-direction: row;
-    flex-wrap: wrap;
     align-items: center;
   }
   
   .terminal-theme-card-header {
-    flex: 0 0 auto;
-  }
-  
-  .terminal-theme-controls {
-    flex: 1;
-    min-width: 280px;
-  }
-  
-  .terminal-theme-controls-row {
-    flex-wrap: wrap;
+    min-width: 110px;
   }
 }
 
 @media (max-width: 768px) {
   .terminal-settings-container {
-    padding: 1rem;
-    gap: 0.875rem;
+    padding: 0.875rem;
+    gap: 0.75rem;
   }
   
   .terminal-global-row {
-    gap: 1.25rem;
+    gap: 1rem;
   }
   
   .terminal-theme-card {
     flex-direction: column;
-    padding: 1rem;
+    align-items: flex-start;
+    padding: 0.75rem;
+    gap: 0.625rem;
+  }
+  
+  .terminal-theme-card-header {
+    min-width: auto;
   }
   
   .terminal-theme-controls {
     width: 100%;
-    min-width: 0;
   }
   
   .terminal-theme-controls-row {
-    flex-direction: column;
-    gap: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.375rem;
   }
   
-  .terminal-theme-selector {
-    width: 100%;
-    flex: none;
+  .terminal-theme-selector.font-selector,
+  .terminal-theme-selector.theme-selector {
+    flex: 1 1 45%;
+    min-width: 100px;
   }
   
   .terminal-theme-selector.size-selector {
-    flex: none;
-    width: 100%;
+    flex: 0 0 65px;
+  }
+  
+  .terminal-preview-section {
+    min-height: 200px;
   }
   
   .terminal-preview-tabs {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    gap: 0.125rem;
-    padding: 0.375rem 0.5rem;
+    padding: 0.375rem 0.625rem;
   }
   
   .terminal-preview-tab {
     flex-shrink: 0;
-    padding: 0.375rem 0.625rem;
+    padding: 0.375rem 0.75rem;
     font-size: 0.75rem;
   }
   
   .terminal-preview-window {
-    padding: 0.75rem 1rem;
-    font-size: 12px;
+    padding: 1rem;
+    font-size: 13px;
   }
   
   .terminal-preview-content {
-    min-height: 140px;
+    min-height: 160px;
   }
 }
 
 @media (max-width: 500px) {
   .terminal-settings-container {
-    padding: 0.75rem;
+    padding: 0.625rem;
   }
   
   .terminal-section-header {
-    padding: 0.75rem 1rem;
+    padding: 0.625rem 0.875rem;
   }
   
   .terminal-section-content {
-    padding: 0.875rem 1rem;
+    padding: 0.75rem 0.875rem;
   }
   
-  .terminal-theme-icon {
-    width: 36px;
-    height: 36px;
-    font-size: 0.95rem;
+  .terminal-theme-controls-row {
+    flex-direction: column;
   }
   
-  .terminal-theme-name {
-    font-size: 0.9rem;
+  .terminal-theme-selector.font-selector,
+  .terminal-theme-selector.theme-selector,
+  .terminal-theme-selector.size-selector {
+    flex: none;
+    width: 100%;
+  }
+  
+  .terminal-preview-window {
+    padding: 0.75rem;
+    font-size: 12px;
   }
 }
