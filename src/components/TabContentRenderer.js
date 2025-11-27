@@ -37,6 +37,9 @@ const TabContentRenderer = React.memo(({
   localFontSize,
   localLinuxTerminalTheme,
   localPowerShellTheme,
+  localDockerTerminalTheme,
+  dockerFontFamily,
+  dockerFontSize,
   // FileExplorer props
   iconTheme,
   explorerFont,
@@ -973,15 +976,15 @@ const TabContentRenderer = React.memo(({
   // Terminal local independiente
   // Docker Terminal
   if (tab.type === 'docker') {
-    const linuxTheme = themes[localLinuxTerminalTheme]?.theme || themes['Default Dark']?.theme;
+    const dockerTheme = themes[localDockerTerminalTheme]?.theme || themes['Default Dark']?.theme;
     
     return (
       <DockerTerminal
         ref={el => terminalRefs.current[tab.key] = el}
         tabId={tab.key}
-        fontFamily={localFontFamily}
-        fontSize={localFontSize}
-        theme={linuxTheme}
+        fontFamily={dockerFontFamily}
+        fontSize={dockerFontSize}
+        theme={dockerTheme}
         dockerInfo={tab.distroInfo}
       />
     );
