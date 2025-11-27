@@ -510,6 +510,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
   padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--ui-dialog-border);
   background: var(--ui-content-bg);
@@ -523,9 +524,42 @@
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--ui-dialog-text);
+  flex-shrink: 0;
 }
 
 .theme-explore-title i {
+  color: var(--ui-button-primary);
+}
+
+/* Botón de temas por fila */
+.theme-per-row-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: 6px;
+  color: var(--ui-dialog-text);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  width: 2rem;
+  height: 2rem;
+}
+
+.theme-per-row-btn:hover {
+  border-color: var(--ui-button-primary);
+  background-color: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.theme-per-row-btn:active {
+  transform: translateY(0);
+}
+
+.theme-per-row-btn i {
+  font-size: 0.875rem;
   color: var(--ui-button-primary);
 }
 
@@ -534,6 +568,8 @@
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+  flex: 1;
+  justify-content: center;
 }
 
 .theme-category-pill {
@@ -664,6 +700,48 @@
   overflow: hidden;
 }
 
+/* Preview más alta para 2 y 4 temas por fila */
+.themes-per-row-2 .theme-thumbnail-preview,
+.themes-per-row-4 .theme-thumbnail-preview {
+  height: 120px;
+  font-size: 8px;
+}
+
+.themes-per-row-2 .theme-thumbnail-main,
+.themes-per-row-4 .theme-thumbnail-main {
+  height: 80px;
+}
+
+.themes-per-row-2 .theme-thumbnail-menubar,
+.themes-per-row-4 .theme-thumbnail-menubar {
+  padding: 4px 6px;
+  font-size: 7px;
+}
+
+.themes-per-row-2 .theme-thumbnail-sidebar,
+.themes-per-row-4 .theme-thumbnail-sidebar {
+  width: 40px;
+  padding: 4px;
+  font-size: 6px;
+}
+
+.themes-per-row-2 .theme-thumbnail-tabs,
+.themes-per-row-4 .theme-thumbnail-tabs {
+  font-size: 6px;
+}
+
+.themes-per-row-2 .theme-thumbnail-terminal,
+.themes-per-row-4 .theme-thumbnail-terminal {
+  padding: 4px;
+  font-size: 6px;
+}
+
+.themes-per-row-2 .theme-thumbnail-statusbar,
+.themes-per-row-4 .theme-thumbnail-statusbar {
+  padding: 3px 5px;
+  font-size: 5px;
+}
+
 .theme-thumbnail-menubar {
   padding: 3px 5px;
   font-size: 5px;
@@ -721,11 +799,12 @@
 
 /* Info de la miniatura */
 .theme-thumbnail-info {
-  padding: 0.625rem 0.75rem;
+  padding: 0.25rem 0.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.25rem;
+  min-height: auto;
 }
 
 .theme-thumbnail-name {
@@ -735,6 +814,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 .theme-thumbnail-palette {
@@ -744,8 +824,8 @@
 }
 
 .theme-thumbnail-dot {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
