@@ -32,6 +32,7 @@ import { homeTabIcons, setHomeTabIcon, getHomeTabIconGroups } from '../themes/ho
 import { groupTabIcons, setGroupTabIcon } from '../themes/group-tab-icons';
 import AIClientsTab from './AIClientsTab';
 import SettingsSidebarNav from './SettingsSidebarNav';
+import TerminalSettingsTab from './TerminalSettingsTab';
 import { useDialogResize } from '../hooks/useDialogResize';
 import '../styles/components/settings-sidebar.css';
 
@@ -2478,215 +2479,23 @@ const SettingsDialog = ({
               <ThemeSelector showPreview={true} />
             )}
             {activeSubTab === 'terminal' && (
-                <div style={{ 
-                  padding: '1rem 0', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  justifyContent: 'flex-start', 
-                  alignItems: 'center', 
-                  width: '100%',
-                  boxSizing: 'border-box'
-                }}>
-                  <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                    <i className="pi pi-desktop" style={{ marginRight: '0.5rem' }}></i>
-                    Configuración del Terminal SSH
-                  </h3>
-
-                  {/* Fuente */}
-                  <div style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                      Fuente
-                    </h4>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                      <div>
-                        <label htmlFor="font-family" style={{
-                          display: 'block',
-                          marginBottom: '0.5rem',
-                          fontWeight: 'bold',
-                          fontSize: '0.9rem'
-                        }}>
-                          Familia de fuente
-                        </label>
-                        <Dropdown
-                          id="font-family"
-                          value={fontFamily}
-                          options={availableFonts}
-                          onChange={handleFontFamilyChange}
-                          placeholder="Selecciona una fuente"
-                          style={{ width: '100%' }}
-                          itemTemplate={option => (
-                            <div style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              justifyContent: 'space-between',
-                              padding: '4px 0'
-                            }}>
-                              <span style={{ 
-                                fontFamily: option.value,
-                                fontSize: '14px',
-                                fontWeight: '400'
-                              }}>
-                                {option.label}
-                              </span>
-                              <span style={{ 
-                                fontSize: '11px',
-                                color: 'var(--text-color-secondary)',
-                                opacity: 0.7,
-                                fontFamily: option.value
-                              }}>
-                                123
-                              </span>
-                            </div>
-                          )}
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor="font-size" style={{
-                          display: 'block',
-                          marginBottom: '0.5rem',
-                          fontWeight: 'bold',
-                          fontSize: '0.9rem'
-                        }}>
-                          Tamaño (px)
-                        </label>
-                        <InputNumber
-                          id="font-size"
-                          value={fontSize}
-                          onValueChange={(e) => handleFontSizeChange(e.value)}
-                          min={8}
-                          max={32}
-                          style={{ width: '100%' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <Divider />
-
-                  {/* Tema del Terminal */}
-                  <div style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                      Tema del Terminal
-                    </h4>
-
-                    <div style={{ marginBottom: '1rem' }}>
-                      <label htmlFor="terminal-theme" style={{
-                        display: 'block',
-                        marginBottom: '0.5rem',
-                        fontWeight: 'bold',
-                        fontSize: '0.9rem'
-                      }}>
-                        Esquema de colores
-                      </label>
-                      <Dropdown
-                        id="terminal-theme"
-                        value={terminalTheme?.name || 'Default Dark'}
-                        options={terminalThemeOptions}
-                        onChange={handleTerminalThemeChange}
-                        placeholder="Selecciona un tema"
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-
-                    <div style={{
-                      fontSize: '12px',
-                      color: '#666',
-                      marginBottom: '10px',
-                      fontStyle: 'italic'
-                    }}>
-                      Vista previa del terminal:
-                    </div>
-
-                    <TerminalPreview />
-                  </div>
-
-                  <Divider />
-
-                  <h3 style={{ margin: '2rem 0 1rem 0', color: 'var(--text-color)' }}>
-                    <i className="pi pi-desktop" style={{ marginRight: '0.5rem', color: '#4fc3f7' }}></i>
-                    Configuración del Terminal Local
-                  </h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem', width: '100%' }}>
-                    <div>
-                      <label htmlFor="local-font-family" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                        Familia de fuente (local)
-                      </label>
-                      <Dropdown
-                        id="local-font-family"
-                        value={localFontFamily}
-                        options={availableFonts}
-                        onChange={e => setLocalFontFamily(e.value)}
-                        placeholder="Selecciona una fuente"
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="local-font-size" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-                        Tamaño (px)
-                      </label>
-                      <InputNumber
-                        id="local-font-size"
-                        value={localFontSize}
-                        onValueChange={e => setLocalFontSize(e.value)}
-                        min={8}
-                        max={32}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                    <div style={{ marginBottom: 16 }}>
-                      <label style={{ fontWeight: 'bold', fontSize: '0.95rem', marginBottom: 4, display: 'block' }}>Tema para PowerShell</label>
-                      <Dropdown
-                        value={localPowerShellTheme}
-                        options={terminalThemeOptions}
-                        onChange={handlePowerShellThemeChange}
-                        placeholder="Tema para PowerShell"
-                        style={{ width: '100%', marginBottom: 12 }}
-                      />
-                      <label style={{ fontWeight: 'bold', fontSize: '0.95rem', marginBottom: 4, display: 'block' }}>Tema para terminales Linux (WSL, Ubuntu, etc.)</label>
-                      <Dropdown
-                        value={localLinuxTerminalTheme}
-                        options={terminalThemeOptions}
-                        onChange={handleLinuxTerminalThemeChange}
-                        placeholder="Tema para terminales Linux"
-                        style={{ width: '100%' }}
-                      />
-                      <div style={{ marginTop: 16 }}>
-                        <label style={{ fontWeight: 'bold', fontSize: '0.95rem', marginBottom: 4, display: 'block' }}>Status Bar de PowerShell (tema)</label>
-                        <Dropdown
-                          value={(typeof window !== 'undefined' && window.localStorage) ? (localStorage.getItem(LOCAL_POWERSHELL_STATUSBAR_THEME_STORAGE_KEY) || (localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark')) : 'Default Dark'}
-                          options={Object.keys(statusBarThemes).map(name => ({ label: name, value: name }))}
-                          onChange={handlePowerShellStatusBarThemeChange}
-                          placeholder="Tema de status bar"
-                          style={{ width: '100%' }}
-                        />
-                      </div>
-                      <div style={{ marginTop: 12 }}>
-                        <label style={{ fontWeight: 'bold', fontSize: '0.95rem', marginBottom: 4, display: 'block' }}>Status Bar para terminales Linux (WSL/Ubuntu) (tema)</label>
-                        <Dropdown
-                          value={(typeof window !== 'undefined' && window.localStorage) ? (localStorage.getItem(LOCAL_LINUX_STATUSBAR_THEME_STORAGE_KEY) || (localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark')) : 'Default Dark'}
-                          options={Object.keys(statusBarThemes).map(name => ({ label: name, value: name }))}
-                          onChange={handleLinuxStatusBarThemeChange}
-                          placeholder="Tema de status bar (Linux)"
-                          style={{ width: '100%' }}
-                        />
-                      </div>
-                      <div style={{ marginTop: 16 }}>
-                        <label style={{ fontWeight: 'bold', fontSize: '0.95rem', marginBottom: 4, display: 'block' }}>Mostrar unidades de red en Status Bar</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Dropdown
-                            value={(typeof window !== 'undefined' && window.localStorage) ? ((localStorage.getItem(LOCAL_SHOW_NETWORK_DISKS_STORAGE_KEY) || 'true') === 'true' ? 'show' : 'hide') : 'show'}
-                            options={[{ label: 'Mostrar', value: 'show' }, { label: 'Ocultar', value: 'hide' }]}
-                            onChange={(e) => handleLocalShowNetworkDisksChange(e.value === 'show')}
-                            style={{ width: 180 }}
-                          />
-                          <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>CIFS/SMB/NFS, UNC y mapeos (Z:, Y:, ...)</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <TerminalSettingsTab
+                fontFamily={fontFamily}
+                setFontFamily={setFontFamily}
+                fontSize={fontSize}
+                setFontSize={setFontSize}
+                terminalTheme={terminalTheme}
+                setTerminalTheme={setTerminalTheme}
+                availableFonts={availableFonts}
+                localFontFamily={localFontFamily}
+                setLocalFontFamily={setLocalFontFamily}
+                localFontSize={localFontSize}
+                setLocalFontSize={setLocalFontSize}
+                localPowerShellTheme={localPowerShellTheme}
+                setLocalPowerShellTheme={setLocalPowerShellTheme}
+                localLinuxTerminalTheme={localLinuxTerminalTheme}
+                setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
+              />
             )}
             {activeSubTab === 'status-bar' && (
                 <div style={{
