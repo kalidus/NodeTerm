@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Dropdown } from 'primereact/dropdown';
 import { InputNumber } from 'primereact/inputnumber';
 import { Checkbox } from 'primereact/checkbox';
@@ -11,13 +11,25 @@ const STORAGE_KEYS = {
   CURSOR_STYLE: 'nodeterm_cursor_style',
   CURSOR_BLINK: 'nodeterm_cursor_blink',
   SCROLLBACK_LINES: 'nodeterm_scrollback_lines',
-  LOCAL_FONT_FAMILY: 'basicapp_local_terminal_font_family',
-  LOCAL_FONT_SIZE: 'basicapp_local_terminal_font_size',
+  // SSH
+  SSH_FONT_FAMILY: 'basicapp_terminal_font_family',
+  SSH_FONT_SIZE: 'basicapp_terminal_font_size',
+  SSH_THEME: 'basicapp_terminal_theme',
+  // PowerShell
+  POWERSHELL_FONT_FAMILY: 'basicapp_local_terminal_font_family',
+  POWERSHELL_FONT_SIZE: 'basicapp_local_terminal_font_size',
   POWERSHELL_THEME: 'localPowerShellTheme',
-  LINUX_THEME: 'localLinuxTerminalTheme',
-  DOCKER_THEME: 'localDockerTerminalTheme',
   POWERSHELL_STATUSBAR: 'localPowerShellStatusBarTheme',
+  // Linux
+  LINUX_FONT_FAMILY: 'nodeterm_linux_font_family',
+  LINUX_FONT_SIZE: 'nodeterm_linux_font_size',
+  LINUX_THEME: 'localLinuxTerminalTheme',
   LINUX_STATUSBAR: 'localLinuxStatusBarTheme',
+  // Docker
+  DOCKER_FONT_FAMILY: 'nodeterm_docker_font_family',
+  DOCKER_FONT_SIZE: 'nodeterm_docker_font_size',
+  DOCKER_THEME: 'localDockerTerminalTheme',
+  // Misc
   SHOW_NETWORK_DISKS: 'localShowNetworkDisks'
 };
 
@@ -28,24 +40,23 @@ const CURSOR_STYLES = [
   { id: 'underline', label: 'Subrayado', icon: 'cursor-underline' }
 ];
 
-// Terminal types for themes
+// Terminal types
 const TERMINAL_TYPES = [
-  { id: 'ssh', name: 'SSH', icon: 'pi pi-server', iconClass: 'ssh', description: 'Conexiones remotas SSH' },
-  { id: 'powershell', name: 'PowerShell', icon: 'pi pi-microsoft', iconClass: 'powershell', description: 'Terminal de Windows' },
-  { id: 'linux', name: 'Linux / WSL', icon: 'pi pi-desktop', iconClass: 'linux', description: 'WSL, Ubuntu, etc.' },
-  { id: 'docker', name: 'Docker', icon: 'pi pi-box', iconClass: 'docker', description: 'Contenedores Docker' }
+  { id: 'ssh', name: 'SSH', icon: 'pi pi-server', iconClass: 'ssh' },
+  { id: 'powershell', name: 'PowerShell', icon: 'pi pi-microsoft', iconClass: 'powershell' },
+  { id: 'linux', name: 'Linux / WSL', icon: 'pi pi-desktop', iconClass: 'linux' },
+  { id: 'docker', name: 'Docker', icon: 'pi pi-box', iconClass: 'docker' }
 ];
 
 // Preview tabs
 const PREVIEW_TABS = [
   { id: 'ssh', label: 'SSH', icon: 'pi pi-server' },
-  { id: 'powershell', label: 'PowerShell', icon: 'pi pi-microsoft' },
+  { id: 'powershell', label: 'PS', icon: 'pi pi-microsoft' },
   { id: 'linux', label: 'Linux', icon: 'pi pi-desktop' },
   { id: 'docker', label: 'Docker', icon: 'pi pi-box' }
 ];
 
 const TerminalSettingsTab = ({
-  // SSH Terminal props
   fontFamily,
   setFontFamily,
   fontSize,
@@ -53,7 +64,6 @@ const TerminalSettingsTab = ({
   terminalTheme,
   setTerminalTheme,
   availableFonts,
-  // Local Terminal props
   localFontFamily,
   setLocalFontFamily,
   localFontSize,
@@ -63,104 +73,158 @@ const TerminalSettingsTab = ({
   localLinuxTerminalTheme,
   setLocalLinuxTerminalTheme
 }) => {
-  // Estados locales
-  const [cursorStyle, setCursorStyle] = useState(() => {
-    return localStorage.getItem(STORAGE_KEYS.CURSOR_STYLE) || 'bar';
-  });
-  
+  // Cursor settings
+  const [cursorStyle, setCursorStyle] = useState(() => 
+    localStorage.getItem(STORAGE_KEYS.CURSOR_STYLE) || 'bar'
+  );
   const [cursorBlink, setCursorBlink] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CURSOR_BLINK);
     return saved !== null ? saved === 'true' : true;
   });
-  
   const [scrollbackLines, setScrollbackLines] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SCROLLBACK_LINES);
     return saved ? parseInt(saved, 10) : 1000;
   });
-  
-  const [dockerTheme, setDockerTheme] = useState(() => {
-    return localStorage.getItem(STORAGE_KEYS.DOCKER_THEME) || 'Default Dark';
+
+  // Font settings per terminal type
+  const [linuxFontFamily, setLinuxFontFamily] = useState(() => 
+    localStorage.getItem(STORAGE_KEYS.LINUX_FONT_FAMILY) || localFontFamily || 'Consolas'
+  );
+  const [linuxFontSize, setLinuxFontSize] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.LINUX_FONT_SIZE);
+    return saved ? parseInt(saved, 10) : localFontSize || 14;
   });
-  
+  const [dockerFontFamily, setDockerFontFamily] = useState(() => 
+    localStorage.getItem(STORAGE_KEYS.DOCKER_FONT_FAMILY) || localFontFamily || 'Consolas'
+  );
+  const [dockerFontSize, setDockerFontSize] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.DOCKER_FONT_SIZE);
+    return saved ? parseInt(saved, 10) : localFontSize || 14;
+  });
+  const [dockerTheme, setDockerTheme] = useState(() => 
+    localStorage.getItem(STORAGE_KEYS.DOCKER_THEME) || 'Default Dark'
+  );
+
+  // Advanced settings
   const [advancedExpanded, setAdvancedExpanded] = useState(false);
   const [activePreviewTab, setActivePreviewTab] = useState('ssh');
-  
-  // Status bar themes para avanzado
-  const [powerShellStatusBar, setPowerShellStatusBar] = useState(() => {
-    return localStorage.getItem(STORAGE_KEYS.POWERSHELL_STATUSBAR) || 'Default Dark';
-  });
-  
-  const [linuxStatusBar, setLinuxStatusBar] = useState(() => {
-    return localStorage.getItem(STORAGE_KEYS.LINUX_STATUSBAR) || 'Default Dark';
-  });
-  
+  const [powerShellStatusBar, setPowerShellStatusBar] = useState(() => 
+    localStorage.getItem(STORAGE_KEYS.POWERSHELL_STATUSBAR) || 'Default Dark'
+  );
+  const [linuxStatusBar, setLinuxStatusBar] = useState(() => 
+    localStorage.getItem(STORAGE_KEYS.LINUX_STATUSBAR) || 'Default Dark'
+  );
   const [showNetworkDisks, setShowNetworkDisks] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SHOW_NETWORK_DISKS);
     return saved ? JSON.parse(saved) : true;
   });
 
-  // Opciones de temas
-  const terminalThemeOptions = useMemo(() => {
-    return Object.keys(themes).map(name => ({ label: name, value: name }));
-  }, []);
-  
-  const statusBarThemeOptions = useMemo(() => {
-    return Object.keys(statusBarThemes).map(name => ({ label: name, value: name }));
-  }, []);
+  // Options
+  const terminalThemeOptions = useMemo(() => 
+    Object.keys(themes).map(name => ({ label: name, value: name })), []
+  );
+  const statusBarThemeOptions = useMemo(() => 
+    Object.keys(statusBarThemes).map(name => ({ label: name, value: name })), []
+  );
 
   // Handlers
   const handleCursorStyleChange = useCallback((style) => {
     setCursorStyle(style);
     localStorage.setItem(STORAGE_KEYS.CURSOR_STYLE, style);
-    // Dispatch event for terminals to update
-    window.dispatchEvent(new CustomEvent('terminal-settings-changed', { 
-      detail: { cursorStyle: style } 
-    }));
+    window.dispatchEvent(new CustomEvent('terminal-settings-changed', { detail: { cursorStyle: style } }));
   }, []);
 
   const handleCursorBlinkChange = useCallback((value) => {
     setCursorBlink(value);
     localStorage.setItem(STORAGE_KEYS.CURSOR_BLINK, value.toString());
-    window.dispatchEvent(new CustomEvent('terminal-settings-changed', { 
-      detail: { cursorBlink: value } 
-    }));
   }, []);
 
   const handleScrollbackChange = useCallback((value) => {
     if (value >= 100 && value <= 10000) {
       setScrollbackLines(value);
       localStorage.setItem(STORAGE_KEYS.SCROLLBACK_LINES, value.toString());
-      window.dispatchEvent(new CustomEvent('terminal-settings-changed', { 
-        detail: { scrollbackLines: value } 
-      }));
     }
   }, []);
 
-  const handleFontFamilyChange = useCallback((e) => {
-    setFontFamily(e.value);
-    // También actualizar local font por defecto si no hay override
-    if (localFontFamily === fontFamily) {
-      setLocalFontFamily(e.value);
-      localStorage.setItem(STORAGE_KEYS.LOCAL_FONT_FAMILY, e.value);
+  // Get/Set font for each terminal type
+  const getFontForType = useCallback((type) => {
+    switch (type) {
+      case 'ssh': return fontFamily || 'Consolas';
+      case 'powershell': return localFontFamily || 'Consolas';
+      case 'linux': return linuxFontFamily;
+      case 'docker': return dockerFontFamily;
+      default: return 'Consolas';
     }
-  }, [setFontFamily, localFontFamily, fontFamily, setLocalFontFamily]);
+  }, [fontFamily, localFontFamily, linuxFontFamily, dockerFontFamily]);
 
-  const handleFontSizeChange = useCallback((value) => {
-    if (value >= 8 && value <= 32) {
-      setFontSize(value);
-      // También actualizar local font size por defecto
-      if (localFontSize === fontSize) {
-        setLocalFontSize(value);
-        localStorage.setItem(STORAGE_KEYS.LOCAL_FONT_SIZE, value.toString());
-      }
+  const getFontSizeForType = useCallback((type) => {
+    switch (type) {
+      case 'ssh': return fontSize || 14;
+      case 'powershell': return localFontSize || 14;
+      case 'linux': return linuxFontSize;
+      case 'docker': return dockerFontSize;
+      default: return 14;
     }
-  }, [setFontSize, localFontSize, fontSize, setLocalFontSize]);
+  }, [fontSize, localFontSize, linuxFontSize, dockerFontSize]);
 
-  const handleTerminalThemeChange = useCallback((themeId, themeName) => {
+  const handleFontChange = useCallback((type, font) => {
+    switch (type) {
+      case 'ssh':
+        setFontFamily(font);
+        break;
+      case 'powershell':
+        setLocalFontFamily(font);
+        localStorage.setItem(STORAGE_KEYS.POWERSHELL_FONT_FAMILY, font);
+        break;
+      case 'linux':
+        setLinuxFontFamily(font);
+        localStorage.setItem(STORAGE_KEYS.LINUX_FONT_FAMILY, font);
+        break;
+      case 'docker':
+        setDockerFontFamily(font);
+        localStorage.setItem(STORAGE_KEYS.DOCKER_FONT_FAMILY, font);
+        break;
+      default: break;
+    }
+  }, [setFontFamily, setLocalFontFamily]);
+
+  const handleFontSizeChange = useCallback((type, size) => {
+    if (size < 8 || size > 32) return;
+    switch (type) {
+      case 'ssh':
+        setFontSize(size);
+        break;
+      case 'powershell':
+        setLocalFontSize(size);
+        localStorage.setItem(STORAGE_KEYS.POWERSHELL_FONT_SIZE, size.toString());
+        break;
+      case 'linux':
+        setLinuxFontSize(size);
+        localStorage.setItem(STORAGE_KEYS.LINUX_FONT_SIZE, size.toString());
+        break;
+      case 'docker':
+        setDockerFontSize(size);
+        localStorage.setItem(STORAGE_KEYS.DOCKER_FONT_SIZE, size.toString());
+        break;
+      default: break;
+    }
+  }, [setFontSize, setLocalFontSize]);
+
+  // Get/Set theme for each terminal type
+  const getThemeForType = useCallback((type) => {
+    switch (type) {
+      case 'ssh': return terminalTheme?.name || 'Default Dark';
+      case 'powershell': return localPowerShellTheme || 'Default Dark';
+      case 'linux': return localLinuxTerminalTheme || 'Default Dark';
+      case 'docker': return dockerTheme;
+      default: return 'Default Dark';
+    }
+  }, [terminalTheme, localPowerShellTheme, localLinuxTerminalTheme, dockerTheme]);
+
+  const handleThemeChange = useCallback((type, themeName) => {
     const theme = themes[themeName];
     if (!theme) return;
-    
-    switch (themeId) {
+    switch (type) {
       case 'ssh':
         setTerminalTheme(theme);
         break;
@@ -176,8 +240,7 @@ const TerminalSettingsTab = ({
         setDockerTheme(themeName);
         localStorage.setItem(STORAGE_KEYS.DOCKER_THEME, themeName);
         break;
-      default:
-        break;
+      default: break;
     }
   }, [setTerminalTheme, setLocalPowerShellTheme, setLocalLinuxTerminalTheme]);
 
@@ -185,267 +248,82 @@ const TerminalSettingsTab = ({
     if (type === 'powershell') {
       setPowerShellStatusBar(themeName);
       localStorage.setItem(STORAGE_KEYS.POWERSHELL_STATUSBAR, themeName);
-      window.dispatchEvent(new StorageEvent('storage', { 
-        key: STORAGE_KEYS.POWERSHELL_STATUSBAR, 
-        newValue: themeName 
-      }));
     } else if (type === 'linux') {
       setLinuxStatusBar(themeName);
       localStorage.setItem(STORAGE_KEYS.LINUX_STATUSBAR, themeName);
-      window.dispatchEvent(new StorageEvent('storage', { 
-        key: STORAGE_KEYS.LINUX_STATUSBAR, 
-        newValue: themeName 
-      }));
     }
   }, []);
 
-  const handleShowNetworkDisksChange = useCallback((value) => {
-    setShowNetworkDisks(value);
-    localStorage.setItem(STORAGE_KEYS.SHOW_NETWORK_DISKS, JSON.stringify(value));
-    window.dispatchEvent(new StorageEvent('storage', { 
-      key: STORAGE_KEYS.SHOW_NETWORK_DISKS, 
-      newValue: JSON.stringify(value) 
-    }));
-  }, []);
-
-  // Get current theme for each terminal type
-  const getThemeForType = useCallback((type) => {
-    switch (type) {
-      case 'ssh':
-        return terminalTheme?.name || 'Default Dark';
-      case 'powershell':
-        return localPowerShellTheme || 'Default Dark';
-      case 'linux':
-        return localLinuxTerminalTheme || 'Default Dark';
-      case 'docker':
-        return dockerTheme || 'Default Dark';
-      default:
-        return 'Default Dark';
-    }
-  }, [terminalTheme, localPowerShellTheme, localLinuxTerminalTheme, dockerTheme]);
-
-  // Get theme colors for preview
+  // Preview helpers
   const getPreviewTheme = useCallback((type) => {
     const themeName = getThemeForType(type);
-    const theme = themes[themeName];
-    return theme?.theme || themes['Default Dark'].theme;
+    return themes[themeName]?.theme || themes['Default Dark'].theme;
   }, [getThemeForType]);
 
-  // Preview content by terminal type
   const getPreviewContent = useCallback((type) => {
-    switch (type) {
-      case 'ssh':
-        return {
-          prompt: 'user@hostname:~/project$',
-          command: 'ls -la',
-          output: [
-            'total 24',
-            'drwxr-xr-x  3 user user 4096 Dec 25 10:30 .',
-            '-rw-r--r--  1 user user  256 Dec 25 10:30 README.md',
-            '-rwxr-xr-x  1 user user 1024 Dec 25 10:28 script.sh'
-          ]
-        };
-      case 'powershell':
-        return {
-          prompt: 'PS C:\\Users\\Admin>',
-          command: 'Get-Process | Select -First 3',
-          output: [
-            'Handles  NPM(K)    PM(K)     WS(K)   CPU(s)     Id',
-            '-------  ------    -----     -----   ------     --',
-            '    234      12    15432     18920     1.23   1234'
-          ]
-        };
-      case 'linux':
-        return {
-          prompt: 'ubuntu@wsl:~$',
-          command: 'uname -a',
-          output: [
-            'Linux wsl 5.15.90-microsoft-standard-WSL2',
-            '#1 SMP x86_64 GNU/Linux'
-          ]
-        };
-      case 'docker':
-        return {
-          prompt: 'root@container:/#',
-          command: 'docker ps',
-          output: [
-            'CONTAINER ID   IMAGE          STATUS',
-            'a1b2c3d4e5f6   nginx:latest   Up 2 hours',
-            'f6e5d4c3b2a1   redis:alpine   Up 5 hours'
-          ]
-        };
-      default:
-        return { prompt: '$', command: '', output: [] };
-    }
+    const contents = {
+      ssh: { prompt: 'user@host:~$', cmd: 'ls -la', out: ['total 24', 'drwxr-xr-x 3 user user 4096 Dec 25 .'] },
+      powershell: { prompt: 'PS C:\\>', cmd: 'Get-Process', out: ['Handles NPM(K) PM(K)', '234 12 15432'] },
+      linux: { prompt: 'ubuntu@wsl:~$', cmd: 'uname -a', out: ['Linux wsl 5.15.90-microsoft'] },
+      docker: { prompt: 'root@container:/#', cmd: 'docker ps', out: ['CONTAINER ID IMAGE STATUS'] }
+    };
+    return contents[type] || contents.ssh;
   }, []);
 
   return (
     <div className="terminal-settings-container">
-      {/* Sección 1: Configuración Base */}
+      {/* Sección 1: Cursor y Scrollback (compacto en una fila) */}
       <div className="terminal-settings-section">
         <div className="terminal-section-header">
           <div className="terminal-section-icon">
             <i className="pi pi-cog"></i>
           </div>
           <div className="terminal-section-info">
-            <h3 className="terminal-section-title">Configuración Base</h3>
-            <p className="terminal-section-description">
-              Estas opciones se aplican a todos los tipos de terminal
-            </p>
+            <h3 className="terminal-section-title">Configuración Global</h3>
           </div>
         </div>
-        
         <div className="terminal-section-content">
-          <div className="terminal-base-grid">
-            {/* Fuente */}
-            <div className="terminal-config-group">
-              <label className="terminal-config-label">
-                <i className="pi pi-pencil"></i>
-                Familia de fuente
-              </label>
-              <Dropdown
-                value={fontFamily}
-                options={availableFonts}
-                onChange={handleFontFamilyChange}
-                placeholder="Selecciona una fuente"
-                style={{ width: '100%' }}
-                itemTemplate={(option) => (
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    fontFamily: option.value 
-                  }}>
-                    <span>{option.label}</span>
-                    <span style={{ opacity: 0.5, fontSize: '12px' }}>Aa123</span>
-                  </div>
-                )}
-              />
-              <span className="terminal-config-hint">
-                Se recomienda usar fuentes monoespaciadas con ligaduras
-              </span>
-            </div>
-
-            {/* Tamaño */}
-            <div className="terminal-config-group">
-              <label className="terminal-config-label">
-                <i className="pi pi-text-size"></i>
-                Tamaño de fuente
-              </label>
-              <InputNumber
-                value={fontSize}
-                onValueChange={(e) => handleFontSizeChange(e.value)}
-                min={8}
-                max={32}
-                suffix=" px"
-                showButtons
-                buttonLayout="horizontal"
-                style={{ width: '100%' }}
-              />
-              <span className="terminal-config-hint">
-                Valor recomendado: 14px
-              </span>
-            </div>
-
-            {/* Estilo de cursor */}
-            <div className="terminal-config-group">
-              <label className="terminal-config-label">
-                <i className="pi pi-arrow-right"></i>
-                Estilo del cursor
-              </label>
+          <div className="terminal-global-row">
+            <div className="terminal-cursor-group">
+              <span className="terminal-mini-label">Cursor</span>
               <div className="terminal-cursor-selector">
                 {CURSOR_STYLES.map((style) => (
                   <div
                     key={style.id}
                     className={`terminal-cursor-option ${cursorStyle === style.id ? 'active' : ''}`}
                     onClick={() => handleCursorStyleChange(style.id)}
+                    title={style.label}
                   >
                     <div className="terminal-cursor-preview">
                       <div className={style.icon}></div>
                     </div>
-                    <span className="terminal-cursor-label">{style.label}</span>
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Parpadeo y Scrollback */}
-            <div className="terminal-config-group">
-              <div className="terminal-config-row">
-                <div className="terminal-config-group">
-                  <label className="terminal-config-label">
-                    <i className="pi pi-bolt"></i>
-                    Parpadeo del cursor
-                  </label>
-                  <div 
-                    className={`terminal-toggle-switch ${cursorBlink ? 'active' : ''}`}
-                    onClick={() => handleCursorBlinkChange(!cursorBlink)}
-                    role="switch"
-                    aria-checked={cursorBlink}
-                  />
-                </div>
-                <div className="terminal-config-group">
-                  <label className="terminal-config-label">
-                    <i className="pi pi-history"></i>
-                    Historial (líneas)
-                  </label>
-                  <InputNumber
-                    value={scrollbackLines}
-                    onValueChange={(e) => handleScrollbackChange(e.value)}
-                    min={100}
-                    max={10000}
-                    step={100}
-                    showButtons
-                    buttonLayout="horizontal"
-                    style={{ width: '100%' }}
-                  />
-                </div>
-              </div>
+            <div className="terminal-blink-group">
+              <span className="terminal-mini-label">Parpadeo</span>
+              <div 
+                className={`terminal-toggle-switch ${cursorBlink ? 'active' : ''}`}
+                onClick={() => handleCursorBlinkChange(!cursorBlink)}
+              />
+            </div>
+            <div className="terminal-scrollback-group">
+              <span className="terminal-mini-label">Historial</span>
+              <InputNumber
+                value={scrollbackLines}
+                onValueChange={(e) => handleScrollbackChange(e.value)}
+                min={100}
+                max={10000}
+                step={100}
+                style={{ width: '100px' }}
+              />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Sección 2: Temas por Tipo de Terminal */}
-      <div className="terminal-settings-section">
-        <div className="terminal-section-header">
-          <div className="terminal-section-icon">
-            <i className="pi pi-palette"></i>
-          </div>
-          <div className="terminal-section-info">
-            <h3 className="terminal-section-title">Temas por Tipo de Terminal</h3>
-            <p className="terminal-section-description">
-              Usa temas diferentes para identificar fácilmente cada tipo de terminal
-            </p>
-          </div>
-        </div>
-        
-        <div className="terminal-section-content">
-          <div className="terminal-themes-grid">
-            {TERMINAL_TYPES.map((type) => (
-              <div key={type.id} className="terminal-theme-card">
-                <div className={`terminal-theme-icon ${type.iconClass}`}>
-                  <i className={type.icon}></i>
-                </div>
-                <div className="terminal-theme-info">
-                  <div className="terminal-theme-name">{type.name}</div>
-                  <div className="terminal-theme-type">{type.description}</div>
-                </div>
-                <div className="terminal-theme-selector">
-                  <Dropdown
-                    value={getThemeForType(type.id)}
-                    options={terminalThemeOptions}
-                    onChange={(e) => handleTerminalThemeChange(type.id, e.value)}
-                    placeholder="Seleccionar tema"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Sección 3: Personalización Avanzada */}
+      {/* Sección 2: Personalización Avanzada (colapsable) */}
       <div className="terminal-settings-section">
         <div 
           className={`terminal-advanced-toggle ${advancedExpanded ? 'expanded' : ''}`}
@@ -455,113 +333,91 @@ const TerminalSettingsTab = ({
             <div className="terminal-advanced-toggle-icon">
               <i className="pi pi-sliders-h"></i>
             </div>
-            <div className="terminal-advanced-toggle-text">
-              <span className="terminal-advanced-toggle-title">Personalización Avanzada</span>
-              <span className="terminal-advanced-toggle-description">
-                Status bar, fuentes locales y opciones adicionales
-              </span>
-            </div>
+            <span className="terminal-advanced-toggle-title">Opciones Avanzadas</span>
           </div>
-          <i className={`pi pi-chevron-down terminal-advanced-chevron`}></i>
+          <i className="pi pi-chevron-down terminal-advanced-chevron"></i>
         </div>
-        
         <div className={`terminal-advanced-content ${advancedExpanded ? 'expanded' : ''}`}>
           <div className="terminal-advanced-inner">
-            {/* Override fuente local */}
             <div className="terminal-override-card">
               <div className="terminal-override-info">
-                <div className="terminal-override-icon">
-                  <i className="pi pi-pencil"></i>
-                </div>
-                <div>
-                  <div className="terminal-override-label">Fuente para Terminal Local</div>
-                  <div className="terminal-override-hint">Sobrescribir la fuente base para terminales locales</div>
-                </div>
+                <div className="terminal-override-icon"><i className="pi pi-chart-bar"></i></div>
+                <span className="terminal-override-label">Status Bar PowerShell</span>
               </div>
-              <div className="terminal-override-control">
-                <Dropdown
-                  value={localFontFamily}
-                  options={availableFonts}
-                  onChange={(e) => {
-                    setLocalFontFamily(e.value);
-                    localStorage.setItem(STORAGE_KEYS.LOCAL_FONT_FAMILY, e.value);
-                  }}
-                  style={{ width: '200px' }}
-                />
-                <InputNumber
-                  value={localFontSize}
-                  onValueChange={(e) => {
-                    setLocalFontSize(e.value);
-                    localStorage.setItem(STORAGE_KEYS.LOCAL_FONT_SIZE, e.value.toString());
-                  }}
-                  min={8}
-                  max={32}
-                  suffix=" px"
-                  style={{ width: '100px' }}
-                />
-              </div>
+              <Dropdown value={powerShellStatusBar} options={statusBarThemeOptions} 
+                onChange={(e) => handleStatusBarThemeChange('powershell', e.value)} style={{ width: '150px' }} />
             </div>
+            <div className="terminal-override-card">
+              <div className="terminal-override-info">
+                <div className="terminal-override-icon"><i className="pi pi-chart-bar"></i></div>
+                <span className="terminal-override-label">Status Bar Linux</span>
+              </div>
+              <Dropdown value={linuxStatusBar} options={statusBarThemeOptions} 
+                onChange={(e) => handleStatusBarThemeChange('linux', e.value)} style={{ width: '150px' }} />
+            </div>
+            <div className="terminal-override-card">
+              <div className="terminal-override-info">
+                <div className="terminal-override-icon"><i className="pi pi-folder"></i></div>
+                <span className="terminal-override-label">Mostrar Discos de Red</span>
+              </div>
+              <Checkbox checked={showNetworkDisks} onChange={(e) => {
+                setShowNetworkDisks(e.checked);
+                localStorage.setItem(STORAGE_KEYS.SHOW_NETWORK_DISKS, JSON.stringify(e.checked));
+              }} />
+            </div>
+          </div>
+        </div>
+      </div>
 
-            {/* Status Bar PowerShell */}
-            <div className="terminal-override-card">
-              <div className="terminal-override-info">
-                <div className="terminal-override-icon">
-                  <i className="pi pi-chart-bar"></i>
+      {/* Sección 3: Configuración por Tipo de Terminal */}
+      <div className="terminal-settings-section">
+        <div className="terminal-section-header">
+          <div className="terminal-section-icon">
+            <i className="pi pi-palette"></i>
+          </div>
+          <div className="terminal-section-info">
+            <h3 className="terminal-section-title">Configuración por Tipo de Terminal</h3>
+          </div>
+        </div>
+        <div className="terminal-section-content">
+          <div className="terminal-themes-grid">
+            {TERMINAL_TYPES.map((type) => (
+              <div key={type.id} className="terminal-theme-card">
+                <div className="terminal-theme-card-header">
+                  <div className={`terminal-theme-icon ${type.iconClass}`}>
+                    <i className={type.icon}></i>
+                  </div>
+                  <span className="terminal-theme-name">{type.name}</span>
                 </div>
-                <div>
-                  <div className="terminal-override-label">Status Bar - PowerShell</div>
-                  <div className="terminal-override-hint">Tema de la barra de estado para PowerShell</div>
-                </div>
-              </div>
-              <div className="terminal-override-control">
-                <Dropdown
-                  value={powerShellStatusBar}
-                  options={statusBarThemeOptions}
-                  onChange={(e) => handleStatusBarThemeChange('powershell', e.value)}
-                  style={{ width: '200px' }}
-                />
-              </div>
-            </div>
-
-            {/* Status Bar Linux */}
-            <div className="terminal-override-card">
-              <div className="terminal-override-info">
-                <div className="terminal-override-icon">
-                  <i className="pi pi-chart-bar"></i>
-                </div>
-                <div>
-                  <div className="terminal-override-label">Status Bar - Linux / WSL</div>
-                  <div className="terminal-override-hint">Tema de la barra de estado para terminales Linux</div>
-                </div>
-              </div>
-              <div className="terminal-override-control">
-                <Dropdown
-                  value={linuxStatusBar}
-                  options={statusBarThemeOptions}
-                  onChange={(e) => handleStatusBarThemeChange('linux', e.value)}
-                  style={{ width: '200px' }}
-                />
-              </div>
-            </div>
-
-            {/* Mostrar discos de red */}
-            <div className="terminal-override-card">
-              <div className="terminal-override-info">
-                <div className="terminal-override-icon">
-                  <i className="pi pi-folder"></i>
-                </div>
-                <div>
-                  <div className="terminal-override-label">Mostrar Discos de Red</div>
-                  <div className="terminal-override-hint">CIFS/SMB/NFS, UNC y mapeos (Z:, Y:, ...)</div>
+                <div className="terminal-theme-controls">
+                  <div className="terminal-theme-selector font-selector">
+                    <Dropdown
+                      value={getFontForType(type.id)}
+                      options={availableFonts}
+                      onChange={(e) => handleFontChange(type.id, e.value)}
+                      placeholder="Fuente"
+                    />
+                  </div>
+                  <div className="terminal-theme-selector size-selector">
+                    <InputNumber
+                      value={getFontSizeForType(type.id)}
+                      onValueChange={(e) => handleFontSizeChange(type.id, e.value)}
+                      min={8}
+                      max={32}
+                      suffix="px"
+                    />
+                  </div>
+                  <div className="terminal-theme-selector theme-selector">
+                    <Dropdown
+                      value={getThemeForType(type.id)}
+                      options={terminalThemeOptions}
+                      onChange={(e) => handleThemeChange(type.id, e.value)}
+                      placeholder="Tema"
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="terminal-override-control">
-                <Checkbox
-                  checked={showNetworkDisks}
-                  onChange={(e) => handleShowNetworkDisksChange(e.checked)}
-                />
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
@@ -574,12 +430,8 @@ const TerminalSettingsTab = ({
           </div>
           <div className="terminal-section-info">
             <h3 className="terminal-section-title">Vista Previa</h3>
-            <p className="terminal-section-description">
-              Previsualiza cómo se verá cada tipo de terminal
-            </p>
           </div>
         </div>
-        
         <div className="terminal-preview-tabs">
           {PREVIEW_TABS.map((tab) => (
             <button
@@ -592,61 +444,43 @@ const TerminalSettingsTab = ({
             </button>
           ))}
         </div>
-        
         <div className="terminal-preview-content">
           {(() => {
             const theme = getPreviewTheme(activePreviewTab);
             const content = getPreviewContent(activePreviewTab);
-            const cursorElement = cursorStyle === 'bar' 
-              ? <span className="terminal-preview-cursor" style={{ width: '2px', background: theme.cursor || theme.foreground }} />
-              : cursorStyle === 'block'
-                ? <span className="terminal-preview-cursor" style={{ width: '10px', background: theme.cursor || theme.foreground, opacity: 0.7 }} />
-                : <span className="terminal-preview-cursor" style={{ width: '10px', height: '2px', marginTop: '14px', background: theme.cursor || theme.foreground }} />;
-            
+            const previewFont = getFontForType(activePreviewTab);
+            const previewSize = getFontSizeForType(activePreviewTab);
             return (
-              <div 
-                className="terminal-preview-window"
-                style={{
-                  background: theme.background,
-                  fontFamily: fontFamily || 'Consolas, Monaco, monospace',
-                  fontSize: `${fontSize || 14}px`
-                }}
-              >
+              <div className="terminal-preview-window" style={{
+                background: theme.background,
+                fontFamily: previewFont,
+                fontSize: `${previewSize}px`
+              }}>
                 <div className="terminal-preview-line">
-                  <span className="terminal-preview-prompt" style={{ color: theme.green || '#22c55e' }}>
-                    {content.prompt}
-                  </span>
-                  <span className="terminal-preview-command" style={{ color: theme.foreground }}>
-                    {' '}{content.command}
-                  </span>
+                  <span style={{ color: theme.green || '#22c55e' }}>{content.prompt}</span>
+                  <span style={{ color: theme.foreground }}> {content.cmd}</span>
                 </div>
-                {content.output.map((line, idx) => (
+                {content.out.map((line, idx) => (
                   <div key={idx} className="terminal-preview-line">
-                    <span className="terminal-preview-output" style={{ color: theme.foreground, opacity: 0.85 }}>
-                      {line}
-                    </span>
+                    <span style={{ color: theme.foreground, opacity: 0.85 }}>{line}</span>
                   </div>
                 ))}
                 <div className="terminal-preview-line">
-                  <span className="terminal-preview-prompt" style={{ color: theme.green || '#22c55e' }}>
-                    {content.prompt}
-                  </span>
-                  {cursorBlink ? cursorElement : React.cloneElement(cursorElement, { 
-                    style: { ...cursorElement.props.style, animation: 'none' } 
-                  })}
+                  <span style={{ color: theme.green || '#22c55e' }}>{content.prompt}</span>
+                  <span className="terminal-preview-cursor" style={{ 
+                    background: theme.cursor || theme.foreground,
+                    width: cursorStyle === 'bar' ? '2px' : '8px',
+                    height: cursorStyle === 'underline' ? '2px' : '14px',
+                    marginTop: cursorStyle === 'underline' ? '12px' : '0',
+                    animation: cursorBlink ? 'cursor-blink 1s step-end infinite' : 'none'
+                  }} />
                 </div>
               </div>
             );
           })()}
-          
           <div className="terminal-preview-info">
-            <div className="terminal-preview-theme-name">
-              <i className="pi pi-palette"></i>
-              {getThemeForType(activePreviewTab)}
-            </div>
-            <div className="terminal-preview-font-info">
-              {fontFamily || 'Consolas'} • {fontSize || 14}px
-            </div>
+            <span><i className="pi pi-palette"></i> {getThemeForType(activePreviewTab)}</span>
+            <span>{getFontForType(activePreviewTab)} • {getFontSizeForType(activePreviewTab)}px</span>
           </div>
         </div>
       </div>
@@ -655,4 +489,3 @@ const TerminalSettingsTab = ({
 };
 
 export default TerminalSettingsTab;
-
