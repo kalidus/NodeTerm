@@ -5,6 +5,7 @@ import '../styles/components/theme-selector.css';
 
 const ANIM_SPEED_KEY = 'nodeterm_ui_anim_speed';
 const REDUCED_MOTION_KEY = 'nodeterm_ui_reduced_motion';
+const THEMES_PER_ROW_KEY = 'nodeterm_themes_per_row';
 
 // Definición de categorías
 const CATEGORIES = [
@@ -36,6 +37,7 @@ const ThemeSelector = ({ showPreview = false }) => {
   const [animSpeed, setAnimSpeed] = useState('normal');
   const [reducedMotion, setReducedMotion] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [themesPerRow, setThemesPerRow] = useState(4);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('ui_theme') || 'Light';
@@ -59,6 +61,18 @@ const ThemeSelector = ({ showPreview = false }) => {
     }
     setReducedMotion(initialReduced);
     document.documentElement.setAttribute('data-ui-reduced-motion', initialReduced ? 'true' : 'false');
+    
+    const savedThemesPerRow = localStorage.getItem(THEMES_PER_ROW_KEY);
+    if (savedThemesPerRow) {
+      const parsed = parseInt(savedThemesPerRow, 10);
+      if ([2, 4, 6, 8].includes(parsed)) {
+        setThemesPerRow(parsed);
+      } else {
+        setThemesPerRow(4);
+      }
+    } else {
+      setThemesPerRow(4);
+    }
   }, []);
 
   const handleThemeChange = useCallback((themeName) => {
@@ -86,6 +100,15 @@ const ThemeSelector = ({ showPreview = false }) => {
     localStorage.setItem(REDUCED_MOTION_KEY, newValue.toString());
     document.documentElement.setAttribute('data-ui-reduced-motion', newValue ? 'true' : 'false');
   }, [reducedMotion]);
+
+  const handleThemesPerRowToggle = useCallback(() => {
+    const options = [2, 4, 6, 8];
+    const currentIndex = options.indexOf(themesPerRow);
+    const nextIndex = (currentIndex + 1) % options.length;
+    const nextValue = options[nextIndex];
+    setThemesPerRow(nextValue);
+    localStorage.setItem(THEMES_PER_ROW_KEY, nextValue.toString());
+  }, [themesPerRow]);
 
   // Obtener tema actual (memoizado)
   const activeTheme = useMemo(() => {
@@ -396,10 +419,23 @@ const ThemeSelector = ({ showPreview = false }) => {
               );
             })}
           </div>
+          
+          <button
+            className="theme-per-row-btn"
+            onClick={handleThemesPerRowToggle}
+            title={`${themesPerRow} temas por fila. Clic para cambiar: 2 → 4 → 6 → 8 → 2...`}
+          >
+            <i className="pi pi-th-large"></i>
+          </button>
         </div>
 
         <div className="theme-thumbnails-container">
-          <div className="theme-thumbnails-grid">
+          <div 
+            className={`theme-thumbnails-grid themes-per-row-${themesPerRow}`}
+            style={{
+              gridTemplateColumns: `repeat(${themesPerRow}, 1fr)`
+            }}
+          >
             {themes.map((theme) => (
               <ThemeThumbnailCard
                 key={theme.name}
