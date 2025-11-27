@@ -37,11 +37,11 @@ const SettingsSidebarNav = ({
       icon: 'pi pi-palette',
       subitems: [
         { id: 'interfaz', label: 'Interfaz', icon: 'pi pi-eye' },
+        { id: 'pestanas', label: 'Pestañas', icon: 'pi pi-palette' },
         { id: 'terminal', label: 'Terminal', icon: 'pi pi-desktop' },
         { id: 'status-bar', label: 'Status Bar', icon: 'pi pi-sliders-h' },
         { id: 'explorador-sesiones', label: 'Expl. Sesiones', icon: 'pi pi-sitemap' },
-        { id: 'explorador-archivos', label: 'Expl. Archivos', icon: 'pi pi-folder-open' },
-        { id: 'pestanas', label: 'Pestañas', icon: 'pi pi-palette' }
+        { id: 'explorador-archivos', label: 'Expl. Archivos', icon: 'pi pi-folder-open' }
       ]
     },
     {

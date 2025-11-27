@@ -138,11 +138,11 @@ const SettingsDialog = ({
       'nueva-pestana': { parent: 'seguridad', index: 2 },
       // Dentro de Apariencia (índice 2)
       'interfaz': { parent: 'apariencia', index: 0 },
-      'terminal': { parent: 'apariencia', index: 1 },
-      'status-bar': { parent: 'apariencia', index: 2 },
-      'explorador-sesiones': { parent: 'apariencia', index: 3 },
-      'explorador-archivos': { parent: 'apariencia', index: 4 },
-      'pestanas': { parent: 'apariencia', index: 5 }
+      'pestanas': { parent: 'apariencia', index: 1 },
+      'terminal': { parent: 'apariencia', index: 2 },
+      'status-bar': { parent: 'apariencia', index: 3 },
+      'explorador-sesiones': { parent: 'apariencia', index: 4 },
+      'explorador-archivos': { parent: 'apariencia', index: 5 }
     };
     return subTabMap[subTab];
   };
