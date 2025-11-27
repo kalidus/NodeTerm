@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
 import { Divider } from 'primereact/divider';
@@ -1134,8 +1134,123 @@ const SettingsDialog = ({
     );
   };
 
-  // Calcular altura del contenido (altura total - header)
-  const contentHeight = size.height - 60; // Aproximadamente 60px header
+  // Calcular altura del contenido dinámicamente
+  const [contentHeight, setContentHeight] = useState(() => size.height - 60);
+  
+  // Función helper para obtener el elemento del diálogo (similar a useDialogResize)
+  const getDialogElement = useCallback(() => {
+    // Primero intentar usar el ref si es un elemento DOM válido
+    if (dialogRef.current) {
+      if (dialogRef.current instanceof Element || dialogRef.current instanceof HTMLElement) {
+        if (typeof dialogRef.current.closest === 'function') {
+          try {
+            const found = dialogRef.current.closest('.p-dialog');
+            if (found) return found;
+          } catch (e) {
+            // Si closest falla, continuar con el fallback
+          }
+        }
+      }
+    }
+    
+    // Fallback: buscar en el DOM el diálogo más reciente
+    try {
+      const dialogs = document.querySelectorAll('.settings-dialog.p-dialog');
+      if (dialogs.length > 0) {
+        return dialogs[dialogs.length - 1];
+      }
+    } catch (e) {
+      // Error al buscar, retornar null
+    }
+    
+    return null;
+  }, []);
+  
+  // Función para recalcular contentHeight
+  const recalculateContentHeight = useCallback(() => {
+    if (!visible) return;
+    
+    const dialogElement = getDialogElement();
+    if (dialogElement) {
+      const headerElement = dialogElement.querySelector('.p-dialog-header');
+      const navElement = dialogElement.querySelector('.p-tabview-nav-container');
+      const headerHeight = headerElement ? headerElement.offsetHeight : 60;
+      const navHeight = navElement ? navElement.offsetHeight : 0;
+      // Usar el tamaño real del diálogo, no el size del hook
+      const dialogHeight = dialogElement.offsetHeight || size.height;
+      const calculatedContentHeight = dialogHeight - headerHeight - navHeight;
+      setContentHeight(calculatedContentHeight);
+    } else {
+      // Fallback si no se encuentra el elemento
+      setContentHeight(size.height - 60);
+    }
+  }, [visible, getDialogElement, size.height]);
+
+  // Actualizar contentHeight cuando cambie el tamaño, calculando dinámicamente el header
+  useEffect(() => {
+    if (!visible) return;
+    
+    // Usar setTimeout para asegurar que el DOM esté completamente renderizado
+    const timeoutId = setTimeout(() => {
+      recalculateContentHeight();
+    }, 0);
+    
+    return () => clearTimeout(timeoutId);
+  }, [size.height, size.width, visible, recalculateContentHeight]);
+
+  // Detectar cuando la ventana se maximiza/restaura y recalcular
+  useEffect(() => {
+    if (!visible) return;
+    
+    const handleResize = () => {
+      // Pequeño delay para que el DOM se actualice después de maximizar
+      setTimeout(() => {
+        recalculateContentHeight();
+      }, 100);
+    };
+    
+    // Escuchar cambios de tamaño de la ventana
+    window.addEventListener('resize', handleResize);
+    
+    // También escuchar cuando el diálogo cambia de tamaño (usando ResizeObserver)
+    const dialogElement = getDialogElement();
+    let resizeObserver = null;
+    
+    if (dialogElement && window.ResizeObserver) {
+      resizeObserver = new ResizeObserver(() => {
+        setTimeout(() => {
+          recalculateContentHeight();
+        }, 50);
+      });
+      resizeObserver.observe(dialogElement);
+    }
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
+  }, [visible, getDialogElement, recalculateContentHeight]);
+
+  // Actualizar variables CSS cuando cambie contentHeight (al maximizar/redimensionar)
+  useEffect(() => {
+    if (!visible) return;
+    
+    const timeoutId = setTimeout(() => {
+      const dialogElement = getDialogElement();
+      if (dialogElement) {
+        dialogElement.style.setProperty('--content-height', `${contentHeight}px`);
+      }
+      // También actualizar en todos los TabPanels
+      const tabPanels = document.querySelectorAll('.settings-dialog-tabview .p-tabview-panel');
+      tabPanels.forEach(panel => {
+        panel.style.setProperty('--content-height', `${contentHeight}px`);
+      });
+    }, 0);
+    
+    return () => clearTimeout(timeoutId);
+  }, [contentHeight, visible, getDialogElement]);
 
   return (
     <Dialog
