@@ -238,10 +238,46 @@ const TerminalSettingsTab = ({
 
   const getPreviewContent = useCallback((type) => {
     const contents = {
-      ssh: { prompt: 'user@host:~$', cmd: 'ls -la', out: ['total 24', 'drwxr-xr-x 3 user user 4096 Dec 25 .'] },
-      powershell: { prompt: 'PS C:\\>', cmd: 'Get-Process', out: ['Handles NPM(K) PM(K)', '234 12 15432'] },
-      linux: { prompt: 'ubuntu@wsl:~$', cmd: 'uname -a', out: ['Linux wsl 5.15.90-microsoft'] },
-      docker: { prompt: 'root@container:/#', cmd: 'docker ps', out: ['CONTAINER ID IMAGE STATUS'] }
+      ssh: { 
+        prompt: 'user@host:~$', 
+        cmd: 'ls -la', 
+        out: [
+          'total 24',
+          'drwxr-xr-x  3 user user 4096 Dec 25 .',
+          'drwxr-xr-x 18 user user 4096 Dec 24 ..',
+          '-rw-r--r--  1 user user  220 Dec 25 .bashrc'
+        ] 
+      },
+      powershell: { 
+        prompt: 'PS C:\\Users\\admin>', 
+        cmd: 'Get-Process | Select -First 3', 
+        out: [
+          'Handles  NPM(K)    PM(K)  CPU(s)   Id  ProcessName',
+          '-------  ------    -----  ------   --  -----------',
+          '    234      12    15432    2.53  1234 chrome',
+          '    156       8     8234    0.31  5678 explorer'
+        ] 
+      },
+      linux: { 
+        prompt: 'ubuntu@wsl:~$', 
+        cmd: 'neofetch --stdout | head -5', 
+        out: [
+          'OS: Ubuntu 22.04.3 LTS x86_64',
+          'Host: Windows Subsystem for Linux',
+          'Kernel: 5.15.90-microsoft-WSL2',
+          'Shell: bash 5.1.16'
+        ] 
+      },
+      docker: { 
+        prompt: 'root@container:/#', 
+        cmd: 'docker ps --format "table {{.Names}}\t{{.Status}}"', 
+        out: [
+          'NAMES          STATUS',
+          'nginx-proxy    Up 2 hours',
+          'postgres-db    Up 2 hours',
+          'redis-cache    Up 2 hours'
+        ] 
+      }
     };
     return contents[type] || contents.ssh;
   }, []);
@@ -312,7 +348,7 @@ const TerminalSettingsTab = ({
         <div className="terminal-section-content">
           <div className="terminal-themes-grid">
             {TERMINAL_TYPES.map((type) => (
-              <div key={type.id} className="terminal-theme-card">
+              <div key={type.id} className={`terminal-theme-card ${type.iconClass}`}>
                 <div className="terminal-theme-card-header">
                   <div className={`terminal-theme-icon ${type.iconClass}`}>
                     <i className={type.icon}></i>
@@ -320,30 +356,35 @@ const TerminalSettingsTab = ({
                   <span className="terminal-theme-name">{type.name}</span>
                 </div>
                 <div className="terminal-theme-controls">
-                  <div className="terminal-theme-selector font-selector">
-                    <Dropdown
-                      value={getFontForType(type.id)}
-                      options={availableFonts}
-                      onChange={(e) => handleFontChange(type.id, e.value)}
-                      placeholder="Fuente"
-                    />
-                  </div>
-                  <div className="terminal-theme-selector size-selector">
-                    <InputNumber
-                      value={getFontSizeForType(type.id)}
-                      onValueChange={(e) => handleFontSizeChange(type.id, e.value)}
-                      min={8}
-                      max={32}
-                      suffix="px"
-                    />
-                  </div>
-                  <div className="terminal-theme-selector theme-selector">
-                    <Dropdown
-                      value={getThemeForType(type.id)}
-                      options={terminalThemeOptions}
-                      onChange={(e) => handleThemeChange(type.id, e.value)}
-                      placeholder="Tema"
-                    />
+                  <div className="terminal-theme-controls-row">
+                    <div className="terminal-theme-selector font-selector">
+                      <span className="terminal-selector-label">Fuente</span>
+                      <Dropdown
+                        value={getFontForType(type.id)}
+                        options={availableFonts}
+                        onChange={(e) => handleFontChange(type.id, e.value)}
+                        placeholder="Fuente"
+                      />
+                    </div>
+                    <div className="terminal-theme-selector size-selector">
+                      <span className="terminal-selector-label">Tamaño</span>
+                      <InputNumber
+                        value={getFontSizeForType(type.id)}
+                        onValueChange={(e) => handleFontSizeChange(type.id, e.value)}
+                        min={8}
+                        max={32}
+                        suffix="px"
+                      />
+                    </div>
+                    <div className="terminal-theme-selector theme-selector">
+                      <span className="terminal-selector-label">Tema</span>
+                      <Dropdown
+                        value={getThemeForType(type.id)}
+                        options={terminalThemeOptions}
+                        onChange={(e) => handleThemeChange(type.id, e.value)}
+                        placeholder="Tema"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -362,55 +403,62 @@ const TerminalSettingsTab = ({
             <h3 className="terminal-section-title">Vista Previa</h3>
           </div>
         </div>
-        <div className="terminal-preview-tabs">
-          {PREVIEW_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              className={`terminal-preview-tab ${activePreviewTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActivePreviewTab(tab.id)}
-            >
-              <i className={tab.icon}></i>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-        <div className="terminal-preview-content">
-          {(() => {
-            const theme = getPreviewTheme(activePreviewTab);
-            const content = getPreviewContent(activePreviewTab);
-            const previewFont = getFontForType(activePreviewTab);
-            const previewSize = getFontSizeForType(activePreviewTab);
-            return (
-              <div className="terminal-preview-window" style={{
-                background: theme.background,
-                fontFamily: previewFont,
-                fontSize: `${previewSize}px`
-              }}>
-                <div className="terminal-preview-line">
-                  <span style={{ color: theme.green || '#22c55e' }}>{content.prompt}</span>
-                  <span style={{ color: theme.foreground }}> {content.cmd}</span>
-                </div>
-                {content.out.map((line, idx) => (
-                  <div key={idx} className="terminal-preview-line">
-                    <span style={{ color: theme.foreground, opacity: 0.85 }}>{line}</span>
+        <div className="terminal-section-content">
+          <div className="terminal-preview-tabs">
+            {PREVIEW_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                className={`terminal-preview-tab ${activePreviewTab === tab.id ? 'active' : ''}`}
+                onClick={() => setActivePreviewTab(tab.id)}
+              >
+                <i className={tab.icon}></i>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div className="terminal-preview-content">
+            {(() => {
+              const theme = getPreviewTheme(activePreviewTab);
+              const content = getPreviewContent(activePreviewTab);
+              const previewFont = getFontForType(activePreviewTab);
+              const previewSize = getFontSizeForType(activePreviewTab);
+              return (
+                <div className="terminal-preview-window" style={{
+                  background: theme.background,
+                  fontFamily: `"${previewFont}", monospace`,
+                  fontSize: `${previewSize}px`
+                }}>
+                  <div className="terminal-preview-line">
+                    <span style={{ color: theme.green || '#22c55e' }}>{content.prompt}</span>
+                    <span style={{ color: theme.foreground }}> {content.cmd}</span>
                   </div>
-                ))}
-                <div className="terminal-preview-line">
-                  <span style={{ color: theme.green || '#22c55e' }}>{content.prompt}</span>
-                  <span className="terminal-preview-cursor" style={{ 
-                    background: theme.cursor || theme.foreground,
-                    width: cursorStyle === 'bar' ? '2px' : '8px',
-                    height: cursorStyle === 'underline' ? '2px' : '14px',
-                    marginTop: cursorStyle === 'underline' ? '12px' : '0',
-                    animation: cursorBlink ? 'cursor-blink 1s step-end infinite' : 'none'
-                  }} />
+                  {content.out.map((line, idx) => (
+                    <div key={idx} className="terminal-preview-line">
+                      <span style={{ color: theme.foreground, opacity: 0.85 }}>{line}</span>
+                    </div>
+                  ))}
+                  <div className="terminal-preview-line">
+                    <span style={{ color: theme.green || '#22c55e' }}>{content.prompt}</span>
+                    <span className="terminal-preview-cursor" style={{ 
+                      background: theme.cursor || theme.foreground,
+                      width: cursorStyle === 'bar' ? '2px' : '10px',
+                      height: cursorStyle === 'underline' ? '3px' : '18px',
+                      marginTop: cursorStyle === 'underline' ? '15px' : '0',
+                      animation: cursorBlink ? 'cursor-blink 1s step-end infinite' : 'none'
+                    }} />
+                  </div>
                 </div>
-              </div>
-            );
-          })()}
-          <div className="terminal-preview-info">
-            <span><i className="pi pi-palette"></i> {getThemeForType(activePreviewTab)}</span>
-            <span>{getFontForType(activePreviewTab)} • {getFontSizeForType(activePreviewTab)}px</span>
+              );
+            })()}
+            <div className="terminal-preview-info">
+              <span>
+                <i className="pi pi-palette"></i> 
+                {getThemeForType(activePreviewTab)}
+              </span>
+              <span className="terminal-font-info">
+                "{getFontForType(activePreviewTab)}", monospace • {getFontSizeForType(activePreviewTab)}px
+              </span>
+            </div>
           </div>
         </div>
       </div>
