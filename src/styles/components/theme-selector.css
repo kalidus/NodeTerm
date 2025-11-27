@@ -343,6 +343,20 @@
   text-align: left;
 }
 
+.theme-titlebar-btn .theme-titlebar-text-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  gap: 0.125rem;
+}
+
+.theme-titlebar-btn .theme-titlebar-text-container .theme-option-hint {
+  font-size: 0.625rem;
+  opacity: 0.7;
+  font-weight: 400;
+}
+
 .theme-titlebar-btn .theme-mini-toggle.on {
   background: var(--ui-button-primary);
 }

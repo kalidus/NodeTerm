@@ -283,10 +283,12 @@ const ThemeSelector = ({ showPreview = false }) => {
                   title="Usa los colores primarios del tema en la barra de título"
                 >
                   <i className="pi pi-window-maximize"></i>
-                  <span>Titlebar</span>
+                  <div className="theme-titlebar-text-container">
+                    <span>Titlebar</span>
+                    <span className="theme-option-hint">Colores primarios</span>
+                  </div>
                   <div className={`theme-mini-toggle ${usePrimaryColorsForTitlebar ? 'on' : ''}`}></div>
                 </button>
-                <span className="theme-option-hint">Colores primarios</span>
               </div>
             </div>
             <div className="theme-hero-badge">
