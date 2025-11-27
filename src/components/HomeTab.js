@@ -430,6 +430,27 @@ const HomeTab = ({
     };
   }, [showAIChat, handleToggleTerminalVisibility]);
 
+  // Escuchar cambios de storage para statusBarVisible desde SettingsDialog
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'homeTab_statusBarVisible') {
+        const newValue = e.newValue === 'true';
+        setStatusBarVisible(newValue);
+      }
+    };
+    const handleCustomEvent = (e) => {
+      if (e.detail && typeof e.detail.visible === 'boolean') {
+        setStatusBarVisible(e.detail.visible);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('statusbar-visibility-changed', handleCustomEvent);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('statusbar-visibility-changed', handleCustomEvent);
+    };
+  }, []);
+
 
 
   // Determinar el tamaño del panel superior

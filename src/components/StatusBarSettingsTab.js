@@ -15,6 +15,7 @@ const STORAGE_KEYS = {
   HEIGHT: 'basicapp_statusbar_height',
   POLLING_INTERVAL: 'statusBarPollingInterval',
   SHOW_NETWORK_DISKS: 'localShowNetworkDisks',
+  STATUSBAR_VISIBLE: 'homeTab_statusBarVisible',
   // SSH
   SSH_THEME: 'basicapp_statusbar_theme',
   SSH_ICON_THEME: 'basicapp_ssh_statusbar_icon_theme',
@@ -61,6 +62,10 @@ const StatusBarSettingsTab = ({
   const [showNetworkDisks, setShowNetworkDisks] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SHOW_NETWORK_DISKS);
     return saved ? JSON.parse(saved) : true;
+  });
+  const [statusBarVisible, setStatusBarVisible] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.STATUSBAR_VISIBLE);
+    return saved !== null ? saved === 'true' : true;
   });
 
   // Theme per terminal type (colors)
@@ -122,6 +127,20 @@ const StatusBarSettingsTab = ({
     window.dispatchEvent(new StorageEvent('storage', {
       key: STORAGE_KEYS.SHOW_NETWORK_DISKS,
       newValue: JSON.stringify(checked)
+    }));
+  }, []);
+
+  const handleStatusBarVisibleChange = useCallback((checked) => {
+    setStatusBarVisible(checked);
+    localStorage.setItem(STORAGE_KEYS.STATUSBAR_VISIBLE, checked.toString());
+    // Disparar evento personalizado para que HomeTab lo detecte
+    window.dispatchEvent(new CustomEvent('statusbar-visibility-changed', {
+      detail: { visible: checked }
+    }));
+    // También disparar StorageEvent para compatibilidad con otras ventanas
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: STORAGE_KEYS.STATUSBAR_VISIBLE,
+      newValue: checked.toString()
     }));
   }, []);
 
@@ -392,6 +411,16 @@ const StatusBarSettingsTab = ({
                   className={`statusbar-toggle-switch ${showNetworkDisks ? 'active' : ''}`}
                   onClick={() => handleShowNetworkDisksChange(!showNetworkDisks)}
                   title={showNetworkDisks ? 'Ocultar discos de red' : 'Mostrar discos de red'}
+                />
+              </div>
+            </div>
+            <div className="statusbar-setting-group">
+              <span className="statusbar-mini-label statusbar-label-normal">Mostrar barra de estado</span>
+              <div className="statusbar-network-disks-control">
+                <div 
+                  className={`statusbar-toggle-switch ${statusBarVisible ? 'active' : ''}`}
+                  onClick={() => handleStatusBarVisibleChange(!statusBarVisible)}
+                  title={statusBarVisible ? 'Ocultar barra de estado' : 'Mostrar barra de estado'}
                 />
               </div>
             </div>
