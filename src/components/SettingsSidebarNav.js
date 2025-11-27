@@ -28,7 +28,8 @@ const SettingsSidebarNav = ({
       icon: 'pi pi-shield',
       subitems: [
         { id: 'clave-maestra', label: 'Clave Maestra', icon: 'pi pi-key' },
-        { id: 'auditoria', label: 'Auditoría', icon: 'pi pi-video' }
+        { id: 'auditoria', label: 'Auditoría', icon: 'pi pi-video' },
+        { id: 'nueva-pestana', label: 'Nueva Pestaña', icon: 'pi pi-file' }
       ]
     },
     {

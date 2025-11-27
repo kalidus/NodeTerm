@@ -12,6 +12,7 @@ import { Toast } from 'primereact/toast';
 import { Badge } from 'primereact/badge';
 import { Checkbox } from 'primereact/checkbox';
 import { OverlayPanel } from 'primereact/overlaypanel';
+import { Card } from 'primereact/card';
 import ThemeSelector from './ThemeSelector';
 import StatusBarThemeSelector from './StatusBarThemeSelector';
 import StatusBarIconThemeSelector from './StatusBarIconThemeSelector';
@@ -139,6 +140,7 @@ const SettingsDialog = ({
       // Dentro de Seguridad (índice 1)
       'clave-maestra': { parent: 'seguridad', index: 0 },
       'auditoria': { parent: 'seguridad', index: 1 },
+      'nueva-pestana': { parent: 'seguridad', index: 2 },
       // Dentro de Apariencia (índice 2)
       'interfaz': { parent: 'apariencia', index: 0 },
       'terminal': { parent: 'apariencia', index: 1 },
@@ -1253,15 +1255,35 @@ const SettingsDialog = ({
               padding: 0 !important;
               background: transparent !important;
             }
+            /* Override para TODAS las pestañas: escapar del límite de 700px de dialogs.css */
+            /* Usar selector más específico para sobrescribir el !important */
+            .settings-dialog .settings-dialog-tabview .p-tabview-panel,
+            .p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-panel {
+              min-height: var(--content-height, 1000px) !important;
+              height: var(--content-height, 1000px) !important;
+              max-height: var(--content-height, 1000px) !important;
+            }
+            .settings-dialog .settings-dialog-tabview .p-tabview-panel > div:first-child,
+            .p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-panel > div:first-child {
+              height: var(--content-height, 1000px) !important;
+              max-height: var(--content-height, 1000px) !important;
+              min-height: var(--content-height, 1000px) !important;
+            }
+            /* Apariencia tab container también necesita la altura correcta */
+            .apariencia-tab-container {
+              height: var(--content-height, 1000px) !important;
+              max-height: var(--content-height, 1000px) !important;
+              min-height: var(--content-height, 1000px) !important;
+            }
           `}</style>
           <TabView
             activeIndex={activeIndex}
             onTabChange={(e) => setActiveIndex(e.index)}
             className="settings-dialog-tabview"
           >
-        <TabPanel header="General" leftIcon="pi pi-sliders-h">
+        <TabPanel header="General" leftIcon="pi pi-sliders-h" style={{ '--content-height': `${contentHeight}px` }}>
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
-            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: '8px', bottom: 0, width: 'calc(100% - 8px)' }}>
             {/* Header */}
             <div className="general-settings-header-wrapper" style={{ flexShrink: 0 }}>
               <div className="general-header-content">
@@ -1413,9 +1435,19 @@ const SettingsDialog = ({
             </div>
           </div>
         </TabPanel>
-        <TabPanel header="Seguridad" leftIcon="pi pi-shield">
-          <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
-            <div style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '1rem 1.5rem 1.5rem 1.5rem' }}>
+        <TabPanel 
+          header="Seguridad" 
+          leftIcon="pi pi-shield"
+          style={{ '--content-height': `${contentHeight}px` }}
+        >
+          <div style={{ 
+            height: `${contentHeight}px`, 
+            maxHeight: `${contentHeight}px`, 
+            minHeight: `${contentHeight}px`, 
+            overflow: 'hidden', 
+            position: 'relative'
+          }}>
+            <div style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: activeSubTab === 'nueva-pestana' ? 'hidden' : 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: '8px', bottom: 0, width: 'calc(100% - 8px)', padding: activeSubTab === 'nueva-pestana' ? '0' : '1rem 1.5rem 1.5rem 1.5rem' }}>
             {/* Renderizado condicional basado en activeSubTab */}
             {activeSubTab === 'clave-maestra' && (
                 <div className="security-settings-container">
@@ -2275,12 +2307,141 @@ const SettingsDialog = ({
                   </div>
                 </div>
             )}
+            {activeSubTab === 'nueva-pestana' && (
+                <div style={{ 
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: '8px',
+                  bottom: 0,
+                  height: `${contentHeight}px`,
+                  maxHeight: `${contentHeight}px`,
+                  minHeight: `${contentHeight}px`,
+                  width: 'calc(100% - 8px)',
+                  margin: 0,
+                  padding: 0,
+                  overflow: 'hidden',
+                  background: 'var(--ui-content-bg)',
+                  '--content-height': `${contentHeight}px`
+                }}>
+                  <div style={{
+                    height: '100%',
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    padding: '2rem',
+                    textAlign: 'center',
+                    margin: 0,
+                    boxSizing: 'border-box',
+                    position: 'relative'
+                  }}>
+                    <h2 style={{ 
+                      marginBottom: '1.5rem', 
+                      color: 'var(--ui-dialog-text)',
+                      fontSize: '1.5rem',
+                      fontWeight: '600'
+                    }}>
+                      Nueva Pestaña de Seguridad
+                    </h2>
+                    <p style={{ 
+                      color: 'var(--text-color-secondary)',
+                      fontSize: '1rem',
+                      lineHeight: '1.6',
+                      maxWidth: '600px'
+                    }}>
+                      Este es el contenido de la nueva pestaña en la sección de Seguridad. 
+                      El card y el texto ocupan toda la pantalla disponible.
+                    </p>
+                    {/* DEBUG INFO - Top Left */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '1rem',
+                      left: '1rem',
+                      fontSize: '0.7rem',
+                      color: '#00ff00',
+                      opacity: 0.8,
+                      fontFamily: 'monospace',
+                      background: 'rgba(0,0,0,0.7)',
+                      padding: '0.5rem',
+                      borderRadius: '4px',
+                      zIndex: 1000,
+                      border: '1px solid #00ff00'
+                    }}>
+                      <div>contentHeight: {contentHeight}px</div>
+                      <div>Container height: {contentHeight}px</div>
+                      <div>Container: absolute</div>
+                      <div>top: 0, bottom: 0</div>
+                      <div>Parent padding: 0 (removed)</div>
+                    </div>
+                    {/* DEBUG INFO - Bottom Left */}
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '1rem',
+                      left: '1rem',
+                      fontSize: '0.7rem',
+                      color: '#00ff00',
+                      opacity: 0.8,
+                      fontFamily: 'monospace',
+                      background: 'rgba(0,0,0,0.7)',
+                      padding: '0.5rem',
+                      borderRadius: '4px',
+                      zIndex: 1000,
+                      border: '1px solid #00ff00'
+                    }}>
+                      <div>Inner div height: 100%</div>
+                      <div>Inner div padding: 2rem</div>
+                      <div>This should be at bottom</div>
+                      <div>If cut, CSS issue</div>
+                    </div>
+                    {/* DEBUG INFO - Top Right */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '1rem',
+                      right: '1rem',
+                      fontSize: '0.7rem',
+                      color: '#00ff00',
+                      opacity: 0.8,
+                      fontFamily: 'monospace',
+                      background: 'rgba(0,0,0,0.7)',
+                      padding: '0.5rem',
+                      borderRadius: '4px',
+                      zIndex: 1000,
+                      border: '1px solid #00ff00'
+                    }}>
+                      <div>Window: {typeof window !== 'undefined' ? window.innerHeight : 'N/A'}px</div>
+                      <div>Dialog computed height</div>
+                      <div>Check browser devtools</div>
+                    </div>
+                    {/* DEBUG INFO - Bottom Right */}
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '1rem',
+                      right: '1rem',
+                      fontSize: '0.7rem',
+                      color: '#00ff00',
+                      opacity: 0.8,
+                      fontFamily: 'monospace',
+                      background: 'rgba(0,0,0,0.7)',
+                      padding: '0.5rem',
+                      borderRadius: '4px',
+                      zIndex: 1000,
+                      border: '1px solid #00ff00'
+                    }}>
+                      <div>Bottom reached: YES</div>
+                      <div>If cut: CSS 700px limit</div>
+                      <div>Check dialogs.css</div>
+                    </div>
+                  </div>
+                </div>
+            )}
             </div>
           </div>
         </TabPanel>
 
-        <TabPanel header="Apariencia" leftIcon="pi pi-palette">
-          <div className="apariencia-tab-container">
+        <TabPanel header="Apariencia" leftIcon="pi pi-palette" style={{ '--content-height': `${contentHeight}px` }}>
+          <div className="apariencia-tab-container" style={{ right: '8px', width: 'calc(100% - 8px)' }}>
             {/* Renderizado condicional basado en activeSubTab */}
             {activeSubTab === 'interfaz' && (
               <ThemeSelector showPreview={true} />
@@ -2930,9 +3091,9 @@ const SettingsDialog = ({
           </div>
         </TabPanel>
 
-        <TabPanel header={<span><i className="pi pi-desktop" style={{ marginRight: 8 }}></i>RDP</span>}>
+        <TabPanel header={<span><i className="pi pi-desktop" style={{ marginRight: 8 }}></i>RDP</span>} style={{ '--content-height': `${contentHeight}px` }}>
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
-            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: '8px', bottom: 0, width: 'calc(100% - 8px)' }}>
               {/* Header */}
               <div className="general-settings-header-wrapper" style={{ flexShrink: 0 }}>
                 <div className="general-header-content">
@@ -3128,9 +3289,9 @@ const SettingsDialog = ({
           </div>
         </TabPanel>
 
-        <TabPanel header="Clientes de IA" leftIcon="pi pi-comments">
+        <TabPanel header="Clientes de IA" leftIcon="pi pi-comments" style={{ '--content-height': `${contentHeight}px` }}>
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
-            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: '8px', bottom: 0, width: 'calc(100% - 8px)' }}>
             {/* Header */}
             <div className="general-settings-header-wrapper" style={{ flexShrink: 0 }}>
               <div className="general-header-content">
@@ -3152,9 +3313,9 @@ const SettingsDialog = ({
           </div>
         </TabPanel>
 
-        <TabPanel header="Actualizaciones" leftIcon="pi pi-refresh">
+        <TabPanel header="Actualizaciones" leftIcon="pi pi-refresh" style={{ '--content-height': `${contentHeight}px` }}>
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
-            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: '8px', bottom: 0, width: 'calc(100% - 8px)' }}>
               {/* Header */}
               <div className="general-settings-header-wrapper" style={{ flexShrink: 0 }}>
                 <div className="general-header-content">
@@ -3812,9 +3973,9 @@ const SettingsDialog = ({
           </div>
         </TabPanel>
 
-        <TabPanel header="Sincronización" leftIcon="pi pi-cloud">
+        <TabPanel header="Sincronización" leftIcon="pi pi-cloud" style={{ '--content-height': `${contentHeight}px` }}>
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
-            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: '8px', bottom: 0, width: 'calc(100% - 8px)' }}>
             {/* Header */}
             <div className="general-settings-header-wrapper">
               <div className="general-header-content">
@@ -3896,9 +4057,9 @@ const SettingsDialog = ({
           </div>
         </TabPanel>
 
-        <TabPanel header="Información" leftIcon="pi pi-info-circle">
+        <TabPanel header="Información" leftIcon="pi pi-info-circle" style={{ '--content-height': `${contentHeight}px` }}>
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
-            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: '8px', bottom: 0, width: 'calc(100% - 8px)' }}>
               {/* Header */}
               <div className="general-settings-header-wrapper">
                 <div className="general-header-content">
