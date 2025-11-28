@@ -10,6 +10,7 @@ import { FolderDialog } from './Dialogs';
 import SidebarFooter from './SidebarFooter';
 import { iconThemes } from '../themes/icon-themes';
 import '../styles/components/password-manager-sidebar.css';
+import '../styles/components/tree-themes.css';
 
 const PasswordManagerSidebar = ({ 
   nodes, 
@@ -30,7 +31,8 @@ const PasswordManagerSidebar = ({
   secureStorage,
   setShowSettingsDialog,
   onShowImportDialog,
-  sidebarFilter = '' // Filtro desde la TitleBar
+  sidebarFilter = '', // Filtro desde la TitleBar
+  treeTheme = 'default' // Tema del árbol
 }) => {
   // Estado separado para passwords - no usar el árbol principal de conexiones
   const [passwordNodes, setPasswordNodes] = useState([]);
@@ -1222,7 +1224,7 @@ const PasswordManagerSidebar = ({
           </div>
         ) : (
                   <Tree
-                    key={`password-tree-${iconTheme}-${explorerFontSize}`}
+                    key={`password-tree-${iconTheme}-${explorerFontSize}-${treeTheme}`}
                     value={filteredPasswordNodes}
                     selectionMode="single"
                     selectionKeys={selectedNodeKey}
@@ -1237,8 +1239,9 @@ const PasswordManagerSidebar = ({
                     onDragEnd={() => {
                       // Feedback visual opcional
                     }}
-                    className="sidebar-tree"
+                    className={`sidebar-tree tree-theme-${treeTheme}`}
                     data-icon-theme={iconTheme}
+                    data-tree-theme={treeTheme}
                     style={{ 
                       fontSize: `${explorerFontSize}px`,
                       '--icon-size': `${iconSize}px`

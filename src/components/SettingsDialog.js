@@ -32,7 +32,9 @@ import AIClientsTab from './AIClientsTab';
 import SettingsSidebarNav from './SettingsSidebarNav';
 import TerminalSettingsTab from './TerminalSettingsTab';
 import { useDialogResize } from '../hooks/useDialogResize';
+import { treeThemes, treeThemeOptions, getTreeTheme } from '../themes/tree-themes';
 import '../styles/components/settings-sidebar.css';
+import '../styles/components/tree-themes.css';
 
 const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
 const LOCAL_FONT_SIZE_STORAGE_KEY = 'basicapp_local_terminal_font_size';
@@ -90,7 +92,9 @@ const SettingsDialog = ({
   importTreeFromJson,
   sessionManager,
   onMasterPasswordConfigured,
-  onMasterPasswordChanged
+  onMasterPasswordChanged,
+  treeTheme = 'default',
+  setTreeTheme
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   
@@ -2492,8 +2496,8 @@ const SettingsDialog = ({
                   {/* Card Unificada: Dashboard de Personalización */}
                   <div className="general-settings-section" style={{ 
                     marginBottom: 0, 
-                    maxWidth: '1000px',
-                    margin: '0 auto'
+                    maxWidth: '100%',
+                    width: '100%'
                   }}>
                     <div className="general-section-header">
                       <div className="general-section-icon" style={{ 
@@ -2533,18 +2537,17 @@ const SettingsDialog = ({
                           Vista Previa
                         </div>
                         
-                        {/* Árbol Simulado */}
-                        <div style={{
-                          background: 'rgba(0, 0, 0, 0.2)',
-                          borderRadius: '8px',
-                          padding: '0.875rem 1rem',
-                          fontFamily: sidebarFont,
-                          fontSize: `${sidebarFontSize}px`,
-                          color: 'var(--ui-dialog-text)',
-                          lineHeight: '1.8'
-                        }}>
-                          {/* Carpeta Principal */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {/* Árbol Simulado con tema dinámico */}
+                        <div 
+                          className={`tree-preview-container tree-theme-${treeTheme}`}
+                          style={{
+                            fontFamily: sidebarFont,
+                            fontSize: `${sidebarFontSize}px`,
+                            color: 'var(--ui-dialog-text)'
+                          }}
+                        >
+                          {/* Carpeta Principal - Raíz */}
+                          <div className="tree-preview-node" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             {iconThemes[iconThemeSidebar]?.icons.folder && 
                               React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
                                 width: folderIconSize || 20,
@@ -2560,94 +2563,119 @@ const SettingsDialog = ({
                             <span style={{ fontWeight: 600 }}>Producción</span>
                           </div>
                           
-                          {/* Subcarpeta 1 */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingLeft: '1.25rem' }}>
-                            <span style={{ color: 'var(--text-color-secondary)', opacity: 0.5 }}>├──</span>
-                            {iconThemes[iconThemeSidebar]?.icons.folder && 
-                              React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
-                                width: folderIconSize || 20,
-                                height: folderIconSize || 20,
-                                style: { 
-                                  ...iconThemes[iconThemeSidebar].icons.folder.props.style,
-                                  width: `${folderIconSize || 20}px`,
-                                  height: `${folderIconSize || 20}px`,
-                                  flexShrink: 0
+                          {/* Nivel 1: Hijos de la carpeta raíz */}
+                          <div className="tree-preview-children">
+                            {/* Subcarpeta 1: Servidores Web */}
+                            <div className="tree-preview-child">
+                              <div className="tree-preview-node" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                {treeTheme === 'default' && (
+                                  <span className="tree-preview-connector">├──</span>
+                                )}
+                                {iconThemes[iconThemeSidebar]?.icons.folder && 
+                                  React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
+                                    width: folderIconSize || 20,
+                                    height: folderIconSize || 20,
+                                    style: { 
+                                      ...iconThemes[iconThemeSidebar].icons.folder.props.style,
+                                      width: `${folderIconSize || 20}px`,
+                                      height: `${folderIconSize || 20}px`,
+                                      flexShrink: 0
+                                    }
+                                  })
                                 }
-                              })
-                            }
-                            <span>Servidores Web</span>
-                          </div>
-                          
-                          {/* Conexión SSH 1 */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingLeft: '2.5rem' }}>
-                            <span style={{ color: 'var(--text-color-secondary)', opacity: 0.5 }}>├──</span>
-                            {iconThemes[iconThemeSidebar]?.icons.ssh && 
-                              React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
-                                width: connectionIconSize || 20,
-                                height: connectionIconSize || 20,
-                                style: { 
-                                  ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
-                                  width: `${connectionIconSize || 20}px`,
-                                  height: `${connectionIconSize || 20}px`,
-                                  flexShrink: 0
+                                <span>Servidores Web</span>
+                              </div>
+                              
+                              {/* Nivel 2: Conexiones dentro de Servidores Web */}
+                              <div className="tree-preview-children">
+                                <div className="tree-preview-child">
+                                  <div className="tree-preview-node" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    {treeTheme === 'default' && (
+                                      <span className="tree-preview-connector">├──</span>
+                                    )}
+                                    {iconThemes[iconThemeSidebar]?.icons.ssh && 
+                                      React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
+                                        width: connectionIconSize || 20,
+                                        height: connectionIconSize || 20,
+                                        style: { 
+                                          ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
+                                          width: `${connectionIconSize || 20}px`,
+                                          height: `${connectionIconSize || 20}px`,
+                                          flexShrink: 0
+                                        }
+                                      })
+                                    }
+                                    <span>Apache-Server-01</span>
+                                  </div>
+                                </div>
+                                <div className="tree-preview-child">
+                                  <div className="tree-preview-node" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    {treeTheme === 'default' && (
+                                      <span className="tree-preview-connector">└──</span>
+                                    )}
+                                    {iconThemes[iconThemeSidebar]?.icons.ssh && 
+                                      React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
+                                        width: connectionIconSize || 20,
+                                        height: connectionIconSize || 20,
+                                        style: { 
+                                          ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
+                                          width: `${connectionIconSize || 20}px`,
+                                          height: `${connectionIconSize || 20}px`,
+                                          flexShrink: 0
+                                        }
+                                      })
+                                    }
+                                    <span>Nginx-Proxy</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Subcarpeta 2: Bases de Datos */}
+                            <div className="tree-preview-child">
+                              <div className="tree-preview-node" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                {treeTheme === 'default' && (
+                                  <span className="tree-preview-connector">└──</span>
+                                )}
+                                {iconThemes[iconThemeSidebar]?.icons.folder && 
+                                  React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
+                                    width: folderIconSize || 20,
+                                    height: folderIconSize || 20,
+                                    style: { 
+                                      ...iconThemes[iconThemeSidebar].icons.folder.props.style,
+                                      width: `${folderIconSize || 20}px`,
+                                      height: `${folderIconSize || 20}px`,
+                                      flexShrink: 0
+                                    }
+                                  })
                                 }
-                              })
-                            }
-                            <span>Apache-Server-01</span>
-                          </div>
-                          
-                          {/* Conexión SSH 2 */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingLeft: '2.5rem' }}>
-                            <span style={{ color: 'var(--text-color-secondary)', opacity: 0.5 }}>└──</span>
-                            {iconThemes[iconThemeSidebar]?.icons.ssh && 
-                              React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
-                                width: connectionIconSize || 20,
-                                height: connectionIconSize || 20,
-                                style: { 
-                                  ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
-                                  width: `${connectionIconSize || 20}px`,
-                                  height: `${connectionIconSize || 20}px`,
-                                  flexShrink: 0
-                                }
-                              })
-                            }
-                            <span>Nginx-Proxy</span>
-                          </div>
-                          
-                          {/* Subcarpeta 2 */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingLeft: '1.25rem' }}>
-                            <span style={{ color: 'var(--text-color-secondary)', opacity: 0.5 }}>└──</span>
-                            {iconThemes[iconThemeSidebar]?.icons.folder && 
-                              React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
-                                width: folderIconSize || 20,
-                                height: folderIconSize || 20,
-                                style: { 
-                                  ...iconThemes[iconThemeSidebar].icons.folder.props.style,
-                                  width: `${folderIconSize || 20}px`,
-                                  height: `${folderIconSize || 20}px`,
-                                  flexShrink: 0
-                                }
-                              })
-                            }
-                            <span>Bases de Datos</span>
-                          </div>
-                          
-                          {/* Conexión RDP */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingLeft: '2.5rem' }}>
-                            <span style={{ color: 'var(--text-color-secondary)', opacity: 0.5 }}>└──</span>
-                            {iconThemes[iconThemeSidebar]?.icons.rdp && 
-                              React.cloneElement(iconThemes[iconThemeSidebar].icons.rdp, {
-                                width: connectionIconSize || 20,
-                                height: connectionIconSize || 20,
-                                style: { 
-                                  ...iconThemes[iconThemeSidebar].icons.rdp.props.style,
-                                  width: `${connectionIconSize || 20}px`,
-                                  height: `${connectionIconSize || 20}px`,
-                                  flexShrink: 0
-                                }
-                              })
-                            }
-                            <span>SQL-Server-Main</span>
+                                <span>Bases de Datos</span>
+                              </div>
+                              
+                              {/* Nivel 2: Conexiones dentro de Bases de Datos */}
+                              <div className="tree-preview-children">
+                                <div className="tree-preview-child">
+                                  <div className="tree-preview-node" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    {treeTheme === 'default' && (
+                                      <span className="tree-preview-connector">└──</span>
+                                    )}
+                                    {iconThemes[iconThemeSidebar]?.icons.rdp && 
+                                      React.cloneElement(iconThemes[iconThemeSidebar].icons.rdp, {
+                                        width: connectionIconSize || 20,
+                                        height: connectionIconSize || 20,
+                                        style: { 
+                                          ...iconThemes[iconThemeSidebar].icons.rdp.props.style,
+                                          width: `${connectionIconSize || 20}px`,
+                                          height: `${connectionIconSize || 20}px`,
+                                          flexShrink: 0
+                                        }
+                                      })
+                                    }
+                                    <span>SQL-Server-Main</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -2701,7 +2729,7 @@ const SettingsDialog = ({
                           />
                         </div>
 
-                        {/* Tema del Árbol (Placeholder) */}
+                        {/* Tema del Árbol */}
                         <div>
                           <div style={{
                             display: 'flex',
@@ -2715,27 +2743,24 @@ const SettingsDialog = ({
                               fontWeight: 600,
                               color: 'var(--ui-dialog-text)'
                             }}>Tema del Árbol</label>
-                            <span style={{
-                              fontSize: '0.625rem',
-                              padding: '0.125rem 0.375rem',
-                              background: 'rgba(255, 193, 7, 0.2)',
-                              color: '#FFC107',
-                              borderRadius: '4px',
-                              fontWeight: 500
-                            }}>Próximamente</span>
                           </div>
                           <Dropdown
                             id="tree-theme"
-                            value="default"
-                            options={[
-                              { label: 'Default', value: 'default' },
-                              { label: 'Minimal', value: 'minimal' },
-                              { label: 'Líneas Conectadas', value: 'connected' },
-                              { label: 'Compacto', value: 'compact' }
-                            ]}
-                            disabled={true}
+                            value={treeTheme}
+                            options={treeThemeOptions}
+                            onChange={(e) => setTreeTheme && setTreeTheme(e.value)}
                             placeholder="Selecciona un tema"
-                            style={{ width: '100%', opacity: 0.6 }}
+                            style={{ width: '100%' }}
+                            itemTemplate={(option) => (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ fontWeight: 500 }}>{option.label}</span>
+                                <span style={{ 
+                                  fontSize: '0.75rem', 
+                                  color: 'var(--text-color-secondary)',
+                                  opacity: 0.7 
+                                }}>{option.description}</span>
+                              </div>
+                            )}
                           />
                         </div>
                       </div>

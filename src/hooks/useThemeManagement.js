@@ -4,6 +4,7 @@ import { explorerFonts } from '../themes';
 import { themeManager } from '../utils/themeManager';
 import { statusBarThemeManager } from '../utils/statusBarThemeManager';
 import { STORAGE_KEYS } from '../utils/constants';
+import { TREE_THEME_STORAGE_KEY } from '../themes/tree-themes';
 
 export const useThemeManagement = () => {
   // Storage keys
@@ -221,6 +222,15 @@ export const useThemeManagement = () => {
     }
   });
 
+  // Tree theme state
+  const [treeTheme, setTreeTheme] = useState(() => {
+    try {
+      return localStorage.getItem(TREE_THEME_STORAGE_KEY) || 'default';
+    } catch {
+      return 'default';
+    }
+  });
+
   // Auto-save effects
   useEffect(() => {
     localStorage.setItem(FONT_FAMILY_STORAGE_KEY, fontFamily);
@@ -305,6 +315,13 @@ export const useThemeManagement = () => {
     } catch {}
   }, [iconSize]);
 
+  // Tree theme auto-save
+  useEffect(() => {
+    try {
+      localStorage.setItem(TREE_THEME_STORAGE_KEY, treeTheme);
+    } catch {}
+  }, [treeTheme]);
+
   // Initial theme loading effect
   useEffect(() => {
     // Función para inicializar temas de forma robusta
@@ -358,6 +375,7 @@ export const useThemeManagement = () => {
     const updatedIconSize = localStorage.getItem('iconSize');
     const updatedIconTheme = localStorage.getItem('iconTheme') || 'nord';
     const updatedIconThemeSidebar = localStorage.getItem('iconThemeSidebar') || 'nord';
+    const updatedTreeTheme = localStorage.getItem(TREE_THEME_STORAGE_KEY) || 'default';
 
     // Actualizar estados
     setStatusBarTheme(updatedStatusBarTheme);
@@ -373,6 +391,7 @@ export const useThemeManagement = () => {
     if (updatedIconSize) setIconSize(parseInt(updatedIconSize, 10));
     setIconTheme(updatedIconTheme);
     setIconThemeSidebar(updatedIconThemeSidebar);
+    setTreeTheme(updatedTreeTheme);
 
     // Actualizar tema de terminal
     const updatedTerminalThemeObj = themes && themes[updatedLocalTerminalTheme] ? themes[updatedLocalTerminalTheme] : {};
@@ -445,6 +464,10 @@ export const useThemeManagement = () => {
     setSidebarFont,
     sidebarFontSize,
     setSidebarFontSize,
+    
+    // Tree theme
+    treeTheme,
+    setTreeTheme,
 
     // Utility functions
     updateThemesFromSync

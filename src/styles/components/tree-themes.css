@@ -1,0 +1,604 @@
+/**
+ * Tree Themes CSS
+ * Estilos visuales para los diferentes temas del árbol de sesiones
+ */
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   VARIABLES BASE DEL ÁRBOL
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.sidebar-tree {
+  --tree-line-color: var(--ui-sidebar-border, rgba(255, 255, 255, 0.15));
+  --tree-line-opacity: 0.5;
+  --tree-line-width: 1px;
+  --tree-indent: 20px;
+  --tree-node-spacing: 0px;
+  --tree-border-radius: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   TEMA: DEFAULT (ASCII Lines)
+   Estilo clásico con caracteres ASCII ├── └──
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.sidebar-tree.tree-theme-default {
+  --tree-indent: 20px;
+  --tree-node-spacing: 0px;
+  --tree-border-radius: 4px;
+}
+
+.sidebar-tree.tree-theme-default .tree-connector {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-color-secondary);
+  opacity: 0.5;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.75em;
+  margin-right: 4px;
+  user-select: none;
+  min-width: 20px;
+}
+
+.sidebar-tree.tree-theme-default .p-treenode-content:hover {
+  background: var(--ui-sidebar-hover) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   TEMA: MINIMAL (Sin líneas)
+   Limpio y elegante sin líneas de conexión
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.sidebar-tree.tree-theme-minimal {
+  --tree-indent: 16px;
+  --tree-node-spacing: 0px;
+  --tree-border-radius: 4px;
+}
+
+.sidebar-tree.tree-theme-minimal .tree-connector {
+  display: none !important;
+}
+
+.sidebar-tree.tree-theme-minimal .p-treenode-children {
+  padding-left: 16px !important;
+  border-left: none !important;
+}
+
+.sidebar-tree.tree-theme-minimal .p-treenode-content {
+  padding-left: 4px !important;
+}
+
+.sidebar-tree.tree-theme-minimal .p-treenode-content:hover {
+  background: var(--ui-sidebar-hover) !important;
+  border-radius: 4px;
+}
+
+/* Indicador sutil de nivel mediante opacidad del fondo */
+.sidebar-tree.tree-theme-minimal .p-treenode-children .p-treenode-content {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.sidebar-tree.tree-theme-minimal .p-treenode-children .p-treenode-children .p-treenode-content {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   TEMA: CONNECTED (Líneas CSS continuas)
+   Estilo VSCode con líneas verticales y horizontales
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.sidebar-tree.tree-theme-connected {
+  --tree-indent: 20px;
+  --tree-line-color: var(--ui-sidebar-border, rgba(255, 255, 255, 0.15));
+  --tree-line-opacity: 0.6;
+  --tree-node-spacing: 0px;
+  --tree-border-radius: 4px;
+}
+
+.sidebar-tree.tree-theme-connected .tree-connector {
+  display: none !important;
+}
+
+/* Línea vertical izquierda en hijos */
+.sidebar-tree.tree-theme-connected .p-treenode-children {
+  position: relative;
+  padding-left: 20px !important;
+  margin-left: 8px;
+}
+
+.sidebar-tree.tree-theme-connected .p-treenode-children::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 12px;
+  width: 1px !important;
+  height: auto !important;
+  background: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+  border: none !important;
+}
+
+/* Línea horizontal hacia cada nodo hijo */
+.sidebar-tree.tree-theme-connected .p-treenode-children > .p-treenode {
+  position: relative;
+}
+
+.sidebar-tree.tree-theme-connected .p-treenode-children > .p-treenode > .p-treenode-content::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  width: 12px !important;
+  height: 1px !important;
+  background: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+  border: none !important;
+}
+
+/* Hover con highlight */
+.sidebar-tree.tree-theme-connected .p-treenode-content:hover {
+  background: var(--ui-sidebar-hover) !important;
+  border-radius: 4px;
+}
+
+.sidebar-tree.tree-theme-connected .p-treenode-content:hover::before {
+  opacity: 1 !important;
+  background: var(--ui-button-primary) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   TEMA: COMPACT (Espaciado mínimo)
+   Para árboles con muchos nodos
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.sidebar-tree.tree-theme-compact {
+  --tree-indent: 14px;
+  --tree-line-color: var(--ui-sidebar-border, rgba(255, 255, 255, 0.12));
+  --tree-line-opacity: 0.4;
+  --tree-node-spacing: -2px;
+  --tree-border-radius: 2px;
+}
+
+.sidebar-tree.tree-theme-compact .tree-connector {
+  display: none !important;
+}
+
+.sidebar-tree.tree-theme-compact .p-treenode {
+  margin-bottom: -2px !important;
+}
+
+.sidebar-tree.tree-theme-compact .p-treenode-content {
+  padding: 0.02rem 0.25rem !important;
+  min-height: 18px !important;
+  line-height: 18px !important;
+  border-radius: 2px;
+}
+
+.sidebar-tree.tree-theme-compact .p-treenode-children {
+  position: relative;
+  padding-left: 14px !important;
+  margin-left: 6px;
+}
+
+.sidebar-tree.tree-theme-compact .p-treenode-children::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 8px;
+  width: 1px !important;
+  height: auto !important;
+  background: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+  border: none !important;
+}
+
+.sidebar-tree.tree-theme-compact .p-treenode-children > .p-treenode > .p-treenode-content::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  width: 8px !important;
+  height: 1px !important;
+  background: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+  border: none !important;
+}
+
+.sidebar-tree.tree-theme-compact .p-treenode-content:hover {
+  background: var(--ui-sidebar-hover) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   TEMA: DOTTED (Líneas punteadas)
+   Elegante con líneas discontinuas
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.sidebar-tree.tree-theme-dotted {
+  --tree-indent: 18px;
+  --tree-line-color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.5));
+  --tree-line-opacity: 0.35;
+  --tree-node-spacing: 0px;
+  --tree-border-radius: 4px;
+}
+
+.sidebar-tree.tree-theme-dotted .tree-connector {
+  display: none !important;
+}
+
+.sidebar-tree.tree-theme-dotted .p-treenode-children {
+  position: relative;
+  padding-left: 18px !important;
+  margin-left: 7px;
+}
+
+/* Línea vertical punteada */
+.sidebar-tree.tree-theme-dotted .p-treenode-children::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 10px;
+  width: 0 !important;
+  height: auto !important;
+  background: none !important;
+  border: none !important;
+  border-left: 1px dotted var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+}
+
+/* Línea horizontal punteada */
+.sidebar-tree.tree-theme-dotted .p-treenode-children > .p-treenode > .p-treenode-content::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute;
+  left: -18px;
+  top: 50%;
+  width: 10px !important;
+  height: 0 !important;
+  background: none !important;
+  border: none !important;
+  border-top: 1px dotted var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+}
+
+.sidebar-tree.tree-theme-dotted .p-treenode-content:hover {
+  background: var(--ui-sidebar-hover) !important;
+  border-radius: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   TEMA: MODERN (Moderno con acentos)
+   Líneas de color con efectos de glow
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.sidebar-tree.tree-theme-modern {
+  --tree-indent: 22px;
+  --tree-line-color: var(--ui-button-primary, #00acc1);
+  --tree-line-opacity: 0.5;
+  --tree-node-spacing: 2px;
+  --tree-border-radius: 6px;
+}
+
+.sidebar-tree.tree-theme-modern .tree-connector {
+  display: none !important;
+}
+
+.sidebar-tree.tree-theme-modern .p-treenode {
+  margin-bottom: 2px !important;
+}
+
+.sidebar-tree.tree-theme-modern .p-treenode-content {
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.sidebar-tree.tree-theme-modern .p-treenode-children {
+  position: relative;
+  padding-left: 22px !important;
+  margin-left: 9px;
+}
+
+/* Línea vertical con gradiente */
+.sidebar-tree.tree-theme-modern .p-treenode-children::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 14px;
+  width: 2px !important;
+  height: auto !important;
+  background: linear-gradient(
+    180deg, 
+    var(--tree-line-color) 0%, 
+    transparent 100%
+  ) !important;
+  opacity: var(--tree-line-opacity);
+  border: none !important;
+  border-radius: 1px;
+}
+
+/* Línea horizontal con gradiente */
+.sidebar-tree.tree-theme-modern .p-treenode-children > .p-treenode > .p-treenode-content::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute;
+  left: -22px;
+  top: 50%;
+  width: 14px !important;
+  height: 2px !important;
+  background: linear-gradient(
+    90deg,
+    var(--tree-line-color) 0%,
+    transparent 100%
+  ) !important;
+  opacity: var(--tree-line-opacity);
+  border: none !important;
+  border-radius: 1px;
+}
+
+/* Efecto glow en hover */
+.sidebar-tree.tree-theme-modern .p-treenode-content:hover {
+  background: var(--ui-sidebar-hover) !important;
+  box-shadow: 0 0 8px rgba(var(--ui-button-primary-rgb, 0, 172, 193), 0.15);
+}
+
+.sidebar-tree.tree-theme-modern .p-treenode-content:hover::before {
+  opacity: 0.8 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ESTILOS COMUNES PARA TODOS LOS TEMAS CSS (no ASCII)
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* Asegurar posición relativa para las líneas */
+.sidebar-tree.tree-theme-connected .p-treenode-children > .p-treenode > .p-treenode-content,
+.sidebar-tree.tree-theme-compact .p-treenode-children > .p-treenode > .p-treenode-content,
+.sidebar-tree.tree-theme-dotted .p-treenode-children > .p-treenode > .p-treenode-content,
+.sidebar-tree.tree-theme-modern .p-treenode-children > .p-treenode > .p-treenode-content {
+  position: relative;
+}
+
+/* Último nodo hijo - ajustar línea vertical */
+.sidebar-tree.tree-theme-connected .p-treenode-children > .p-treenode:last-child::before,
+.sidebar-tree.tree-theme-compact .p-treenode-children > .p-treenode:last-child::before,
+.sidebar-tree.tree-theme-dotted .p-treenode-children > .p-treenode:last-child::before,
+.sidebar-tree.tree-theme-modern .p-treenode-children > .p-treenode:last-child::before {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   PREVIEW EN SETTINGS DIALOG
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.tree-preview-container {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  line-height: 1.8;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Preview: Tema Default (ASCII) */
+.tree-preview-container.tree-theme-default .tree-preview-connector {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-color-secondary);
+  opacity: 0.5;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.85em;
+  margin-right: 6px;
+  user-select: none;
+}
+
+/* Preview: Tema Minimal */
+.tree-preview-container.tree-theme-minimal .tree-preview-connector {
+  display: none;
+}
+
+.tree-preview-container.tree-theme-minimal .tree-preview-node {
+  padding-left: 0 !important;
+}
+
+/* Preview: Tema Connected */
+.tree-preview-container.tree-theme-connected {
+  --preview-line-color: var(--ui-sidebar-border, rgba(255, 255, 255, 0.15));
+}
+
+.tree-preview-container.tree-theme-connected .tree-preview-connector {
+  display: none;
+}
+
+.tree-preview-container.tree-theme-connected .tree-preview-children {
+  position: relative;
+  margin-left: 8px;
+  padding-left: 20px;
+}
+
+.tree-preview-container.tree-theme-connected .tree-preview-children::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 14px;
+  width: 1px;
+  background: var(--preview-line-color);
+  opacity: 0.6;
+}
+
+.tree-preview-container.tree-theme-connected .tree-preview-child {
+  position: relative;
+}
+
+.tree-preview-container.tree-theme-connected .tree-preview-child::before {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  width: 12px;
+  height: 1px;
+  background: var(--preview-line-color);
+  opacity: 0.6;
+}
+
+/* Preview: Tema Compact */
+.tree-preview-container.tree-theme-compact {
+  --preview-line-color: var(--ui-sidebar-border, rgba(255, 255, 255, 0.12));
+  line-height: 1.5;
+}
+
+.tree-preview-container.tree-theme-compact .tree-preview-connector {
+  display: none;
+}
+
+.tree-preview-container.tree-theme-compact .tree-preview-children {
+  position: relative;
+  margin-left: 6px;
+  padding-left: 14px;
+}
+
+.tree-preview-container.tree-theme-compact .tree-preview-children::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 10px;
+  width: 1px;
+  background: var(--preview-line-color);
+  opacity: 0.4;
+}
+
+.tree-preview-container.tree-theme-compact .tree-preview-child {
+  position: relative;
+}
+
+.tree-preview-container.tree-theme-compact .tree-preview-child::before {
+  content: '';
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  width: 8px;
+  height: 1px;
+  background: var(--preview-line-color);
+  opacity: 0.4;
+}
+
+/* Preview: Tema Dotted */
+.tree-preview-container.tree-theme-dotted {
+  --preview-line-color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.5));
+}
+
+.tree-preview-container.tree-theme-dotted .tree-preview-connector {
+  display: none;
+}
+
+.tree-preview-container.tree-theme-dotted .tree-preview-children {
+  position: relative;
+  margin-left: 7px;
+  padding-left: 18px;
+}
+
+.tree-preview-container.tree-theme-dotted .tree-preview-children::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 12px;
+  border-left: 1px dotted var(--preview-line-color);
+  opacity: 0.35;
+}
+
+.tree-preview-container.tree-theme-dotted .tree-preview-child {
+  position: relative;
+}
+
+.tree-preview-container.tree-theme-dotted .tree-preview-child::before {
+  content: '';
+  position: absolute;
+  left: -18px;
+  top: 50%;
+  width: 10px;
+  border-top: 1px dotted var(--preview-line-color);
+  opacity: 0.35;
+}
+
+/* Preview: Tema Modern */
+.tree-preview-container.tree-theme-modern {
+  --preview-line-color: var(--ui-button-primary, #00acc1);
+  line-height: 2;
+}
+
+.tree-preview-container.tree-theme-modern .tree-preview-connector {
+  display: none;
+}
+
+.tree-preview-container.tree-theme-modern .tree-preview-children {
+  position: relative;
+  margin-left: 9px;
+  padding-left: 22px;
+}
+
+.tree-preview-container.tree-theme-modern .tree-preview-children::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 16px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--preview-line-color) 0%, transparent 100%);
+  opacity: 0.5;
+  border-radius: 1px;
+}
+
+.tree-preview-container.tree-theme-modern .tree-preview-child {
+  position: relative;
+}
+
+.tree-preview-container.tree-theme-modern .tree-preview-child::before {
+  content: '';
+  position: absolute;
+  left: -22px;
+  top: 50%;
+  width: 14px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--preview-line-color) 0%, transparent 100%);
+  opacity: 0.5;
+  border-radius: 1px;
+}
+
+.tree-preview-container.tree-theme-modern .tree-preview-node {
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin: -2px -6px;
+}
+
+.tree-preview-container.tree-theme-modern .tree-preview-node:hover {
+  background: rgba(0, 172, 193, 0.1);
+  box-shadow: 0 0 8px rgba(0, 172, 193, 0.15);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ANIMACIONES
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* Transición suave al cambiar de tema */
+.sidebar-tree[data-tree-theme] {
+  transition: padding 0.2s ease, margin 0.2s ease;
+}
+
+.sidebar-tree[data-tree-theme] .p-treenode-content {
+  transition: background 0.15s ease, box-shadow 0.15s ease, border-radius 0.15s ease;
+}
+
+.sidebar-tree[data-tree-theme] .p-treenode-children::before {
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+

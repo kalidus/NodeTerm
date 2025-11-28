@@ -820,6 +820,7 @@ const App = () => {
     explorerFont, setExplorerFont,
     explorerFontSize, setExplorerFontSize, explorerColorTheme, setExplorerColorTheme,
     sidebarFont, setSidebarFont, sidebarFontSize, setSidebarFontSize,
+    treeTheme, setTreeTheme,
     updateThemesFromSync
   } = useThemeManagement();
 
@@ -2014,11 +2015,14 @@ const App = () => {
     masterKey,
     secureStorage,
     isAIChatActive,
-    onToggleLocalTerminalForAIChat: handleToggleLocalTerminalForAIChat
+    onToggleLocalTerminalForAIChat: handleToggleLocalTerminalForAIChat,
+    
+    // Tema del árbol
+    treeTheme
   }), [
     nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
-    iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, terminalTheme,
+    iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, terminalTheme, treeTheme,
     toast, confirmDialog, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu, hideContextMenu,
     sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey,
     
@@ -2271,6 +2275,8 @@ const App = () => {
         setSidebarFont={setSidebarFont}
         sidebarFontSize={sidebarFontSize}
         setSidebarFontSize={setSidebarFontSize}
+        treeTheme={treeTheme}
+        setTreeTheme={setTreeTheme}
         statusBarIconTheme={statusBarIconTheme}
         setStatusBarIconTheme={setStatusBarIconTheme}
         statusBarPollingInterval={statusBarPollingInterval}

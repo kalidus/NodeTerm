@@ -14,6 +14,8 @@ import ImportService from '../services/ImportService';
 import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorite as isFavoriteConn } from '../utils/connectionStore';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { STORAGE_KEYS } from '../utils/constants';
+import { getTreeTheme } from '../themes/tree-themes';
+import '../styles/components/tree-themes.css';
 
 // Helper para loggear setNodes
 function logSetNodes(source, nodes) {
@@ -114,7 +116,10 @@ const Sidebar = React.memo(({
   onToggleLocalTerminalForAIChat,
   
   // Filtro de búsqueda desde TitleBar
-  sidebarFilter = ''
+  sidebarFilter = '',
+  
+  // Tema del árbol
+  treeTheme = 'default'
 }) => {
   
   // Estado para diálogos
@@ -2272,7 +2277,7 @@ const Sidebar = React.memo(({
                   </div>
                 ) : (
                   <Tree
-                    key={`tree-${iconTheme}-${explorerFontSize}`} // Forzar re-render cuando cambie el tema
+                    key={`tree-${iconTheme}-${explorerFontSize}-${treeTheme}`} // Forzar re-render cuando cambie el tema
                     value={nodes}
                     selectionMode="single"
                     selectionKeys={selectedNodeKey}
@@ -2285,8 +2290,9 @@ const Sidebar = React.memo(({
                       // if (e.node) setDraggedNodeKey(e.node.key); // This line was removed as per the edit hint
                     }}
                     onDragEnd={() => {}}
-                    className="sidebar-tree"
+                    className={`sidebar-tree tree-theme-${treeTheme}`}
                     data-icon-theme={iconTheme}
+                    data-tree-theme={treeTheme}
                     style={{ 
                       fontSize: `${explorerFontSize}px`,
                       '--icon-size': `${iconSize}px`
@@ -2337,6 +2343,7 @@ const Sidebar = React.memo(({
               setShowSettingsDialog={setShowSettingsDialog}
               onShowImportDialog={setShowImportDialog}
               sidebarFilter={sidebarFilter}
+              treeTheme={treeTheme}
             />
           )}
         </>
