@@ -2492,7 +2492,7 @@ const SettingsDialog = ({
                   {/* Card Unificada: Dashboard de Personalización */}
                   <div className="general-settings-section" style={{ 
                     marginBottom: 0, 
-                    maxWidth: '800px',
+                    maxWidth: '1000px',
                     margin: '0 auto'
                   }}>
                     <div className="general-section-header">
@@ -2744,62 +2744,89 @@ const SettingsDialog = ({
                           FILA 2: TIPOGRAFÍA
                           ═══════════════════════════════════════════════════════════════ */}
                       <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 100px',
-                        gap: '1rem',
+                        background: 'rgba(0, 0, 0, 0.08)',
+                        borderRadius: '10px',
+                        padding: '0.875rem 1rem',
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
                         marginBottom: '1rem'
                       }}>
-                        {/* Fuente */}
-                        <div>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            marginBottom: '0.5rem'
-                          }}>
-                            <i className="pi pi-pencil" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
-                            <label style={{
-                              fontSize: '0.875rem',
-                              fontWeight: 600,
-                              color: 'var(--ui-dialog-text)'
-                            }}>Fuente</label>
-                          </div>
-                          <Dropdown
-                            id="sidebar-font"
-                            value={sidebarFont}
-                            options={explorerFonts.map(f => ({ label: f, value: f }))}
-                            onChange={e => setSidebarFont(e.value)}
-                            placeholder="Selecciona una fuente"
-                            style={{ width: '100%' }}
-                            itemTemplate={option => (
-                              <span style={{ fontFamily: option.value }}>{option.label}</span>
-                            )}
-                          />
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          marginBottom: '0.75rem'
+                        }}>
+                          <i className="pi pi-pencil" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
+                          <span style={{
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                            color: 'var(--ui-dialog-text)'
+                          }}>Tipografía</span>
                         </div>
-
-                        {/* Tamaño de Fuente */}
-                        <div>
+                        
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '1rem'
+                        }}>
+                          {/* Fuente */}
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '0.5rem',
-                            marginBottom: '0.5rem'
+                            gap: '0.75rem'
                           }}>
-                            <label style={{
-                              fontSize: '0.875rem',
-                              fontWeight: 600,
-                              color: 'var(--ui-dialog-text)'
-                            }}>Tamaño</label>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              minWidth: '60px'
+                            }}>
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Fuente</span>
+                            </div>
+                            <Dropdown
+                              id="sidebar-font"
+                              value={sidebarFont}
+                              options={explorerFonts.map(f => ({ label: f, value: f }))}
+                              onChange={e => setSidebarFont(e.value)}
+                              placeholder="Selecciona una fuente"
+                              style={{ flex: 1 }}
+                              itemTemplate={option => (
+                                <span style={{ fontFamily: option.value }}>{option.label}</span>
+                              )}
+                            />
                           </div>
-                          <InputNumber
-                            id="sidebar-font-size"
-                            value={sidebarFontSize}
-                            onValueChange={(e) => handleSidebarFontSizeChange(e.value)}
-                            min={8}
-                            max={32}
-                            suffix=" px"
-                            style={{ width: '100%' }}
-                          />
+
+                          {/* Tamaño de Fuente con Slider */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              minWidth: '60px'
+                            }}>
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Tamaño</span>
+                            </div>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <Slider
+                                value={sidebarFontSize}
+                                onChange={(e) => handleSidebarFontSizeChange(e.value)}
+                                min={8}
+                                max={24}
+                                style={{ flex: 1 }}
+                              />
+                              <span style={{ 
+                                fontSize: '0.75rem', 
+                                color: 'var(--ui-button-primary)',
+                                fontWeight: 600,
+                                minWidth: '40px',
+                                textAlign: 'right'
+                              }}>{sidebarFontSize} px</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
