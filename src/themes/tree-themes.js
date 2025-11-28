@@ -116,6 +116,179 @@ export const treeThemes = {
     hoverStyle: 'glow',
     connectorChars: null,
     cssClass: 'tree-theme-modern'
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // TEMAS COMPACTOS MODERNOS
+  // ═══════════════════════════════════════════════════════════════
+
+  connectedCompact: {
+    name: 'Conectado Compacto',
+    description: 'Líneas conectadas con espaciado mínimo',
+    lineStyle: 'solid',
+    lineColor: 'var(--ui-sidebar-border)',
+    lineOpacity: 0.5,
+    lineWidth: 1,
+    nodeSpacing: 'compact',
+    indentSize: 14,
+    borderRadius: 3,
+    hoverStyle: 'highlight',
+    connectorChars: null,
+    cssClass: 'tree-theme-connected-compact'
+  },
+
+  modernCompact: {
+    name: 'Moderno Compacto',
+    description: 'Estilo moderno con espaciado reducido',
+    lineStyle: 'solid',
+    lineColor: 'var(--ui-button-primary)',
+    lineOpacity: 0.4,
+    lineWidth: 1,
+    nodeSpacing: 'compact',
+    indentSize: 16,
+    borderRadius: 4,
+    hoverStyle: 'glow',
+    connectorChars: null,
+    cssClass: 'tree-theme-modern-compact'
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // TEMAS FUTURISTAS
+  // ═══════════════════════════════════════════════════════════════
+
+  neon: {
+    name: 'Neón',
+    description: 'Líneas brillantes con efecto neón',
+    lineStyle: 'solid',
+    lineColor: '#00ffff',
+    lineOpacity: 0.8,
+    lineWidth: 1,
+    nodeSpacing: 'normal',
+    indentSize: 20,
+    borderRadius: 4,
+    hoverStyle: 'neon-glow',
+    connectorChars: null,
+    cssClass: 'tree-theme-neon'
+  },
+
+  cyber: {
+    name: 'Cyberpunk',
+    description: 'Estilo cyberpunk con rosa y azul',
+    lineStyle: 'solid',
+    lineColor: '#ff00ff',
+    lineOpacity: 0.6,
+    lineWidth: 2,
+    nodeSpacing: 'normal',
+    indentSize: 20,
+    borderRadius: 0,
+    hoverStyle: 'cyber-glow',
+    connectorChars: null,
+    cssClass: 'tree-theme-cyber'
+  },
+
+  matrix: {
+    name: 'Matrix',
+    description: 'Verde digital estilo Matrix',
+    lineStyle: 'solid',
+    lineColor: '#00ff00',
+    lineOpacity: 0.5,
+    lineWidth: 1,
+    nodeSpacing: 'compact',
+    indentSize: 16,
+    borderRadius: 0,
+    hoverStyle: 'matrix-glow',
+    connectorChars: null,
+    cssClass: 'tree-theme-matrix'
+  },
+
+  hologram: {
+    name: 'Holograma',
+    description: 'Efecto holográfico translúcido',
+    lineStyle: 'solid',
+    lineColor: '#64ffda',
+    lineOpacity: 0.4,
+    lineWidth: 1,
+    nodeSpacing: 'normal',
+    indentSize: 20,
+    borderRadius: 8,
+    hoverStyle: 'hologram',
+    connectorChars: null,
+    cssClass: 'tree-theme-hologram'
+  },
+
+  gradient: {
+    name: 'Gradiente',
+    description: 'Líneas con gradientes coloridos',
+    lineStyle: 'gradient',
+    lineColor: 'linear-gradient(180deg, #667eea, #764ba2)',
+    lineOpacity: 0.7,
+    lineWidth: 2,
+    nodeSpacing: 'normal',
+    indentSize: 20,
+    borderRadius: 6,
+    hoverStyle: 'gradient-glow',
+    connectorChars: null,
+    cssClass: 'tree-theme-gradient'
+  },
+
+  aurora: {
+    name: 'Aurora',
+    description: 'Colores de aurora boreal',
+    lineStyle: 'solid',
+    lineColor: '#7f5af0',
+    lineOpacity: 0.6,
+    lineWidth: 2,
+    nodeSpacing: 'comfortable',
+    indentSize: 22,
+    borderRadius: 8,
+    hoverStyle: 'aurora-glow',
+    connectorChars: null,
+    cssClass: 'tree-theme-aurora'
+  },
+
+  pulse: {
+    name: 'Pulso',
+    description: 'Líneas con animación de pulso',
+    lineStyle: 'solid',
+    lineColor: '#f72585',
+    lineOpacity: 0.5,
+    lineWidth: 2,
+    nodeSpacing: 'normal',
+    indentSize: 20,
+    borderRadius: 4,
+    hoverStyle: 'pulse',
+    connectorChars: null,
+    cssClass: 'tree-theme-pulse'
+  },
+
+  electric: {
+    name: 'Eléctrico',
+    description: 'Efecto eléctrico con chispas',
+    lineStyle: 'dashed',
+    lineColor: '#ffd60a',
+    lineOpacity: 0.7,
+    lineWidth: 2,
+    nodeSpacing: 'normal',
+    indentSize: 18,
+    borderRadius: 2,
+    hoverStyle: 'electric',
+    connectorChars: null,
+    cssClass: 'tree-theme-electric'
+  },
+
+  frost: {
+    name: 'Escarcha',
+    description: 'Efecto de hielo frío y cristalino',
+    lineStyle: 'solid',
+    lineColor: '#a8dadc',
+    lineOpacity: 0.5,
+    lineWidth: 1,
+    nodeSpacing: 'normal',
+    indentSize: 20,
+    borderRadius: 6,
+    hoverStyle: 'frost',
+    connectorChars: null,
+    cssClass: 'tree-theme-frost'
   }
 };
 
