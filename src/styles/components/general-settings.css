@@ -736,3 +736,104 @@ body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ========================================
+   ESTILOS ESPECÍFICOS PARA EXPLORADOR DE SESIONES - LAYOUT 2 COLUMNAS
+   ======================================== */
+
+/* Asegurar que las cards no permitan que el contenido sobresalga */
+.general-setting-card {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.general-setting-content {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
+  word-wrap: break-word;
+}
+
+/* Mejorar el layout de inputs dentro de las cards */
+.general-setting-card .p-inputnumber {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.general-setting-card .p-inputnumber input {
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Asegurar que los iconos de vista previa no sobresalgan */
+.general-setting-card .general-setting-content > div:last-child {
+  flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Mejorar el espaciado y padding de las secciones en layout de 2 columnas */
+.general-settings-container > div[style*="grid"] .general-settings-section {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Asegurar que los dropdowns y inputs no sobresalgan */
+.general-settings-options .p-dropdown,
+.general-settings-options .p-inputnumber {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Mejorar la integración visual de las cards con inputs */
+.general-setting-card .general-setting-content[style*="flexWrap"] {
+  padding: 0.5rem 0;
+  box-sizing: border-box;
+}
+
+.general-setting-card .general-setting-content[style*="flexWrap"] > div {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* Asegurar que los iconos de vista previa estén contenidos */
+.general-setting-card .general-setting-content > div:last-child > div {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Mejorar el espaciado en el grid de 2 columnas */
+.general-settings-container > div[style*="gridTemplateColumns"] {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+}
+
+.general-settings-container > div[style*="gridTemplateColumns"] > div {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Asegurar que el contenedor de Explorador de Sesiones ocupe todo el ancho */
+.general-settings-container[style*="width: 100%"] {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 1rem 1.5rem 1.5rem 1.5rem;
+}
+
+/* Grid de 2 columnas para Explorador de Sesiones - ocupar todo el ancho */
+.general-settings-container > div[style*="gridTemplateColumns"] {
+  width: 100% !important;
+}
+
+/* Aumentar el gap en pantallas más grandes para mejor distribución */
+@media (min-width: 1400px) {
+  .general-settings-container > div[style*="gridTemplateColumns"] {
+    gap: 2rem !important;
+  }
+}
