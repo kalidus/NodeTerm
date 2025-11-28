@@ -1,7 +1,10 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { Dropdown } from 'primereact/dropdown';
 import { InputNumber } from 'primereact/inputnumber';
 import { Checkbox } from 'primereact/checkbox';
+import { OverlayPanel } from 'primereact/overlaypanel';
+import { Button } from 'primereact/button';
+import { Slider } from 'primereact/slider';
 import { themes } from '../themes';
 import '../styles/components/terminal-settings.css';
 
@@ -106,6 +109,9 @@ const TerminalSettingsTab = ({
 
   // Preview settings
   const [activePreviewTab, setActivePreviewTab] = useState('ssh');
+
+  // Overlay panels refs for font/size configuration
+  const overlayRefs = useRef({});
 
   // Options
   const terminalThemeOptions = useMemo(() => 
@@ -309,6 +315,13 @@ const TerminalSettingsTab = ({
     return contents[type] || contents.ssh;
   }, []);
 
+  // Overlay handlers
+  const handleOpenFontSizePanel = useCallback((type, event) => {
+    if (overlayRefs.current[type]) {
+      overlayRefs.current[type].toggle(event);
+    }
+  }, []);
+
   return (
     <div className="terminal-settings-container">
       {/* Sección 1: Cursor y Scrollback (compacto en una fila) */}
@@ -384,26 +397,7 @@ const TerminalSettingsTab = ({
                 </div>
                 <div className="terminal-theme-controls">
                   <div className="terminal-theme-controls-row">
-                    <div className="terminal-theme-selector font-selector">
-                      <span className="terminal-selector-label">Fuente</span>
-                      <Dropdown
-                        value={getFontForType(type.id)}
-                        options={availableFonts}
-                        onChange={(e) => handleFontChange(type.id, e.value)}
-                        placeholder="Fuente"
-                      />
-                    </div>
-                    <div className="terminal-theme-selector size-selector">
-                      <span className="terminal-selector-label">Tamaño</span>
-                      <InputNumber
-                        value={getFontSizeForType(type.id)}
-                        onValueChange={(e) => handleFontSizeChange(type.id, e.value)}
-                        min={8}
-                        max={32}
-                        suffix="px"
-                      />
-                    </div>
-                    <div className="terminal-theme-selector theme-selector">
+                    <div className="terminal-theme-selector theme-selector" style={{ flex: 1 }}>
                       <span className="terminal-selector-label">Tema</span>
                       <Dropdown
                         value={getThemeForType(type.id)}
@@ -412,6 +406,20 @@ const TerminalSettingsTab = ({
                         placeholder="Tema"
                       />
                     </div>
+                    <Button
+                      icon="pi pi-cog"
+                      label="Configurar"
+                      className="p-button-text p-button-sm"
+                      onClick={(e) => handleOpenFontSizePanel(type.id, e)}
+                      style={{
+                        marginLeft: '0.5rem',
+                        fontSize: '0.75rem',
+                        padding: '0.375rem 0.75rem',
+                        minWidth: 'auto'
+                      }}
+                      tooltip="Configurar fuente y tamaño"
+                      tooltipOptions={{ position: 'top' }}
+                    />
                   </div>
                 </div>
               </div>
@@ -489,6 +497,128 @@ const TerminalSettingsTab = ({
           </div>
         </div>
       </div>
+
+      {/* OverlayPanels para configurar fuente y tamaño por cada tipo de terminal */}
+      {TERMINAL_TYPES.map((type) => {
+        const currentFont = getFontForType(type.id);
+        const currentFontSize = getFontSizeForType(type.id);
+        const currentTheme = getPreviewTheme(type.id);
+        const previewContent = {
+          ssh: 'user@host:~$ ls -la',
+          powershell: 'PS C:\\Users\\admin> Get-Process',
+          linux: 'ubuntu@wsl:~$ neofetch',
+          docker: 'root@container:/# docker ps'
+        };
+
+        return (
+          <OverlayPanel
+            key={type.id}
+            ref={(el) => (overlayRefs.current[type.id] = el)}
+            style={{ width: '380px' }}
+            className="font-size-overlay"
+          >
+            <div style={{ padding: '0.5rem 0' }}>
+              {/* Header */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                marginBottom: '1rem',
+                paddingBottom: '0.75rem',
+                borderBottom: `1px solid ${currentTheme.foreground}20`
+              }}>
+                <i className={`pi ${type.icon}`} style={{ color: currentTheme.green || currentTheme.foreground }}></i>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: currentTheme.foreground }}>
+                  {type.name}
+                </span>
+              </div>
+
+              {/* Fuente */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '0.5rem',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  color: currentTheme.foreground
+                }}>
+                  Fuente
+                </label>
+                <Dropdown
+                  value={currentFont}
+                  options={availableFonts}
+                  onChange={(e) => handleFontChange(type.id, e.value)}
+                  placeholder="Selecciona una fuente"
+                  style={{ width: '100%' }}
+                  itemTemplate={option => (
+                    <span style={{ fontFamily: option.value || option }}>{option.label || option}</span>
+                  )}
+                />
+              </div>
+
+              {/* Tamaño */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '0.5rem',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  color: currentTheme.foreground
+                }}>
+                  Tamaño: {currentFontSize}px
+                </label>
+                <Slider
+                  value={currentFontSize}
+                  onChange={(e) => handleFontSizeChange(type.id, e.value)}
+                  min={8}
+                  max={32}
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              {/* Vista previa */}
+              <div style={{
+                background: currentTheme.background,
+                borderRadius: '6px',
+                padding: '0.875rem',
+                border: `1px solid ${currentTheme.foreground}20`
+              }}>
+                <div style={{
+                  fontSize: '0.7rem',
+                  color: currentTheme.foreground,
+                  opacity: 0.7,
+                  marginBottom: '0.5rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Vista previa:
+                </div>
+                <div style={{
+                  fontFamily: `"${currentFont}", monospace`,
+                  fontSize: `${currentFontSize}px`,
+                  color: currentTheme.foreground,
+                  background: currentTheme.background,
+                  padding: '0.625rem',
+                  borderRadius: '4px',
+                  border: `1px solid ${currentTheme.foreground}15`,
+                  minHeight: '50px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  whiteSpace: 'pre-wrap',
+                  lineHeight: '1.4'
+                }}>
+                  <span style={{ color: currentTheme.green || currentTheme.cyan || currentTheme.foreground }}>
+                    {previewContent[type.id].split(' ')[0]}
+                  </span>
+                  <span style={{ color: currentTheme.foreground }}>
+                    {' ' + previewContent[type.id].split(' ').slice(1).join(' ')}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </OverlayPanel>
+        );
+      })}
     </div>
   );
 };
