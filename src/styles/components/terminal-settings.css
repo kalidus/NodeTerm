@@ -703,3 +703,117 @@
     font-size: 12px;
   }
 }
+
+/* ========================================
+   OVERLAY PANEL - TEMA DEL TERMINAL
+   ======================================== */
+
+.font-size-overlay .p-overlaypanel-content {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+/* Dropdown con tema del terminal */
+.font-size-overlay .p-dropdown {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: inherit !important;
+}
+
+.font-size-overlay .p-dropdown:not(.p-disabled):hover {
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.font-size-overlay .p-dropdown:not(.p-disabled).p-focus {
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.font-size-overlay .p-dropdown-label {
+  color: inherit !important;
+  padding: 0.5rem 0.75rem !important;
+}
+
+.font-size-overlay .p-dropdown-trigger {
+  color: inherit !important;
+  opacity: 0.8;
+}
+
+.font-size-overlay .p-dropdown-trigger:hover {
+  opacity: 1;
+}
+
+.font-size-overlay .p-dropdown-panel {
+  background: rgba(20, 20, 20, 0.98) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Scrollbar para el overlay panel */
+.font-size-overlay::-webkit-scrollbar {
+  width: 8px !important;
+}
+
+.font-size-overlay::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.font-size-overlay::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 4px !important;
+}
+
+.font-size-overlay::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+.font-size-overlay .p-dropdown-item {
+  color: rgba(255, 255, 255, 0.9) !important;
+  padding: 0.625rem 0.875rem !important;
+}
+
+.font-size-overlay .p-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 1) !important;
+}
+
+.font-size-overlay .p-dropdown-item.p-highlight {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: rgba(255, 255, 255, 1) !important;
+}
+
+/* Slider con tema del terminal */
+.font-size-overlay .p-slider {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-radius: 4px !important;
+  height: 6px !important;
+}
+
+.font-size-overlay .p-slider .p-slider-handle {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 2px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  width: 18px !important;
+  height: 18px !important;
+  margin-top: -6px !important;
+}
+
+.font-size-overlay .p-slider .p-slider-handle:hover {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  transform: scale(1.1);
+}
+
+.font-size-overlay .p-slider .p-slider-handle:focus {
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25) !important;
+  outline: none !important;
+}
+
+.font-size-overlay .p-slider .p-slider-range {
+  background: rgba(255, 255, 255, 0.5) !important;
+  border-radius: 4px !important;
+}
