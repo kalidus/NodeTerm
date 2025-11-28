@@ -2541,8 +2541,8 @@ const SettingsDialog = ({
                         <div 
                           className={`tree-preview-container tree-theme-${treeTheme}`}
                           style={{
-                            fontFamily: sidebarFont,
-                            fontSize: `${sidebarFontSize}px`,
+                          fontFamily: sidebarFont,
+                          fontSize: `${sidebarFontSize}px`,
                             color: 'var(--ui-dialog-text)'
                           }}
                         >
@@ -2571,21 +2571,21 @@ const SettingsDialog = ({
                                 {treeTheme === 'default' && (
                                   <span className="tree-preview-connector">├──</span>
                                 )}
-                                {iconThemes[iconThemeSidebar]?.icons.folder && 
-                                  React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
-                                    width: folderIconSize || 20,
-                                    height: folderIconSize || 20,
-                                    style: { 
-                                      ...iconThemes[iconThemeSidebar].icons.folder.props.style,
-                                      width: `${folderIconSize || 20}px`,
-                                      height: `${folderIconSize || 20}px`,
-                                      flexShrink: 0
-                                    }
-                                  })
+                            {iconThemes[iconThemeSidebar]?.icons.folder && 
+                              React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
+                                width: folderIconSize || 20,
+                                height: folderIconSize || 20,
+                                style: { 
+                                  ...iconThemes[iconThemeSidebar].icons.folder.props.style,
+                                  width: `${folderIconSize || 20}px`,
+                                  height: `${folderIconSize || 20}px`,
+                                  flexShrink: 0
                                 }
-                                <span>Servidores Web</span>
-                              </div>
-                              
+                              })
+                            }
+                            <span>Servidores Web</span>
+                          </div>
+                          
                               {/* Nivel 2: Conexiones dentro de Servidores Web */}
                               <div className="tree-preview-children">
                                 <div className="tree-preview-child">
@@ -2593,65 +2593,65 @@ const SettingsDialog = ({
                                     {treeTheme === 'default' && (
                                       <span className="tree-preview-connector">├──</span>
                                     )}
-                                    {iconThemes[iconThemeSidebar]?.icons.ssh && 
-                                      React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
-                                        width: connectionIconSize || 20,
-                                        height: connectionIconSize || 20,
-                                        style: { 
-                                          ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
-                                          width: `${connectionIconSize || 20}px`,
-                                          height: `${connectionIconSize || 20}px`,
-                                          flexShrink: 0
-                                        }
-                                      })
-                                    }
-                                    <span>Apache-Server-01</span>
-                                  </div>
+                            {iconThemes[iconThemeSidebar]?.icons.ssh && 
+                              React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
+                                width: connectionIconSize || 20,
+                                height: connectionIconSize || 20,
+                                style: { 
+                                  ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
+                                  width: `${connectionIconSize || 20}px`,
+                                  height: `${connectionIconSize || 20}px`,
+                                  flexShrink: 0
+                                }
+                              })
+                            }
+                            <span>Apache-Server-01</span>
+                          </div>
                                 </div>
                                 <div className="tree-preview-child">
                                   <div className="tree-preview-node" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     {treeTheme === 'default' && (
                                       <span className="tree-preview-connector">└──</span>
                                     )}
-                                    {iconThemes[iconThemeSidebar]?.icons.ssh && 
-                                      React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
-                                        width: connectionIconSize || 20,
-                                        height: connectionIconSize || 20,
-                                        style: { 
-                                          ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
-                                          width: `${connectionIconSize || 20}px`,
-                                          height: `${connectionIconSize || 20}px`,
-                                          flexShrink: 0
-                                        }
-                                      })
-                                    }
-                                    <span>Nginx-Proxy</span>
+                            {iconThemes[iconThemeSidebar]?.icons.ssh && 
+                              React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
+                                width: connectionIconSize || 20,
+                                height: connectionIconSize || 20,
+                                style: { 
+                                  ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
+                                  width: `${connectionIconSize || 20}px`,
+                                  height: `${connectionIconSize || 20}px`,
+                                  flexShrink: 0
+                                }
+                              })
+                            }
+                            <span>Nginx-Proxy</span>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                            
+                          </div>
+                          
                             {/* Subcarpeta 2: Bases de Datos */}
                             <div className="tree-preview-child">
                               <div className="tree-preview-node" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 {treeTheme === 'default' && (
                                   <span className="tree-preview-connector">└──</span>
                                 )}
-                                {iconThemes[iconThemeSidebar]?.icons.folder && 
-                                  React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
-                                    width: folderIconSize || 20,
-                                    height: folderIconSize || 20,
-                                    style: { 
-                                      ...iconThemes[iconThemeSidebar].icons.folder.props.style,
-                                      width: `${folderIconSize || 20}px`,
-                                      height: `${folderIconSize || 20}px`,
-                                      flexShrink: 0
-                                    }
-                                  })
+                            {iconThemes[iconThemeSidebar]?.icons.folder && 
+                              React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
+                                width: folderIconSize || 20,
+                                height: folderIconSize || 20,
+                                style: { 
+                                  ...iconThemes[iconThemeSidebar].icons.folder.props.style,
+                                  width: `${folderIconSize || 20}px`,
+                                  height: `${folderIconSize || 20}px`,
+                                  flexShrink: 0
                                 }
-                                <span>Bases de Datos</span>
-                              </div>
-                              
+                              })
+                            }
+                            <span>Bases de Datos</span>
+                          </div>
+                          
                               {/* Nivel 2: Conexiones dentro de Bases de Datos */}
                               <div className="tree-preview-children">
                                 <div className="tree-preview-child">
@@ -2659,19 +2659,19 @@ const SettingsDialog = ({
                                     {treeTheme === 'default' && (
                                       <span className="tree-preview-connector">└──</span>
                                     )}
-                                    {iconThemes[iconThemeSidebar]?.icons.rdp && 
-                                      React.cloneElement(iconThemes[iconThemeSidebar].icons.rdp, {
-                                        width: connectionIconSize || 20,
-                                        height: connectionIconSize || 20,
-                                        style: { 
-                                          ...iconThemes[iconThemeSidebar].icons.rdp.props.style,
-                                          width: `${connectionIconSize || 20}px`,
-                                          height: `${connectionIconSize || 20}px`,
-                                          flexShrink: 0
-                                        }
-                                      })
-                                    }
-                                    <span>SQL-Server-Main</span>
+                            {iconThemes[iconThemeSidebar]?.icons.rdp && 
+                              React.cloneElement(iconThemes[iconThemeSidebar].icons.rdp, {
+                                width: connectionIconSize || 20,
+                                height: connectionIconSize || 20,
+                                style: { 
+                                  ...iconThemes[iconThemeSidebar].icons.rdp.props.style,
+                                  width: `${connectionIconSize || 20}px`,
+                                  height: `${connectionIconSize || 20}px`,
+                                  flexShrink: 0
+                                }
+                              })
+                            }
+                            <span>SQL-Server-Main</span>
                                   </div>
                                 </div>
                               </div>
