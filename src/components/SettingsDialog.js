@@ -1993,223 +1993,272 @@ const SettingsDialog = ({
 
                     {/* Grid de 2 columnas para las secciones */}
                     <div className="security-layout-grid">
-                    {/* Sección de Grabación Automática */}
-                    <div className="general-settings-section">
-                      <div className="general-section-header">
-                        <div className="general-section-icon">
-                          <i className="pi pi-video"></i>
+                    {/* Contenedor izquierdo: Grabación + Estadísticas */}
+                    <div style={{ gridColumn: '1', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {/* Sección de Grabación Automática */}
+                      <div className="general-settings-section">
+                        <div className="general-section-header">
+                          <div className="general-section-icon">
+                            <i className="pi pi-video"></i>
+                          </div>
+                          <h4 className="general-section-title">Grabación Automática de Sesiones SSH</h4>
                         </div>
-                        <h4 className="general-section-title">Grabación Automática de Sesiones SSH</h4>
-                      </div>
-                      
-                      <div className="general-settings-options">
-                      
-                        {/* Activar grabación automática */}
-                        <div className="general-setting-card" onClick={() => setAutoRecordingEnabled(!autoRecordingEnabled)}>
-                          <div className="general-setting-content">
-                            <div className="general-setting-icon lock">
-                              <i className="pi pi-video"></i>
-                            </div>
-                            <div className="general-setting-info">
-                              <label htmlFor="autoRecording" className="general-setting-label">
-                                Activar grabación automática
-                              </label>
-                              <p className="general-setting-description">
-                                Graba automáticamente todas las sesiones SSH iniciadas
-                              </p>
-                            </div>
-                            <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                              <Checkbox
-                                inputId="autoRecording"
-                                checked={autoRecordingEnabled}
-                                onChange={(e) => setAutoRecordingEnabled(e.checked)}
-                              />
+                        
+                        <div className="general-settings-options">
+                        
+                          {/* Activar grabación automática */}
+                          <div className="general-setting-card" onClick={() => setAutoRecordingEnabled(!autoRecordingEnabled)}>
+                            <div className="general-setting-content">
+                              <div className="general-setting-icon lock">
+                                <i className="pi pi-video"></i>
+                              </div>
+                              <div className="general-setting-info">
+                                <label htmlFor="autoRecording" className="general-setting-label">
+                                  Activar grabación automática
+                                </label>
+                                <p className="general-setting-description">
+                                  Graba automáticamente todas las sesiones SSH iniciadas
+                                </p>
+                              </div>
+                              <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                  inputId="autoRecording"
+                                  checked={autoRecordingEnabled}
+                                  onChange={(e) => setAutoRecordingEnabled(e.checked)}
+                                />
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        {autoRecordingEnabled && (
-                          <>
-                            {/* Calidad de grabación */}
-                            <div className="general-icon-selector-section">
-                              <div className="general-selector-row-expandable">
-                                <div className="general-selector-info-group">
-                                  <div className="general-selector-icon-compact">
-                                    <i className="pi pi-sliders-h"></i>
-                                  </div>
-                                  <div className="general-selector-text-group">
-                                    <span className="general-selector-title-compact">Calidad de grabación</span>
-                                    <span className="general-selector-description-compact">Nivel de detalle capturado en las grabaciones</span>
-                                  </div>
-                                </div>
-                                <div className="general-selector-action-wrapper">
-                                  <Dropdown
-                                    id="recordingQuality"
-                                    value={recordingQuality}
-                                    options={[
-                                      { label: 'Alta (todos los eventos)', value: 'high' },
-                                      { label: 'Media (eventos importantes)', value: 'medium' },
-                                      { label: 'Baja (solo comandos)', value: 'low' }
-                                    ]}
-                                    onChange={(e) => setRecordingQuality(e.value)}
-                                    style={{ minWidth: '200px' }}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Cifrar grabaciones */}
-                            <div className="general-setting-card" onClick={() => setEncryptRecordings(!encryptRecordings)}>
-                              <div className="general-setting-content">
-                                <div className="general-setting-icon lock">
-                                  <i className="pi pi-lock"></i>
-                                </div>
-                                <div className="general-setting-info">
-                                  <label htmlFor="encryptRecordings" className="general-setting-label">
-                                    Cifrar grabaciones con clave maestra
-                                  </label>
-                                  <p className="general-setting-description">
-                                    Las grabaciones se cifrarán automáticamente si tienes una clave maestra configurada
-                                  </p>
-                                </div>
-                                <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                                  <Checkbox
-                                    inputId="encryptRecordings"
-                                    checked={encryptRecordings}
-                                    onChange={(e) => setEncryptRecordings(e.checked)}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Ubicación de grabaciones */}
-                            <div className="general-icon-selector-section">
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {autoRecordingEnabled && (
+                            <>
+                              {/* Calidad de grabación */}
+                              <div className="general-icon-selector-section">
                                 <div className="general-selector-row-expandable">
                                   <div className="general-selector-info-group">
                                     <div className="general-selector-icon-compact">
-                                      <i className="pi pi-folder-open"></i>
+                                      <i className="pi pi-sliders-h"></i>
                                     </div>
                                     <div className="general-selector-text-group">
-                                      <span className="general-selector-title-compact">Ubicación de grabaciones</span>
-                                      <span className="general-selector-description-compact">
-                                        {isDefaultPath 
-                                          ? 'Ubicación por defecto: AppData/NodeTerm/recordings'
-                                          : `Personalizada: ${recordingPath || 'Cargando...'}`
-                                        }
-                                      </span>
+                                      <span className="general-selector-title-compact">Calidad de grabación</span>
+                                      <span className="general-selector-description-compact">Nivel de detalle capturado en las grabaciones</span>
                                     </div>
                                   </div>
+                                  <div className="general-selector-action-wrapper">
+                                    <Dropdown
+                                      id="recordingQuality"
+                                      value={recordingQuality}
+                                      options={[
+                                        { label: 'Alta (todos los eventos)', value: 'high' },
+                                        { label: 'Media (eventos importantes)', value: 'medium' },
+                                        { label: 'Baja (solo comandos)', value: 'low' }
+                                      ]}
+                                      onChange={(e) => setRecordingQuality(e.value)}
+                                      style={{ minWidth: '200px' }}
+                                    />
+                                  </div>
                                 </div>
-                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                                  <InputText
-                                    value={recordingPath || ''}
-                                    readOnly
-                                    style={{
-                                      flex: 1,
-                                      fontFamily: 'monospace',
-                                      fontSize: '0.8125rem',
-                                      padding: '0.5rem 0.75rem'
-                                    }}
-                                    placeholder={loadingPath ? 'Cargando...' : 'Ruta de grabaciones'}
-                                  />
-                                  <Button
-                                    icon="pi pi-folder-open"
-                                    label="Cambiar"
-                                    onClick={async () => {
-                                      try {
-                                        if (!window?.electron?.dialog?.showOpenDialog) {
-                                          toast?.show({
-                                            severity: 'warn',
-                                            summary: 'No disponible',
-                                            detail: 'El selector de directorios requiere la app de escritorio'
-                                          });
-                                          return;
-                                        }
-                                        
-                                        const result = await window.electron.dialog.showOpenDialog({
-                                          properties: ['openDirectory'],
-                                          title: 'Seleccionar carpeta para guardar grabaciones'
-                                        });
-                                        
-                                        if (result && !result.canceled && result.filePaths && result.filePaths.length > 0) {
-                                          const selectedPath = result.filePaths[0];
-                                          setLoadingPath(true);
-                                          
-                                          const setResult = await window.electron.ipcRenderer.invoke('recording:set-path', {
-                                            customPath: selectedPath
-                                          });
-                                          
-                                          if (setResult && setResult.success) {
-                                            setRecordingPath(setResult.currentPath);
-                                            setIsDefaultPath(false);
-                                            toast?.show({
-                                              severity: 'success',
-                                              summary: 'Ubicación actualizada',
-                                              detail: `Las grabaciones se guardarán en: ${setResult.currentPath}`
-                                            });
-                                          } else {
-                                            toast?.show({
-                                              severity: 'error',
-                                              summary: 'Error',
-                                              detail: setResult?.error || 'No se pudo cambiar la ubicación'
-                                            });
+                              </div>
+
+                              {/* Cifrar grabaciones */}
+                              <div className="general-setting-card" onClick={() => setEncryptRecordings(!encryptRecordings)}>
+                                <div className="general-setting-content">
+                                  <div className="general-setting-icon lock">
+                                    <i className="pi pi-lock"></i>
+                                  </div>
+                                  <div className="general-setting-info">
+                                    <label htmlFor="encryptRecordings" className="general-setting-label">
+                                      Cifrar grabaciones con clave maestra
+                                    </label>
+                                    <p className="general-setting-description">
+                                      Las grabaciones se cifrarán automáticamente si tienes una clave maestra configurada
+                                    </p>
+                                  </div>
+                                  <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                                    <Checkbox
+                                      inputId="encryptRecordings"
+                                      checked={encryptRecordings}
+                                      onChange={(e) => setEncryptRecordings(e.checked)}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Ubicación de grabaciones */}
+                              <div className="general-icon-selector-section">
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                  <div className="general-selector-row-expandable">
+                                    <div className="general-selector-info-group">
+                                      <div className="general-selector-icon-compact">
+                                        <i className="pi pi-folder-open"></i>
+                                      </div>
+                                      <div className="general-selector-text-group">
+                                        <span className="general-selector-title-compact">Ubicación de grabaciones</span>
+                                        <span className="general-selector-description-compact">
+                                          {isDefaultPath 
+                                            ? 'Ubicación por defecto: AppData/NodeTerm/recordings'
+                                            : `Personalizada: ${recordingPath || 'Cargando...'}`
                                           }
-                                          setLoadingPath(false);
-                                        }
-                                      } catch (error) {
-                                        console.error('Error seleccionando carpeta:', error);
-                                        toast?.show({
-                                          severity: 'error',
-                                          summary: 'Error',
-                                          detail: 'No se pudo abrir el selector de carpeta'
-                                        });
-                                        setLoadingPath(false);
-                                      }
-                                    }}
-                                    disabled={loadingPath}
-                                    style={{ minWidth: '100px' }}
-                                  />
-                                  {!isDefaultPath && (
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                                    <InputText
+                                      value={recordingPath || ''}
+                                      readOnly
+                                      style={{
+                                        flex: 1,
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.8125rem',
+                                        padding: '0.5rem 0.75rem'
+                                      }}
+                                      placeholder={loadingPath ? 'Cargando...' : 'Ruta de grabaciones'}
+                                    />
                                     <Button
-                                      icon="pi pi-refresh"
-                                      label="Restaurar"
+                                      icon="pi pi-folder-open"
+                                      label="Cambiar"
                                       onClick={async () => {
                                         try {
-                                          setLoadingPath(true);
-                                          const result = await window.electron.ipcRenderer.invoke('recording:set-path', {
-                                            customPath: null
+                                          if (!window?.electron?.dialog?.showOpenDialog) {
+                                            toast?.show({
+                                              severity: 'warn',
+                                              summary: 'No disponible',
+                                              detail: 'El selector de directorios requiere la app de escritorio'
+                                            });
+                                            return;
+                                          }
+                                          
+                                          const result = await window.electron.dialog.showOpenDialog({
+                                            properties: ['openDirectory'],
+                                            title: 'Seleccionar carpeta para guardar grabaciones'
                                           });
                                           
-                                          if (result && result.success) {
-                                            setRecordingPath(result.currentPath);
-                                            setIsDefaultPath(true);
-                                            toast?.show({
-                                              severity: 'success',
-                                              summary: 'Ubicación restaurada',
-                                              detail: 'Se usará la ubicación por defecto'
+                                          if (result && !result.canceled && result.filePaths && result.filePaths.length > 0) {
+                                            const selectedPath = result.filePaths[0];
+                                            setLoadingPath(true);
+                                            
+                                            const setResult = await window.electron.ipcRenderer.invoke('recording:set-path', {
+                                              customPath: selectedPath
                                             });
+                                            
+                                            if (setResult && setResult.success) {
+                                              setRecordingPath(setResult.currentPath);
+                                              setIsDefaultPath(false);
+                                              toast?.show({
+                                                severity: 'success',
+                                                summary: 'Ubicación actualizada',
+                                                detail: `Las grabaciones se guardarán en: ${setResult.currentPath}`
+                                              });
+                                            } else {
+                                              toast?.show({
+                                                severity: 'error',
+                                                summary: 'Error',
+                                                detail: setResult?.error || 'No se pudo cambiar la ubicación'
+                                              });
+                                            }
+                                            setLoadingPath(false);
                                           }
-                                          setLoadingPath(false);
                                         } catch (error) {
-                                          console.error('Error restaurando ruta:', error);
+                                          console.error('Error seleccionando carpeta:', error);
+                                          toast?.show({
+                                            severity: 'error',
+                                            summary: 'Error',
+                                            detail: 'No se pudo abrir el selector de carpeta'
+                                          });
                                           setLoadingPath(false);
                                         }
                                       }}
                                       disabled={loadingPath}
                                       style={{ minWidth: '100px' }}
                                     />
-                                  )}
+                                    {!isDefaultPath && (
+                                      <Button
+                                        icon="pi pi-refresh"
+                                        label="Restaurar"
+                                        onClick={async () => {
+                                          try {
+                                            setLoadingPath(true);
+                                            const result = await window.electron.ipcRenderer.invoke('recording:set-path', {
+                                              customPath: null
+                                            });
+                                            
+                                            if (result && result.success) {
+                                              setRecordingPath(result.currentPath);
+                                              setIsDefaultPath(true);
+                                              toast?.show({
+                                                severity: 'success',
+                                                summary: 'Ubicación restaurada',
+                                                detail: 'Se usará la ubicación por defecto'
+                                              });
+                                            }
+                                            setLoadingPath(false);
+                                          } catch (error) {
+                                            console.error('Error restaurando ruta:', error);
+                                            setLoadingPath(false);
+                                          }
+                                        }}
+                                        disabled={loadingPath}
+                                        style={{ minWidth: '100px' }}
+                                      />
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </>
-                        )}
+                            </>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Sección de Estadísticas Actuales */}
+                      <div className="general-settings-section">
+                      <div className="general-section-header">
+                        <div className="general-section-icon">
+                          <i className="pi pi-chart-bar"></i>
+                        </div>
+                        <h4 className="general-section-title">Estadísticas Actuales</h4>
+                      </div>
+                      
+                      <div className="general-settings-options">
+                        <div style={{
+                          padding: '1rem',
+                          background: 'rgba(255, 255, 255, 0.02)',
+                          border: '1px solid rgba(255, 255, 255, 0.05)',
+                          borderRadius: '10px'
+                        }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.8125rem' }}>
+                            <div>
+                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>Archivos:</span>
+                              <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem' }}>
+                                {auditStats?.fileCount || 0}
+                              </span>
+                            </div>
+                            <div>
+                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>Tamaño total:</span>
+                              <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem' }}>
+                                {formatBytes(auditStats?.totalSize || 0)}
+                              </span>
+                            </div>
+                            <div>
+                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>Más antiguo:</span>
+                              <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem', fontSize: '0.75rem' }}>
+                                {auditStats?.oldestFile ? new Date(auditStats.oldestFile).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'N/A'}
+                              </span>
+                            </div>
+                            <div>
+                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>Última limpieza:</span>
+                              <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem', fontSize: '0.75rem' }}>
+                                {auditStats?.lastCleanup ? new Date(auditStats.lastCleanup).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'Nunca'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                     </div>
 
                     {/* Sección de Limpieza Automática */}
-                    <div className="general-settings-section">
+                    <div className="general-settings-section" style={{ gridColumn: '2', gridRow: '1' }}>
                       <div className="general-section-header">
                         <div className="general-section-icon">
                           <i className="pi pi-trash"></i>
@@ -2372,48 +2421,6 @@ const SettingsDialog = ({
                             </div>
                           </>
                         )}
-
-                        {/* Estadísticas actuales */}
-                        <div style={{
-                          marginTop: '1rem',
-                          padding: '1rem',
-                          background: 'rgba(255, 255, 255, 0.02)',
-                          border: '1px solid rgba(255, 255, 255, 0.05)',
-                          borderRadius: '10px'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                            <i className="pi pi-chart-bar" style={{ color: 'var(--ui-button-primary)', fontSize: '0.875rem' }}></i>
-                            <span style={{ color: 'var(--text-color)', fontWeight: '600', fontSize: '0.875rem' }}>
-                              Estadísticas Actuales
-                            </span>
-                          </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.8125rem' }}>
-                            <div>
-                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>Archivos:</span>
-                              <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem' }}>
-                                {auditStats?.fileCount || 0}
-                              </span>
-                            </div>
-                            <div>
-                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>Tamaño total:</span>
-                              <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem' }}>
-                                {formatBytes(auditStats?.totalSize || 0)}
-                              </span>
-                            </div>
-                            <div>
-                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>Más antiguo:</span>
-                              <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem', fontSize: '0.75rem' }}>
-                                {auditStats?.oldestFile ? new Date(auditStats.oldestFile).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'N/A'}
-                              </span>
-                            </div>
-                            <div>
-                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>Última limpieza:</span>
-                              <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem', fontSize: '0.75rem' }}>
-                                {auditStats?.lastCleanup ? new Date(auditStats.lastCleanup).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'Nunca'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
 
                         {/* Botones de acción */}
                         <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
