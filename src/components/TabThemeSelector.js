@@ -2505,31 +2505,55 @@ const TabThemeSelector = () => {
             <div className="tab-theme-options-wrapper">
               <div className="tab-theme-anim-card">
                 <div className="tab-theme-anim-card-header">
-                  <span className="tab-theme-anim-card-title">
-                    <i className="pi pi-sliders-h" />
-                    Animaciones
+                  <span className="tab-theme-anim-card-title">🎬 Animaciones</span>
+                  <span 
+                    className="tab-theme-anim-card-badge" 
+                    title="Muestra solo temas con animaciones activas"
+                  >
+                    Solo animados
                   </span>
                 </div>
                 <div className="tab-theme-anim-card-options">
-                  <div 
-                    className="tab-theme-anim-option"
-                    onClick={handleReducedMotionToggle}
-                  >
-                    <span>Reducir movimiento</span>
-                    <div className={`tab-theme-mini-toggle ${reducedMotion ? 'on' : ''}`} />
-                  </div>
-                  <div className="tab-theme-speed-row">
-                    <span>Velocidad:</span>
-                    <select 
-                      className="tab-theme-speed-select"
-                      value={animSpeed} 
-                      onChange={handleAnimSpeedChange}
+                  <div className="tab-theme-anim-option-wrapper">
+                    <button 
+                      className={`tab-theme-anim-option ${!reducedMotion ? 'active' : ''}`}
+                      onClick={handleReducedMotionToggle}
+                      title={reducedMotion ? "Activa las animaciones de las pestañas" : "Desactiva las animaciones para mejorar el rendimiento y reducir distracciones"}
                     >
-                      <option value="slow">Lento</option>
-                      <option value="normal">Normal</option>
-                      <option value="fast">Rápido</option>
-                      <option value="turbo">Turbo</option>
-                    </select>
+                      <i className="pi pi-eye-slash" style={{ width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
+                      <span>Animaciones</span>
+                      <div className={`tab-theme-mini-toggle ${!reducedMotion ? 'on' : ''}`} style={{ marginLeft: 'auto' }}></div>
+                    </button>
+                  </div>
+                  <div className="tab-theme-anim-speed-wrapper">
+                    <span style={{ 
+                      fontSize: '0.6875rem', 
+                      fontWeight: 500, 
+                      color: 'var(--ui-dialog-text)',
+                      marginBottom: '0.25rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.375rem',
+                      paddingLeft: '0.375rem'
+                    }}>
+                      <i className="pi pi-forward" style={{ fontSize: '0.6875rem', opacity: 0.7, width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
+                      Velocidad animaciones
+                    </span>
+                    <div 
+                      className="tab-theme-anim-speed"
+                      title="Controla la velocidad de las animaciones de las pestañas"
+                    >
+                      <select 
+                        className="tab-theme-speed-select-mini"
+                        value={animSpeed} 
+                        onChange={handleAnimSpeedChange}
+                      >
+                        <option value="slow">Lento</option>
+                        <option value="normal">Normal</option>
+                        <option value="fast">Rápido</option>
+                        <option value="turbo">Turbo</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
