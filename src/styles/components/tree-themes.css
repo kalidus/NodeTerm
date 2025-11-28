@@ -43,6 +43,11 @@
   background: var(--ui-sidebar-hover) !important;
 }
 
+.sidebar-tree.tree-theme-default .p-tree-toggler-icon {
+  color: var(--text-color-secondary) !important;
+  opacity: 0.6;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    TEMA: MINIMAL (Sin líneas)
    Limpio y elegante sin líneas de conexión
@@ -79,6 +84,11 @@
 
 .sidebar-tree.tree-theme-minimal .p-treenode-children .p-treenode-children .p-treenode-content {
   background: rgba(255, 255, 255, 0.02);
+}
+
+.sidebar-tree.tree-theme-minimal .p-tree-toggler-icon {
+  color: var(--ui-sidebar-text) !important;
+  opacity: 0.5;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -148,6 +158,16 @@
   background: var(--ui-button-primary) !important;
 }
 
+.sidebar-tree.tree-theme-connected .p-tree-toggler-icon {
+  color: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+}
+
+.sidebar-tree.tree-theme-connected .p-tree-toggler:hover .p-tree-toggler-icon {
+  color: var(--ui-button-primary) !important;
+  opacity: 1;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    TEMA: COMPACT (Espaciado mínimo)
    Para árboles con muchos nodos
@@ -213,6 +233,11 @@
   background: var(--ui-sidebar-hover) !important;
 }
 
+.sidebar-tree.tree-theme-compact .p-tree-toggler-icon {
+  color: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    TEMA: DOTTED (Líneas punteadas)
    Elegante con líneas discontinuas
@@ -270,6 +295,11 @@
 .sidebar-tree.tree-theme-dotted .p-treenode-content:hover {
   background: var(--ui-sidebar-hover) !important;
   border-radius: 4px;
+}
+
+.sidebar-tree.tree-theme-dotted .p-tree-toggler-icon {
+  color: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -351,6 +381,16 @@
 
 .sidebar-tree.tree-theme-modern .p-treenode-content:hover::before {
   opacity: 0.8 !important;
+}
+
+.sidebar-tree.tree-theme-modern .p-tree-toggler-icon {
+  color: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+}
+
+.sidebar-tree.tree-theme-modern .p-tree-toggler:hover .p-tree-toggler-icon {
+  opacity: 0.8;
+  filter: drop-shadow(0 0 4px var(--tree-line-color));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -657,6 +697,16 @@
   background: var(--ui-button-primary) !important;
 }
 
+.sidebar-tree.tree-theme-connected-compact .p-tree-toggler-icon {
+  color: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+}
+
+.sidebar-tree.tree-theme-connected-compact .p-tree-toggler:hover .p-tree-toggler-icon {
+  color: var(--ui-button-primary) !important;
+  opacity: 1;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    TEMA: MODERN COMPACT (Moderno Compacto)
    Estilo moderno con espaciado reducido
@@ -726,6 +776,16 @@
   box-shadow: 0 0 6px rgba(0, 172, 193, 0.12);
 }
 
+.sidebar-tree.tree-theme-modern-compact .p-tree-toggler-icon {
+  color: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+}
+
+.sidebar-tree.tree-theme-modern-compact .p-tree-toggler:hover .p-tree-toggler-icon {
+  opacity: 0.7;
+  filter: drop-shadow(0 0 3px var(--tree-line-color));
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    TEMA: NEON (Neón Futurista)
    Líneas brillantes con efecto neón cyan
@@ -788,6 +848,18 @@
 .sidebar-tree.tree-theme-neon .p-treenode-content:hover {
   background: rgba(0, 255, 255, 0.1) !important;
   box-shadow: 0 0 10px rgba(0, 255, 255, 0.3), inset 0 0 10px rgba(0, 255, 255, 0.05);
+}
+
+.sidebar-tree.tree-theme-neon .p-tree-toggler-icon {
+  color: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+  filter: drop-shadow(0 0 3px var(--tree-line-color));
+  transition: all 0.2s ease;
+}
+
+.sidebar-tree.tree-theme-neon .p-tree-toggler:hover .p-tree-toggler-icon {
+  opacity: 1;
+  filter: drop-shadow(0 0 6px var(--tree-line-color)) drop-shadow(0 0 12px var(--tree-line-color));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -855,6 +927,19 @@
   background: rgba(255, 0, 255, 0.15) !important;
   border-left: 2px solid var(--tree-line-color);
   box-shadow: 0 0 12px rgba(255, 0, 255, 0.25), inset 0 0 20px rgba(255, 0, 255, 0.05);
+}
+
+.sidebar-tree.tree-theme-cyber .p-tree-toggler-icon {
+  color: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+  filter: drop-shadow(0 0 4px var(--tree-line-color));
+  transition: all 0.15s ease;
+}
+
+.sidebar-tree.tree-theme-cyber .p-tree-toggler:hover .p-tree-toggler-icon {
+  color: var(--tree-line-secondary) !important;
+  opacity: 1;
+  filter: drop-shadow(0 0 8px var(--tree-line-secondary));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -930,6 +1015,18 @@
   box-shadow: inset 0 0 15px rgba(0, 255, 0, 0.05);
 }
 
+.sidebar-tree.tree-theme-matrix .p-tree-toggler-icon {
+  color: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+  filter: drop-shadow(0 0 2px var(--tree-line-color));
+  transition: all 0.15s ease;
+}
+
+.sidebar-tree.tree-theme-matrix .p-tree-toggler:hover .p-tree-toggler-icon {
+  opacity: 0.8;
+  filter: drop-shadow(0 0 4px var(--tree-line-color)) drop-shadow(0 0 8px var(--tree-line-color));
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    TEMA: HOLOGRAM (Holograma)
    Efecto holográfico translúcido con teal
@@ -996,6 +1093,18 @@
   border: 1px solid rgba(100, 255, 218, 0.2);
 }
 
+.sidebar-tree.tree-theme-hologram .p-tree-toggler-icon {
+  color: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+  filter: drop-shadow(0 0 4px var(--tree-line-color));
+  transition: all 0.25s ease;
+}
+
+.sidebar-tree.tree-theme-hologram .p-tree-toggler:hover .p-tree-toggler-icon {
+  opacity: 0.7;
+  filter: drop-shadow(0 0 8px var(--tree-line-color)) drop-shadow(0 0 16px var(--tree-line-color));
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    TEMA: GRADIENT (Gradiente)
    Líneas con gradientes púrpura-rosa
@@ -1057,6 +1166,20 @@
 .sidebar-tree.tree-theme-gradient .p-treenode-content:hover {
   background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)) !important;
   box-shadow: 0 0 12px rgba(102, 126, 234, 0.2);
+}
+
+.sidebar-tree.tree-theme-gradient .p-tree-toggler-icon {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  opacity: var(--tree-line-opacity);
+  transition: all 0.2s ease;
+}
+
+.sidebar-tree.tree-theme-gradient .p-tree-toggler:hover .p-tree-toggler-icon {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px #667eea);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -1130,6 +1253,21 @@
   box-shadow: 0 0 15px rgba(127, 90, 240, 0.2), 0 0 30px rgba(44, 182, 125, 0.1);
 }
 
+.sidebar-tree.tree-theme-aurora .p-tree-toggler-icon {
+  background: linear-gradient(135deg, var(--tree-line-color), var(--tree-line-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  opacity: var(--tree-line-opacity);
+  filter: drop-shadow(0 0 4px var(--tree-line-color));
+  transition: all 0.3s ease;
+}
+
+.sidebar-tree.tree-theme-aurora .p-tree-toggler:hover .p-tree-toggler-icon {
+  opacity: 1;
+  filter: drop-shadow(0 0 8px var(--tree-line-color)) drop-shadow(0 0 12px var(--tree-line-secondary));
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    TEMA: PULSE (Pulso Animado)
    Líneas con animación de pulso rosa
@@ -1197,6 +1335,19 @@
 .sidebar-tree.tree-theme-pulse .p-treenode-content:hover {
   background: rgba(247, 37, 133, 0.12) !important;
   box-shadow: 0 0 15px rgba(247, 37, 133, 0.25);
+}
+
+.sidebar-tree.tree-theme-pulse .p-tree-toggler-icon {
+  color: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+  filter: drop-shadow(0 0 3px var(--tree-line-color));
+  animation: pulse-glow 2s ease-in-out infinite;
+  transition: all 0.2s ease;
+}
+
+.sidebar-tree.tree-theme-pulse .p-tree-toggler:hover .p-tree-toggler-icon {
+  opacity: 1;
+  filter: drop-shadow(0 0 8px var(--tree-line-color)) drop-shadow(0 0 16px var(--tree-line-color));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -1278,6 +1429,19 @@
   box-shadow: 0 0 15px rgba(255, 214, 10, 0.3), inset 0 0 10px rgba(255, 214, 10, 0.05);
 }
 
+.sidebar-tree.tree-theme-electric .p-tree-toggler-icon {
+  color: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+  filter: drop-shadow(0 0 4px var(--tree-line-color));
+  animation: electric-flicker 0.5s ease-in-out infinite;
+  transition: all 0.15s ease;
+}
+
+.sidebar-tree.tree-theme-electric .p-tree-toggler:hover .p-tree-toggler-icon {
+  opacity: 1;
+  filter: drop-shadow(0 0 8px var(--tree-line-color)) drop-shadow(0 0 16px var(--tree-line-color));
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    TEMA: FROST (Escarcha)
    Efecto de hielo frío y cristalino
@@ -1343,6 +1507,18 @@
   background: rgba(168, 218, 220, 0.1) !important;
   box-shadow: 0 0 15px rgba(168, 218, 220, 0.2), inset 0 0 20px rgba(168, 218, 220, 0.03);
   border: 1px solid rgba(168, 218, 220, 0.15);
+}
+
+.sidebar-tree.tree-theme-frost .p-tree-toggler-icon {
+  color: var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+  filter: drop-shadow(0 0 3px var(--tree-line-color));
+  transition: all 0.25s ease;
+}
+
+.sidebar-tree.tree-theme-frost .p-tree-toggler:hover .p-tree-toggler-icon {
+  opacity: 0.8;
+  filter: drop-shadow(0 0 6px var(--tree-line-color)) drop-shadow(0 0 12px var(--tree-line-secondary));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
