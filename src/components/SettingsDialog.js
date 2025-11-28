@@ -25,6 +25,9 @@ import { explorerFonts } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
 import SecureStorage from '../services/SecureStorage';
 import FontPreview, { MonospaceFontPreview } from './FontPreview';
+import { 
+  FaFolder, FaFile, FaFilePdf, FaFileWord, FaFileExcel
+} from 'react-icons/fa';
 import { STORAGE_KEYS } from '../utils/constants';
 import { homeTabIcons, setHomeTabIcon, getHomeTabIconGroups } from '../themes/home-tab-icons';
 import { groupTabIcons, setGroupTabIcon } from '../themes/group-tab-icons';
@@ -3014,105 +3017,205 @@ const SettingsDialog = ({
                       {/* ═══════════════════════════════════════════════════════════════
                           VISTA PREVIA EN VIVO DEL EXPLORADOR
                           ═══════════════════════════════════════════════════════════════ */}
-                      <div style={{
-                        background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.15) 100%)',
-                        borderRadius: '12px',
-                        padding: '1rem',
-                        marginBottom: '1.25rem',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.1)'
-                      }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          marginBottom: '0.75rem',
-                          opacity: 0.7,
-                          fontSize: '0.75rem',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px',
-                          color: 'var(--text-color-secondary)'
-                        }}>
-                          <i className="pi pi-desktop" style={{ fontSize: '0.7rem' }}></i>
-                          Vista Previa
-                        </div>
+                      {(() => {
+                        const themeColors = uiThemes[explorerColorTheme]?.colors || uiThemes['Light']?.colors || {};
+                        const previewBg = themeColors.contentBackground || '#ffffff';
+                        const previewText = themeColors.dialogText || '#1e293b';
+                        const previewBorder = themeColors.contentBorder || '#e2e8f0';
+                        const previewHover = themeColors.sidebarHover || '#f1f5f9';
                         
-                        {/* Vista Previa de Archivos */}
-                        <div 
-                          style={{
-                            fontFamily: explorerFont,
-                            fontSize: `${explorerFontSize}px`,
-                            color: 'var(--ui-dialog-text)',
-                            padding: '0.5rem 0'
-                          }}
-                        >
-                          {/* Carpeta Principal */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                            {iconThemes[iconTheme]?.icons.folder && 
-                              React.cloneElement(iconThemes[iconTheme].icons.folder, {
-                                width: 20,
-                                height: 20,
-                                style: { 
-                                  ...iconThemes[iconTheme].icons.folder.props.style,
-                                  width: '20px',
-                                  height: '20px',
+                        return (
+                          <div style={{
+                            background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.15) 100%)',
+                            borderRadius: '12px',
+                            padding: '1rem',
+                            marginBottom: '1.25rem',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.1)'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              marginBottom: '0.75rem',
+                              opacity: 0.7,
+                              fontSize: '0.75rem',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              color: 'var(--text-color-secondary)'
+                            }}>
+                              <i className="pi pi-desktop" style={{ fontSize: '0.7rem' }}></i>
+                              Vista Previa
+                            </div>
+                            
+                            {/* Vista Previa del Explorador de Archivos - Estilo Material Design Cards */}
+                            <div 
+                              style={{
+                                fontFamily: explorerFont,
+                                fontSize: `${explorerFontSize}px`,
+                                background: previewBg,
+                                borderRadius: '8px',
+                                padding: '0.5rem',
+                                border: `1px solid ${previewBorder}`,
+                                maxHeight: '200px',
+                                overflowY: 'auto'
+                              }}
+                            >
+                              {/* Carpeta */}
+                              <div 
+                                style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '0.75rem',
+                                  padding: '0.5rem 0.75rem',
+                                  borderRadius: '6px',
+                                  marginBottom: '0.25rem',
+                                  background: previewHover,
+                                  cursor: 'pointer',
+                                  transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = themeColors.sidebarSelected || '#e0e7ff'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = previewHover}
+                              >
+                                <FaFolder style={{ 
+                                  fontSize: '20px', 
+                                  color: themeColors.buttonPrimary || '#667eea',
                                   flexShrink: 0
-                                }
-                              })
-                            }
-                            <span style={{ fontWeight: 600 }}>Documentos</span>
+                                }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ 
+                                    fontWeight: 600, 
+                                    color: previewText,
+                                    fontSize: `${explorerFontSize}px`,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>Documentos</div>
+                                  <div style={{ 
+                                    fontSize: `${Math.max(explorerFontSize - 2, 10)}px`,
+                                    color: previewText,
+                                    opacity: 0.7,
+                                    marginTop: '2px'
+                                  }}>Carpeta • Modificado hoy</div>
+                                </div>
+                              </div>
+                              
+                              {/* Archivo PDF */}
+                              <div 
+                                style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '0.75rem',
+                                  padding: '0.5rem 0.75rem',
+                                  borderRadius: '6px',
+                                  marginBottom: '0.25rem',
+                                  cursor: 'pointer',
+                                  transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = previewHover}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                              >
+                                <FaFilePdf style={{ 
+                                  fontSize: '18px', 
+                                  color: '#dc2626',
+                                  flexShrink: 0
+                                }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ 
+                                    fontWeight: 500, 
+                                    color: previewText,
+                                    fontSize: `${explorerFontSize}px`,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>reporte.pdf</div>
+                                  <div style={{ 
+                                    fontSize: `${Math.max(explorerFontSize - 2, 10)}px`,
+                                    color: previewText,
+                                    opacity: 0.7,
+                                    marginTop: '2px'
+                                  }}>PDF • 2.4 MB • Modificado ayer</div>
+                                </div>
+                              </div>
+                              
+                              {/* Archivo PowerPoint */}
+                              <div 
+                                style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '0.75rem',
+                                  padding: '0.5rem 0.75rem',
+                                  borderRadius: '6px',
+                                  marginBottom: '0.25rem',
+                                  cursor: 'pointer',
+                                  transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = previewHover}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                              >
+                                <FaFileWord style={{ 
+                                  fontSize: '18px', 
+                                  color: '#ea580c',
+                                  flexShrink: 0
+                                }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ 
+                                    fontWeight: 500, 
+                                    color: previewText,
+                                    fontSize: `${explorerFontSize}px`,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>presentacion.pptx</div>
+                                  <div style={{ 
+                                    fontSize: `${Math.max(explorerFontSize - 2, 10)}px`,
+                                    color: previewText,
+                                    opacity: 0.7,
+                                    marginTop: '2px'
+                                  }}>Word • 1.8 MB • Modificado hace 2 días</div>
+                                </div>
+                              </div>
+                              
+                              {/* Archivo Excel */}
+                              <div 
+                                style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '0.75rem',
+                                  padding: '0.5rem 0.75rem',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = previewHover}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                              >
+                                <FaFileExcel style={{ 
+                                  fontSize: '18px', 
+                                  color: '#16a34a',
+                                  flexShrink: 0
+                                }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ 
+                                    fontWeight: 500, 
+                                    color: previewText,
+                                    fontSize: `${explorerFontSize}px`,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>datos.xlsx</div>
+                                  <div style={{ 
+                                    fontSize: `${Math.max(explorerFontSize - 2, 10)}px`,
+                                    color: previewText,
+                                    opacity: 0.7,
+                                    marginTop: '2px'
+                                  }}>Excel • 856 KB • Modificado hace 3 días</div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          
-                          {/* Archivos dentro de Documentos */}
-                          <div style={{ marginLeft: '1.5rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                              {iconThemes[iconTheme]?.icons.file && 
-                                React.cloneElement(iconThemes[iconTheme].icons.file, {
-                                  width: 18,
-                                  height: 18,
-                                  style: { 
-                                    ...iconThemes[iconTheme].icons.file.props.style,
-                                    width: '18px',
-                                    height: '18px',
-                                    flexShrink: 0
-                                  }
-                                })
-                              }
-                              <span>reporte.pdf</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                              {iconThemes[iconTheme]?.icons.file && 
-                                React.cloneElement(iconThemes[iconTheme].icons.file, {
-                                  width: 18,
-                                  height: 18,
-                                  style: { 
-                                    ...iconThemes[iconTheme].icons.file.props.style,
-                                    width: '18px',
-                                    height: '18px',
-                                    flexShrink: 0
-                                  }
-                                })
-                              }
-                              <span>presentacion.pptx</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              {iconThemes[iconTheme]?.icons.file && 
-                                React.cloneElement(iconThemes[iconTheme].icons.file, {
-                                  width: 18,
-                                  height: 18,
-                                  style: { 
-                                    ...iconThemes[iconTheme].icons.file.props.style,
-                                    width: '18px',
-                                    height: '18px',
-                                    flexShrink: 0
-                                  }
-                                })
-                              }
-                              <span>datos.xlsx</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                        );
+                      })()}
 
                       {/* ═══════════════════════════════════════════════════════════════
                           DIVIDER
