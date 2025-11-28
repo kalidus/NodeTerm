@@ -2472,7 +2472,7 @@ const SettingsDialog = ({
               />
             )}
             {activeSubTab === 'explorador-sesiones' && (
-                <div className="general-settings-container" style={{ maxWidth: '600px', margin: '0 auto' }}>
+                <div className="general-settings-container" style={{ width: '100%', maxWidth: '100%' }}>
                   {/* Header */}
                   <div className="general-settings-header-wrapper">
                     <div className="general-header-content">
@@ -2489,162 +2489,87 @@ const SettingsDialog = ({
                     </div>
                   </div>
 
-                  {/* Contenido en una columna */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {/* Contenido en 2 columnas */}
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: '1fr 1fr', 
+                    gap: '1.5rem',
+                    alignItems: 'start',
+                    boxSizing: 'border-box',
+                    width: '100%',
+                    maxWidth: '100%'
+                  }}>
                     
-                    {/* Sección: Tema de Iconos */}
-                    <div className="general-settings-section" style={{ marginBottom: 0 }}>
-                      <div className="general-section-header">
-                        <div className="general-section-icon">
-                          <i className="pi pi-palette"></i>
+                    {/* Columna Izquierda */}
+                    <div style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '1rem',
+                      boxSizing: 'border-box',
+                      maxWidth: '100%',
+                      overflow: 'hidden'
+                    }}>
+                      {/* Sección: Tema de Iconos */}
+                      <div className="general-settings-section" style={{ marginBottom: 0, height: '100%', boxSizing: 'border-box', maxWidth: '100%', overflow: 'hidden' }}>
+                        <div className="general-section-header">
+                          <div className="general-section-icon">
+                            <i className="pi pi-palette"></i>
+                          </div>
+                          <h4 className="general-section-title">Tema de Iconos</h4>
                         </div>
-                        <h4 className="general-section-title">Tema de Iconos</h4>
-                      </div>
-                      <div className="general-settings-options">
-                        <div style={{ marginBottom: '0.75rem' }}>
-                          <Dropdown
-                            id="icon-theme-sidebar"
-                            value={iconThemeSidebar}
-                            options={Object.entries(iconThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
-                            onChange={e => setIconThemeSidebar(e.value)}
-                            placeholder="Selecciona un tema de iconos"
-                            style={{ width: '100%' }}
-                            itemTemplate={option => (
-                              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                {iconThemes[option.value]?.icons.folder}
-                                {iconThemes[option.value]?.name}
+                        <div className="general-settings-options" style={{ boxSizing: 'border-box', maxWidth: '100%', overflow: 'hidden' }}>
+                          <div style={{ marginBottom: '0.75rem' }}>
+                            <Dropdown
+                              id="icon-theme-sidebar"
+                              value={iconThemeSidebar}
+                              options={Object.entries(iconThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
+                              onChange={e => setIconThemeSidebar(e.value)}
+                              placeholder="Selecciona un tema de iconos"
+                              style={{ width: '100%' }}
+                              itemTemplate={option => (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  {iconThemes[option.value]?.icons.folder}
+                                  {iconThemes[option.value]?.name}
+                                </span>
+                              )}
+                            />
+                          </div>
+                          <div style={{ 
+                            display: 'flex', 
+                            gap: '12px', 
+                            justifyContent: 'center',
+                            padding: '0.75rem',
+                            background: 'rgba(0, 0, 0, 0.15)',
+                            borderRadius: '8px',
+                            flexWrap: 'wrap'
+                          }}>
+                            {iconThemes[iconThemeSidebar] && Object.values(iconThemes[iconThemeSidebar].icons).map((icon, idx) => (
+                              <span key={idx}>
+                                {React.cloneElement(icon, {
+                                  width: 22,
+                                  height: 22,
+                                  style: { 
+                                    ...icon.props.style,
+                                    width: '22px',
+                                    height: '22px'
+                                  }
+                                })}
                               </span>
-                            )}
-                          />
-                        </div>
-                        <div style={{ 
-                          display: 'flex', 
-                          gap: '12px', 
-                          justifyContent: 'center',
-                          padding: '0.75rem',
-                          background: 'rgba(0, 0, 0, 0.15)',
-                          borderRadius: '8px'
-                        }}>
-                          {iconThemes[iconThemeSidebar] && Object.values(iconThemes[iconThemeSidebar].icons).map((icon, idx) => (
-                            <span key={idx}>
-                              {React.cloneElement(icon, {
-                                width: 22,
-                                height: 22,
-                                style: { 
-                                  ...icon.props.style,
-                                  width: '22px',
-                                  height: '22px'
-                                }
-                              })}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Sección: Tamaño de Iconos */}
-                    <div className="general-settings-section" style={{ marginBottom: 0 }}>
-                      <div className="general-section-header">
-                        <div className="general-section-icon">
-                          <i className="pi pi-expand"></i>
-                        </div>
-                        <h4 className="general-section-title">Tamaño de Iconos</h4>
-                      </div>
-                      <div className="general-settings-options">
-                        {/* Carpetas */}
-                        <div className="general-setting-card">
-                          <div className="general-setting-content">
-                            <div className="general-setting-icon" style={{ background: 'var(--ui-button-primary)' }}>
-                              <i className="pi pi-folder"></i>
-                            </div>
-                            <div className="general-setting-info">
-                              <label className="general-setting-label">Carpetas</label>
-                              <p className="general-setting-description">Tamaño de iconos de carpetas</p>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                              <InputNumber
-                                id="folder-icon-size"
-                                value={folderIconSize || 20}
-                                onValueChange={(e) => setFolderIconSize && setFolderIconSize(e.value)}
-                                min={12}
-                                max={32}
-                                suffix=" px"
-                                style={{ width: '80px' }}
-                              />
-                              {iconThemes[iconThemeSidebar]?.icons.folder && 
-                                React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
-                                  width: folderIconSize,
-                                  height: folderIconSize,
-                                  style: { 
-                                    ...iconThemes[iconThemeSidebar].icons.folder.props.style,
-                                    width: `${folderIconSize}px`,
-                                    height: `${folderIconSize}px`
-                                  }
-                                })
-                              }
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Conexiones */}
-                        <div className="general-setting-card">
-                          <div className="general-setting-content">
-                            <div className="general-setting-icon" style={{ background: 'var(--ui-button-primary)', opacity: 0.9 }}>
-                              <i className="pi pi-link"></i>
-                            </div>
-                            <div className="general-setting-info">
-                              <label className="general-setting-label">Conexiones</label>
-                              <p className="general-setting-description">Tamaño de iconos SSH, RDP, etc.</p>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <InputNumber
-                                id="connection-icon-size"
-                                value={connectionIconSize || 20}
-                                onValueChange={(e) => setConnectionIconSize && setConnectionIconSize(e.value)}
-                                min={12}
-                                max={32}
-                                suffix=" px"
-                                style={{ width: '80px' }}
-                              />
-                              {iconThemes[iconThemeSidebar]?.icons.ssh && 
-                                React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
-                                  width: connectionIconSize,
-                                  height: connectionIconSize,
-                                  style: { 
-                                    ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
-                                    width: `${connectionIconSize}px`,
-                                    height: `${connectionIconSize}px`
-                                  }
-                                })
-                              }
-                              {iconThemes[iconThemeSidebar]?.icons.rdp && 
-                                React.cloneElement(iconThemes[iconThemeSidebar].icons.rdp, {
-                                  width: connectionIconSize,
-                                  height: connectionIconSize,
-                                  style: { 
-                                    ...iconThemes[iconThemeSidebar].icons.rdp.props.style,
-                                    width: `${connectionIconSize}px`,
-                                    height: `${connectionIconSize}px`
-                                  }
-                                })
-                              }
-                            </div>
+                            ))}
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Sección: Tipografía */}
-                    <div className="general-settings-section" style={{ marginBottom: 0 }}>
-                      <div className="general-section-header">
-                        <div className="general-section-icon">
-                          <i className="pi pi-pencil"></i>
+                      {/* Sección: Tipografía */}
+                      <div className="general-settings-section" style={{ marginBottom: 0, height: '100%', boxSizing: 'border-box', maxWidth: '100%', overflow: 'hidden' }}>
+                        <div className="general-section-header">
+                          <div className="general-section-icon">
+                            <i className="pi pi-pencil"></i>
+                          </div>
+                          <h4 className="general-section-title">Tipografía</h4>
                         </div>
-                        <h4 className="general-section-title">Tipografía</h4>
-                      </div>
-                      <div className="general-settings-options">
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: '1rem', marginBottom: '0.75rem' }}>
-                          <div>
+                        <div className="general-settings-options" style={{ boxSizing: 'border-box', maxWidth: '100%', overflow: 'hidden' }}>
+                          <div style={{ marginBottom: '0.75rem' }}>
                             <label style={{
                               display: 'block',
                               marginBottom: '0.4rem',
@@ -2666,7 +2591,7 @@ const SettingsDialog = ({
                               )}
                             />
                           </div>
-                          <div>
+                          <div style={{ marginBottom: '0.75rem' }}>
                             <label style={{
                               display: 'block',
                               marginBottom: '0.4rem',
@@ -2686,17 +2611,205 @@ const SettingsDialog = ({
                               style={{ width: '100%' }}
                             />
                           </div>
+                          <div style={{ 
+                            padding: '0.75rem 1rem',
+                            background: 'rgba(0, 0, 0, 0.15)',
+                            borderRadius: '8px',
+                            fontFamily: sidebarFont, 
+                            fontSize: `${sidebarFontSize}px`,
+                            textAlign: 'center',
+                            color: 'var(--ui-dialog-text)'
+                          }}>
+                            <span style={{ opacity: 0.7 }}>Vista previa:</span> <span style={{ fontWeight: 600 }}>{sidebarFont}</span>
+                          </div>
                         </div>
-                        <div style={{ 
-                          padding: '0.75rem 1rem',
-                          background: 'rgba(0, 0, 0, 0.15)',
-                          borderRadius: '8px',
-                          fontFamily: sidebarFont, 
-                          fontSize: `${sidebarFontSize}px`,
-                          textAlign: 'center',
-                          color: 'var(--ui-dialog-text)'
+                      </div>
+                    </div>
+
+                    {/* Columna Derecha */}
+                    <div style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '1rem',
+                      boxSizing: 'border-box',
+                      maxWidth: '100%',
+                      overflow: 'hidden'
+                    }}>
+                      {/* Sección: Tamaño de Iconos */}
+                      <div className="general-settings-section" style={{ marginBottom: 0, height: '100%', boxSizing: 'border-box', maxWidth: '100%', overflow: 'hidden' }}>
+                        <div className="general-section-header">
+                          <div className="general-section-icon">
+                            <i className="pi pi-expand"></i>
+                          </div>
+                          <h4 className="general-section-title">Tamaño de Iconos</h4>
+                        </div>
+                        <div className="general-settings-options" style={{ 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          gap: '0.75rem',
+                          boxSizing: 'border-box',
+                          maxWidth: '100%',
+                          overflow: 'hidden'
                         }}>
-                          <span style={{ opacity: 0.7 }}>Vista previa:</span> <span style={{ fontWeight: 600 }}>{sidebarFont}</span>
+                          {/* Carpetas */}
+                          <div className="general-setting-card" style={{ marginBottom: 0, boxSizing: 'border-box' }}>
+                            <div className="general-setting-content" style={{ 
+                              flexWrap: 'wrap', 
+                              gap: '0.75rem',
+                              boxSizing: 'border-box',
+                              maxWidth: '100%',
+                              overflow: 'hidden'
+                            }}>
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '0.75rem', 
+                                flex: '1 1 auto', 
+                                minWidth: 0,
+                                maxWidth: '100%',
+                                boxSizing: 'border-box'
+                              }}>
+                                <div className="general-setting-icon" style={{ background: 'var(--ui-button-primary)', flexShrink: 0 }}>
+                                  <i className="pi pi-folder"></i>
+                                </div>
+                                <div className="general-setting-info" style={{ flex: '1 1 auto', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
+                                  <label className="general-setting-label">Carpetas</label>
+                                  <p className="general-setting-description">Tamaño de iconos de carpetas</p>
+                                </div>
+                              </div>
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '0.5rem',
+                                flexShrink: 0,
+                                width: '100%',
+                                boxSizing: 'border-box',
+                                maxWidth: '100%',
+                                overflow: 'hidden',
+                                paddingTop: '0.25rem'
+                              }}>
+                                <InputNumber
+                                  id="folder-icon-size"
+                                  value={folderIconSize || 20}
+                                  onValueChange={(e) => setFolderIconSize && setFolderIconSize(e.value)}
+                                  min={12}
+                                  max={32}
+                                  suffix=" px"
+                                  style={{ width: '90px', flexShrink: 0, maxWidth: '90px' }}
+                                />
+                                <div style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center',
+                                  width: `${Math.max(folderIconSize || 20, 20)}px`,
+                                  height: `${Math.max(folderIconSize || 20, 20)}px`,
+                                  flexShrink: 0,
+                                  maxWidth: '32px',
+                                  overflow: 'hidden'
+                                }}>
+                                  {iconThemes[iconThemeSidebar]?.icons.folder && 
+                                    React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
+                                      width: folderIconSize,
+                                      height: folderIconSize,
+                                      style: { 
+                                        ...iconThemes[iconThemeSidebar].icons.folder.props.style,
+                                        width: `${Math.min(folderIconSize, 32)}px`,
+                                        height: `${Math.min(folderIconSize, 32)}px`,
+                                        maxWidth: '32px',
+                                        maxHeight: '32px'
+                                      }
+                                    })
+                                  }
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Conexiones */}
+                          <div className="general-setting-card" style={{ marginBottom: 0, boxSizing: 'border-box' }}>
+                            <div className="general-setting-content" style={{ 
+                              flexWrap: 'wrap', 
+                              gap: '0.75rem',
+                              boxSizing: 'border-box',
+                              maxWidth: '100%',
+                              overflow: 'hidden'
+                            }}>
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '0.75rem', 
+                                flex: '1 1 auto', 
+                                minWidth: 0,
+                                maxWidth: '100%',
+                                boxSizing: 'border-box'
+                              }}>
+                                <div className="general-setting-icon" style={{ background: 'var(--ui-button-primary)', opacity: 0.9, flexShrink: 0 }}>
+                                  <i className="pi pi-link"></i>
+                                </div>
+                                <div className="general-setting-info" style={{ flex: '1 1 auto', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
+                                  <label className="general-setting-label">Conexiones</label>
+                                  <p className="general-setting-description">Tamaño de iconos SSH, RDP, etc.</p>
+                                </div>
+                              </div>
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '0.5rem',
+                                flexShrink: 0,
+                                width: '100%',
+                                flexWrap: 'wrap',
+                                boxSizing: 'border-box',
+                                maxWidth: '100%',
+                                overflow: 'hidden',
+                                paddingTop: '0.25rem'
+                              }}>
+                                <InputNumber
+                                  id="connection-icon-size"
+                                  value={connectionIconSize || 20}
+                                  onValueChange={(e) => setConnectionIconSize && setConnectionIconSize(e.value)}
+                                  min={12}
+                                  max={32}
+                                  suffix=" px"
+                                  style={{ width: '90px', flexShrink: 0, maxWidth: '90px' }}
+                                />
+                                <div style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '0.25rem',
+                                  flexShrink: 0,
+                                  maxWidth: '100%',
+                                  overflow: 'hidden'
+                                }}>
+                                  {iconThemes[iconThemeSidebar]?.icons.ssh && 
+                                    React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
+                                      width: connectionIconSize,
+                                      height: connectionIconSize,
+                                      style: { 
+                                        ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
+                                        width: `${Math.min(connectionIconSize, 32)}px`,
+                                        height: `${Math.min(connectionIconSize, 32)}px`,
+                                        maxWidth: '32px',
+                                        maxHeight: '32px'
+                                      }
+                                    })
+                                  }
+                                  {iconThemes[iconThemeSidebar]?.icons.rdp && 
+                                    React.cloneElement(iconThemes[iconThemeSidebar].icons.rdp, {
+                                      width: connectionIconSize,
+                                      height: connectionIconSize,
+                                      style: { 
+                                        ...iconThemes[iconThemeSidebar].icons.rdp.props.style,
+                                        width: `${Math.min(connectionIconSize, 32)}px`,
+                                        height: `${Math.min(connectionIconSize, 32)}px`,
+                                        maxWidth: '32px',
+                                        maxHeight: '32px'
+                                      }
+                                    })
+                                  }
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
