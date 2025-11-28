@@ -2976,7 +2976,7 @@ const SettingsDialog = ({
                 </div>
             )}
             {activeSubTab === 'explorador-archivos' && (
-                <div className="general-settings-container" style={{ maxWidth: '600px', margin: '0 auto' }}>
+                <div className="general-settings-container" style={{ maxWidth: '100%', margin: '0 auto' }}>
                   {/* Header */}
                   <div className="general-settings-header-wrapper">
                     <div className="general-header-content">
@@ -2993,25 +2993,166 @@ const SettingsDialog = ({
                     </div>
                   </div>
 
-                  {/* Contenido en una columna */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    
-                    {/* Sección: Tema de Iconos */}
-                    <div className="general-settings-section" style={{ marginBottom: 0 }}>
-                      <div className="general-section-header">
-                        <div className="general-section-icon">
-                          <i className="pi pi-palette"></i>
-                        </div>
-                        <h4 className="general-section-title">Tema de Iconos</h4>
+                  {/* Card Unificada: Dashboard de Personalización */}
+                  <div className="general-settings-section" style={{ 
+                    marginBottom: 0, 
+                    maxWidth: '100%',
+                    width: '100%'
+                  }}>
+                    <div className="general-section-header">
+                      <div className="general-section-icon" style={{ 
+                        background: 'linear-gradient(135deg, #8BC34A 0%, #689F38 100%)',
+                        boxShadow: '0 2px 8px rgba(139, 195, 74, 0.3)'
+                      }}>
+                        <i className="pi pi-eye"></i>
                       </div>
-                      <div className="general-settings-options">
-                        <div style={{ marginBottom: '0.75rem' }}>
+                      <h4 className="general-section-title">Personalización del Explorador</h4>
+                    </div>
+                    
+                    <div className="general-settings-options" style={{ padding: '1rem 1.25rem' }}>
+                      
+                      {/* ═══════════════════════════════════════════════════════════════
+                          VISTA PREVIA EN VIVO DEL EXPLORADOR
+                          ═══════════════════════════════════════════════════════════════ */}
+                      <div style={{
+                        background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.15) 100%)',
+                        borderRadius: '12px',
+                        padding: '1rem',
+                        marginBottom: '1.25rem',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          marginBottom: '0.75rem',
+                          opacity: 0.7,
+                          fontSize: '0.75rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          color: 'var(--text-color-secondary)'
+                        }}>
+                          <i className="pi pi-desktop" style={{ fontSize: '0.7rem' }}></i>
+                          Vista Previa
+                        </div>
+                        
+                        {/* Vista Previa de Archivos */}
+                        <div 
+                          style={{
+                            fontFamily: explorerFont,
+                            fontSize: `${explorerFontSize}px`,
+                            color: 'var(--ui-dialog-text)',
+                            padding: '0.5rem 0'
+                          }}
+                        >
+                          {/* Carpeta Principal */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            {iconThemes[iconTheme]?.icons.folder && 
+                              React.cloneElement(iconThemes[iconTheme].icons.folder, {
+                                width: 20,
+                                height: 20,
+                                style: { 
+                                  ...iconThemes[iconTheme].icons.folder.props.style,
+                                  width: '20px',
+                                  height: '20px',
+                                  flexShrink: 0
+                                }
+                              })
+                            }
+                            <span style={{ fontWeight: 600 }}>Documentos</span>
+                          </div>
+                          
+                          {/* Archivos dentro de Documentos */}
+                          <div style={{ marginLeft: '1.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                              {iconThemes[iconTheme]?.icons.file && 
+                                React.cloneElement(iconThemes[iconTheme].icons.file, {
+                                  width: 18,
+                                  height: 18,
+                                  style: { 
+                                    ...iconThemes[iconTheme].icons.file.props.style,
+                                    width: '18px',
+                                    height: '18px',
+                                    flexShrink: 0
+                                  }
+                                })
+                              }
+                              <span>reporte.pdf</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                              {iconThemes[iconTheme]?.icons.file && 
+                                React.cloneElement(iconThemes[iconTheme].icons.file, {
+                                  width: 18,
+                                  height: 18,
+                                  style: { 
+                                    ...iconThemes[iconTheme].icons.file.props.style,
+                                    width: '18px',
+                                    height: '18px',
+                                    flexShrink: 0
+                                  }
+                                })
+                              }
+                              <span>presentacion.pptx</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              {iconThemes[iconTheme]?.icons.file && 
+                                React.cloneElement(iconThemes[iconTheme].icons.file, {
+                                  width: 18,
+                                  height: 18,
+                                  style: { 
+                                    ...iconThemes[iconTheme].icons.file.props.style,
+                                    width: '18px',
+                                    height: '18px',
+                                    flexShrink: 0
+                                  }
+                                })
+                              }
+                              <span>datos.xlsx</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ═══════════════════════════════════════════════════════════════
+                          DIVIDER
+                          ═══════════════════════════════════════════════════════════════ */}
+                      <div style={{
+                        height: '1px',
+                        background: 'linear-gradient(90deg, transparent 0%, rgba(139, 195, 74, 0.4) 50%, transparent 100%)',
+                        margin: '0.5rem 0 1rem 0'
+                      }}></div>
+
+                      {/* ═══════════════════════════════════════════════════════════════
+                          FILA 1: TEMA DE ICONOS + TEMA DE COLORES
+                          ═══════════════════════════════════════════════════════════════ */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: '1rem',
+                        marginBottom: '1rem'
+                      }}>
+                        {/* Tema de Iconos */}
+                        <div>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            marginBottom: '0.5rem'
+                          }}>
+                            <i className="pi pi-palette" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
+                            <label style={{
+                              fontSize: '0.875rem',
+                              fontWeight: 600,
+                              color: 'var(--ui-dialog-text)'
+                            }}>Tema de Iconos</label>
+                          </div>
                           <Dropdown
                             id="icon-theme"
                             value={iconTheme}
                             options={Object.entries(iconThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
                             onChange={e => setIconTheme(e.value)}
-                            placeholder="Selecciona un tema de iconos"
+                            placeholder="Selecciona un tema"
                             style={{ width: '100%' }}
                             itemTemplate={option => (
                               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -3021,120 +3162,28 @@ const SettingsDialog = ({
                             )}
                           />
                         </div>
-                        <div style={{ 
-                          display: 'flex', 
-                          gap: '12px', 
-                          justifyContent: 'center',
-                          padding: '0.75rem',
-                          background: 'rgba(0, 0, 0, 0.15)',
-                          borderRadius: '8px'
-                        }}>
-                          {iconThemes[iconTheme] && Object.values(iconThemes[iconTheme].icons).map((icon, idx) => (
-                            <span key={idx}>{icon}</span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* Sección: Tipografía */}
-                    <div className="general-settings-section" style={{ marginBottom: 0 }}>
-                      <div className="general-section-header">
-                        <div className="general-section-icon">
-                          <i className="pi pi-pencil"></i>
-                        </div>
-                        <h4 className="general-section-title">Tipografía</h4>
-                      </div>
-                      <div className="general-settings-options">
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: '1rem', marginBottom: '0.75rem' }}>
-                          <div>
+                        {/* Tema de Colores */}
+                        <div>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            marginBottom: '0.5rem'
+                          }}>
+                            <i className="pi pi-sun" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
                             <label style={{
-                              display: 'block',
-                              marginBottom: '0.4rem',
-                              fontSize: '0.8125rem',
-                              color: 'var(--text-color-secondary)',
-                              fontWeight: 500
-                            }}>
-                              Familia de fuente
-                            </label>
-                            <Dropdown
-                              id="explorer-font"
-                              value={explorerFont}
-                              options={explorerFonts.map(f => ({ label: f, value: f }))}
-                              onChange={e => setExplorerFont(e.value)}
-                              placeholder="Selecciona una fuente"
-                              style={{ width: '100%' }}
-                              itemTemplate={option => (
-                                <div style={{ 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  justifyContent: 'space-between',
-                                  padding: '4px 0'
-                                }}>
-                                  <span style={{ 
-                                    fontFamily: option.value,
-                                    fontSize: '14px',
-                                    fontWeight: '500'
-                                  }}>
-                                    {option.label}
-                                  </span>
-                                  <span style={{ 
-                                    fontSize: '11px',
-                                    color: 'var(--text-color-secondary)',
-                                    opacity: 0.7,
-                                    fontFamily: 'monospace'
-                                  }}>
-                                    Aa
-                                  </span>
-                                </div>
-                              )}
-                            />
+                              fontSize: '0.875rem',
+                              fontWeight: 600,
+                              color: 'var(--ui-dialog-text)'
+                            }}>Tema de Colores</label>
                           </div>
-                          <div>
-                            <label style={{
-                              display: 'block',
-                              marginBottom: '0.4rem',
-                              fontSize: '0.8125rem',
-                              color: 'var(--text-color-secondary)',
-                              fontWeight: 500
-                            }}>
-                              Tamaño
-                            </label>
-                            <InputNumber
-                              id="explorer-font-size"
-                              value={explorerFontSize}
-                              onValueChange={e => setExplorerFontSize(e.value)}
-                              min={8}
-                              max={32}
-                              suffix=" px"
-                              style={{ width: '100%' }}
-                            />
-                          </div>
-                        </div>
-                        <FontPreview 
-                          fontFamily={explorerFont}
-                          fontSize={explorerFontSize}
-                          sampleText="Explorador de Archivos"
-                          style={{ marginTop: 0 }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Sección: Tema de Colores */}
-                    <div className="general-settings-section" style={{ marginBottom: 0 }}>
-                      <div className="general-section-header">
-                        <div className="general-section-icon">
-                          <i className="pi pi-sun"></i>
-                        </div>
-                        <h4 className="general-section-title">Tema de Colores</h4>
-                      </div>
-                      <div className="general-settings-options">
-                        <div style={{ marginBottom: '0.75rem' }}>
                           <Dropdown
                             id="explorer-color-theme"
                             value={explorerColorTheme}
                             options={Object.entries(uiThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
                             onChange={e => setExplorerColorTheme(e.value)}
-                            placeholder="Selecciona un tema de colores"
+                            placeholder="Selecciona un tema"
                             style={{ width: '100%' }}
                             itemTemplate={option => (
                               <span style={{
@@ -3156,24 +3205,99 @@ const SettingsDialog = ({
                             )}
                           />
                         </div>
+                      </div>
+
+                      {/* ═══════════════════════════════════════════════════════════════
+                          FILA 2: TIPOGRAFÍA
+                          ═══════════════════════════════════════════════════════════════ */}
+                      <div style={{
+                        background: 'rgba(0, 0, 0, 0.08)',
+                        borderRadius: '10px',
+                        padding: '0.875rem 1rem',
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        marginBottom: '1rem'
+                      }}>
                         <div style={{
-                          padding: '0.75rem 1rem',
-                          borderRadius: '8px',
-                          background: uiThemes[explorerColorTheme]?.colors?.contentBackground || '#fff',
-                          border: `2px solid ${uiThemes[explorerColorTheme]?.colors?.buttonPrimary || '#007ad9'}`,
-                          color: uiThemes[explorerColorTheme]?.colors?.dialogText || '#000',
-                          textAlign: 'center',
-                          fontSize: '0.875rem',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          marginBottom: '0.75rem'
                         }}>
-                          Vista previa del tema: <span style={{ 
+                          <i className="pi pi-pencil" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
+                          <span style={{
+                            fontSize: '0.875rem',
                             fontWeight: 600,
-                            color: uiThemes[explorerColorTheme]?.colors?.buttonPrimary || '#007ad9'
-                          }}>{uiThemes[explorerColorTheme]?.name}</span>
+                            color: 'var(--ui-dialog-text)'
+                          }}>Tipografía</span>
+                        </div>
+                        
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '1rem'
+                        }}>
+                          {/* Fuente */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              minWidth: '60px'
+                            }}>
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Fuente</span>
+                            </div>
+                            <Dropdown
+                              id="explorer-font"
+                              value={explorerFont}
+                              options={explorerFonts.map(f => ({ label: f, value: f }))}
+                              onChange={e => setExplorerFont(e.value)}
+                              placeholder="Selecciona una fuente"
+                              style={{ flex: 1 }}
+                              itemTemplate={option => (
+                                <span style={{ fontFamily: option.value }}>{option.label}</span>
+                              )}
+                            />
+                          </div>
+
+                          {/* Tamaño de Fuente con Slider */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              minWidth: '60px'
+                            }}>
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Tamaño</span>
+                            </div>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <Slider
+                                value={explorerFontSize}
+                                onChange={(e) => setExplorerFontSize(e.value)}
+                                min={8}
+                                max={32}
+                                style={{ flex: 1 }}
+                              />
+                              <span style={{ 
+                                fontSize: '0.75rem', 
+                                color: 'var(--ui-button-primary)',
+                                fontWeight: 600,
+                                minWidth: '40px',
+                                textAlign: 'right'
+                              }}>{explorerFontSize} px</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
+                    </div>
                   </div>
                 </div>
             )}
