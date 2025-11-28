@@ -246,36 +246,6 @@ export const treeThemes = {
     cssClass: 'tree-theme-aurora'
   },
 
-  pulse: {
-    name: 'Pulso',
-    description: 'Líneas con animación de pulso',
-    lineStyle: 'solid',
-    lineColor: '#f72585',
-    lineOpacity: 0.5,
-    lineWidth: 2,
-    nodeSpacing: 'normal',
-    indentSize: 20,
-    borderRadius: 4,
-    hoverStyle: 'pulse',
-    connectorChars: null,
-    cssClass: 'tree-theme-pulse'
-  },
-
-  electric: {
-    name: 'Eléctrico',
-    description: 'Efecto eléctrico con chispas',
-    lineStyle: 'dashed',
-    lineColor: '#ffd60a',
-    lineOpacity: 0.7,
-    lineWidth: 2,
-    nodeSpacing: 'normal',
-    indentSize: 18,
-    borderRadius: 2,
-    hoverStyle: 'electric',
-    connectorChars: null,
-    cssClass: 'tree-theme-electric'
-  },
-
   frost: {
     name: 'Escarcha',
     description: 'Efecto de hielo frío y cristalino',
@@ -289,7 +259,27 @@ export const treeThemes = {
     hoverStyle: 'frost',
     connectorChars: null,
     cssClass: 'tree-theme-frost'
-  }
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // TEMAS CON ESTILOS DE LÍNEAS ÚNICOS
+  // ═══════════════════════════════════════════════════════════════
+
+  double: {
+    name: 'Doble Línea',
+    description: 'Líneas dobles paralelas',
+    lineStyle: 'double',
+    lineColor: 'var(--ui-sidebar-border)',
+    lineOpacity: 0.7,
+    lineWidth: 2,
+    nodeSpacing: 'normal',
+    indentSize: 20,
+    borderRadius: 4,
+    hoverStyle: 'highlight',
+    connectorChars: null,
+    cssClass: 'tree-theme-double'
+  },
+
 };
 
 // Array para el dropdown del selector
