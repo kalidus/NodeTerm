@@ -2636,18 +2636,6 @@ const TabThemeSelector = () => {
             ))}
           </div>
         </div>
-
-        {/* Info Box */}
-        <div className="tab-theme-info-box">
-          <i className="pi pi-info-circle" />
-          <div className="tab-theme-info-box-content">
-            <div className="tab-theme-info-box-title">Información</div>
-            <p className="tab-theme-info-box-text">
-              El tema "Por Defecto" adapta automáticamente el estilo de las pestañas al tema de interfaz seleccionado. 
-              Los demás temas son independientes y conservan su apariencia sin importar el tema de la interfaz.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );
