@@ -2489,390 +2489,437 @@ const SettingsDialog = ({
                     </div>
                   </div>
 
-                  {/* Contenido en 2 columnas */}
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: '1fr 1fr', 
-                    gap: '1.5rem',
-                    alignItems: 'start',
-                    boxSizing: 'border-box',
-                    width: '100%',
-                    maxWidth: '100%'
+                  {/* Card Unificada: Dashboard de Personalización */}
+                  <div className="general-settings-section" style={{ 
+                    marginBottom: 0, 
+                    maxWidth: '800px',
+                    margin: '0 auto'
                   }}>
+                    <div className="general-section-header">
+                      <div className="general-section-icon" style={{ 
+                        background: 'linear-gradient(135deg, #00ACC1 0%, #0097A7 100%)',
+                        boxShadow: '0 2px 8px rgba(0, 172, 193, 0.3)'
+                      }}>
+                        <i className="pi pi-eye"></i>
+                      </div>
+                      <h4 className="general-section-title">Personalización del Explorador</h4>
+                    </div>
                     
-                    {/* Columna Izquierda */}
-                    <div style={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      gap: '1rem',
-                      boxSizing: 'border-box',
-                      maxWidth: '100%',
-                      overflow: 'hidden'
-                    }}>
-                      {/* Sección: Tema de Iconos */}
-                      <div className="general-settings-section" style={{ marginBottom: 0, height: '100%', boxSizing: 'border-box', maxWidth: '100%', overflow: 'hidden' }}>
-                        <div className="general-section-header">
-                          <div className="general-section-icon">
-                            <i className="pi pi-palette"></i>
-                          </div>
-                          <h4 className="general-section-title">Tema de Iconos</h4>
-                        </div>
-                        <div className="general-settings-options" style={{ boxSizing: 'border-box', maxWidth: '100%', overflow: 'hidden' }}>
-                          <div style={{ marginBottom: '0.75rem' }}>
-                            <Dropdown
-                              id="icon-theme-sidebar"
-                              value={iconThemeSidebar}
-                              options={Object.entries(iconThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
-                              onChange={e => setIconThemeSidebar(e.value)}
-                              placeholder="Selecciona un tema de iconos"
-                              style={{ width: '100%' }}
-                              itemTemplate={option => (
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  {iconThemes[option.value]?.icons.folder}
-                                  {iconThemes[option.value]?.name}
-                                </span>
-                              )}
-                            />
-                          </div>
-                          <div style={{ 
-                            display: 'flex', 
-                            gap: '12px', 
-                            justifyContent: 'center',
-                            padding: '0.75rem',
-                            background: 'rgba(0, 0, 0, 0.15)',
-                            borderRadius: '8px',
-                            flexWrap: 'wrap'
-                          }}>
-                            {iconThemes[iconThemeSidebar] && Object.values(iconThemes[iconThemeSidebar].icons).map((icon, idx) => (
-                              <span key={idx}>
-                                {React.cloneElement(icon, {
-                                  width: 22,
-                                  height: 22,
-                                  style: { 
-                                    ...icon.props.style,
-                                    width: '22px',
-                                    height: '22px'
-                                  }
-                                })}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Columna Derecha - Card Unificada: Tipografía y Tamaño de Iconos */}
-                    <div style={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      gap: '1rem',
-                      boxSizing: 'border-box',
-                      maxWidth: '100%',
-                      overflow: 'hidden'
-                    }}>
-                      {/* Card Unificada: Personalización Visual */}
-                      <div className="general-settings-section" style={{ marginBottom: 0, height: '100%', boxSizing: 'border-box', maxWidth: '100%', overflow: 'hidden' }}>
-                        <div className="general-section-header">
-                          <div className="general-section-icon" style={{ background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.9) 0%, rgba(156, 39, 176, 0.9) 100%)' }}>
-                            <i className="pi pi-sliders-h"></i>
-                          </div>
-                          <h4 className="general-section-title">Personalización Visual</h4>
-                        </div>
-                        <div className="general-settings-options" style={{ 
-                          boxSizing: 'border-box', 
-                          maxWidth: '100%', 
-                          overflow: 'hidden',
-                          padding: '0.75rem 1rem',
-                          gap: '0.5rem'
+                    <div className="general-settings-options" style={{ padding: '1rem 1.25rem' }}>
+                      
+                      {/* ═══════════════════════════════════════════════════════════════
+                          VISTA PREVIA EN VIVO DEL EXPLORADOR
+                          ═══════════════════════════════════════════════════════════════ */}
+                      <div style={{
+                        background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.15) 100%)',
+                        borderRadius: '12px',
+                        padding: '1rem',
+                        marginBottom: '1.25rem',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          marginBottom: '0.75rem',
+                          opacity: 0.7,
+                          fontSize: '0.75rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          color: 'var(--text-color-secondary)'
                         }}>
+                          <i className="pi pi-desktop" style={{ fontSize: '0.7rem' }}></i>
+                          Vista Previa
+                        </div>
+                        
+                        {/* Árbol Simulado */}
+                        <div style={{
+                          background: 'rgba(0, 0, 0, 0.2)',
+                          borderRadius: '8px',
+                          padding: '0.875rem 1rem',
+                          fontFamily: sidebarFont,
+                          fontSize: `${sidebarFontSize}px`,
+                          color: 'var(--ui-dialog-text)',
+                          lineHeight: '1.8'
+                        }}>
+                          {/* Carpeta Principal */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            {iconThemes[iconThemeSidebar]?.icons.folder && 
+                              React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
+                                width: folderIconSize || 20,
+                                height: folderIconSize || 20,
+                                style: { 
+                                  ...iconThemes[iconThemeSidebar].icons.folder.props.style,
+                                  width: `${folderIconSize || 20}px`,
+                                  height: `${folderIconSize || 20}px`,
+                                  flexShrink: 0
+                                }
+                              })
+                            }
+                            <span style={{ fontWeight: 600 }}>Producción</span>
+                          </div>
                           
-                          {/* Sección: Tipografía */}
+                          {/* Subcarpeta 1 */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingLeft: '1.25rem' }}>
+                            <span style={{ color: 'var(--text-color-secondary)', opacity: 0.5 }}>├──</span>
+                            {iconThemes[iconThemeSidebar]?.icons.folder && 
+                              React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
+                                width: folderIconSize || 20,
+                                height: folderIconSize || 20,
+                                style: { 
+                                  ...iconThemes[iconThemeSidebar].icons.folder.props.style,
+                                  width: `${folderIconSize || 20}px`,
+                                  height: `${folderIconSize || 20}px`,
+                                  flexShrink: 0
+                                }
+                              })
+                            }
+                            <span>Servidores Web</span>
+                          </div>
+                          
+                          {/* Conexión SSH 1 */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingLeft: '2.5rem' }}>
+                            <span style={{ color: 'var(--text-color-secondary)', opacity: 0.5 }}>├──</span>
+                            {iconThemes[iconThemeSidebar]?.icons.ssh && 
+                              React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
+                                width: connectionIconSize || 20,
+                                height: connectionIconSize || 20,
+                                style: { 
+                                  ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
+                                  width: `${connectionIconSize || 20}px`,
+                                  height: `${connectionIconSize || 20}px`,
+                                  flexShrink: 0
+                                }
+                              })
+                            }
+                            <span>Apache-Server-01</span>
+                          </div>
+                          
+                          {/* Conexión SSH 2 */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingLeft: '2.5rem' }}>
+                            <span style={{ color: 'var(--text-color-secondary)', opacity: 0.5 }}>└──</span>
+                            {iconThemes[iconThemeSidebar]?.icons.ssh && 
+                              React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
+                                width: connectionIconSize || 20,
+                                height: connectionIconSize || 20,
+                                style: { 
+                                  ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
+                                  width: `${connectionIconSize || 20}px`,
+                                  height: `${connectionIconSize || 20}px`,
+                                  flexShrink: 0
+                                }
+                              })
+                            }
+                            <span>Nginx-Proxy</span>
+                          </div>
+                          
+                          {/* Subcarpeta 2 */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingLeft: '1.25rem' }}>
+                            <span style={{ color: 'var(--text-color-secondary)', opacity: 0.5 }}>└──</span>
+                            {iconThemes[iconThemeSidebar]?.icons.folder && 
+                              React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
+                                width: folderIconSize || 20,
+                                height: folderIconSize || 20,
+                                style: { 
+                                  ...iconThemes[iconThemeSidebar].icons.folder.props.style,
+                                  width: `${folderIconSize || 20}px`,
+                                  height: `${folderIconSize || 20}px`,
+                                  flexShrink: 0
+                                }
+                              })
+                            }
+                            <span>Bases de Datos</span>
+                          </div>
+                          
+                          {/* Conexión RDP */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingLeft: '2.5rem' }}>
+                            <span style={{ color: 'var(--text-color-secondary)', opacity: 0.5 }}>└──</span>
+                            {iconThemes[iconThemeSidebar]?.icons.rdp && 
+                              React.cloneElement(iconThemes[iconThemeSidebar].icons.rdp, {
+                                width: connectionIconSize || 20,
+                                height: connectionIconSize || 20,
+                                style: { 
+                                  ...iconThemes[iconThemeSidebar].icons.rdp.props.style,
+                                  width: `${connectionIconSize || 20}px`,
+                                  height: `${connectionIconSize || 20}px`,
+                                  flexShrink: 0
+                                }
+                              })
+                            }
+                            <span>SQL-Server-Main</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ═══════════════════════════════════════════════════════════════
+                          DIVIDER
+                          ═══════════════════════════════════════════════════════════════ */}
+                      <div style={{
+                        height: '1px',
+                        background: 'linear-gradient(90deg, transparent 0%, rgba(0, 172, 193, 0.4) 50%, transparent 100%)',
+                        margin: '0.5rem 0 1rem 0'
+                      }}></div>
+
+                      {/* ═══════════════════════════════════════════════════════════════
+                          FILA 1: TEMA DE ICONOS + TEMA DEL ÁRBOL
+                          ═══════════════════════════════════════════════════════════════ */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: '1rem',
+                        marginBottom: '1rem'
+                      }}>
+                        {/* Tema de Iconos */}
+                        <div>
                           <div style={{
-                            padding: '0.625rem',
-                            background: 'rgba(0, 0, 0, 0.08)',
-                            borderRadius: '10px',
-                            marginBottom: '0.5rem',
-                            border: '1px solid rgba(255, 255, 255, 0.05)'
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            marginBottom: '0.5rem'
                           }}>
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.5rem',
-                              marginBottom: '0.625rem',
-                              paddingBottom: '0.5rem',
-                              borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
-                            }}>
-                              <i className="pi pi-pencil" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
-                              <h5 style={{
-                                margin: 0,
-                                fontSize: '0.9375rem',
-                                fontWeight: 600,
-                                color: 'var(--ui-dialog-text)'
-                              }}>Tipografía</h5>
-                            </div>
-                            <div style={{ 
-                              display: 'grid', 
-                              gridTemplateColumns: '1fr 120px', 
-                              gap: '0.625rem',
-                              marginBottom: '0.625rem'
-                            }}>
-                              <div>
-                                <label style={{
-                                  display: 'block',
-                                  marginBottom: '0.4rem',
-                                  fontSize: '0.8125rem',
-                                  color: 'var(--text-color-secondary)',
-                                  fontWeight: 500
-                                }}>
-                                  Familia de fuente
-                                </label>
-                                <Dropdown
-                                  id="sidebar-font"
-                                  value={sidebarFont}
-                                  options={explorerFonts.map(f => ({ label: f, value: f }))}
-                                  onChange={e => setSidebarFont(e.value)}
-                                  placeholder="Selecciona una fuente"
-                                  style={{ width: '100%' }}
-                                  itemTemplate={option => (
-                                    <span style={{ fontFamily: option.value }}>{option.label}</span>
-                                  )}
-                                />
-                              </div>
-                              <div>
-                                <label style={{
-                                  display: 'block',
-                                  marginBottom: '0.4rem',
-                                  fontSize: '0.8125rem',
-                                  color: 'var(--text-color-secondary)',
-                                  fontWeight: 500
-                                }}>
-                                  Tamaño
-                                </label>
-                                <InputNumber
-                                  id="sidebar-font-size"
-                                  value={sidebarFontSize}
-                                  onValueChange={(e) => handleSidebarFontSizeChange(e.value)}
-                                  min={8}
-                                  max={32}
-                                  suffix=" px"
-                                  style={{ width: '100%' }}
-                                />
-                              </div>
-                            </div>
-                            <div style={{ 
-                              padding: '0.625rem 0.75rem',
-                              background: 'rgba(0, 0, 0, 0.15)',
-                              borderRadius: '8px',
-                              fontFamily: sidebarFont, 
-                              fontSize: `${sidebarFontSize}px`,
-                              textAlign: 'center',
+                            <i className="pi pi-palette" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
+                            <label style={{
+                              fontSize: '0.875rem',
+                              fontWeight: 600,
                               color: 'var(--ui-dialog-text)'
-                            }}>
-                              <span style={{ opacity: 0.7 }}>Vista previa:</span> <span style={{ fontWeight: 600 }}>{sidebarFont}</span>
-                            </div>
+                            }}>Tema de Iconos</label>
                           </div>
+                          <Dropdown
+                            id="icon-theme-sidebar"
+                            value={iconThemeSidebar}
+                            options={Object.entries(iconThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
+                            onChange={e => setIconThemeSidebar(e.value)}
+                            placeholder="Selecciona un tema"
+                            style={{ width: '100%' }}
+                            itemTemplate={option => (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                {iconThemes[option.value]?.icons.folder}
+                                {iconThemes[option.value]?.name}
+                              </span>
+                            )}
+                          />
+                        </div>
 
-                          {/* Divider Elegante */}
+                        {/* Tema del Árbol (Placeholder) */}
+                        <div>
                           <div style={{
-                            height: '1px',
-                            background: 'linear-gradient(90deg, transparent 0%, rgba(33, 150, 243, 0.3) 50%, transparent 100%)',
-                            margin: '0.5rem 0',
-                            position: 'relative'
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            marginBottom: '0.5rem'
                           }}>
-                            <div style={{
-                              position: 'absolute',
-                              left: '50%',
-                              top: '50%',
-                              transform: 'translate(-50%, -50%)',
-                              background: 'var(--ui-dialog-bg)',
-                              padding: '0 0.5rem',
-                              fontSize: '0.75rem',
-                              color: 'var(--text-color-secondary)',
-                              opacity: 0.6
-                            }}>✦</div>
+                            <i className="pi pi-share-alt" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
+                            <label style={{
+                              fontSize: '0.875rem',
+                              fontWeight: 600,
+                              color: 'var(--ui-dialog-text)'
+                            }}>Tema del Árbol</label>
+                            <span style={{
+                              fontSize: '0.625rem',
+                              padding: '0.125rem 0.375rem',
+                              background: 'rgba(255, 193, 7, 0.2)',
+                              color: '#FFC107',
+                              borderRadius: '4px',
+                              fontWeight: 500
+                            }}>Próximamente</span>
                           </div>
+                          <Dropdown
+                            id="tree-theme"
+                            value="default"
+                            options={[
+                              { label: 'Default', value: 'default' },
+                              { label: 'Minimal', value: 'minimal' },
+                              { label: 'Líneas Conectadas', value: 'connected' },
+                              { label: 'Compacto', value: 'compact' }
+                            ]}
+                            disabled={true}
+                            placeholder="Selecciona un tema"
+                            style={{ width: '100%', opacity: 0.6 }}
+                          />
+                        </div>
+                      </div>
 
-                          {/* Sección: Tamaño de Iconos */}
+                      {/* ═══════════════════════════════════════════════════════════════
+                          FILA 2: TIPOGRAFÍA
+                          ═══════════════════════════════════════════════════════════════ */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 100px',
+                        gap: '1rem',
+                        marginBottom: '1rem'
+                      }}>
+                        {/* Fuente */}
+                        <div>
                           <div style={{
-                            padding: '0.625rem',
-                            background: 'rgba(0, 0, 0, 0.08)',
-                            borderRadius: '10px',
-                            border: '1px solid rgba(255, 255, 255, 0.05)'
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            marginBottom: '0.5rem'
+                          }}>
+                            <i className="pi pi-pencil" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
+                            <label style={{
+                              fontSize: '0.875rem',
+                              fontWeight: 600,
+                              color: 'var(--ui-dialog-text)'
+                            }}>Fuente</label>
+                          </div>
+                          <Dropdown
+                            id="sidebar-font"
+                            value={sidebarFont}
+                            options={explorerFonts.map(f => ({ label: f, value: f }))}
+                            onChange={e => setSidebarFont(e.value)}
+                            placeholder="Selecciona una fuente"
+                            style={{ width: '100%' }}
+                            itemTemplate={option => (
+                              <span style={{ fontFamily: option.value }}>{option.label}</span>
+                            )}
+                          />
+                        </div>
+
+                        {/* Tamaño de Fuente */}
+                        <div>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            marginBottom: '0.5rem'
+                          }}>
+                            <label style={{
+                              fontSize: '0.875rem',
+                              fontWeight: 600,
+                              color: 'var(--ui-dialog-text)'
+                            }}>Tamaño</label>
+                          </div>
+                          <InputNumber
+                            id="sidebar-font-size"
+                            value={sidebarFontSize}
+                            onValueChange={(e) => handleSidebarFontSizeChange(e.value)}
+                            min={8}
+                            max={32}
+                            suffix=" px"
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* ═══════════════════════════════════════════════════════════════
+                          FILA 3: TAMAÑO DE ICONOS
+                          ═══════════════════════════════════════════════════════════════ */}
+                      <div style={{
+                        background: 'rgba(0, 0, 0, 0.08)',
+                        borderRadius: '10px',
+                        padding: '0.875rem 1rem',
+                        border: '1px solid rgba(255, 255, 255, 0.05)'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          marginBottom: '0.75rem'
+                        }}>
+                          <i className="pi pi-expand" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
+                          <span style={{
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                            color: 'var(--ui-dialog-text)'
+                          }}>Tamaño de Iconos</span>
+                        </div>
+                        
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '1rem'
+                        }}>
+                          {/* Carpetas */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem'
                           }}>
                             <div style={{
                               display: 'flex',
                               alignItems: 'center',
                               gap: '0.5rem',
-                              marginBottom: '0.625rem',
-                              paddingBottom: '0.5rem',
-                              borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+                              minWidth: '90px'
                             }}>
-                              <i className="pi pi-expand" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
-                              <h5 style={{
-                                margin: 0,
-                                fontSize: '0.9375rem',
-                                fontWeight: 600,
-                                color: 'var(--ui-dialog-text)'
-                              }}>Tamaño de Iconos</h5>
+                              {iconThemes[iconThemeSidebar]?.icons.folder && 
+                                React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
+                                  width: 18,
+                                  height: 18,
+                                  style: { 
+                                    ...iconThemes[iconThemeSidebar].icons.folder.props.style,
+                                    width: '18px',
+                                    height: '18px'
+                                  }
+                                })
+                              }
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Carpetas</span>
                             </div>
-                            <div style={{ 
-                              display: 'grid', 
-                              gridTemplateColumns: '1fr 1fr', 
-                              gap: '0.5rem',
-                              boxSizing: 'border-box',
-                              maxWidth: '100%',
-                              overflow: 'hidden'
-                            }}>
-                              {/* Carpetas */}
-                              <div className="general-setting-card" style={{ marginBottom: 0, boxSizing: 'border-box', padding: '0.5rem 0', borderBottom: 'none' }}>
-                                <div className="general-setting-content" style={{ 
-                                  flexDirection: 'column',
-                                  gap: '0.5rem',
-                                  boxSizing: 'border-box',
-                                  maxWidth: '100%',
-                                  overflow: 'hidden'
-                                }}>
-                                  <div style={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: '0.5rem', 
-                                    boxSizing: 'border-box'
-                                  }}>
-                                    <div className="general-setting-icon" style={{ background: 'var(--ui-button-primary)', flexShrink: 0, width: '22px', height: '22px' }}>
-                                      <i className="pi pi-folder" style={{ fontSize: '0.7rem' }}></i>
-                                    </div>
-                                    <div className="general-setting-info" style={{ flex: '1 1 auto', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
-                                      <label className="general-setting-label" style={{ fontSize: '0.875rem', marginBottom: '0.125rem' }}>Carpetas</label>
-                                    </div>
-                                  </div>
-                                  <div style={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: '0.5rem',
-                                    boxSizing: 'border-box',
-                                    maxWidth: '100%',
-                                    overflow: 'hidden'
-                                  }}>
-                                    <InputNumber
-                                      id="folder-icon-size"
-                                      value={folderIconSize || 20}
-                                      onValueChange={(e) => setFolderIconSize && setFolderIconSize(e.value)}
-                                      min={12}
-                                      max={32}
-                                      suffix=" px"
-                                      style={{ width: '85px', flexShrink: 0, maxWidth: '85px' }}
-                                    />
-                                    <div style={{ 
-                                      display: 'flex', 
-                                      alignItems: 'center', 
-                                      justifyContent: 'center',
-                                      width: `${Math.max(folderIconSize || 20, 20)}px`,
-                                      height: `${Math.max(folderIconSize || 20, 20)}px`,
-                                      flexShrink: 0,
-                                      maxWidth: '32px',
-                                      overflow: 'hidden'
-                                    }}>
-                                      {iconThemes[iconThemeSidebar]?.icons.folder && 
-                                        React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
-                                          width: folderIconSize,
-                                          height: folderIconSize,
-                                          style: { 
-                                            ...iconThemes[iconThemeSidebar].icons.folder.props.style,
-                                            width: `${Math.min(folderIconSize, 32)}px`,
-                                            height: `${Math.min(folderIconSize, 32)}px`,
-                                            maxWidth: '32px',
-                                            maxHeight: '32px'
-                                          }
-                                        })
-                                      }
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <Slider
+                                value={folderIconSize || 20}
+                                onChange={(e) => setFolderIconSize && setFolderIconSize(e.value)}
+                                min={12}
+                                max={32}
+                                style={{ flex: 1 }}
+                              />
+                              <span style={{ 
+                                fontSize: '0.75rem', 
+                                color: 'var(--ui-button-primary)',
+                                fontWeight: 600,
+                                minWidth: '40px',
+                                textAlign: 'right'
+                              }}>{folderIconSize || 20} px</span>
+                            </div>
+                          </div>
 
-                              {/* Conexiones */}
-                              <div className="general-setting-card" style={{ marginBottom: 0, boxSizing: 'border-box', padding: '0.5rem 0', borderBottom: 'none' }}>
-                                <div className="general-setting-content" style={{ 
-                                  flexDirection: 'column',
-                                  gap: '0.5rem',
-                                  boxSizing: 'border-box',
-                                  maxWidth: '100%',
-                                  overflow: 'hidden'
-                                }}>
-                                  <div style={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: '0.5rem', 
-                                    boxSizing: 'border-box'
-                                  }}>
-                                    <div className="general-setting-icon" style={{ background: 'var(--ui-button-primary)', opacity: 0.9, flexShrink: 0, width: '22px', height: '22px' }}>
-                                      <i className="pi pi-link" style={{ fontSize: '0.7rem' }}></i>
-                                    </div>
-                                    <div className="general-setting-info" style={{ flex: '1 1 auto', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
-                                      <label className="general-setting-label" style={{ fontSize: '0.875rem', marginBottom: '0.125rem' }}>Conexiones</label>
-                                    </div>
-                                  </div>
-                                  <div style={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: '0.5rem',
-                                    boxSizing: 'border-box',
-                                    maxWidth: '100%',
-                                    overflow: 'hidden'
-                                  }}>
-                                    <InputNumber
-                                      id="connection-icon-size"
-                                      value={connectionIconSize || 20}
-                                      onValueChange={(e) => setConnectionIconSize && setConnectionIconSize(e.value)}
-                                      min={12}
-                                      max={32}
-                                      suffix=" px"
-                                      style={{ width: '85px', flexShrink: 0, maxWidth: '85px' }}
-                                    />
-                                    <div style={{ 
-                                      display: 'flex', 
-                                      alignItems: 'center', 
-                                      gap: '0.25rem',
-                                      flexShrink: 0,
-                                      maxWidth: '100%',
-                                      overflow: 'hidden'
-                                    }}>
-                                      {iconThemes[iconThemeSidebar]?.icons.ssh && 
-                                        React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
-                                          width: connectionIconSize,
-                                          height: connectionIconSize,
-                                          style: { 
-                                            ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
-                                            width: `${Math.min(connectionIconSize, 32)}px`,
-                                            height: `${Math.min(connectionIconSize, 32)}px`,
-                                            maxWidth: '32px',
-                                            maxHeight: '32px'
-                                          }
-                                        })
-                                      }
-                                      {iconThemes[iconThemeSidebar]?.icons.rdp && 
-                                        React.cloneElement(iconThemes[iconThemeSidebar].icons.rdp, {
-                                          width: connectionIconSize,
-                                          height: connectionIconSize,
-                                          style: { 
-                                            ...iconThemes[iconThemeSidebar].icons.rdp.props.style,
-                                            width: `${Math.min(connectionIconSize, 32)}px`,
-                                            height: `${Math.min(connectionIconSize, 32)}px`,
-                                            maxWidth: '32px',
-                                            maxHeight: '32px'
-                                          }
-                                        })
-                                      }
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
+                          {/* Conexiones */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              minWidth: '90px'
+                            }}>
+                              {iconThemes[iconThemeSidebar]?.icons.ssh && 
+                                React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
+                                  width: 18,
+                                  height: 18,
+                                  style: { 
+                                    ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
+                                    width: '18px',
+                                    height: '18px'
+                                  }
+                                })
+                              }
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Conexiones</span>
+                            </div>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <Slider
+                                value={connectionIconSize || 20}
+                                onChange={(e) => setConnectionIconSize && setConnectionIconSize(e.value)}
+                                min={12}
+                                max={32}
+                                style={{ flex: 1 }}
+                              />
+                              <span style={{ 
+                                fontSize: '0.75rem', 
+                                color: 'var(--ui-button-primary)',
+                                fontWeight: 600,
+                                minWidth: '40px',
+                                textAlign: 'right'
+                              }}>{connectionIconSize || 20} px</span>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
 
+                    </div>
                   </div>
                 </div>
             )}
