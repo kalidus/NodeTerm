@@ -1931,6 +1931,81 @@ const App = () => {
     };
   }, []);
 
+  // Listener global para Ctrl + rueda del ratón para cambiar tamaño de fuente de terminales
+  useEffect(() => {
+    const handleWheel = (e) => {
+      // Solo procesar si Ctrl está presionado
+      if (!e.ctrlKey) return;
+
+      // Detectar si el cursor está sobre una terminal
+      // xterm.js crea elementos con clase 'xterm' y también puede estar dentro de contenedores
+      const target = e.target;
+      const isOverTerminal = target.closest('.xterm') !== null || 
+                             target.closest('.terminal-outer-padding') !== null ||
+                             target.classList.contains('xterm') ||
+                             target.classList.contains('terminal-outer-padding') ||
+                             // También verificar si está dentro de un contenedor de terminal (para terminales locales)
+                             target.closest('[class*="terminal"]') !== null;
+
+      // Si no está sobre una terminal, no hacer nada
+      if (!isOverTerminal) return;
+
+      // Prevenir el comportamiento por defecto (zoom del navegador)
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Determinar dirección del scroll (arriba = aumentar, abajo = disminuir)
+      const delta = e.deltaY > 0 ? -1 : 1; // deltaY positivo = scroll abajo = disminuir
+      const step = 1; // Incremento/decremento de 1px
+
+      // Función para actualizar un tamaño de fuente con límites
+      const updateFontSize = (currentSize, setter, storageKey, min = 8, max = 32) => {
+        const newSize = Math.max(min, Math.min(max, currentSize + (delta * step)));
+        if (newSize !== currentSize) {
+          setter(newSize);
+          localStorage.setItem(storageKey, newSize.toString());
+          // Disparar evento de cambio para sincronización
+          window.dispatchEvent(new CustomEvent('localStorageChange', {
+            detail: { key: storageKey, value: newSize.toString() }
+          }));
+          window.dispatchEvent(new StorageEvent('storage', {
+            key: storageKey,
+            newValue: newSize.toString()
+          }));
+        }
+        return newSize;
+      };
+
+      // Actualizar todos los tamaños de fuente de terminales
+      // 1. SSH terminales
+      const currentSSHSize = fontSize || 14;
+      updateFontSize(currentSSHSize, setFontSize, 'basicapp_terminal_font_size');
+
+      // 2. PowerShell/Linux locales
+      const currentLocalSize = localFontSize || 14;
+      updateFontSize(currentLocalSize, setLocalFontSize, 'basicapp_local_terminal_font_size');
+
+      // 3. Linux/WSL terminales
+      const currentLinuxSize = parseInt(localStorage.getItem('nodeterm_linux_font_size') || localFontSize || '14', 10);
+      const newLinuxSize = updateFontSize(currentLinuxSize, () => {}, 'nodeterm_linux_font_size');
+      // Notificar cambio para que TerminalSettingsTab lo detecte
+      window.dispatchEvent(new CustomEvent('terminal-settings-changed', { 
+        detail: { linuxFontSize: newLinuxSize } 
+      }));
+
+      // 4. Docker terminales
+      const currentDockerSize = dockerFontSize || 14;
+      updateFontSize(currentDockerSize, setDockerFontSize, 'nodeterm_docker_font_size');
+    };
+
+    // Agregar listener con capture para interceptar antes que otros handlers
+    document.addEventListener('wheel', handleWheel, { passive: false, capture: true });
+
+    return () => {
+      document.removeEventListener('wheel', handleWheel, { capture: true });
+    };
+  }, [fontSize, setFontSize, localFontSize, setLocalFontSize, dockerFontSize, setDockerFontSize]);
+
   const activeTab = filteredTabs[activeTabIndex] || null;
   const isAIChatActive = activeTab?.type === 'ai-chat' || (activeTab?.type === 'home' && isHomeTabActive && isHomeAIChatVisible);
 
