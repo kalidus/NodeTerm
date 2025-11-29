@@ -44,6 +44,8 @@ if (typeof window !== 'undefined') {
 
 // Custom styles
 import './styles/main.css';
+// Fuentes locales integradas (generadas con npm run download-fonts)
+import './styles/fonts.css';
 // import './assets/DashboardStyles.css';
 // import './assets/Dashboard.css';
 // import './assets/form-fixes.css';

@@ -4,7 +4,8 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "webpack --mode production",
+    "download-fonts": "node scripts/download-fonts.js",
+    "build": "npm run download-fonts && webpack --mode production",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation concurrently \"webpack --watch --mode development\" \"electron .\"",
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && npm prune --omit=optional --no-audit --no-fund && electron-builder",
