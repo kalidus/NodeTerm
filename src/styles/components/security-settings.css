@@ -56,15 +56,50 @@
 /* Layout de 2 columnas */
 .security-layout-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  grid-template-columns: minmax(300px, 1fr) minmax(300px, 1fr);
+  gap: 1.5rem;
   align-items: start;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-@media (max-width: 900px) {
+/* Asegurar que las columnas no se compriman demasiado */
+.security-layout-grid > div {
+  min-width: 0;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+/* Asegurar que las secciones dentro del grid se adapten correctamente */
+.security-layout-grid .general-settings-section {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* Asegurar que los elementos internos no se desborden */
+.security-layout-grid .general-settings-options {
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.security-layout-grid .general-settings-options > * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Cambiar a una columna cuando el espacio es insuficiente */
+@media (max-width: 1200px) {
   .security-layout-grid {
     grid-template-columns: 1fr;
     gap: 1.5rem;
+  }
+  
+  .security-layout-grid > div[style*="gridColumn: '2'"] {
+    grid-column: 1 !important;
+    grid-row: auto !important;
   }
 }
 

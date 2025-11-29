@@ -2004,7 +2004,7 @@ const SettingsDialog = ({
                     {/* Grid de 2 columnas para las secciones */}
                     <div className="security-layout-grid">
                     {/* Contenedor izquierdo: Grabación + Estadísticas */}
-                    <div style={{ gridColumn: '1', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ gridColumn: '1', display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 0, width: '100%' }}>
                       {/* Sección de Grabación Automática */}
                       <div className="general-settings-section">
                         <div className="general-section-header">
@@ -2268,7 +2268,7 @@ const SettingsDialog = ({
                     </div>
 
                     {/* Sección de Limpieza Automática */}
-                    <div className="general-settings-section" style={{ gridColumn: '2', gridRow: '1' }}>
+                    <div className="general-settings-section" style={{ gridColumn: '2', gridRow: '1', minWidth: 0, width: '100%' }}>
                       <div className="general-section-header">
                         <div className="general-section-icon">
                           <i className="pi pi-trash"></i>
