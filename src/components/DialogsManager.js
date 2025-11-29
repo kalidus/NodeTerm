@@ -198,6 +198,8 @@ const DialogsManager = ({
   setSidebarFont,
   sidebarFontSize,
   setSidebarFontSize,
+  sidebarFontColor,
+  setSidebarFontColor,
   treeTheme,
   setTreeTheme,
   statusBarIconTheme,
@@ -354,6 +356,8 @@ const DialogsManager = ({
         setSidebarFont={setSidebarFont}
         sidebarFontSize={sidebarFontSize}
         setSidebarFontSize={setSidebarFontSize}
+        sidebarFontColor={sidebarFontColor}
+        setSidebarFontColor={setSidebarFontColor}
         treeTheme={treeTheme}
         setTreeTheme={setTreeTheme}
         statusBarIconTheme={statusBarIconTheme}

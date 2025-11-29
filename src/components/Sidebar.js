@@ -63,6 +63,7 @@ const Sidebar = React.memo(({
   connectionIconSize = 20,
   explorerFont,
   explorerFontSize = 14,
+  explorerFontColor,
   uiTheme = 'Light',
   showToast, // callback opcional para mostrar toast global
   confirmDialog, // callback para mostrar diálogo de confirmación
@@ -313,6 +314,28 @@ const Sidebar = React.memo(({
     }, 100);
     
   }, [iconTheme, setNodes]);
+  
+  // Actualizar variable CSS cuando cambie el color de fuente
+  // Usar useRef para evitar loops infinitos
+  const prevColorRef = React.useRef(explorerFontColor);
+  
+  React.useEffect(() => {
+    // Solo actualizar si el color realmente cambió
+    if (prevColorRef.current === explorerFontColor) {
+      return;
+    }
+    
+    prevColorRef.current = explorerFontColor;
+    
+    // Aplicar la variable CSS al contenedor del sidebar usando el elemento raíz
+    if (explorerFontColor) {
+      const root = document.documentElement;
+      root.style.setProperty('--ui-sidebar-text', explorerFontColor);
+    } else {
+      const root = document.documentElement;
+      root.style.removeProperty('--ui-sidebar-text');
+    }
+  }, [explorerFontColor]);
   
   // Estado para controlar la visibilidad de los botones de clientes de IA
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
@@ -1796,7 +1819,9 @@ const Sidebar = React.memo(({
         display: 'flex',
         flexDirection: 'column',
         fontFamily: explorerFont,
-        fontSize: `${explorerFontSize}px`
+        fontSize: `${explorerFontSize}px`,
+        color: explorerFontColor || undefined,
+        ...(explorerFontColor ? { '--ui-sidebar-text': explorerFontColor } : {})
       }}>
       {sidebarCollapsed ? (
         // Layout de sidebar colapsada: botón de colapsar arriba a la izquierda, menú y config abajo
@@ -2266,7 +2291,9 @@ const Sidebar = React.memo(({
                   overflowY: 'auto', 
                   overflowX: 'auto',
                   position: 'relative',
-                  fontSize: `${explorerFontSize}px`
+                  fontSize: `${explorerFontSize}px`,
+                  color: explorerFontColor || undefined,
+                  ...(explorerFontColor ? { '--ui-sidebar-text': explorerFontColor } : {})
                 }}
                 onContextMenu={onTreeAreaContextMenu}
                 className="tree-container"
@@ -2277,7 +2304,7 @@ const Sidebar = React.memo(({
                   </div>
                 ) : (
                   <Tree
-                    key={`tree-${iconTheme}-${explorerFontSize}-${treeTheme}`} // Forzar re-render cuando cambie el tema
+                    key={`tree-${iconTheme}-${explorerFontSize}-${treeTheme}-${explorerFontColor || 'default'}`} // Forzar re-render cuando cambie el tema
                     value={nodes}
                     selectionMode="single"
                     selectionKeys={selectedNodeKey}
@@ -2293,9 +2320,15 @@ const Sidebar = React.memo(({
                     className={`sidebar-tree tree-theme-${treeTheme}`}
                     data-icon-theme={iconTheme}
                     data-tree-theme={treeTheme}
+                    data-font-color={explorerFontColor || ''}
                     style={{ 
                       fontSize: `${explorerFontSize}px`,
-                      '--icon-size': `${iconSize}px`
+                      color: explorerFontColor || undefined,
+                      '--icon-size': `${iconSize}px`,
+                      ...(explorerFontColor ? { 
+                        '--ui-sidebar-text': explorerFontColor,
+                        '--tree-text-color': explorerFontColor
+                      } : {})
                     }}
                     nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })}
                   />

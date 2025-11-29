@@ -194,6 +194,14 @@ export const useThemeManagement = () => {
     }
   });
 
+  const [sidebarFontColor, setSidebarFontColor] = useState(() => {
+    try {
+      return localStorage.getItem('sidebarFontColor') || '';
+    } catch {
+      return '';
+    }
+  });
+
   // Tree theme state
   const [treeTheme, setTreeTheme] = useState(() => {
     try {
@@ -283,6 +291,16 @@ export const useThemeManagement = () => {
 
   useEffect(() => {
     try {
+      if (sidebarFontColor) {
+        localStorage.setItem('sidebarFontColor', sidebarFontColor);
+      } else {
+        localStorage.removeItem('sidebarFontColor');
+      }
+    } catch {}
+  }, [sidebarFontColor]);
+
+  useEffect(() => {
+    try {
       localStorage.setItem('iconSize', iconSize.toString());
     } catch {}
   }, [iconSize]);
@@ -344,6 +362,7 @@ export const useThemeManagement = () => {
     const updatedExplorerColorTheme = localStorage.getItem('explorerColorTheme') || 'Light';
     const updatedSidebarFont = localStorage.getItem('sidebarFont') || explorerFonts[0];
     const updatedSidebarFontSize = localStorage.getItem('sidebarFontSize');
+    const updatedSidebarFontColor = localStorage.getItem('sidebarFontColor') || '';
     const updatedIconSize = localStorage.getItem('iconSize');
     const updatedIconTheme = localStorage.getItem('iconTheme') || 'nord';
     const updatedIconThemeSidebar = localStorage.getItem('iconThemeSidebar') || 'nord';
@@ -360,6 +379,7 @@ export const useThemeManagement = () => {
     setExplorerColorTheme(updatedExplorerColorTheme);
     setSidebarFont(updatedSidebarFont);
     if (updatedSidebarFontSize) setSidebarFontSize(parseInt(updatedSidebarFontSize, 10));
+    setSidebarFontColor(updatedSidebarFontColor);
     if (updatedIconSize) setIconSize(parseInt(updatedIconSize, 10));
     setIconTheme(updatedIconTheme);
     setIconThemeSidebar(updatedIconThemeSidebar);
@@ -436,6 +456,8 @@ export const useThemeManagement = () => {
     setSidebarFont,
     sidebarFontSize,
     setSidebarFontSize,
+    sidebarFontColor,
+    setSidebarFontColor,
     
     // Tree theme
     treeTheme,

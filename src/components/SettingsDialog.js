@@ -75,6 +75,8 @@ const SettingsDialog = ({
   setSidebarFont,
   sidebarFontSize,
   setSidebarFontSize,
+  sidebarFontColor,
+  setSidebarFontColor,
   explorerFontSize,
   setExplorerFontSize,
   statusBarPollingInterval,
@@ -963,6 +965,30 @@ const SettingsDialog = ({
       setSidebarFontSize(value);
     }
   };
+
+  // Debounce para el color de fuente para evitar actualizaciones excesivas
+  const colorTimeoutRef = useRef(null);
+  
+  // Cleanup del timeout al desmontar
+  useEffect(() => {
+    return () => {
+      if (colorTimeoutRef.current) {
+        clearTimeout(colorTimeoutRef.current);
+      }
+    };
+  }, []);
+  
+  const handleSidebarFontColorChange = (newColor) => {
+    if (colorTimeoutRef.current) {
+      clearTimeout(colorTimeoutRef.current);
+    }
+    colorTimeoutRef.current = setTimeout(() => {
+      if (setSidebarFontColor && typeof setSidebarFontColor === 'function') {
+        setSidebarFontColor(newColor);
+      }
+    }, 150); // Debounce de 150ms
+  };
+
 
   // Handlers para configuración de auditoría
   const handleManualCleanup = async () => {
@@ -2508,7 +2534,7 @@ const SettingsDialog = ({
                       </span>
                       <div className="general-header-text">
                         <h3 className="general-header">Explorador de Sesiones</h3>
-                        <p className="general-description">Personaliza iconos, tamaños y tipografía del árbol</p>
+                        <p className="general-description">Personaliza iconos, tamaños, tipografía y color del árbol</p>
                       </div>
                     </div>
                   </div>
@@ -2563,7 +2589,7 @@ const SettingsDialog = ({
                           style={{
                           fontFamily: sidebarFont,
                           fontSize: `${sidebarFontSize}px`,
-                            color: 'var(--ui-dialog-text)'
+                            color: sidebarFontColor || 'var(--ui-dialog-text)'
                           }}
                         >
                           {/* Carpeta Principal - Raíz */}
@@ -2811,7 +2837,7 @@ const SettingsDialog = ({
                         
                         <div style={{
                           display: 'grid',
-                          gridTemplateColumns: '1fr 1fr',
+                          gridTemplateColumns: '1fr 1fr 1fr',
                           gap: '1rem'
                         }}>
                           {/* Fuente */}
@@ -2870,6 +2896,70 @@ const SettingsDialog = ({
                                 minWidth: '40px',
                                 textAlign: 'right'
                               }}>{sidebarFontSize} px</span>
+                            </div>
+                          </div>
+
+                          {/* Color de Fuente */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              minWidth: '60px'
+                            }}>
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Color</span>
+                            </div>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <input
+                                  type="color"
+                                  id="sidebar-font-color-input"
+                                  value={sidebarFontColor || '#ffffff'}
+                                  onChange={(e) => {
+                                    const newColor = e.target.value;
+                                    handleSidebarFontColorChange(newColor);
+                                  }}
+                                  style={{
+                                    flex: 1,
+                                    height: '36px',
+                                    minWidth: '80px',
+                                    borderRadius: '6px',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    cursor: 'pointer',
+                                    backgroundColor: 'transparent'
+                                  }}
+                                />
+                                <span style={{ 
+                                  fontSize: '0.75rem', 
+                                  color: 'var(--ui-button-primary)',
+                                  fontWeight: 600,
+                                  minWidth: '70px',
+                                  textAlign: 'right',
+                                  fontFamily: 'monospace'
+                                }}>{sidebarFontColor || 'Por defecto'}</span>
+                              </div>
+                              {sidebarFontColor && (
+                                <Button
+                                  icon="pi pi-times"
+                                  className="p-button-text p-button-rounded"
+                                  onClick={() => {
+                                    console.log('[SettingsDialog] Restaurando color por defecto');
+                                    setSidebarFontColor('');
+                                  }}
+                                  tooltip="Restaurar color por defecto"
+                                  tooltipOptions={{ position: 'top' }}
+                                  style={{
+                                    width: '36px',
+                                    height: '36px',
+                                    padding: 0,
+                                    color: 'var(--text-color-secondary)'
+                                  }}
+                                />
+                              )}
                             </div>
                           </div>
                         </div>

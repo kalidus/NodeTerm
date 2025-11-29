@@ -819,7 +819,7 @@ const App = () => {
     folderIconSize, setFolderIconSize, connectionIconSize, setConnectionIconSize,
     explorerFont, setExplorerFont,
     explorerFontSize, setExplorerFontSize, explorerColorTheme, setExplorerColorTheme,
-    sidebarFont, setSidebarFont, sidebarFontSize, setSidebarFontSize,
+    sidebarFont, setSidebarFont, sidebarFontSize, setSidebarFontSize, sidebarFontColor, setSidebarFontColor,
     treeTheme, setTreeTheme,
     updateThemesFromSync
   } = useThemeManagement();
@@ -2041,6 +2041,7 @@ const App = () => {
     connectionIconSize: connectionIconSize,
     explorerFont: sidebarFont,
     explorerFontSize: sidebarFontSize,
+    explorerFontColor: sidebarFontColor,
     uiTheme: uiTheme || 'Light',
     showToast: toast.current && toast.current.show ? toast.current.show : undefined,
     confirmDialog: confirmDialog,
@@ -2097,7 +2098,7 @@ const App = () => {
   }), [
     nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
-    iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, terminalTheme, treeTheme,
+    iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, sidebarFontColor, terminalTheme, treeTheme,
     toast, confirmDialog, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu, hideContextMenu,
     sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey,
     
@@ -2350,6 +2351,8 @@ const App = () => {
         setSidebarFont={setSidebarFont}
         sidebarFontSize={sidebarFontSize}
         setSidebarFontSize={setSidebarFontSize}
+        sidebarFontColor={sidebarFontColor}
+        setSidebarFontColor={setSidebarFontColor}
         treeTheme={treeTheme}
         setTreeTheme={setTreeTheme}
         statusBarIconTheme={statusBarIconTheme}
