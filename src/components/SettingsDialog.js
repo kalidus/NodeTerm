@@ -102,11 +102,21 @@ const SettingsDialog = ({
   const [activeIndex, setActiveIndex] = useState(0);
   
   // Hook para redimensionamiento del diálogo
+  // storageKey: null para que siempre se abra con el tamaño por defecto
   const { dialogRef, size, startResize } = useDialogResize(
-    'settings-dialog-size',
-    { width: 1200, height: 800 },
+    null,
+    { width: 1400, height: 900 },
     { minWidth: 1000, minHeight: 600, maxWidth: window.innerWidth * 0.98, maxHeight: window.innerHeight * 0.98 }
   );
+  
+  // Limpiar el tamaño guardado en localStorage al montar el componente
+  useEffect(() => {
+    try {
+      localStorage.removeItem('settings-dialog-size');
+    } catch (error) {
+      console.warn('Error al limpiar settings-dialog-size del localStorage:', error);
+    }
+  }, []);
   
   // Estados para navegación con sidebar vertical
   const [activeMainTab, setActiveMainTab] = useState('general');
