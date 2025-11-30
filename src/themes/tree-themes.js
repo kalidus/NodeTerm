@@ -280,6 +280,42 @@ export const treeThemes = {
     cssClass: 'tree-theme-double'
   },
 
+  explorer: {
+    name: 'Explorador',
+    description: 'Estilo clásico de Windows Explorer con líneas punteadas',
+    lineStyle: 'dotted',
+    lineColor: 'var(--ui-sidebar-text)',
+    lineOpacity: 0.4,
+    lineWidth: 1,
+    nodeSpacing: 'normal',
+    indentSize: 18,
+    borderRadius: 0,
+    hoverStyle: 'subtle',
+    connectorChars: {
+      vertical: '│',
+      horizontal: '──',
+      branch: '├',
+      lastBranch: '└',
+      space: ' '
+    },
+    cssClass: 'tree-theme-explorer'
+  },
+
+  windowsClassic: {
+    name: 'Windows Clásico',
+    description: 'Cuadros con + y - como en Windows Explorer clásico',
+    lineStyle: 'dotted',
+    lineColor: 'var(--ui-sidebar-text)',
+    lineOpacity: 0.4,
+    lineWidth: 1,
+    nodeSpacing: 'normal',
+    indentSize: 18,
+    borderRadius: 0,
+    hoverStyle: 'subtle',
+    connectorChars: null,
+    cssClass: 'tree-theme-windowsClassic'
+  },
+
 };
 
 // Array para el dropdown del selector
