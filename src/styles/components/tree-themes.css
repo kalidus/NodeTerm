@@ -1439,7 +1439,9 @@
 .sidebar-tree.tree-theme-gradient .p-treenode-children > .p-treenode > .p-treenode-content,
 .sidebar-tree.tree-theme-aurora .p-treenode-children > .p-treenode > .p-treenode-content,
 .sidebar-tree.tree-theme-frost .p-treenode-children > .p-treenode > .p-treenode-content,
-.sidebar-tree.tree-theme-double .p-treenode-children > .p-treenode > .p-treenode-content {
+.sidebar-tree.tree-theme-double .p-treenode-children > .p-treenode > .p-treenode-content,
+.sidebar-tree.tree-theme-explorer .p-treenode-children > .p-treenode > .p-treenode-content,
+.sidebar-tree.tree-theme-windowsClassic .p-treenode-children > .p-treenode > .p-treenode-content {
   position: relative;
 }
 
@@ -1800,6 +1802,370 @@
   background: var(--preview-line-color);
   opacity: 0.5;
   box-shadow: 0 0 4px var(--preview-line-color);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   TEMA: EXPLORER (Explorador de Windows)
+   Estilo clásico de Windows Explorer con líneas punteadas
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.sidebar-tree.tree-theme-explorer {
+  --tree-indent: 18px;
+  --tree-line-color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.8));
+  --tree-line-opacity: 0.4;
+  --tree-node-spacing: 0px;
+  --tree-border-radius: 0px;
+}
+
+.sidebar-tree.tree-theme-explorer .tree-connector {
+  display: none !important;
+}
+
+.sidebar-tree.tree-theme-explorer .p-treenode-content {
+  border-radius: 0;
+  padding-left: 4px;
+  transition: background 0.15s ease;
+}
+
+.sidebar-tree.tree-theme-explorer .p-treenode-children {
+  position: relative;
+  padding-left: 18px !important;
+  margin-left: 8px;
+}
+
+/* Línea vertical punteada estilo Windows Explorer */
+.sidebar-tree.tree-theme-explorer .p-treenode-children::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 10px;
+  width: 0 !important;
+  height: auto !important;
+  background: none !important;
+  border: none !important;
+  border-left: 1px dotted var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+  pointer-events: none;
+}
+
+/* Línea horizontal punteada hacia cada nodo */
+.sidebar-tree.tree-theme-explorer .p-treenode-children > .p-treenode > .p-treenode-content {
+  position: relative;
+}
+
+.sidebar-tree.tree-theme-explorer .p-treenode-children > .p-treenode > .p-treenode-content::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute;
+  left: -18px;
+  top: 50%;
+  width: 10px !important;
+  height: 0 !important;
+  background: none !important;
+  border: none !important;
+  border-top: 1px dotted var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+  pointer-events: none;
+}
+
+.sidebar-tree.tree-theme-explorer .p-treenode-content:hover {
+  background: var(--ui-sidebar-hover) !important;
+}
+
+.sidebar-tree.tree-theme-explorer .p-tree-toggler {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--tree-line-color);
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.15s ease;
+}
+
+.sidebar-tree.tree-theme-explorer .p-tree-toggler:hover {
+  opacity: 1;
+  background: var(--ui-sidebar-hover);
+  border-color: var(--ui-button-primary);
+}
+
+.sidebar-tree.tree-theme-explorer .p-tree-toggler-icon {
+  color: var(--ui-sidebar-text) !important;
+  opacity: 0.9;
+  font-size: 0.7em;
+  font-weight: bold;
+}
+
+.sidebar-tree.tree-theme-explorer .p-tree-toggler:hover .p-tree-toggler-icon {
+  color: var(--ui-button-primary) !important;
+  opacity: 1;
+}
+
+/* Ajustar el espaciado de los nodos */
+.sidebar-tree.tree-theme-explorer .p-treenode {
+  margin-bottom: 1px;
+}
+
+.sidebar-tree.tree-theme-explorer .p-treenode-content {
+  min-height: 22px;
+  line-height: 22px;
+  display: flex;
+  align-items: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   PREVIEW: TEMA EXPLORER
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.tree-preview-container.tree-theme-explorer {
+  --preview-line-color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.5));
+}
+
+.tree-preview-container.tree-theme-explorer .tree-preview-connector {
+  display: none;
+}
+
+.tree-preview-container.tree-theme-explorer .tree-preview-children {
+  position: relative;
+  margin-left: 8px;
+  padding-left: 18px;
+}
+
+.tree-preview-container.tree-theme-explorer .tree-preview-children::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 12px;
+  border-left: 1px dotted var(--preview-line-color);
+  opacity: 0.4;
+}
+
+.tree-preview-container.tree-theme-explorer .tree-preview-child {
+  position: relative;
+}
+
+.tree-preview-container.tree-theme-explorer .tree-preview-child::before {
+  content: '';
+  position: absolute;
+  left: -18px;
+  top: 50%;
+  width: 10px;
+  border-top: 1px dotted var(--preview-line-color);
+  opacity: 0.4;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   TEMA: WINDOWS CLASSIC (Windows Clásico)
+   Cuadros con + y - exactamente como en Windows Explorer clásico
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.sidebar-tree.tree-theme-windowsClassic {
+  --tree-indent: 18px;
+  --tree-line-color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.8));
+  --tree-line-opacity: 0.4;
+  --tree-node-spacing: 0px;
+  --tree-border-radius: 0px;
+}
+
+.sidebar-tree.tree-theme-windowsClassic .tree-connector {
+  display: none !important;
+}
+
+.sidebar-tree.tree-theme-windowsClassic .p-treenode-content {
+  border-radius: 0;
+  padding-left: 4px;
+  transition: background 0.15s ease;
+}
+
+.sidebar-tree.tree-theme-windowsClassic .p-treenode-children {
+  position: relative;
+  padding-left: 18px !important;
+  margin-left: 8px;
+}
+
+/* Línea vertical punteada estilo Windows Explorer */
+.sidebar-tree.tree-theme-windowsClassic .p-treenode-children::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 10px;
+  width: 0 !important;
+  height: auto !important;
+  background: none !important;
+  border: none !important;
+  border-left: 1px dotted var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+  pointer-events: none;
+}
+
+/* Línea horizontal punteada hacia cada nodo */
+.sidebar-tree.tree-theme-windowsClassic .p-treenode-children > .p-treenode > .p-treenode-content {
+  position: relative;
+}
+
+.sidebar-tree.tree-theme-windowsClassic .p-treenode-children > .p-treenode > .p-treenode-content::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute;
+  left: -18px;
+  top: 50%;
+  width: 10px !important;
+  height: 0 !important;
+  background: none !important;
+  border: none !important;
+  border-top: 1px dotted var(--tree-line-color) !important;
+  opacity: var(--tree-line-opacity);
+  pointer-events: none;
+}
+
+.sidebar-tree.tree-theme-windowsClassic .p-treenode-content:hover {
+  background: var(--ui-sidebar-hover) !important;
+}
+
+/* Cuadro con borde para el toggler - estilo Windows Explorer */
+.sidebar-tree.tree-theme-windowsClassic .p-tree-toggler {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  margin-right: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid var(--ui-sidebar-text, rgba(255, 255, 255, 0.6)) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: all 0.15s ease;
+  padding: 0 !important;
+  position: relative;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.sidebar-tree.tree-theme-windowsClassic .p-tree-toggler:hover {
+  opacity: 1;
+  background: var(--ui-sidebar-hover) !important;
+  border-color: var(--ui-button-primary) !important;
+}
+
+.sidebar-tree.tree-theme-windowsClassic .p-tree-toggler:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Ocultar completamente el icono de flecha de PrimeReact */
+.sidebar-tree.tree-theme-windowsClassic .p-tree-toggler-icon {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Usar ::before para el símbolo + o - - que llene todo el cuadro y esté perfectamente centrado */
+.sidebar-tree.tree-theme-windowsClassic .p-tree-toggler::before {
+  content: '+' !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 16px !important;
+  height: 16px !important;
+  font-size: 17px !important;
+  font-weight: 900 !important;
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.9)) !important;
+  font-family: 'Segoe UI', Arial, sans-serif !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: absolute;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, calc(-50% - 1px)) !important;
+  box-sizing: border-box;
+  pointer-events: none;
+  line-height: 1 !important;
+  text-align: center !important;
+  letter-spacing: 0 !important;
+}
+
+/* Mostrar "-" cuando el nodo está expandido - múltiples detectores */
+/* 1. Detectar por el icono angle-down de PrimeReact (expandido = angle-down, colapsado = angle-right) */
+.sidebar-tree.tree-theme-windowsClassic .p-treenode:has(.p-tree-toggler .pi-angle-down) .p-tree-toggler::before,
+.sidebar-tree.tree-theme-windowsClassic .p-tree-toggler:has(.pi-angle-down)::before,
+/* 2. Detectar por aria-expanded */
+.sidebar-tree.tree-theme-windowsClassic .p-tree-toggler[aria-expanded="true"]::before,
+/* 3. Detectar cuando el nodo tiene hijos visibles (no ocultos) */
+.sidebar-tree.tree-theme-windowsClassic .p-treenode:has(.p-treenode-children:not([style*="display: none"])) > .p-treenode-content > .p-tree-toggler::before {
+  content: '−' !important;
+}
+
+/* Nodos hoja no tienen toggler, pero necesitamos el espacio */
+.sidebar-tree.tree-theme-windowsClassic .p-treenode-leaf .p-tree-toggler {
+  display: none !important;
+}
+
+/* Ajustar el espaciado de los nodos */
+.sidebar-tree.tree-theme-windowsClassic .p-treenode {
+  margin-bottom: 1px;
+}
+
+.sidebar-tree.tree-theme-windowsClassic .p-treenode-content {
+  min-height: 22px;
+  line-height: 22px;
+  display: flex;
+  align-items: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   PREVIEW: TEMA WINDOWS CLASSIC
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.tree-preview-container.tree-theme-windowsClassic {
+  --preview-line-color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.5));
+}
+
+.tree-preview-container.tree-theme-windowsClassic .tree-preview-connector {
+  display: none;
+}
+
+.tree-preview-container.tree-theme-windowsClassic .tree-preview-children {
+  position: relative;
+  margin-left: 8px;
+  padding-left: 18px;
+}
+
+.tree-preview-container.tree-theme-windowsClassic .tree-preview-children::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 12px;
+  border-left: 1px dotted var(--preview-line-color);
+  opacity: 0.4;
+}
+
+.tree-preview-container.tree-theme-windowsClassic .tree-preview-child {
+  position: relative;
+}
+
+.tree-preview-container.tree-theme-windowsClassic .tree-preview-child::before {
+  content: '';
+  position: absolute;
+  left: -18px;
+  top: 50%;
+  width: 10px;
+  border-top: 1px dotted var(--preview-line-color);
+  opacity: 0.4;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
