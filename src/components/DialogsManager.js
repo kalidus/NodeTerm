@@ -130,10 +130,18 @@ const DialogsManager = ({
   // Estados de formularios Folder
   folderName,
   setFolderName,
+  folderColor,
+  setFolderColor,
+  folderIcon,
+  setFolderIcon,
   parentNodeKey,
   editFolderNode,
   editFolderName,
   setEditFolderName,
+  editFolderColor,
+  setEditFolderColor,
+  editFolderIcon,
+  setEditFolderIcon,
   
   // Estados de formularios Group
   newGroupName,
@@ -223,6 +231,17 @@ const DialogsManager = ({
   useEffect(() => {
     console.log('DialogsManager - Montado - handleSaveFileConnectionToSidebar:', typeof handleSaveFileConnectionToSidebar, !!handleSaveFileConnectionToSidebar);
   }, [handleSaveFileConnectionToSidebar]);
+  
+  // Debug: verificar props de folder
+  useEffect(() => {
+    console.log('🔍 DialogsManager - Folder props:', {
+      setFolderIcon: typeof setFolderIcon,
+      setFolderIconValue: setFolderIcon,
+      setFolderColor: typeof setFolderColor,
+      folderIcon,
+      folderColor
+    });
+  }, [setFolderIcon, setFolderColor, folderIcon, folderColor]);
   
   // Crear handler estable con useCallback para que no cambie entre renders
   const stableFileConnectionHandler = useCallback((fileData) => {
@@ -406,8 +425,13 @@ const DialogsManager = ({
       <FolderDialog
         visible={showFolderDialog}
         onHide={() => setShowFolderDialog(false)}
+        mode="new"
         folderName={folderName}
         setFolderName={setFolderName}
+        folderColor={folderColor}
+        setFolderColor={setFolderColor}
+        folderIcon={folderIcon}
+        setFolderIcon={setFolderIcon || (() => console.warn('setFolderIcon no disponible'))}
         onConfirm={createNewFolder}
         iconTheme={iconTheme}
       />
@@ -416,8 +440,13 @@ const DialogsManager = ({
       <FolderDialog
         visible={showEditFolderDialog}
         onHide={() => setShowEditFolderDialog(false)}
+        mode="edit"
         folderName={editFolderName}
         setFolderName={setEditFolderName}
+        folderColor={editFolderColor}
+        setFolderColor={setEditFolderColor}
+        folderIcon={editFolderIcon}
+        setFolderIcon={setEditFolderIcon}
         onConfirm={saveEditFolder}
         iconTheme={iconTheme}
       />

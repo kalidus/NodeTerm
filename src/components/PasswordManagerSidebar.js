@@ -9,6 +9,7 @@ import { ContextMenu } from 'primereact/contextmenu';
 import { FolderDialog } from './Dialogs';
 import SidebarFooter from './SidebarFooter';
 import { iconThemes } from '../themes/icon-themes';
+import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import '../styles/components/password-manager-sidebar.css';
 import '../styles/components/tree-themes.css';
 
@@ -116,6 +117,7 @@ const PasswordManagerSidebar = ({
   // Estados para carpetas
   const [folderName, setFolderName] = useState('');
   const [folderColor, setFolderColor] = useState(() => getThemeDefaultColor(iconTheme));
+  const [folderIcon, setFolderIcon] = useState('general');
   const [parentNodeKey, setParentNodeKey] = useState(null);
 
   // CARGAR passwords (con o sin encriptación)
@@ -328,7 +330,8 @@ const PasswordManagerSidebar = ({
             return {
               ...node,
               label: folderName.trim(),
-              color: folderColor
+              color: folderColor,
+              folderIcon: folderIcon || 'general'
             };
           }
           if (node.children) {
@@ -359,6 +362,7 @@ const PasswordManagerSidebar = ({
         createdAt: new Date().toISOString(),
         isUserCreated: true,
         color: folderColor,
+        folderIcon: folderIcon || 'general',
         data: { type: 'password-folder' }
       };
       
@@ -855,7 +859,11 @@ const PasswordManagerSidebar = ({
         icon = <span className="pi pi-key" style={{ color: '#ffc107', fontSize: `${connectionIconSize}px` }} />;
       }
     } else if (isFolder) {
-      if (node.data && node.data.iconImage) {
+      // Verificar si tiene icono personalizado
+      if (node.folderIcon && FolderIconPresets[node.folderIcon.toUpperCase()]) {
+        const preset = FolderIconPresets[node.folderIcon.toUpperCase()];
+        icon = <FolderIconRenderer preset={preset} pixelSize={folderIconSize} />;
+      } else if (node.data && node.data.iconImage) {
         icon = (
           <img 
             src={node.data.iconImage} 
@@ -966,6 +974,7 @@ const PasswordManagerSidebar = ({
   const handleEditFolder = (folder) => {
     setFolderName(folder.label);
     setFolderColor(folder.color || getThemeDefaultColor(iconTheme));
+    setFolderIcon(folder.folderIcon || 'general');
     setEditingFolder(folder);
     setShowFolderDialog(true);
   };
@@ -1375,6 +1384,7 @@ const PasswordManagerSidebar = ({
           setShowFolderDialog(false);
           setFolderName('');
           setFolderColor(getThemeDefaultColor(iconTheme));
+          setFolderIcon('general');
           setEditingFolder(null);
         }}
         mode={editingFolder ? "edit" : "new"}
@@ -1382,6 +1392,8 @@ const PasswordManagerSidebar = ({
         setFolderName={setFolderName}
         folderColor={folderColor}
         setFolderColor={setFolderColor}
+        folderIcon={folderIcon}
+        setFolderIcon={setFolderIcon}
         onConfirm={createNewFolder}
         iconTheme={iconTheme}
       />

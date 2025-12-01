@@ -1,4 +1,5 @@
 import React, { useCallback, useRef, useEffect } from 'react';
+import { FolderIconRenderer, FolderIconPresets } from '../components/FolderIconSelector';
 
 export const useNodeTemplate = ({
   // Estados
@@ -17,9 +18,12 @@ export const useNodeTemplate = ({
   iconThemes,
   iconThemeSidebar,
   sidebarFont,
+  folderIconSize,
   // Estados de diálogos
   setEditFolderNode,
   setEditFolderName,
+  setEditFolderColor,
+  setEditFolderIcon,
   setShowEditFolderDialog,
   // Funciones
   onNodeContextMenu,
@@ -44,8 +48,10 @@ export const useNodeTemplate = ({
   const openEditFolderDialog = useCallback((node) => {
     setEditFolderNode(node);
     setEditFolderName(node.label);
+    setEditFolderColor(node.color || '');
+    setEditFolderIcon(node.folderIcon || 'general');
     setShowEditFolderDialog(true);
-  }, [setEditFolderNode, setEditFolderName, setShowEditFolderDialog]);
+  }, [setEditFolderNode, setEditFolderName, setEditFolderColor, setEditFolderIcon, setShowEditFolderDialog]);
 
   // Node template simplificado - acciones movidas al menú contextual
   const nodeTemplate = useCallback((node, options) => {
@@ -138,55 +144,47 @@ export const useNodeTemplate = ({
       
       const folderColor = node.color || getThemeDefaultColor(iconThemeSidebar);
       
-      // DEBUG: Log para entender qué está pasando
-      console.log('🔍 Folder Icon Debug:', {
-        nodeKey: node.key,
-        nodeLabel: node.label,
-        folderColor,
-        iconThemeSidebar,
-        themeIcon: iconThemes[iconThemeSidebar]?.icons?.folder,
-        expanded: options.expanded
-      });
-      
-      // Usar el icono del tema si existe, pero forzar el color
-      const themeIcon = options.expanded 
-        ? iconThemes[iconThemeSidebar]?.icons?.folderOpen 
-        : iconThemes[iconThemeSidebar]?.icons?.folder;
-      
-      if (themeIcon) {
-        console.log('🎨 Using theme icon:', themeIcon);
-        // Si hay un icono del tema, clonarlo y aplicar el color
-        icon = React.cloneElement(themeIcon, {
-          style: { 
-            ...themeIcon.props.style, 
-            color: folderColor,
-            '--icon-color': folderColor
-          },
-          'data-folder-color': folderColor,
-          'data-debug': 'theme-icon'
-        });
+      // Verificar si tiene icono personalizado
+      if (node.folderIcon && FolderIconPresets[node.folderIcon.toUpperCase()]) {
+        const preset = FolderIconPresets[node.folderIcon.toUpperCase()];
+        // Usar el icono personalizado con FolderIconRenderer
+        icon = <FolderIconRenderer preset={preset} pixelSize={folderIconSize} />;
       } else {
-        console.log('🎨 Using fallback icon');
-        // Fallback a iconos PrimeReact con color forzado
-        icon = options.expanded
-          ? <span 
-              className="pi pi-folder-open" 
-              style={{ 
-                color: folderColor,
-                '--icon-color': folderColor
-              }} 
-              data-folder-color={folderColor}
-              data-debug="fallback-open"
-            />
-          : <span 
-              className="pi pi-folder" 
-              style={{ 
-                color: folderColor,
-                '--icon-color': folderColor
-              }} 
-              data-folder-color={folderColor}
-              data-debug="fallback-closed"
-            />;
+        // Usar el icono del tema si no hay icono personalizado
+        const themeIcon = options.expanded 
+          ? iconThemes[iconThemeSidebar]?.icons?.folderOpen 
+          : iconThemes[iconThemeSidebar]?.icons?.folder;
+        
+        if (themeIcon) {
+          // Si hay un icono del tema, clonarlo y aplicar el color
+          icon = React.cloneElement(themeIcon, {
+            style: { 
+              ...themeIcon.props.style, 
+              color: folderColor,
+              '--icon-color': folderColor
+            },
+            'data-folder-color': folderColor
+          });
+        } else {
+          // Fallback a iconos PrimeReact con color forzado
+          icon = options.expanded
+            ? <span 
+                className="pi pi-folder-open" 
+                style={{ 
+                  color: folderColor,
+                  '--icon-color': folderColor
+                }} 
+                data-folder-color={folderColor}
+              />
+            : <span 
+                className="pi pi-folder" 
+                style={{ 
+                  color: folderColor,
+                  '--icon-color': folderColor
+                }} 
+                data-folder-color={folderColor}
+              />;
+        }
       }
     }
 
