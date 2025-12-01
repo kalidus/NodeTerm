@@ -204,6 +204,9 @@ export const useNodeTemplate = ({
       }
     };
 
+    // Detectar si tiene icono personalizado (para ajustar alineación del texto)
+    const hasCustomFolderIcon = isFolder && node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()];
+
     return (
       <div className="flex align-items-center gap-1"
         onContextMenu={options.onNodeContextMenu ? (e) => options.onNodeContextMenu(e, node) : undefined}
@@ -270,11 +273,30 @@ export const useNodeTemplate = ({
           }
         } : undefined}
         onClick={isSSH ? (e) => {} : undefined}
-        style={{ cursor: 'pointer', fontFamily: sidebarFont }}
+        style={{ 
+          cursor: 'pointer', 
+          fontFamily: sidebarFont,
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: '6px'
+        }}
         title="Click derecho para más opciones"
       >
-        <span style={{ minWidth: 16 }}>{icon}</span>
-        <span className="node-label">{node.label}</span>
+        <span style={{ 
+          minWidth: 16,
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+          height: '20px'
+        }}>{icon}</span>
+        <span className="node-label" style={{
+          lineHeight: '20px',
+          height: '20px',
+          display: 'block',
+          margin: 0,
+          padding: 0,
+          ...(hasCustomFolderIcon ? { transform: 'translateY(3px)' } : {})
+        }}>{node.label}</span>
         {getConnectionIndicator()}
       </div>
     );

@@ -203,14 +203,17 @@
   min-height: 20px !important;
   line-height: 20px !important;
   border-radius: 4px;
-  display: flex;
-  align-items: flex-start;
+  display: flex !important;
+  align-items: center !important;
   gap: 0.12rem;
   transition: background 0.2s;
   width: 100%;
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  font-size: inherit !important;
 }
 .sidebar-tree .p-treenode-content.p-highlight {
   background: transparent !important;
@@ -254,10 +257,6 @@
 .sidebar-tree .p-treenode-children {
   padding-left: 0.5rem !important;
 }
-.sidebar-tree .p-treenode-content {
-  margin-left: 0 !important;
-  padding-left: 0 !important;
-}
 .sidebar-tree .p-treenode-content::before,
 .sidebar-tree .p-treenode::before,
 .sidebar-tree .p-treenode-children::before,
@@ -277,10 +276,15 @@
   margin-right: 0.25rem;
 }
 .sidebar-tree .p-treenode-content .node-label {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  line-height: 20px !important;
+  height: 20px !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 .sidebar-tree .p-treenode-content .ml-auto {
   margin-left: auto;
@@ -289,15 +293,16 @@
   visibility: visible;
 }
 .node-label {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.7rem;
-  line-height: 1.2;
-  padding-top: 0.02rem;
-  display: flex;
-  align-items: center;
+  flex: 1 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: inherit !important;
+  line-height: 20px !important;
+  height: 20px !important;
+  padding: 0 !important;
+  display: block !important;
+  margin: 0 !important;
 }
 .node-action-button .p-button-icon {
   font-size: 0.65rem;
@@ -688,10 +693,6 @@
   padding-left: var(--tree-indent) !important;
   border-left: none !important;
 }
-.sidebar-tree .p-treenode-content {
-  margin-left: calc(-1 * var(--tree-indent));
-  padding-left: 0.1rem !important;
-}
 .sidebar-tree .p-treenode-icon {
   margin: 0 0.1rem 0 0 !important; /* icono más cerca del texto */
 }
@@ -788,15 +789,14 @@
 }
 /* Restablecer estilos del árbol para asegurar funcionalidad */
 .sidebar-tree .p-tree,
-.sidebar-tree .p-treenode,
-.sidebar-tree .p-treenode-content {
+.sidebar-tree .p-treenode {
   pointer-events: auto;
   cursor: default;
   user-select: none;
 }
 /* Cursor pointer solo para elementos clicables */
 .sidebar-tree .p-treenode-content:hover {
-  cursor: pointer;
+  cursor: pointer !important;
 }
 /* Botones de la sidebar */
 .sidebar-container .p-button {

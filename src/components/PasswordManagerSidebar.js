@@ -900,6 +900,9 @@ const PasswordManagerSidebar = ({
       }
     }
     
+    // Detectar si tiene icono personalizado (para ajustar alineación del texto)
+    const hasCustomFolderIcon = isFolder && node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()];
+    
     return (
       <div 
         className="flex align-items-center gap-1"
@@ -912,7 +915,13 @@ const PasswordManagerSidebar = ({
             handleOpenFolder(node);
           }
         }}
-        style={{ cursor: 'pointer', fontFamily: explorerFont, alignItems: 'flex-start' }}
+        style={{ 
+          cursor: 'pointer', 
+          fontFamily: explorerFont,
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: '6px'
+        }}
         data-connection-type={isPassword ? 'password' : null}
         data-node-type={isFolder ? 'folder' : 'connection'}
         draggable={true}
@@ -920,7 +929,7 @@ const PasswordManagerSidebar = ({
         <span style={{ 
           minWidth: 20,
           display: 'flex', 
-          alignItems: 'center', 
+          alignItems: 'flex-end', 
           justifyContent: 'center', 
           height: '20px',
           position: 'relative'
@@ -929,7 +938,13 @@ const PasswordManagerSidebar = ({
         </span>
         <span className="node-label" style={{ 
           flex: 1,
-          marginLeft: '0px'
+          marginLeft: '0px',
+          lineHeight: '20px',
+          height: '20px',
+          display: 'block',
+          margin: 0,
+          padding: 0,
+          ...(hasCustomFolderIcon ? { transform: 'translateY(3px)' } : {})
         }}>{node.label}</span>
       </div>
     );
