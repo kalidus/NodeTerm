@@ -6,6 +6,7 @@ import SidebarFooter from './SidebarFooter';
 import { uiThemes, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 import { FolderDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
+import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import ImportDialog from './ImportDialog';
 import PasswordManagerSidebar from './PasswordManagerSidebar';
 import SidebarFilesystemExplorer from './SidebarFilesystemExplorer';
@@ -259,6 +260,7 @@ const Sidebar = React.memo(({
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [folderName, setFolderName] = useState('');
   const [folderColor, setFolderColor] = useState(() => getThemeDefaultColor(iconTheme));
+  const [folderIcon, setFolderIcon] = useState('general');
   const [parentNodeKey, setParentNodeKey] = useState(null);
   const [editingNode, setEditingNode] = useState(null); // Para saber si estamos editando un nodo existente
   
@@ -871,18 +873,18 @@ const Sidebar = React.memo(({
     
     if (editingNode) {
       // Modo edición: actualizar carpeta existente
-      const updateNodeInTree = (nodes, targetKey, newLabel, newColor) => {
+      const updateNodeInTree = (nodes, targetKey, newLabel, newColor, newIcon) => {
         return nodes.map(node => {
           if (node.key === targetKey) {
-            return { ...node, label: newLabel, color: newColor };
+            return { ...node, label: newLabel, color: newColor, folderIcon: newIcon || 'general' };
           }
           if (node.children) {
-            return { ...node, children: updateNodeInTree(node.children, targetKey, newLabel, newColor) };
+            return { ...node, children: updateNodeInTree(node.children, targetKey, newLabel, newColor, newIcon) };
           }
           return node;
         });
       };
-      const updatedNodes = updateNodeInTree(nodesCopy, editingNode.key, folderName.trim(), folderColor);
+      const updatedNodes = updateNodeInTree(nodesCopy, editingNode.key, folderName.trim(), folderColor, folderIcon);
       setNodes(() => logSetNodes('Sidebar', updatedNodes));
       showToast && showToast({ severity: 'success', summary: 'Éxito', detail: `Carpeta "${folderName}" actualizada`, life: 3000 });
     } else {
@@ -896,7 +898,8 @@ const Sidebar = React.memo(({
         uid: newKey,
         createdAt: new Date().toISOString(),
         isUserCreated: true,
-        color: folderColor
+        color: folderColor,
+        folderIcon: folderIcon || 'general'
       };
       
       if (parentNodeKey === null) {
@@ -1284,6 +1287,9 @@ const Sidebar = React.memo(({
           const parentKey = findParent(nodes, node.key);
           setParentNodeKey(parentKey);
           setEditingNode(node); // Estado para saber que estamos editando
+          setFolderName(node.label);
+          setFolderColor(node.color || getThemeDefaultColor(iconTheme));
+          setFolderIcon(node.folderIcon || 'general');
           setShowFolderDialog(true);
         },
         deleteNode: (nodeKey, nodeLabel) => {
@@ -1473,16 +1479,20 @@ const Sidebar = React.memo(({
         icon = <span className="pi pi-folder" style={{ color: fallbackColors[protocol] || '#ff9800', fontSize: `${connectionIconSize}px` }} />;
       }
     } else if (isFolder) {
-      // Lógica inteligente para determinar el color de la carpeta:
-      // 1. Si no tiene color asignado → usar color por defecto del tema actual
-      // 2. Si tiene color pero es un color por defecto de algún tema → usar color por defecto del tema actual
-      // 3. Si tiene color personalizado → mantener ese color
-      const hasCustomColor = node.color && !isDefaultThemeColor(node.color);
-      const folderColor = hasCustomColor ? node.color : getThemeDefaultColor(iconTheme);
-      
-      
-      // Usar el icono del tema si existe, pero forzar el color
-      const themeIcon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
+      // Verificar si tiene icono personalizado
+      if (node.folderIcon && FolderIconPresets[node.folderIcon.toUpperCase()]) {
+        const preset = FolderIconPresets[node.folderIcon.toUpperCase()];
+        icon = <FolderIconRenderer preset={preset} pixelSize={folderIconSize} />;
+      } else {
+        // Lógica inteligente para determinar el color de la carpeta:
+        // 1. Si no tiene color asignado → usar color por defecto del tema actual
+        // 2. Si tiene color pero es un color por defecto de algún tema → usar color por defecto del tema actual
+        // 3. Si tiene color personalizado → mantener ese color
+        const hasCustomColor = node.color && !isDefaultThemeColor(node.color);
+        const folderColor = hasCustomColor ? node.color : getThemeDefaultColor(iconTheme);
+        
+        // Usar el icono del tema si existe, pero forzar el color
+        const themeIcon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
       
       if (themeIcon) {
         // Si hay un icono del tema, clonarlo y aplicar el color y tamaño
@@ -1695,6 +1705,7 @@ const Sidebar = React.memo(({
               data-folder-color={folderColor}
               data-debug="sidebar-fallback-closed"
             />;
+        }
       }
     } else {
       icon = themeIcons.file;
@@ -2388,6 +2399,7 @@ const Sidebar = React.memo(({
           setShowFolderDialog(false);
           setFolderName('');
           setFolderColor(getThemeDefaultColor(iconTheme));
+          setFolderIcon('general');
           setEditingNode(null); // Limpiar estado de edición al cerrar
         }}
         mode={editingNode ? "edit" : "new"}
@@ -2395,6 +2407,8 @@ const Sidebar = React.memo(({
         setFolderName={setFolderName}
         folderColor={folderColor}
         setFolderColor={setFolderColor}
+        folderIcon={folderIcon}
+        setFolderIcon={setFolderIcon}
         onConfirm={createNewFolder}
         themeDefaultColor={getThemeDefaultColor(iconTheme)}
         themeName={iconThemes[iconTheme]?.name || 'Material'}

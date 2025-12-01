@@ -76,9 +76,13 @@ export const useDialogManagement = () => {
   // ============ ESTADOS DE FORMULARIOS FOLDER ============
   
   const [folderName, setFolderName] = useState('');
+  const [folderColor, setFolderColor] = useState('');
+  const [folderIcon, setFolderIcon] = useState('general');
   const [parentNodeKey, setParentNodeKey] = useState(null);
   const [editFolderNode, setEditFolderNode] = useState(null);
   const [editFolderName, setEditFolderName] = useState('');
+  const [editFolderColor, setEditFolderColor] = useState('');
+  const [editFolderIcon, setEditFolderIcon] = useState('general');
 
   // ============ FUNCIONES DE UTILIDAD ============
   
@@ -109,6 +113,8 @@ export const useDialogManagement = () => {
   // Resetear todos los campos Folder
   const resetFolderForm = () => {
     setFolderName('');
+    setFolderColor('');
+    setFolderIcon('general');
     setParentNodeKey(null);
   };
 
@@ -144,6 +150,8 @@ export const useDialogManagement = () => {
   const resetEditFolderForm = () => {
     setEditFolderNode(null);
     setEditFolderName('');
+    setEditFolderColor('');
+    setEditFolderIcon('general');
   };
 
   // Abrir diálogo SSH con reset automático
@@ -255,9 +263,13 @@ export const useDialogManagement = () => {
 
     // Estados de formularios Folder
     folderName, setFolderName,
+    folderColor, setFolderColor,
+    folderIcon, setFolderIcon,
     parentNodeKey, setParentNodeKey,
     editFolderNode, setEditFolderNode,
     editFolderName, setEditFolderName,
+    editFolderColor, setEditFolderColor,
+    editFolderIcon, setEditFolderIcon,
 
     // Estados de formularios Archivos (SFTP/FTP/SCP)
     fileConnectionName, setFileConnectionName,

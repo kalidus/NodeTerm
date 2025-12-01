@@ -1086,9 +1086,13 @@ const App = () => {
     editingFileConnectionNode, setEditingFileConnectionNode,
     // Estados de formularios Folder
     folderName, setFolderName,
+    folderColor, setFolderColor,
+    folderIcon, setFolderIcon,
     parentNodeKey, setParentNodeKey,
     editFolderNode, setEditFolderNode,
     editFolderName, setEditFolderName,
+    editFolderColor, setEditFolderColor,
+    editFolderIcon, setEditFolderIcon,
     // Funciones de utilidad
     resetSSHForm, resetRDPForm, resetFolderForm,
     resetEditSSHForm, resetEditFolderForm,
@@ -1269,8 +1273,11 @@ const App = () => {
     iconThemes,
     iconThemeSidebar,
     sidebarFont,
+    folderIconSize,
     setEditFolderNode,
     setEditFolderName,
+    setEditFolderColor,
+    setEditFolderIcon,
     setShowEditFolderDialog,
     onNodeContextMenu,
     onTreeAreaContextMenu
@@ -2471,10 +2478,18 @@ const App = () => {
         // Estados de formularios Folder
         folderName={folderName}
         setFolderName={setFolderName}
+        folderColor={folderColor}
+        setFolderColor={setFolderColor}
+        folderIcon={folderIcon}
+        setFolderIcon={setFolderIcon}
         parentNodeKey={parentNodeKey}
         editFolderNode={editFolderNode}
         editFolderName={editFolderName}
         setEditFolderName={setEditFolderName}
+        editFolderColor={editFolderColor}
+        setEditFolderColor={setEditFolderColor}
+        editFolderIcon={editFolderIcon}
+        setEditFolderIcon={setEditFolderIcon}
         
         // Estados de formularios Group
         newGroupName={newGroupName}

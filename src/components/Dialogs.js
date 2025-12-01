@@ -11,6 +11,7 @@ import { ColorSelector } from './ColorSelector';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { FileUpload } from 'primereact/fileupload';
 import { Message } from 'primereact/message';
+import { FolderIconSelectorModal, FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 
 // --- SSHDialog: para crear o editar conexiones SSH ---
 export function SSHDialog({
@@ -216,11 +217,86 @@ export function FolderDialog({
   mode = 'new',
   folderName, setFolderName,
   folderColor, setFolderColor,
+  folderIcon = 'general', 
+  setFolderIcon,
   onConfirm,
   loading = false,
-  iconTheme = 'material' // Agregar prop para el tema de iconos
+  iconTheme = 'material'
 }) {
   const isEdit = mode === 'edit';
+  const [showIconSelector, setShowIconSelector] = useState(false);
+  // Estado local como fallback si setFolderIcon no está disponible
+  const [localFolderIcon, setLocalFolderIcon] = useState(folderIcon || 'general');
+  
+  // Debug: ver qué props están llegando
+  useEffect(() => {
+    console.log('🔍 FolderDialog props:', {
+      mode,
+      folderIcon,
+      setFolderIcon: typeof setFolderIcon,
+      setFolderIconValue: setFolderIcon,
+      folderColor,
+      setFolderColor: typeof setFolderColor,
+      setFolderColorValue: setFolderColor,
+      visible,
+      allProps: arguments[0] // Esto no funcionará, mejor usar otro método
+    });
+    console.log('🔍 FolderDialog - setFolderIcon es:', setFolderIcon);
+    console.log('🔍 FolderDialog - setFolderColor es:', setFolderColor);
+  }, [mode, folderIcon, setFolderIcon, folderColor, setFolderColor, visible]);
+  
+  // Usar el icono del prop si está disponible, sino el local
+  const currentFolderIcon = folderIcon !== undefined ? folderIcon : localFolderIcon;
+  
+  const selectedPreset = useMemo(() => {
+    const preset = currentFolderIcon && FolderIconPresets[currentFolderIcon.toUpperCase()] 
+      ? FolderIconPresets[currentFolderIcon.toUpperCase()] 
+      : FolderIconPresets.GENERAL;
+    console.log('📦 selectedPreset calculado:', preset.id, 'desde folderIcon:', currentFolderIcon);
+    return preset;
+  }, [currentFolderIcon]);
+  
+  // Sincronizar estado local cuando cambia el prop
+  useEffect(() => {
+    if (folderIcon !== undefined) {
+      setLocalFolderIcon(folderIcon);
+    }
+  }, [folderIcon]);
+  
+  // Debug: ver cuando cambia folderIcon
+  useEffect(() => {
+    console.log('🔄 folderIcon cambió a:', currentFolderIcon);
+  }, [currentFolderIcon]);
+  
+  // Función segura para actualizar el icono
+  const handleIconSelect = useCallback((iconId) => {
+    console.log('🎨 handleIconSelect llamado con:', iconId);
+    console.log('setFolderIcon disponible?', typeof setFolderIcon);
+    console.log('setFolderIcon valor:', setFolderIcon);
+    
+    // Siempre actualizar el estado local primero
+    setLocalFolderIcon(iconId);
+    
+    // Intentar actualizar el hook si está disponible
+    if (setFolderIcon && typeof setFolderIcon === 'function') {
+      try {
+        setFolderIcon(iconId);
+        console.log('✅ setFolderIcon llamado con:', iconId);
+      } catch (error) {
+        console.error('❌ Error al llamar setFolderIcon:', error);
+      }
+    } else {
+      console.warn('⚠️ setFolderIcon no está disponible, usando solo estado local');
+    }
+  }, [setFolderIcon]);
+  
+  // Efecto para sincronizar el hook cuando el estado local cambia y setFolderIcon está disponible
+  useEffect(() => {
+    if (setFolderIcon && typeof setFolderIcon === 'function' && localFolderIcon !== folderIcon) {
+      console.log('🔄 Sincronizando hook con estado local:', localFolderIcon);
+      setFolderIcon(localFolderIcon);
+    }
+  }, [localFolderIcon, setFolderIcon, folderIcon]);
   
   return (
     <Dialog 
@@ -261,6 +337,37 @@ export function FolderDialog({
           </div>
           
           <div className="form-field">
+            <label className="field-label">
+              <i className="pi pi-palette"></i>
+              Icono de la carpeta
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowIconSelector(true)}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem',
+                padding: '0.75rem',
+                backgroundColor: 'var(--ui-card-bg, rgba(255, 255, 255, 0.05))',
+                border: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.1))',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                color: 'var(--ui-dialog-text, #ffffff)',
+                fontSize: '0.95rem'
+              }}
+            >
+              <FolderIconRenderer preset={selectedPreset} size="medium" />
+              <div style={{ flex: 1, textAlign: 'left' }}>
+                <div style={{ fontWeight: '600' }}>{selectedPreset.name}</div>
+                <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>{selectedPreset.description}</div>
+              </div>
+              <i className="pi pi-chevron-right"></i>
+            </button>
+          </div>
+          
+          <div className="form-field">
             <ColorSelector
               selectedColor={folderColor}
               onColorChange={setFolderColor}
@@ -272,9 +379,9 @@ export function FolderDialog({
         
         <div className="folder-preview">
           <div className="preview-label">Vista previa:</div>
-          <div className="preview-folder" style={{ borderLeftColor: folderColor || '#007ad9' }}>
-            <i className="pi pi-folder" style={{ color: folderColor || '#007ad9' }}></i>
-            <span className="preview-name">{folderName || 'Nombre de la carpeta'}</span>
+          <div className="preview-folder" style={{ borderLeftColor: folderColor || '#007ad9', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <FolderIconRenderer preset={selectedPreset} size="medium" />
+            <span className="preview-name" style={{ color: folderColor || '#007ad9' }}>{folderName || 'Nombre de la carpeta'}</span>
           </div>
         </div>
       </div>
@@ -290,11 +397,31 @@ export function FolderDialog({
           label={isEdit ? 'Guardar cambios' : 'Crear carpeta'} 
           icon={isEdit ? 'pi pi-save' : 'pi pi-plus'} 
           className="p-button-primary create-button" 
-          onClick={onConfirm} 
+          onClick={() => {
+            // Asegurar que el icono se actualice en el hook antes de guardar
+            console.log('💾 Guardando carpeta con icono:', currentFolderIcon);
+            if (setFolderIcon && typeof setFolderIcon === 'function') {
+              setFolderIcon(currentFolderIcon);
+              console.log('✅ Hook actualizado con:', currentFolderIcon);
+            } else {
+              console.warn('⚠️ setFolderIcon no disponible, el icono puede no guardarse correctamente');
+            }
+            // Pequeño delay para asegurar que el hook se actualice
+            setTimeout(() => {
+              onConfirm();
+            }, 50);
+          }} 
           loading={loading}
           disabled={!folderName?.trim()}
         />
       </div>
+      
+      <FolderIconSelectorModal
+        visible={showIconSelector}
+        onHide={() => setShowIconSelector(false)}
+        selectedIconId={selectedPreset.id}
+        onSelectIcon={handleIconSelect}
+      />
     </Dialog>
   );
 }

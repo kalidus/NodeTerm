@@ -69,9 +69,11 @@ export const useFormHandlers = ({
   // Estados de formularios Folder
   folderName, parentNodeKey,
   folderColor, setFolderColor,
+  folderIcon, setFolderIcon,
   editFolderNode, setEditFolderNode,
   editFolderName, setEditFolderName,
   editFolderColor, setEditFolderColor,
+  editFolderIcon, setEditFolderIcon,
   closeFolderDialogWithReset,
   
   // Funciones de gestión de datos
@@ -149,7 +151,8 @@ export const useFormHandlers = ({
         createdAt: new Date().toISOString(),
         isUserCreated: true,
         color: folderColor || themeDefaultColor,
-        hasCustomColor: isCustomColor // Solo marcar como personalizado si es diferente al tema
+        hasCustomColor: isCustomColor,
+        folderIcon: folderIcon || 'general'
       };
       
       const nodesCopy = deepCopy(nodes);
@@ -182,7 +185,7 @@ export const useFormHandlers = ({
         life: 3000
       });
     }
-  }, [folderName, folderColor, parentNodeKey, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, closeFolderDialogWithReset, toast]);
+  }, [folderName, folderColor, folderIcon, parentNodeKey, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, closeFolderDialogWithReset, toast]);
 
   /**
    * Crear nueva conexión SSH
@@ -469,7 +472,8 @@ export const useFormHandlers = ({
       
       
       nodeToEdit.color = editFolderColor || themeDefaultColor;
-      nodeToEdit.hasCustomColor = isCustomColor; // Solo marcar como personalizado si es diferente al tema
+      nodeToEdit.hasCustomColor = isCustomColor;
+      nodeToEdit.folderIcon = editFolderIcon || 'general';
     }
     
     setNodes(nodesCopy);
@@ -483,7 +487,7 @@ export const useFormHandlers = ({
       detail: `Nombre actualizado`,
       life: 3000
     });
-  }, [editFolderName, editFolderColor, editFolderNode, nodes, setNodes, findNodeByKey, deepCopy, closeFolderDialogWithReset, setEditFolderNode, setEditFolderName, toast]);
+  }, [editFolderName, editFolderColor, editFolderIcon, editFolderNode, nodes, setNodes, findNodeByKey, deepCopy, closeFolderDialogWithReset, setEditFolderNode, setEditFolderName, toast]);
 
   // === FUNCIONES DE DIÁLOGOS ===
 
