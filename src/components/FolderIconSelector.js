@@ -4,18 +4,53 @@ import { uiThemes } from '../themes/ui-themes';
 
 // Presets de iconos disponibles
 export const FolderIconPresets = {
-  GENERAL: { id: 'general', name: 'General', emoji: '📁', description: 'Carpeta estándar', color: '#2196F3' },
-  SECURITY: { id: 'security', name: 'Seguridad', emoji: '🔒', description: 'Datos seguros', color: '#F44336' },
-  NETWORK: { id: 'network', name: 'Redes', emoji: '🌐', description: 'Conexiones', color: '#FF9800' },
-  DATABASE: { id: 'database', name: 'Base de Datos', emoji: '💾', description: 'Almacenamiento', color: '#673AB7' },
-  ANALYTICS: { id: 'analytics', name: 'Análisis', emoji: '📊', description: 'Reportes y datos', color: '#4CAF50' },
-  SETTINGS: { id: 'settings', name: 'Configuración', emoji: '⚙️', description: 'Ajustes', color: '#009688' },
-  PROJECTS: { id: 'projects', name: 'Proyectos', emoji: '💼', description: 'Trabajos', color: '#3F51B5' },
-  DOCUMENTS: { id: 'documents', name: 'Documentos', emoji: '📝', description: 'Archivos', color: '#2196F3' },
-  DESIGN: { id: 'design', name: 'Diseño', emoji: '🎨', description: 'Creatividad', color: '#E91E63' },
-  MEDIA: { id: 'media', name: 'Media', emoji: '🎬', description: 'Videos e imágenes', color: '#FF5722' },
-  FAVORITES: { id: 'favorites', name: 'Favoritos', emoji: '⭐', description: 'Marcados', color: '#FFC107' },
-  SYNC: { id: 'sync', name: 'Sincronización', emoji: '🔄', description: 'Actualizaciones', color: '#00BCD4' }
+  // Sección: General
+  GENERAL: { id: 'general', name: 'General', emoji: '📁', description: 'Carpeta estándar', color: '#2196F3', category: 'general' },
+  SECURITY: { id: 'security', name: 'Seguridad', emoji: '🔒', description: 'Datos seguros', color: '#F44336', category: 'general' },
+  NETWORK: { id: 'network', name: 'Redes', emoji: '🌐', description: 'Conexiones', color: '#FF9800', category: 'general' },
+  DATABASE: { id: 'database', name: 'Base de Datos', emoji: '💾', description: 'Almacenamiento', color: '#673AB7', category: 'general' },
+  ANALYTICS: { id: 'analytics', name: 'Análisis', emoji: '📊', description: 'Reportes y datos', color: '#4CAF50', category: 'general' },
+  SETTINGS: { id: 'settings', name: 'Configuración', emoji: '⚙️', description: 'Ajustes', color: '#009688', category: 'general' },
+  PROJECTS: { id: 'projects', name: 'Proyectos', emoji: '💼', description: 'Trabajos', color: '#3F51B5', category: 'general' },
+  DOCUMENTS: { id: 'documents', name: 'Documentos', emoji: '📝', description: 'Archivos', color: '#2196F3', category: 'general' },
+  DESIGN: { id: 'design', name: 'Diseño', emoji: '🎨', description: 'Creatividad', color: '#E91E63', category: 'general' },
+  MEDIA: { id: 'media', name: 'Media', emoji: '🎬', description: 'Videos e imágenes', color: '#FF5722', category: 'general' },
+  FAVORITES: { id: 'favorites', name: 'Favoritos', emoji: '⭐', description: 'Marcados', color: '#FFC107', category: 'general' },
+  SYNC: { id: 'sync', name: 'Sincronización', emoji: '🔄', description: 'Actualizaciones', color: '#00BCD4', category: 'general' },
+  
+  // Sección: Administrador de Sistemas
+  SERVERS: { id: 'servers', name: 'Servidores', emoji: '🖥️', description: 'Servidores y hosts', color: '#607D8B', category: 'sysadmin' },
+  CONNECTIONS: { id: 'connections', name: 'Conexiones', emoji: '🔌', description: 'Conexiones remotas', color: '#795548', category: 'sysadmin' },
+  DATABASES_SYS: { id: 'databases_sys', name: 'Bases de Datos', emoji: '🗄️', description: 'MySQL, PostgreSQL, etc.', color: '#9C27B0', category: 'sysadmin' },
+  WINDOWS: { id: 'windows', name: 'Windows', emoji: '🪟', description: 'Sistemas Windows', color: '#00BCD4', category: 'sysadmin' },
+  LINUX: { id: 'linux', name: 'Linux', emoji: '🐧', description: 'Sistemas Linux', color: '#FFC107', category: 'sysadmin' },
+  SCRIPTS: { id: 'scripts', name: 'Scripts', emoji: '📜', description: 'Scripts y automatización', color: '#FF9800', category: 'sysadmin' },
+  LOGS: { id: 'logs', name: 'Logs', emoji: '📋', description: 'Archivos de registro', color: '#9E9E9E', category: 'sysadmin' },
+  MONITORING: { id: 'monitoring', name: 'Monitoreo', emoji: '📊', description: 'Sistemas de monitoreo', color: '#4CAF50', category: 'sysadmin' },
+  BACKUP: { id: 'backup', name: 'Backup', emoji: '💿', description: 'Copias de seguridad', color: '#3F51B5', category: 'sysadmin' },
+  SYSTEM_SECURITY: { id: 'system_security', name: 'Seguridad del Sistema', emoji: '🛡️', description: 'Firewall y seguridad', color: '#F44336', category: 'sysadmin' },
+  VIRTUALIZATION: { id: 'virtualization', name: 'Virtualización', emoji: '☁️', description: 'VMware, Hyper-V, etc.', color: '#00ACC1', category: 'sysadmin' },
+  CONTAINERS: { id: 'containers', name: 'Containers', emoji: '📦', description: 'Docker, Kubernetes', color: '#2196F3', category: 'sysadmin' },
+  CLOUD: { id: 'cloud', name: 'Cloud', emoji: '☁️', description: 'AWS, Azure, GCP', color: '#03A9F4', category: 'sysadmin' },
+  DEVOPS: { id: 'devops', name: 'DevOps', emoji: '⚡', description: 'CI/CD y automatización', color: '#FF6F00', category: 'sysadmin' },
+  CONFIG_SERVERS: { id: 'config_servers', name: 'Configuración', emoji: '⚙️', description: 'Config de servidores', color: '#009688', category: 'sysadmin' },
+  TERMINAL: { id: 'terminal', name: 'Terminal', emoji: '💻', description: 'Acceso por terminal', color: '#424242', category: 'sysadmin' }
+};
+
+// Categorías de iconos
+export const IconCategories = {
+  general: {
+    id: 'general',
+    name: 'General',
+    icon: '📁',
+    description: 'Iconos de uso general'
+  },
+  sysadmin: {
+    id: 'sysadmin',
+    name: 'Administrador de Sistemas',
+    icon: '🖥️',
+    description: 'Iconos para administración de sistemas'
+  }
 };
 
 // Renderiza un icono de carpeta con SVG
@@ -72,6 +107,24 @@ export const FolderIconRenderer = ({ preset, size = 'medium', pixelSize = null }
 export const FolderIconSelectorModal = ({ visible, onHide, selectedIconId, onSelectIcon, theme }) => {
   const [hoveredId, setHoveredId] = useState(null);
   const [themeVersion, setThemeVersion] = useState(0);
+  
+  // Determinar la categoría inicial basada en el icono seleccionado
+  const getInitialCategory = useCallback(() => {
+    if (!selectedIconId || selectedIconId === 'general') return 'general';
+    const preset = FolderIconPresets[Object.keys(FolderIconPresets).find(key => 
+      FolderIconPresets[key].id === selectedIconId
+    )];
+    return preset?.category || 'general';
+  }, [selectedIconId]);
+  
+  const [activeCategory, setActiveCategory] = useState(getInitialCategory);
+  
+  // Actualizar categoría cuando cambia el icono seleccionado o cuando se abre el modal
+  useEffect(() => {
+    if (visible) {
+      setActiveCategory(getInitialCategory());
+    }
+  }, [visible, getInitialCategory]);
 
   useEffect(() => {
     const onThemeChanged = () => setThemeVersion(v => v + 1);
@@ -94,7 +147,15 @@ export const FolderIconSelectorModal = ({ visible, onHide, selectedIconId, onSel
     };
   }, [currentTheme]);
 
-  const presets = Object.values(FolderIconPresets);
+  // Filtrar presets por categoría activa
+  const presets = useMemo(() => {
+    return Object.values(FolderIconPresets).filter(preset => preset.category === activeCategory);
+  }, [activeCategory]);
+
+  // Obtener todas las categorías disponibles
+  const categories = useMemo(() => {
+    return Object.values(IconCategories);
+  }, []);
 
   const handleSelectIcon = useCallback((iconId) => {
     onSelectIcon(iconId);
@@ -128,7 +189,7 @@ export const FolderIconSelectorModal = ({ visible, onHide, selectedIconId, onSel
             borderRadius: '16px',
             border: `1px solid ${themeColors.border}`,
             boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
-            width: '600px',
+            width: '700px',
             maxWidth: '95vw',
             maxHeight: '90vh',
             overflowY: 'auto',
@@ -140,6 +201,56 @@ export const FolderIconSelectorModal = ({ visible, onHide, selectedIconId, onSel
             <i className="pi pi-palette" style={{ fontSize: '1.5rem', color: themeColors.buttonPrimary }}></i>
             <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>Selecciona el icono de la carpeta</span>
             <button onClick={onHide} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: themeColors.dialogText, fontSize: '1.5rem', cursor: 'pointer', padding: 0, width: '32px', height: '32px' }}>✕</button>
+          </div>
+
+          {/* Pestañas de categorías */}
+          <div style={{ 
+            display: 'flex', 
+            gap: '0.5rem', 
+            padding: '1rem 1.5rem', 
+            borderBottom: `1px solid ${themeColors.border}`,
+            overflowX: 'auto',
+            scrollbarWidth: 'thin'
+          }}>
+            {categories.map((category) => {
+              const isActive = activeCategory === category.id;
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => setActiveCategory(category.id)}
+                  type="button"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.75rem 1.25rem',
+                    backgroundColor: isActive ? themeColors.buttonPrimary : 'transparent',
+                    border: `1px solid ${isActive ? themeColors.buttonPrimary : themeColors.border}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    color: isActive ? '#ffffff' : themeColors.dialogText,
+                    fontSize: '0.9rem',
+                    fontWeight: isActive ? '600' : '500',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s ease',
+                    pointerEvents: 'auto'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = themeColors.buttonHover;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
+                >
+                  <span style={{ fontSize: '1.2rem' }}>{category.icon}</span>
+                  <span>{category.name}</span>
+                </button>
+              );
+            })}
           </div>
 
           <div style={{ padding: '1.5rem', pointerEvents: 'auto' }}>
