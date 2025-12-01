@@ -109,8 +109,8 @@ export const FolderIconRenderer = ({ preset, size = 'medium', pixelSize = null }
   if (pixelSize && typeof pixelSize === 'number') {
     // Usar el tamaño en píxeles proporcionado
     containerSize = pixelSize;
-    // Calcular el tamaño del emoji proporcionalmente (aproximadamente 48% del tamaño del contenedor)
-    emojiSize = Math.max(10, Math.round(pixelSize * 0.48));
+    // Calcular el tamaño del emoji proporcionalmente (aproximadamente 40% del tamaño del contenedor)
+    emojiSize = Math.max(8, Math.round(pixelSize * 0.40));
   } else {
     // Usar tamaños predefinidos para compatibilidad
     const sizes = {
