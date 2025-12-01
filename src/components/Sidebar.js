@@ -1724,6 +1724,9 @@ const Sidebar = React.memo(({
       title += ` | Doble click para abrir explorador ${protocolLabel}`;
     }
     
+    // Detectar si tiene icono personalizado (para ajustar alineación del texto)
+    const hasCustomFolderIcon = isFolder && node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()];
+    
     // Render básico, puedes añadir acciones/contextual aquí
     return (
       <div className="flex align-items-center gap-1"
@@ -1740,15 +1743,21 @@ const Sidebar = React.memo(({
             sidebarCallbacksRef.current.openFileConnection(node, nodes);
           }
         }}
-        style={{ cursor: 'pointer', fontFamily: explorerFont, alignItems: 'flex-start' }}
+        style={{ 
+          cursor: 'pointer', 
+          fontFamily: explorerFont,
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: '6px'
+        }}
         title={title}
         data-connection-type={isSSH ? 'ssh' : (isRDP ? 'rdp' : (isVNC ? 'vnc' : null))}
         data-node-type={isFolder ? 'folder' : 'connection'}
       >
         <span style={{ 
-          minWidth: 20, // Hacer el icono más ancho
+          minWidth: 20,
           display: 'flex', 
-          alignItems: 'center', 
+          alignItems: 'flex-end', 
           justifyContent: 'center', 
           height: '20px',
           position: 'relative' // Para posicionar el tag SSH
@@ -1808,7 +1817,13 @@ const Sidebar = React.memo(({
         </span>
         <span className="node-label" style={{ 
           flex: 1,
-          marginLeft: (isSSH || isRDP || isVNC) && iconTheme === 'nodetermBasic' ? '6px' : '0px' // Espaciado para conexiones SSH, RDP y VNC solo en tema Nodeterm Basic
+          marginLeft: (isSSH || isRDP || isVNC) && iconTheme === 'nodetermBasic' ? '6px' : '0px',
+          lineHeight: '20px',
+          height: '20px',
+          display: 'block',
+          margin: 0,
+          padding: 0,
+          ...(hasCustomFolderIcon ? { transform: 'translateY(3px)' } : {})
         }}>{node.label}</span>
         {/* Estrella de favoritos oculta en la lista lateral por solicitud */}
       </div>
