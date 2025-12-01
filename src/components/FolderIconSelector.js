@@ -28,8 +28,8 @@ export const FolderIconRenderer = ({ preset, size = 'medium', pixelSize = null }
   if (pixelSize && typeof pixelSize === 'number') {
     // Usar el tamaño en píxeles proporcionado
     containerSize = pixelSize;
-    // Calcular el tamaño del emoji proporcionalmente (aproximadamente 40% del tamaño del contenedor)
-    emojiSize = Math.max(8, Math.round(pixelSize * 0.4));
+    // Calcular el tamaño del emoji proporcionalmente (aproximadamente 48% del tamaño del contenedor)
+    emojiSize = Math.max(10, Math.round(pixelSize * 0.48));
   } else {
     // Usar tamaños predefinidos para compatibilidad
     const sizes = {
@@ -53,7 +53,14 @@ export const FolderIconRenderer = ({ preset, size = 'medium', pixelSize = null }
       <path d="M 10 35 L 30 20 L 40 20 L 40 35 Z" fill={`url(#grad-${preset.id})`} opacity="0.9" />
       <path d="M 10 35 L 10 85 Q 10 90 15 90 L 85 90 Q 90 90 90 85 L 90 40 Q 90 35 85 35 L 40 35 L 40 30 Q 40 25 35 25 L 15 25 Q 10 25 10 30 Z" fill={`url(#grad-${preset.id})`} />
       <path d="M 10 35 L 10 85 Q 10 90 15 90 L 85 90 Q 90 90 90 85 L 90 40 Q 90 35 85 35 L 40 35 L 40 30 Q 40 25 35 25 L 15 25 Q 10 25 10 30 Z" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-      <text x="70" y="75" fontSize={emojiSize} textAnchor="middle" dominantBaseline="middle" style={{ userSelect: 'none', pointerEvents: 'none' }}>
+      <text 
+        x="70" 
+        y="75" 
+        fontSize={pixelSize ? (emojiSize / containerSize) * 100 : emojiSize} 
+        textAnchor="middle" 
+        dominantBaseline="middle" 
+        style={{ userSelect: 'none', pointerEvents: 'none' }}
+      >
         {preset.emoji}
       </text>
       <circle cx="70" cy="70" r="22" fill="rgba(255,255,255,0.15)" opacity="0.6" />

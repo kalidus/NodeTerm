@@ -260,7 +260,7 @@ const Sidebar = React.memo(({
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [folderName, setFolderName] = useState('');
   const [folderColor, setFolderColor] = useState(() => getThemeDefaultColor(iconTheme));
-  const [folderIcon, setFolderIcon] = useState('general');
+  const [folderIcon, setFolderIcon] = useState(null);
   const [parentNodeKey, setParentNodeKey] = useState(null);
   const [editingNode, setEditingNode] = useState(null); // Para saber si estamos editando un nodo existente
   
@@ -1289,7 +1289,7 @@ const Sidebar = React.memo(({
           setEditingNode(node); // Estado para saber que estamos editando
           setFolderName(node.label);
           setFolderColor(node.color || getThemeDefaultColor(iconTheme));
-          setFolderIcon(node.folderIcon || 'general');
+          setFolderIcon(node.folderIcon || null);
           setShowFolderDialog(true);
         },
         deleteNode: (nodeKey, nodeLabel) => {
@@ -1479,8 +1479,8 @@ const Sidebar = React.memo(({
         icon = <span className="pi pi-folder" style={{ color: fallbackColors[protocol] || '#ff9800', fontSize: `${connectionIconSize}px` }} />;
       }
     } else if (isFolder) {
-      // Verificar si tiene icono personalizado
-      if (node.folderIcon && FolderIconPresets[node.folderIcon.toUpperCase()]) {
+      // Verificar si tiene icono personalizado (ignorar 'general' como si fuera null)
+      if (node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()]) {
         const preset = FolderIconPresets[node.folderIcon.toUpperCase()];
         icon = <FolderIconRenderer preset={preset} pixelSize={folderIconSize} />;
       } else {
@@ -2399,7 +2399,7 @@ const Sidebar = React.memo(({
           setShowFolderDialog(false);
           setFolderName('');
           setFolderColor(getThemeDefaultColor(iconTheme));
-          setFolderIcon('general');
+          setFolderIcon(null);
           setEditingNode(null); // Limpiar estado de edición al cerrar
         }}
         mode={editingNode ? "edit" : "new"}

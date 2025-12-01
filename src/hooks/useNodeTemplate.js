@@ -49,7 +49,7 @@ export const useNodeTemplate = ({
     setEditFolderNode(node);
     setEditFolderName(node.label);
     setEditFolderColor(node.color || '');
-    setEditFolderIcon(node.folderIcon || 'general');
+    setEditFolderIcon(node.folderIcon || null);
     setShowEditFolderDialog(true);
   }, [setEditFolderNode, setEditFolderName, setEditFolderColor, setEditFolderIcon, setShowEditFolderDialog]);
 
@@ -144,8 +144,8 @@ export const useNodeTemplate = ({
       
       const folderColor = node.color || getThemeDefaultColor(iconThemeSidebar);
       
-      // Verificar si tiene icono personalizado
-      if (node.folderIcon && FolderIconPresets[node.folderIcon.toUpperCase()]) {
+      // Verificar si tiene icono personalizado (ignorar 'general' como si fuera null)
+      if (node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()]) {
         const preset = FolderIconPresets[node.folderIcon.toUpperCase()];
         // Usar el icono personalizado con FolderIconRenderer
         icon = <FolderIconRenderer preset={preset} pixelSize={folderIconSize} />;

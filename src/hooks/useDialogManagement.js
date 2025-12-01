@@ -77,12 +77,12 @@ export const useDialogManagement = () => {
   
   const [folderName, setFolderName] = useState('');
   const [folderColor, setFolderColor] = useState('');
-  const [folderIcon, setFolderIcon] = useState('general');
+  const [folderIcon, setFolderIcon] = useState(null);
   const [parentNodeKey, setParentNodeKey] = useState(null);
   const [editFolderNode, setEditFolderNode] = useState(null);
   const [editFolderName, setEditFolderName] = useState('');
   const [editFolderColor, setEditFolderColor] = useState('');
-  const [editFolderIcon, setEditFolderIcon] = useState('general');
+  const [editFolderIcon, setEditFolderIcon] = useState(null);
 
   // ============ FUNCIONES DE UTILIDAD ============
   
@@ -114,7 +114,7 @@ export const useDialogManagement = () => {
   const resetFolderForm = () => {
     setFolderName('');
     setFolderColor('');
-    setFolderIcon('general');
+    setFolderIcon(null);
     setParentNodeKey(null);
   };
 
@@ -151,7 +151,7 @@ export const useDialogManagement = () => {
     setEditFolderNode(null);
     setEditFolderName('');
     setEditFolderColor('');
-    setEditFolderIcon('general');
+    setEditFolderIcon(null);
   };
 
   // Abrir diálogo SSH con reset automático
