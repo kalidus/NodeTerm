@@ -6,10 +6,11 @@ Esta guía explica cómo evitar que Windows Defender y otros antivirus detecten 
 
 1. [Problema Común](#problema-común)
 2. [Soluciones Implementadas](#soluciones-implementadas)
-3. [Firma de Código (Recomendado)](#firma-de-código-recomendado)
-4. [Enviar a Microsoft para Análisis](#enviar-a-microsoft-para-análisis)
-5. [Configuración Local (Desarrollo)](#configuración-local-desarrollo)
-6. [Mejores Prácticas](#mejores-prácticas)
+3. [VirusTotal - Análisis Automático](#virustotal---análisis-automático) ⭐ **NUEVO**
+4. [Firma de Código (Recomendado)](#firma-de-código-recomendado)
+5. [Enviar a Microsoft para Análisis](#enviar-a-microsoft-para-análisis)
+6. [Configuración Local (Desarrollo)](#configuración-local-desarrollo)
+7. [Mejores Prácticas](#mejores-prácticas)
 
 ---
 
@@ -58,6 +59,161 @@ El instalador NSIS ahora incluye:
 - Iconos personalizados en todas las etapas
 - Configuración de atajos del sistema
 - Información del instalador más completa
+
+---
+
+## 🛡️ VirusTotal - Análisis Automático ⭐
+
+**VirusTotal es una herramienta GRATUITA** que analiza tu ejecutable con más de 70 motores antivirus diferentes. Es muy común en repositorios de código abierto y es una excelente forma de:
+
+- ✅ Verificar qué antivirus detectan falsos positivos
+- ✅ Obtener whitelisting de múltiples proveedores
+- ✅ Monitorear la reputación de tu aplicación
+- ✅ Automatizar el proceso de verificación
+
+### Configuración Rápida
+
+#### 1. Obtener API Key (Opcional pero Recomendado)
+
+1. Ve a https://www.virustotal.com/gui/join-us
+2. Crea una cuenta gratuita
+3. Ve a tu perfil → API Key
+4. Copia tu API key
+
+**Límites de la API gratuita:**
+- 4 solicitudes por minuto
+- 500 solicitudes por día
+- Suficiente para desarrollo y releases
+
+#### 2. Configurar API Key
+
+**Windows PowerShell:**
+```powershell
+# Temporal (solo esta sesión)
+$env:VIRUSTOTAL_API_KEY = "tu-api-key-aqui"
+
+# Permanente (para el usuario)
+[System.Environment]::SetEnvironmentVariable('VIRUSTOTAL_API_KEY', 'tu-api-key-aqui', 'User')
+```
+
+**Linux/Mac:**
+```bash
+# Temporal
+export VIRUSTOTAL_API_KEY="tu-api-key-aqui"
+
+# Permanente (agregar a ~/.bashrc o ~/.zshrc)
+echo 'export VIRUSTOTAL_API_KEY="tu-api-key-aqui"' >> ~/.bashrc
+```
+
+**O crear archivo `.env` (NO subir a Git):**
+```
+VIRUSTOTAL_API_KEY=tu-api-key-aqui
+```
+
+### Uso Automático
+
+#### Opción 1: Después de Build
+
+```bash
+# Build y escanear automáticamente
+npm run dist:scan
+```
+
+#### Opción 2: Escanear Manualmente
+
+```bash
+# Escanear el ejecutable más reciente
+npm run scan:virustotal
+
+# O especificar archivo
+node scripts/virustotal-scan.js "ruta/al/ejecutable.exe"
+```
+
+**PowerShell:**
+```powershell
+.\scripts\virustotal-scan.ps1
+# O con archivo específico
+.\scripts\virustotal-scan.ps1 "ruta\al\ejecutable.exe"
+```
+
+### Resultados
+
+El script mostrará:
+
+```
+═══════════════════════════════════════════════════
+📊 RESULTADOS DE VIRUSTOTAL
+═══════════════════════════════════════════════════
+   Total de motores: 70
+   Detecciones: 2
+   Porcentaje limpio: 97.1%
+
+⚠️  Se detectaron falsos positivos:
+   🔴 Antivirus1: Trojan.Generic
+   🔴 Antivirus2: Suspicious
+
+💡 Recomendaciones:
+   1. Si es un falso positivo, contacta a los proveedores
+   2. Considera obtener un certificado de código
+   3. Envía a Microsoft Defender para análisis
+
+🔗 URL completa: https://www.virustotal.com/gui/file/...
+```
+
+### Sin API Key (Método Manual)
+
+Si no configuras la API key, el script te dará instrucciones para subir manualmente:
+
+1. Ve a https://www.virustotal.com/gui/home/upload
+2. Sube tu ejecutable
+3. Espera el análisis (1-2 minutos)
+4. Revisa los resultados
+
+### Ventajas de VirusTotal
+
+✅ **Gratis**: No requiere pago
+✅ **Múltiples motores**: 70+ antivirus diferentes
+✅ **Reputación**: Mejora la confianza de los usuarios
+✅ **Automatizable**: Se integra en CI/CD
+✅ **Historial**: Mantiene historial de análisis
+✅ **Compartible**: Puedes compartir el enlace con usuarios
+
+### Integración en CI/CD
+
+Ejemplo para GitHub Actions:
+
+```yaml
+- name: Scan with VirusTotal
+  run: |
+    npm run dist
+    npm run scan:virustotal
+  env:
+    VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+```
+
+### Contactar Proveedores de Antivirus
+
+Si VirusTotal muestra falsos positivos:
+
+1. **Identifica el antivirus** que detecta tu aplicación
+2. **Visita su sitio web** de reporte de falsos positivos
+3. **Envía tu ejecutable** con información sobre tu aplicación
+4. **Proporciona el hash SHA256** de VirusTotal
+
+**Enlaces útiles:**
+- Windows Defender: https://www.microsoft.com/en-us/wdsi/filesubmission
+- Avast: https://www.avast.com/false-positive-file-form.php
+- AVG: https://www.avg.com/en-us/false-positive-file-form
+- Kaspersky: https://opentip.kaspersky.com/
+
+### Monitoreo Continuo
+
+Puedes verificar periódicamente la reputación de tu aplicación:
+
+```bash
+# Verificar hash específico
+node scripts/virustotal-scan.js --hash SHA256_HASH
+```
 
 ---
 
