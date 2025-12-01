@@ -21,7 +21,7 @@ export const FolderIconPresets = {
   // Sección: Administrador de Sistemas
   SERVERS: { id: 'servers', name: 'Servidores', emoji: '🖥️', description: 'Servidores y hosts', color: '#607D8B', category: 'sysadmin' },
   CONNECTIONS: { id: 'connections', name: 'Conexiones', emoji: '🔌', description: 'Conexiones remotas', color: '#795548', category: 'sysadmin' },
-  DATABASES_SYS: { id: 'databases_sys', name: 'Bases de Datos', emoji: '🗄️', description: 'MySQL, PostgreSQL, etc.', color: '#9C27B0', category: 'sysadmin' },
+  DATABASES_SYS: { id: 'databases_sys', name: 'Bases de Datos', emoji: '🗄️', description: 'Bases de datos generales', color: '#9C27B0', category: 'sysadmin' },
   WINDOWS: { id: 'windows', name: 'Windows', emoji: '🪟', description: 'Sistemas Windows', color: '#00BCD4', category: 'sysadmin' },
   LINUX: { id: 'linux', name: 'Linux', emoji: '🐧', description: 'Sistemas Linux', color: '#FFC107', category: 'sysadmin' },
   SCRIPTS: { id: 'scripts', name: 'Scripts', emoji: '📜', description: 'Scripts y automatización', color: '#FF9800', category: 'sysadmin' },
@@ -29,12 +29,58 @@ export const FolderIconPresets = {
   MONITORING: { id: 'monitoring', name: 'Monitoreo', emoji: '📊', description: 'Sistemas de monitoreo', color: '#4CAF50', category: 'sysadmin' },
   BACKUP: { id: 'backup', name: 'Backup', emoji: '💿', description: 'Copias de seguridad', color: '#3F51B5', category: 'sysadmin' },
   SYSTEM_SECURITY: { id: 'system_security', name: 'Seguridad del Sistema', emoji: '🛡️', description: 'Firewall y seguridad', color: '#F44336', category: 'sysadmin' },
-  VIRTUALIZATION: { id: 'virtualization', name: 'Virtualización', emoji: '☁️', description: 'VMware, Hyper-V, etc.', color: '#00ACC1', category: 'sysadmin' },
-  CONTAINERS: { id: 'containers', name: 'Containers', emoji: '📦', description: 'Docker, Kubernetes', color: '#2196F3', category: 'sysadmin' },
-  CLOUD: { id: 'cloud', name: 'Cloud', emoji: '☁️', description: 'AWS, Azure, GCP', color: '#03A9F4', category: 'sysadmin' },
+  VIRTUALIZATION: { id: 'virtualization', name: 'Virtualización', emoji: '☁️', description: 'Virtualización general', color: '#00ACC1', category: 'sysadmin' },
+  CONTAINERS: { id: 'containers', name: 'Containers', emoji: '📦', description: 'Contenedores generales', color: '#2196F3', category: 'sysadmin' },
+  CLOUD: { id: 'cloud', name: 'Cloud', emoji: '☁️', description: 'Cloud general', color: '#03A9F4', category: 'sysadmin' },
   DEVOPS: { id: 'devops', name: 'DevOps', emoji: '⚡', description: 'CI/CD y automatización', color: '#FF6F00', category: 'sysadmin' },
   CONFIG_SERVERS: { id: 'config_servers', name: 'Configuración', emoji: '⚙️', description: 'Config de servidores', color: '#009688', category: 'sysadmin' },
-  TERMINAL: { id: 'terminal', name: 'Terminal', emoji: '💻', description: 'Acceso por terminal', color: '#424242', category: 'sysadmin' }
+  TERMINAL: { id: 'terminal', name: 'Terminal', emoji: '💻', description: 'Acceso por terminal', color: '#424242', category: 'sysadmin' },
+  
+  // Software específico - Virtualización
+  VMWARE: { id: 'vmware', name: 'VMware', emoji: '🖥️', description: 'VMware vSphere/ESXi', color: '#607078', category: 'sysadmin' },
+  HYPERV: { id: 'hyperv', name: 'Hyper-V', emoji: '🪟', description: 'Microsoft Hyper-V', color: '#0078D4', category: 'sysadmin' },
+  VIRTUALBOX: { id: 'virtualbox', name: 'VirtualBox', emoji: '📦', description: 'Oracle VirtualBox', color: '#183A61', category: 'sysadmin' },
+  KVM: { id: 'kvm', name: 'KVM', emoji: '🐧', description: 'Kernel-based VM', color: '#FF6F00', category: 'sysadmin' },
+  
+  // Software específico - Containers
+  DOCKER: { id: 'docker', name: 'Docker', emoji: '🐳', description: 'Docker containers', color: '#2496ED', category: 'sysadmin' },
+  KUBERNETES: { id: 'kubernetes', name: 'Kubernetes', emoji: '☸️', description: 'Kubernetes (K8s)', color: '#326CE5', category: 'sysadmin' },
+  
+  // Software específico - Bases de Datos
+  MYSQL: { id: 'mysql', name: 'MySQL', emoji: '🗄️', description: 'MySQL Database', color: '#4479A1', category: 'sysadmin' },
+  MARIADB: { id: 'mariadb', name: 'MariaDB', emoji: '🗄️', description: 'MariaDB Database', color: '#C49A3C', category: 'sysadmin' },
+  POSTGRESQL: { id: 'postgresql', name: 'PostgreSQL', emoji: '🐘', description: 'PostgreSQL Database', color: '#336791', category: 'sysadmin' },
+  MONGODB: { id: 'mongodb', name: 'MongoDB', emoji: '🍃', description: 'MongoDB Database', color: '#47A248', category: 'sysadmin' },
+  REDIS: { id: 'redis', name: 'Redis', emoji: '🔴', description: 'Redis Cache', color: '#DC382D', category: 'sysadmin' },
+  ELASTICSEARCH: { id: 'elasticsearch', name: 'Elasticsearch', emoji: '🔍', description: 'Elasticsearch', color: '#005571', category: 'sysadmin' },
+  
+  // Software específico - Cloud
+  AWS: { id: 'aws', name: 'AWS', emoji: '☁️', description: 'Amazon Web Services', color: '#FF9900', category: 'sysadmin' },
+  AZURE: { id: 'azure', name: 'Azure', emoji: '☁️', description: 'Microsoft Azure', color: '#0078D4', category: 'sysadmin' },
+  GCP: { id: 'gcp', name: 'GCP', emoji: '☁️', description: 'Google Cloud Platform', color: '#4285F4', category: 'sysadmin' },
+  
+  // Software específico - Monitoreo y Logs
+  PROMETHEUS: { id: 'prometheus', name: 'Prometheus', emoji: '🔥', description: 'Prometheus Monitoring', color: '#E6522C', category: 'sysadmin' },
+  GRAFANA: { id: 'grafana', name: 'Grafana', emoji: '📊', description: 'Grafana Dashboards', color: '#F46800', category: 'sysadmin' },
+  NAGIOS: { id: 'nagios', name: 'Nagios', emoji: '👁️', description: 'Nagios Monitoring', color: '#1A1A1A', category: 'sysadmin' },
+  ZABBIX: { id: 'zabbix', name: 'Zabbix', emoji: '📈', description: 'Zabbix Monitoring', color: '#D40000', category: 'sysadmin' },
+  ELK: { id: 'elk', name: 'ELK Stack', emoji: '🦌', description: 'Elasticsearch, Logstash, Kibana', color: '#005571', category: 'sysadmin' },
+  
+  // Software específico - CI/CD y DevOps
+  JENKINS: { id: 'jenkins', name: 'Jenkins', emoji: '🤖', description: 'Jenkins CI/CD', color: '#D24939', category: 'sysadmin' },
+  GITLAB: { id: 'gitlab', name: 'GitLab', emoji: '🦊', description: 'GitLab CI/CD', color: '#FC6D26', category: 'sysadmin' },
+  GITHUB_ACTIONS: { id: 'github_actions', name: 'GitHub Actions', emoji: '🐙', description: 'GitHub CI/CD', color: '#2088FF', category: 'sysadmin' },
+  ANSIBLE: { id: 'ansible', name: 'Ansible', emoji: '🔴', description: 'Ansible Automation', color: '#EE0000', category: 'sysadmin' },
+  TERRAFORM: { id: 'terraform', name: 'Terraform', emoji: '🏗️', description: 'Terraform IaC', color: '#7B42BC', category: 'sysadmin' },
+  
+  // Software específico - Web Servers
+  NGINX: { id: 'nginx', name: 'Nginx', emoji: '🌐', description: 'Nginx Web Server', color: '#009639', category: 'sysadmin' },
+  APACHE: { id: 'apache', name: 'Apache', emoji: '🌐', description: 'Apache HTTP Server', color: '#D22128', category: 'sysadmin' },
+  
+  // Software específico - Otros
+  PUPPET: { id: 'puppet', name: 'Puppet', emoji: '🎭', description: 'Puppet Configuration', color: '#FFAE1A', category: 'sysadmin' },
+  CHEF: { id: 'chef', name: 'Chef', emoji: '👨‍🍳', description: 'Chef Automation', color: '#F09820', category: 'sysadmin' },
+  SALTSTACK: { id: 'saltstack', name: 'SaltStack', emoji: '🧂', description: 'SaltStack Automation', color: '#00EACE', category: 'sysadmin' }
 };
 
 // Categorías de iconos
