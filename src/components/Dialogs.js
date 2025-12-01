@@ -12,6 +12,7 @@ import { InputTextarea } from 'primereact/inputtextarea';
 import { FileUpload } from 'primereact/fileupload';
 import { Message } from 'primereact/message';
 import { FolderIconSelectorModal, FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
+import { iconThemes } from '../themes/icon-themes';
 
 // --- SSHDialog: para crear o editar conexiones SSH ---
 export function SSHDialog({
@@ -217,7 +218,7 @@ export function FolderDialog({
   mode = 'new',
   folderName, setFolderName,
   folderColor, setFolderColor,
-  folderIcon = 'general', 
+  folderIcon = null, 
   setFolderIcon,
   onConfirm,
   loading = false,
@@ -226,18 +227,27 @@ export function FolderDialog({
   const isEdit = mode === 'edit';
   const [showIconSelector, setShowIconSelector] = useState(false);
   // Estado local como fallback si setFolderIcon no está disponible
-  const [localFolderIcon, setLocalFolderIcon] = useState(folderIcon || 'general');
+  const [localFolderIcon, setLocalFolderIcon] = useState(folderIcon || null);
   
   
   // Usar el icono del prop si está disponible, sino el local
   const currentFolderIcon = folderIcon !== undefined ? folderIcon : localFolderIcon;
   
+  // Determinar si hay un icono personalizado válido
+  const hasCustomIcon = currentFolderIcon && currentFolderIcon !== 'general' && FolderIconPresets[currentFolderIcon.toUpperCase()];
+  
   const selectedPreset = useMemo(() => {
-    const preset = currentFolderIcon && FolderIconPresets[currentFolderIcon.toUpperCase()] 
-      ? FolderIconPresets[currentFolderIcon.toUpperCase()] 
-      : FolderIconPresets.GENERAL;
-    return preset;
-  }, [currentFolderIcon]);
+    if (hasCustomIcon) {
+      return FolderIconPresets[currentFolderIcon.toUpperCase()];
+    }
+    return FolderIconPresets.GENERAL; // Solo para el modal, no se usará en el renderizado
+  }, [currentFolderIcon, hasCustomIcon]);
+  
+  // Obtener el icono del tema para mostrar cuando no hay icono personalizado
+  const themeIcon = useMemo(() => {
+    const theme = iconThemes[iconTheme] || iconThemes['material'];
+    return theme?.icons?.folder || null;
+  }, [iconTheme]);
   
   // Sincronizar estado local cuando cambia el prop
   useEffect(() => {
@@ -248,13 +258,16 @@ export function FolderDialog({
   
   // Función segura para actualizar el icono
   const handleIconSelect = useCallback((iconId) => {
+    // Si se selecciona 'general', establecer como null para usar el icono del tema
+    const iconToSet = iconId === 'general' ? null : iconId;
+    
     // Siempre actualizar el estado local primero
-    setLocalFolderIcon(iconId);
+    setLocalFolderIcon(iconToSet);
     
     // Intentar actualizar el hook si está disponible
     if (setFolderIcon && typeof setFolderIcon === 'function') {
       try {
-        setFolderIcon(iconId);
+        setFolderIcon(iconToSet);
       } catch (error) {
         console.error('❌ Error al llamar setFolderIcon:', error);
       }
@@ -321,10 +334,29 @@ export function FolderDialog({
                 fontSize: '0.95rem'
               }}
             >
-              <FolderIconRenderer preset={selectedPreset} size="medium" />
+              {hasCustomIcon ? (
+                <FolderIconRenderer preset={selectedPreset} size="medium" />
+              ) : themeIcon ? (
+                React.cloneElement(themeIcon, {
+                  width: 40,
+                  height: 40,
+                  style: { 
+                    ...themeIcon.props.style,
+                    color: folderColor || '#007ad9',
+                    width: '40px',
+                    height: '40px'
+                  }
+                })
+              ) : (
+                <span className="pi pi-folder" style={{ fontSize: '40px', color: folderColor || '#007ad9' }} />
+              )}
               <div style={{ flex: 1, textAlign: 'left' }}>
-                <div style={{ fontWeight: '600' }}>{selectedPreset.name}</div>
-                <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>{selectedPreset.description}</div>
+                <div style={{ fontWeight: '600' }}>
+                  {hasCustomIcon ? selectedPreset.name : 'Icono del tema'}
+                </div>
+                <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>
+                  {hasCustomIcon ? selectedPreset.description : 'Usa el icono del tema seleccionado'}
+                </div>
               </div>
               <i className="pi pi-chevron-right"></i>
             </button>
@@ -343,7 +375,22 @@ export function FolderDialog({
         <div className="folder-preview">
           <div className="preview-label">Vista previa:</div>
           <div className="preview-folder" style={{ borderLeftColor: folderColor || '#007ad9', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <FolderIconRenderer preset={selectedPreset} size="medium" />
+            {hasCustomIcon ? (
+              <FolderIconRenderer preset={selectedPreset} size="medium" />
+            ) : themeIcon ? (
+              React.cloneElement(themeIcon, {
+                width: 40,
+                height: 40,
+                style: { 
+                  ...themeIcon.props.style,
+                  color: folderColor || '#007ad9',
+                  width: '40px',
+                  height: '40px'
+                }
+              })
+            ) : (
+              <span className="pi pi-folder" style={{ fontSize: '40px', color: folderColor || '#007ad9' }} />
+            )}
             <span className="preview-name" style={{ color: folderColor || '#007ad9' }}>{folderName || 'Nombre de la carpeta'}</span>
           </div>
         </div>
@@ -376,7 +423,7 @@ export function FolderDialog({
       <FolderIconSelectorModal
         visible={showIconSelector}
         onHide={() => setShowIconSelector(false)}
-        selectedIconId={selectedPreset.id}
+        selectedIconId={hasCustomIcon ? selectedPreset.id : 'general'}
         onSelectIcon={handleIconSelect}
       />
     </Dialog>

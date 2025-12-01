@@ -152,7 +152,7 @@ export const useFormHandlers = ({
         isUserCreated: true,
         color: folderColor || themeDefaultColor,
         hasCustomColor: isCustomColor,
-        folderIcon: folderIcon || 'general'
+        folderIcon: folderIcon && folderIcon !== 'general' ? folderIcon : null
       };
       
       const nodesCopy = deepCopy(nodes);
@@ -473,7 +473,7 @@ export const useFormHandlers = ({
       
       nodeToEdit.color = editFolderColor || themeDefaultColor;
       nodeToEdit.hasCustomColor = isCustomColor;
-      nodeToEdit.folderIcon = editFolderIcon || 'general';
+      nodeToEdit.folderIcon = editFolderIcon && editFolderIcon !== 'general' ? editFolderIcon : null;
     }
     
     setNodes(nodesCopy);
