@@ -886,8 +886,7 @@ class GuacdService {
         // Asegurar instalación de guacd
         await new Promise((r) => wslExec(['sh', '-lc', 'command -v guacd >/dev/null 2>&1 || (export DEBIAN_FRONTEND=noninteractive; apt-get update -y && apt-get install -y guacd)'], () => r()));
 
-        // Crear directorio por defecto NodeTermDrive en el home del usuario WSL
-        await new Promise((r) => wslExec(['sh', '-lc', 'mkdir -p /home/kalidus/NodeTermDrive && chown kalidus:kalidus /home/kalidus/NodeTermDrive'], () => r()));
+        // NO crear directorio en WSL - se usará la carpeta del host convertida con toWslPath()
 
         // Lanzar guacd en background dentro de WSL (bind a 127.0.0.1 y log a archivo)
         // Escuchar en todas las interfaces dentro de WSL para permitir acceso desde Windows
@@ -1166,7 +1165,7 @@ class GuacdService {
    * Devuelve la ruta que debe enviarse en el token RDP como "drive-path",
    * dependiendo del método con el que corre guacd.
    * - docker: la ruta montada dentro del contenedor (/guacdrive)
-   * - wsl: ruta nativa de Linux (/home/kalidus/NodeTermDrive) para evitar problemas de permisos
+   * - wsl: convierte la ruta del host Windows a WSL usando toWslPath()
    * - native: ruta Windows del host
    * - mock/unknown: intenta usar /guacdrive por compatibilidad
    */
@@ -1178,9 +1177,13 @@ class GuacdService {
       return toRemoteAccessiblePath(this.driveHostDir, 'docker');
     }
     if (method === 'wsl') {
-      // Para WSL, usar una ruta nativa de Linux en lugar de una ruta montada
-      // Esto evita problemas de permisos con rutas montadas de Windows
-      return '/home/kalidus/NodeTermDrive';
+      // Para WSL, convertir la ruta del host Windows a ruta WSL
+      // Usa la carpeta del host que ya existe, no crea nada nuevo
+      if (this.driveHostDir) {
+        return toWslPath(this.driveHostDir);
+      }
+      // Fallback temporal si no hay driveHostDir configurado
+      return '/tmp/NodeTermDrive';
     }
     if (method === 'native') {
       return this.driveHostDir;
@@ -1228,14 +1231,17 @@ class GuacdService {
       return toRemoteAccessiblePath(this.driveHostDir, 'docker');
     }
     if (method === 'wsl') {
-      // Para WSL, si el usuario especificó una ruta, convertirla a WSL
-      // Si no, usar la ruta por defecto
-      if (dir && hostDir && typeof hostDir === 'string' && hostDir.trim().length > 0) {
-        // El usuario especificó una ruta personalizada, convertirla a WSL
+      // Para WSL, convertir la ruta del host Windows a ruta WSL
+      // Usa la carpeta del host que ya existe, no crea nada nuevo
+      if (dir && typeof dir === 'string' && dir.trim().length > 0) {
+        // Convertir la ruta del host a WSL
         return toWslPath(dir);
+      } else if (this.driveHostDir) {
+        // Usar driveHostDir por defecto si no se especificó otra ruta
+        return toWslPath(this.driveHostDir);
       } else {
-        // Usar la ruta por defecto nativa de Linux (solo en Windows con WSL)
-        return process.platform === 'win32' ? '/home/kalidus/NodeTermDrive' : '/guacdrive';
+        // Fallback temporal si no hay ninguna ruta configurada
+        return process.platform === 'win32' ? '/tmp/NodeTermDrive' : '/guacdrive';
       }
     }
     if (method === 'native') {
