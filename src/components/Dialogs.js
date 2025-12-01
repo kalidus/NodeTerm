@@ -228,22 +228,6 @@ export function FolderDialog({
   // Estado local como fallback si setFolderIcon no está disponible
   const [localFolderIcon, setLocalFolderIcon] = useState(folderIcon || 'general');
   
-  // Debug: ver qué props están llegando
-  useEffect(() => {
-    console.log('🔍 FolderDialog props:', {
-      mode,
-      folderIcon,
-      setFolderIcon: typeof setFolderIcon,
-      setFolderIconValue: setFolderIcon,
-      folderColor,
-      setFolderColor: typeof setFolderColor,
-      setFolderColorValue: setFolderColor,
-      visible,
-      allProps: arguments[0] // Esto no funcionará, mejor usar otro método
-    });
-    console.log('🔍 FolderDialog - setFolderIcon es:', setFolderIcon);
-    console.log('🔍 FolderDialog - setFolderColor es:', setFolderColor);
-  }, [mode, folderIcon, setFolderIcon, folderColor, setFolderColor, visible]);
   
   // Usar el icono del prop si está disponible, sino el local
   const currentFolderIcon = folderIcon !== undefined ? folderIcon : localFolderIcon;
@@ -252,7 +236,6 @@ export function FolderDialog({
     const preset = currentFolderIcon && FolderIconPresets[currentFolderIcon.toUpperCase()] 
       ? FolderIconPresets[currentFolderIcon.toUpperCase()] 
       : FolderIconPresets.GENERAL;
-    console.log('📦 selectedPreset calculado:', preset.id, 'desde folderIcon:', currentFolderIcon);
     return preset;
   }, [currentFolderIcon]);
   
@@ -263,17 +246,8 @@ export function FolderDialog({
     }
   }, [folderIcon]);
   
-  // Debug: ver cuando cambia folderIcon
-  useEffect(() => {
-    console.log('🔄 folderIcon cambió a:', currentFolderIcon);
-  }, [currentFolderIcon]);
-  
   // Función segura para actualizar el icono
   const handleIconSelect = useCallback((iconId) => {
-    console.log('🎨 handleIconSelect llamado con:', iconId);
-    console.log('setFolderIcon disponible?', typeof setFolderIcon);
-    console.log('setFolderIcon valor:', setFolderIcon);
-    
     // Siempre actualizar el estado local primero
     setLocalFolderIcon(iconId);
     
@@ -281,22 +255,11 @@ export function FolderDialog({
     if (setFolderIcon && typeof setFolderIcon === 'function') {
       try {
         setFolderIcon(iconId);
-        console.log('✅ setFolderIcon llamado con:', iconId);
       } catch (error) {
         console.error('❌ Error al llamar setFolderIcon:', error);
       }
-    } else {
-      console.warn('⚠️ setFolderIcon no está disponible, usando solo estado local');
     }
   }, [setFolderIcon]);
-  
-  // Efecto para sincronizar el hook cuando el estado local cambia y setFolderIcon está disponible
-  useEffect(() => {
-    if (setFolderIcon && typeof setFolderIcon === 'function' && localFolderIcon !== folderIcon) {
-      console.log('🔄 Sincronizando hook con estado local:', localFolderIcon);
-      setFolderIcon(localFolderIcon);
-    }
-  }, [localFolderIcon, setFolderIcon, folderIcon]);
   
   return (
     <Dialog 
@@ -402,14 +365,8 @@ export function FolderDialog({
             console.log('💾 Guardando carpeta con icono:', currentFolderIcon);
             if (setFolderIcon && typeof setFolderIcon === 'function') {
               setFolderIcon(currentFolderIcon);
-              console.log('✅ Hook actualizado con:', currentFolderIcon);
-            } else {
-              console.warn('⚠️ setFolderIcon no disponible, el icono puede no guardarse correctamente');
             }
-            // Pequeño delay para asegurar que el hook se actualice
-            setTimeout(() => {
-              onConfirm();
-            }, 50);
+            onConfirm();
           }} 
           loading={loading}
           disabled={!folderName?.trim()}
