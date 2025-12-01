@@ -18,6 +18,8 @@
   "build": {
     "appId": "com.electron.nodeterm",
     "productName": "NodeTerm",
+    "copyright": "Copyright © 2024",
+    "compression": "maximum",
     "files": [
       "dist/",
       "binaries/**",
@@ -45,11 +47,23 @@
     "win": {
       "target": "nsis",
       "icon": "src/assets/app-icon.png",
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "publisherName": "NodeTerm",
+      "verifyUpdateCodeSignature": false,
+      "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
       "oneClick": true,
-      "perMachine": false
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NodeTerm",
+      "include": "build/installer.nsh",
+      "installerIcon": "src/assets/app-icon.png",
+      "uninstallerIcon": "src/assets/app-icon.png",
+      "installerHeaderIcon": "src/assets/app-icon.png",
+      "deleteAppDataOnUninstall": false
     },
     "linux": {
       "target": "AppImage",
