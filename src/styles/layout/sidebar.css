@@ -363,22 +363,22 @@
   color: #ffc107; /* Amarillo */
 }
 
-/* Ajuste para evitar exceso de espacio entre grupos en el árbol lateral */
+/* Ajuste para aumentar el espacio entre grupos en el árbol lateral */
 .sidebar-tree .p-treenode {
-  margin-bottom: -1px;
-  /* Reduce el espacio entre nodos */
+  margin-bottom: 3px;
+  /* Aumenta el espacio entre nodos */
 }
 
-/* Compactar espaciado SOLO entre conexiones (SSH y RDP) - MUY COMPACTO */
+/* Aumentar espaciado entre conexiones (SSH y RDP) */
 /* Selector para nodos que contienen conexiones SSH o RDP */
 .sidebar-tree .p-treenode:has(.p-treenode-content [data-connection-type="ssh"]),
 .sidebar-tree .p-treenode:has(.p-treenode-content [data-connection-type="rdp"]) {
-  margin-bottom: -8px; /* Espaciado muy compacto entre conexiones */
+  margin-bottom: 3px; /* Espaciado aumentado entre conexiones */
 }
 
 /* Alternativa para navegadores que no soportan :has() */
 .sidebar-tree .p-treenode[data-node-type="connection"] {
-  margin-bottom: -8px; /* Espaciado muy compacto entre conexiones */
+  margin-bottom: 3px; /* Espaciado aumentado entre conexiones */
 }
 
 /* Reducir también el padding interno de las conexiones para mayor compactación */
