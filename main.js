@@ -1023,7 +1023,22 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         delete sshConnections[tabId];
       },
       (err) => {
-        sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
+        const conn = sshConnections[tabId];
+        // Detectar errores de autenticación
+        const isAuthError = err.message && (
+          err.message.includes('authentication') ||
+          err.message.includes('Authentication failed') ||
+          err.message.includes('All configured authentication methods failed')
+        );
+        
+        if (isAuthError && conn) {
+          // Activar modo manual de password para reintento interactivo
+          conn.manualPasswordMode = true;
+          conn.manualPasswordBuffer = '';
+          sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nAutenticación fallida. Por favor, introduce el password:\r\nPassword: `);
+        } else {
+          sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
+        }
       },
       (stream) => {
         if (sshConnections[tabId]) {
@@ -1055,8 +1070,16 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       statsTimeout: null,
       previousNet: null,
       previousTime: null,
-      statsLoopRunning: false
+      statsLoopRunning: false,
+      // Si no hay password, activar modo manual inmediatamente
+      manualPasswordMode: !(config.password && config.password.trim()),
+      manualPasswordBuffer: ''
     };
+    
+    // Si no hay password, mostrar prompt inmediatamente
+    if (!(config.password && config.password.trim())) {
+      sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPor favor, introduce el password:\r\nPassword: `);
+    }
     
     // Función de bucle de stats para Wallix/bastión
     function wallixStatsLoop() {
@@ -2061,86 +2084,27 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
         }
         
         // Reconectar con el password proporcionado
-        const ssh2Client = new SSH2Client();
         const newConfig = { ...conn.config, password: password };
         
-        ssh2Client.on('ready', () => {
-          ssh2Client.shell({ term: 'xterm-256color', cols: 80, rows: 24 }, async (err, shellStream) => {
-            if (err) {
-              sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
-              ssh2Client.end();
-              // Activar modo manual de nuevo para reintentar
-              conn.manualPasswordMode = true;
-              conn.manualPasswordBuffer = '';
-              sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPassword incorrecto. Intenta de nuevo:\r\nPassword: `);
-              return;
-            }
-            
-            // Crear wrapper para exec compatible con statsLoop
-            // IMPORTANTE: Guardar el método original antes de reemplazarlo para evitar recursión
-            const originalExec = ssh2Client.exec.bind(ssh2Client);
-            
-            const execWrapper = (command) => {
-              return new Promise((resolve, reject) => {
-                // Usar el método original, no el wrapper
-                originalExec(command, (err, stream) => {
-                  if (err) {
-                    reject(err);
-                    return;
-                  }
-                  let output = '';
-                  stream.on('data', (data) => {
-                    output += data.toString('utf-8');
-                  });
-                  stream.on('close', (code) => {
-                    if (code === 0) {
-                      resolve(output);
-                    } else {
-                      reject(new Error(`Command failed with code ${code}`));
-                    }
-                  });
-                  stream.stderr.on('data', (data) => {
-                    output += data.toString('utf-8');
-                  });
-                });
-              });
-            };
-            
-            // Agregar método exec para compatibilidad con statsLoop
-            ssh2Client.exec = execWrapper;
-            
-            // Obtener hostname y distro para stats
-            let realHostname = 'unknown';
-            let osRelease = '';
-            try {
-              realHostname = (await execWrapper('hostname')).trim() || 'unknown';
-            } catch (e) {
-              console.warn('[SSH] Error obteniendo hostname:', e);
-            }
-            try {
-              osRelease = await execWrapper('cat /etc/os-release');
-            } catch (e) {
-              osRelease = 'ID=linux';
-            }
-            const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
-            const finalDistroId = distroId.replace(/"/g, '').toLowerCase();
-            
-            // Actualizar conexión
-            conn.ssh = ssh2Client;
-            conn.stream = shellStream;
-            conn.realHostname = realHostname;
-            conn.finalDistroId = finalDistroId;
-            
-            // Configurar listeners del stream
-            shellStream.on('data', (data) => {
+        // Si es conexión Bastion, usar createBastionShell
+        if (newConfig.useBastionWallix) {
+          const bastionConfig = {
+            bastionHost: newConfig.bastionHost,
+            port: 22,
+            bastionUser: newConfig.bastionUser,
+            password: password
+          };
+          
+          const { conn: newBastionConn } = createBastionShell(
+            bastionConfig,
+            (data) => {
               const dataStr = data.toString('utf-8');
               if (sessionRecorder.isRecording(tabId)) {
                 sessionRecorder.recordOutput(tabId, dataStr);
               }
               sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
-            });
-            
-            shellStream.on('close', () => {
+            },
+            () => {
               sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
               if (sshConnections[tabId] && sshConnections[tabId].statsTimeout) {
                 clearTimeout(sshConnections[tabId].statsTimeout);
@@ -2149,46 +2113,399 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
                 originalKey: conn.originalKey || tabId,
                 tabId: tabId
               });
+              delete bastionStatsState[tabId];
               delete sshConnections[tabId];
-              ssh2Client.end();
-            });
-            
-            shellStream.stderr?.on('data', (data) => {
-              sendToRenderer(event.sender, `ssh:data:${tabId}`, data.toString('utf-8'));
-            });
-            
-            sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\n✅ Conectado exitosamente.\r\n');
-            sendToRenderer(event.sender, `ssh:ready:${tabId}`);
-            sendToRenderer(event.sender, 'ssh-connection-ready', {
-              originalKey: conn.originalKey || tabId,
-              tabId: tabId
-            });
-            
-            // CRÍTICO: Inicializar statsLoop después de un breve delay para que la status bar funcione
-            setTimeout(() => {
-              if (sshConnections[tabId] && sshConnections[tabId].ssh) {
-                statsLoop(tabId, realHostname, finalDistroId, conn.config.host);
+            },
+            (err) => {
+              const isAuthError = err.message && (
+                err.message.includes('authentication') ||
+                err.message.includes('Authentication failed') ||
+                err.message.includes('All configured authentication methods failed')
+              );
+              
+              if (isAuthError) {
+                conn.manualPasswordMode = true;
+                conn.manualPasswordBuffer = '';
+                sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPassword incorrecto. Intenta de nuevo:\r\nPassword: `);
+              } else {
+                sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
               }
-            }, 1000);
+            },
+            (stream) => {
+              if (sshConnections[tabId]) {
+                sshConnections[tabId].stream = stream;
+                const pending = sshConnections[tabId]._pendingResize;
+                if (pending && stream && !stream.destroyed && typeof stream.setWindow === 'function') {
+                  const safeRows = Math.max(1, Math.min(300, pending.rows || 24));
+                  const safeCols = Math.max(1, Math.min(500, pending.cols || 80));
+                  stream.setWindow(safeRows, safeCols);
+                  sshConnections[tabId]._pendingResize = null;
+                }
+                
+                // Crear función wallixStatsLoop si no existe
+                if (!conn.wallixStatsLoop) {
+                  function wallixStatsLoop() {
+                    const connObj = sshConnections[tabId];
+                    if (activeStatsTabId !== tabId) {
+                      if (connObj) {
+                        connObj.statsTimeout = null;
+                        connObj.statsLoopRunning = false;
+                      }
+                      return;
+                    }
+                    if (!connObj || !connObj.ssh || !connObj.stream) {
+                      return;
+                    }
+                    if (connObj.statsLoopRunning) {
+                      return;
+                    }
+                    
+                    connObj.statsLoopRunning = true;
+
+                    try {
+                      if (connObj.ssh.execCommand) {
+                        const command = 'grep "cpu " /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "" && cat /etc/os-release';
+                        connObj.ssh.execCommand(command, (err, result) => {
+                          if (err || !result) {
+                            const fallbackStats = {
+                              cpu: '0.00',
+                              mem: { total: 0, used: 0 },
+                              disk: [],
+                              uptime: 'Error',
+                              network: { rx_speed: 0, tx_speed: 0 },
+                              hostname: 'Bastión',
+                              distro: 'linux',
+                              ip: newConfig.host
+                            };
+                            sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, fallbackStats);
+                            
+                            if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
+                              sshConnections[tabId].statsLoopRunning = false;
+                              sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
+                            } else {
+                              if (sshConnections[tabId]) sshConnections[tabId].statsLoopRunning = false;
+                            }
+                            return;
+                          }
+                          
+                          const output = result.stdout;
+                          
+                          try {
+                            const parts = output.trim().split('\n');
+                            
+                            const cpuLineIndex = parts.findIndex(line => line.trim().startsWith('cpu '));
+                            let cpuLoad = '0.00';
+                            if (cpuLineIndex >= 0) {
+                              const cpuLine = parts[cpuLineIndex];
+                              const cpuTimes = cpuLine.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
+                              const previousCpu = bastionStatsState[tabId]?.previousCpu;
+                              if (cpuTimes.length >= 8) {
+                                const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
+                                if (previousCpu) {
+                                  const prevIdle = previousCpu.idle + previousCpu.iowait;
+                                  const currentIdle = currentCpu.idle + currentCpu.iowait;
+                                  const prevTotal = Object.values(previousCpu).reduce((a, b) => a + b, 0);
+                                  const currentTotal = Object.values(currentCpu).reduce((a, b) => a + b, 0);
+                                  const totalDiff = currentTotal - prevTotal;
+                                  const idleDiff = currentIdle - prevIdle;
+                                  if (totalDiff > 0) {
+                                    cpuLoad = ((1 - idleDiff / totalDiff) * 100).toFixed(2);
+                                  }
+                                }
+                                if (!bastionStatsState[tabId]) bastionStatsState[tabId] = {};
+                                bastionStatsState[tabId].previousCpu = currentCpu;
+                              }
+                            }
+                            
+                            const freeLineIndex = parts.findIndex(line => line.trim().startsWith('Mem:'));
+                            let mem = { total: 0, used: 0 };
+                            if (freeLineIndex >= 0) {
+                              const memParts = parts[freeLineIndex].trim().split(/\s+/);
+                              if (memParts.length >= 4) {
+                                mem.total = parseInt(memParts[1], 10);
+                                mem.used = parseInt(memParts[2], 10);
+                              }
+                            }
+                            
+                            const dfLines = parts.filter(line => line.trim() && !line.includes('Filesystem') && !line.includes('tmpfs') && !line.includes('devtmpfs'));
+                            const disks = dfLines.slice(0, 3).map(line => {
+                              const dfParts = line.trim().split(/\s+/);
+                              if (dfParts.length >= 5) {
+                                return {
+                                  mount: dfParts[5] || '/',
+                                  total: parseInt(dfParts[1], 10) * 1024,
+                                  used: parseInt(dfParts[2], 10) * 1024
+                                };
+                              }
+                              return null;
+                            }).filter(d => d !== null);
+                            
+                            const uptimeLine = parts.find(line => line.includes('up'));
+                            let uptime = 'N/A';
+                            if (uptimeLine) {
+                              uptime = uptimeLine.replace(/.*up\s+/, '').trim();
+                            }
+                            
+                            const netLineIndex = parts.findIndex(line => line.trim().startsWith('Inter-face') || line.trim().startsWith('face'));
+                            let network = { rx_speed: 0, tx_speed: 0 };
+                            if (netLineIndex >= 0 && netLineIndex + 1 < parts.length) {
+                              const netLine = parts[netLineIndex + 1];
+                              const netParts = netLine.trim().split(/\s+/);
+                              if (netParts.length >= 10) {
+                                const rx = parseInt(netParts[1], 10);
+                                const tx = parseInt(netParts[9], 10);
+                                const previousNet = bastionStatsState[tabId]?.previousNet;
+                                const previousTime = bastionStatsState[tabId]?.previousTime;
+                                const currentTime = Date.now();
+                                if (previousNet && previousTime) {
+                                  const timeDiff = (currentTime - previousTime) / 1000;
+                                  if (timeDiff > 0) {
+                                    network.rx_speed = Math.max(0, (rx - previousNet.rx) / timeDiff);
+                                    network.tx_speed = Math.max(0, (tx - previousNet.tx) / timeDiff);
+                                  }
+                                }
+                                if (!bastionStatsState[tabId]) bastionStatsState[tabId] = {};
+                                bastionStatsState[tabId].previousNet = { rx, tx };
+                                bastionStatsState[tabId].previousTime = currentTime;
+                              }
+                            }
+                            
+                            const hostnameLine = parts.find(line => line.trim() && !line.includes(':') && !line.includes('=') && !line.includes('Filesystem') && !line.includes('Mem:') && !line.includes('cpu ') && !line.includes('up') && !line.includes('Inter-face') && !line.includes('face'));
+                            const hostname = hostnameLine ? hostnameLine.trim() : 'Bastión';
+                            
+                            const ipLine = parts.find(line => /^\d+\.\d+\.\d+\.\d+/.test(line.trim()));
+                            const ip = ipLine ? ipLine.trim().split(/\s+/)[0] : newConfig.host;
+                            
+                            const osReleaseLines = parts.filter(line => line.includes('='));
+                            let finalDistroId = 'linux';
+                            let versionId = '';
+                            try {
+                              let idLine = osReleaseLines.find(line => line.trim().startsWith('ID='));
+                              let idLikeLine = osReleaseLines.find(line => line.trim().startsWith('ID_LIKE='));
+                              let versionIdLine = osReleaseLines.find(line => line.trim().startsWith('VERSION_ID='));
+                              let rawDistro = '';
+                              if (idLine) {
+                                const match = idLine.match(/^ID=("?)([^"\n]*)\1$/);
+                                if (match) rawDistro = match[2].toLowerCase();
+                              }
+                              if (["rhel", "redhat", "redhatenterpriseserver", "red hat enterprise linux"].includes(rawDistro)) {
+                                finalDistroId = "rhel";
+                              } else if (rawDistro === 'linux' && idLikeLine) {
+                                const match = idLikeLine.match(/^ID_LIKE=("?)([^"\n]*)\1$/);
+                                const idLike = match ? match[2].toLowerCase() : '';
+                                if (idLike.includes('rhel') || idLike.includes('redhat')) {
+                                  finalDistroId = "rhel";
+                                } else {
+                                  finalDistroId = rawDistro;
+                                }
+                              } else if (rawDistro) {
+                                finalDistroId = rawDistro;
+                              }
+                              if (versionIdLine) {
+                                const match = versionIdLine.match(/^VERSION_ID=("?)([^"\n]*)\1$/);
+                                if (match) versionId = match[2];
+                              }
+                            } catch (e) {}
+                            const stats = {
+                              cpu: cpuLoad,
+                              mem,
+                              disk: disks,
+                              uptime,
+                              network,
+                              hostname,
+                              distro: finalDistroId,
+                              versionId,
+                              ip
+                            };
+                            
+                            sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
+                            
+                          } catch (parseErr) {
+                            // Error parseando
+                          }
+                          
+                          if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
+                            sshConnections[tabId].statsLoopRunning = false;
+                            sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 2000);
+                          } else {
+                            if (sshConnections[tabId]) sshConnections[tabId].statsLoopRunning = false;
+                          }
+                        });
+                        
+                      } else {
+                        const stats = {
+                          cpu: '0.00',
+                          mem: { total: 0, used: 0 },
+                          disk: [],
+                          uptime: 'N/A',
+                          network: { rx_speed: 0, tx_speed: 0 },
+                          hostname: 'Bastión',
+                          distro: 'linux',
+                          ip: newConfig.host
+                        };
+                        sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
+                      }
+                      
+                    } catch (e) {
+                      if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
+                        sshConnections[tabId].statsLoopRunning = false;
+                        sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
+                      } else {
+                        if (sshConnections[tabId]) sshConnections[tabId].statsLoopRunning = false;
+                      }
+                    }
+                  }
+                  
+                  conn.wallixStatsLoop = wallixStatsLoop;
+                }
+                
+                if (activeStatsTabId === tabId) {
+                  conn.wallixStatsLoop();
+                }
+              }
+            }
+          );
+          
+          // Actualizar conexión
+          conn.ssh = newBastionConn;
+          conn.config = newConfig;
+          
+          sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\n✅ Conectado exitosamente.\r\n');
+          sendToRenderer(event.sender, `ssh:ready:${tabId}`);
+          sendToRenderer(event.sender, 'ssh-connection-ready', {
+            originalKey: conn.originalKey || tabId,
+            tabId: tabId
           });
-        });
-        
-        ssh2Client.on('error', (err) => {
-          sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
-          // Activar modo manual de nuevo para reintentar
-          conn.manualPasswordMode = true;
-          conn.manualPasswordBuffer = '';
-          sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPassword incorrecto. Intenta de nuevo:\r\nPassword: `);
-        });
-        
-        ssh2Client.connect({
-          host: newConfig.host,
-          username: newConfig.username,
-          port: newConfig.port || 22,
-          password: password,
-          readyTimeout: 30000,
-          keepaliveInterval: 60000
-        });
+        } else {
+          // Conexión SSH directa
+          const ssh2Client = new SSH2Client();
+          
+          ssh2Client.on('ready', () => {
+            ssh2Client.shell({ term: 'xterm-256color', cols: 80, rows: 24 }, async (err, shellStream) => {
+              if (err) {
+                sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
+                ssh2Client.end();
+                // Activar modo manual de nuevo para reintentar
+                conn.manualPasswordMode = true;
+                conn.manualPasswordBuffer = '';
+                sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPassword incorrecto. Intenta de nuevo:\r\nPassword: `);
+                return;
+              }
+              
+              // Crear wrapper para exec compatible con statsLoop
+              // IMPORTANTE: Guardar el método original antes de reemplazarlo para evitar recursión
+              const originalExec = ssh2Client.exec.bind(ssh2Client);
+              
+              const execWrapper = (command) => {
+                return new Promise((resolve, reject) => {
+                  // Usar el método original, no el wrapper
+                  originalExec(command, (err, stream) => {
+                    if (err) {
+                      reject(err);
+                      return;
+                    }
+                    let output = '';
+                    stream.on('data', (data) => {
+                      output += data.toString('utf-8');
+                    });
+                    stream.on('close', (code) => {
+                      if (code === 0) {
+                        resolve(output);
+                      } else {
+                        reject(new Error(`Command failed with code ${code}`));
+                      }
+                    });
+                    stream.stderr.on('data', (data) => {
+                      output += data.toString('utf-8');
+                    });
+                  });
+                });
+              };
+              
+              // Agregar método exec para compatibilidad con statsLoop
+              ssh2Client.exec = execWrapper;
+              
+              // Obtener hostname y distro para stats
+              let realHostname = 'unknown';
+              let osRelease = '';
+              try {
+                realHostname = (await execWrapper('hostname')).trim() || 'unknown';
+              } catch (e) {
+                console.warn('[SSH] Error obteniendo hostname:', e);
+              }
+              try {
+                osRelease = await execWrapper('cat /etc/os-release');
+              } catch (e) {
+                osRelease = 'ID=linux';
+              }
+              const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
+              const finalDistroId = distroId.replace(/"/g, '').toLowerCase();
+              
+              // Actualizar conexión
+              conn.ssh = ssh2Client;
+              conn.stream = shellStream;
+              conn.realHostname = realHostname;
+              conn.finalDistroId = finalDistroId;
+              
+              // Configurar listeners del stream
+              shellStream.on('data', (data) => {
+                const dataStr = data.toString('utf-8');
+                if (sessionRecorder.isRecording(tabId)) {
+                  sessionRecorder.recordOutput(tabId, dataStr);
+                }
+                sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
+              });
+              
+              shellStream.on('close', () => {
+                sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
+                if (sshConnections[tabId] && sshConnections[tabId].statsTimeout) {
+                  clearTimeout(sshConnections[tabId].statsTimeout);
+                }
+                sendToRenderer(event.sender, 'ssh-connection-disconnected', {
+                  originalKey: conn.originalKey || tabId,
+                  tabId: tabId
+                });
+                delete sshConnections[tabId];
+                ssh2Client.end();
+              });
+              
+              shellStream.stderr?.on('data', (data) => {
+                sendToRenderer(event.sender, `ssh:data:${tabId}`, data.toString('utf-8'));
+              });
+              
+              sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\n✅ Conectado exitosamente.\r\n');
+              sendToRenderer(event.sender, `ssh:ready:${tabId}`);
+              sendToRenderer(event.sender, 'ssh-connection-ready', {
+                originalKey: conn.originalKey || tabId,
+                tabId: tabId
+              });
+              
+              // CRÍTICO: Inicializar statsLoop después de un breve delay para que la status bar funcione
+              setTimeout(() => {
+                if (sshConnections[tabId] && sshConnections[tabId].ssh) {
+                  statsLoop(tabId, realHostname, finalDistroId, conn.config.host);
+                }
+              }, 1000);
+            });
+          });
+          
+          ssh2Client.on('error', (err) => {
+            sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
+            // Activar modo manual de nuevo para reintentar
+            conn.manualPasswordMode = true;
+            conn.manualPasswordBuffer = '';
+            sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPassword incorrecto. Intenta de nuevo:\r\nPassword: `);
+          });
+          
+          ssh2Client.connect({
+            host: newConfig.host,
+            username: newConfig.username,
+            port: newConfig.port || 22,
+            password: password,
+            readyTimeout: 30000,
+            keepaliveInterval: 60000
+          });
+        }
       } else {
         sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPassword vacío. Por favor, introduce el password:\r\nPassword: `);
       }
