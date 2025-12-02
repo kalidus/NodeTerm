@@ -2515,9 +2515,23 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
       // Acumular caracteres (ocultar en terminal para password)
       // Solo acumular si no es Enter (Enter se procesa arriba)
       if (!data.includes('\r') && !data.includes('\n')) {
-        conn.manualPasswordBuffer += data;
-        // Mostrar asteriscos en lugar del password
-        sendToRenderer(event.sender, `ssh:data:${tabId}`, '*');
+        // Detectar backspace (\b o \x7f)
+        if (data === '\b' || data === '\x7f' || data.charCodeAt(0) === 8 || data.charCodeAt(0) === 127) {
+          // Eliminar último carácter del buffer si existe
+          if (conn.manualPasswordBuffer.length > 0) {
+            conn.manualPasswordBuffer = conn.manualPasswordBuffer.slice(0, -1);
+            // Enviar backspace + espacio + backspace para borrar visualmente el asterisco
+            sendToRenderer(event.sender, `ssh:data:${tabId}`, '\b \b');
+          } else {
+            // Si no hay caracteres, solo enviar el backspace sin efecto
+            sendToRenderer(event.sender, `ssh:data:${tabId}`, '\b');
+          }
+        } else {
+          // Carácter normal: acumular y mostrar asterisco
+          conn.manualPasswordBuffer += data;
+          // Mostrar asteriscos en lugar del password
+          sendToRenderer(event.sender, `ssh:data:${tabId}`, '*');
+        }
       }
     }
     return;
