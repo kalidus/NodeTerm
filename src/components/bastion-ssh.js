@@ -60,11 +60,10 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
     });
     
     // Conectar usando las mismas credenciales pero para ejecutar comandos específicos
-    statsConn.connect({
+    const statsConnectConfig = {
       host: config.bastionHost,
       port: config.port || 22,
       username: config.bastionUser,
-      password: config.password,
       readyTimeout: 10000,
       algorithms: {
         kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
@@ -73,7 +72,16 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
         hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
       },
       hostVerifier: () => true // Aceptar cualquier host key para Wallix
-    });
+    };
+    
+    // Si hay password, usarlo. Si no, permitir autenticación interactiva
+    if (config.password && config.password.trim()) {
+      statsConnectConfig.password = config.password;
+    } else {
+      statsConnectConfig.tryKeyboard = true;
+    }
+    
+    statsConn.connect(statsConnectConfig);
   };
   
     // Ya no necesitamos procesamiento especial, solo enviar todo al terminal
@@ -108,15 +116,35 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
     });
   });
   
+  // Manejar autenticación interactiva (keyboard-interactive)
+  conn.on('keyboard-interactive', (name, instructions, instructionsLang, prompts, finish) => {
+    // Mostrar instrucciones y prompts en la terminal
+    if (instructions) {
+      if (onData) onData(Buffer.from(instructions + '\r\n', 'utf-8'));
+    }
+    
+    // Mostrar cada prompt
+    prompts.forEach((prompt) => {
+      if (prompt.prompt) {
+        if (onData) onData(Buffer.from(prompt.prompt, 'utf-8'));
+      }
+    });
+    
+    // Las respuestas se enviarán cuando el usuario escriba en la terminal
+    // Por ahora, responder con array vacío para permitir que continúe
+    // El usuario escribirá el password directamente en la terminal
+    const responses = prompts.map(() => '');
+    finish(responses);
+  });
+  
   conn.on('error', (err) => {
     if (onError) onError(err);
   });
   
-  conn.connect({
+  const connectConfig = {
     host: config.bastionHost,
     port: config.port || 22,
     username: config.bastionUser,
-    password: config.password,
     readyTimeout: 30000,
     keepaliveInterval: 60000,
     keepaliveCountMax: 3,
@@ -129,7 +157,16 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
     hostVerifier: () => true, // Aceptar cualquier host key para Wallix
     compress: false,
     debug: false
-  });
+  };
+  
+  // Si hay password, usarlo. Si no, permitir autenticación interactiva
+  if (config.password && config.password.trim()) {
+    connectConfig.password = config.password;
+  } else {
+    connectConfig.tryKeyboard = true;
+  }
+  
+  conn.connect(connectConfig);
   
   return { conn };
 }
