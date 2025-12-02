@@ -32,6 +32,7 @@ export const useSplitManagement = ({
       password: sshNode.data.password,
       port: sshNode.data.port || 22,
       originalKey: sshNode.key,
+      name: sshNode.label,
       useBastionWallix: sshNode.data.useBastionWallix || false,
       bastionHost: sshNode.data.bastionHost || '',
       bastionUser: sshNode.data.bastionUser || ''

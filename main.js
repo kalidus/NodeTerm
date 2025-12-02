@@ -955,6 +955,10 @@ app.on('activate', () => {
 
 // IPC handler to establish an SSH connection
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
+  // Mostrar mensaje de conexión al inicio
+  const hostName = config.name || config.label || config.host;
+  sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nConnecting to ${hostName}...\r\n`);
+  
   // Para bastiones: usar cacheKey único por destino (permite reutilización)
   // Para SSH directo: usar pooling normal para eficiencia
   const cacheKey = config.useBastionWallix 
@@ -1984,8 +1988,6 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         if (config.password && config.password.trim() && !isAuthError) {
           connectConfig.password = config.password;
         }
-        
-        sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nConectando a ${config.host}...\r\n`);
         
         // Si no hay password configurado, activar modo manual inmediatamente
         if (!config.password || !config.password.trim()) {

@@ -220,9 +220,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             
             // --- End of Clipboard Handling ---
             
-            term.current.writeln('Connecting to SSH...');
-
-            // Connect via IPC
+            // Connect via IPC (el mensaje de conexión se mostrará desde main.js)
             window.electron.ipcRenderer.send('ssh:connect', { tabId, config: sshConfig });
 
             // After the SSH connection is ready, send an initial resize so programs like vim/htop get the correct size

@@ -265,6 +265,7 @@ export const useConnectionManagement = ({
         password: password,
         port: conn.port,
         originalKey: conn.originalKey,
+        name: conn.name,
         useBastionWallix: isSidebarNode ? (nodeOrConn.data.useBastionWallix || false) : (nodeOrConn.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false),
         bastionHost: isSidebarNode ? (nodeOrConn.data.bastionHost || '') : (nodeOrConn.bastionHost || matchedSidebarNode?.data?.bastionHost || ''),
         bastionUser: isSidebarNode ? (nodeOrConn.data.bastionUser || '') : (nodeOrConn.bastionUser || matchedSidebarNode?.data?.bastionUser || ''),

@@ -179,6 +179,7 @@ export const useTabManagement = (toast, {
           password: matchedSidebarNode?.data?.password || '',
           port: session.port,
           originalKey: session.key,
+          name: session.label,
           useBastionWallix: session.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false,
           bastionHost: session.bastionHost || matchedSidebarNode?.data?.bastionHost || '',
           bastionUser: session.bastionUser || matchedSidebarNode?.data?.bastionUser || ''

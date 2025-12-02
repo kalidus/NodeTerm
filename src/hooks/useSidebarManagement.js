@@ -148,6 +148,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
               password: node.data.password,
               port: node.data.port || 22,
               originalKey: node.key,
+              name: node.label,
               useBastionWallix: node.data.useBastionWallix || false,
               bastionHost: node.data.bastionHost || '',
               bastionUser: node.data.bastionUser || ''
