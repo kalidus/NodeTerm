@@ -254,22 +254,44 @@ function registerSystemHandlers() {
         try {
           const fullPath = path.join(normalizedPath, entry.name);
           const stat = fs.statSync(fullPath);
+          
+          // Detectar si el archivo está oculto
+          // En Windows y Unix: archivos que empiezan con punto están ocultos
+          // También verificar atributo hidden en Windows si está disponible
+          let isHidden = entry.name.startsWith('.');
+          
+          // En Windows, también verificar el atributo del sistema
+          if (process.platform === 'win32' && !isHidden) {
+            try {
+              // Usar fs.constants para verificar atributos (más eficiente)
+              const fs = require('fs');
+              // Los archivos ocultos en Windows tienen el bit FILE_ATTRIBUTE_HIDDEN
+              // Por ahora, usamos solo la heurística del punto para ser más rápido
+              // Si necesitamos verificar atributos reales, habría que usar otra API
+            } catch {
+              // Ignorar errores de verificación
+            }
+          }
+          
           return {
             name: entry.name,
             type: entry.isDirectory() ? 'directory' : 'file',
             size: stat.size,
             modified: stat.mtime.toISOString(),
-            path: fullPath
+            path: fullPath,
+            hidden: isHidden
           };
         } catch (entryError) {
           console.warn('⚠️ [local:list-files] Error procesando entrada:', entry.name, entryError.message);
           // Retornar entrada básica si hay error al obtener stat
+          const isHidden = entry.name.startsWith('.');
           return {
             name: entry.name,
             type: entry.isDirectory() ? 'directory' : 'file',
             size: 0,
             modified: new Date().toISOString(),
-            path: path.join(normalizedPath, entry.name)
+            path: path.join(normalizedPath, entry.name),
+            hidden: isHidden
           };
         }
       });
