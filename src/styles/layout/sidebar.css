@@ -965,3 +965,41 @@
   background: transparent !important;
   box-shadow: none !important;
 }
+
+/* === ESTILOS PARA LOCAL FILE EXPLORER SIDEBAR === */
+/* Asegurar que el componente local file explorer se adapte al ancho */
+.local-file-explorer-sidebar {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+/* Header del local file explorer */
+.local-file-explorer-sidebar > div:first-child {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
+
+/* Contenedor del árbol en local file explorer */
+.local-file-explorer-sidebar .tree-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+/* Árbol dentro del local file explorer */
+.local-file-explorer-sidebar .sidebar-tree {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Asegurar que los textos se trunquen correctamente */
+.local-file-explorer-sidebar span {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}

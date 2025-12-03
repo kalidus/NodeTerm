@@ -26,7 +26,9 @@ const SidebarFilesystemExplorer = ({
   explorerFontSize,
   uiTheme = 'Light',
   showToast,
-  sessionActionIconTheme = 'modern'
+  sessionActionIconTheme = 'modern',
+  initialPath = null,
+  onPathNavigated = null
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
@@ -287,6 +289,75 @@ const SidebarFilesystemExplorer = ({
     }, {});
     setExpandedKeys(defaultExpanded);
   }, [allowedPaths, basename, makeKey]);
+
+  // Navegar automáticamente al path inicial si se proporciona
+  useEffect(() => {
+    if (!initialPath || !loadDirectory) return;
+    
+    const navigateToInitialPath = async () => {
+      try {
+        // Normalizar el path (convertir Windows \ a / si es necesario)
+        let normalizedPath = initialPath.replace(/\\/g, '/');
+        
+        // Si el path no está en allowedPaths, intentar añadirlo temporalmente
+        // o al menos intentar navegar directamente
+        const pathExists = allowedPaths.some(allowed => {
+          const normalizedAllowed = allowed.replace(/\\/g, '/');
+          return normalizedPath.startsWith(normalizedAllowed) || normalizedAllowed.startsWith(normalizedPath);
+        });
+        
+        if (!pathExists && allowedPaths.length > 0) {
+          // Si no está en allowedPaths pero hay rutas permitidas, usar la primera como base
+          // y navegar desde ahí
+          const basePath = allowedPaths[0];
+          notify('info', 'Navegando', `Navegando a ${normalizedPath}`);
+        }
+        
+        // Expandir y cargar el directorio
+        await loadDirectory(normalizedPath, { keepExpanded: true });
+        
+        // Seleccionar el nodo
+        const pathKey = makeKey(normalizedPath);
+        setSelectedKey(pathKey);
+        
+        // Expandir todos los directorios padre
+        const pathParts = normalizedPath.split('/').filter(p => p);
+        let currentPath = '';
+        const keysToExpand = {};
+        
+        for (const part of pathParts) {
+          currentPath = currentPath ? `${currentPath}/${part}` : `/${part}`;
+          const key = makeKey(currentPath);
+          keysToExpand[key] = true;
+          
+          // Cargar cada directorio padre si no está cargado
+          if (currentPath !== normalizedPath) {
+            await loadDirectory(currentPath, { keepExpanded: true });
+          }
+        }
+        
+        setExpandedKeys(prev => ({ ...prev, ...keysToExpand }));
+        
+        // Limpiar el path inicial después de navegar
+        if (onPathNavigated) {
+          onPathNavigated();
+        }
+      } catch (error) {
+        console.error('Error navegando al path inicial:', error);
+        notify('error', 'Error', `No se pudo navegar a ${initialPath}: ${error.message}`);
+        if (onPathNavigated) {
+          onPathNavigated();
+        }
+      }
+    };
+    
+    // Esperar un poco para asegurar que los nodos iniciales estén cargados
+    const timeoutId = setTimeout(() => {
+      navigateToInitialPath();
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [initialPath, loadDirectory, makeKey, notify, onPathNavigated, allowedPaths]);
 
   const setLoadingForPath = useCallback((path, value) => {
     setLoadingPaths(prev => {
