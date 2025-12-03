@@ -10,6 +10,7 @@ import { uiThemes } from '../themes/ui-themes';
 import mcpClient from '../services/MCPClientService';
 import SidebarFooter from './SidebarFooter';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import { sessionActionIconThemes } from '../themes/session-action-icons';
 
 const DEFAULT_MOVE_PARAMS = { source: 'source', destination: 'destination' };
 const DEFAULT_CREATE_PARAM = 'path';
@@ -693,8 +694,7 @@ const SidebarFilesystemExplorer = ({
         overflow: 'visible'
       }}>
         <Button 
-          icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
-          className="p-button-rounded p-button-text sidebar-action-button" 
+          className="p-button-rounded p-button-text sidebar-action-button glass-button" 
           onClick={() => setSidebarCollapsed(v => !v)} 
           tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
           tooltipOptions={{ position: 'bottom' }} 
@@ -704,10 +704,27 @@ const SidebarFilesystemExplorer = ({
             width: '40px',
             height: '40px',
             minWidth: '40px',
+            padding: 0,
             minHeight: '40px',
-            fontSize: '18px'
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }} 
-        />
+        >
+          <span style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: '20px',
+            height: '20px',
+            color: 'var(--ui-sidebar-text)'
+          }}>
+            {sidebarCollapsed 
+              ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
+              : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft
+            }
+          </span>
+        </Button>
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
