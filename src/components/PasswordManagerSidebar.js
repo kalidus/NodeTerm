@@ -1188,7 +1188,7 @@ const PasswordManagerSidebar = ({
           icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
           className="p-button-rounded p-button-text sidebar-action-button" 
           onClick={() => setSidebarCollapsed && setSidebarCollapsed(v => !v)} 
-          tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
+          tooltip={sidebarCollapsed ? tCommon('tooltips.expandSidebar') : tCommon('tooltips.collapseSidebar')} 
           tooltipOptions={{ position: 'bottom' }} 
           style={{ marginRight: 8 }} 
         />
@@ -1205,7 +1205,7 @@ const PasswordManagerSidebar = ({
             icon="pi pi-folder" 
             className="p-button-rounded p-button-text sidebar-action-button" 
             onClick={handleNewFolder} 
-            tooltip="Nueva carpeta" 
+            tooltip={tCommon('tooltips.newFolder')} 
             tooltipOptions={{ position: 'bottom' }} 
             style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
           />
@@ -1220,7 +1220,7 @@ const PasswordManagerSidebar = ({
                 window.dispatchEvent(new CustomEvent('open-create-group-dialog'));
               }, 100);
             }} 
-            tooltip="Crear grupo de pestañas" 
+            tooltip={tCommon('tooltips.createGroup')} 
             tooltipOptions={{ position: 'bottom' }} 
             style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
           />
@@ -1228,7 +1228,7 @@ const PasswordManagerSidebar = ({
             icon="pi pi-sitemap" 
             className="p-button-rounded p-button-text sidebar-action-button" 
             onClick={onBackToConnections} 
-            tooltip="Ir a conexiones" 
+            tooltip={tCommon('tooltips.goToConnections')} 
             tooltipOptions={{ position: 'bottom' }} 
             style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
           />

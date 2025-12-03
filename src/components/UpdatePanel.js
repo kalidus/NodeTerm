@@ -15,8 +15,11 @@ import { Checkbox } from 'primereact/checkbox';
 import { Badge } from 'primereact/badge';
 import { Toast } from 'primereact/toast';
 import { Message } from 'primereact/message';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 
 const UpdatePanel = () => {
+  const { t } = useTranslation('common');
+  
   const [currentVersion, setCurrentVersion] = useState('');
   const [config, setConfig] = useState({
     autoCheck: true,
@@ -489,7 +492,7 @@ const UpdatePanel = () => {
             icon="pi pi-trash"
             onClick={clearUpdateCache}
             className="p-button-warning p-button-outlined"
-            tooltip="Limpia el caché de actualizaciones para resolver problemas de checksum"
+            tooltip={t('tooltips.clearUpdateCache')}
           />
         )}
       </div>

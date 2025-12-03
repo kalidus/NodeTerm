@@ -6,6 +6,7 @@ import { useThemeManagement } from '../hooks/useThemeManagement';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import { loadSavedTabTheme } from '../utils/tabThemeLoader';
 import i18n from '../i18n';
+import ErrorBoundary from './ErrorBoundary';
 
 import { useStatusBarSettings } from '../hooks/useStatusBarSettings';
 import { useSessionManagement } from '../hooks/useSessionManagement';
@@ -2198,9 +2199,10 @@ const App = () => {
   ]);
 
   return (
-    <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
-      {/* UnlockDialog - Pide master password al inicio si existe */}
-      <UnlockDialog
+    <ErrorBoundary>
+      <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
+        {/* UnlockDialog - Pide master password al inicio si existe */}
+        <UnlockDialog
         visible={needsUnlock}
         onSuccess={handleUnlockSuccess}
         secureStorage={secureStorage}
@@ -2670,7 +2672,8 @@ const App = () => {
       
       {/* ConfirmDialog para confirmaciones globales */}
       <ConfirmDialog />
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 };
 

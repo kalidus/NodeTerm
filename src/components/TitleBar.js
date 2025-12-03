@@ -6,8 +6,12 @@ import { FaSearch } from 'react-icons/fa';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { iconThemes } from '../themes/icon-themes';
 import { toggleFavorite, helpers } from '../utils/connectionStore';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 
 const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onOpenVncConnection, onShowImportDialog, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog, expandedKeys, masterKey, secureStorage }) => {
+  // Hook de internacionalización
+  const { t } = useTranslation('common');
+  
   const [isMaximized, setIsMaximized] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredConnections, setFilteredConnections] = useState([]);
@@ -594,7 +598,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   // Función para manejar el menú de aplicación del TitleBar
   const handleAppMenuClick = (event) => {
     console.log('handleAppMenuClick TitleBar ejecutado - menú unificado');
-    const menuStructure = createAppMenu(onShowImportDialog);
+    const menuStructure = createAppMenu(onShowImportDialog, t);
     createContextMenu(event, menuStructure, 'app-context-menu-unified');
     return;
 
@@ -1089,7 +1093,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               cursor: 'pointer',
               fontSize: 12
             }}
-          >Actualizar ahora</button>
+          >{t('appMenu.updateNow')}</button>
           <button
             onClick={() => {
               if (onOpenImportWithSource) onOpenImportWithSource(importBanner.source);

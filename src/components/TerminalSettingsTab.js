@@ -6,6 +6,7 @@ import { OverlayPanel } from 'primereact/overlaypanel';
 import { Button } from 'primereact/button';
 import { Slider } from 'primereact/slider';
 import { themes } from '../themes';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/terminal-settings.css';
 
 // Storage keys
@@ -75,6 +76,8 @@ const TerminalSettingsTab = ({
   localLinuxTerminalTheme,
   setLocalLinuxTerminalTheme
 }) => {
+  const { t } = useTranslation('common');
+  
   // Cursor settings
   const [cursorStyle, setCursorStyle] = useState(() => 
     localStorage.getItem(STORAGE_KEYS.CURSOR_STYLE) || 'bar'
@@ -493,7 +496,7 @@ const TerminalSettingsTab = ({
                         padding: '0.375rem 0.75rem',
                         minWidth: 'auto'
                       }}
-                      tooltip="Configurar fuente y tamaño"
+                      tooltip={t('tooltips.configureFont')}
                       tooltipOptions={{ position: 'top' }}
                     />
                   </div>

@@ -9,6 +9,7 @@ import { InputText } from 'primereact/inputtext';
 import { uiThemes } from '../themes/ui-themes';
 import mcpClient from '../services/MCPClientService';
 import SidebarFooter from './SidebarFooter';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 
 const DEFAULT_MOVE_PARAMS = { source: 'source', destination: 'destination' };
 const DEFAULT_CREATE_PARAM = 'path';
@@ -25,6 +26,9 @@ const SidebarFilesystemExplorer = ({
   uiTheme = 'Light',
   showToast
 }) => {
+  // Hook de internacionalización
+  const { t } = useTranslation('common');
+  
   const detail = status || {};
   const allowedPaths = Array.isArray(detail.allowedPaths) ? detail.allowedPaths : [];
   const server = detail.server || {};
@@ -715,7 +719,7 @@ const SidebarFilesystemExplorer = ({
             icon="pi pi-comments" 
             className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={openChatTab} 
-            tooltip="Chat de IA" 
+            tooltip={t('tooltips.aiChat')} 
             tooltipOptions={{ position: 'bottom' }}
             style={{ flexShrink: 0 }}
           />
@@ -723,7 +727,7 @@ const SidebarFilesystemExplorer = ({
             icon="pi pi-folder" 
             className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={openCreateFolderDialog} 
-            tooltip="Nueva carpeta" 
+            tooltip={t('tooltips.newFolder')} 
             tooltipOptions={{ position: 'bottom' }}
             disabled={globalLoading || allowedPaths.length === 0}
             style={{ flexShrink: 0 }}
@@ -732,7 +736,7 @@ const SidebarFilesystemExplorer = ({
             icon="pi pi-th-large" 
             className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={openCreateGroupDialog} 
-            tooltip="Crear grupo de pestañas" 
+            tooltip={t('tooltips.createGroup')} 
             tooltipOptions={{ position: 'bottom' }}
             style={{ flexShrink: 0 }}
           />
@@ -740,7 +744,7 @@ const SidebarFilesystemExplorer = ({
             icon="pi pi-refresh" 
             className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={() => handleRefreshNode()} 
-            tooltip="Recargar carpeta" 
+            tooltip={t('tooltips.reloadFolder')} 
             tooltipOptions={{ position: 'bottom' }}
             disabled={globalLoading}
             style={{ flexShrink: 0 }}

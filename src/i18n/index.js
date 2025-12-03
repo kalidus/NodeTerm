@@ -111,54 +111,59 @@ class I18nService {
    * @returns {string} - Texto traducido o la clave si no se encuentra
    */
   t(key, params = {}) {
-    if (!key) return '';
+    try {
+      if (!key) return '';
 
-    // Si no hay traducciones cargadas, intentar cargar por defecto
-    if (!this.translations || Object.keys(this.translations).length === 0) {
-      console.warn(`[i18n] No hay traducciones cargadas, usando español por defecto`);
-      this.translations = allTranslations['es'] || {};
-    }
-
-    const parts = key.split('.');
-    let namespace = 'common';
-    let path = parts;
-
-    // Si el primer elemento es un namespace conocido, usarlo
-    if (this.translations && this.translations[parts[0]]) {
-      namespace = parts[0];
-      path = parts.slice(1);
-    }
-
-    // Navegar por el objeto de traducciones
-    let value = this.translations[namespace];
-    if (!value) {
-      console.warn(`[i18n] Namespace '${namespace}' no encontrado. Traducciones disponibles:`, Object.keys(this.translations));
-      return key;
-    }
-
-    for (const part of path) {
-      if (value === undefined || value === null) {
-        break;
+      // Si no hay traducciones cargadas, intentar cargar por defecto
+      if (!this.translations || Object.keys(this.translations).length === 0) {
+        console.warn(`[i18n] No hay traducciones cargadas, usando español por defecto`);
+        this.translations = allTranslations['es'] || {};
       }
-      value = value[part];
-    }
 
-    // Si no se encontró, devolver la clave
-    if (value === undefined || value === null) {
-      // Solo mostrar warning en desarrollo
-      console.warn(`[i18n] Traducción faltante: ${key} (${this.currentLocale})`);
-      console.warn(`[i18n] Namespace: ${namespace}, Path: ${path.join('.')}, Traducciones disponibles:`, Object.keys(this.translations[namespace] || {}));
+      const parts = key.split('.');
+      let namespace = 'common';
+      let path = parts;
+
+      // Si el primer elemento es un namespace conocido, usarlo
+      if (this.translations && this.translations[parts[0]]) {
+        namespace = parts[0];
+        path = parts.slice(1);
+      }
+
+      // Navegar por el objeto de traducciones
+      let value = this.translations[namespace];
+      if (!value) {
+        console.warn(`[i18n] Namespace '${namespace}' no encontrado. Traducciones disponibles:`, Object.keys(this.translations || {}));
+        return key;
+      }
+
+      for (const part of path) {
+        if (value === undefined || value === null) {
+          break;
+        }
+        value = value[part];
+      }
+
+      // Si no se encontró, devolver la clave
+      if (value === undefined || value === null) {
+        // Solo mostrar warning en desarrollo
+        console.warn(`[i18n] Traducción faltante: ${key} (${this.currentLocale})`);
+        console.warn(`[i18n] Namespace: ${namespace}, Path: ${path.join('.')}, Traducciones disponibles:`, Object.keys(this.translations[namespace] || {}));
+        return key;
+      }
+
+      // Interpolación de parámetros: "Hola {name}" -> "Hola Juan"
+      if (typeof value === 'string' && Object.keys(params).length > 0) {
+        return value.replace(/\{(\w+)\}/g, (match, paramKey) => {
+          return params[paramKey] !== undefined ? params[paramKey] : match;
+        });
+      }
+
+      return value;
+    } catch (error) {
+      console.error(`[i18n] Error en traducción para clave '${key}':`, error);
       return key;
     }
-
-    // Interpolación de parámetros: "Hola {name}" -> "Hola Juan"
-    if (typeof value === 'string' && Object.keys(params).length > 0) {
-      return value.replace(/\{(\w+)\}/g, (match, paramKey) => {
-        return params[paramKey] !== undefined ? params[paramKey] : match;
-      });
-    }
-
-    return value;
   }
 
   /**

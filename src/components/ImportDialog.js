@@ -12,6 +12,7 @@ import { InputText } from 'primereact/inputtext';
 import { Password } from 'primereact/password';
 import { Card } from 'primereact/card';
 import ImportService from '../services/ImportService';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 
 const ImportDialog = ({ 
   visible, 
@@ -22,6 +23,8 @@ const ImportDialog = ({
   targetFolderOptions,
   defaultTargetFolderKey
 }) => {
+  const { t } = useTranslation('common');
+  
   const [manualSelectedFile, setManualSelectedFile] = useState(null);
   const [activeTab, setActiveTab] = useState(0); // 0=Sesiones, 1=Passwords
   const [importing, setImporting] = useState(false);
@@ -900,7 +903,7 @@ const ImportDialog = ({
                               className="p-button-outlined p-button-sm"
                               onClick={handleChooseFile}
                               disabled={importing}
-                              tooltip="Cambiar archivo"
+                              tooltip={t('tooltips.changeFile')}
                               tooltipOptions={{ position: 'top' }}
                             />
                             <Button
@@ -908,7 +911,7 @@ const ImportDialog = ({
                               className="p-button-outlined p-button-danger p-button-sm"
                               onClick={handleFileRemove}
                               disabled={importing}
-                              tooltip="Remover archivo"
+                              tooltip={t('tooltips.removeFile')}
                               tooltipOptions={{ position: 'top' }}
                             />
                           </div>
@@ -1324,7 +1327,7 @@ const ImportDialog = ({
                                     className="p-button-outlined p-button-sm"
                                     onClick={() => linkFileInputRef.current && linkFileInputRef.current.click()}
                                     disabled={importing}
-                                    tooltip="Cambiar archivo"
+                                    tooltip={t('tooltips.changeFile')}
                                     tooltipOptions={{ position: 'top' }}
                                   />
                                   <Button
@@ -1332,7 +1335,7 @@ const ImportDialog = ({
                                     className="p-button-outlined p-button-danger p-button-sm"
                                     onClick={handleFileRemoveLinked}
                                     disabled={importing}
-                                    tooltip="Remover archivo"
+                                    tooltip={t('tooltips.removeFile')}
                                     tooltipOptions={{ position: 'top' }}
                                   />
                                 </div>
