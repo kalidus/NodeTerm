@@ -107,6 +107,13 @@ const LocalFileExplorerSidebar = ({
   const [selectedKey, setSelectedKey] = useState(null);
   const [loading, setLoading] = useState(false);
   const [currentPath, setCurrentPath] = useState(null);
+  const [showHiddenFiles, setShowHiddenFiles] = useState(() => {
+    try {
+      return localStorage.getItem('localExplorer_showHiddenFiles') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   const makeKey = useCallback((filePath) => `local|${filePath}`, []);
 
@@ -133,7 +140,19 @@ const LocalFileExplorerSidebar = ({
       const result = await window.electron.ipcRenderer.invoke('local:list-files', dirPath);
       
       if (result && result.success && Array.isArray(result.files)) {
-        const children = result.files.map(file => ({
+        // Filtrar archivos ocultos si no se deben mostrar
+        const filteredFiles = showHiddenFiles 
+          ? result.files 
+          : result.files.filter(file => {
+              // Filtrar archivos ocultos
+              // Los archivos ocultos tienen hidden=true o empiezan con punto
+              const isHidden = file.hidden === true || 
+                             file.name.startsWith('.') ||
+                             (file.name && file.name.length > 0 && file.name[0] === '.');
+              return !isHidden;
+            });
+        
+        const children = filteredFiles.map(file => ({
           key: makeKey(file.path),
           label: file.name,
           data: {
@@ -186,7 +205,7 @@ const LocalFileExplorerSidebar = ({
     } finally {
       setLoading(false);
     }
-  }, [makeKey, showToast, currentPath, updateNodeChildren]);
+  }, [makeKey, showToast, currentPath, updateNodeChildren, showHiddenFiles]);
 
   // Cargar directorio inicial
   useEffect(() => {
@@ -447,6 +466,25 @@ const LocalFileExplorerSidebar = ({
           )}
         </div>
         <Button
+          icon={showHiddenFiles ? "pi pi-eye-slash" : "pi pi-eye"}
+          className="p-button-rounded p-button-text sidebar-action-button"
+          onClick={() => {
+            const newValue = !showHiddenFiles;
+            setShowHiddenFiles(newValue);
+            try {
+              localStorage.setItem('localExplorer_showHiddenFiles', newValue.toString());
+            } catch (e) {
+              console.error('Error guardando preferencia:', e);
+            }
+            // Recargar el directorio actual con el nuevo filtro
+            if (currentPath) {
+              loadDirectory(currentPath);
+            }
+          }}
+          tooltip={showHiddenFiles ? "Ocultar archivos ocultos" : "Mostrar archivos ocultos"}
+          style={{ flexShrink: 0 }}
+        />
+        <Button
           icon="pi pi-refresh"
           className="p-button-rounded p-button-text sidebar-action-button"
           onClick={() => currentPath && loadDirectory(currentPath)}
@@ -483,13 +521,43 @@ const LocalFileExplorerSidebar = ({
           </div>
         ) : nodes.length === 0 ? (
           <div style={{ 
-            textAlign: 'center', 
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
             padding: '2rem', 
-            opacity: 0.7,
-            fontSize: '0.9rem',
+            gap: '1rem',
             width: '100%'
           }}>
-            No hay archivos
+            <div style={{ 
+              textAlign: 'center', 
+              opacity: 0.7,
+              fontSize: '0.9rem'
+            }}>
+              No hay archivos visibles
+            </div>
+            <Button
+              icon={showHiddenFiles ? 'pi pi-eye-slash' : 'pi pi-eye'}
+              label={showHiddenFiles ? 'Ocultar archivos ocultos' : 'Mostrar archivos ocultos'}
+              className="p-button-rounded p-button-text"
+              onClick={() => {
+                const newValue = !showHiddenFiles;
+                setShowHiddenFiles(newValue);
+                try {
+                  localStorage.setItem('localExplorer_showHiddenFiles', newValue.toString());
+                } catch (e) {
+                  console.error('Error guardando preferencia:', e);
+                }
+                // Recargar el directorio actual con el nuevo filtro
+                if (currentPath) {
+                  loadDirectory(currentPath);
+                }
+              }}
+              style={{
+                fontSize: '0.875rem',
+                padding: '0.5rem 1rem'
+              }}
+            />
           </div>
         ) : (
           <Tree
