@@ -177,16 +177,89 @@
       "new": "New VNC Connection",
       "edit": "Edit VNC Connection"
     },
+    "sections": {
+      "connection": "Connection",
+      "screen": "Screen",
+      "options": "Options"
+    },
     "fields": {
       "name": "Name",
-      "host": "Host",
+      "server": "Server",
       "port": "Port",
-      "password": "Password"
+      "password": "VNC Password",
+      "resolution": "Resolution",
+      "colorDepth": "Color Depth",
+      "imageQuality": "Image Quality",
+      "dpi": "DPI"
     },
     "placeholders": {
-      "name": "VNC Server",
-      "host": "IP or server name",
-      "port": "5900"
+      "name": "Descriptive name",
+      "server": "IP or server name",
+      "port": "5900",
+      "password": "VNC password (optional)",
+      "dpi": "96"
+    },
+    "descriptions": {
+      "password": "VNC server password (if configured)"
+    },
+    "colorDepths": {
+      "32": "32 bits",
+      "24": "24 bits",
+      "16": "16 bits",
+      "8": "8 bits"
+    },
+    "imageQualities": {
+      "lossless": "Lossless",
+      "lossyLow": "Low loss",
+      "lossyMedium": "Medium loss",
+      "lossyHigh": "High loss"
+    },
+    "options": {
+      "readOnly": "Read only",
+      "compression": "Compression",
+      "autoReconnect": "Auto reconnect",
+      "autoResize": "Auto resize",
+      "clipboard": "Clipboard"
+    },
+    "tooltips": {
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
+    }
+  },
+  "fileConnection": {
+    "title": {
+      "new": "New File Connection",
+      "edit": "Edit File Connection"
+    },
+    "sections": {
+      "connection": "File Connection"
+    },
+    "fields": {
+      "name": "Connection name",
+      "protocol": "Protocol",
+      "host": "Host",
+      "user": "User",
+      "port": "Port",
+      "password": "Password",
+      "remoteFolder": "Remote folder",
+      "targetFolder": "Local target folder"
+    },
+    "placeholders": {
+      "name": "My SFTP server",
+      "host": "192.168.1.100",
+      "user": "username",
+      "password": "Password",
+      "remoteFolder": "/home/user",
+      "targetFolder": "C:\\Downloads"
+    },
+    "protocols": {
+      "sftp": "SFTP",
+      "ftp": "FTP",
+      "scp": "SCP"
+    },
+    "buttons": {
+      "saveChanges": "Save Changes",
+      "create": "Create Connection"
     }
   },
   "folder": {
