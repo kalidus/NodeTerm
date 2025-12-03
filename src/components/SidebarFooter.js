@@ -2,15 +2,15 @@ import React from 'react';
 import { Button } from 'primereact/button';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import { sessionActionIconThemes } from '../themes/session-action-icons';
 
-const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed, onShowImportDialog }) => {
+const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed, onShowImportDialog, sessionActionIconTheme = 'modern' }) => {
   const { t } = useTranslation('common');
   if (collapsed) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
         <Button
-          icon="pi pi-cog"
-          className="p-button-rounded p-button-text sidebar-action-button"
+          className="p-button-rounded p-button-text sidebar-action-button glass-button"
           onClick={onConfigClick}
           tooltip={t('tooltips.settings')}
           style={{
@@ -18,16 +18,26 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed,
             height: 40,
             borderRadius: '50%',
             background: 'var(--ui-sidebar-footer-bg, #223)',
-            color: 'var(--ui-sidebar-footer-fg, #fff)',
             border: 'none',
-    display: 'flex',
-    alignItems: 'center',
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 22,
             cursor: 'pointer',
-            margin: 4
+            margin: 4,
+            padding: 0
           }}
-        />
+        >
+          <span style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: '20px',
+            height: '20px',
+            color: 'var(--ui-sidebar-footer-fg, #fff)'
+          }}>
+            {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.settings}
+          </span>
+        </Button>
       </div>
     );
   }
@@ -42,19 +52,81 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed,
     <div className="sidebar-footer" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '4px 8px' }}>
       {/* Botón menú, expandir/plegar, config, etc. */}
       <Button
-        icon="pi pi-bars"
-        className="p-button-rounded p-button-text sidebar-action-button"
+        className="p-button-rounded p-button-text sidebar-action-button glass-button"
         onClick={handleAppMenuClick}
         tooltip={t('tooltips.appMenu')}
-      />
+        style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          width: '40px',
+          height: '40px',
+          padding: 0
+        }}
+      >
+        <span style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          width: '20px',
+          height: '20px',
+          color: 'var(--ui-sidebar-text)'
+        }}>
+          {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.menu}
+        </span>
+      </Button>
       <div style={{ display: 'flex', gap: '0.5rem' }}>
-    <Button
-      icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"}
-      className="p-button-rounded p-button-text sidebar-action-button"
-      onClick={toggleExpandAll}
-      tooltip={allExpanded ? t('tooltips.collapseAll') : t('tooltips.expandAll')}
-    />
-    <Button icon="pi pi-cog" className="p-button-rounded p-button-text sidebar-action-button" onClick={onConfigClick} tooltip={t('tooltips.settings')} />
+        <Button
+          className="p-button-rounded p-button-text sidebar-action-button glass-button"
+          onClick={toggleExpandAll}
+          tooltip={allExpanded ? t('tooltips.collapseAll') : t('tooltips.expandAll')}
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: '40px',
+            height: '40px',
+            padding: 0
+          }}
+        >
+          <span style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: '20px',
+            height: '20px',
+            color: 'var(--ui-sidebar-text)'
+          }}>
+            {allExpanded 
+              ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseAll
+              : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandAll
+            }
+          </span>
+        </Button>
+        <Button 
+          className="p-button-rounded p-button-text sidebar-action-button glass-button" 
+          onClick={onConfigClick} 
+          tooltip={t('tooltips.settings')}
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: '40px',
+            height: '40px',
+            padding: 0
+          }}
+        >
+          <span style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: '20px',
+            height: '20px',
+            color: 'var(--ui-sidebar-text)'
+          }}>
+            {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.settings}
+          </span>
+        </Button>
       </div>
   </div>
 );

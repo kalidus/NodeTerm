@@ -24,7 +24,8 @@ const SidebarFilesystemExplorer = ({
   explorerFont,
   explorerFontSize,
   uiTheme = 'Light',
-  showToast
+  showToast,
+  sessionActionIconTheme = 'modern'
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
@@ -809,6 +810,7 @@ const SidebarFilesystemExplorer = ({
         toggleExpandAll={handleToggleExpandAllGlobal}
         collapsed={sidebarCollapsed}
         onShowImportDialog={() => {}}
+        sessionActionIconTheme={sessionActionIconTheme}
       />
       <Dialog
         header="Nueva carpeta"

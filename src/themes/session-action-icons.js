@@ -288,6 +288,34 @@ export const sessionActionIconThemes = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
         </svg>
+      ),
+      menu: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      ),
+      expandAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7 13l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+          <path d="M7 6l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+      collapseAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17 11l-5-5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+          <path d="M17 18l-5-5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+      settings: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" fill="none"/>
+          <path d="M12 1v6m0 6v6M23 12h-6m-6 0H1M19.07 4.93l-4.24 4.24m0 2.83l4.24 4.24M4.93 19.07l4.24-4.24m0-2.83L4.93 4.93" 
+                stroke="currentColor" 
+                strokeWidth="1.5" 
+                strokeLinecap="round"/>
+        </svg>
       )
     }
   },
@@ -352,6 +380,35 @@ export const sessionActionIconThemes = {
       expandRight: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+      menu: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      ),
+      expandAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7 13l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+          <path d="M7 6l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+      collapseAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17 11l-5-5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+          <path d="M17 18l-5-5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+      settings: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.1"/>
+          <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" fill="none"/>
+          <path d="M12 1v6m0 6v6M23 12h-6m-6 0H1M19.07 4.93l-4.24 4.24m0 2.83l4.24 4.24M4.93 19.07l4.24-4.24m0-2.83L4.93 4.93" 
+                stroke="currentColor" 
+                strokeWidth="1.5" 
+                strokeLinecap="round"/>
         </svg>
       )
     }
@@ -494,6 +551,87 @@ export const sessionActionIconThemes = {
             </filter>
           </defs>
           <path d="M9 18l6-6-6-6" stroke="url(#neonExpandGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" filter="url(#neonExpandGlow)"/>
+        </svg>
+      ),
+      menu: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="neonMenuGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#00ffff" />
+              <stop offset="100%" stopColor="#0080ff" />
+            </linearGradient>
+            <filter id="neonMenuGlow">
+              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <line x1="3" y1="6" x2="21" y2="6" stroke="url(#neonMenuGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#neonMenuGlow)"/>
+          <line x1="3" y1="12" x2="21" y2="12" stroke="url(#neonMenuGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#neonMenuGlow)"/>
+          <line x1="3" y1="18" x2="21" y2="18" stroke="url(#neonMenuGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#neonMenuGlow)"/>
+        </svg>
+      ),
+      expandAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="neonExpandAllGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#00ffff" />
+              <stop offset="100%" stopColor="#0080ff" />
+            </linearGradient>
+            <filter id="neonExpandAllGlow">
+              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <path d="M7 13l5 5 5-5" stroke="url(#neonExpandAllGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" filter="url(#neonExpandAllGlow)"/>
+          <path d="M7 6l5 5 5-5" stroke="url(#neonExpandAllGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" filter="url(#neonExpandAllGlow)"/>
+        </svg>
+      ),
+      collapseAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="neonCollapseAllGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#00ffff" />
+              <stop offset="100%" stopColor="#0080ff" />
+            </linearGradient>
+            <filter id="neonCollapseAllGlow">
+              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <path d="M17 11l-5-5-5 5" stroke="url(#neonCollapseAllGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" filter="url(#neonCollapseAllGlow)"/>
+          <path d="M17 18l-5-5-5 5" stroke="url(#neonCollapseAllGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" filter="url(#neonCollapseAllGlow)"/>
+        </svg>
+      ),
+      settings: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="neonSettingsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#00ffff" />
+              <stop offset="100%" stopColor="#0080ff" />
+            </linearGradient>
+            <filter id="neonSettingsGlow">
+              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <circle cx="12" cy="12" r="3" stroke="url(#neonSettingsGrad)" strokeWidth="2" fill="none" filter="url(#neonSettingsGlow)"/>
+          <path d="M12 1v6m0 6v6M23 12h-6m-6 0H1M19.07 4.93l-4.24 4.24m0 2.83l4.24 4.24M4.93 19.07l4.24-4.24m0-2.83L4.93 4.93" 
+                stroke="url(#neonSettingsGrad)" 
+                strokeWidth="1.5" 
+                strokeLinecap="round" 
+                filter="url(#neonSettingsGlow)"/>
         </svg>
       )
     }
