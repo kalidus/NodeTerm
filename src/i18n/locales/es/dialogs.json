@@ -66,31 +66,110 @@
   },
   "rdp": {
     "title": {
-      "new": "Nueva conexión RDP",
+      "new": "Nueva Conexión RDP",
       "edit": "Editar conexión RDP"
     },
     "sections": {
       "connection": "Conexión",
       "display": "Pantalla",
-      "resources": "Recursos"
+      "resources": "Recursos",
+      "screen": "Pantalla",
+      "options": "Opciones",
+      "advanced": "Opciones Avanzadas"
     },
     "fields": {
       "name": "Nombre",
-      "host": "Host",
+      "server": "Servidor",
       "port": "Puerto",
       "domain": "Dominio",
       "user": "Usuario",
+      "username": "Usuario",
       "password": "Contraseña",
       "width": "Ancho",
       "height": "Alto",
-      "fullscreen": "Pantalla completa"
+      "fullscreen": "Pantalla completa",
+      "client": "Cliente",
+      "security": "Seguridad",
+      "preset": "Preset",
+      "resolution": "Resolución",
+      "color": "Color",
+      "dpi": "DPI",
+      "sharedFolder": "Carpeta Compartida",
+      "localPath": "Ruta del directorio local"
     },
     "placeholders": {
-      "name": "Servidor Windows",
-      "host": "IP o nombre del servidor",
+      "name": "Nombre descriptivo",
+      "server": "IP o nombre del servidor",
       "port": "3389",
       "domain": "DOMINIO",
-      "user": "Administrador"
+      "user": "Usuario",
+      "username": "Usuario",
+      "password": "Contraseña (opcional)",
+      "dpi": "96",
+      "localPath": "Ej: C:\\Users\\TuUsuario\\Compartido"
+    },
+    "descriptions": {
+      "security": "Nivel de seguridad para la conexión RDP",
+      "sharedFolder": "Esta carpeta estará disponible como una unidad de red dentro de la sesión RDP."
+    },
+    "clientTypes": {
+      "mstsc": "Windows MSTSC",
+      "guacamole": "Apache Guacamole"
+    },
+    "securityOptions": {
+      "any": "Automático",
+      "rdp": "RDP Estándar",
+      "tls": "TLS",
+      "nla": "Network Level Authentication"
+    },
+    "presets": {
+      "default": "Por defecto",
+      "performance": "Rendimiento",
+      "quality": "Calidad"
+    },
+    "resolutions": {
+      "fullscreen": "Pantalla completa",
+      "1920x1080": "1920x1080",
+      "1600x1000": "1600x1000",
+      "1366x768": "1366x768",
+      "1024x768": "1024x768"
+    },
+    "colorDepths": {
+      "32": "32 bits",
+      "24": "24 bits",
+      "16": "16 bits",
+      "15": "15 bits"
+    },
+    "options": {
+      "clipboard": "Portapapeles",
+      "audio": "Audio",
+      "printers": "Impresoras",
+      "folders": "Carpetas",
+      "smartSizing": "Ajuste automático",
+      "fullscreen": "Pantalla completa",
+      "enableDrive": "Carpetas (NodeTerm Drive)",
+      "autoResize": "Ajuste automático",
+      "enableWallpaper": "Mostrar fondo"
+    },
+    "advanced": {
+      "performance": "Rendimiento",
+      "interface": "Interfaz",
+      "cache": "Caché",
+      "enableGfx": "Habilitar GFX",
+      "desktopComposition": "Desktop Composition",
+      "fontSmoothing": "Font Smoothing",
+      "theming": "Theming",
+      "fullWindowDrag": "Full Window Drag",
+      "menuAnimations": "Animaciones de menú",
+      "glyphCaching": "Glyph Caching",
+      "offscreenCaching": "Offscreen Caching",
+      "bitmapCaching": "Bitmap Caching",
+      "copyRect": "Copy-Rect"
+    },
+    "tooltips": {
+      "selectFolder": "Seleccionar carpeta",
+      "showPassword": "Mostrar contraseña",
+      "hidePassword": "Ocultar contraseña"
     }
   },
   "vnc": {
@@ -142,11 +221,18 @@
   },
   "group": {
     "title": {
-      "new": "Nuevo grupo",
+      "new": "Nuevo grupo de pestañas",
       "edit": "Editar grupo"
     },
     "fields": {
-      "name": "Nombre del grupo"
+      "name": "Nombre del grupo",
+      "color": "Color del grupo"
+    },
+    "color": {
+      "custom": "Color personalizado"
+    },
+    "buttons": {
+      "create": "Crear grupo"
     }
   },
   "common": {

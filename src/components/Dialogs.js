@@ -449,15 +449,19 @@ export function GroupDialog({
   onConfirm,
   loading = false
 }) {
+  // Hook de internacionalización
+  const { t } = useTranslation('dialogs');
+  const { t: tCommon } = useTranslation('common');
+  
   return (
-    <Dialog header="Nuevo grupo de pestañas" visible={visible} style={{ width: '370px', borderRadius: 16 }} modal onHide={onHide}>
+    <Dialog header={t('group.title.new')} visible={visible} style={{ width: '370px', borderRadius: 16 }} modal onHide={onHide}>
       <div className="p-fluid" style={{ padding: 8 }}>
         <div className="p-field" style={{ marginBottom: 18 }}>
-          <label htmlFor="groupName">Nombre del grupo</label>
+          <label htmlFor="groupName">{t('group.fields.name')}</label>
           <InputText id="groupName" value={groupName} onChange={e => setGroupName(e.target.value)} autoFocus />
         </div>
         <div className="p-field" style={{ marginBottom: 18 }}>
-          <label>Color del grupo</label>
+          <label>{t('group.fields.color')}</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 8, justifyContent: 'center', alignItems: 'center' }}>
             {colorOptions.map(color => (
               <div
@@ -511,7 +515,7 @@ export function GroupDialog({
                 transition: 'box-shadow 0.2s, border 0.2s',
                 margin: 0
               }}
-              title="Color personalizado"
+              title={t('group.color.custom')}
             >
               <span style={{ fontSize: 16, color: !colorOptions.includes(groupColor) ? '#fff' : '#1976d2', pointerEvents: 'none', userSelect: 'none' }}>🎨</span>
               <input
@@ -538,7 +542,7 @@ export function GroupDialog({
         </div>
         <div className="p-field" style={{ marginTop: 18 }}>
           <Button
-            label="Crear grupo"
+            label={t('group.buttons.create')}
             icon="pi pi-plus"
             onClick={onConfirm}
             disabled={!groupName.trim()}
@@ -2003,6 +2007,10 @@ export function NewRDPConnectionDialog({
   onGoBack,
   onSaveToSidebar
 }) {
+  // Hook de internacionalización
+  const { t } = useTranslation('dialogs');
+  const { t: tCommon } = useTranslation('common');
+  
   const [formData, setFormData] = useState({
     name: '',
     server: '',
@@ -2073,7 +2081,7 @@ export function NewRDPConnectionDialog({
     try {
       const result = await window.electron.dialog.showOpenDialog({
         properties: ['openDirectory'],
-        title: 'Seleccionar carpeta para NodeTerm Drive'
+        title: t('rdp.tooltips.selectFolder')
       });
       
       if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
@@ -2135,7 +2143,7 @@ export function NewRDPConnectionDialog({
 
   return (
     <Dialog
-      header="Nueva Conexión RDP"
+      header={t('rdp.title.new')}
       visible={visible}
       style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
       modal
@@ -2149,58 +2157,58 @@ export function NewRDPConnectionDialog({
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
             {/* --- COLUMNA IZQUIERDA: Conexión --- */}
             <div style={{ flex: '1', minWidth: '320px' }}>
-              <Card title="🔗 Conexión" className="mb-2">
+              <Card title={`🔗 ${t('rdp.sections.connection')}`} className="mb-2">
                 <div className="formgrid grid">
                   <div className="field col-12">
-                    <label htmlFor="name-create-rdp">Nombre *</label>
+                    <label htmlFor="name-create-rdp">{t('rdp.fields.name')} *</label>
                     <InputText
                       id="name-create-rdp"
                       value={formData.name}
                       onChange={handleTextChange('name')}
-                      placeholder="Nombre descriptivo"
+                      placeholder={t('rdp.placeholders.name')}
                       autoComplete="off"
                     />
                   </div>
                   <div className="field col-8">
-                    <label htmlFor="server-create-rdp">Servidor *</label>
+                    <label htmlFor="server-create-rdp">{t('rdp.fields.server')} *</label>
                     <InputText
                       id="server-create-rdp"
                       value={formData.server}
                       onChange={handleTextChange('server')}
-                      placeholder="IP o nombre del servidor"
+                      placeholder={t('rdp.placeholders.server')}
                       autoComplete="off"
                     />
                   </div>
                   <div className="field col-4">
-                    <label htmlFor="port-create-rdp">Puerto</label>
+                    <label htmlFor="port-create-rdp">{t('rdp.fields.port')}</label>
                     <InputText
                       id="port-create-rdp"
                       type="number"
                       value={formData.port}
                       onChange={handleTextChange('port')}
-                      placeholder="3389"
+                      placeholder={t('rdp.placeholders.port')}
                       autoComplete="off"
                     />
                   </div>
                   <div className="field col-12">
-                    <label htmlFor="username-create-rdp">Usuario *</label>
+                    <label htmlFor="username-create-rdp">{t('rdp.fields.username')} *</label>
                     <InputText
                       id="username-create-rdp"
                       value={formData.username}
                       onChange={handleTextChange('username')}
-                      placeholder="Usuario"
+                      placeholder={t('rdp.placeholders.username')}
                       autoComplete="off"
                     />
                   </div>
                   <div className="field col-12">
-                    <label htmlFor="password-create-rdp">Contraseña</label>
+                    <label htmlFor="password-create-rdp">{t('rdp.fields.password')}</label>
                     <div className="p-inputgroup">
                       <InputText
                         id="password-create-rdp"
                         type={showRdpPassword ? "text" : "password"}
                         value={formData.password}
                         onChange={handleTextChange('password')}
-                        placeholder="Contraseña (opcional)"
+                        placeholder={t('rdp.placeholders.password')}
                         autoComplete="off"
                       />
                       <Button
@@ -2208,60 +2216,60 @@ export function NewRDPConnectionDialog({
                         icon={showRdpPassword ? "pi pi-eye-slash" : "pi pi-eye"}
                         className="p-button-outlined"
                         onClick={() => setShowRdpPassword(!showRdpPassword)}
-                        tooltip={showRdpPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        tooltip={showRdpPassword ? t('rdp.tooltips.hidePassword') : t('rdp.tooltips.showPassword')}
                         tooltipOptions={{ position: 'top' }}
                       />
                     </div>
                   </div>
                   <div className="field col-12">
-                    <label htmlFor="clientType-create-rdp">💻 Cliente</label>
+                    <label htmlFor="clientType-create-rdp">💻 {t('rdp.fields.client')}</label>
                     <Dropdown
                       id="clientType-create-rdp"
                       value={formData.clientType}
                       options={[
-                        { label: 'Windows MSTSC', value: 'mstsc' },
-                        { label: 'Apache Guacamole', value: 'guacamole' }
+                        { label: t('rdp.clientTypes.mstsc'), value: 'mstsc' },
+                        { label: t('rdp.clientTypes.guacamole'), value: 'guacamole' }
                       ]}
                       onChange={(e) => handleInputChange('clientType', e.value)}
-                      placeholder="Seleccionar tipo"
+                      placeholder={tCommon('labels.select')}
                     />
                   </div>
                   {formData.clientType === 'guacamole' && (
                     <div className="field col-12">
-                      <label htmlFor="guacSecurity-create-rdp">🔒 Seguridad</label>
+                      <label htmlFor="guacSecurity-create-rdp">🔒 {t('rdp.fields.security')}</label>
                       <Dropdown
                         id="guacSecurity-create-rdp"
                         value={formData.guacSecurity}
                         options={[
-                          { label: '🛡️ Automático', value: 'any' },
-                          { label: '🔐 RDP Estándar', value: 'rdp' },
-                          { label: '🔒 TLS', value: 'tls' },
-                          { label: '🛡️ Network Level Authentication', value: 'nla' }
+                          { label: `🛡️ ${t('rdp.securityOptions.any')}`, value: 'any' },
+                          { label: `🔐 ${t('rdp.securityOptions.rdp')}`, value: 'rdp' },
+                          { label: `🔒 ${t('rdp.securityOptions.tls')}`, value: 'tls' },
+                          { label: `🛡️ ${t('rdp.securityOptions.nla')}`, value: 'nla' }
                         ]}
                         onChange={(e) => handleInputChange('guacSecurity', e.value)}
-                        placeholder="Seleccionar protocolo"
+                        placeholder={tCommon('labels.select')}
                       />
-                      <small>Nivel de seguridad para la conexión RDP</small>
+                      <small>{t('rdp.descriptions.security')}</small>
                     </div>
                   )}
                 </div>
               </Card>
 
               {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
-                <Card title="📁 Carpeta Compartida" className="mt-3">
+                <Card title={`📁 ${t('rdp.fields.sharedFolder')}`} className="mt-3">
                   <div className="field">
-                    <label htmlFor="guacDriveHostDir-create-rdp">Ruta del directorio local</label>
+                    <label htmlFor="guacDriveHostDir-create-rdp">{t('rdp.fields.localPath')}</label>
                     <div className="p-inputgroup">
                       <InputText
                         id="guacDriveHostDir-create-rdp"
                         value={formData.guacDriveHostDir}
                         onChange={handleTextChange('guacDriveHostDir')}
-                        placeholder="Ej: C:\Users\TuUsuario\Compartido"
+                        placeholder={t('rdp.placeholders.localPath')}
                       />
-                      <Button icon="pi pi-folder-open" className="p-button-secondary p-button-outlined" onClick={handleSelectFolder} tooltip="Seleccionar carpeta" />
+                      <Button icon="pi pi-folder-open" className="p-button-secondary p-button-outlined" onClick={handleSelectFolder} tooltip={t('rdp.tooltips.selectFolder')} />
                     </div>
                     <small className="p-d-block mt-2 text-color-secondary">
-                      Esta carpeta estará disponible como una unidad de red dentro de la sesión RDP.
+                      {t('rdp.descriptions.sharedFolder')}
                     </small>
                   </div>
                 </Card>
@@ -2271,28 +2279,28 @@ export function NewRDPConnectionDialog({
             {/* --- COLUMNA DERECHA: Ajustes de Sesión --- */}
             <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {/* Card: Pantalla */}
-              <Card title="🖥️ Pantalla">
+              <Card title={`🖥️ ${t('rdp.sections.screen')}`}>
                 <div className="formgrid grid">
                   <div className="field col-6">
-                    <label htmlFor="preset-create-rdp">Preset</label>
+                    <label htmlFor="preset-create-rdp">{t('rdp.fields.preset')}</label>
                     <Dropdown
                       id="preset-create-rdp"
                       value={formData.preset}
                       options={[
-                        { label: 'Por defecto', value: 'default' },
-                        { label: 'Rendimiento', value: 'performance' },
-                        { label: 'Calidad', value: 'quality' }
+                        { label: t('rdp.presets.default'), value: 'default' },
+                        { label: t('rdp.presets.performance'), value: 'performance' },
+                        { label: t('rdp.presets.quality'), value: 'quality' }
                       ]}
                       onChange={(e) => handleInputChange('preset', e.value)}
                     />
                   </div>
                   <div className="field col-6">
-                    <label htmlFor="resolution-create-rdp">Resolución</label>
+                    <label htmlFor="resolution-create-rdp">{t('rdp.fields.resolution')}</label>
                     <Dropdown
                       id="resolution-create-rdp"
                       value={formData.resolution}
                       options={[
-                        { label: 'Pantalla completa', value: 'fullscreen' },
+                        { label: t('rdp.resolutions.fullscreen'), value: 'fullscreen' },
                         { label: '1920x1080', value: '1920x1080' },
                         { label: '1600x1000', value: '1600x1000' },
                         { label: '1366x768', value: '1366x768' },
@@ -2302,54 +2310,54 @@ export function NewRDPConnectionDialog({
                     />
                   </div>
                   <div className="field col-6">
-                    <label htmlFor="colorDepth-create-rdp">Color</label>
+                    <label htmlFor="colorDepth-create-rdp">{t('rdp.fields.color')}</label>
                     <Dropdown
                       id="colorDepth-create-rdp"
                       value={formData.colorDepth}
                       options={[
-                        { label: '32 bits', value: 32 },
-                        { label: '24 bits', value: 24 },
-                        { label: '16 bits', value: 16 },
-                        { label: '15 bits', value: 15 }
+                        { label: t('rdp.colorDepths.32'), value: 32 },
+                        { label: t('rdp.colorDepths.24'), value: 24 },
+                        { label: t('rdp.colorDepths.16'), value: 16 },
+                        { label: t('rdp.colorDepths.15'), value: 15 }
                       ]}
                       onChange={(e) => handleInputChange('colorDepth', e.value)}
                     />
                   </div>
                   <div className="field col-6">
-                    <label htmlFor="guacDpi-create-rdp">DPI</label>
+                    <label htmlFor="guacDpi-create-rdp">{t('rdp.fields.dpi')}</label>
                     <InputText
                       id="guacDpi-create-rdp"
                       value={formData.guacDpi}
                       onChange={handleTextChange('guacDpi')}
-                      placeholder="96"
+                      placeholder={t('rdp.placeholders.dpi')}
                     />
                   </div>
                 </div>
               </Card>
 
               {/* Card: Opciones */}
-              <Card title="⚙️ Opciones">
+              <Card title={`⚙️ ${t('rdp.sections.options')}`}>
                 <div className="formgrid grid">
                   {/* Opciones para MSTSC */}
                   {formData.clientType === 'mstsc' && (
                     <>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectClipboard-create-rdp" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="mstsc-redirectClipboard-create-rdp">📋 Portapapeles</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectAudio-create-rdp" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="mstsc-redirectAudio-create-rdp">🔊 Audio</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectPrinters-create-rdp" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="mstsc-redirectPrinters-create-rdp">🖨️ Impresoras</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectFolders-create-rdp" checked={formData.redirectFolders} onChange={handleCheckboxChange('redirectFolders')} /><label htmlFor="mstsc-redirectFolders-create-rdp">📁 Carpetas</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-smartSizing-create-rdp" checked={formData.smartSizing} onChange={handleCheckboxChange('smartSizing')} /><label htmlFor="mstsc-smartSizing-create-rdp">📐 Ajuste automático</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-fullscreen-create-rdp" checked={formData.fullscreen} onChange={handleCheckboxChange('fullscreen')} /><label htmlFor="mstsc-fullscreen-create-rdp">🖥️ Pantalla completa</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectClipboard-create-rdp" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="mstsc-redirectClipboard-create-rdp">📋 {t('rdp.options.clipboard')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectAudio-create-rdp" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="mstsc-redirectAudio-create-rdp">🔊 {t('rdp.options.audio')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectPrinters-create-rdp" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="mstsc-redirectPrinters-create-rdp">🖨️ {t('rdp.options.printers')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectFolders-create-rdp" checked={formData.redirectFolders} onChange={handleCheckboxChange('redirectFolders')} /><label htmlFor="mstsc-redirectFolders-create-rdp">📁 {t('rdp.options.folders')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-smartSizing-create-rdp" checked={formData.smartSizing} onChange={handleCheckboxChange('smartSizing')} /><label htmlFor="mstsc-smartSizing-create-rdp">📐 {t('rdp.options.smartSizing')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-fullscreen-create-rdp" checked={formData.fullscreen} onChange={handleCheckboxChange('fullscreen')} /><label htmlFor="mstsc-fullscreen-create-rdp">🖥️ {t('rdp.options.fullscreen')}</label></div>
                     </>
                   )}
                   {/* Opciones para Guacamole */}
                   {formData.clientType === 'guacamole' && (
                     <>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-create-rdp" checked={!!formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} key={`clipboard-create-${formData.redirectClipboard}`} /><label htmlFor="guac-redirectClipboard-create-rdp">📋 Portapapeles</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-create-rdp" checked={!!formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} key={`audio-create-${formData.redirectAudio}`} /><label htmlFor="guac-redirectAudio-create-rdp">🔊 Audio</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-create-rdp" checked={!!formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} key={`drive-create-${formData.guacEnableDrive}`} /><label htmlFor="guac-enableDrive-create-rdp">💾 Carpetas (NodeTerm Drive)</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-create-rdp" checked={!!formData.autoResize} onChange={handleCheckboxChange('autoResize')} key={`resize-create-${formData.autoResize}`} /><label htmlFor="guac-autoResize-create-rdp">📐 Ajuste automático</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-create-rdp" checked={!!formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} key={`wallpaper-create-${formData.guacEnableWallpaper}`} /><label htmlFor="guac-enableWallpaper-create-rdp">🖼️ Mostrar fondo</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-create-rdp" checked={!!formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} key={`printers-create-${formData.redirectPrinters}`} /><label htmlFor="guac-redirectPrinters-create-rdp">🖨️ Impresoras</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-create-rdp" checked={!!formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} key={`clipboard-create-${formData.redirectClipboard}`} /><label htmlFor="guac-redirectClipboard-create-rdp">📋 {t('rdp.options.clipboard')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-create-rdp" checked={!!formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} key={`audio-create-${formData.redirectAudio}`} /><label htmlFor="guac-redirectAudio-create-rdp">🔊 {t('rdp.options.audio')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-create-rdp" checked={!!formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} key={`drive-create-${formData.guacEnableDrive}`} /><label htmlFor="guac-enableDrive-create-rdp">💾 {t('rdp.options.enableDrive')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-create-rdp" checked={!!formData.autoResize} onChange={handleCheckboxChange('autoResize')} key={`resize-create-${formData.autoResize}`} /><label htmlFor="guac-autoResize-create-rdp">📐 {t('rdp.options.autoResize')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-create-rdp" checked={!!formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} key={`wallpaper-create-${formData.guacEnableWallpaper}`} /><label htmlFor="guac-enableWallpaper-create-rdp">🖼️ {t('rdp.options.enableWallpaper')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-create-rdp" checked={!!formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} key={`printers-create-${formData.redirectPrinters}`} /><label htmlFor="guac-redirectPrinters-create-rdp">🖨️ {t('rdp.options.printers')}</label></div>
                     </>
                   )}
                 </div>
@@ -2357,22 +2365,22 @@ export function NewRDPConnectionDialog({
                 {/* Fieldset: Opciones Avanzadas */}
                 {formData.clientType === 'guacamole' && (
                   <div style={{ marginTop: '1rem', paddingTop: '1rem' }}>
-                    <Fieldset legend="⚙️ Opciones Avanzadas" toggleable collapsed className="advanced-fieldset">
+                    <Fieldset legend={`⚙️ ${t('rdp.sections.advanced')}`} toggleable collapsed className="advanced-fieldset">
                       <div className="formgrid grid">
                         <div className="col-4">
-                          <h5>Rendimiento</h5>
+                          <h5>{t('rdp.advanced.performance')}</h5>
                           <div className="field-checkbox"><Checkbox inputId="guac-gfx-create-rdp" checked={!!formData.guacEnableGfx} onChange={handleCheckboxChange('guacEnableGfx')} key={`gfx-create-${formData.guacEnableGfx}`} /><label htmlFor="guac-gfx-create-rdp">🎨 Habilitar GFX</label></div>
                           <div className="field-checkbox"><Checkbox inputId="guac-composition-create-rdp" checked={!!formData.guacEnableDesktopComposition} onChange={handleCheckboxChange('guacEnableDesktopComposition')} key={`composition-create-${formData.guacEnableDesktopComposition}`} /><label htmlFor="guac-composition-create-rdp">🖼️ Desktop Composition</label></div>
                           <div className="field-checkbox"><Checkbox inputId="guac-font-create-rdp" checked={!!formData.guacEnableFontSmoothing} onChange={handleCheckboxChange('guacEnableFontSmoothing')} key={`font-create-${formData.guacEnableFontSmoothing}`} /><label htmlFor="guac-font-create-rdp">✨ Font Smoothing</label></div>
                           <div className="field-checkbox"><Checkbox inputId="guac-theming-create-rdp" checked={!!formData.guacEnableTheming} onChange={handleCheckboxChange('guacEnableTheming')} key={`theming-create-${formData.guacEnableTheming}`} /><label htmlFor="guac-theming-create-rdp">🎭 Theming</label></div>
                         </div>
                         <div className="col-4">
-                          <h5>Interfaz</h5>
-                          <div className="field-checkbox"><Checkbox inputId="guac-drag-create-rdp" checked={!!formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} key={`drag-create-${formData.guacEnableFullWindowDrag}`} /><label htmlFor="guac-drag-create-rdp">🖱️ Full Window Drag</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-menu-create-rdp" checked={!!formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} key={`menu-create-${formData.guacEnableMenuAnimations}`} /><label htmlFor="guac-menu-create-rdp">🎬 Animaciones de menú</label></div>
+                          <h5>{t('rdp.advanced.interface')}</h5>
+                          <div className="field-checkbox"><Checkbox inputId="guac-drag-create-rdp" checked={!!formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} key={`drag-create-${formData.guacEnableFullWindowDrag}`} /><label htmlFor="guac-drag-create-rdp">🖱️ {t('rdp.advanced.fullWindowDrag')}</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-menu-create-rdp" checked={!!formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} key={`menu-create-${formData.guacEnableMenuAnimations}`} /><label htmlFor="guac-menu-create-rdp">🎬 {t('rdp.advanced.menuAnimations')}</label></div>
                         </div>
                         <div className="col-4">
-                          <h5>Caché</h5>
+                          <h5>{t('rdp.advanced.cache')}</h5>
                           <div className="field-checkbox"><Checkbox inputId="guac-glyph-cache-create-rdp" checked={!!(!formData.guacDisableGlyphCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableGlyphCaching', !newValue); }} key={`glyph-create-${!formData.guacDisableGlyphCaching}`} /><label htmlFor="guac-glyph-cache-create-rdp">🔤 Glyph Caching</label></div>
                           <div className="field-checkbox"><Checkbox inputId="guac-offscreen-cache-create-rdp" checked={!!(!formData.guacDisableOffscreenCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableOffscreenCaching', !newValue); }} key={`offscreen-create-${!formData.guacDisableOffscreenCaching}`} /><label htmlFor="guac-offscreen-cache-create-rdp">📱 Offscreen Caching</label></div>
                           <div className="field-checkbox"><Checkbox inputId="guac-bitmap-cache-create-rdp" checked={!!(!formData.guacDisableBitmapCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableBitmapCaching', !newValue); }} key={`bitmap-create-${!formData.guacDisableBitmapCaching}`} /><label htmlFor="guac-bitmap-cache-create-rdp">🖼️ Bitmap Caching</label></div>
@@ -2391,7 +2399,7 @@ export function NewRDPConnectionDialog({
           <div style={{ display: 'flex', gap: 12 }}>
             {onGoBack && (
               <Button
-                label="Volver"
+                label={t('common.back')}
                 icon="pi pi-arrow-left"
                 className="p-button-text"
                 onClick={onGoBack}
@@ -2401,14 +2409,14 @@ export function NewRDPConnectionDialog({
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
             <Button
-              label="Cancelar"
+              label={tCommon('buttons.cancel')}
               icon="pi pi-times"
               className="p-button-text"
               onClick={onHide}
               style={{ fontSize: '13px', padding: '8px 16px' }}
             />
             <Button
-              label="Guardar"
+              label={tCommon('buttons.save')}
               icon="pi pi-check"
               className="p-button-primary"
               onClick={() => {

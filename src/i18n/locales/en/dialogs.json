@@ -72,25 +72,104 @@
     "sections": {
       "connection": "Connection",
       "display": "Display",
-      "resources": "Resources"
+      "resources": "Resources",
+      "screen": "Screen",
+      "options": "Options",
+      "advanced": "Advanced Options"
     },
     "fields": {
       "name": "Name",
-      "host": "Host",
+      "server": "Server",
       "port": "Port",
       "domain": "Domain",
       "user": "User",
+      "username": "Username",
       "password": "Password",
       "width": "Width",
       "height": "Height",
-      "fullscreen": "Fullscreen"
+      "fullscreen": "Fullscreen",
+      "client": "Client",
+      "security": "Security",
+      "preset": "Preset",
+      "resolution": "Resolution",
+      "color": "Color",
+      "dpi": "DPI",
+      "sharedFolder": "Shared Folder",
+      "localPath": "Local directory path"
     },
     "placeholders": {
-      "name": "Windows Server",
-      "host": "IP or server name",
+      "name": "Descriptive name",
+      "server": "IP or server name",
       "port": "3389",
       "domain": "DOMAIN",
-      "user": "Administrator"
+      "user": "User",
+      "username": "Username",
+      "password": "Password (optional)",
+      "dpi": "96",
+      "localPath": "E.g: C:\\Users\\YourUser\\Shared"
+    },
+    "descriptions": {
+      "security": "Security level for the RDP connection",
+      "sharedFolder": "This folder will be available as a network drive within the RDP session."
+    },
+    "clientTypes": {
+      "mstsc": "Windows MSTSC",
+      "guacamole": "Apache Guacamole"
+    },
+    "securityOptions": {
+      "any": "Automatic",
+      "rdp": "Standard RDP",
+      "tls": "TLS",
+      "nla": "Network Level Authentication"
+    },
+    "presets": {
+      "default": "Default",
+      "performance": "Performance",
+      "quality": "Quality"
+    },
+    "resolutions": {
+      "fullscreen": "Fullscreen",
+      "1920x1080": "1920x1080",
+      "1600x1000": "1600x1000",
+      "1366x768": "1366x768",
+      "1024x768": "1024x768"
+    },
+    "colorDepths": {
+      "32": "32 bits",
+      "24": "24 bits",
+      "16": "16 bits",
+      "15": "15 bits"
+    },
+    "options": {
+      "clipboard": "Clipboard",
+      "audio": "Audio",
+      "printers": "Printers",
+      "folders": "Folders",
+      "smartSizing": "Auto sizing",
+      "fullscreen": "Fullscreen",
+      "enableDrive": "Folders (NodeTerm Drive)",
+      "autoResize": "Auto resize",
+      "enableWallpaper": "Show wallpaper"
+    },
+    "advanced": {
+      "performance": "Performance",
+      "interface": "Interface",
+      "cache": "Cache",
+      "enableGfx": "Enable GFX",
+      "desktopComposition": "Desktop Composition",
+      "fontSmoothing": "Font Smoothing",
+      "theming": "Theming",
+      "fullWindowDrag": "Full Window Drag",
+      "menuAnimations": "Menu animations",
+      "glyphCaching": "Glyph Caching",
+      "offscreenCaching": "Offscreen Caching",
+      "bitmapCaching": "Bitmap Caching",
+      "copyRect": "Copy-Rect"
+    },
+    "tooltips": {
+      "selectFolder": "Select folder",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
     }
   },
   "vnc": {
@@ -142,11 +221,18 @@
   },
   "group": {
     "title": {
-      "new": "New Group",
+      "new": "New tab group",
       "edit": "Edit Group"
     },
     "fields": {
-      "name": "Group name"
+      "name": "Group name",
+      "color": "Group color"
+    },
+    "color": {
+      "custom": "Custom color"
+    },
+    "buttons": {
+      "create": "Create group"
     }
   },
   "common": {
