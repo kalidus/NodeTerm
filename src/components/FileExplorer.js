@@ -557,6 +557,59 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
             return;
         }
         
+        // Verificar si el archivo viene del sidebar local (LocalFileExplorerSidebar)
+        const source = event.dataTransfer.getData('x-source');
+        const localFileData = event.dataTransfer.getData('application/x-local-file');
+        
+        if (source === 'local-explorer-sidebar' && localFileData) {
+            // Archivo viene del sidebar local
+            try {
+                const fileInfo = JSON.parse(localFileData);
+                console.log('📥 [FileExplorer] Recibido archivo del sidebar local:', fileInfo);
+                
+                if (!fileInfo.path) {
+                    console.error('No path in local file data');
+                    return;
+                }
+                
+                // Subir el archivo directamente usando la ruta local
+                const fileName = fileInfo.name || fileInfo.path.split(/[/\\]/).pop();
+                const remotePath = currentPath === '/' ? `/${fileName}` : `${currentPath}/${fileName}`;
+                
+                console.log(`Uploading from local sidebar: ${fileInfo.path} -> ${remotePath}`);
+                setTransferProgress({ type: 'upload', current: 0, total: 1 });
+                
+                try {
+                    const uploadResult = await window.electron.fileExplorer.uploadFile(tabId, fileInfo.path, remotePath, config);
+                    if (uploadResult.success) {
+                        toast.current?.show({
+                            severity: 'success',
+                            summary: 'Subida exitosa',
+                            detail: `${fileName} subido correctamente`,
+                            life: 3000
+                        });
+                    } else {
+                        throw new Error(uploadResult.error || 'Error desconocido');
+                    }
+                } catch (err) {
+                    console.error('Error uploading file:', err);
+                    toast.current?.show({
+                        severity: 'error',
+                        summary: 'Error al subir',
+                        detail: `Error subiendo ${fileName}: ${err.message}`,
+                        life: 5000
+                    });
+                }
+                
+                setTransferProgress(null);
+                loadFiles(currentPath);
+                return; // Salir temprano, ya procesamos el archivo
+            } catch (parseError) {
+                console.error('Error parsing local file data:', parseError);
+                // Continuar con el procesamiento normal
+            }
+        }
+        
         // En Electron, usar dataTransfer.files directamente
         // Los archivos arrastrados desde el sistema tienen la propiedad 'path'
         const files = Array.from(event.dataTransfer.files);

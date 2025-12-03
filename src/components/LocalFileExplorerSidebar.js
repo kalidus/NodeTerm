@@ -7,6 +7,12 @@ import { uiThemes } from '../themes/ui-themes';
 import { iconThemes } from '../themes/icon-themes';
 import SidebarFooter from './SidebarFooter';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import { 
+  FaFolder, FaFolderOpen, FaFile, FaFilePdf, FaFileWord, FaFileExcel, 
+  FaImage, FaVideo, FaMusic, FaCode, FaGlobe, FaArchive, FaCog, 
+  FaDatabase, FaFileAlt, FaArrowUp, FaLink, FaPython, FaJs, FaHtml5,
+  FaCss3Alt, FaFileCode
+} from 'react-icons/fa';
 import '../styles/layout/sidebar.css';
 import '../styles/components/tree-themes.css';
 
@@ -272,6 +278,83 @@ const LocalFileExplorerSidebar = ({
     return '#5e81ac';
   }, []);
 
+  // Función para obtener icono según tipo de archivo (igual que FileExplorer)
+  const getFileIcon = useCallback((fileName, fileType) => {
+    if (fileType === 'directory') {
+      return null; // Las carpetas se manejan por separado con el tema
+    }
+    
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    
+    // Documentos
+    if (['pdf'].includes(extension)) {
+      return <FaFilePdf className="file-icon file-pdf-icon" style={{ fontSize: `${iconSize}px`, width: `${iconSize}px`, height: `${iconSize}px` }} />;
+    }
+    if (['doc', 'docx', 'odt', 'txt', 'rtf'].includes(extension)) {
+      return <FaFileWord className="file-icon file-doc-icon" style={{ fontSize: `${iconSize}px`, width: `${iconSize}px`, height: `${iconSize}px` }} />;
+    }
+    if (['xls', 'xlsx', 'ods', 'csv'].includes(extension)) {
+      return <FaFileExcel className="file-icon file-excel-icon" style={{ fontSize: `${iconSize}px`, width: `${iconSize}px`, height: `${iconSize}px` }} />;
+    }
+    
+    // Imágenes
+    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'ico'].includes(extension)) {
+      return <FaImage className="file-icon file-image-icon" style={{ fontSize: `${iconSize}px`, width: `${iconSize}px`, height: `${iconSize}px` }} />;
+    }
+    
+    // Video
+    if (['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm'].includes(extension)) {
+      return <FaVideo className="file-icon file-video-icon" style={{ fontSize: `${iconSize}px`, width: `${iconSize}px`, height: `${iconSize}px` }} />;
+    }
+    
+    // Audio
+    if (['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'].includes(extension)) {
+      return <FaMusic className="file-icon file-audio-icon" style={{ fontSize: `${iconSize}px`, width: `${iconSize}px`, height: `${iconSize}px` }} />;
+    }
+    
+    // Código específico
+    if (['py'].includes(extension)) {
+      return <FaPython className="file-icon file-code-icon" style={{ fontSize: `${iconSize}px`, width: `${iconSize}px`, height: `${iconSize}px` }} />;
+    }
+    if (['js', 'jsx'].includes(extension)) {
+      return <FaJs className="file-icon file-code-icon" style={{ fontSize: `${iconSize}px`, width: `${iconSize}px`, height: `${iconSize}px` }} />;
+    }
+    if (['html', 'htm'].includes(extension)) {
+      return <FaHtml5 className="file-icon file-web-icon" style={{ fontSize: `${iconSize}px`, width: `${iconSize}px`, height: `${iconSize}px` }} />;
+    }
+    if (['css', 'scss', 'sass', 'less'].includes(extension)) {
+      return <FaCss3Alt className="file-icon file-web-icon" style={{ fontSize: `${iconSize}px`, width: `${iconSize}px`, height: `${iconSize}px` }} />;
+    }
+    
+    // Código genérico
+    if (['ts', 'tsx', 'java', 'cpp', 'c', 'cs', 'go', 'rs', 'php', 'rb', 'swift'].includes(extension)) {
+      return <FaCode className="file-icon file-code-icon" style={{ fontSize: `${iconSize}px`, width: `${iconSize}px`, height: `${iconSize}px` }} />;
+    }
+    
+    // Web/Config
+    if (['json', 'yaml', 'yml', 'xml', 'toml', 'ini', 'cfg', 'conf'].includes(extension)) {
+      return <FaFileCode className="file-icon file-config-icon" style={{ fontSize: `${iconSize}px`, width: `${iconSize}px`, height: `${iconSize}px` }} />;
+    }
+    
+    // Comprimidos
+    if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'].includes(extension)) {
+      return <FaArchive className="file-icon file-archive-icon" style={{ fontSize: `${iconSize}px`, width: `${iconSize}px`, height: `${iconSize}px` }} />;
+    }
+    
+    // Ejecutables
+    if (['exe', 'msi', 'deb', 'rpm', 'dmg', 'app', 'sh', 'bat', 'cmd'].includes(extension)) {
+      return <FaCog className="file-icon file-executable-icon" style={{ fontSize: `${iconSize}px`, width: `${iconSize}px`, height: `${iconSize}px` }} />;
+    }
+    
+    // Base de datos
+    if (['sql', 'db', 'sqlite', 'mdb'].includes(extension)) {
+      return <FaDatabase className="file-icon file-database-icon" style={{ fontSize: `${iconSize}px`, width: `${iconSize}px`, height: `${iconSize}px` }} />;
+    }
+    
+    // Genérico
+    return <FaFile className="file-icon file-generic-icon" style={{ fontSize: `${iconSize}px`, width: `${iconSize}px`, height: `${iconSize}px` }} />;
+  }, [iconSize]);
+
   // Node template personalizado con iconos del tema
   const nodeTemplate = useCallback((node, options) => {
     const isDirectory = node.data?.type === 'directory';
@@ -314,29 +397,45 @@ const LocalFileExplorerSidebar = ({
             />;
       }
     } else {
-      // Icono para archivos
-      const fileIcon = iconThemes[iconTheme]?.icons?.file;
-      if (fileIcon) {
-        icon = React.cloneElement(fileIcon, {
-          style: {
-            ...fileIcon.props.style,
-            fontSize: `${iconSize}px`,
-            width: `${iconSize}px`,
-            height: `${iconSize}px`
-          }
-        });
-      } else {
-        icon = <span 
-          className="pi pi-file" 
-          style={{ 
-            fontSize: `${iconSize}px`
-          }} 
-        />;
-      }
+      // Icono para archivos - usar función getFileIcon que reconoce tipos
+      icon = getFileIcon(node.label, node.data?.type);
     }
 
+    // Handler para drag start
+    const handleDragStart = (e) => {
+      if (isDirectory) {
+        e.preventDefault(); // No permitir arrastrar carpetas por ahora
+        return;
+      }
+      
+      const filePath = node.data?.path;
+      if (!filePath) {
+        e.preventDefault();
+        return;
+      }
+      
+      // Guardar la ruta del archivo en dataTransfer
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('text/plain', filePath);
+      e.dataTransfer.setData('application/x-local-file', JSON.stringify({
+        path: filePath,
+        name: node.label,
+        type: node.data?.type || 'file'
+      }));
+      
+      // Establecer un identificador para que FileExplorer sepa que viene del sidebar local
+      e.dataTransfer.setData('x-source', 'local-explorer-sidebar');
+      
+      console.log('📤 [LocalFileExplorerSidebar] Iniciando drag:', filePath);
+    };
+    
     return (
-      <div className="flex align-items-center gap-1" style={{ width: '100%' }}>
+      <div 
+        className="flex align-items-center gap-1" 
+        style={{ width: '100%', cursor: isDirectory ? 'default' : 'grab' }}
+        draggable={!isDirectory}
+        onDragStart={handleDragStart}
+      >
         <span style={{ 
           display: 'flex', 
           alignItems: 'center', 
@@ -350,7 +449,7 @@ const LocalFileExplorerSidebar = ({
         </span>
       </div>
     );
-  }, [expandedKeys, iconTheme, iconSize, folderIconSize, getThemeDefaultColor]);
+  }, [expandedKeys, iconTheme, iconSize, folderIconSize, getThemeDefaultColor, getFileIcon]);
 
   const panelBorder = colors?.contentBorder || 'rgba(255,255,255,0.08)';
   const textPrimary = colors?.sidebarText || '#e5ecff';
