@@ -1888,8 +1888,7 @@ const Sidebar = React.memo(({
             }}>
               {/* Botón de colapsar */}
               <Button 
-                icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
-                className="p-button-rounded p-button-text sidebar-action-button" 
+                className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                 onClick={() => setSidebarCollapsed(v => !v)} 
                 tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')} 
                 tooltipOptions={{ position: 'right' }} 
@@ -1899,20 +1898,33 @@ const Sidebar = React.memo(({
                   height: 40, 
                   minWidth: 40, 
                   minHeight: 40, 
-                  fontSize: 18,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
                   justifyContent: 'center',
                   visibility: 'visible !important',
-                  opacity: '1 !important'
+                  opacity: '1 !important',
+                  padding: 0
                 }} 
-              />
+              >
+                <span style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: 'var(--ui-sidebar-text)'
+                }}>
+                  {sidebarCollapsed 
+                    ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
+                    : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft
+                  }
+                </span>
+              </Button>
               
               {/* Botón de conexiones */}
               <Button 
-                icon="pi pi-sitemap" 
-                className="p-button-rounded p-button-text sidebar-action-button" 
+                className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                 onClick={() => {
                   setViewMode('connections');
                   setSidebarCollapsed(false);
@@ -1925,21 +1937,30 @@ const Sidebar = React.memo(({
                   height: 40, 
                   minWidth: 40, 
                   minHeight: 40, 
-                  fontSize: 18,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
                   justifyContent: 'center',
                   visibility: 'visible !important',
                   opacity: '1 !important',
-                  color: '#2196f3'
+                  padding: 0
                 }} 
-              />
+              >
+                <span style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: '#2196f3'
+                }}>
+                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
+                </span>
+              </Button>
               
               {/* Botón de passwords */}
               <Button 
-                icon="pi pi-key" 
-                className="p-button-rounded p-button-text sidebar-action-button" 
+                className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                 onClick={() => {
                   setViewMode('passwords');
                   setSidebarCollapsed(false);
@@ -1952,21 +1973,30 @@ const Sidebar = React.memo(({
                   height: 40, 
                   minWidth: 40, 
                   minHeight: 40, 
-                  fontSize: 18,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
                   justifyContent: 'center',
                   visibility: 'visible !important',
                   opacity: '1 !important',
-                  color: '#ffc107'
+                  padding: 0
                 }} 
-              />
+              >
+                <span style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: '#ffc107'
+                }}>
+                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
+                </span>
+              </Button>
               
               {/* Botón de nuevo grupo */}
               <Button 
-                icon="pi pi-th-large" 
-                className="p-button-rounded p-button-text sidebar-action-button" 
+                className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                 onClick={() => setShowCreateGroupDialog(true)} 
                 tooltip={t('tooltips.createGroup')} 
                 tooltipOptions={{ position: 'right' }} 
@@ -1976,15 +2006,26 @@ const Sidebar = React.memo(({
                   height: 40, 
                   minWidth: 40, 
                   minHeight: 40, 
-                  fontSize: 18,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
                   justifyContent: 'center',
                   visibility: 'visible !important',
-                  opacity: '1 !important'
+                  opacity: '1 !important',
+                  padding: 0
                 }} 
-              />
+              >
+                <span style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: 'var(--ui-sidebar-text)'
+                }}>
+                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
+                </span>
+              </Button>
               
             {/* Separador para clientes de IA */}
             {(aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui) && (
@@ -2107,8 +2148,7 @@ const Sidebar = React.memo(({
                   }}
                 />
                 <Button
-                  icon="pi pi-folder-open"
-                  className="p-button-rounded p-button-text sidebar-action-button"
+                  className="p-button-rounded p-button-text sidebar-action-button glass-button"
                   onClick={() => {
                     setViewMode('filesystem');
                     setSidebarCollapsed(false);
@@ -2121,16 +2161,26 @@ const Sidebar = React.memo(({
                     height: 40,
                     minWidth: 40,
                     minHeight: 40,
-                    fontSize: 18,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
                     justifyContent: 'center',
                     visibility: 'visible !important',
                     opacity: '1 !important',
-                    color: viewMode === 'filesystem' ? '#8bc34a' : '#cfd8dc'
+                    padding: 0
                   }}
-                />
+                >
+                  <span style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    width: '20px',
+                    height: '20px',
+                    color: viewMode === 'filesystem' ? '#8bc34a' : '#cfd8dc'
+                  }}>
+                    {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
+                  </span>
+                </Button>
               </>
             )}
 
@@ -2177,8 +2227,7 @@ const Sidebar = React.memo(({
             zIndex: 1000
           }}>
             <Button
-              icon="pi pi-cog"
-              className="p-button-rounded p-button-text sidebar-action-button"
+              className="p-button-rounded p-button-text sidebar-action-button glass-button"
               onClick={() => setShowSettingsDialog(true)}
               tooltip={t('tooltips.settings')}
               tooltipOptions={{ position: 'right' }}
@@ -2188,18 +2237,28 @@ const Sidebar = React.memo(({
                 height: 40, 
                 minWidth: 40, 
                 minHeight: 40, 
-                fontSize: 18,
                 border: 'none',
                 display: 'flex !important',
                 alignItems: 'center',
                 justifyContent: 'center',
                 visibility: 'visible !important',
-                opacity: '1 !important'
+                opacity: '1 !important',
+                padding: 0
               }} 
-            />
+            >
+              <span style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                width: '20px',
+                height: '20px',
+                color: 'var(--ui-sidebar-text)'
+              }}>
+                {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.settings}
+              </span>
+            </Button>
             <Button
-              icon="pi pi-bars"
-              className="p-button-rounded p-button-text sidebar-action-button"
+              className="p-button-rounded p-button-text sidebar-action-button glass-button"
               onClick={(e) => {
                 handleAppMenuClick(e);
               }}
@@ -2211,15 +2270,26 @@ const Sidebar = React.memo(({
                 height: 40, 
                 minWidth: 40, 
                 minHeight: 40, 
-                fontSize: 18,
                 border: 'none',
                 display: 'flex !important',
                 alignItems: 'center',
                 justifyContent: 'center',
                 visibility: 'visible !important',
-                opacity: '1 !important'
+                opacity: '1 !important',
+                padding: 0
               }} 
-            />
+            >
+              <span style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                width: '20px',
+                height: '20px',
+                color: 'var(--ui-sidebar-text)'
+              }}>
+                {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.menu}
+              </span>
+            </Button>
           </div>
         </div>
       ) : (
