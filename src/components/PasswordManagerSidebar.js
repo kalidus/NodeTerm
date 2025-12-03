@@ -34,7 +34,8 @@ const PasswordManagerSidebar = ({
   setShowSettingsDialog,
   onShowImportDialog,
   sidebarFilter = '', // Filtro desde la TitleBar
-  treeTheme = 'default' // Tema del árbol
+  treeTheme = 'default', // Tema del árbol
+  sessionActionIconTheme = 'modern'
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('dialogs');
@@ -1286,6 +1287,7 @@ const PasswordManagerSidebar = ({
         toggleExpandAll={toggleExpandAll}
         collapsed={false}
         onShowImportDialog={onShowImportDialog}
+        sessionActionIconTheme={sessionActionIconTheme}
       />
 
       {/* Dialog para crear/editar password */}

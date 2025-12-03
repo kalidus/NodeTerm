@@ -2467,6 +2467,7 @@ const Sidebar = React.memo(({
                 toggleExpandAll={toggleExpandAll}
                 collapsed={sidebarCollapsed}
                 onShowImportDialog={setShowImportDialog}
+                sessionActionIconTheme={sessionActionIconTheme}
               />
             </>
           ) : viewMode === 'filesystem' ? (
@@ -2479,6 +2480,7 @@ const Sidebar = React.memo(({
               explorerFontSize={explorerFontSize}
               uiTheme={uiTheme}
               showToast={showToast}
+              sessionActionIconTheme={sessionActionIconTheme}
             />
           ) : (
             // Vista de passwords
@@ -2501,6 +2503,7 @@ const Sidebar = React.memo(({
               secureStorage={secureStorage}
               setShowSettingsDialog={setShowSettingsDialog}
               onShowImportDialog={setShowImportDialog}
+              sessionActionIconTheme={sessionActionIconTheme}
               sidebarFilter={sidebarFilter}
               treeTheme={treeTheme}
             />
