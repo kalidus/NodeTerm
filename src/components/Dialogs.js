@@ -573,6 +573,9 @@ export function EditSSHConnectionDialog({
   onSSHConfirm,
   sshLoading = false
 }) {
+  // Hook de internacionalización
+  const { t } = useTranslation('dialogs');
+  
   // Precargar datos cuando se abre el diálogo
   useEffect(() => {
     if (editNodeData && visible) {
@@ -593,7 +596,7 @@ export function EditSSHConnectionDialog({
       <div className="protocol-dialog-header-icon" style={{ background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', boxShadow: '0 2px 8px rgba(255, 152, 0, 0.3)' }}>
         <i className="pi pi-terminal"></i>
       </div>
-      <span className="protocol-dialog-header-title">Editar Conexión SSH</span>
+      <span className="protocol-dialog-header-title">{t('ssh.title.edit')}</span>
     </div>
   );
 
@@ -644,6 +647,10 @@ export function EditRDPConnectionDialog({
   editNodeData,
   onSaveToSidebar
 }) {
+  // Hook de internacionalización
+  const { t } = useTranslation('dialogs');
+  const { t: tCommon } = useTranslation('common');
+  
   const [formData, setFormData] = useState({
     name: '',
     server: '',
@@ -797,7 +804,7 @@ export function EditRDPConnectionDialog({
     try {
       const result = await window.electron.dialog.showOpenDialog({
         properties: ['openDirectory'],
-        title: 'Seleccionar carpeta para NodeTerm Drive'
+        title: t('rdp.tooltips.selectFolder')
       });
       
       if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
@@ -814,7 +821,7 @@ export function EditRDPConnectionDialog({
 
   return (
     <Dialog
-      header="Editar Conexión RDP"
+      header={t('rdp.title.edit')}
       visible={visible}
       onHide={onHide}
       style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
@@ -828,58 +835,58 @@ export function EditRDPConnectionDialog({
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
             {/* --- COLUMNA IZQUIERDA: Conexión --- */}
             <div style={{ flex: '1', minWidth: '320px' }}>
-              <Card title="🔗 Conexión" className="mb-2">
+              <Card title={`🔗 ${t('rdp.sections.connection')}`} className="mb-2">
                 <div className="formgrid grid">
                   <div className="field col-12">
-                    <label htmlFor="name-edit-rdp">Nombre *</label>
+                    <label htmlFor="name-edit-rdp">{t('rdp.fields.name')} *</label>
                     <InputText
                       id="name-edit-rdp"
                       value={formData.name}
                       onChange={handleTextChange('name')}
-                      placeholder="Nombre descriptivo"
+                      placeholder={t('rdp.placeholders.name')}
                       autoComplete="off"
                     />
                   </div>
                   <div className="field col-8">
-                    <label htmlFor="server-edit-rdp">Servidor *</label>
+                    <label htmlFor="server-edit-rdp">{t('rdp.fields.server')} *</label>
                     <InputText
                       id="server-edit-rdp"
                       value={formData.server}
                       onChange={handleTextChange('server')}
-                      placeholder="IP o nombre del servidor"
+                      placeholder={t('rdp.placeholders.server')}
                       autoComplete="off"
                     />
                   </div>
                   <div className="field col-4">
-                    <label htmlFor="port-edit-rdp">Puerto</label>
+                    <label htmlFor="port-edit-rdp">{t('rdp.fields.port')}</label>
                     <InputText
                       id="port-edit-rdp"
                       type="number"
                       value={formData.port}
                       onChange={handleTextChange('port')}
-                      placeholder="3389"
+                      placeholder={t('rdp.placeholders.port')}
                       autoComplete="off"
                     />
                   </div>
                   <div className="field col-12">
-                    <label htmlFor="username-edit-rdp">Usuario *</label>
+                    <label htmlFor="username-edit-rdp">{t('rdp.fields.username')} *</label>
                     <InputText
                       id="username-edit-rdp"
                       value={formData.username}
                       onChange={handleTextChange('username')}
-                      placeholder="Usuario"
+                      placeholder={t('rdp.placeholders.username')}
                       autoComplete="off"
                     />
                   </div>
                   <div className="field col-12">
-                    <label htmlFor="password-edit-rdp">Contraseña</label>
+                    <label htmlFor="password-edit-rdp">{t('rdp.fields.password')}</label>
                     <div className="p-inputgroup">
                       <InputText
                         id="password-edit-rdp"
                         type={showRdpPassword ? "text" : "password"}
                         value={formData.password}
                         onChange={handleTextChange('password')}
-                        placeholder="Contraseña (opcional)"
+                        placeholder={t('rdp.placeholders.password')}
                         autoComplete="off"
                       />
                       <Button
@@ -887,60 +894,60 @@ export function EditRDPConnectionDialog({
                         icon={showRdpPassword ? "pi pi-eye-slash" : "pi pi-eye"}
                         className="p-button-outlined"
                         onClick={() => setShowRdpPassword(!showRdpPassword)}
-                        tooltip={showRdpPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        tooltip={showRdpPassword ? t('rdp.tooltips.hidePassword') : t('rdp.tooltips.showPassword')}
                         tooltipOptions={{ position: 'top' }}
                       />
                     </div>
                   </div>
                   <div className="field col-12">
-                    <label htmlFor="clientType-edit-rdp">💻 Cliente</label>
+                    <label htmlFor="clientType-edit-rdp">💻 {t('rdp.fields.client')}</label>
                     <Dropdown
                       id="clientType-edit-rdp"
                       value={formData.clientType}
                       options={[
-                        { label: 'Windows MSTSC', value: 'mstsc' },
-                        { label: 'Apache Guacamole', value: 'guacamole' }
+                        { label: t('rdp.clientTypes.mstsc'), value: 'mstsc' },
+                        { label: t('rdp.clientTypes.guacamole'), value: 'guacamole' }
                       ]}
                       onChange={(e) => handleInputChange('clientType', e.value)}
-                      placeholder="Seleccionar tipo"
+                      placeholder={tCommon('labels.select')}
                     />
                   </div>
                   {formData.clientType === 'guacamole' && (
                     <div className="field col-12">
-                      <label htmlFor="guacSecurity-edit-rdp">🔒 Seguridad</label>
+                      <label htmlFor="guacSecurity-edit-rdp">🔒 {t('rdp.fields.security')}</label>
                       <Dropdown
                         id="guacSecurity-edit-rdp"
                         value={formData.guacSecurity}
                         options={[
-                          { label: '🛡️ Automático', value: 'any' },
-                          { label: '🔐 RDP Estándar', value: 'rdp' },
-                          { label: '🔒 TLS', value: 'tls' },
-                          { label: '🛡️ Network Level Authentication', value: 'nla' }
+                          { label: `🛡️ ${t('rdp.securityOptions.any')}`, value: 'any' },
+                          { label: `🔐 ${t('rdp.securityOptions.rdp')}`, value: 'rdp' },
+                          { label: `🔒 ${t('rdp.securityOptions.tls')}`, value: 'tls' },
+                          { label: `🛡️ ${t('rdp.securityOptions.nla')}`, value: 'nla' }
                         ]}
                         onChange={(e) => handleInputChange('guacSecurity', e.value)}
-                        placeholder="Seleccionar protocolo"
+                        placeholder={tCommon('labels.select')}
                       />
-                      <small>Nivel de seguridad para la conexión RDP</small>
+                      <small>{t('rdp.descriptions.security')}</small>
                     </div>
                   )}
                 </div>
               </Card>
 
               {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
-                <Card title="📁 Carpeta Compartida" className="mt-3">
+                <Card title={`📁 ${t('rdp.fields.sharedFolder')}`} className="mt-3">
                   <div className="field">
-                    <label htmlFor="guacDriveHostDir-edit-rdp">Ruta del directorio local</label>
+                    <label htmlFor="guacDriveHostDir-edit-rdp">{t('rdp.fields.localPath')}</label>
                     <div className="p-inputgroup">
                       <InputText
                         id="guacDriveHostDir-edit-rdp"
                         value={formData.guacDriveHostDir}
                         onChange={handleTextChange('guacDriveHostDir')}
-                        placeholder="Ej: C:\Users\TuUsuario\Compartido"
+                        placeholder={t('rdp.placeholders.localPath')}
                       />
-                      <Button icon="pi pi-folder-open" className="p-button-secondary p-button-outlined" onClick={handleSelectFolder} tooltip="Seleccionar carpeta" />
+                      <Button icon="pi pi-folder-open" className="p-button-secondary p-button-outlined" onClick={handleSelectFolder} tooltip={t('rdp.tooltips.selectFolder')} />
                     </div>
                     <small className="p-d-block mt-2 text-color-secondary">
-                      Esta carpeta estará disponible como una unidad de red dentro de la sesión RDP.
+                      {t('rdp.descriptions.sharedFolder')}
                     </small>
                   </div>
                 </Card>
@@ -950,28 +957,28 @@ export function EditRDPConnectionDialog({
             {/* --- COLUMNA DERECHA: Ajustes de Sesión --- */}
             <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {/* Card: Pantalla */}
-              <Card title="🖥️ Pantalla">
+              <Card title={`🖥️ ${t('rdp.sections.screen')}`}>
                 <div className="formgrid grid">
                   <div className="field col-6">
-                    <label htmlFor="preset-edit-rdp">Preset</label>
+                    <label htmlFor="preset-edit-rdp">{t('rdp.fields.preset')}</label>
                     <Dropdown
                       id="preset-edit-rdp"
                       value={formData.preset}
                       options={[
-                        { label: 'Por defecto', value: 'default' },
-                        { label: 'Rendimiento', value: 'performance' },
-                        { label: 'Calidad', value: 'quality' }
+                        { label: t('rdp.presets.default'), value: 'default' },
+                        { label: t('rdp.presets.performance'), value: 'performance' },
+                        { label: t('rdp.presets.quality'), value: 'quality' }
                       ]}
                       onChange={(e) => handleInputChange('preset', e.value)}
                     />
                   </div>
                   <div className="field col-6">
-                    <label htmlFor="resolution-edit-rdp">Resolución</label>
+                    <label htmlFor="resolution-edit-rdp">{t('rdp.fields.resolution')}</label>
                     <Dropdown
                       id="resolution-edit-rdp"
                       value={formData.resolution}
                       options={[
-                        { label: 'Pantalla completa', value: 'fullscreen' },
+                        { label: t('rdp.resolutions.fullscreen'), value: 'fullscreen' },
                         { label: '1920x1080', value: '1920x1080' },
                         { label: '1600x1000', value: '1600x1000' },
                         { label: '1366x768', value: '1366x768' },
@@ -981,54 +988,54 @@ export function EditRDPConnectionDialog({
                     />
                   </div>
                   <div className="field col-6">
-                    <label htmlFor="colorDepth-edit-rdp">Color</label>
+                    <label htmlFor="colorDepth-edit-rdp">{t('rdp.fields.color')}</label>
                     <Dropdown
                       id="colorDepth-edit-rdp"
                       value={formData.colorDepth}
                       options={[
-                        { label: '32 bits', value: 32 },
-                        { label: '24 bits', value: 24 },
-                        { label: '16 bits', value: 16 },
-                        { label: '15 bits', value: 15 }
+                        { label: t('rdp.colorDepths.32'), value: 32 },
+                        { label: t('rdp.colorDepths.24'), value: 24 },
+                        { label: t('rdp.colorDepths.16'), value: 16 },
+                        { label: t('rdp.colorDepths.15'), value: 15 }
                       ]}
                       onChange={(e) => handleInputChange('colorDepth', e.value)}
                     />
                   </div>
                   <div className="field col-6">
-                    <label htmlFor="guacDpi-edit-rdp">DPI</label>
+                    <label htmlFor="guacDpi-edit-rdp">{t('rdp.fields.dpi')}</label>
                     <InputText
                       id="guacDpi-edit-rdp"
                       value={formData.guacDpi}
                       onChange={handleTextChange('guacDpi')}
-                      placeholder="96"
+                      placeholder={t('rdp.placeholders.dpi')}
                     />
                   </div>
                 </div>
               </Card>
 
               {/* Card: Opciones */}
-              <Card title="⚙️ Opciones">
+              <Card title={`⚙️ ${t('rdp.sections.options')}`}>
                 <div className="formgrid grid">
                   {/* Opciones para MSTSC */}
                   {formData.clientType === 'mstsc' && (
                     <>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectClipboard-edit-rdp" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="mstsc-redirectClipboard-edit-rdp">📋 Portapapeles</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectAudio-edit-rdp" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="mstsc-redirectAudio-edit-rdp">🔊 Audio</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectPrinters-edit-rdp" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="mstsc-redirectPrinters-edit-rdp">🖨️ Impresoras</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectFolders-edit-rdp" checked={formData.redirectFolders} onChange={handleCheckboxChange('redirectFolders')} /><label htmlFor="mstsc-redirectFolders-edit-rdp">📁 Carpetas</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-smartSizing-edit-rdp" checked={formData.smartSizing} onChange={handleCheckboxChange('smartSizing')} /><label htmlFor="mstsc-smartSizing-edit-rdp">📐 Ajuste automático</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-fullscreen-edit-rdp" checked={formData.fullscreen} onChange={handleCheckboxChange('fullscreen')} /><label htmlFor="mstsc-fullscreen-edit-rdp">🖥️ Pantalla completa</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectClipboard-edit-rdp" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="mstsc-redirectClipboard-edit-rdp">📋 {t('rdp.options.clipboard')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectAudio-edit-rdp" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="mstsc-redirectAudio-edit-rdp">🔊 {t('rdp.options.audio')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectPrinters-edit-rdp" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="mstsc-redirectPrinters-edit-rdp">🖨️ {t('rdp.options.printers')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectFolders-edit-rdp" checked={formData.redirectFolders} onChange={handleCheckboxChange('redirectFolders')} /><label htmlFor="mstsc-redirectFolders-edit-rdp">📁 {t('rdp.options.folders')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-smartSizing-edit-rdp" checked={formData.smartSizing} onChange={handleCheckboxChange('smartSizing')} /><label htmlFor="mstsc-smartSizing-edit-rdp">📐 {t('rdp.options.smartSizing')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-fullscreen-edit-rdp" checked={formData.fullscreen} onChange={handleCheckboxChange('fullscreen')} /><label htmlFor="mstsc-fullscreen-edit-rdp">🖥️ {t('rdp.options.fullscreen')}</label></div>
                     </>
                   )}
                   {/* Opciones para Guacamole */}
                   {formData.clientType === 'guacamole' && (
                     <>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-edit-rdp" checked={!!formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} key={`clipboard-${formData.redirectClipboard}`} /><label htmlFor="guac-redirectClipboard-edit-rdp">📋 Portapapeles</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-edit-rdp" checked={!!formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} key={`audio-${formData.redirectAudio}`} /><label htmlFor="guac-redirectAudio-edit-rdp">🔊 Audio</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-edit-rdp" checked={!!formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} key={`drive-${formData.guacEnableDrive}`} /><label htmlFor="guac-enableDrive-edit-rdp">💾 Carpetas (NodeTerm Drive)</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-edit-rdp" checked={!!formData.autoResize} onChange={handleCheckboxChange('autoResize')} key={`resize-${formData.autoResize}`} /><label htmlFor="guac-autoResize-edit-rdp">📐 Ajuste automático</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-edit-rdp" checked={!!formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} key={`wallpaper-${formData.guacEnableWallpaper}`} /><label htmlFor="guac-enableWallpaper-edit-rdp">🖼️ Mostrar fondo</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-edit-rdp" checked={!!formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} key={`printers-${formData.redirectPrinters}`} /><label htmlFor="guac-redirectPrinters-edit-rdp">🖨️ Impresoras</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-edit-rdp" checked={!!formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} key={`clipboard-${formData.redirectClipboard}`} /><label htmlFor="guac-redirectClipboard-edit-rdp">📋 {t('rdp.options.clipboard')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-edit-rdp" checked={!!formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} key={`audio-${formData.redirectAudio}`} /><label htmlFor="guac-redirectAudio-edit-rdp">🔊 {t('rdp.options.audio')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-edit-rdp" checked={!!formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} key={`drive-${formData.guacEnableDrive}`} /><label htmlFor="guac-enableDrive-edit-rdp">💾 {t('rdp.options.enableDrive')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-edit-rdp" checked={!!formData.autoResize} onChange={handleCheckboxChange('autoResize')} key={`resize-${formData.autoResize}`} /><label htmlFor="guac-autoResize-edit-rdp">📐 {t('rdp.options.autoResize')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-edit-rdp" checked={!!formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} key={`wallpaper-${formData.guacEnableWallpaper}`} /><label htmlFor="guac-enableWallpaper-edit-rdp">🖼️ {t('rdp.options.enableWallpaper')}</label></div>
+                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-edit-rdp" checked={!!formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} key={`printers-${formData.redirectPrinters}`} /><label htmlFor="guac-redirectPrinters-edit-rdp">🖨️ {t('rdp.options.printers')}</label></div>
                     </>
                   )}
                 </div>
@@ -1036,26 +1043,26 @@ export function EditRDPConnectionDialog({
                 {/* Fieldset: Opciones Avanzadas */}
                 {formData.clientType === 'guacamole' && (
                   <div style={{ marginTop: '1rem', paddingTop: '1rem' }}>
-                    <Fieldset legend="⚙️ Opciones Avanzadas" toggleable collapsed className="advanced-fieldset">
+                    <Fieldset legend={`⚙️ ${t('rdp.sections.advanced')}`} toggleable collapsed className="advanced-fieldset">
                       <div className="formgrid grid">
                         <div className="col-4">
-                          <h5>Rendimiento</h5>
-                          <div className="field-checkbox"><Checkbox inputId="guac-gfx-edit-rdp" checked={!!formData.guacEnableGfx} onChange={handleCheckboxChange('guacEnableGfx')} key={`gfx-${formData.guacEnableGfx}`} /><label htmlFor="guac-gfx-edit-rdp">🎨 Habilitar GFX</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-composition-edit-rdp" checked={!!formData.guacEnableDesktopComposition} onChange={handleCheckboxChange('guacEnableDesktopComposition')} key={`composition-${formData.guacEnableDesktopComposition}`} /><label htmlFor="guac-composition-edit-rdp">🖼️ Desktop Composition</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-font-edit-rdp" checked={!!formData.guacEnableFontSmoothing} onChange={handleCheckboxChange('guacEnableFontSmoothing')} key={`font-${formData.guacEnableFontSmoothing}`} /><label htmlFor="guac-font-edit-rdp">✨ Font Smoothing</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-theming-edit-rdp" checked={!!formData.guacEnableTheming} onChange={handleCheckboxChange('guacEnableTheming')} key={`theming-${formData.guacEnableTheming}`} /><label htmlFor="guac-theming-edit-rdp">🎭 Theming</label></div>
+                          <h5>{t('rdp.advanced.performance')}</h5>
+                          <div className="field-checkbox"><Checkbox inputId="guac-gfx-edit-rdp" checked={!!formData.guacEnableGfx} onChange={handleCheckboxChange('guacEnableGfx')} key={`gfx-${formData.guacEnableGfx}`} /><label htmlFor="guac-gfx-edit-rdp">🎨 {t('rdp.advanced.enableGfx')}</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-composition-edit-rdp" checked={!!formData.guacEnableDesktopComposition} onChange={handleCheckboxChange('guacEnableDesktopComposition')} key={`composition-${formData.guacEnableDesktopComposition}`} /><label htmlFor="guac-composition-edit-rdp">🖼️ {t('rdp.advanced.desktopComposition')}</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-font-edit-rdp" checked={!!formData.guacEnableFontSmoothing} onChange={handleCheckboxChange('guacEnableFontSmoothing')} key={`font-${formData.guacEnableFontSmoothing}`} /><label htmlFor="guac-font-edit-rdp">✨ {t('rdp.advanced.fontSmoothing')}</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-theming-edit-rdp" checked={!!formData.guacEnableTheming} onChange={handleCheckboxChange('guacEnableTheming')} key={`theming-${formData.guacEnableTheming}`} /><label htmlFor="guac-theming-edit-rdp">🎭 {t('rdp.advanced.theming')}</label></div>
                         </div>
                         <div className="col-4">
-                          <h5>Interfaz</h5>
-                          <div className="field-checkbox"><Checkbox inputId="guac-drag-edit-rdp" checked={!!formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} key={`drag-${formData.guacEnableFullWindowDrag}`} /><label htmlFor="guac-drag-edit-rdp">🖱️ Full Window Drag</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-menu-edit-rdp" checked={!!formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} key={`menu-${formData.guacEnableMenuAnimations}`} /><label htmlFor="guac-menu-edit-rdp">🎬 Animaciones de menú</label></div>
+                          <h5>{t('rdp.advanced.interface')}</h5>
+                          <div className="field-checkbox"><Checkbox inputId="guac-drag-edit-rdp" checked={!!formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} key={`drag-${formData.guacEnableFullWindowDrag}`} /><label htmlFor="guac-drag-edit-rdp">🖱️ {t('rdp.advanced.fullWindowDrag')}</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-menu-edit-rdp" checked={!!formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} key={`menu-${formData.guacEnableMenuAnimations}`} /><label htmlFor="guac-menu-edit-rdp">🎬 {t('rdp.advanced.menuAnimations')}</label></div>
                         </div>
                         <div className="col-4">
-                          <h5>Caché</h5>
-                          <div className="field-checkbox"><Checkbox inputId="guac-glyph-cache-edit-rdp" checked={!!(!formData.guacDisableGlyphCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableGlyphCaching', !newValue); }} key={`glyph-${!formData.guacDisableGlyphCaching}`} /><label htmlFor="guac-glyph-cache-edit-rdp">🔤 Glyph Caching</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-offscreen-cache-edit-rdp" checked={!!(!formData.guacDisableOffscreenCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableOffscreenCaching', !newValue); }} key={`offscreen-${!formData.guacDisableOffscreenCaching}`} /><label htmlFor="guac-offscreen-cache-edit-rdp">📱 Offscreen Caching</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-bitmap-cache-edit-rdp" checked={!!(!formData.guacDisableBitmapCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableBitmapCaching', !newValue); }} key={`bitmap-${!formData.guacDisableBitmapCaching}`} /><label htmlFor="guac-bitmap-cache-edit-rdp">🖼️ Bitmap Caching</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-copy-rect-edit-rdp" checked={!!(!formData.guacDisableCopyRect)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableCopyRect', !newValue); }} key={`copyrect-${!formData.guacDisableCopyRect}`} /><label htmlFor="guac-copy-rect-edit-rdp">📋 Copy-Rect</label></div>
+                          <h5>{t('rdp.advanced.cache')}</h5>
+                          <div className="field-checkbox"><Checkbox inputId="guac-glyph-cache-edit-rdp" checked={!!(!formData.guacDisableGlyphCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableGlyphCaching', !newValue); }} key={`glyph-${!formData.guacDisableGlyphCaching}`} /><label htmlFor="guac-glyph-cache-edit-rdp">🔤 {t('rdp.advanced.glyphCaching')}</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-offscreen-cache-edit-rdp" checked={!!(!formData.guacDisableOffscreenCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableOffscreenCaching', !newValue); }} key={`offscreen-${!formData.guacDisableOffscreenCaching}`} /><label htmlFor="guac-offscreen-cache-edit-rdp">📱 {t('rdp.advanced.offscreenCaching')}</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-bitmap-cache-edit-rdp" checked={!!(!formData.guacDisableBitmapCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableBitmapCaching', !newValue); }} key={`bitmap-${!formData.guacDisableBitmapCaching}`} /><label htmlFor="guac-bitmap-cache-edit-rdp">🖼️ {t('rdp.advanced.bitmapCaching')}</label></div>
+                          <div className="field-checkbox"><Checkbox inputId="guac-copy-rect-edit-rdp" checked={!!(!formData.guacDisableCopyRect)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableCopyRect', !newValue); }} key={`copyrect-${!formData.guacDisableCopyRect}`} /><label htmlFor="guac-copy-rect-edit-rdp">📋 {t('rdp.advanced.copyRect')}</label></div>
                         </div>
                       </div>
                     </Fieldset>
@@ -1068,14 +1075,14 @@ export function EditRDPConnectionDialog({
         {/* Botones */}
         <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', paddingTop: '12px' }}>
           <Button
-            label="Cancelar"
+            label={tCommon('buttons.cancel')}
             icon="pi pi-times"
             className="p-button-text"
             onClick={onHide}
             style={{ fontSize: '13px', padding: '8px 16px' }}
           />
           <Button
-            label="Guardar Cambios"
+            label={tCommon('buttons.save')}
             icon="pi pi-check"
             className="p-button-primary"
             onClick={() => {
@@ -1121,6 +1128,10 @@ export function FileConnectionDialog({
   onFileConnectionConfirm = null,
   fileConnectionLoading = false
 }) {
+  // Hook de internacionalización
+  const { t } = useTranslation('dialogs');
+  const { t: tCommon } = useTranslation('common');
+  
   // Estados locales para el formulario
   const [localName, setLocalName] = useState('');
   const [localHost, setLocalHost] = useState('');
@@ -1210,7 +1221,7 @@ export function FileConnectionDialog({
 
   return (
     <Dialog
-      header={isEditMode ? "Editar Conexión de Archivos" : "Nueva Conexión de Archivos"}
+      header={isEditMode ? t('fileConnection.title.edit') : t('fileConnection.title.new')}
       visible={visible}
       style={{ width: '500px', borderRadius: '16px' }}
       modal
@@ -1219,59 +1230,59 @@ export function FileConnectionDialog({
     >
       <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
         <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
-          <Card title="🔗 Conexión de Archivos" className="mb-2">
+          <Card title={`🔗 ${t('fileConnection.sections.connection')}`} className="mb-2">
             <div className="formgrid grid">
               <div className="field col-12">
-                <label htmlFor="file-name">Nombre de la conexión *</label>
+                <label htmlFor="file-name">{t('fileConnection.fields.name')} *</label>
                 <InputText
                   id="file-name"
                   value={localName}
                   onChange={(e) => setLocalName(e.target.value)}
-                  placeholder="Mi servidor SFTP"
+                  placeholder={t('fileConnection.placeholders.name')}
                   style={{ width: '100%' }}
                 />
               </div>
 
               <div className="field col-12 md:col-6">
-                <label htmlFor="file-protocol">Protocolo *</label>
+                <label htmlFor="file-protocol">{t('fileConnection.fields.protocol')} *</label>
                 <Dropdown
                   id="file-protocol"
                   value={localProtocol}
                   options={[
-                    { label: 'SFTP', value: 'sftp' },
-                    { label: 'FTP', value: 'ftp' },
-                    { label: 'SCP', value: 'scp' }
+                    { label: t('fileConnection.protocols.sftp'), value: 'sftp' },
+                    { label: t('fileConnection.protocols.ftp'), value: 'ftp' },
+                    { label: t('fileConnection.protocols.scp'), value: 'scp' }
                   ]}
                   onChange={(e) => handleProtocolChange(e.value)}
-                  placeholder="Seleccionar protocolo"
+                  placeholder={tCommon('labels.select')}
                   style={{ width: '100%' }}
                 />
               </div>
 
               <div className="field col-12 md:col-6">
-                <label htmlFor="file-host">Host *</label>
+                <label htmlFor="file-host">{t('fileConnection.fields.host')} *</label>
                 <InputText
                   id="file-host"
                   value={localHost}
                   onChange={(e) => setLocalHost(e.target.value)}
-                  placeholder="192.168.1.100"
+                  placeholder={t('fileConnection.placeholders.host')}
                   style={{ width: '100%' }}
                 />
               </div>
 
               <div className="field col-12 md:col-6">
-                <label htmlFor="file-user">Usuario *</label>
+                <label htmlFor="file-user">{t('fileConnection.fields.user')} *</label>
                 <InputText
                   id="file-user"
                   value={localUser}
                   onChange={(e) => setLocalUser(e.target.value)}
-                  placeholder="usuario"
+                  placeholder={t('fileConnection.placeholders.user')}
                   style={{ width: '100%' }}
                 />
               </div>
 
               <div className="field col-12 md:col-6">
-                <label htmlFor="file-port">Puerto</label>
+                <label htmlFor="file-port">{t('fileConnection.fields.port')}</label>
                 <InputText
                   id="file-port"
                   type="number"
@@ -1283,35 +1294,35 @@ export function FileConnectionDialog({
               </div>
 
               <div className="field col-12">
-                <label htmlFor="file-password">Contraseña</label>
+                <label htmlFor="file-password">{t('fileConnection.fields.password')}</label>
                 <InputText
                   id="file-password"
                   type="password"
                   value={localPassword}
                   onChange={(e) => setLocalPassword(e.target.value)}
-                  placeholder="Contraseña"
+                  placeholder={t('fileConnection.placeholders.password')}
                   style={{ width: '100%' }}
                 />
               </div>
 
               <div className="field col-12">
-                <label htmlFor="file-remote-folder">Carpeta remota (opcional)</label>
+                <label htmlFor="file-remote-folder">{t('fileConnection.fields.remoteFolder')} ({tCommon('labels.optional')})</label>
                 <InputText
                   id="file-remote-folder"
                   value={localRemoteFolder}
                   onChange={(e) => setLocalRemoteFolder(e.target.value)}
-                  placeholder="/home/usuario"
+                  placeholder={t('fileConnection.placeholders.remoteFolder')}
                   style={{ width: '100%' }}
                 />
               </div>
 
               <div className="field col-12">
-                <label htmlFor="file-target-folder">Carpeta local destino (opcional)</label>
+                <label htmlFor="file-target-folder">{t('fileConnection.fields.targetFolder')} ({tCommon('labels.optional')})</label>
                 <InputText
                   id="file-target-folder"
                   value={localTargetFolder}
                   onChange={(e) => setLocalTargetFolder(e.target.value)}
-                  placeholder="C:\\Downloads"
+                  placeholder={t('fileConnection.placeholders.targetFolder')}
                   style={{ width: '100%' }}
                 />
               </div>
@@ -1323,7 +1334,7 @@ export function FileConnectionDialog({
           <div style={{ display: 'flex', gap: 12 }}>
             {onGoBack && (
               <Button
-                label="Volver"
+                label={t('common.back')}
                 icon="pi pi-arrow-left"
                 className="p-button-text"
                 onClick={onGoBack}
@@ -1333,14 +1344,14 @@ export function FileConnectionDialog({
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
             <Button
-              label="Cancelar"
+              label={tCommon('buttons.cancel')}
               icon="pi pi-times"
               className="p-button-text"
               onClick={onHide}
               style={{ fontSize: '13px', padding: '8px 16px' }}
             />
             <Button
-              label={isEditMode ? "Guardar Cambios" : "Crear Conexión"}
+              label={isEditMode ? t('fileConnection.buttons.saveChanges') : t('fileConnection.buttons.create')}
               icon="pi pi-check"
               className="p-button-primary"
               onClick={handleConfirm}
@@ -2445,6 +2456,10 @@ export function NewVNCConnectionDialog({
   onGoBack,
   onSaveToSidebar
 }) {
+  // Hook de internacionalización
+  const { t } = useTranslation('dialogs');
+  const { t: tCommon } = useTranslation('common');
+  
   const [formData, setFormData] = useState({
     name: '',
     server: '',
@@ -2504,7 +2519,7 @@ export function NewVNCConnectionDialog({
 
   return (
     <Dialog
-      header="Nueva Conexión VNC"
+      header={t('vnc.title.new')}
       visible={visible}
       style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
       modal
@@ -2518,48 +2533,48 @@ export function NewVNCConnectionDialog({
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
             {/* --- COLUMNA IZQUIERDA: Conexión --- */}
             <div style={{ flex: '1', minWidth: '320px' }}>
-              <Card title="🔗 Conexión" className="mb-2">
+              <Card title={`🔗 ${t('vnc.sections.connection')}`} className="mb-2">
                 <div className="formgrid grid">
                   <div className="field col-12">
-                    <label htmlFor="name-create-vnc">Nombre *</label>
+                    <label htmlFor="name-create-vnc">{t('vnc.fields.name')} *</label>
                     <InputText
                       id="name-create-vnc"
                       value={formData.name}
                       onChange={handleTextChange('name')}
-                      placeholder="Nombre descriptivo"
+                      placeholder={t('vnc.placeholders.name')}
                       autoComplete="off"
                     />
                   </div>
                   <div className="field col-8">
-                    <label htmlFor="server-create-vnc">Servidor *</label>
+                    <label htmlFor="server-create-vnc">{t('vnc.fields.server')} *</label>
                     <InputText
                       id="server-create-vnc"
                       value={formData.server}
                       onChange={handleTextChange('server')}
-                      placeholder="IP o nombre del servidor"
+                      placeholder={t('vnc.placeholders.server')}
                       autoComplete="off"
                     />
                   </div>
                   <div className="field col-4">
-                    <label htmlFor="port-create-vnc">Puerto</label>
+                    <label htmlFor="port-create-vnc">{t('vnc.fields.port')}</label>
                     <InputText
                       id="port-create-vnc"
                       type="number"
                       value={formData.port}
                       onChange={handleTextChange('port')}
-                      placeholder="5900"
+                      placeholder={t('vnc.placeholders.port')}
                       autoComplete="off"
                     />
                   </div>
                   <div className="field col-12">
-                    <label htmlFor="password-create-vnc">Contraseña VNC</label>
+                    <label htmlFor="password-create-vnc">{t('vnc.fields.password')}</label>
                     <div className="p-inputgroup">
                       <InputText
                         id="password-create-vnc"
                         type={showVncPassword ? "text" : "password"}
                         value={formData.password}
                         onChange={handleTextChange('password')}
-                        placeholder="Contraseña VNC (opcional)"
+                        placeholder={t('vnc.placeholders.password')}
                         autoComplete="off"
                       />
                       <Button
@@ -2567,12 +2582,12 @@ export function NewVNCConnectionDialog({
                         icon={showVncPassword ? "pi pi-eye-slash" : "pi pi-eye"}
                         className="p-button-outlined"
                         onClick={() => setShowVncPassword(!showVncPassword)}
-                        tooltip={showVncPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        tooltip={showVncPassword ? t('vnc.tooltips.hidePassword') : t('vnc.tooltips.showPassword')}
                         tooltipOptions={{ position: 'top' }}
                       />
                     </div>
                     <small className="p-d-block mt-2 text-color-secondary">
-                      Contraseña del servidor VNC (si está configurada)
+                      {t('vnc.descriptions.password')}
                     </small>
                   </div>
                 </div>
@@ -2582,15 +2597,15 @@ export function NewVNCConnectionDialog({
             {/* --- COLUMNA DERECHA: Ajustes de Sesión --- */}
             <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {/* Card: Pantalla */}
-              <Card title="🖥️ Pantalla">
+              <Card title={`🖥️ ${t('vnc.sections.screen')}`}>
                 <div className="formgrid grid">
                   <div className="field col-6">
-                    <label htmlFor="resolution-create-vnc">Resolución</label>
+                    <label htmlFor="resolution-create-vnc">{t('vnc.fields.resolution')}</label>
                     <Dropdown
                       id="resolution-create-vnc"
                       value={formData.resolution}
                       options={[
-                        { label: 'Pantalla completa', value: 'fullscreen' },
+                        { label: t('rdp.resolutions.fullscreen'), value: 'fullscreen' },
                         { label: '1920x1080', value: '1920x1080' },
                         { label: '1600x1000', value: '1600x1000' },
                         { label: '1366x768', value: '1366x768' },
@@ -2600,39 +2615,39 @@ export function NewVNCConnectionDialog({
                     />
                   </div>
                   <div className="field col-6">
-                    <label htmlFor="colorDepth-create-vnc">Profundidad de Color</label>
+                    <label htmlFor="colorDepth-create-vnc">{t('vnc.fields.colorDepth')}</label>
                     <Dropdown
                       id="colorDepth-create-vnc"
                       value={formData.colorDepth}
                       options={[
-                        { label: '32 bits', value: 32 },
-                        { label: '24 bits', value: 24 },
-                        { label: '16 bits', value: 16 },
-                        { label: '8 bits', value: 8 }
+                        { label: t('vnc.colorDepths.32'), value: 32 },
+                        { label: t('vnc.colorDepths.24'), value: 24 },
+                        { label: t('vnc.colorDepths.16'), value: 16 },
+                        { label: t('vnc.colorDepths.8'), value: 8 }
                       ]}
                       onChange={(e) => handleInputChange('colorDepth', e.value)}
                     />
                   </div>
                   <div className="field col-6">
-                    <label htmlFor="guacDpi-create-vnc">DPI</label>
+                    <label htmlFor="guacDpi-create-vnc">{t('vnc.fields.dpi')}</label>
                     <InputText
                       id="guacDpi-create-vnc"
                       type="number"
                       value={formData.guacDpi}
                       onChange={handleTextChange('guacDpi')}
-                      placeholder="96"
+                      placeholder={t('vnc.placeholders.dpi')}
                     />
                   </div>
                   <div className="field col-6">
-                    <label htmlFor="imageQuality-create-vnc">Calidad de Imagen</label>
+                    <label htmlFor="imageQuality-create-vnc">{t('vnc.fields.imageQuality')}</label>
                     <Dropdown
                       id="imageQuality-create-vnc"
                       value={formData.imageQuality}
                       options={[
-                        { label: 'Sin pérdida', value: 'lossless' },
-                        { label: 'Pérdida baja', value: 'lossy-low' },
-                        { label: 'Pérdida media', value: 'lossy-medium' },
-                        { label: 'Pérdida alta', value: 'lossy-high' }
+                        { label: t('vnc.imageQualities.lossless'), value: 'lossless' },
+                        { label: t('vnc.imageQualities.lossyLow'), value: 'lossy-low' },
+                        { label: t('vnc.imageQualities.lossyMedium'), value: 'lossy-medium' },
+                        { label: t('vnc.imageQualities.lossyHigh'), value: 'lossy-high' }
                       ]}
                       onChange={(e) => handleInputChange('imageQuality', e.value)}
                     />
@@ -2641,7 +2656,7 @@ export function NewVNCConnectionDialog({
               </Card>
 
               {/* Card: Opciones */}
-              <Card title="⚙️ Opciones">
+              <Card title={`⚙️ ${t('vnc.sections.options')}`}>
                 <div className="formgrid grid">
                   <div className="field-checkbox col-6">
                     <Checkbox 
@@ -2649,7 +2664,7 @@ export function NewVNCConnectionDialog({
                       checked={formData.readOnly} 
                       onChange={handleCheckboxChange('readOnly')} 
                     />
-                    <label htmlFor="readOnly-create-vnc">👁️ Solo lectura</label>
+                    <label htmlFor="readOnly-create-vnc">👁️ {t('vnc.options.readOnly')}</label>
                   </div>
                   <div className="field-checkbox col-6">
                     <Checkbox 
@@ -2657,7 +2672,7 @@ export function NewVNCConnectionDialog({
                       checked={formData.enableCompression} 
                       onChange={handleCheckboxChange('enableCompression')} 
                     />
-                    <label htmlFor="enableCompression-create-vnc">🗜️ Compresión</label>
+                    <label htmlFor="enableCompression-create-vnc">🗜️ {t('vnc.options.compression')}</label>
                   </div>
                   <div className="field-checkbox col-6">
                     <Checkbox 
@@ -2665,7 +2680,7 @@ export function NewVNCConnectionDialog({
                       checked={formData.autoReconnect} 
                       onChange={handleCheckboxChange('autoReconnect')} 
                     />
-                    <label htmlFor="autoReconnect-create-vnc">🔄 Reconexión automática</label>
+                    <label htmlFor="autoReconnect-create-vnc">🔄 {t('vnc.options.autoReconnect')}</label>
                   </div>
                   <div className="field-checkbox col-6">
                     <Checkbox 
@@ -2673,7 +2688,7 @@ export function NewVNCConnectionDialog({
                       checked={formData.autoResize} 
                       onChange={handleCheckboxChange('autoResize')} 
                     />
-                    <label htmlFor="autoResize-create-vnc">📐 Ajuste automático</label>
+                    <label htmlFor="autoResize-create-vnc">📐 {t('vnc.options.autoResize')}</label>
                   </div>
                   <div className="field-checkbox col-6">
                     <Checkbox 
@@ -2681,7 +2696,7 @@ export function NewVNCConnectionDialog({
                       checked={formData.redirectClipboard} 
                       onChange={handleCheckboxChange('redirectClipboard')} 
                     />
-                    <label htmlFor="redirectClipboard-create-vnc">📋 Portapapeles</label>
+                    <label htmlFor="redirectClipboard-create-vnc">📋 {t('vnc.options.clipboard')}</label>
                   </div>
                 </div>
               </Card>
@@ -2693,7 +2708,7 @@ export function NewVNCConnectionDialog({
           <div style={{ display: 'flex', gap: 12 }}>
             {onGoBack && (
               <Button
-                label="Volver"
+                label={t('common.back')}
                 icon="pi pi-arrow-left"
                 className="p-button-text"
                 onClick={onGoBack}
@@ -2703,14 +2718,14 @@ export function NewVNCConnectionDialog({
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
             <Button
-              label="Cancelar"
+              label={tCommon('buttons.cancel')}
               icon="pi pi-times"
               className="p-button-text"
               onClick={onHide}
               style={{ fontSize: '13px', padding: '8px 16px' }}
             />
             <Button
-              label="Guardar"
+              label={tCommon('buttons.save')}
               icon="pi pi-check"
               className="p-button-primary"
               onClick={() => {
@@ -2740,6 +2755,10 @@ export function EditVNCConnectionDialog({
   editNodeData,
   onSaveToSidebar
 }) {
+  // Hook de internacionalización
+  const { t } = useTranslation('dialogs');
+  const { t: tCommon } = useTranslation('common');
+  
   const [formData, setFormData] = useState({
     name: '',
     server: '',
@@ -2821,7 +2840,7 @@ export function EditVNCConnectionDialog({
 
   return (
     <Dialog
-      header="Editar Conexión VNC"
+      header={t('vnc.title.edit')}
       visible={visible}
       style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
       modal
@@ -2835,48 +2854,48 @@ export function EditVNCConnectionDialog({
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
             {/* --- COLUMNA IZQUIERDA: Conexión --- */}
             <div style={{ flex: '1', minWidth: '320px' }}>
-              <Card title="🔗 Conexión" className="mb-2">
+              <Card title={`🔗 ${t('vnc.sections.connection')}`} className="mb-2">
                 <div className="formgrid grid">
                   <div className="field col-12">
-                    <label htmlFor="name-edit-vnc">Nombre *</label>
+                    <label htmlFor="name-edit-vnc">{t('vnc.fields.name')} *</label>
                     <InputText
                       id="name-edit-vnc"
                       value={formData.name}
                       onChange={handleTextChange('name')}
-                      placeholder="Nombre descriptivo"
+                      placeholder={t('vnc.placeholders.name')}
                       autoComplete="off"
                     />
                   </div>
                   <div className="field col-8">
-                    <label htmlFor="server-edit-vnc">Servidor *</label>
+                    <label htmlFor="server-edit-vnc">{t('vnc.fields.server')} *</label>
                     <InputText
                       id="server-edit-vnc"
                       value={formData.server}
                       onChange={handleTextChange('server')}
-                      placeholder="IP o nombre del servidor"
+                      placeholder={t('vnc.placeholders.server')}
                       autoComplete="off"
                     />
                   </div>
                   <div className="field col-4">
-                    <label htmlFor="port-edit-vnc">Puerto</label>
+                    <label htmlFor="port-edit-vnc">{t('vnc.fields.port')}</label>
                     <InputText
                       id="port-edit-vnc"
                       type="number"
                       value={formData.port}
                       onChange={handleTextChange('port')}
-                      placeholder="5900"
+                      placeholder={t('vnc.placeholders.port')}
                       autoComplete="off"
                     />
                   </div>
                   <div className="field col-12">
-                    <label htmlFor="password-edit-vnc">Contraseña VNC</label>
+                    <label htmlFor="password-edit-vnc">{t('vnc.fields.password')}</label>
                     <div className="p-inputgroup">
                       <InputText
                         id="password-edit-vnc"
                         type={showVncPassword ? "text" : "password"}
                         value={formData.password}
                         onChange={handleTextChange('password')}
-                        placeholder="Contraseña VNC (opcional)"
+                        placeholder={t('vnc.placeholders.password')}
                         autoComplete="off"
                       />
                       <Button
@@ -2884,12 +2903,12 @@ export function EditVNCConnectionDialog({
                         icon={showVncPassword ? "pi pi-eye-slash" : "pi pi-eye"}
                         className="p-button-outlined"
                         onClick={() => setShowVncPassword(!showVncPassword)}
-                        tooltip={showVncPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        tooltip={showVncPassword ? t('vnc.tooltips.hidePassword') : t('vnc.tooltips.showPassword')}
                         tooltipOptions={{ position: 'top' }}
                       />
                     </div>
                     <small className="p-d-block mt-2 text-color-secondary">
-                      Contraseña del servidor VNC (si está configurada)
+                      {t('vnc.descriptions.password')}
                     </small>
                   </div>
                 </div>
@@ -2899,15 +2918,15 @@ export function EditVNCConnectionDialog({
             {/* --- COLUMNA DERECHA: Ajustes de Sesión --- */}
             <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {/* Card: Pantalla */}
-              <Card title="🖥️ Pantalla">
+              <Card title={`🖥️ ${t('vnc.sections.screen')}`}>
                 <div className="formgrid grid">
                   <div className="field col-6">
-                    <label htmlFor="resolution-edit-vnc">Resolución</label>
+                    <label htmlFor="resolution-edit-vnc">{t('vnc.fields.resolution')}</label>
                     <Dropdown
                       id="resolution-edit-vnc"
                       value={formData.resolution}
                       options={[
-                        { label: 'Pantalla completa', value: 'fullscreen' },
+                        { label: t('rdp.resolutions.fullscreen'), value: 'fullscreen' },
                         { label: '1920x1080', value: '1920x1080' },
                         { label: '1600x1000', value: '1600x1000' },
                         { label: '1366x768', value: '1366x768' },
@@ -2917,39 +2936,39 @@ export function EditVNCConnectionDialog({
                     />
                   </div>
                   <div className="field col-6">
-                    <label htmlFor="colorDepth-edit-vnc">Profundidad de Color</label>
+                    <label htmlFor="colorDepth-edit-vnc">{t('vnc.fields.colorDepth')}</label>
                     <Dropdown
                       id="colorDepth-edit-vnc"
                       value={formData.colorDepth}
                       options={[
-                        { label: '32 bits', value: 32 },
-                        { label: '24 bits', value: 24 },
-                        { label: '16 bits', value: 16 },
-                        { label: '8 bits', value: 8 }
+                        { label: t('vnc.colorDepths.32'), value: 32 },
+                        { label: t('vnc.colorDepths.24'), value: 24 },
+                        { label: t('vnc.colorDepths.16'), value: 16 },
+                        { label: t('vnc.colorDepths.8'), value: 8 }
                       ]}
                       onChange={(e) => handleInputChange('colorDepth', e.value)}
                     />
                   </div>
                   <div className="field col-6">
-                    <label htmlFor="guacDpi-edit-vnc">DPI</label>
+                    <label htmlFor="guacDpi-edit-vnc">{t('vnc.fields.dpi')}</label>
                     <InputText
                       id="guacDpi-edit-vnc"
                       type="number"
                       value={formData.guacDpi}
                       onChange={handleTextChange('guacDpi')}
-                      placeholder="96"
+                      placeholder={t('vnc.placeholders.dpi')}
                     />
                   </div>
                   <div className="field col-6">
-                    <label htmlFor="imageQuality-edit-vnc">Calidad de Imagen</label>
+                    <label htmlFor="imageQuality-edit-vnc">{t('vnc.fields.imageQuality')}</label>
                     <Dropdown
                       id="imageQuality-edit-vnc"
                       value={formData.imageQuality}
                       options={[
-                        { label: 'Sin pérdida', value: 'lossless' },
-                        { label: 'Pérdida baja', value: 'lossy-low' },
-                        { label: 'Pérdida media', value: 'lossy-medium' },
-                        { label: 'Pérdida alta', value: 'lossy-high' }
+                        { label: t('vnc.imageQualities.lossless'), value: 'lossless' },
+                        { label: t('vnc.imageQualities.lossyLow'), value: 'lossy-low' },
+                        { label: t('vnc.imageQualities.lossyMedium'), value: 'lossy-medium' },
+                        { label: t('vnc.imageQualities.lossyHigh'), value: 'lossy-high' }
                       ]}
                       onChange={(e) => handleInputChange('imageQuality', e.value)}
                     />
@@ -2958,7 +2977,7 @@ export function EditVNCConnectionDialog({
               </Card>
 
               {/* Card: Opciones */}
-              <Card title="⚙️ Opciones">
+              <Card title={`⚙️ ${t('vnc.sections.options')}`}>
                 <div className="formgrid grid">
                   <div className="field-checkbox col-6">
                     <Checkbox 
@@ -2966,7 +2985,7 @@ export function EditVNCConnectionDialog({
                       checked={formData.readOnly} 
                       onChange={handleCheckboxChange('readOnly')} 
                     />
-                    <label htmlFor="readOnly-edit-vnc">👁️ Solo lectura</label>
+                    <label htmlFor="readOnly-edit-vnc">👁️ {t('vnc.options.readOnly')}</label>
                   </div>
                   <div className="field-checkbox col-6">
                     <Checkbox 
@@ -2974,7 +2993,7 @@ export function EditVNCConnectionDialog({
                       checked={formData.enableCompression} 
                       onChange={handleCheckboxChange('enableCompression')} 
                     />
-                    <label htmlFor="enableCompression-edit-vnc">🗜️ Compresión</label>
+                    <label htmlFor="enableCompression-edit-vnc">🗜️ {t('vnc.options.compression')}</label>
                   </div>
                   <div className="field-checkbox col-6">
                     <Checkbox 
@@ -2982,7 +3001,7 @@ export function EditVNCConnectionDialog({
                       checked={formData.autoReconnect} 
                       onChange={handleCheckboxChange('autoReconnect')} 
                     />
-                    <label htmlFor="autoReconnect-edit-vnc">🔄 Reconexión automática</label>
+                    <label htmlFor="autoReconnect-edit-vnc">🔄 {t('vnc.options.autoReconnect')}</label>
                   </div>
                   <div className="field-checkbox col-6">
                     <Checkbox 
@@ -2990,7 +3009,7 @@ export function EditVNCConnectionDialog({
                       checked={formData.autoResize} 
                       onChange={handleCheckboxChange('autoResize')} 
                     />
-                    <label htmlFor="autoResize-edit-vnc">📐 Ajuste automático</label>
+                    <label htmlFor="autoResize-edit-vnc">📐 {t('vnc.options.autoResize')}</label>
                   </div>
                   <div className="field-checkbox col-6">
                     <Checkbox 
@@ -2998,7 +3017,7 @@ export function EditVNCConnectionDialog({
                       checked={formData.redirectClipboard} 
                       onChange={handleCheckboxChange('redirectClipboard')} 
                     />
-                    <label htmlFor="redirectClipboard-edit-vnc">📋 Portapapeles</label>
+                    <label htmlFor="redirectClipboard-edit-vnc">📋 {t('vnc.options.clipboard')}</label>
                   </div>
                 </div>
               </Card>
@@ -3009,14 +3028,14 @@ export function EditVNCConnectionDialog({
         <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', paddingTop: '12px' }}>
           <div style={{ display: 'flex', gap: 12 }}>
             <Button
-              label="Cancelar"
+              label={tCommon('buttons.cancel')}
               icon="pi pi-times"
               className="p-button-text"
               onClick={onHide}
               style={{ fontSize: '13px', padding: '8px 16px' }}
             />
             <Button
-              label="Guardar"
+              label={tCommon('buttons.save')}
               icon="pi pi-check"
               className="p-button-primary"
               onClick={() => {

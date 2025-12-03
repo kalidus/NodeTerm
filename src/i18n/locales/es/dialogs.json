@@ -174,19 +174,92 @@
   },
   "vnc": {
     "title": {
-      "new": "Nueva conexión VNC",
+      "new": "Nueva Conexión VNC",
       "edit": "Editar conexión VNC"
+    },
+    "sections": {
+      "connection": "Conexión",
+      "screen": "Pantalla",
+      "options": "Opciones"
     },
     "fields": {
       "name": "Nombre",
-      "host": "Host",
+      "server": "Servidor",
       "port": "Puerto",
-      "password": "Contraseña"
+      "password": "Contraseña VNC",
+      "resolution": "Resolución",
+      "colorDepth": "Profundidad de Color",
+      "imageQuality": "Calidad de Imagen",
+      "dpi": "DPI"
     },
     "placeholders": {
-      "name": "Servidor VNC",
-      "host": "IP o nombre del servidor",
-      "port": "5900"
+      "name": "Nombre descriptivo",
+      "server": "IP o nombre del servidor",
+      "port": "5900",
+      "password": "Contraseña VNC (opcional)",
+      "dpi": "96"
+    },
+    "descriptions": {
+      "password": "Contraseña del servidor VNC (si está configurada)"
+    },
+    "colorDepths": {
+      "32": "32 bits",
+      "24": "24 bits",
+      "16": "16 bits",
+      "8": "8 bits"
+    },
+    "imageQualities": {
+      "lossless": "Sin pérdida",
+      "lossyLow": "Pérdida baja",
+      "lossyMedium": "Pérdida media",
+      "lossyHigh": "Pérdida alta"
+    },
+    "options": {
+      "readOnly": "Solo lectura",
+      "compression": "Compresión",
+      "autoReconnect": "Reconexión automática",
+      "autoResize": "Ajuste automático",
+      "clipboard": "Portapapeles"
+    },
+    "tooltips": {
+      "showPassword": "Mostrar contraseña",
+      "hidePassword": "Ocultar contraseña"
+    }
+  },
+  "fileConnection": {
+    "title": {
+      "new": "Nueva Conexión de Archivos",
+      "edit": "Editar Conexión de Archivos"
+    },
+    "sections": {
+      "connection": "Conexión de Archivos"
+    },
+    "fields": {
+      "name": "Nombre de la conexión",
+      "protocol": "Protocolo",
+      "host": "Host",
+      "user": "Usuario",
+      "port": "Puerto",
+      "password": "Contraseña",
+      "remoteFolder": "Carpeta remota",
+      "targetFolder": "Carpeta local destino"
+    },
+    "placeholders": {
+      "name": "Mi servidor SFTP",
+      "host": "192.168.1.100",
+      "user": "usuario",
+      "password": "Contraseña",
+      "remoteFolder": "/home/usuario",
+      "targetFolder": "C:\\Downloads"
+    },
+    "protocols": {
+      "sftp": "SFTP",
+      "ftp": "FTP",
+      "scp": "SCP"
+    },
+    "buttons": {
+      "saveChanges": "Guardar Cambios",
+      "create": "Crear Conexión"
     }
   },
   "folder": {
