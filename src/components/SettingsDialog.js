@@ -13,6 +13,7 @@ import { Badge } from 'primereact/badge';
 import { Checkbox } from 'primereact/checkbox';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Card } from 'primereact/card';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 import ThemeSelector from './ThemeSelector';
 import StatusBarSettingsTab from './StatusBarSettingsTab';
 import TabThemeSelector from './TabThemeSelector';
@@ -102,6 +103,9 @@ const SettingsDialog = ({
   setTreeTheme
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  
+  // Hook para internacionalización
+  const { t, locale, setLocale, availableLocales } = useTranslation('settings');
   
   // Hook para redimensionamiento del diálogo
   // storageKey: null para que siempre se abra con el tamaño por defecto
@@ -1541,6 +1545,46 @@ const SettingsDialog = ({
                           id="sidebar-start-collapsed"
                           checked={sidebarStartCollapsed}
                           onChange={(e) => setSidebarStartCollapsed(e.checked)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sección de Idioma */}
+              <div className="general-settings-section">
+                <div className="general-section-header">
+                  <div className="general-section-icon">
+                    <i className="pi pi-globe"></i>
+                  </div>
+                  <h4 className="general-section-title">{t('language.title')}</h4>
+                </div>
+                
+                <div className="general-settings-options">
+                  <div className="general-setting-card">
+                    <div className="general-setting-content">
+                      <div className="general-setting-icon" style={{ background: 'linear-gradient(135deg, #4CAF50 0%, #2196F3 100%)' }}>
+                        <i className="pi pi-language"></i>
+                      </div>
+                      <div className="general-setting-info">
+                        <label htmlFor="language-select" className="general-setting-label">
+                          {t('language.select')}
+                        </label>
+                        <p className="general-setting-description">
+                          {t('language.description')}
+                        </p>
+                      </div>
+                      <div className="general-setting-control" onClick={(e) => e.stopPropagation()} style={{ minWidth: '180px' }}>
+                        <Dropdown
+                          id="language-select"
+                          value={locale}
+                          options={availableLocales.map(loc => ({
+                            label: `${loc.flag} ${loc.name}`,
+                            value: loc.code
+                          }))}
+                          onChange={(e) => setLocale(e.value)}
+                          style={{ width: '100%' }}
                         />
                       </div>
                     </div>

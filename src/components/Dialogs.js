@@ -13,6 +13,7 @@ import { FileUpload } from 'primereact/fileupload';
 import { Message } from 'primereact/message';
 import { FolderIconSelectorModal, FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import { iconThemes } from '../themes/icon-themes';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 
 // --- SSHDialog: para crear o editar conexiones SSH ---
 export function SSHDialog({
@@ -33,12 +34,16 @@ export function SSHDialog({
   const isEdit = mode === 'edit';
   const [showPassword, setShowPassword] = useState(false);
   
+  // Hook de internacionalización
+  const { t } = useTranslation('dialogs');
+  const { t: tCommon } = useTranslation('common');
+  
   return (
     <Dialog 
       header={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <i className="pi pi-terminal" style={{ fontSize: '1.25rem', color: 'var(--ui-button-primary)' }}></i>
-          <span>{isEdit ? 'Editar conexión SSH' : 'Nueva conexión SSH'}</span>
+          <span>{isEdit ? t('ssh.title.edit') : t('ssh.title.new')}</span>
         </div>
       }
       visible={visible} 
@@ -57,18 +62,18 @@ export function SSHDialog({
         <div className="settings-section">
           <div className="section-header">
             <i className="pi pi-link section-icon"></i>
-            <h3 className="section-title">Conexión</h3>
+            <h3 className="section-title">{t('ssh.sections.connection')}</h3>
           </div>
           <div className="settings-options">
             <div className="p-field">
               <label htmlFor="sshName" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--ui-dialog-text)' }}>
-                Nombre <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                {t('ssh.fields.name')} <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
               </label>
               <InputText 
                 id="sshName" 
                 value={name} 
                 onChange={e => setName(e.target.value)} 
-                placeholder="Servidor de producción"
+                placeholder={t('ssh.placeholders.name')}
                 autoFocus
                 style={{ width: '100%' }}
               />
@@ -77,26 +82,26 @@ export function SSHDialog({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'start' }}>
               <div className="p-field">
                 <label htmlFor="sshHost" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--ui-dialog-text)' }}>
-                  Host <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                  {t('ssh.fields.host')} <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
                 </label>
                 <InputText 
                   id="sshHost" 
                   value={host} 
                   onChange={e => setHost(e.target.value)} 
-                  placeholder="IP o nombre del servidor"
+                  placeholder={t('ssh.placeholders.host')}
                   style={{ width: '100%' }}
                 />
               </div>
               
               <div className="p-field" style={{ minWidth: '100px', maxWidth: '120px' }}>
                 <label htmlFor="sshPort" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--ui-dialog-text)' }}>
-                  Puerto
+                  {t('ssh.fields.port')}
                 </label>
                 <InputText 
                   id="sshPort" 
                   value={port} 
                   onChange={e => setPort(e.target.value)} 
-                  placeholder="22"
+                  placeholder={t('ssh.placeholders.port')}
                   style={{ width: '100%' }}
                 />
               </div>
@@ -104,13 +109,13 @@ export function SSHDialog({
             
             <div className="p-field">
               <label htmlFor="sshUser" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--ui-dialog-text)' }}>
-                Usuario <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                {t('ssh.fields.user')} <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
               </label>
               <InputText 
                 id="sshUser" 
                 value={user} 
                 onChange={e => setUser(e.target.value)} 
-                placeholder="root"
+                placeholder={t('ssh.placeholders.user')}
                 style={{ width: '100%' }}
               />
             </div>
@@ -121,12 +126,12 @@ export function SSHDialog({
         <div className="settings-section">
           <div className="section-header">
             <i className="pi pi-lock section-icon"></i>
-            <h3 className="section-title">Autenticación</h3>
+            <h3 className="section-title">{t('ssh.sections.authentication')}</h3>
           </div>
           <div className="settings-options">
             <div className="p-field">
               <label htmlFor="sshPassword" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--ui-dialog-text)' }}>
-                Contraseña <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                {t('ssh.fields.password')} <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
               </label>
               <div className="p-inputgroup" style={{ width: '100%' }}>
                 <InputText 
@@ -134,7 +139,7 @@ export function SSHDialog({
                   type={showPassword ? "text" : "password"} 
                   value={password} 
                   onChange={e => setPassword(e.target.value)} 
-                  placeholder="Contraseña"
+                  placeholder={t('ssh.placeholders.password')}
                   style={{ width: '100%' }}
                 />
                 <Button 
@@ -142,7 +147,7 @@ export function SSHDialog({
                   icon={showPassword ? "pi pi-eye-slash" : "pi pi-eye"} 
                   className="p-button-outlined"
                   onClick={() => setShowPassword(!showPassword)}
-                  tooltip={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  tooltip={showPassword ? t('ssh.tooltips.hidePassword') : t('ssh.tooltips.showPassword')}
                   tooltipOptions={{ position: 'top' }}
                 />
               </div>
@@ -154,32 +159,32 @@ export function SSHDialog({
         <div className="settings-section">
           <div className="section-header">
             <i className="pi pi-folder section-icon"></i>
-            <h3 className="section-title">Carpetas</h3>
+            <h3 className="section-title">{t('ssh.sections.folders')}</h3>
           </div>
           <div className="settings-options">
             <div className="p-field">
               <label htmlFor="sshRemoteFolder" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--ui-dialog-text)' }}>
-                Carpeta remota <span style={{ opacity: 0.6, fontSize: '0.9rem' }}>(opcional)</span>
+                {t('ssh.fields.remoteFolder')} <span style={{ opacity: 0.6, fontSize: '0.9rem' }}>({tCommon('labels.optional')})</span>
               </label>
               <InputText 
                 id="sshRemoteFolder" 
                 value={remoteFolder} 
                 onChange={e => setRemoteFolder(e.target.value)} 
-                placeholder="/home/usuario"
+                placeholder={t('ssh.placeholders.remoteFolder')}
                 style={{ width: '100%' }}
               />
             </div>
             
             <div className="p-field">
               <label htmlFor="sshTargetFolder" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--ui-dialog-text)' }}>
-                Carpeta destino <span style={{ opacity: 0.6, fontSize: '0.9rem' }}>(opcional)</span>
+                {t('ssh.fields.targetFolder')} <span style={{ opacity: 0.6, fontSize: '0.9rem' }}>({tCommon('labels.optional')})</span>
               </label>
               <Dropdown 
                 id="sshTargetFolder" 
                 value={targetFolder} 
                 options={foldersOptions} 
                 onChange={e => setTargetFolder(e.value)} 
-                placeholder="Seleccionar carpeta local"
+                placeholder={t('ssh.placeholders.targetFolder')}
                 showClear 
                 filter
                 style={{ width: '100%' }}
@@ -191,14 +196,14 @@ export function SSHDialog({
         {/* Botones de acción */}
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--ui-dialog-border)' }}>
           <Button 
-            label="Cancelar" 
+            label={tCommon('buttons.cancel')} 
             icon="pi pi-times" 
             className="p-button-text" 
             onClick={onHide} 
             style={{ minWidth: '120px' }} 
           />
           <Button 
-            label={isEdit ? 'Guardar' : 'Crear'} 
+            label={isEdit ? tCommon('buttons.save') : tCommon('buttons.create')} 
             icon="pi pi-check" 
             className="p-button-primary" 
             onClick={onConfirm} 
@@ -1456,6 +1461,10 @@ export function EnhancedSSHForm({
   onGoBack,
   sshLoading = false
 }) {
+  // Hook de internacionalización
+  const { t } = useTranslation('dialogs');
+  const { t: tCommon } = useTranslation('common');
+  
   const [authMethod, setAuthMethod] = useState('password'); // 'password' | 'key'
   const [sshPrivateKey, setSSHPrivateKey] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
@@ -1474,27 +1483,27 @@ export function EnhancedSSHForm({
     const errors = {};
     
     if (!sshName?.trim()) {
-      errors.name = 'El nombre es requerido';
+      errors.name = t('ssh.validation.nameRequired');
     }
     
     if (!sshHost?.trim()) {
-      errors.host = 'El host es requerido';
+      errors.host = t('ssh.validation.hostRequired');
     }
     
     if (!sshUser?.trim()) {
-      errors.user = 'El usuario es requerido';
+      errors.user = t('ssh.validation.userRequired');
     }
     
     if (authMethod === 'password' && !sshPassword?.trim()) {
-      errors.password = 'La contraseña es requerida';
+      errors.password = t('ssh.validation.passwordRequired');
     }
     
     if (authMethod === 'key' && !sshPrivateKey?.trim()) {
-      errors.privateKey = 'La clave privada es requerida';
+      errors.privateKey = t('ssh.validation.privateKeyRequired');
     }
     
     return errors;
-  }, [sshName, sshHost, sshUser, sshPassword, authMethod, sshPrivateKey]);
+  }, [sshName, sshHost, sshUser, sshPassword, authMethod, sshPrivateKey, t]);
 
   // Handler para enviar el formulario
   const handleSubmit = useCallback((e) => {
@@ -1568,7 +1577,7 @@ export function EnhancedSSHForm({
               <div className="general-section-icon">
                 <i className="pi pi-link"></i>
               </div>
-              <h4 className="general-section-title">Conexión</h4>
+              <h4 className="general-section-title">{t('ssh.sections.connection')}</h4>
             </div>
             
             <div className="general-settings-options">
@@ -1579,10 +1588,10 @@ export function EnhancedSSHForm({
                   </div>
                   <div className="general-setting-info">
                     <label htmlFor="sshName" className="general-setting-label">
-                      Nombre <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                      {t('ssh.fields.name')} <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
                     </label>
                     <p className="general-setting-description">
-                      Identificador único para esta conexión
+                      {t('ssh.descriptions.name')}
                     </p>
                   </div>
                   <div className="general-setting-control">
@@ -1590,7 +1599,7 @@ export function EnhancedSSHForm({
                       id="sshName"
                       value={sshName} 
                       onChange={(e) => setSSHName(e.target.value)}
-                      placeholder="Servidor de producción"
+                      placeholder={t('ssh.placeholders.name')}
                       autoFocus={activeTabIndex === 0}
                       className={validationErrors.name ? 'p-invalid' : ''}
                       style={{ width: '100%', fontSize: '0.875rem' }}
@@ -1607,10 +1616,10 @@ export function EnhancedSSHForm({
                   </div>
                   <div className="general-setting-info">
                     <label htmlFor="sshHost" className="general-setting-label">
-                      Host <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                      {t('ssh.fields.host')} <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
                     </label>
                     <p className="general-setting-description">
-                      Dirección IP o nombre del servidor
+                      {t('ssh.descriptions.host')}
                     </p>
                   </div>
                   <div className="general-setting-control general-setting-control-inputs" style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', maxWidth: '280px', flex: '1 1 auto' }}>
@@ -1618,7 +1627,7 @@ export function EnhancedSSHForm({
                       id="sshHost"
                       value={sshHost} 
                       onChange={(e) => setSSHHost(e.target.value)}
-                      placeholder="IP o nombre del servidor"
+                      placeholder={t('ssh.placeholders.host')}
                       className={validationErrors.host ? 'p-invalid' : ''}
                       style={{ flex: '1 1 auto', minWidth: '120px', maxWidth: '200px', fontSize: '0.875rem' }}
                     />
@@ -1626,7 +1635,7 @@ export function EnhancedSSHForm({
                       id="sshPort"
                       value={sshPort} 
                       onChange={(e) => setSSHPort(e.target.value)}
-                      placeholder="22"
+                      placeholder={t('ssh.placeholders.port')}
                       className={validationErrors.port ? 'p-invalid' : ''}
                       style={{ width: '70px', flexShrink: 0, fontSize: '0.875rem' }}
                     />
@@ -1643,10 +1652,10 @@ export function EnhancedSSHForm({
                   </div>
                   <div className="general-setting-info">
                     <label htmlFor="sshUser" className="general-setting-label">
-                      Usuario <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                      {t('ssh.fields.user')} <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
                     </label>
                     <p className="general-setting-description">
-                      Nombre de usuario para la conexión
+                      {t('ssh.descriptions.user')}
                     </p>
                   </div>
                   <div className="general-setting-control">
@@ -1654,7 +1663,7 @@ export function EnhancedSSHForm({
                       id="sshUser"
                       value={sshUser} 
                       onChange={(e) => setSSHUser(e.target.value)}
-                      placeholder="root"
+                      placeholder={t('ssh.placeholders.user')}
                       className={validationErrors.user ? 'p-invalid' : ''}
                       style={{ width: '100%', fontSize: '0.875rem' }}
                     />
@@ -1671,7 +1680,7 @@ export function EnhancedSSHForm({
               <div className="general-section-icon">
                 <i className="pi pi-lock"></i>
               </div>
-              <h4 className="general-section-title">Autenticación</h4>
+              <h4 className="general-section-title">{t('ssh.sections.authentication')}</h4>
             </div>
             
             <div className="general-settings-options">
@@ -1682,20 +1691,20 @@ export function EnhancedSSHForm({
                   </div>
                   <div className="general-setting-info">
                     <label className="general-setting-label">
-                      Método de Autenticación
+                      {t('ssh.auth.method')}
                     </label>
                     <p className="general-setting-description">
-                      Selecciona cómo autenticarte en el servidor
+                      {t('ssh.auth.methodDescription')}
                     </p>
                   </div>
                   <div className="general-setting-control" style={{ display: 'flex', gap: '1rem' }}>
                     <div className="field-radiobutton">
                       <RadioButton inputId="authPassword" name="authMethod" value="password" onChange={(e) => setAuthMethod(e.value)} checked={authMethod === 'password'} />
-                      <label htmlFor="authPassword" style={{ marginLeft: '0.5rem', cursor: 'pointer', fontSize: '0.8125rem' }}>Contraseña</label>
+                      <label htmlFor="authPassword" style={{ marginLeft: '0.5rem', cursor: 'pointer', fontSize: '0.8125rem' }}>{t('ssh.auth.password')}</label>
                     </div>
                     <div className="field-radiobutton">
                       <RadioButton inputId="authKey" name="authMethod" value="key" onChange={(e) => setAuthMethod(e.value)} checked={authMethod === 'key'} />
-                      <label htmlFor="authKey" style={{ marginLeft: '0.5rem', cursor: 'pointer', fontSize: '0.8125rem' }}>Clave SSH</label>
+                      <label htmlFor="authKey" style={{ marginLeft: '0.5rem', cursor: 'pointer', fontSize: '0.8125rem' }}>{t('ssh.auth.key')}</label>
                     </div>
                   </div>
                 </div>
@@ -1710,10 +1719,10 @@ export function EnhancedSSHForm({
                       </div>
                       <div className="general-setting-info">
                         <label htmlFor="sshPassword" className="general-setting-label">
-                          Contraseña <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                          {t('ssh.fields.password')} <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
                         </label>
                         <p className="general-setting-description">
-                          Contraseña para autenticación
+                          {t('ssh.descriptions.password')}
                         </p>
                       </div>
                       <div className="general-setting-control">
@@ -1723,7 +1732,7 @@ export function EnhancedSSHForm({
                             type={showPassword ? "text" : "password"}
                             value={sshPassword} 
                             onChange={(e) => setSSHPassword(e.target.value)}
-                            placeholder="Contraseña"
+                            placeholder={t('ssh.placeholders.password')}
                             className={validationErrors.password ? 'p-invalid' : ''}
                             style={{ width: '100%', fontSize: '0.875rem' }}
                           />
@@ -1732,7 +1741,7 @@ export function EnhancedSSHForm({
                             icon={showPassword ? "pi pi-eye-slash" : "pi pi-eye"} 
                             className="p-button-outlined"
                             onClick={() => setShowPassword(!showPassword)}
-                            tooltip={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                            tooltip={showPassword ? t('ssh.tooltips.hidePassword') : t('ssh.tooltips.showPassword')}
                             tooltipOptions={{ position: 'top' }}
                           />
                         </div>
@@ -1748,10 +1757,10 @@ export function EnhancedSSHForm({
                       </div>
                       <div className="general-setting-info">
                         <label htmlFor="autoCopyPassword" className="general-setting-label">
-                          Copiar contraseña automáticamente
+                          {t('ssh.auth.autoCopyPassword')}
                         </label>
                         <p className="general-setting-description">
-                          Copia la contraseña al portapapeles al conectar
+                          {t('ssh.auth.autoCopyPasswordDescription')}
                         </p>
                       </div>
                       <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
@@ -1774,10 +1783,10 @@ export function EnhancedSSHForm({
                     </div>
                     <div className="general-setting-info">
                       <label htmlFor="sshPrivateKey" className="general-setting-label">
-                        Clave Privada SSH <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
+                        {t('ssh.fields.privateKeySSH')} <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
                       </label>
                       <p className="general-setting-description">
-                        Archivo de clave privada o pega el contenido
+                        {t('ssh.descriptions.privateKey')}
                       </p>
                     </div>
                     <div className="general-setting-control general-setting-control-ssh-key" style={{ width: '100%', flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}>
@@ -1786,7 +1795,7 @@ export function EnhancedSSHForm({
                         name="sshPrivateKey"
                         accept=".pem,.key"
                         maxFileSize={10000000}
-                        chooseLabel="Seleccionar archivo de clave"
+                        chooseLabel={t('ssh.auth.selectKeyFile')}
                         onUpload={handleFileUpload}
                         auto
                         style={{ width: '100%' }}
@@ -1797,7 +1806,7 @@ export function EnhancedSSHForm({
                           value={sshPrivateKey}
                           onChange={(e) => setSSHPrivateKey(e.target.value)}
                           rows={6}
-                          placeholder="O pegar la clave privada aquí"
+                          placeholder={t('ssh.auth.pasteKey')}
                           className={validationErrors.privateKey ? 'p-invalid' : ''}
                           style={{ fontFamily: 'monospace', fontSize: '12px', width: '100%' }}
                         />
@@ -1816,7 +1825,7 @@ export function EnhancedSSHForm({
               <div className="general-section-icon">
                 <i className="pi pi-folder"></i>
               </div>
-              <h4 className="general-section-title">Carpetas</h4>
+              <h4 className="general-section-title">{t('ssh.sections.folders')}</h4>
             </div>
             
             <div className="general-settings-options">
@@ -1827,10 +1836,10 @@ export function EnhancedSSHForm({
                   </div>
                   <div className="general-setting-info">
                     <label htmlFor="sshRemoteFolder" className="general-setting-label">
-                      Carpeta remota <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>(opcional)</span>
+                      {t('ssh.fields.remoteFolder')} <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>({tCommon('labels.optional')})</span>
                     </label>
                     <p className="general-setting-description">
-                      Ruta en el servidor remoto donde iniciar la sesión
+                      {t('ssh.descriptions.remoteFolder')}
                     </p>
                   </div>
                   <div className="general-setting-control">
@@ -1838,7 +1847,7 @@ export function EnhancedSSHForm({
                       id="sshRemoteFolder"
                       value={sshRemoteFolder} 
                       onChange={(e) => setSSHRemoteFolder(e.target.value)}
-                      placeholder="/home/usuario"
+                      placeholder={t('ssh.placeholders.remoteFolder')}
                       style={{ width: '100%', fontSize: '0.875rem' }}
                     />
                   </div>
@@ -1852,10 +1861,10 @@ export function EnhancedSSHForm({
                   </div>
                   <div className="general-setting-info">
                     <label htmlFor="sshTargetFolder" className="general-setting-label">
-                      Carpeta destino <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>(opcional)</span>
+                      {t('ssh.fields.targetFolder')} <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>({tCommon('labels.optional')})</span>
                     </label>
                     <p className="general-setting-description">
-                      Carpeta local donde organizar esta conexión
+                      {t('ssh.descriptions.targetFolder')}
                     </p>
                   </div>
                   <div className="general-setting-control">
@@ -1864,7 +1873,7 @@ export function EnhancedSSHForm({
                       value={sshTargetFolder}
                       options={foldersOptions}
                       onChange={(e) => setSSHTargetFolder(e.value)}
-                      placeholder="Seleccionar carpeta local"
+                      placeholder={t('ssh.placeholders.targetFolder')}
                       filter
                       showClear
                       style={{ width: '100%', fontSize: '0.875rem' }}
@@ -1882,7 +1891,7 @@ export function EnhancedSSHForm({
         <div style={{ display: 'flex', gap: '12px' }}>
           {onGoBack && (
             <Button 
-              label="Volver" 
+              label={t('common.back')} 
               icon="pi pi-arrow-left" 
               className="p-button-text" 
               onClick={onGoBack}
@@ -1892,14 +1901,14 @@ export function EnhancedSSHForm({
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <Button 
-            label="Cancelar" 
+            label={tCommon('buttons.cancel')} 
             icon="pi pi-times" 
             className="p-button-text" 
             onClick={onHide}
             style={{ minWidth: '120px' }}
           />
           <Button 
-            label="Guardar" 
+            label={tCommon('buttons.save')} 
             icon="pi pi-check" 
             className="p-button-primary" 
             onClick={handleSubmit}
@@ -1930,12 +1939,15 @@ export function NewSSHConnectionDialog({
   onSSHConfirm,
   sshLoading = false
 }) {
+  // Hook de internacionalización
+  const { t } = useTranslation('dialogs');
+  
   const headerTemplate = (
     <div className="protocol-dialog-header-custom">
       <div className="protocol-dialog-header-icon" style={{ background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', boxShadow: '0 2px 8px rgba(255, 152, 0, 0.3)' }}>
         <i className="pi pi-terminal"></i>
       </div>
-      <span className="protocol-dialog-header-title">Nueva Conexión SSH</span>
+      <span className="protocol-dialog-header-title">{t('ssh.title.new')}</span>
     </div>
   );
 
