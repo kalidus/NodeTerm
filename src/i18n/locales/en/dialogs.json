@@ -389,5 +389,36 @@
       "windows": "Windows",
       "crossPlatform": "Cross-platform"
     }
+  },
+  "passwordManager": {
+    "title": {
+      "new": "New Password",
+      "edit": "Edit Password"
+    },
+    "fields": {
+      "title": "Title",
+      "username": "Username",
+      "password": "Password",
+      "url": "URL",
+      "group": "Group",
+      "folder": "Folder",
+      "notes": "Notes"
+    },
+    "placeholders": {
+      "title": "My account",
+      "titleExample": "E.g: Gmail, GitHub, etc.",
+      "username": "Username or email",
+      "password": "Password",
+      "url": "https://example.com",
+      "group": "Category or group",
+      "notes": "Additional notes...",
+      "folder": "Select folder"
+    },
+    "tooltips": {
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "newPassword": "New password",
+      "generatePassword": "Generate random password"
+    }
   }
 }

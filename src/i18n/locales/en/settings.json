@@ -1,5 +1,6 @@
 {
   "title": "Settings",
+  "description": "Customize NodeTerm's behavior and basic appearance",
   "language": {
     "title": "Language",
     "description": "Select the interface language",
@@ -15,6 +16,34 @@
   },
   "general": {
     "title": "General Settings",
+    "sections": {
+      "behavior": {
+        "title": "Application Behavior",
+        "lockHomeButton": {
+          "label": "Lock Home Button",
+          "description": "Prevents the home button from being closed or moved accidentally"
+        },
+        "interactiveIcon": {
+          "label": "Interactive NodeTerm Icon",
+          "description": "Allows clicking the title bar icon to open the home menu"
+        },
+        "sidebarStartCollapsed": {
+          "label": "Sidebar Initially Collapsed",
+          "description": "Start the application with the sidebar collapsed"
+        }
+      },
+      "visual": {
+        "title": "Visual Customization",
+        "homeTabIcon": {
+          "title": "Home Tab Icon",
+          "description": "Customize the icon that appears on the home tab"
+        },
+        "groupTabIcon": {
+          "title": "Group Tabs Icon",
+          "description": "Choose the icon for the groups tab"
+        }
+      }
+    },
     "startMinimized": "Start minimized",
     "startWithSystem": "Start with system",
     "checkUpdates": "Check for updates on startup"
@@ -25,5 +54,200 @@
     "iconTheme": "Icon theme",
     "fontSize": "Font size",
     "fontFamily": "Font family"
+  },
+  "security": {
+    "title": "Security",
+    "masterPassword": {
+      "rememberPassword": "Remember password on this device",
+      "rememberPasswordHint": "If enabled, password will not be requested when starting the app",
+      "configureTitle": "Configure Master Password",
+      "changeTitle": "Change Master Password",
+      "newPassword": "New Master Password",
+      "confirmPassword": "Confirm Master Password",
+      "currentPassword": "Current Password",
+      "confirmNewPassword": "Confirm New Password",
+      "placeholders": {
+        "minChars": "Minimum 6 characters",
+        "repeat": "Repeat the password",
+        "current": "Current master password",
+        "new": "New password (minimum 6 characters)",
+        "repeatNew": "Repeat the new password"
+      },
+      "buttons": {
+        "saving": "Saving...",
+        "save": "Save Master Password",
+        "changing": "Changing...",
+        "change": "Change Password",
+        "delete": "Delete"
+      }
+    },
+    "audit": {
+      "title": "Audit Configuration",
+      "description": "Configure automatic SSH session recording and audit file management",
+      "autoRecording": {
+        "title": "Automatic SSH Session Recording",
+        "enable": "Enable automatic recording",
+        "enableDescription": "Automatically records all SSH sessions started",
+        "quality": "Recording quality",
+        "qualityDescription": "Level of detail captured in recordings",
+        "qualityOptions": {
+          "high": "High (all events)",
+          "medium": "Medium (important events)",
+          "low": "Low (commands only)"
+        },
+        "encrypt": "Encrypt recordings with master password",
+        "encryptDescription": "Recordings will be automatically encrypted if you have a master password configured",
+        "location": "Recording location",
+        "locationDefault": "Default location: AppData/NodeTerm/recordings",
+        "locationCustom": "Custom: {path}",
+        "locationLoading": "Loading...",
+        "locationPlaceholder": "Recording path",
+        "changeLocation": "Change",
+        "restoreLocation": "Restore",
+        "selectFolder": "Select folder to save recordings",
+        "locationUpdated": "Location updated",
+        "locationUpdatedDetail": "Recordings will be saved to: {path}",
+        "locationRestored": "Location restored",
+        "locationRestoredDetail": "Default location will be used",
+        "notAvailable": "Not available",
+        "notAvailableDetail": "Directory selector requires desktop app",
+        "error": "Error",
+        "errorDetail": "Could not change location",
+        "errorFolder": "Could not open folder selector"
+      },
+      "stats": {
+        "title": "Current Statistics",
+        "files": "Files:",
+        "totalSize": "Total size:",
+        "oldest": "Oldest:",
+        "lastCleanup": "Last cleanup:",
+        "never": "Never"
+      },
+      "cleanup": {
+        "title": "Automatic File Cleanup",
+        "enable": "Enable automatic cleanup",
+        "enableDescription": "Automatically deletes old audit files according to configured rules",
+        "retentionDays": "Retention days: {days}",
+        "retentionDescription": "Older files will be automatically deleted",
+        "retentionRange": {
+          "min": "1 day",
+          "max": "365 days"
+        },
+        "maxStorage": "Maximum size: {size} GB",
+        "maxStorageDescription": "Total space limit for audit files",
+        "maxStorageRange": {
+          "min": "0.1 GB",
+          "max": "100 GB"
+        },
+        "onStartup": "Run cleanup on application startup",
+        "onStartupDescription": "Cleans old files every time NodeTerm starts",
+        "frequency": "Automatic cleanup frequency",
+        "frequencyDescription": "How often automatic cleanup will run",
+        "frequencyOptions": {
+          "daily": "Daily",
+          "weekly": "Weekly",
+          "monthly": "Monthly",
+          "manual": "Manual only"
+        },
+        "runNow": "Run Cleanup Now",
+        "viewFiles": "View Files"
+      }
+    }
+  },
+  "updateChannels": {
+    "stable": "Stable",
+    "stableRecommended": "Stable (Recommended)",
+    "stableDescription": "Tested and secure versions",
+    "beta": "Beta",
+    "betaDescription": "New features (may contain bugs)",
+    "message": "You will now receive updates from the {channel} channel",
+    "channelUpdated": "Channel updated",
+    "checkUpdates": "Check for Updates",
+    "updatesTitle": "Updates",
+    "updatesDescription": "Manage automatic updates and version channel for NodeTerm",
+    "checking": "Checking for updates...",
+    "checkNow": "Check Now",
+    "available": "Update Available",
+    "upToDate": "System Updated",
+    "upToDateDetail": "You already have the latest version available",
+    "notAvailable": "Update system not available",
+    "checkError": "Could not check for updates",
+    "downloadComplete": "Download Complete",
+    "downloadCompleteDetail": "Update is ready to install",
+    "downloadError": "Could not download update",
+    "installing": "Application will restart to apply update...",
+    "installError": "Could not install update",
+    "autoCheckEnabled": "Automatic check enabled",
+    "autoCheckDisabled": "Automatic check disabled",
+    "autoDownloadEnabled": "Automatic download enabled",
+    "autoDownloadDisabled": "Automatic download disabled",
+    "download": "Download Update",
+    "install": "Install and Restart",
+    "retry": "Retry"
+  },
+  "guacdOptions": {
+    "dockerDesktop": "Docker Desktop",
+    "wsl": "WSL",
+    "docker": "Docker",
+    "native": "Native (local)"
+  },
+  "appearance": {
+    "title": "Appearance",
+    "theme": "Theme",
+    "iconTheme": "Icon theme",
+    "fontSize": "Font size",
+    "fontFamily": "Font family",
+    "sessionExplorer": {
+      "title": "Session Explorer",
+      "description": "Customize icons, sizes, typography and tree color",
+      "selectTheme": "Select a theme",
+      "selectFont": "Select a font",
+      "restoreColor": "Restore default color"
+    }
+  },
+  "rdp": {
+    "title": "RDP Configuration",
+    "description": "Customize RDP session behavior, connectivity and performance",
+    "guacdMethod": "Preferred method",
+    "guacdMethodHint": "Preference → alternative (Windows: Docker/WSL, Linux: Docker/Native)",
+    "guacdStatus": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "sessionActivity": "Session activity threshold (min)",
+    "sessionActivityHint": "If there is no activity, automatic reconnection may be attempted",
+    "resizeDebounce": "Resize debounce (ms)",
+    "resizeDebounceHint": "Delay of final send after stopping window dragging",
+    "idleMinutes": "Inactivity threshold (min)",
+    "idleMinutesHint": "Without activity (keyboard/mouse), next resize will execute warm-up or reconnection",
+    "resizeAckTimeout": "Resize ACK timeout (ms)",
+    "resizeAckTimeoutHint": "Maximum time waiting for display response before allowing another resize",
+    "guacdInactivity": "Guacd inactivity watchdog (min)",
+    "guacdInactivityHint": "0 to disable. Inactivity shutdown between guacamole-lite and guacd",
+    "backendTitle": "Guacamole Backend"
+  },
+  "sync": {
+    "title": "Sync",
+    "configure": "Configure Sync",
+    "cloudTitle": "Cloud Sync",
+    "description": "Sync your personal settings across all your devices using Nextcloud. Never lose your themes, fonts and custom configurations."
+  },
+  "info": {
+    "title": "NodeTerm Information",
+    "description": "Version, technical details and features of your application",
+    "appVersion": "Application Version",
+    "technicalInfo": "Technical Information",
+    "version": "Version",
+    "build": "Build",
+    "electron": "Electron",
+    "node": "Node.js",
+    "chrome": "Chromium",
+    "appName": "NodeTerm",
+    "appDescription": "Cross-platform SSH terminal"
+  },
+  "common": {
+    "select": "Select",
+    "loading": "Loading...",
+    "selectIcon": "Select"
   }
 }
