@@ -16,6 +16,7 @@ import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorit
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { STORAGE_KEYS } from '../utils/constants';
 import { getTreeTheme } from '../themes/tree-themes';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/tree-themes.css';
 
 // Helper para loggear setNodes
@@ -123,6 +124,8 @@ const Sidebar = React.memo(({
   // Tema del árbol
   treeTheme = 'default'
 }) => {
+  // Hook de internacionalización
+  const { t } = useTranslation('common');
   
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
@@ -425,7 +428,7 @@ const Sidebar = React.memo(({
   
   // Función para manejar el menú de aplicación (unificada)
   const handleAppMenuClick = (event) => {
-    const menuStructure = createAppMenu(setShowImportDialog);
+    const menuStructure = createAppMenu(setShowImportDialog, t);
     createContextMenu(event, menuStructure, 'app-context-menu-sidebar');
   };
   
@@ -1884,7 +1887,7 @@ const Sidebar = React.memo(({
                 icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
                 className="p-button-rounded p-button-text sidebar-action-button" 
                 onClick={() => setSidebarCollapsed(v => !v)} 
-                tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
+                tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')} 
                 tooltipOptions={{ position: 'right' }} 
                 style={{ 
                   margin: 0, 
@@ -1910,7 +1913,7 @@ const Sidebar = React.memo(({
                   setViewMode('connections');
                   setSidebarCollapsed(false);
                 }} 
-                tooltip="Conexiones" 
+                tooltip={t('tooltips.connections')} 
                 tooltipOptions={{ position: 'right' }} 
                 style={{ 
                   margin: 0, 
@@ -1937,7 +1940,7 @@ const Sidebar = React.memo(({
                   setViewMode('passwords');
                   setSidebarCollapsed(false);
                 }} 
-                tooltip="Passwords" 
+                tooltip={t('tooltips.passwords')} 
                 tooltipOptions={{ position: 'right' }} 
                 style={{ 
                   margin: 0, 
@@ -1961,7 +1964,7 @@ const Sidebar = React.memo(({
                 icon="pi pi-th-large" 
                 className="p-button-rounded p-button-text sidebar-action-button" 
                 onClick={() => setShowCreateGroupDialog(true)} 
-                tooltip="Crear grupo de pestañas" 
+                tooltip={t('tooltips.createGroup')} 
                 tooltipOptions={{ position: 'right' }} 
                 style={{ 
                   margin: 0, 
@@ -2013,7 +2016,7 @@ const Sidebar = React.memo(({
                     detail: { tab: newAITab }
                   }));
                 }} 
-                tooltip="Chat de IA" 
+                tooltip={t('tooltips.aiChat')} 
                 tooltipOptions={{ position: 'right' }} 
                 style={{ 
                   margin: 0, 
@@ -2038,7 +2041,7 @@ const Sidebar = React.memo(({
                 icon="pi pi-box" 
                 className="p-button-rounded p-button-text sidebar-action-button" 
                 onClick={openAnythingLLMTab} 
-                tooltip="AnythingLLM" 
+                tooltip={t('tooltips.anythingLLM')} 
                 tooltipOptions={{ position: 'right' }} 
                 style={{ 
                   margin: 0, 
@@ -2064,7 +2067,7 @@ const Sidebar = React.memo(({
                 icon="pi pi-globe" 
                 className="p-button-rounded p-button-text sidebar-action-button" 
                 onClick={openOpenWebUITab} 
-                tooltip="Open WebUI" 
+                tooltip={t('tooltips.openWebUI')} 
                 tooltipOptions={{ position: 'right' }} 
                 style={{ 
                   margin: 0, 
@@ -2106,7 +2109,7 @@ const Sidebar = React.memo(({
                     setViewMode('filesystem');
                     setSidebarCollapsed(false);
                   }}
-                  tooltip="Filesystem MCP"
+                  tooltip={t('tooltips.filesystemMCP')}
                   tooltipOptions={{ position: 'right' }}
                   style={{
                     margin: 0,
@@ -2134,7 +2137,7 @@ const Sidebar = React.memo(({
                 onClick={() => {
                   onToggleLocalTerminalForAIChat();
                 }}
-                tooltip="Terminal local"
+                tooltip={t('tooltips.localTerminal')}
                 tooltipOptions={{ position: 'right' }}
                 style={{
                   margin: 0,
@@ -2173,7 +2176,7 @@ const Sidebar = React.memo(({
               icon="pi pi-cog"
               className="p-button-rounded p-button-text sidebar-action-button"
               onClick={() => setShowSettingsDialog(true)}
-              tooltip="Configuración"
+              tooltip={t('tooltips.settings')}
               tooltipOptions={{ position: 'right' }}
               style={{ 
                 margin: 0, 
@@ -2196,7 +2199,7 @@ const Sidebar = React.memo(({
               onClick={(e) => {
                 handleAppMenuClick(e);
               }}
-              tooltip="Menú de la aplicación"
+              tooltip={t('tooltips.appMenu')}
               tooltipOptions={{ position: 'right' }}
               style={{ 
                 margin: 0, 
@@ -2239,7 +2242,7 @@ const Sidebar = React.memo(({
                   icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
                   className="p-button-rounded p-button-text sidebar-action-button" 
                   onClick={() => setSidebarCollapsed(v => !v)} 
-                  tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
+                  tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')} 
                   tooltipOptions={{ position: 'bottom' }} 
                   style={{ marginRight: 8 }} 
                 />
@@ -2256,28 +2259,28 @@ const Sidebar = React.memo(({
                         window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
                       }
                     }} 
-                    tooltip="Nueva conexión" 
+                    tooltip={t('tooltips.newConnection')} 
                     tooltipOptions={{ position: 'bottom' }}
                   />
                   <Button 
                     icon="pi pi-folder" 
                     className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                     onClick={() => setShowFolderDialog(true)} 
-                    tooltip="Crear carpeta" 
+                    tooltip={t('tooltips.createFolder')} 
                     tooltipOptions={{ position: 'bottom' }}
                   />
                   <Button 
                     icon="pi pi-th-large" 
                     className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                     onClick={() => setShowCreateGroupDialog(true)} 
-                    tooltip="Crear grupo de pestañas" 
+                    tooltip={t('tooltips.createGroup')} 
                     tooltipOptions={{ position: 'bottom' }}
                   />
                   <Button 
                     icon="pi pi-key" 
                     className="p-button-rounded p-button-text sidebar-action-button glass-button key-button" 
                     onClick={() => setViewMode('passwords')} 
-                    tooltip="Gestor de passwords" 
+                    tooltip={t('tooltips.passwordManager')} 
                     tooltipOptions={{ position: 'bottom' }}
                   />
                   {filesystemAvailable && isAIChatActive && (
@@ -2285,7 +2288,7 @@ const Sidebar = React.memo(({
                       icon="pi pi-folder-open"
                       className={`p-button-rounded p-button-text sidebar-action-button glass-button ${viewMode === 'filesystem' ? 'active' : ''}`}
                       onClick={() => setViewMode('filesystem')}
-                      tooltip="Explorador MCP"
+                      tooltip={t('tooltips.mcpExplorer')}
                       tooltipOptions={{ position: 'bottom' }}
                       style={{
                         borderColor: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : undefined,
@@ -2298,7 +2301,7 @@ const Sidebar = React.memo(({
                       icon="pi pi-desktop"
                       className="p-button-rounded p-button-text sidebar-action-button glass-button"
                       onClick={() => onToggleLocalTerminalForAIChat()}
-                      tooltip="Terminal local"
+                      tooltip={t('tooltips.localTerminal')}
                       tooltipOptions={{ position: 'bottom' }}
                       style={{
                         borderColor: '#90caf9',

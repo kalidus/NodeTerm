@@ -10,6 +10,7 @@ import { uiThemes } from '../themes/ui-themes';
 import MCPManagerTab from './MCPManagerTab';
 import mcpClient from '../services/MCPClientService';
 import modelMemoryService from '../services/ModelMemoryService';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 
 // Definición de categorías de uso
 const USE_CASE_CATEGORIES = [
@@ -80,6 +81,8 @@ const USE_CASE_CATEGORIES = [
 ];
 
 const AIConfigDialog = ({ visible, onHide }) => {
+  const { t } = useTranslation('common');
+  
   const [activeIndex, setActiveIndex] = useState(0);
   const [remoteModels, setRemoteModels] = useState([]);
   const [localModels, setLocalModels] = useState([]);
@@ -2327,7 +2330,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
                             }}
                             severity="secondary"
                             style={{ width: '100%' }}
-                            tooltip="Configurar rendimiento"
+                            tooltip={t('tooltips.configurePerformance')}
                             tooltipOptions={{ position: 'top' }}
                           />
                           <Button
@@ -2355,7 +2358,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
                             }}
                             severity="secondary"
                             style={{ width: '100%' }}
-                            tooltip="Configurar rendimiento"
+                            tooltip={t('tooltips.configurePerformance')}
                             tooltipOptions={{ position: 'top' }}
                           />
                         </>

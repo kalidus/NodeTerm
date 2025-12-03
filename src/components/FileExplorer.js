@@ -8,6 +8,7 @@ import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { uiThemes } from '../themes/ui-themes';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 
 // Helper para obtener colores del tema
 const getThemeColors = (themeName) => {
@@ -25,6 +26,9 @@ import {
 } from 'react-icons/fa';
 
 const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont = 'Segoe UI', explorerColorTheme = 'Light', explorerFontSize = 15 }) => {
+    // Hook de internacionalización
+    const { t } = useTranslation('common');
+    
     // sshConfig puede tener protocol para SFTP/FTP/SCP, o ser SSH tradicional
     const config = sshConfig || {};
     const protocol = config.protocol || 'ssh'; // Por defecto SSH para compatibilidad
@@ -815,7 +819,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                             onClick={handleNavigateFromInput}
                             disabled={!sshReady || loading}
                             className="breadcrumb-path-button"
-                            tooltip="Ir a ruta"
+                            tooltip={t('tooltips.goToPath')}
                         />
                     </div>
                 </div>
@@ -830,27 +834,27 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                                 navigateToPath(parentPath);
                             }}
                             disabled={!sshReady || !currentPath || currentPath === '/'}
-                            tooltip="Ir al directorio padre"
+                            tooltip={t('tooltips.goToParent')}
                             className="toolbar-button"
                         />
                         <Button 
                             icon={<FaSync />}
                             onClick={() => currentPath && loadFiles(currentPath)}
                             disabled={!sshReady || !currentPath}
-                            tooltip="Actualizar"
+                            tooltip={t('tooltips.refresh')}
                             className="toolbar-button"
                         />
                         <Button 
                             icon={<FaHome />}
                             onClick={() => homeDir && navigateToPath(homeDir)}
                             disabled={!sshReady || !currentPath}
-                            tooltip="Ir al home"
+                            tooltip={t('tooltips.goToHome')}
                             className="toolbar-button"
                         />
                         <Button 
                             icon={showDotfiles ? <FaEyeSlash /> : <FaEye />}
                             onClick={() => setShowDotfiles(v => !v)}
-                            tooltip={showDotfiles ? "Ocultar archivos ocultos" : "Mostrar archivos ocultos"}
+                            tooltip={showDotfiles ? t('tooltips.hideHiddenFiles') : t('tooltips.showHiddenFiles')}
                             className="toolbar-button"
                         />
                     </div>
@@ -949,7 +953,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                                                 <Button 
                                                     icon={<FaDownload />}
                                                     onClick={() => handleDownloadFile(file)}
-                                                    tooltip="Descargar"
+                                                    tooltip={t('tooltips.download')}
                                                     className="file-action-button"
                                                 />
                                             )}
@@ -958,13 +962,13 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                                                     <Button
                                                         icon={<FaEdit />}
                                                         onClick={() => openRenameDialog(file)}
-                                                        tooltip="Renombrar"
+                                                        tooltip={t('tooltips.rename')}
                                                         className="file-action-button"
                                                     />
                                                     <Button
                                                         icon={<FaTrash />}
                                                         onClick={() => handleDeleteFiles([file])}
-                                                        tooltip="Eliminar"
+                                                        tooltip={t('tooltips.delete')}
                                                         className="file-action-button file-action-danger"
                                                     />
                                                 </>

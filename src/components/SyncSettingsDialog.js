@@ -11,6 +11,7 @@ import { Message } from 'primereact/message';
 import { Badge } from 'primereact/badge';
 import { Tooltip } from 'primereact/tooltip';
 import SyncManager from '../utils/SyncManager';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 
 // Función robusta para extraer todas las sesiones SSH del árbol de nodos
 function extractAllSshSessions(nodes) {
@@ -28,6 +29,7 @@ function extractAllSshSessions(nodes) {
 }
 
 const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager, exportTreeToJson, importTreeFromJson }) => {
+  const { t } = useTranslation('common');
   const [syncManager] = useState(() => new SyncManager(sessionManager));
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
@@ -552,7 +554,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
                     loading={loading}
                     disabled={loading || syncStatus.inProgress}
                     className="p-button-outlined"
-                    tooltip="Sube la configuración local a Nextcloud"
+                    tooltip={t('tooltips.uploadToNextcloud')}
                   />
                   <Button
                     label="Descargar de la Nube"
@@ -561,7 +563,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
                     loading={loading}
                     disabled={loading || syncStatus.inProgress}
                     className="p-button-outlined"
-                    tooltip="Descarga la configuración desde Nextcloud"
+                    tooltip={t('tooltips.downloadFromNextcloud')}
                   />
                   <Button
                     label="Sincronización Inteligente"
@@ -569,7 +571,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
                     onClick={() => performSync('smart')}
                     loading={loading}
                     disabled={loading || syncStatus.inProgress}
-                    tooltip="Sincroniza automáticamente la versión más reciente"
+                    tooltip={t('tooltips.autoSyncLatest')}
                   />
                 </div>
               </div>
