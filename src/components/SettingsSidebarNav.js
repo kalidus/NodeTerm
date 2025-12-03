@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 
 /**
  * Componente de Sidebar de Navegación para SettingsDialog
@@ -10,6 +11,8 @@ const SettingsSidebarNav = ({
   onMainTabChange,
   onSubTabChange
 }) => {
+  const { t } = useTranslation('settings');
+  
   const [expandedItems, setExpandedItems] = useState({ 
     seguridad: true, 
     apariencia: true 
@@ -18,63 +21,63 @@ const SettingsSidebarNav = ({
   const navigationStructure = useMemo(() => [
     {
       id: 'general',
-      label: 'General',
+      label: t('sidebar.general'),
       icon: 'pi pi-sliders-h',
       subitems: []
     },
     {
       id: 'seguridad',
-      label: 'Seguridad',
+      label: t('sidebar.security'),
       icon: 'pi pi-shield',
       subitems: [
-        { id: 'clave-maestra', label: 'Clave Maestra', icon: 'pi pi-key' },
-        { id: 'auditoria', label: 'Auditoría', icon: 'pi pi-video' }
+        { id: 'clave-maestra', label: t('sidebar.masterKey'), icon: 'pi pi-key' },
+        { id: 'auditoria', label: t('sidebar.audit'), icon: 'pi pi-video' }
       ]
     },
     {
       id: 'apariencia',
-      label: 'Apariencia',
+      label: t('sidebar.appearance'),
       icon: 'pi pi-palette',
       subitems: [
-        { id: 'interfaz', label: 'Interfaz', icon: 'pi pi-eye' },
-        { id: 'pestanas', label: 'Pestañas', icon: 'pi pi-palette' },
-        { id: 'terminal', label: 'Terminal', icon: 'pi pi-desktop' },
-        { id: 'status-bar', label: 'Status Bar', icon: 'pi pi-sliders-h' },
-        { id: 'explorador-sesiones', label: 'Expl. Sesiones', icon: 'pi pi-sitemap' },
-        { id: 'explorador-archivos', label: 'Expl. Archivos', icon: 'pi pi-folder-open' }
+        { id: 'interfaz', label: t('sidebar.interface'), icon: 'pi pi-eye' },
+        { id: 'pestanas', label: t('sidebar.tabs'), icon: 'pi pi-palette' },
+        { id: 'terminal', label: t('sidebar.terminal'), icon: 'pi pi-desktop' },
+        { id: 'status-bar', label: t('sidebar.statusBar'), icon: 'pi pi-sliders-h' },
+        { id: 'explorador-sesiones', label: t('sidebar.sessionExplorer'), icon: 'pi pi-sitemap' },
+        { id: 'explorador-archivos', label: t('sidebar.fileExplorer'), icon: 'pi pi-folder-open' }
       ]
     },
     {
       id: 'rdp',
-      label: 'RDP',
+      label: t('sidebar.rdp'),
       icon: 'pi pi-desktop',
       subitems: []
     },
     {
       id: 'clientes-ia',
-      label: 'Clientes de IA',
+      label: t('sidebar.aiClients'),
       icon: 'pi pi-comments',
       subitems: []
     },
     {
       id: 'actualizaciones',
-      label: 'Actualizaciones',
+      label: t('sidebar.updates'),
       icon: 'pi pi-refresh',
       subitems: []
     },
     {
       id: 'sincronizacion',
-      label: 'Sincronización',
+      label: t('sidebar.sync'),
       icon: 'pi pi-cloud',
       subitems: []
     },
     {
       id: 'informacion',
-      label: 'Información',
+      label: t('sidebar.info'),
       icon: 'pi pi-info-circle',
       subitems: []
     }
-  ], []);
+  ], [t]);
 
   const toggleExpandItem = (itemId) => {
     setExpandedItems(prev => ({
