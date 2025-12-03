@@ -229,6 +229,10 @@ export function FolderDialog({
   loading = false,
   iconTheme = 'material'
 }) {
+  // Hook de internacionalización
+  const { t } = useTranslation('dialogs');
+  const { t: tCommon } = useTranslation('common');
+  
   const isEdit = mode === 'edit';
   const [showIconSelector, setShowIconSelector] = useState(false);
   // Estado local como fallback si setFolderIcon no está disponible
@@ -287,9 +291,9 @@ export function FolderDialog({
             <i className={`pi ${isEdit ? 'pi-pencil' : 'pi-folder-plus'}`}></i>
           </div>
           <div className="header-content">
-            <h3 className="header-title">{isEdit ? 'Editar carpeta' : 'Nueva carpeta'}</h3>
+            <h3 className="header-title">{isEdit ? t('folder.title.edit') : t('folder.title.new')}</h3>
             <p className="header-subtitle">
-              {isEdit ? 'Modifica los detalles de tu carpeta' : 'Crea una nueva carpeta organizada'}
+              {isEdit ? t('folder.subtitle.edit') : t('folder.subtitle.new')}
             </p>
           </div>
         </div>
@@ -305,13 +309,13 @@ export function FolderDialog({
           <div className="form-field">
             <label htmlFor="folderName" className="field-label">
               <i className="pi pi-tag"></i>
-              Nombre de la carpeta
+              {t('folder.fields.name')}
             </label>
             <InputText 
               id="folderName" 
               value={folderName} 
               onChange={e => setFolderName(e.target.value)} 
-              placeholder="Ingresa el nombre de la carpeta"
+              placeholder={t('folder.placeholders.name')}
               className="folder-name-input"
               autoFocus 
             />
@@ -320,7 +324,7 @@ export function FolderDialog({
           <div className="form-field">
             <label className="field-label">
               <i className="pi pi-palette"></i>
-              Icono de la carpeta
+              {t('folder.fields.icon')}
             </label>
             <button
               type="button"
@@ -357,10 +361,10 @@ export function FolderDialog({
               )}
               <div style={{ flex: 1, textAlign: 'left' }}>
                 <div style={{ fontWeight: '600' }}>
-                  {hasCustomIcon ? selectedPreset.name : 'Icono del tema'}
+                  {hasCustomIcon ? selectedPreset.name : t('folder.icon.themeIcon')}
                 </div>
                 <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>
-                  {hasCustomIcon ? selectedPreset.description : 'Usa el icono del tema seleccionado'}
+                  {hasCustomIcon ? selectedPreset.description : t('folder.icon.themeIconDescription')}
                 </div>
               </div>
               <i className="pi pi-chevron-right"></i>
@@ -371,14 +375,14 @@ export function FolderDialog({
             <ColorSelector
               selectedColor={folderColor}
               onColorChange={setFolderColor}
-              label="Color de la carpeta"
+              label={t('folder.fields.color')}
               iconTheme={iconTheme}
             />
           </div>
         </div>
         
         <div className="folder-preview">
-          <div className="preview-label">Vista previa:</div>
+          <div className="preview-label">{t('folder.preview.label')}</div>
           <div className="preview-folder" style={{ borderLeftColor: folderColor || '#007ad9', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             {hasCustomIcon ? (
               <FolderIconRenderer preset={selectedPreset} size="medium" />
@@ -396,20 +400,20 @@ export function FolderDialog({
             ) : (
               <span className="pi pi-folder" style={{ fontSize: '40px', color: folderColor || '#007ad9' }} />
             )}
-            <span className="preview-name" style={{ color: folderColor || '#007ad9' }}>{folderName || 'Nombre de la carpeta'}</span>
+            <span className="preview-name" style={{ color: folderColor || '#007ad9' }}>{folderName || t('folder.preview.defaultName')}</span>
           </div>
         </div>
       </div>
       
       <div className="folder-dialog-footer">
         <Button 
-          label="Cancelar" 
+          label={tCommon('buttons.cancel')} 
           icon="pi pi-times" 
           className="p-button-text cancel-button" 
           onClick={onHide}
         />
         <Button 
-          label={isEdit ? 'Guardar cambios' : 'Crear carpeta'} 
+          label={isEdit ? t('folder.buttons.saveChanges') : t('folder.buttons.create')} 
           icon={isEdit ? 'pi pi-save' : 'pi pi-plus'} 
           className="p-button-primary create-button" 
           onClick={() => {
