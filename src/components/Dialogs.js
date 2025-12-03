@@ -3041,124 +3041,107 @@ export function ProtocolSelectionDialog({
   onHide,
   onSelectProtocol // Callback: (protocol) => void
 }) {
-  const [selectedCategory, setSelectedCategory] = useState('Acceso Remoto');
+  // Hook de internacionalización
+  const { t } = useTranslation('dialogs');
+  
+  const remoteAccessCategory = t('protocolSelection.categories.remoteAccess');
+  const [selectedCategory, setSelectedCategory] = useState(remoteAccessCategory);
 
   // Resetear categoría cuando se abre el diálogo
   useEffect(() => {
     if (visible) {
-      setSelectedCategory('Acceso Remoto');
+      setSelectedCategory(remoteAccessCategory);
     }
-  }, [visible]);
+  }, [visible, remoteAccessCategory]);
 
   const protocolSections = [
     {
-      id: 'Acceso Remoto',
-      title: 'Acceso Remoto',
+      id: remoteAccessCategory,
+      title: remoteAccessCategory,
       protocols: [
         {
           id: 'ssh',
-          name: 'SSH (Secure Shell)',
-          fullName: 'SSH (Secure Shell)',
-          description: 'Acceso seguro a la línea de comandos de sistemas remotos (Linux/Unix). Esencial para administración de servidores y desarrollo.',
+          name: t('protocolSelection.protocols.ssh.name'),
+          fullName: t('protocolSelection.protocols.ssh.name'),
+          description: t('protocolSelection.protocols.ssh.description'),
           icon: 'pi pi-server',
           iconColor: '#2196F3',
-          advantages: [
-            'Alta seguridad',
-            'Versatilidad para tunelización y reenvío de puertos'
-          ],
-          badges: ['Seguro']
+          advantages: t('protocolSelection.protocols.ssh.advantages'),
+          badges: [t('protocolSelection.badges.secure')]
         },
         {
           id: 'rdp',
-          name: 'RDP (Remote Desktop Protocol)',
-          fullName: 'RDP (Remote Desktop Protocol)',
-          description: 'Acceso gráfico completo a escritorios de Windows. Permite control visual de un PC remoto.',
+          name: t('protocolSelection.protocols.rdp.name'),
+          fullName: t('protocolSelection.protocols.rdp.name'),
+          description: t('protocolSelection.protocols.rdp.description'),
           icon: 'pi pi-desktop',
           iconColor: '#4CAF50',
-          advantages: [
-            'Experiencia de usuario familiar para entornos Windows',
-            'Soporte para múltiples sesiones'
-          ],
-          badges: ['Windows']
+          advantages: t('protocolSelection.protocols.rdp.advantages'),
+          badges: [t('protocolSelection.badges.windows')]
         },
         {
           id: 'vnc',
-          name: 'VNC (Virtual Network Computing)',
-          fullName: 'VNC (Virtual Network Computing)',
-          description: 'Acceso remoto multiplataforma a escritorios gráficos. Compatible con Linux, Windows, macOS y sistemas embebidos.',
+          name: t('protocolSelection.protocols.vnc.name'),
+          fullName: t('protocolSelection.protocols.vnc.name'),
+          description: t('protocolSelection.protocols.vnc.description'),
           icon: 'pi pi-eye',
           iconColor: '#FF5722',
-          advantages: [
-            'Multiplataforma (Linux, Windows, macOS)',
-            'Ligero y eficiente para conexiones remotas'
-          ],
-          badges: ['Multiplataforma']
+          advantages: t('protocolSelection.protocols.vnc.advantages'),
+          badges: [t('protocolSelection.badges.crossPlatform')]
         }
       ]
     },
     {
-      id: 'Transferencia de Archivos',
-      title: 'Transferencia de Archivos',
+      id: t('protocolSelection.categories.fileTransfer'),
+      title: t('protocolSelection.categories.fileTransfer'),
       protocols: [
         {
           id: 'sftp',
-          name: 'SFTP',
-          fullName: 'SFTP (SSH File Transfer Protocol)',
-          description: 'La forma más recomendada para mover archivos de forma encriptada, utilizando vías de seguridad de SSH.',
+          name: t('protocolSelection.protocols.sftp.name'),
+          fullName: t('protocolSelection.protocols.sftp.fullName'),
+          description: t('protocolSelection.protocols.sftp.description'),
           icon: 'pi pi-folder-open',
           iconColor: '#FF9800',
-          advantages: [
-            'Transferencia encriptada y segura',
-            'Basado en SSH, ampliamente soportado'
-          ],
+          advantages: t('protocolSelection.protocols.sftp.advantages'),
           isRecommended: true,
-          badges: ['Seguro', 'Recomendado']
+          badges: [t('protocolSelection.badges.secure'), t('protocolSelection.badges.recommended')]
         },
         {
           id: 'ftp',
-          name: 'FTP',
-          fullName: 'FTP (File Transfer Protocol)',
-          description: 'Protocolo clásico de transferencia. Rápido, pero *no encripta* los datos (no recomendado para información sensible).',
+          name: t('protocolSelection.protocols.ftp.name'),
+          fullName: t('protocolSelection.protocols.ftp.fullName'),
+          description: t('protocolSelection.protocols.ftp.description'),
           icon: 'pi pi-cloud-upload',
           iconColor: '#9C27B0',
-          advantages: [
-            'Rápido y eficiente',
-            'Amplia compatibilidad'
-          ],
+          advantages: t('protocolSelection.protocols.ftp.advantages'),
           isInsecure: true,
-          badges: ['No seguro']
+          badges: [t('protocolSelection.badges.insecure')]
         },
         {
           id: 'scp',
-          name: 'SCP',
-          fullName: 'SCP (Secure Copy Protocol)',
-          description: 'Herramienta rápida y segura para copiar archivos y directorios entre hosts remotos (basado en SSH).',
+          name: t('protocolSelection.protocols.scp.name'),
+          fullName: t('protocolSelection.protocols.scp.fullName'),
+          description: t('protocolSelection.protocols.scp.description'),
           icon: 'pi pi-copy',
           iconColor: '#00BCD4',
-          advantages: [
-            'Seguro y rápido',
-            'Basado en SSH'
-          ],
-          badges: ['Seguro']
+          advantages: t('protocolSelection.protocols.scp.advantages'),
+          badges: [t('protocolSelection.badges.secure')]
         }
       ]
     },
     {
-      id: 'Gestión de Contraseñas',
-      title: 'Gestión de Contraseñas',
+      id: t('protocolSelection.categories.passwordManagement'),
+      title: t('protocolSelection.categories.passwordManagement'),
       protocols: [
         {
           id: 'password',
-          name: 'Nueva Contraseña',
-          fullName: 'Nueva Contraseña',
-          description: 'Almacena y gestiona contraseñas de forma segura. Encriptación AES-256-GCM con master password opcional.',
+          name: t('protocolSelection.protocols.password.name'),
+          fullName: t('protocolSelection.protocols.password.name'),
+          description: t('protocolSelection.protocols.password.description'),
           icon: 'pi pi-lock',
           iconColor: '#E91E63',
-          advantages: [
-            'Encriptación segura AES-256-GCM',
-            'Organización en carpetas y grupos'
-          ],
-          badges: ['Seguro']
+          advantages: t('protocolSelection.protocols.password.advantages'),
+          badges: [t('protocolSelection.badges.secure')]
         }
       ]
     }
@@ -3189,7 +3172,7 @@ export function ProtocolSelectionDialog({
       <div className="protocol-dialog-header-icon">
         <i className="pi pi-plus-circle"></i>
       </div>
-      <span className="protocol-dialog-header-title">Configuración de Nueva Conexión</span>
+      <span className="protocol-dialog-header-title">{t('protocolSelection.title')}</span>
     </div>
   );
 
@@ -3235,19 +3218,27 @@ export function ProtocolSelectionDialog({
                   <h3 className="protocol-option-title">{protocol.fullName || protocol.name}</h3>
                   {protocol.badges && protocol.badges.length > 0 && (
                     <div className="protocol-badges-container">
-                      {protocol.badges.map((badge, idx) => (
-                        <span 
-                          key={idx} 
-                          className={`protocol-badge protocol-badge-${badge.toLowerCase().replace(/\s+/g, '-')}`}
-                        >
-                          {badge === 'Seguro' && '🛡️'}
-                          {badge === 'Recomendado' && '⭐'}
-                          {badge === 'No seguro' && '⚠️'}
-                          {badge === 'Windows' && '🖥️'}
-                          {badge === 'Multiplataforma' && '🌐'}
-                          <span className="protocol-badge-text">{badge}</span>
-                        </span>
-                      ))}
+                      {protocol.badges.map((badge, idx) => {
+                        const secureBadge = t('protocolSelection.badges.secure');
+                        const recommendedBadge = t('protocolSelection.badges.recommended');
+                        const insecureBadge = t('protocolSelection.badges.insecure');
+                        const windowsBadge = t('protocolSelection.badges.windows');
+                        const crossPlatformBadge = t('protocolSelection.badges.crossPlatform');
+                        
+                        return (
+                          <span 
+                            key={idx} 
+                            className={`protocol-badge protocol-badge-${badge.toLowerCase().replace(/\s+/g, '-')}`}
+                          >
+                            {badge === secureBadge && '🛡️'}
+                            {badge === recommendedBadge && '⭐'}
+                            {badge === insecureBadge && '⚠️'}
+                            {badge === windowsBadge && '🖥️'}
+                            {badge === crossPlatformBadge && '🌐'}
+                            <span className="protocol-badge-text">{badge}</span>
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

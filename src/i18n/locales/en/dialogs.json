@@ -240,5 +240,81 @@
     "selectFolder": "Select folder",
     "noFolders": "No folders available",
     "back": "Back"
+  },
+  "protocolSelection": {
+    "title": "New Connection Setup",
+    "categories": {
+      "remoteAccess": "Remote Access",
+      "fileTransfer": "File Transfer",
+      "passwordManagement": "Password Management"
+    },
+    "protocols": {
+      "ssh": {
+        "name": "SSH (Secure Shell)",
+        "description": "Secure access to remote system command lines (Linux/Unix). Essential for server administration and development.",
+        "advantages": [
+          "High security",
+          "Versatile for tunneling and port forwarding"
+        ]
+      },
+      "rdp": {
+        "name": "RDP (Remote Desktop Protocol)",
+        "description": "Full graphical access to Windows desktops. Allows visual control of a remote PC.",
+        "advantages": [
+          "Familiar user experience for Windows environments",
+          "Support for multiple sessions"
+        ]
+      },
+      "vnc": {
+        "name": "VNC (Virtual Network Computing)",
+        "description": "Cross-platform remote access to graphical desktops. Compatible with Linux, Windows, macOS and embedded systems.",
+        "advantages": [
+          "Cross-platform (Linux, Windows, macOS)",
+          "Lightweight and efficient for remote connections"
+        ]
+      },
+      "sftp": {
+        "name": "SFTP",
+        "fullName": "SFTP (SSH File Transfer Protocol)",
+        "description": "The most recommended way to move files encrypted, using SSH security channels.",
+        "advantages": [
+          "Encrypted and secure transfer",
+          "SSH-based, widely supported"
+        ]
+      },
+      "ftp": {
+        "name": "FTP",
+        "fullName": "FTP (File Transfer Protocol)",
+        "description": "Classic transfer protocol. Fast, but *does not encrypt* data (not recommended for sensitive information).",
+        "advantages": [
+          "Fast and efficient",
+          "Wide compatibility"
+        ]
+      },
+      "scp": {
+        "name": "SCP",
+        "fullName": "SCP (Secure Copy Protocol)",
+        "description": "Fast and secure tool for copying files and directories between remote hosts (SSH-based).",
+        "advantages": [
+          "Secure and fast",
+          "SSH-based"
+        ]
+      },
+      "password": {
+        "name": "New Password",
+        "description": "Store and manage passwords securely. AES-256-GCM encryption with optional master password.",
+        "advantages": [
+          "Secure AES-256-GCM encryption",
+          "Organization in folders and groups"
+        ]
+      }
+    },
+    "badges": {
+      "secure": "Secure",
+      "recommended": "Recommended",
+      "insecure": "Not secure",
+      "windows": "Windows",
+      "crossPlatform": "Cross-platform"
+    }
   }
 }
