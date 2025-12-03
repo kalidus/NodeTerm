@@ -4,6 +4,7 @@ import { Tree } from 'primereact/tree';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Divider } from 'primereact/divider';
 import { uiThemes } from '../themes/ui-themes';
+import { iconThemes } from '../themes/icon-themes';
 import SidebarFooter from './SidebarFooter';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/layout/sidebar.css';
@@ -19,11 +20,87 @@ const LocalFileExplorerSidebar = ({
   uiTheme = 'Light',
   showToast,
   setShowSettingsDialog,
-  sessionActionIconTheme = 'modern'
+  sessionActionIconTheme = 'modern',
+  iconTheme: propIconTheme,
+  iconSize: propIconSize,
+  folderIconSize: propFolderIconSize
 }) => {
   const { t } = useTranslation('common');
   const theme = uiThemes[uiTheme] || uiThemes['Light'];
   const colors = theme?.colors || {};
+  
+  // Leer tema de iconos del explorador de archivos directamente del localStorage
+  const [iconTheme, setIconTheme] = useState(() => {
+    try {
+      return localStorage.getItem('iconTheme') || propIconTheme || 'material';
+    } catch {
+      return propIconTheme || 'material';
+    }
+  });
+  
+  // Leer tamaños de iconos del explorador de archivos
+  const [iconSize, setIconSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('iconSize');
+      return saved ? parseInt(saved, 10) : (propIconSize || 20);
+    } catch {
+      return propIconSize || 20;
+    }
+  });
+  
+  const [folderIconSize, setFolderIconSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('folderIconSize');
+      return saved ? parseInt(saved, 10) : (propFolderIconSize || 20);
+    } catch {
+      return propFolderIconSize || 20;
+    }
+  });
+  
+  // Escuchar cambios en el tema de iconos del explorador de archivos
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const storedIconTheme = localStorage.getItem('iconTheme');
+        const storedIconSize = localStorage.getItem('iconSize');
+        const storedFolderIconSize = localStorage.getItem('folderIconSize');
+        
+        if (storedIconTheme && storedIconTheme !== iconTheme) {
+          setIconTheme(storedIconTheme);
+        }
+        
+        if (storedIconSize) {
+          const size = parseInt(storedIconSize, 10);
+          if (size && size !== iconSize) {
+            setIconSize(size);
+          }
+        }
+        
+        if (storedFolderIconSize) {
+          const size = parseInt(storedFolderIconSize, 10);
+          if (size && size !== folderIconSize) {
+            setFolderIconSize(size);
+          }
+        }
+      } catch (error) {
+        console.error('Error leyendo tema del explorador:', error);
+      }
+    };
+    
+    // Verificar cambios periódicamente
+    const interval = setInterval(handleStorageChange, 500);
+    
+    // También escuchar eventos de storage
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Verificar inmediatamente
+    handleStorageChange();
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [iconTheme, iconSize, folderIconSize]);
   
   const [nodes, setNodes] = useState([]);
   const [expandedKeys, setExpandedKeys] = useState({});
@@ -65,7 +142,6 @@ const LocalFileExplorerSidebar = ({
             size: file.size,
             parentPath: dirPath
           },
-          icon: file.type === 'directory' ? 'pi pi-folder' : 'pi pi-file',
           leaf: file.type !== 'directory',
           children: file.type === 'directory' ? [] : undefined
         }));
@@ -148,6 +224,114 @@ const LocalFileExplorerSidebar = ({
       }
     });
   }, [expandedKeys, nodes, loadDirectory, findNodeByKey]);
+
+  // Función para obtener el color por defecto del tema
+  const getThemeDefaultColor = useCallback((themeName) => {
+    const theme = iconThemes[themeName];
+    if (!theme || !theme.icons || !theme.icons.folder) return '#5e81ac';
+    
+    const folderIcon = theme.icons.folder;
+    if (folderIcon.props && folderIcon.props.fill && folderIcon.props.fill !== 'none') {
+      return folderIcon.props.fill;
+    }
+    if (folderIcon.props && folderIcon.props.stroke) {
+      return folderIcon.props.stroke;
+    }
+    if (folderIcon.props && folderIcon.props.children) {
+      const children = Array.isArray(folderIcon.props.children) 
+        ? folderIcon.props.children 
+        : [folderIcon.props.children];
+      for (const child of children) {
+        if (child.props && child.props.fill && child.props.fill !== 'none') {
+          return child.props.fill;
+        }
+        if (child.props && child.props.stroke) {
+          return child.props.stroke;
+        }
+      }
+    }
+    return '#5e81ac';
+  }, []);
+
+  // Node template personalizado con iconos del tema
+  const nodeTemplate = useCallback((node, options) => {
+    const isDirectory = node.data?.type === 'directory';
+    const isExpanded = expandedKeys[node.key];
+    let icon = null;
+
+    if (isDirectory) {
+      const folderColor = getThemeDefaultColor(iconTheme);
+      const themeIcon = isExpanded
+        ? iconThemes[iconTheme]?.icons?.folderOpen
+        : iconThemes[iconTheme]?.icons?.folder;
+
+      if (themeIcon) {
+        icon = React.cloneElement(themeIcon, {
+          style: {
+            ...themeIcon.props.style,
+            color: folderColor,
+            '--icon-color': folderColor,
+            fontSize: `${folderIconSize}px`,
+            width: `${folderIconSize}px`,
+            height: `${folderIconSize}px`
+          },
+          'data-folder-color': folderColor
+        });
+      } else {
+        icon = isExpanded
+          ? <span 
+              className="pi pi-folder-open" 
+              style={{ 
+                color: folderColor,
+                fontSize: `${folderIconSize}px`
+              }} 
+            />
+          : <span 
+              className="pi pi-folder" 
+              style={{ 
+                color: folderColor,
+                fontSize: `${folderIconSize}px`
+              }} 
+            />;
+      }
+    } else {
+      // Icono para archivos
+      const fileIcon = iconThemes[iconTheme]?.icons?.file;
+      if (fileIcon) {
+        icon = React.cloneElement(fileIcon, {
+          style: {
+            ...fileIcon.props.style,
+            fontSize: `${iconSize}px`,
+            width: `${iconSize}px`,
+            height: `${iconSize}px`
+          }
+        });
+      } else {
+        icon = <span 
+          className="pi pi-file" 
+          style={{ 
+            fontSize: `${iconSize}px`
+          }} 
+        />;
+      }
+    }
+
+    return (
+      <div className="flex align-items-center gap-1" style={{ width: '100%' }}>
+        <span style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          flexShrink: 0
+        }}>
+          {icon}
+        </span>
+        <span className="node-label" style={{ flex: 1, minWidth: 0 }}>
+          {node.label}
+        </span>
+      </div>
+    );
+  }, [expandedKeys, iconTheme, iconSize, folderIconSize, getThemeDefaultColor]);
 
   const panelBorder = colors?.contentBorder || 'rgba(255,255,255,0.08)';
   const textPrimary = colors?.sidebarText || '#e5ecff';
@@ -309,6 +493,7 @@ const LocalFileExplorerSidebar = ({
           </div>
         ) : (
           <Tree
+            key={`local-explorer-${iconTheme}-${iconSize}-${folderIconSize}`}
             value={nodes}
             expandedKeys={expandedKeys}
             onToggle={handleToggle}
@@ -316,6 +501,7 @@ const LocalFileExplorerSidebar = ({
             selectionKeys={selectedKey}
             onSelectionChange={(e) => setSelectedKey(e.value)}
             className="sidebar-tree"
+            nodeTemplate={nodeTemplate}
             style={{ 
               fontSize: `${explorerFontSize || 14}px`,
               backgroundColor: 'transparent',
