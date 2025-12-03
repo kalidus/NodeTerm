@@ -2591,6 +2591,9 @@ const Sidebar = React.memo(({
               showToast={showToast}
               setShowSettingsDialog={setShowSettingsDialog}
               sessionActionIconTheme={sessionActionIconTheme}
+              iconTheme={iconTheme}
+              iconSize={iconSize}
+              folderIconSize={folderIconSize}
             />
           ) : (
             // Vista de passwords
