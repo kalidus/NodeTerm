@@ -1,0 +1,142 @@
+{
+  "ssh": {
+    "title": {
+      "new": "New SSH Connection",
+      "edit": "Edit SSH Connection"
+    },
+    "sections": {
+      "connection": "Connection",
+      "authentication": "Authentication",
+      "folders": "Folders",
+      "advanced": "Advanced"
+    },
+    "fields": {
+      "name": "Name",
+      "host": "Host",
+      "port": "Port",
+      "user": "User",
+      "password": "Password",
+      "privateKey": "Private Key",
+      "privateKeySSH": "SSH Private Key",
+      "passphrase": "Passphrase",
+      "remoteFolder": "Remote Folder",
+      "targetFolder": "Target Folder"
+    },
+    "descriptions": {
+      "name": "Unique identifier for this connection",
+      "host": "IP address or server name",
+      "user": "Username for the connection",
+      "password": "Password for authentication",
+      "privateKey": "Private key file or paste the content",
+      "remoteFolder": "Path on the remote server where the session will start",
+      "targetFolder": "Local folder to organize this connection"
+    },
+    "auth": {
+      "method": "Authentication Method",
+      "methodDescription": "Select how to authenticate on the server",
+      "password": "Password",
+      "key": "SSH Key",
+      "autoCopyPassword": "Copy password automatically",
+      "autoCopyPasswordDescription": "Copies the password to the clipboard when connecting",
+      "selectKeyFile": "Select key file",
+      "pasteKey": "Or paste the private key here"
+    },
+    "validation": {
+      "nameRequired": "Name is required",
+      "hostRequired": "Host is required",
+      "userRequired": "User is required",
+      "passwordRequired": "Password is required",
+      "privateKeyRequired": "Private key is required"
+    },
+    "placeholders": {
+      "name": "Production Server",
+      "host": "IP or server name",
+      "port": "22",
+      "user": "root",
+      "password": "Password",
+      "remoteFolder": "/home/user",
+      "targetFolder": "Select local folder"
+    },
+    "tooltips": {
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "selectFolder": "Select folder",
+      "selectPrivateKey": "Select private key file"
+    }
+  },
+  "rdp": {
+    "title": {
+      "new": "New RDP Connection",
+      "edit": "Edit RDP Connection"
+    },
+    "sections": {
+      "connection": "Connection",
+      "display": "Display",
+      "resources": "Resources"
+    },
+    "fields": {
+      "name": "Name",
+      "host": "Host",
+      "port": "Port",
+      "domain": "Domain",
+      "user": "User",
+      "password": "Password",
+      "width": "Width",
+      "height": "Height",
+      "fullscreen": "Fullscreen"
+    },
+    "placeholders": {
+      "name": "Windows Server",
+      "host": "IP or server name",
+      "port": "3389",
+      "domain": "DOMAIN",
+      "user": "Administrator"
+    }
+  },
+  "vnc": {
+    "title": {
+      "new": "New VNC Connection",
+      "edit": "Edit VNC Connection"
+    },
+    "fields": {
+      "name": "Name",
+      "host": "Host",
+      "port": "Port",
+      "password": "Password"
+    },
+    "placeholders": {
+      "name": "VNC Server",
+      "host": "IP or server name",
+      "port": "5900"
+    }
+  },
+  "folder": {
+    "title": {
+      "new": "New Folder",
+      "edit": "Edit Folder"
+    },
+    "fields": {
+      "name": "Folder name",
+      "icon": "Icon",
+      "color": "Color"
+    },
+    "placeholders": {
+      "name": "My folder"
+    }
+  },
+  "group": {
+    "title": {
+      "new": "New Group",
+      "edit": "Edit Group"
+    },
+    "fields": {
+      "name": "Group name"
+    }
+  },
+  "common": {
+    "required": "Required field",
+    "selectFolder": "Select folder",
+    "noFolders": "No folders available",
+    "back": "Back"
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "ssh": {
+    "title": {
+      "new": "Nueva conexión SSH",
+      "edit": "Editar conexión SSH"
+    },
+    "sections": {
+      "connection": "Conexión",
+      "authentication": "Autenticación",
+      "folders": "Carpetas",
+      "advanced": "Avanzado"
+    },
+    "fields": {
+      "name": "Nombre",
+      "host": "Host",
+      "port": "Puerto",
+      "user": "Usuario",
+      "password": "Contraseña",
+      "privateKey": "Clave privada",
+      "privateKeySSH": "Clave Privada SSH",
+      "passphrase": "Frase de paso",
+      "remoteFolder": "Carpeta remota",
+      "targetFolder": "Carpeta destino"
+    },
+    "descriptions": {
+      "name": "Identificador único para esta conexión",
+      "host": "Dirección IP o nombre del servidor",
+      "user": "Nombre de usuario para la conexión",
+      "password": "Contraseña para autenticación",
+      "privateKey": "Archivo de clave privada o pega el contenido",
+      "remoteFolder": "Ruta en el servidor remoto donde iniciar la sesión",
+      "targetFolder": "Carpeta local donde organizar esta conexión"
+    },
+    "auth": {
+      "method": "Método de Autenticación",
+      "methodDescription": "Selecciona cómo autenticarte en el servidor",
+      "password": "Contraseña",
+      "key": "Clave SSH",
+      "autoCopyPassword": "Copiar contraseña automáticamente",
+      "autoCopyPasswordDescription": "Copia la contraseña al portapapeles al conectar",
+      "selectKeyFile": "Seleccionar archivo de clave",
+      "pasteKey": "O pegar la clave privada aquí"
+    },
+    "validation": {
+      "nameRequired": "El nombre es requerido",
+      "hostRequired": "El host es requerido",
+      "userRequired": "El usuario es requerido",
+      "passwordRequired": "La contraseña es requerida",
+      "privateKeyRequired": "La clave privada es requerida"
+    },
+    "placeholders": {
+      "name": "Servidor de producción",
+      "host": "IP o nombre del servidor",
+      "port": "22",
+      "user": "root",
+      "password": "Contraseña",
+      "remoteFolder": "/home/usuario",
+      "targetFolder": "Seleccionar carpeta local"
+    },
+    "tooltips": {
+      "showPassword": "Mostrar contraseña",
+      "hidePassword": "Ocultar contraseña",
+      "selectFolder": "Seleccionar carpeta",
+      "selectPrivateKey": "Seleccionar archivo de clave privada"
+    }
+  },
+  "rdp": {
+    "title": {
+      "new": "Nueva conexión RDP",
+      "edit": "Editar conexión RDP"
+    },
+    "sections": {
+      "connection": "Conexión",
+      "display": "Pantalla",
+      "resources": "Recursos"
+    },
+    "fields": {
+      "name": "Nombre",
+      "host": "Host",
+      "port": "Puerto",
+      "domain": "Dominio",
+      "user": "Usuario",
+      "password": "Contraseña",
+      "width": "Ancho",
+      "height": "Alto",
+      "fullscreen": "Pantalla completa"
+    },
+    "placeholders": {
+      "name": "Servidor Windows",
+      "host": "IP o nombre del servidor",
+      "port": "3389",
+      "domain": "DOMINIO",
+      "user": "Administrador"
+    }
+  },
+  "vnc": {
+    "title": {
+      "new": "Nueva conexión VNC",
+      "edit": "Editar conexión VNC"
+    },
+    "fields": {
+      "name": "Nombre",
+      "host": "Host",
+      "port": "Puerto",
+      "password": "Contraseña"
+    },
+    "placeholders": {
+      "name": "Servidor VNC",
+      "host": "IP o nombre del servidor",
+      "port": "5900"
+    }
+  },
+  "folder": {
+    "title": {
+      "new": "Nueva carpeta",
+      "edit": "Editar carpeta"
+    },
+    "fields": {
+      "name": "Nombre de la carpeta",
+      "icon": "Icono",
+      "color": "Color"
+    },
+    "placeholders": {
+      "name": "Mi carpeta"
+    }
+  },
+  "group": {
+    "title": {
+      "new": "Nuevo grupo",
+      "edit": "Editar grupo"
+    },
+    "fields": {
+      "name": "Nombre del grupo"
+    }
+  },
+  "common": {
+    "required": "Campo obligatorio",
+    "selectFolder": "Seleccionar carpeta",
+    "noFolders": "No hay carpetas disponibles",
+    "back": "Volver"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "title": "Settings",
+  "language": {
+    "title": "Language",
+    "description": "Select the interface language",
+    "select": "Select language"
+  },
+  "tabs": {
+    "general": "General",
+    "appearance": "Appearance",
+    "terminal": "Terminal",
+    "connections": "Connections",
+    "ai": "AI",
+    "advanced": "Advanced"
+  },
+  "general": {
+    "title": "General Settings",
+    "startMinimized": "Start minimized",
+    "startWithSystem": "Start with system",
+    "checkUpdates": "Check for updates on startup"
+  },
+  "appearance": {
+    "title": "Appearance",
+    "theme": "Theme",
+    "iconTheme": "Icon theme",
+    "fontSize": "Font size",
+    "fontFamily": "Font family"
+  }
+}

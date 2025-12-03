@@ -1,0 +1,29 @@
+{
+  "title": "Configuración",
+  "language": {
+    "title": "Idioma",
+    "description": "Selecciona el idioma de la interfaz",
+    "select": "Seleccionar idioma"
+  },
+  "tabs": {
+    "general": "General",
+    "appearance": "Apariencia",
+    "terminal": "Terminal",
+    "connections": "Conexiones",
+    "ai": "IA",
+    "advanced": "Avanzado"
+  },
+  "general": {
+    "title": "Configuración General",
+    "startMinimized": "Iniciar minimizado",
+    "startWithSystem": "Iniciar con el sistema",
+    "checkUpdates": "Buscar actualizaciones al iniciar"
+  },
+  "appearance": {
+    "title": "Apariencia",
+    "theme": "Tema",
+    "iconTheme": "Tema de iconos",
+    "fontSize": "Tamaño de fuente",
+    "fontFamily": "Familia de fuente"
+  }
+}

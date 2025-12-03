@@ -5,6 +5,7 @@ import { useSidebarManagement } from '../hooks/useSidebarManagement';
 import { useThemeManagement } from '../hooks/useThemeManagement';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import { loadSavedTabTheme } from '../utils/tabThemeLoader';
+import i18n from '../i18n';
 
 import { useStatusBarSettings } from '../hooks/useStatusBarSettings';
 import { useSessionManagement } from '../hooks/useSessionManagement';
@@ -148,6 +149,13 @@ const App = () => {
     
     // Ejecutar inicialización
     initializeAllThemes();
+  }, []);
+
+  // Inicializar sistema de internacionalización (i18n)
+  useEffect(() => {
+    i18n.init().catch(err => {
+      console.error('[App] Error inicializando i18n:', err);
+    });
   }, []);
 
   // Detectar si necesita unlock al iniciar (o auto-unlock si está recordado)
