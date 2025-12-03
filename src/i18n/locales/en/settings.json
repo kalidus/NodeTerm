@@ -14,6 +14,24 @@
     "ai": "AI",
     "advanced": "Advanced"
   },
+  "sidebar": {
+    "general": "General",
+    "security": "Security",
+    "masterKey": "Master Key",
+    "audit": "Audit",
+    "appearance": "Appearance",
+    "interface": "Interface",
+    "tabs": "Tabs",
+    "terminal": "Terminal",
+    "statusBar": "Status Bar",
+    "sessionExplorer": "Session Explorer",
+    "fileExplorer": "File Explorer",
+    "rdp": "RDP",
+    "aiClients": "AI Clients",
+    "updates": "Updates",
+    "sync": "Sync",
+    "info": "Information"
+  },
   "general": {
     "title": "General Settings",
     "sections": {

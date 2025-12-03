@@ -14,6 +14,24 @@
     "ai": "IA",
     "advanced": "Avanzado"
   },
+  "sidebar": {
+    "general": "General",
+    "security": "Seguridad",
+    "masterKey": "Clave Maestra",
+    "audit": "Auditoría",
+    "appearance": "Apariencia",
+    "interface": "Interfaz",
+    "tabs": "Pestañas",
+    "terminal": "Terminal",
+    "statusBar": "Status Bar",
+    "sessionExplorer": "Expl. Sesiones",
+    "fileExplorer": "Expl. Archivos",
+    "rdp": "RDP",
+    "aiClients": "Clientes de IA",
+    "updates": "Actualizaciones",
+    "sync": "Sincronización",
+    "info": "Información"
+  },
   "general": {
     "title": "Configuración General",
     "sections": {
