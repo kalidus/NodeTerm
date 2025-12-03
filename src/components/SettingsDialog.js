@@ -310,11 +310,11 @@ const SettingsDialog = ({
     localStorage.setItem('update_channel', channel);
     
     if (toastRef && toastRef.current) {
-      const channelLabel = channel === 'latest' ? 'Estable' : 'Beta';
+      const channelLabel = channel === 'latest' ? t('updateChannels.stable') : t('updateChannels.beta');
       toastRef.current.show({
         severity: 'success',
-        summary: 'Canal actualizado',
-        detail: `Ahora recibirás actualizaciones del canal ${channelLabel}`,
+        summary: t('updateChannels.channelUpdated'),
+        detail: t('updateChannels.message').replace('{channel}', channelLabel),
         life: 2000,
       });
     }
@@ -339,7 +339,7 @@ const SettingsDialog = ({
           if (toastRef && toastRef.current) {
             toastRef.current.show({
               severity: 'success',
-              summary: 'Actualización Disponible',
+              summary: t('updateChannels.available'),
               detail: `Nueva versión disponible: ${result.updateInfo?.version || 'desconocida'}`,
               life: 5000,
             });
@@ -351,14 +351,14 @@ const SettingsDialog = ({
           if (toastRef && toastRef.current) {
             toastRef.current.show({
               severity: 'success',
-              summary: 'Sistema Actualizado',
-              detail: 'Ya tienes la última versión disponible',
+              summary: t('updateChannels.upToDate'),
+              detail: t('updateChannels.upToDateDetail'),
               life: 3000,
             });
           }
         }
       } else {
-        throw new Error('Sistema de actualización no disponible');
+        throw new Error(t('updateChannels.notAvailable'));
       }
     } catch (error) {
       console.error('❌ Error al verificar actualizaciones:', error);
@@ -368,7 +368,7 @@ const SettingsDialog = ({
         toastRef.current.show({
           severity: 'error',
           summary: 'Error',
-          detail: error.message || 'No se pudo comprobar actualizaciones',
+          detail: error.message || t('updateChannels.checkError'),
           life: 5000,
         });
       }
@@ -411,8 +411,8 @@ const SettingsDialog = ({
             if (toastRef && toastRef.current) {
               toastRef.current.show({
                 severity: 'success',
-                summary: 'Descarga Completa',
-                detail: 'La actualización está lista para instalar',
+                summary: t('updateChannels.downloadComplete'),
+                detail: t('updateChannels.downloadCompleteDetail'),
                 life: 3000,
               });
             }
@@ -432,7 +432,7 @@ const SettingsDialog = ({
         toastRef.current.show({
           severity: 'error',
           summary: 'Error',
-          detail: 'No se pudo descargar la actualización',
+          detail: t('updateChannels.downloadError'),
           life: 5000,
         });
       }
@@ -451,7 +451,7 @@ const SettingsDialog = ({
           toastRef.current.show({
             severity: 'info',
             summary: 'Instalando',
-            detail: 'La aplicación se reiniciará para aplicar la actualización...',
+            detail: t('updateChannels.installing'),
             life: 3000,
           });
         }
@@ -466,7 +466,7 @@ const SettingsDialog = ({
         toastRef.current.show({
           severity: 'error',
           summary: 'Error',
-          detail: 'No se pudo instalar la actualización',
+          detail: t('updateChannels.installError'),
           life: 5000,
         });
       }
@@ -482,7 +482,7 @@ const SettingsDialog = ({
       toastRef.current.show({
         severity: 'success',
         summary: 'Guardado',
-        detail: enabled ? 'Búsqueda automática activada' : 'Búsqueda automática desactivada',
+        detail: enabled ? t('updateChannels.autoCheckEnabled') : t('updateChannels.autoCheckDisabled'),
         life: 2000,
       });
     }
@@ -496,7 +496,7 @@ const SettingsDialog = ({
       toastRef.current.show({
         severity: 'success',
         summary: 'Guardado',
-        detail: enabled ? 'Descarga automática activada' : 'Descarga automática desactivada',
+        detail: enabled ? t('updateChannels.autoDownloadEnabled') : t('updateChannels.autoDownloadDisabled'),
         life: 2000,
       });
     }
@@ -518,7 +518,7 @@ const SettingsDialog = ({
           >
             <div className="home-icon-badge-content">
               {currentIcon?.icon(20)}
-              <span className="home-icon-badge-name">{currentIcon?.name || 'Seleccionar'}</span>
+              <span className="home-icon-badge-name">{currentIcon?.name || t('common.selectIcon')}</span>
             </div>
             <i className="pi pi-chevron-down home-icon-badge-chevron"></i>
           </button>
@@ -572,7 +572,7 @@ const SettingsDialog = ({
           >
             <div className="group-icon-badge-content">
               {currentIcon?.icon(20)}
-              <span className="group-icon-badge-name">{currentIcon?.name || 'Seleccionar'}</span>
+              <span className="group-icon-badge-name">{currentIcon?.name || t('common.selectIcon')}</span>
             </div>
             <i className="pi pi-chevron-down group-icon-badge-chevron"></i>
           </button>
@@ -1317,7 +1317,7 @@ const SettingsDialog = ({
           <div className="settings-dialog-header-icon">
             <i className="pi pi-cog"></i>
           </div>
-          <span className="settings-dialog-header-title">Configuración</span>
+          <span className="settings-dialog-header-title">{t('title')}</span>
         </div>
       }
       visible={visible}
@@ -1453,7 +1453,7 @@ const SettingsDialog = ({
             onTabChange={(e) => setActiveIndex(e.index)}
             className="settings-dialog-tabview"
           >
-        <TabPanel header="General" leftIcon="pi pi-sliders-h" style={{ '--content-height': `${contentHeight}px` }}>
+        <TabPanel header={t('tabs.general')} leftIcon="pi pi-sliders-h" style={{ '--content-height': `${contentHeight}px` }}>
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
             <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: '8px', bottom: 0, width: 'calc(100% - 8px)' }}>
             {/* Header */}
@@ -1463,8 +1463,8 @@ const SettingsDialog = ({
                   <i className="pi pi-sliders-h"></i>
                 </span>
                 <div className="general-header-text">
-                  <h3 className="general-header">Configuración General</h3>
-                  <p className="general-description">Personaliza el comportamiento y la apariencia básica de NodeTerm</p>
+                  <h3 className="general-header">{t('general.title')}</h3>
+                  <p className="general-description">{t('description')}</p>
                 </div>
               </div>
             </div>
@@ -1477,7 +1477,7 @@ const SettingsDialog = ({
                   <div className="general-section-icon">
                     <i className="pi pi-sliders-h"></i>
                   </div>
-                  <h4 className="general-section-title">Comportamiento de la Aplicación</h4>
+                  <h4 className="general-section-title">{t('general.sections.behavior.title')}</h4>
                 </div>
                 
                 <div className="general-settings-options">
@@ -1488,10 +1488,10 @@ const SettingsDialog = ({
                       </div>
                       <div className="general-setting-info">
                         <label htmlFor="lock-home-button" className="general-setting-label">
-                          Bloquear Botón de Inicio
+                          {t('general.sections.behavior.lockHomeButton.label')}
                         </label>
                         <p className="general-setting-description">
-                          Previene que el botón de inicio se pueda cerrar o mover accidentalmente
+                          {t('general.sections.behavior.lockHomeButton.description')}
                         </p>
                       </div>
                       <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
@@ -1511,10 +1511,10 @@ const SettingsDialog = ({
                       </div>
                       <div className="general-setting-info">
                         <label htmlFor="interactive-icon" className="general-setting-label">
-                          Icono NodeTerm Interactivo
+                          {t('general.sections.behavior.interactiveIcon.label')}
                         </label>
                         <p className="general-setting-description">
-                          Hace que el cursor "_" en el título parpadee como un terminal real
+                          {t('general.sections.behavior.interactiveIcon.description')}
                         </p>
                       </div>
                       <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
@@ -1534,10 +1534,10 @@ const SettingsDialog = ({
                       </div>
                       <div className="general-setting-info">
                         <label htmlFor="sidebar-start-collapsed" className="general-setting-label">
-                          Iniciar con Sidebar Colapsada
+                          {t('general.sections.behavior.sidebarStartCollapsed.label')}
                         </label>
                         <p className="general-setting-description">
-                          La barra lateral se iniciará colapsada por defecto al abrir la aplicación
+                          {t('general.sections.behavior.sidebarStartCollapsed.description')}
                         </p>
                       </div>
                       <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
@@ -1598,7 +1598,7 @@ const SettingsDialog = ({
                   <div className="general-section-icon">
                     <i className="pi pi-palette"></i>
                   </div>
-                  <h4 className="general-section-title">Personalización Visual</h4>
+                  <h4 className="general-section-title">{t('general.sections.visual.title')}</h4>
                 </div>
                 
                 {/* Selector de Icono de Pestaña de Inicio */}
@@ -1609,8 +1609,8 @@ const SettingsDialog = ({
                         <i className="pi pi-home"></i>
                       </div>
                       <div className="general-selector-text-group">
-                        <span className="general-selector-title-compact">Icono de la Pestaña de Inicio</span>
-                        <span className="general-selector-description-compact">Personaliza el icono que aparece en la pestaña de inicio</span>
+                        <span className="general-selector-title-compact">{t('general.sections.visual.homeTabIcon.title')}</span>
+                        <span className="general-selector-description-compact">{t('general.sections.visual.homeTabIcon.description')}</span>
                       </div>
                     </div>
                     <div className="general-selector-action-wrapper">
@@ -1630,8 +1630,8 @@ const SettingsDialog = ({
                         <i className="pi pi-th-large"></i>
                       </div>
                       <div className="general-selector-text-group">
-                        <span className="general-selector-title-compact">Icono de Grupos de Pestañas</span>
-                        <span className="general-selector-description-compact">Elige el icono para la pestaña de grupos</span>
+                        <span className="general-selector-title-compact">{t('general.sections.visual.groupTabIcon.title')}</span>
+                        <span className="general-selector-description-compact">{t('general.sections.visual.groupTabIcon.description')}</span>
                       </div>
                     </div>
                     <div className="general-selector-action-wrapper">
@@ -1648,7 +1648,7 @@ const SettingsDialog = ({
           </div>
         </TabPanel>
         <TabPanel 
-          header="Seguridad" 
+          header={t('security.title')} 
           leftIcon="pi pi-shield"
           style={{ '--content-height': `${contentHeight}px` }}
         >
@@ -1794,11 +1794,11 @@ const SettingsDialog = ({
                                   }}
                                 />
                                 <label htmlFor="remember-password-settings" className="security-checkbox-label">
-                                  Recordar contraseña en este dispositivo
+                                  {t('security.masterPassword.rememberPassword')}
                                 </label>
                               </div>
                               <small className="security-checkbox-hint">
-                                Si está activado, no se pedirá la contraseña al iniciar la app
+                                {t('security.masterPassword.rememberPasswordHint')}
                               </small>
                             </div>
                           </>
@@ -1851,20 +1851,20 @@ const SettingsDialog = ({
                                 </g>
                               </svg>
                             </span>
-                            Configurar Clave Maestra
+                            {t('security.masterPassword.configureTitle')}
                           </h4>
                           
                           <div className="security-field">
                             <label htmlFor="master-password" className="security-field-label">
                               <i className="pi pi-key"></i>
-                              Nueva Clave Maestra
+                              {t('security.masterPassword.newPassword')}
                             </label>
                             <div className="security-field-input">
                               <Password
                                 id="master-password"
                                 value={masterPassword}
                                 onChange={(e) => setMasterPassword(e.target.value)}
-                                placeholder="Mínimo 6 caracteres"
+                                placeholder={t('security.masterPassword.placeholders.minChars')}
                                 feedback={false}
                                 toggleMask
                                 disabled={isLoading}
@@ -1875,14 +1875,14 @@ const SettingsDialog = ({
                           <div className="security-field">
                             <label htmlFor="confirm-password" className="security-field-label">
                               <i className="pi pi-shield"></i>
-                              Confirmar Clave Maestra
+                              {t('security.masterPassword.confirmPassword')}
                             </label>
                             <div className="security-field-input">
                               <Password
                                 id="confirm-password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                placeholder="Repetir la clave"
+                                placeholder={t('security.masterPassword.placeholders.repeat')}
                                 feedback={false}
                                 toggleMask
                                 disabled={isLoading}
@@ -1891,7 +1891,7 @@ const SettingsDialog = ({
                           </div>
 
                           <Button
-                            label={isLoading ? 'Guardando...' : 'Guardar Clave Maestra'}
+                            label={isLoading ? t('security.masterPassword.buttons.saving') : t('security.masterPassword.buttons.save')}
                             icon={isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-save'}
                             onClick={handleSaveMasterPassword}
                             disabled={!validateMasterPassword() || isLoading}
@@ -1944,20 +1944,20 @@ const SettingsDialog = ({
                                 </g>
                               </svg>
                             </span>
-                            Cambiar Clave Maestra
+                            {t('security.masterPassword.changeTitle')}
                           </h4>
                           
                           <div className="security-field">
                             <label htmlFor="current-password" className="security-field-label">
                               <i className="pi pi-unlock"></i>
-                              Clave Actual
+                              {t('security.masterPassword.currentPassword')}
                             </label>
                             <div className="security-field-input">
                               <Password
                                 id="current-password"
                                 value={currentPassword}
                                 onChange={(e) => setCurrentPassword(e.target.value)}
-                                placeholder="Clave maestra actual"
+                                placeholder={t('security.masterPassword.placeholders.current')}
                                 feedback={false}
                                 toggleMask
                                 disabled={isLoading}
@@ -1968,14 +1968,14 @@ const SettingsDialog = ({
                           <div className="security-field">
                             <label htmlFor="new-password" className="security-field-label">
                               <i className="pi pi-key"></i>
-                              Nueva Clave Maestra
+                              {t('security.masterPassword.newPassword')}
                             </label>
                             <div className="security-field-input">
                               <Password
                                 id="new-password"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
-                                placeholder="Nueva clave (mínimo 6 caracteres)"
+                                placeholder={t('security.masterPassword.placeholders.new')}
                                 feedback={false}
                                 toggleMask
                                 disabled={isLoading}
@@ -1986,14 +1986,14 @@ const SettingsDialog = ({
                           <div className="security-field">
                             <label htmlFor="confirm-new-password" className="security-field-label">
                               <i className="pi pi-shield"></i>
-                              Confirmar Nueva Clave
+                              {t('security.masterPassword.confirmNewPassword')}
                             </label>
                             <div className="security-field-input">
                               <Password
                                 id="confirm-new-password"
                                 value={confirmNewPassword}
                                 onChange={(e) => setConfirmNewPassword(e.target.value)}
-                                placeholder="Repetir la nueva clave"
+                                placeholder={t('security.masterPassword.placeholders.repeatNew')}
                                 feedback={false}
                                 toggleMask
                                 disabled={isLoading}
@@ -2003,7 +2003,7 @@ const SettingsDialog = ({
 
                           <div className="security-actions">
                             <Button
-                              label={isLoading ? 'Cambiando...' : 'Cambiar Clave'}
+                              label={isLoading ? t('security.masterPassword.buttons.changing') : t('security.masterPassword.buttons.change')}
                               icon={isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-sync'}
                               onClick={handleChangeMasterPassword}
                               disabled={!validatePasswordChange() || isLoading}
@@ -2011,7 +2011,7 @@ const SettingsDialog = ({
                             />
                             
                             <Button
-                              label="Eliminar"
+                              label={t('security.masterPassword.buttons.delete')}
                               icon="pi pi-times-circle"
                               onClick={handleRemoveMasterKey}
                               disabled={isLoading}
@@ -2065,8 +2065,8 @@ const SettingsDialog = ({
                           </svg>
                         </span>
                         <div className="security-header-text">
-                          <h3 className="security-header">Configuración de Auditoría</h3>
-                          <p className="security-description">Configura el grabado automático de sesiones SSH y la gestión de archivos de auditoría</p>
+                          <h3 className="security-header">{t('security.audit.title')}</h3>
+                          <p className="security-description">{t('security.audit.description')}</p>
                         </div>
                       </div>
                     </div>
@@ -2081,7 +2081,7 @@ const SettingsDialog = ({
                           <div className="general-section-icon">
                             <i className="pi pi-video"></i>
                           </div>
-                          <h4 className="general-section-title">Grabación Automática de Sesiones SSH</h4>
+                          <h4 className="general-section-title">{t('security.audit.autoRecording.title')}</h4>
                         </div>
                         
                         <div className="general-settings-options">
@@ -2094,10 +2094,10 @@ const SettingsDialog = ({
                               </div>
                               <div className="general-setting-info">
                                 <label htmlFor="autoRecording" className="general-setting-label">
-                                  Activar grabación automática
+                                  {t('security.audit.autoRecording.enable')}
                                 </label>
                                 <p className="general-setting-description">
-                                  Graba automáticamente todas las sesiones SSH iniciadas
+                                  {t('security.audit.autoRecording.enableDescription')}
                                 </p>
                               </div>
                               <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
@@ -2120,8 +2120,8 @@ const SettingsDialog = ({
                                       <i className="pi pi-sliders-h"></i>
                                     </div>
                                     <div className="general-selector-text-group">
-                                      <span className="general-selector-title-compact">Calidad de grabación</span>
-                                      <span className="general-selector-description-compact">Nivel de detalle capturado en las grabaciones</span>
+                                      <span className="general-selector-title-compact">{t('security.audit.autoRecording.quality')}</span>
+                                      <span className="general-selector-description-compact">{t('security.audit.autoRecording.qualityDescription')}</span>
                                     </div>
                                   </div>
                                   <div className="general-selector-action-wrapper">
@@ -2129,9 +2129,9 @@ const SettingsDialog = ({
                                       id="recordingQuality"
                                       value={recordingQuality}
                                       options={[
-                                        { label: 'Alta (todos los eventos)', value: 'high' },
-                                        { label: 'Media (eventos importantes)', value: 'medium' },
-                                        { label: 'Baja (solo comandos)', value: 'low' }
+                                        { label: t('security.audit.autoRecording.qualityOptions.high'), value: 'high' },
+                                        { label: t('security.audit.autoRecording.qualityOptions.medium'), value: 'medium' },
+                                        { label: t('security.audit.autoRecording.qualityOptions.low'), value: 'low' }
                                       ]}
                                       onChange={(e) => setRecordingQuality(e.value)}
                                       style={{ minWidth: '200px' }}
@@ -2148,10 +2148,10 @@ const SettingsDialog = ({
                                   </div>
                                   <div className="general-setting-info">
                                     <label htmlFor="encryptRecordings" className="general-setting-label">
-                                      Cifrar grabaciones con clave maestra
+                                      {t('security.audit.autoRecording.encrypt')}
                                     </label>
                                     <p className="general-setting-description">
-                                      Las grabaciones se cifrarán automáticamente si tienes una clave maestra configurada
+                                      {t('security.audit.autoRecording.encryptDescription')}
                                     </p>
                                   </div>
                                   <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
@@ -2173,11 +2173,11 @@ const SettingsDialog = ({
                                         <i className="pi pi-folder-open"></i>
                                       </div>
                                       <div className="general-selector-text-group">
-                                        <span className="general-selector-title-compact">Ubicación de grabaciones</span>
+                                        <span className="general-selector-title-compact">{t('security.audit.autoRecording.location')}</span>
                                         <span className="general-selector-description-compact">
                                           {isDefaultPath 
-                                            ? 'Ubicación por defecto: AppData/NodeTerm/recordings'
-                                            : `Personalizada: ${recordingPath || 'Cargando...'}`
+                                            ? t('security.audit.autoRecording.locationDefault')
+                                            : t('security.audit.autoRecording.locationCustom').replace('{path}', recordingPath || t('security.audit.autoRecording.locationLoading'))
                                           }
                                         </span>
                                       </div>
@@ -2193,25 +2193,25 @@ const SettingsDialog = ({
                                         fontSize: '0.8125rem',
                                         padding: '0.5rem 0.75rem'
                                       }}
-                                      placeholder={loadingPath ? 'Cargando...' : 'Ruta de grabaciones'}
+                                      placeholder={loadingPath ? t('security.audit.autoRecording.locationLoading') : t('security.audit.autoRecording.locationPlaceholder')}
                                     />
                                     <Button
                                       icon="pi pi-folder-open"
-                                      label="Cambiar"
+                                      label={t('security.audit.autoRecording.changeLocation')}
                                       onClick={async () => {
                                         try {
                                           if (!window?.electron?.dialog?.showOpenDialog) {
-                                            toast?.show({
-                                              severity: 'warn',
-                                              summary: 'No disponible',
-                                              detail: 'El selector de directorios requiere la app de escritorio'
-                                            });
+                                              toast?.show({
+                                                severity: 'warn',
+                                                summary: t('security.audit.autoRecording.notAvailable'),
+                                                detail: t('security.audit.autoRecording.notAvailableDetail')
+                                              });
                                             return;
                                           }
                                           
                                           const result = await window.electron.dialog.showOpenDialog({
                                             properties: ['openDirectory'],
-                                            title: 'Seleccionar carpeta para guardar grabaciones'
+                                            title: t('security.audit.autoRecording.selectFolder')
                                           });
                                           
                                           if (result && !result.canceled && result.filePaths && result.filePaths.length > 0) {
@@ -2227,14 +2227,14 @@ const SettingsDialog = ({
                                               setIsDefaultPath(false);
                                               toast?.show({
                                                 severity: 'success',
-                                                summary: 'Ubicación actualizada',
-                                                detail: `Las grabaciones se guardarán en: ${setResult.currentPath}`
+                                                summary: t('security.audit.autoRecording.locationUpdated'),
+                                                detail: t('security.audit.autoRecording.locationUpdatedDetail').replace('{path}', setResult.currentPath)
                                               });
                                             } else {
                                               toast?.show({
                                                 severity: 'error',
-                                                summary: 'Error',
-                                                detail: setResult?.error || 'No se pudo cambiar la ubicación'
+                                                summary: t('security.audit.autoRecording.error'),
+                                                detail: setResult?.error || t('security.audit.autoRecording.errorDetail')
                                               });
                                             }
                                             setLoadingPath(false);
@@ -2243,8 +2243,8 @@ const SettingsDialog = ({
                                           console.error('Error seleccionando carpeta:', error);
                                           toast?.show({
                                             severity: 'error',
-                                            summary: 'Error',
-                                            detail: 'No se pudo abrir el selector de carpeta'
+                                            summary: t('security.audit.autoRecording.error'),
+                                            detail: t('security.audit.autoRecording.errorFolder')
                                           });
                                           setLoadingPath(false);
                                         }
@@ -2255,7 +2255,7 @@ const SettingsDialog = ({
                                     {!isDefaultPath && (
                                       <Button
                                         icon="pi pi-refresh"
-                                        label="Restaurar"
+                                        label={t('security.audit.autoRecording.restoreLocation')}
                                         onClick={async () => {
                                           try {
                                             setLoadingPath(true);
@@ -2268,8 +2268,8 @@ const SettingsDialog = ({
                                               setIsDefaultPath(true);
                                               toast?.show({
                                                 severity: 'success',
-                                                summary: 'Ubicación restaurada',
-                                                detail: 'Se usará la ubicación por defecto'
+                                                summary: t('security.audit.autoRecording.locationRestored'),
+                                                detail: t('security.audit.autoRecording.locationRestoredDetail')
                                               });
                                             }
                                             setLoadingPath(false);
@@ -2296,7 +2296,7 @@ const SettingsDialog = ({
                         <div className="general-section-icon">
                           <i className="pi pi-chart-bar"></i>
                         </div>
-                        <h4 className="general-section-title">Estadísticas Actuales</h4>
+                        <h4 className="general-section-title">{t('security.audit.stats.title')}</h4>
                       </div>
                       
                       <div className="general-settings-options">
@@ -2308,27 +2308,27 @@ const SettingsDialog = ({
                         }}>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.8125rem' }}>
                             <div>
-                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>Archivos:</span>
+                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>{t('security.audit.stats.files')}</span>
                               <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem' }}>
                                 {auditStats?.fileCount || 0}
                               </span>
                             </div>
                             <div>
-                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>Tamaño total:</span>
+                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>{t('security.audit.stats.totalSize')}</span>
                               <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem' }}>
                                 {formatBytes(auditStats?.totalSize || 0)}
                               </span>
                             </div>
                             <div>
-                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>Más antiguo:</span>
+                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>{t('security.audit.stats.oldest')}</span>
                               <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem', fontSize: '0.75rem' }}>
                                 {auditStats?.oldestFile ? new Date(auditStats.oldestFile).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'N/A'}
                               </span>
                             </div>
                             <div>
-                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>Última limpieza:</span>
+                              <span style={{ color: 'var(--text-color-secondary)', opacity: 0.8 }}>{t('security.audit.stats.lastCleanup')}</span>
                               <span style={{ color: 'var(--text-color)', fontWeight: '500', marginLeft: '0.5rem', fontSize: '0.75rem' }}>
-                                {auditStats?.lastCleanup ? new Date(auditStats.lastCleanup).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'Nunca'}
+                                {auditStats?.lastCleanup ? new Date(auditStats.lastCleanup).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : t('security.audit.stats.never')}
                               </span>
                             </div>
                           </div>
@@ -2343,7 +2343,7 @@ const SettingsDialog = ({
                         <div className="general-section-icon">
                           <i className="pi pi-trash"></i>
                         </div>
-                        <h4 className="general-section-title">Limpieza Automática de Archivos</h4>
+                        <h4 className="general-section-title">{t('security.audit.cleanup.title')}</h4>
                       </div>
                       
                       <div className="general-settings-options">
@@ -2355,10 +2355,10 @@ const SettingsDialog = ({
                             </div>
                             <div className="general-setting-info">
                               <label htmlFor="autoCleanup" className="general-setting-label">
-                                Activar limpieza automática
+                                {t('security.audit.cleanup.enable')}
                               </label>
                               <p className="general-setting-description">
-                                Elimina automáticamente archivos de auditoría antiguos según las reglas configuradas
+                                {t('security.audit.cleanup.enableDescription')}
                               </p>
                             </div>
                             <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
@@ -2381,8 +2381,8 @@ const SettingsDialog = ({
                                     <i className="pi pi-calendar"></i>
                                   </div>
                                   <div className="general-selector-text-group">
-                                    <span className="general-selector-title-compact">Días de retención: {retentionDays}</span>
-                                    <span className="general-selector-description-compact">Archivos más antiguos serán eliminados automáticamente</span>
+                                    <span className="general-selector-title-compact">{t('security.audit.cleanup.retentionDays').replace('{days}', retentionDays)}</span>
+                                    <span className="general-selector-description-compact">{t('security.audit.cleanup.retentionDescription')}</span>
                                   </div>
                                 </div>
                               </div>
@@ -2404,8 +2404,8 @@ const SettingsDialog = ({
                                   marginTop: '0.25rem',
                                   opacity: 0.7
                                 }}>
-                                  <span>1 día</span>
-                                  <span>365 días</span>
+                                  <span>{t('security.audit.cleanup.retentionRange.min')}</span>
+                                  <span>{t('security.audit.cleanup.retentionRange.max')}</span>
                                 </div>
                               </div>
                             </div>
@@ -2418,8 +2418,8 @@ const SettingsDialog = ({
                                     <i className="pi pi-database"></i>
                                   </div>
                                   <div className="general-selector-text-group">
-                                    <span className="general-selector-title-compact">Tamaño máximo: {maxStorageSize} GB</span>
-                                    <span className="general-selector-description-compact">Límite total de espacio para archivos de auditoría</span>
+                                    <span className="general-selector-title-compact">{t('security.audit.cleanup.maxStorage').replace('{size}', maxStorageSize)}</span>
+                                    <span className="general-selector-description-compact">{t('security.audit.cleanup.maxStorageDescription')}</span>
                                   </div>
                                 </div>
                               </div>
@@ -2441,8 +2441,8 @@ const SettingsDialog = ({
                                   marginTop: '0.25rem',
                                   opacity: 0.7
                                 }}>
-                                  <span>0.1 GB</span>
-                                  <span>100 GB</span>
+                                  <span>{t('security.audit.cleanup.maxStorageRange.min')}</span>
+                                  <span>{t('security.audit.cleanup.maxStorageRange.max')}</span>
                                 </div>
                               </div>
                             </div>
@@ -2455,10 +2455,10 @@ const SettingsDialog = ({
                                 </div>
                                 <div className="general-setting-info">
                                   <label htmlFor="cleanupOnStartup" className="general-setting-label">
-                                    Ejecutar limpieza al iniciar la aplicación
+                                    {t('security.audit.cleanup.onStartup')}
                                   </label>
                                   <p className="general-setting-description">
-                                    Limpia archivos antiguos cada vez que se inicia NodeTerm
+                                    {t('security.audit.cleanup.onStartupDescription')}
                                   </p>
                                 </div>
                                 <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
@@ -2479,8 +2479,8 @@ const SettingsDialog = ({
                                     <i className="pi pi-clock"></i>
                                   </div>
                                   <div className="general-selector-text-group">
-                                    <span className="general-selector-title-compact">Frecuencia de limpieza automática</span>
-                                    <span className="general-selector-description-compact">Con qué frecuencia se ejecutará la limpieza automática</span>
+                                    <span className="general-selector-title-compact">{t('security.audit.cleanup.frequency')}</span>
+                                    <span className="general-selector-description-compact">{t('security.audit.cleanup.frequencyDescription')}</span>
                                   </div>
                                 </div>
                                 <div className="general-selector-action-wrapper">
@@ -2488,10 +2488,10 @@ const SettingsDialog = ({
                                     id="cleanupFrequency"
                                     value={cleanupFrequency}
                                     options={[
-                                      { label: 'Diaria', value: 'daily' },
-                                      { label: 'Semanal', value: 'weekly' },
-                                      { label: 'Mensual', value: 'monthly' },
-                                      { label: 'Manual únicamente', value: 'manual' }
+                                      { label: t('security.audit.cleanup.frequencyOptions.daily'), value: 'daily' },
+                                      { label: t('security.audit.cleanup.frequencyOptions.weekly'), value: 'weekly' },
+                                      { label: t('security.audit.cleanup.frequencyOptions.monthly'), value: 'monthly' },
+                                      { label: t('security.audit.cleanup.frequencyOptions.manual'), value: 'manual' }
                                     ]}
                                     onChange={(e) => setCleanupFrequency(e.value)}
                                     style={{ minWidth: '180px' }}
@@ -2505,7 +2505,7 @@ const SettingsDialog = ({
                         {/* Botones de acción */}
                         <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
                           <Button
-                            label="Ejecutar Limpieza Ahora"
+                            label={t('security.audit.cleanup.runNow')}
                             icon="pi pi-trash"
                             onClick={handleManualCleanup}
                             disabled={!autoCleanupEnabled}
@@ -2513,7 +2513,7 @@ const SettingsDialog = ({
                             style={{ flex: 1, fontSize: '0.875rem', padding: '0.5rem' }}
                           />
                           <Button
-                            label="Ver Archivos"
+                            label={t('security.audit.cleanup.viewFiles')}
                             icon="pi pi-folder-open"
                             onClick={handleViewAuditFiles}
                             className="p-button-secondary"
@@ -2530,7 +2530,7 @@ const SettingsDialog = ({
           </div>
         </TabPanel>
 
-        <TabPanel header="Apariencia" leftIcon="pi pi-palette" style={{ '--content-height': `${contentHeight}px` }}>
+        <TabPanel header={t('tabs.appearance')} leftIcon="pi pi-palette" style={{ '--content-height': `${contentHeight}px` }}>
           <div className="apariencia-tab-container" style={{ right: '8px', width: 'calc(100% - 8px)' }}>
             {/* Renderizado condicional basado en activeSubTab */}
             {activeSubTab === 'interfaz' && (
@@ -2577,8 +2577,8 @@ const SettingsDialog = ({
                         <i className="pi pi-sitemap"></i>
                       </span>
                       <div className="general-header-text">
-                        <h3 className="general-header">Explorador de Sesiones</h3>
-                        <p className="general-description">Personaliza iconos, tamaños, tipografía y color del árbol</p>
+                        <h3 className="general-header">{t('appearance.sessionExplorer.title')}</h3>
+                        <p className="general-description">{t('appearance.sessionExplorer.description')}</p>
                       </div>
                     </div>
                   </div>
@@ -2808,7 +2808,7 @@ const SettingsDialog = ({
                             value={iconThemeSidebar}
                             options={Object.entries(iconThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
                             onChange={e => setIconThemeSidebar(e.value)}
-                            placeholder="Selecciona un tema"
+                            placeholder={t('appearance.sessionExplorer.selectTheme')}
                             style={{ width: '100%' }}
                             itemTemplate={option => (
                               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2839,7 +2839,7 @@ const SettingsDialog = ({
                             value={treeTheme}
                             options={treeThemeOptions}
                             onChange={(e) => setTreeTheme && setTreeTheme(e.value)}
-                            placeholder="Selecciona un tema"
+                            placeholder={t('appearance.sessionExplorer.selectTheme')}
                             style={{ width: '100%' }}
                             itemTemplate={(option) => (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -2903,7 +2903,7 @@ const SettingsDialog = ({
                               value={sidebarFont}
                               options={explorerFonts.map(f => ({ label: f, value: f }))}
                               onChange={e => setSidebarFont(e.value)}
-                              placeholder="Selecciona una fuente"
+                              placeholder={t('appearance.sessionExplorer.selectFont')}
                               style={{ flex: 1 }}
                               itemTemplate={option => (
                                 <span style={{ fontFamily: option.value }}>{option.label}</span>
@@ -2994,7 +2994,7 @@ const SettingsDialog = ({
                                     console.log('[SettingsDialog] Restaurando color por defecto');
                                     setSidebarFontColor('');
                                   }}
-                                  tooltip="Restaurar color por defecto"
+                                  tooltip={t('appearance.sessionExplorer.restoreColor')}
                                   tooltipOptions={{ position: 'top' }}
                                   style={{
                                     width: '36px',
@@ -3406,7 +3406,7 @@ const SettingsDialog = ({
                             value={iconTheme}
                             options={Object.entries(iconThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
                             onChange={e => setIconTheme(e.value)}
-                            placeholder="Selecciona un tema"
+                            placeholder={t('appearance.sessionExplorer.selectTheme')}
                             style={{ width: '100%' }}
                             itemTemplate={option => (
                               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -3437,7 +3437,7 @@ const SettingsDialog = ({
                             value={explorerColorTheme}
                             options={Object.entries(uiThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
                             onChange={e => setExplorerColorTheme(e.value)}
-                            placeholder="Selecciona un tema"
+                            placeholder={t('appearance.sessionExplorer.selectTheme')}
                             style={{ width: '100%' }}
                             itemTemplate={option => (
                               <span style={{
@@ -3509,7 +3509,7 @@ const SettingsDialog = ({
                               value={explorerFont}
                               options={explorerFonts.map(f => ({ label: f, value: f }))}
                               onChange={e => setExplorerFont(e.value)}
-                              placeholder="Selecciona una fuente"
+                              placeholder={t('appearance.sessionExplorer.selectFont')}
                               style={{ flex: 1 }}
                               itemTemplate={option => (
                                 <span style={{ fontFamily: option.value }}>{option.label}</span>
@@ -3571,7 +3571,7 @@ const SettingsDialog = ({
                     <i className="pi pi-desktop"></i>
                   </span>
                   <div className="general-header-text">
-                    <h3 className="general-header">Configuración RDP</h3>
+                    <h3 className="general-header">{t('rdp.title')}</h3>
                     <p className="general-description">Personaliza el comportamiento, conectividad y rendimiento de las sesiones RDP</p>
                   </div>
                 </div>
@@ -3585,13 +3585,13 @@ const SettingsDialog = ({
                     <div className="general-section-icon">
                       <i className="pi pi-sitemap"></i>
                     </div>
-                    <h4 className="general-section-title">Backend Guacamole</h4>
+                    <h4 className="general-section-title">{t('rdp.backendTitle')}</h4>
                   </div>
                   
                   <div className="general-settings-options" style={{ padding: '0.75rem 1.25rem', gap: '0.5rem' }}>
                     <div>
                       <label htmlFor="guacd-preferred-method" style={{ display: 'block', marginBottom: '0.35rem', fontWeight: 'bold', fontSize: '0.85rem' }}>
-                        Método preferido
+                        {t('rdp.guacdMethod')}
                       </label>
                       <Dropdown
                         id="guacd-preferred-method"
@@ -3601,7 +3601,7 @@ const SettingsDialog = ({
                         style={{ width: '100%' }}
                       />
                       <small style={{ display: 'block', marginTop: 4, color: 'var(--text-color-secondary)', fontSize: '0.75rem' }}>
-                        Preferencia → alternativa (Windows: Docker/WSL, Linux: Docker/Nativo)
+                        {t('rdp.guacdMethodHint')}
                       </small>
                     </div>
 
@@ -3655,10 +3655,10 @@ const SettingsDialog = ({
                     {/* Actividad de sesión */}
                     <div>
                       <label htmlFor="rdp-session-activity-min" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                        Umbral de actividad de sesión (min)
+                        {t('rdp.sessionActivity')}
                       </label>
                       <small style={{ display: 'block', marginBottom: 4, color: 'var(--text-color-secondary)', fontSize: '0.7rem' }}>
-                        Si no hay actividad, puede intentarse reconexión automática
+                        {t('rdp.sessionActivityHint')}
                       </small>
                       <InputNumber
                         id="rdp-session-activity-min"
@@ -3675,10 +3675,10 @@ const SettingsDialog = ({
 
                     <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
                       <label htmlFor="rdp-resize-debounce" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                        Debounce del resize (ms)
+                        {t('rdp.resizeDebounce')}
                       </label>
                       <small style={{ display: 'block', marginBottom: 4, color: 'var(--text-color-secondary)', fontSize: '0.7rem' }}>
-                        Retardo del envío final tras parar de arrastrar la ventana
+                        {t('rdp.resizeDebounceHint')}
                       </small>
                       <InputNumber
                         id="rdp-resize-debounce"
@@ -3695,10 +3695,10 @@ const SettingsDialog = ({
 
                     <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
                       <label htmlFor="rdp-idle-min" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                        Umbral de inactividad (min)
+                        {t('rdp.idleMinutes')}
                       </label>
                       <small style={{ display: 'block', marginBottom: 4, color: 'var(--text-color-secondary)', fontSize: '0.7rem' }}>
-                        Sin actividad (teclado/ratón), el siguiente resize ejecutará warm-up o reconexión
+                        {t('rdp.idleMinutesHint')}
                       </small>
                       <InputNumber
                         id="rdp-idle-min"
@@ -3715,10 +3715,10 @@ const SettingsDialog = ({
 
                     <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
                       <label htmlFor="rdp-resize-ack-timeout" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                        Timeout de ACK de resize (ms)
+                        {t('rdp.resizeAckTimeout')}
                       </label>
                       <small style={{ display: 'block', marginBottom: 4, color: 'var(--text-color-secondary)', fontSize: '0.7rem' }}>
-                        Tiempo máximo esperando respuesta del display antes de permitir otro resize
+                        {t('rdp.resizeAckTimeoutHint')}
                       </small>
                       <InputNumber
                         id="rdp-resize-ack-timeout"
@@ -3735,10 +3735,10 @@ const SettingsDialog = ({
 
                     <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
                       <label htmlFor="rdp-guacd-inactivity-min" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                        Watchdog de inactividad de Guacd (min)
+                        {t('rdp.guacdInactivity')}
                       </label>
                       <small style={{ display: 'block', marginBottom: 4, color: 'var(--text-color-secondary)', fontSize: '0.7rem' }}>
-                        0 para desactivar. Cierre por inactividad entre guacamole-lite y guacd
+                        {t('rdp.guacdInactivityHint')}
                       </small>
                       <InputNumber
                         id="rdp-guacd-inactivity-min"
@@ -3783,7 +3783,7 @@ const SettingsDialog = ({
           </div>
         </TabPanel>
 
-        <TabPanel header="Actualizaciones" leftIcon="pi pi-refresh" style={{ '--content-height': `${contentHeight}px` }}>
+        <TabPanel header={t('updateChannels.updatesTitle')} leftIcon="pi pi-refresh" style={{ '--content-height': `${contentHeight}px` }}>
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
             <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: '8px', bottom: 0, width: 'calc(100% - 8px)' }}>
               {/* Header */}
@@ -3793,8 +3793,8 @@ const SettingsDialog = ({
                     <i className="pi pi-refresh"></i>
                   </span>
                   <div className="general-header-text">
-                    <h3 className="general-header">Actualizaciones</h3>
-                    <p className="general-description">Gestiona las actualizaciones automáticas y el canal de versiones de NodeTerm</p>
+                    <h3 className="general-header">{t('updateChannels.updatesTitle')}</h3>
+                    <p className="general-description">{t('updateChannels.updatesDescription')}</p>
                   </div>
                 </div>
               </div>
@@ -3807,7 +3807,7 @@ const SettingsDialog = ({
                     <div className="general-section-icon">
                       <i className="pi pi-search"></i>
                     </div>
-                    <h4 className="general-section-title">Buscar Actualizaciones</h4>
+                    <h4 className="general-section-title">{t('updateChannels.checkUpdates')}</h4>
                   </div>
                   
                   <div className="general-settings-options">
@@ -3898,7 +3898,7 @@ const SettingsDialog = ({
                       {/* Botón de verificación */}
                       <div style={{ position: 'relative', zIndex: 1 }}>
                         <Button
-                          label={isCheckingUpdates ? "Buscando actualizaciones..." : "Verificar Ahora"}
+                          label={isCheckingUpdates ? t('updateChannels.checking') : t('updateChannels.checkNow')}
                           icon={isCheckingUpdates ? "pi pi-spin pi-spinner" : "pi pi-search"}
                           onClick={checkForUpdates}
                           disabled={isCheckingUpdates}
@@ -4017,7 +4017,7 @@ const SettingsDialog = ({
                         </div>
                         {!autoDownloadEnabled && (
                           <Button
-                            label="Descargar Actualización"
+                            label={t('updateChannels.download')}
                             icon="pi pi-download"
                             onClick={downloadUpdate}
                             disabled={isDownloading}
@@ -4068,7 +4068,7 @@ const SettingsDialog = ({
                           </div>
                         </div>
                         <Button
-                          label="Instalar y Reiniciar"
+                          label={t('updateChannels.install')}
                           icon="pi pi-check"
                           onClick={installUpdate}
                           disabled={isInstalling}
@@ -4118,7 +4118,7 @@ const SettingsDialog = ({
                           </div>
                         </div>
                         <Button
-                          label="Reintentar"
+                          label={t('updateChannels.retry')}
                           icon="pi pi-refresh"
                           onClick={checkForUpdates}
                           className="p-button-outlined"
@@ -4399,10 +4399,10 @@ const SettingsDialog = ({
                           </div>
                           <div className="general-setting-info">
                             <label className="general-setting-label">
-                              Estable (Recomendado)
+                              {t('updateChannels.stableRecommended')}
                             </label>
                             <p className="general-setting-description">
-                              Versiones probadas y seguras
+                              {t('updateChannels.stableDescription')}
                             </p>
                           </div>
                           <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
@@ -4421,10 +4421,10 @@ const SettingsDialog = ({
                           </div>
                           <div className="general-setting-info">
                             <label className="general-setting-label">
-                              Beta
+                              {t('updateChannels.beta')}
                             </label>
                             <p className="general-setting-description">
-                              Nuevas características (puede contener bugs)
+                              {t('updateChannels.betaDescription')}
                             </p>
                           </div>
                           <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
@@ -4443,7 +4443,7 @@ const SettingsDialog = ({
           </div>
         </TabPanel>
 
-        <TabPanel header="Sincronización" leftIcon="pi pi-cloud" style={{ '--content-height': `${contentHeight}px` }}>
+        <TabPanel header={t('sync.title')} leftIcon="pi pi-cloud" style={{ '--content-height': `${contentHeight}px` }}>
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
             <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: '8px', bottom: 0, width: 'calc(100% - 8px)' }}>
             {/* Header */}
@@ -4453,8 +4453,8 @@ const SettingsDialog = ({
                   <i className="pi pi-cloud"></i>
                 </span>
                 <div className="general-header-text">
-                  <h3 className="general-header">Sincronización</h3>
-                  <p className="general-description">Sincroniza tu configuración personal entre todos tus dispositivos usando Nextcloud</p>
+                    <h3 className="general-header">{t('sync.title')}</h3>
+                    <p className="general-description">Sincroniza tu configuración personal entre todos tus dispositivos usando Nextcloud</p>
                 </div>
               </div>
             </div>
@@ -4470,7 +4470,7 @@ const SettingsDialog = ({
                   display: 'block'
                 }}></i>
                 <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)', textAlign: 'center' }}>
-                  Sincronización en la Nube
+                  {t('sync.cloudTitle')}
                 </h3>
                 <p style={{
                   margin: '0 0 2rem 0',
@@ -4478,14 +4478,13 @@ const SettingsDialog = ({
                   fontSize: '1rem',
                   textAlign: 'center'
                 }}>
-                  Sincroniza tu configuración personal entre todos tus dispositivos usando Nextcloud.
-                  Nunca pierdas tus temas, fuentes y configuraciones personalizadas.
+                  {t('sync.description')}
                 </p>
               </div>
 
               <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'center' }}>
                 <Button
-                  label="Configurar Sincronización"
+                  label={t('sync.configure')}
                   icon="pi pi-cog"
                   onClick={() => setSyncDialogVisible(true)}
                   className="p-button-lg"
@@ -4527,7 +4526,7 @@ const SettingsDialog = ({
           </div>
         </TabPanel>
 
-        <TabPanel header="Información" leftIcon="pi pi-info-circle" style={{ '--content-height': `${contentHeight}px` }}>
+        <TabPanel header={t('info.title')} leftIcon="pi pi-info-circle" style={{ '--content-height': `${contentHeight}px` }}>
           <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
             <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: '8px', bottom: 0, width: 'calc(100% - 8px)' }}>
               {/* Header */}
@@ -4537,8 +4536,8 @@ const SettingsDialog = ({
                     <i className="pi pi-info-circle"></i>
                   </span>
                   <div className="general-header-text">
-                    <h3 className="general-header">Información de NodeTerm</h3>
-                    <p className="general-description">Versión, detalles técnicos y características de tu aplicación</p>
+                    <h3 className="general-header">{t('info.title')}</h3>
+                    <p className="general-description">{t('info.description')}</p>
                   </div>
                 </div>
               </div>
@@ -4551,17 +4550,17 @@ const SettingsDialog = ({
                     <div className="general-section-icon">
                       <i className="pi pi-tag"></i>
                     </div>
-                    <h4 className="general-section-title">Versión de la Aplicación</h4>
+                    <h4 className="general-section-title">{t('info.appVersion')}</h4>
                   </div>
                   
                   <div className="general-settings-options">
                     <div style={{ padding: '0.75rem 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
                       <div>
                         <label style={{ display: 'block', color: 'var(--ui-dialog-text)', fontWeight: '600', fontSize: '0.9375rem', margin: '0' }}>
-                          NodeTerm
+                          {t('info.appName')}
                         </label>
                         <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-color-secondary)', fontSize: '0.8125rem' }}>
-                          Terminal SSH multiplataforma
+                          {t('info.appDescription')}
                         </p>
                       </div>
                       <div style={{
@@ -4586,13 +4585,13 @@ const SettingsDialog = ({
                     <div className="general-section-icon">
                       <i className="pi pi-cog"></i>
                     </div>
-                    <h4 className="general-section-title">Información Técnica</h4>
+                    <h4 className="general-section-title">{t('info.technicalInfo')}</h4>
                   </div>
                   
                   <div className="general-settings-options" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '1rem 1.25rem' }}>
                     <div>
                       <label style={{ display: 'block', color: 'var(--ui-dialog-text)', fontWeight: '600', fontSize: '0.8125rem', margin: '0 0 0.25rem 0' }}>
-                        Electron
+                        {t('info.electron')}
                       </label>
                       <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.8rem' }}>
                         {versionInfo.electronVersion || 'N/A'}
@@ -4600,7 +4599,7 @@ const SettingsDialog = ({
                     </div>
                     <div>
                       <label style={{ display: 'block', color: 'var(--ui-dialog-text)', fontWeight: '600', fontSize: '0.8125rem', margin: '0 0 0.25rem 0' }}>
-                        Node.js
+                        {t('info.node')}
                       </label>
                       <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.8rem' }}>
                         {versionInfo.nodeVersion || 'N/A'}
@@ -4608,7 +4607,7 @@ const SettingsDialog = ({
                     </div>
                     <div>
                       <label style={{ display: 'block', color: 'var(--ui-dialog-text)', fontWeight: '600', fontSize: '0.8125rem', margin: '0 0 0.25rem 0' }}>
-                        Chromium
+                        {t('info.chrome')}
                       </label>
                       <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.8rem' }}>
                         {versionInfo.chromeVersion || 'N/A'}
@@ -4616,7 +4615,7 @@ const SettingsDialog = ({
                     </div>
                     <div>
                       <label style={{ display: 'block', color: 'var(--ui-dialog-text)', fontWeight: '600', fontSize: '0.8125rem', margin: '0 0 0.25rem 0' }}>
-                        Compilación
+                        {t('info.build')}
                       </label>
                       <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.8rem' }}>
                         {versionInfo.buildDate || new Date().toLocaleDateString()}

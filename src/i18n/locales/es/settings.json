@@ -1,5 +1,6 @@
 {
   "title": "Configuración",
+  "description": "Personaliza el comportamiento y la apariencia básica de NodeTerm",
   "language": {
     "title": "Idioma",
     "description": "Selecciona el idioma de la interfaz",
@@ -15,6 +16,34 @@
   },
   "general": {
     "title": "Configuración General",
+    "sections": {
+      "behavior": {
+        "title": "Comportamiento de la Aplicación",
+        "lockHomeButton": {
+          "label": "Bloquear Botón de Inicio",
+          "description": "Previene que el botón de inicio se pueda cerrar o mover accidentalmente"
+        },
+        "interactiveIcon": {
+          "label": "Icono NodeTerm Interactivo",
+          "description": "Permite hacer clic en el icono de la barra de título para abrir el menú de inicio"
+        },
+        "sidebarStartCollapsed": {
+          "label": "Sidebar Inicialmente Colapsada",
+          "description": "Inicia la aplicación con la barra lateral colapsada"
+        }
+      },
+      "visual": {
+        "title": "Personalización Visual",
+        "homeTabIcon": {
+          "title": "Icono de la Pestaña de Inicio",
+          "description": "Personaliza el icono que aparece en la pestaña de inicio"
+        },
+        "groupTabIcon": {
+          "title": "Icono de Grupos de Pestañas",
+          "description": "Elige el icono para la pestaña de grupos"
+        }
+      }
+    },
     "startMinimized": "Iniciar minimizado",
     "startWithSystem": "Iniciar con el sistema",
     "checkUpdates": "Buscar actualizaciones al iniciar"
@@ -24,6 +53,194 @@
     "theme": "Tema",
     "iconTheme": "Tema de iconos",
     "fontSize": "Tamaño de fuente",
-    "fontFamily": "Familia de fuente"
+    "fontFamily": "Familia de fuente",
+    "sessionExplorer": {
+      "title": "Explorador de Sesiones",
+      "description": "Personaliza iconos, tamaños, tipografía y color del árbol",
+      "selectTheme": "Selecciona un tema",
+      "selectFont": "Selecciona una fuente",
+      "restoreColor": "Restaurar color por defecto"
+    }
+  },
+  "rdp": {
+    "title": "Configuración RDP",
+    "description": "Personaliza el comportamiento, conectividad y rendimiento de las sesiones RDP",
+    "guacdMethod": "Método preferido",
+    "guacdMethodHint": "Preferencia → alternativa (Windows: Docker/WSL, Linux: Docker/Nativo)",
+    "guacdStatus": {
+      "active": "Activo",
+      "inactive": "Inactivo"
+    },
+    "sessionActivity": "Umbral de actividad de sesión (min)",
+    "sessionActivityHint": "Si no hay actividad, puede intentarse reconexión automática",
+    "resizeDebounce": "Debounce del resize (ms)",
+    "resizeDebounceHint": "Retardo del envío final tras parar de arrastrar la ventana",
+    "idleMinutes": "Umbral de inactividad (min)",
+    "idleMinutesHint": "Sin actividad (teclado/ratón), el siguiente resize ejecutará warm-up o reconexión",
+    "resizeAckTimeout": "Timeout de ACK de resize (ms)",
+    "resizeAckTimeoutHint": "Tiempo máximo esperando respuesta del display antes de permitir otro resize",
+    "guacdInactivity": "Watchdog de inactividad de Guacd (min)",
+    "guacdInactivityHint": "0 para desactivar. Cierre por inactividad entre guacamole-lite y guacd",
+    "backendTitle": "Backend Guacamole"
+  },
+  "sync": {
+    "title": "Sincronización",
+    "configure": "Configurar Sincronización",
+    "cloudTitle": "Sincronización en la Nube",
+    "description": "Sincroniza tu configuración personal entre todos tus dispositivos usando Nextcloud. Nunca pierdas tus temas, fuentes y configuraciones personalizadas."
+  },
+  "info": {
+    "title": "Información de NodeTerm",
+    "description": "Versión, detalles técnicos y características de tu aplicación",
+    "appVersion": "Versión de la Aplicación",
+    "technicalInfo": "Información Técnica",
+    "version": "Versión",
+    "build": "Compilación",
+    "electron": "Electron",
+    "node": "Node.js",
+    "chrome": "Chromium",
+    "appName": "NodeTerm",
+    "appDescription": "Terminal SSH multiplataforma"
+  },
+  "common": {
+    "select": "Seleccionar",
+    "loading": "Cargando...",
+    "selectIcon": "Seleccionar"
+  },
+  "security": {
+    "title": "Seguridad",
+    "masterPassword": {
+      "rememberPassword": "Recordar contraseña en este dispositivo",
+      "rememberPasswordHint": "Si está activado, no se pedirá la contraseña al iniciar la app",
+      "configureTitle": "Configurar Clave Maestra",
+      "changeTitle": "Cambiar Clave Maestra",
+      "newPassword": "Nueva Clave Maestra",
+      "confirmPassword": "Confirmar Clave Maestra",
+      "currentPassword": "Clave Actual",
+      "confirmNewPassword": "Confirmar Nueva Clave",
+      "placeholders": {
+        "minChars": "Mínimo 6 caracteres",
+        "repeat": "Repetir la clave",
+        "current": "Clave maestra actual",
+        "new": "Nueva clave (mínimo 6 caracteres)",
+        "repeatNew": "Repetir la nueva clave"
+      },
+      "buttons": {
+        "saving": "Guardando...",
+        "save": "Guardar Clave Maestra",
+        "changing": "Cambiando...",
+        "change": "Cambiar Clave",
+        "delete": "Eliminar"
+      }
+    },
+    "audit": {
+      "title": "Configuración de Auditoría",
+      "description": "Configura el grabado automático de sesiones SSH y la gestión de archivos de auditoría",
+      "autoRecording": {
+        "title": "Grabación Automática de Sesiones SSH",
+        "enable": "Activar grabación automática",
+        "enableDescription": "Graba automáticamente todas las sesiones SSH iniciadas",
+        "quality": "Calidad de grabación",
+        "qualityDescription": "Nivel de detalle capturado en las grabaciones",
+        "qualityOptions": {
+          "high": "Alta (todos los eventos)",
+          "medium": "Media (eventos importantes)",
+          "low": "Baja (solo comandos)"
+        },
+        "encrypt": "Cifrar grabaciones con clave maestra",
+        "encryptDescription": "Las grabaciones se cifrarán automáticamente si tienes una clave maestra configurada",
+        "location": "Ubicación de grabaciones",
+        "locationDefault": "Ubicación por defecto: AppData/NodeTerm/recordings",
+        "locationCustom": "Personalizada: {path}",
+        "locationLoading": "Cargando...",
+        "locationPlaceholder": "Ruta de grabaciones",
+        "changeLocation": "Cambiar",
+        "restoreLocation": "Restaurar",
+        "selectFolder": "Seleccionar carpeta para guardar grabaciones",
+        "locationUpdated": "Ubicación actualizada",
+        "locationUpdatedDetail": "Las grabaciones se guardarán en: {path}",
+        "locationRestored": "Ubicación restaurada",
+        "locationRestoredDetail": "Se usará la ubicación por defecto",
+        "notAvailable": "No disponible",
+        "notAvailableDetail": "El selector de directorios requiere la app de escritorio",
+        "error": "Error",
+        "errorDetail": "No se pudo cambiar la ubicación",
+        "errorFolder": "No se pudo abrir el selector de carpeta"
+      },
+      "stats": {
+        "title": "Estadísticas Actuales",
+        "files": "Archivos:",
+        "totalSize": "Tamaño total:",
+        "oldest": "Más antiguo:",
+        "lastCleanup": "Última limpieza:",
+        "never": "Nunca"
+      },
+      "cleanup": {
+        "title": "Limpieza Automática de Archivos",
+        "enable": "Activar limpieza automática",
+        "enableDescription": "Elimina automáticamente archivos de auditoría antiguos según las reglas configuradas",
+        "retentionDays": "Días de retención: {days}",
+        "retentionDescription": "Archivos más antiguos serán eliminados automáticamente",
+        "retentionRange": {
+          "min": "1 día",
+          "max": "365 días"
+        },
+        "maxStorage": "Tamaño máximo: {size} GB",
+        "maxStorageDescription": "Límite total de espacio para archivos de auditoría",
+        "maxStorageRange": {
+          "min": "0.1 GB",
+          "max": "100 GB"
+        },
+        "onStartup": "Ejecutar limpieza al iniciar la aplicación",
+        "onStartupDescription": "Limpia archivos antiguos cada vez que se inicia NodeTerm",
+        "frequency": "Frecuencia de limpieza automática",
+        "frequencyDescription": "Con qué frecuencia se ejecutará la limpieza automática",
+        "frequencyOptions": {
+          "daily": "Diaria",
+          "weekly": "Semanal",
+          "monthly": "Mensual",
+          "manual": "Manual únicamente"
+        },
+        "runNow": "Ejecutar Limpieza Ahora",
+        "viewFiles": "Ver Archivos"
+      }
+    }
+  },
+  "updateChannels": {
+    "stable": "Estable",
+    "stableRecommended": "Estable (Recomendado)",
+    "stableDescription": "Versiones probadas y seguras",
+    "beta": "Beta",
+    "betaDescription": "Nuevas características (puede contener bugs)",
+    "message": "Ahora recibirás actualizaciones del canal {channel}",
+    "channelUpdated": "Canal actualizado",
+    "checkUpdates": "Buscar Actualizaciones",
+    "updatesTitle": "Actualizaciones",
+    "updatesDescription": "Gestiona las actualizaciones automáticas y el canal de versiones de NodeTerm",
+    "checking": "Buscando actualizaciones...",
+    "checkNow": "Verificar Ahora",
+    "available": "Actualización Disponible",
+    "upToDate": "Sistema Actualizado",
+    "upToDateDetail": "Ya tienes la última versión disponible",
+    "notAvailable": "Sistema de actualización no disponible",
+    "checkError": "No se pudo comprobar actualizaciones",
+    "downloadComplete": "Descarga Completa",
+    "downloadCompleteDetail": "La actualización está lista para instalar",
+    "downloadError": "No se pudo descargar la actualización",
+    "installing": "La aplicación se reiniciará para aplicar la actualización...",
+    "installError": "No se pudo instalar la actualización",
+    "autoCheckEnabled": "Búsqueda automática activada",
+    "autoCheckDisabled": "Búsqueda automática desactivada",
+    "autoDownloadEnabled": "Descarga automática activada",
+    "autoDownloadDisabled": "Descarga automática desactivada",
+    "download": "Descargar Actualización",
+    "install": "Instalar y Reiniciar",
+    "retry": "Reintentar"
+  },
+  "guacdOptions": {
+    "dockerDesktop": "Docker Desktop",
+    "wsl": "WSL",
+    "docker": "Docker",
+    "native": "Nativo (local)"
   }
 }

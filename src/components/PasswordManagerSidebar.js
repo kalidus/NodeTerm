@@ -10,6 +10,7 @@ import { FolderDialog } from './Dialogs';
 import SidebarFooter from './SidebarFooter';
 import { iconThemes } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/password-manager-sidebar.css';
 import '../styles/components/tree-themes.css';
 
@@ -35,6 +36,10 @@ const PasswordManagerSidebar = ({
   sidebarFilter = '', // Filtro desde la TitleBar
   treeTheme = 'default' // Tema del árbol
 }) => {
+  // Hook de internacionalización
+  const { t } = useTranslation('dialogs');
+  const { t: tCommon } = useTranslation('common');
+  
   // Estado separado para passwords - no usar el árbol principal de conexiones
   const [passwordNodes, setPasswordNodes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -1192,7 +1197,7 @@ const PasswordManagerSidebar = ({
             icon="pi pi-key" 
             className="p-button-rounded p-button-text sidebar-action-button" 
             onClick={handleNewPassword} 
-            tooltip="Nuevo password" 
+            tooltip={t('passwordManager.tooltips.newPassword')} 
             tooltipOptions={{ position: 'bottom' }} 
             style={{ color: '#ffc107' }}
           />
@@ -1285,7 +1290,7 @@ const PasswordManagerSidebar = ({
 
       {/* Dialog para crear/editar password */}
       <Dialog
-        header={editingPassword ? 'Editar Password' : 'Nuevo Password'}
+        header={editingPassword ? t('passwordManager.title.edit') : t('passwordManager.title.new')}
         visible={showPasswordDialog}
         style={{ width: '500px' }}
         onHide={() => {
@@ -1295,7 +1300,7 @@ const PasswordManagerSidebar = ({
         footer={
           <div>
             <Button
-              label="Cancelar"
+              label={tCommon('buttons.cancel')}
               icon="pi pi-times"
               className="p-button-text"
               onClick={() => {
@@ -1304,7 +1309,7 @@ const PasswordManagerSidebar = ({
               }}
             />
             <Button
-              label={editingPassword ? 'Guardar' : 'Crear'}
+              label={editingPassword ? tCommon('buttons.save') : tCommon('buttons.create')}
               icon="pi pi-check"
               className="p-button-primary"
               onClick={handleSavePassword}
@@ -1314,77 +1319,77 @@ const PasswordManagerSidebar = ({
       >
         <div className="password-form">
           <div className="field">
-            <label htmlFor="title">Título *</label>
+            <label htmlFor="title">{t('passwordManager.fields.title')} *</label>
             <InputText
               id="title"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Ej: Gmail, GitHub, etc."
+              placeholder={t('passwordManager.placeholders.titleExample')}
               className="w-full"
               autoFocus
             />
           </div>
 
           <div className="field">
-            <label htmlFor="username">Usuario</label>
+            <label htmlFor="username">{t('passwordManager.fields.username')}</label>
             <InputText
               id="username"
               value={formData.username}
               onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-              placeholder="Nombre de usuario o email"
+              placeholder={t('passwordManager.placeholders.username')}
               className="w-full"
             />
           </div>
 
           <div className="field">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">{t('passwordManager.fields.password')}</label>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <InputText
                 id="password"
                 type="text"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Password"
+                placeholder={t('passwordManager.placeholders.password')}
                 className="w-full"
               />
               <Button
                 icon="pi pi-refresh"
                 className="p-button-secondary"
                 onClick={generateRandomPassword}
-                tooltip="Generar password aleatorio"
+                tooltip={t('passwordManager.tooltips.generatePassword')}
               />
             </div>
           </div>
 
           <div className="field">
-            <label htmlFor="url">URL</label>
+            <label htmlFor="url">{t('passwordManager.fields.url')}</label>
             <InputText
               id="url"
               value={formData.url}
               onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-              placeholder="https://ejemplo.com"
+              placeholder={t('passwordManager.placeholders.url')}
               className="w-full"
             />
           </div>
 
           <div className="field">
-            <label htmlFor="group">Grupo</label>
+            <label htmlFor="group">{t('passwordManager.fields.group')}</label>
             <InputText
               id="group"
               value={formData.group}
               onChange={(e) => setFormData({ ...formData, group: e.target.value })}
-              placeholder="Categoría o grupo"
+              placeholder={t('passwordManager.placeholders.group')}
               className="w-full"
             />
           </div>
 
           <div className="field">
-            <label htmlFor="notes">Notas</label>
+            <label htmlFor="notes">{t('passwordManager.fields.notes')}</label>
             <InputTextarea
               id="notes"
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Notas adicionales..."
+              placeholder={t('passwordManager.placeholders.notes')}
               rows={3}
               className="w-full"
             />
