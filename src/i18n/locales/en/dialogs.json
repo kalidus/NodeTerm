@@ -115,13 +115,29 @@
       "new": "New Folder",
       "edit": "Edit Folder"
     },
+    "subtitle": {
+      "new": "Create a new organized folder",
+      "edit": "Modify your folder details"
+    },
     "fields": {
       "name": "Folder name",
-      "icon": "Icon",
-      "color": "Color"
+      "icon": "Folder icon",
+      "color": "Folder color"
     },
     "placeholders": {
-      "name": "My folder"
+      "name": "Enter folder name"
+    },
+    "icon": {
+      "themeIcon": "Theme icon",
+      "themeIconDescription": "Use the selected theme icon"
+    },
+    "preview": {
+      "label": "Preview:",
+      "defaultName": "Folder name"
+    },
+    "buttons": {
+      "saveChanges": "Save changes",
+      "create": "Create folder"
     }
   },
   "group": {

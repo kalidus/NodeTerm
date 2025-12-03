@@ -115,13 +115,29 @@
       "new": "Nueva carpeta",
       "edit": "Editar carpeta"
     },
+    "subtitle": {
+      "new": "Crea una nueva carpeta organizada",
+      "edit": "Modifica los detalles de tu carpeta"
+    },
     "fields": {
       "name": "Nombre de la carpeta",
-      "icon": "Icono",
-      "color": "Color"
+      "icon": "Icono de la carpeta",
+      "color": "Color de la carpeta"
     },
     "placeholders": {
-      "name": "Mi carpeta"
+      "name": "Ingresa el nombre de la carpeta"
+    },
+    "icon": {
+      "themeIcon": "Icono del tema",
+      "themeIconDescription": "Usa el icono del tema seleccionado"
+    },
+    "preview": {
+      "label": "Vista previa:",
+      "defaultName": "Nombre de la carpeta"
+    },
+    "buttons": {
+      "saveChanges": "Guardar cambios",
+      "create": "Crear carpeta"
     }
   },
   "group": {
