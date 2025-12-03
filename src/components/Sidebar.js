@@ -7,6 +7,7 @@ import { uiThemes, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 import { FolderDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
+import { sessionActionIconThemes, getDefaultSessionActionIconTheme } from '../themes/session-action-icons';
 import ImportDialog from './ImportDialog';
 import PasswordManagerSidebar from './PasswordManagerSidebar';
 import SidebarFilesystemExplorer from './SidebarFilesystemExplorer';
@@ -122,7 +123,10 @@ const Sidebar = React.memo(({
   sidebarFilter = '',
   
   // Tema del árbol
-  treeTheme = 'default'
+  treeTheme = 'default',
+  
+  // Tema de iconos de acción
+  sessionActionIconTheme = 'modern'
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
@@ -2239,16 +2243,36 @@ const Sidebar = React.memo(({
               )}
               <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
                 <Button 
-                  icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
-                  className="p-button-rounded p-button-text sidebar-action-button" 
+                  className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                   onClick={() => setSidebarCollapsed(v => !v)} 
                   tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')} 
                   tooltipOptions={{ position: 'bottom' }} 
-                  style={{ marginRight: 8 }} 
-                />
+                  style={{ 
+                    marginRight: 8,
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    width: '40px',
+                    height: '40px',
+                    padding: 0
+                  }} 
+                >
+                  <span style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    width: '20px',
+                    height: '20px',
+                    color: 'var(--ui-sidebar-text)'
+                  }}>
+                    {sidebarCollapsed 
+                      ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
+                      : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft
+                    }
+                  </span>
+                </Button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
                   <Button 
-                    icon="pi pi-sitemap" 
                     className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                     onClick={() => {
                       // Abrir diálogo de selección de protocolo
@@ -2261,28 +2285,101 @@ const Sidebar = React.memo(({
                     }} 
                     tooltip={t('tooltips.newConnection')} 
                     tooltipOptions={{ position: 'bottom' }}
-                  />
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '40px',
+                      height: '40px',
+                      padding: 0
+                    }}
+                  >
+                    <span style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '20px',
+                      height: '20px',
+                      color: 'var(--ui-sidebar-text)'
+                    }}>
+                      {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
+                    </span>
+                  </Button>
                   <Button 
-                    icon="pi pi-folder" 
                     className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                     onClick={() => setShowFolderDialog(true)} 
                     tooltip={t('tooltips.createFolder')} 
                     tooltipOptions={{ position: 'bottom' }}
-                  />
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '40px',
+                      height: '40px',
+                      padding: 0
+                    }}
+                  >
+                    <span style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '20px',
+                      height: '20px',
+                      color: 'var(--ui-sidebar-text)'
+                    }}>
+                      {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
+                    </span>
+                  </Button>
                   <Button 
-                    icon="pi pi-th-large" 
                     className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                     onClick={() => setShowCreateGroupDialog(true)} 
                     tooltip={t('tooltips.createGroup')} 
                     tooltipOptions={{ position: 'bottom' }}
-                  />
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '40px',
+                      height: '40px',
+                      padding: 0
+                    }}
+                  >
+                    <span style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '20px',
+                      height: '20px',
+                      color: 'var(--ui-sidebar-text)'
+                    }}>
+                      {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
+                    </span>
+                  </Button>
                   <Button 
-                    icon="pi pi-key" 
                     className="p-button-rounded p-button-text sidebar-action-button glass-button key-button" 
                     onClick={() => setViewMode('passwords')} 
                     tooltip={t('tooltips.passwordManager')} 
                     tooltipOptions={{ position: 'bottom' }}
-                  />
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '40px',
+                      height: '40px',
+                      padding: 0
+                    }}
+                  >
+                    <span style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '20px',
+                      height: '20px',
+                      color: '#ffc107'
+                    }}>
+                      {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
+                    </span>
+                  </Button>
                   {filesystemAvailable && isAIChatActive && (
                     <Button
                       icon="pi pi-folder-open"

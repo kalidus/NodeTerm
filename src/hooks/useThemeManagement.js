@@ -211,6 +211,15 @@ export const useThemeManagement = () => {
     }
   });
 
+  // Session action icons theme state
+  const [sessionActionIconTheme, setSessionActionIconTheme] = useState(() => {
+    try {
+      return localStorage.getItem('sessionActionIconTheme') || 'modern';
+    } catch {
+      return 'modern';
+    }
+  });
+
   // Auto-save effects
   useEffect(() => {
     localStorage.setItem(FONT_FAMILY_STORAGE_KEY, fontFamily);
@@ -311,6 +320,12 @@ export const useThemeManagement = () => {
       localStorage.setItem(TREE_THEME_STORAGE_KEY, treeTheme);
     } catch {}
   }, [treeTheme]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sessionActionIconTheme', sessionActionIconTheme);
+    } catch {}
+  }, [sessionActionIconTheme]);
 
   // Initial theme loading effect
   useEffect(() => {
@@ -462,6 +477,10 @@ export const useThemeManagement = () => {
     // Tree theme
     treeTheme,
     setTreeTheme,
+
+    // Session action icons theme
+    sessionActionIconTheme,
+    setSessionActionIconTheme,
 
     // Utility functions
     updateThemesFromSync

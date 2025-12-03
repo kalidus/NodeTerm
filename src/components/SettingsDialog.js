@@ -37,6 +37,7 @@ import SettingsSidebarNav from './SettingsSidebarNav';
 import TerminalSettingsTab from './TerminalSettingsTab';
 import { useDialogResize } from '../hooks/useDialogResize';
 import { treeThemes, treeThemeOptions, getTreeTheme } from '../themes/tree-themes';
+import { sessionActionIconThemes, getDefaultSessionActionIconTheme } from '../themes/session-action-icons';
 import '../styles/components/settings-sidebar.css';
 import '../styles/components/tree-themes.css';
 
@@ -100,7 +101,9 @@ const SettingsDialog = ({
   onMasterPasswordConfigured,
   onMasterPasswordChanged,
   treeTheme = 'default',
-  setTreeTheme
+  setTreeTheme,
+  sessionActionIconTheme = 'modern',
+  setSessionActionIconTheme
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   
@@ -2780,11 +2783,11 @@ const SettingsDialog = ({
                       }}></div>
 
                       {/* ═══════════════════════════════════════════════════════════════
-                          FILA 1: TEMA DE ICONOS + TEMA DEL ÁRBOL
+                          FILA 1: TEMA DE ICONOS + TEMA DEL ÁRBOL + TEMA DE ICONOS DE ACCIÓN
                           ═══════════════════════════════════════════════════════════════ */}
                       <div style={{
                         display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
+                        gridTemplateColumns: '1fr 1fr 1fr',
                         gap: '1rem',
                         marginBottom: '1rem'
                       }}>
@@ -2840,6 +2843,49 @@ const SettingsDialog = ({
                             options={treeThemeOptions}
                             onChange={(e) => setTreeTheme && setTreeTheme(e.value)}
                             placeholder={t('appearance.sessionExplorer.selectTheme')}
+                            style={{ width: '100%' }}
+                            itemTemplate={(option) => (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ fontWeight: 500 }}>{option.label}</span>
+                                <span style={{ 
+                                  fontSize: '0.75rem', 
+                                  color: 'var(--text-color-secondary)',
+                                  opacity: 0.7 
+                                }}>{option.description}</span>
+                              </div>
+                            )}
+                          />
+                        </div>
+
+                        {/* Tema de Iconos de Acción */}
+                        <div>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            marginBottom: '0.5rem'
+                          }}>
+                            <i className="pi pi-palette" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
+                            <label style={{
+                              fontSize: '0.875rem',
+                              fontWeight: 600,
+                              color: 'var(--ui-dialog-text)'
+                            }}>Iconos de Acción</label>
+                          </div>
+                          <Dropdown
+                            id="session-action-icon-theme"
+                            value={sessionActionIconTheme || 'modern'}
+                            options={Object.entries(sessionActionIconThemes).map(([key, theme]) => ({ 
+                              label: theme.name, 
+                              value: key,
+                              description: theme.description
+                            }))}
+                            onChange={(e) => {
+                              if (setSessionActionIconTheme) {
+                                setSessionActionIconTheme(e.value);
+                              }
+                            }}
+                            placeholder="Seleccionar tema"
                             style={{ width: '100%' }}
                             itemTemplate={(option) => (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -3122,6 +3168,152 @@ const SettingsDialog = ({
                               }}>{connectionIconSize || 20} px</span>
                             </div>
                           </div>
+                        </div>
+                      </div>
+
+                      {/* ═══════════════════════════════════════════════════════════════
+                          VISTA PREVIA DE ICONOS DE ACCIÓN
+                          ═══════════════════════════════════════════════════════════════ */}
+                      <div style={{
+                        background: 'rgba(0, 0, 0, 0.08)',
+                        borderRadius: '10px',
+                        padding: '0.875rem 1rem',
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        marginTop: '1rem'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          marginBottom: '0.75rem'
+                        }}>
+                          <i className="pi pi-eye" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
+                          <span style={{
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                            color: 'var(--ui-dialog-text)'
+                          }}>Vista Previa de Iconos de Acción</span>
+                        </div>
+                        
+                        {/* Vista previa de iconos */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(5, 1fr)',
+                          gap: '0.75rem',
+                          padding: '0.75rem',
+                          background: 'rgba(0, 0, 0, 0.15)',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(255, 255, 255, 0.05)'
+                        }}>
+                          {sessionActionIconThemes[sessionActionIconTheme || 'modern'] && (
+                            <>
+                              <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.5rem',
+                                borderRadius: '6px',
+                                background: 'rgba(255, 255, 255, 0.03)'
+                              }}>
+                                <div style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 'var(--ui-sidebar-text)'
+                                }}>
+                                  {sessionActionIconThemes[sessionActionIconTheme || 'modern'].icons.collapseLeft}
+                                </div>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)', textAlign: 'center' }}>Colapsar</span>
+                              </div>
+                              <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.5rem',
+                                borderRadius: '6px',
+                                background: 'rgba(255, 255, 255, 0.03)'
+                              }}>
+                                <div style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 'var(--ui-sidebar-text)'
+                                }}>
+                                  {sessionActionIconThemes[sessionActionIconTheme || 'modern'].icons.newConnection}
+                                </div>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)', textAlign: 'center' }}>Nueva Conexión</span>
+                              </div>
+                              <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.5rem',
+                                borderRadius: '6px',
+                                background: 'rgba(255, 255, 255, 0.03)'
+                              }}>
+                                <div style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 'var(--ui-sidebar-text)'
+                                }}>
+                                  {sessionActionIconThemes[sessionActionIconTheme || 'modern'].icons.newFolder}
+                                </div>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)', textAlign: 'center' }}>Nueva Carpeta</span>
+                              </div>
+                              <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.5rem',
+                                borderRadius: '6px',
+                                background: 'rgba(255, 255, 255, 0.03)'
+                              }}>
+                                <div style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 'var(--ui-sidebar-text)'
+                                }}>
+                                  {sessionActionIconThemes[sessionActionIconTheme || 'modern'].icons.newGroup}
+                                </div>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)', textAlign: 'center' }}>Nuevo Grupo</span>
+                              </div>
+                              <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.5rem',
+                                borderRadius: '6px',
+                                background: 'rgba(255, 255, 255, 0.03)'
+                              }}>
+                                <div style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#ffc107'
+                                }}>
+                                  {sessionActionIconThemes[sessionActionIconTheme || 'modern'].icons.passwordManager}
+                                </div>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)', textAlign: 'center' }}>Contraseñas</span>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
 

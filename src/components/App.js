@@ -830,6 +830,7 @@ const App = () => {
     explorerFontSize, setExplorerFontSize, explorerColorTheme, setExplorerColorTheme,
     sidebarFont, setSidebarFont, sidebarFontSize, setSidebarFontSize, sidebarFontColor, setSidebarFontColor,
     treeTheme, setTreeTheme,
+    sessionActionIconTheme, setSessionActionIconTheme,
     updateThemesFromSync
   } = useThemeManagement();
 
@@ -2110,11 +2111,14 @@ const App = () => {
     onToggleLocalTerminalForAIChat: handleToggleLocalTerminalForAIChat,
     
     // Tema del árbol
-    treeTheme
+    treeTheme,
+    
+    // Tema de iconos de acción
+    sessionActionIconTheme
   }), [
     nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
-    iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, sidebarFontColor, terminalTheme, treeTheme,
+    iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, sidebarFontColor, terminalTheme, treeTheme, sessionActionIconTheme,
     toast, confirmDialog, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu, hideContextMenu,
     sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey,
     
@@ -2372,6 +2376,8 @@ const App = () => {
         setSidebarFontColor={setSidebarFontColor}
         treeTheme={treeTheme}
         setTreeTheme={setTreeTheme}
+        sessionActionIconTheme={sessionActionIconTheme}
+        setSessionActionIconTheme={setSessionActionIconTheme}
         statusBarIconTheme={statusBarIconTheme}
         setStatusBarIconTheme={setStatusBarIconTheme}
         statusBarPollingInterval={statusBarPollingInterval}
