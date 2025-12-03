@@ -17,7 +17,9 @@ const LocalFileExplorerSidebar = ({
   explorerFont,
   explorerFontSize,
   uiTheme = 'Light',
-  showToast
+  showToast,
+  setShowSettingsDialog,
+  sessionActionIconTheme = 'modern'
 }) => {
   const { t } = useTranslation('common');
   const theme = uiThemes[uiTheme] || uiThemes['Light'];
@@ -270,13 +272,13 @@ const LocalFileExplorerSidebar = ({
         />
       </div>
 
-      <Divider style={{ margin: 0 }} />
+      <Divider style={{ margin: 0, flexShrink: 0 }} />
 
       {/* Tree Container */}
       <div 
         className="tree-container"
         style={{
-          flex: 1,
+          flex: '1 1 auto',
           minHeight: 0,
           overflowY: 'auto',
           overflowX: 'hidden',
@@ -324,7 +326,21 @@ const LocalFileExplorerSidebar = ({
         )}
       </div>
 
-      <SidebarFooter />
+      <div style={{ flexShrink: 0, width: '100%' }}>
+        <SidebarFooter
+          onConfigClick={() => {
+            if (setShowSettingsDialog) {
+              setShowSettingsDialog(true);
+            }
+          }}
+          allExpanded={false}
+          toggleExpandAll={() => {
+            // No hay funcionalidad de expandir/colapsar todo en el explorador local
+          }}
+          collapsed={sidebarCollapsed}
+          sessionActionIconTheme={sessionActionIconTheme}
+        />
+      </div>
     </div>
   );
 };

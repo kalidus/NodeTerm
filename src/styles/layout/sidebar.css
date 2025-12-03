@@ -973,6 +973,9 @@
   max-width: 100% !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
 }
 
 /* Header del local file explorer */
@@ -989,6 +992,9 @@
   box-sizing: border-box !important;
   flex: 1 1 auto !important;
   min-width: 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
 }
 
 /* Árbol dentro del local file explorer */
@@ -1002,4 +1008,61 @@
 .local-file-explorer-sidebar span {
   max-width: 100% !important;
   box-sizing: border-box !important;
+}
+
+/* Footer del local file explorer - siempre visible */
+.local-file-explorer-sidebar > div:last-child {
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  min-height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Asegurar que el footer interno también sea visible */
+.local-file-explorer-sidebar .sidebar-footer {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  min-height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Colores de iconos en el footer del local file explorer */
+.local-file-explorer-sidebar .sidebar-footer {
+  background: var(--ui-sidebar-bg) !important;
+  border-top: 1px solid var(--ui-sidebar-border) !important;
+}
+
+.local-file-explorer-sidebar .sidebar-footer .sidebar-action-button {
+  color: var(--ui-sidebar-text) !important;
+  background: transparent !important;
+}
+
+.local-file-explorer-sidebar .sidebar-footer .sidebar-action-button span {
+  color: var(--ui-sidebar-text) !important;
+}
+
+.local-file-explorer-sidebar .sidebar-footer .sidebar-action-button span svg {
+  fill: var(--ui-sidebar-text) !important;
+  color: var(--ui-sidebar-text) !important;
+}
+
+.local-file-explorer-sidebar .sidebar-footer .sidebar-action-button .p-button-icon {
+  color: var(--ui-sidebar-text) !important;
+}
+
+.local-file-explorer-sidebar .sidebar-footer .sidebar-action-button:hover {
+  background: var(--ui-sidebar-hover) !important;
+}
+
+.local-file-explorer-sidebar .sidebar-footer .sidebar-action-button:hover span {
+  color: var(--ui-sidebar-text) !important;
+}
+
+.local-file-explorer-sidebar .sidebar-footer .sidebar-action-button:hover span svg {
+  fill: var(--ui-sidebar-text) !important;
+  color: var(--ui-sidebar-text) !important;
 }
