@@ -742,6 +742,24 @@ function createWindow() {
       getGuacamoleServerReadyAt: () => guacamoleServerReadyAt
     });
     
+    // Handler simple para obtener el directorio home del usuario local
+    // Se registra después de registerAllHandlers para tener prioridad
+    ipcMain.handle('get-user-home', async () => {
+      try {
+        const os = require('os');
+        const homePath = app.getPath('home') || os.homedir();
+        console.log('🏠 [main.js] get-user-home retornando:', homePath);
+        return homePath;
+      } catch (e) {
+        console.error('❌ [main.js] Error en get-user-home:', e);
+        const os = require('os');
+        const fallback = os.homedir();
+        console.log('🏠 [main.js] get-user-home usando fallback:', fallback);
+        return fallback;
+      }
+    });
+    console.log('✅ [main.js] Handler get-user-home registrado después de registerAllHandlers');
+    
     // Handlers registrados exitosamente
     
     // Inicializar servicios de Guacamole después de registrar los handlers

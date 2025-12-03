@@ -6,6 +6,9 @@ contextBridge.exposeInMainWorld('electron', {
     writeText: (text) => ipcRenderer.invoke('clipboard:writeText', text),
     readText: () => ipcRenderer.invoke('clipboard:readText'),
   },
+  ipcRenderer: {
+    invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
+  },
   fileExplorer: {
     listFiles: (tabId, path, config) => {
       // Si tiene protocol, usar handlers de archivos; si no, usar SSH (compatibilidad)
@@ -109,6 +112,8 @@ contextBridge.exposeInMainWorld('electron', {
         'detect-ubuntu-availability',
         'detect-wsl-distributions',
         'nextcloud:http-request',
+        'get-user-home',
+        /^local:.*$/,
         /^ssh:.*$/,
         /^file:.*$/,
         /^dialog:.*$/,

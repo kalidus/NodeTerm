@@ -11,6 +11,7 @@ import { sessionActionIconThemes, getDefaultSessionActionIconTheme } from '../th
 import ImportDialog from './ImportDialog';
 import PasswordManagerSidebar from './PasswordManagerSidebar';
 import SidebarFilesystemExplorer from './SidebarFilesystemExplorer';
+import LocalFileExplorerSidebar from './LocalFileExplorerSidebar';
 import { unblockAllInputs, detectBlockedInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
 import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorite as isFavoriteConn } from '../utils/connectionStore';
@@ -134,8 +135,8 @@ const Sidebar = React.memo(({
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   
-  // Estado para modo de visualización (conexiones, passwords, filesystem)
-  const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'filesystem'
+  // Estado para modo de visualización (conexiones, passwords, filesystem, localExplorer)
+  const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'filesystem' | 'localExplorer'
   const [filesystemStatus, setFilesystemStatus] = useState({
     active: false,
     allowedPaths: [],
@@ -143,6 +144,8 @@ const Sidebar = React.memo(({
     server: null,
     conversationId: null
   });
+  const [initialFilesystemPath, setInitialFilesystemPath] = useState(null);
+  const [localExplorerPath, setLocalExplorerPath] = useState(null);
   
   // 🔗 Sincronizar conexiones SSH a window para que AIChatPanel las acceda
   useEffect(() => {
@@ -202,13 +205,32 @@ const Sidebar = React.memo(({
     };
   }, []);
 
+  // Listener simple para mostrar explorador local en sidebar
+  useEffect(() => {
+    const handleShowLocalExplorer = (event) => {
+      const { path } = event?.detail || {};
+      if (!path) return;
+      
+      setLocalExplorerPath(path);
+      setViewMode('localExplorer');
+      setSidebarCollapsed(false);
+    };
+    
+    window.addEventListener('show-local-file-explorer', handleShowLocalExplorer);
+    return () => {
+      window.removeEventListener('show-local-file-explorer', handleShowLocalExplorer);
+    };
+  }, []);
+
   const filesystemAvailable = !!filesystemStatus?.active;
   
+  // Permitir modo filesystem si se solicita explícitamente desde FileExplorer
+  // incluso sin AI Chat activo, pero solo si hay un path inicial establecido
   useEffect(() => {
-    if (!isAIChatActive && viewMode === 'filesystem') {
+    if (!isAIChatActive && viewMode === 'filesystem' && !initialFilesystemPath) {
       setViewMode('connections');
     }
-  }, [isAIChatActive, viewMode, setViewMode]);
+  }, [isAIChatActive, viewMode, setViewMode, initialFilesystemPath]);
 
   // Función para obtener el color por defecto del tema actual
   const getThemeDefaultColor = (themeName) => {
@@ -2551,6 +2573,22 @@ const Sidebar = React.memo(({
               uiTheme={uiTheme}
               showToast={showToast}
               sessionActionIconTheme={sessionActionIconTheme}
+              initialPath={initialFilesystemPath}
+              onPathNavigated={() => setInitialFilesystemPath(null)}
+            />
+          ) : viewMode === 'localExplorer' ? (
+            <LocalFileExplorerSidebar
+              initialPath={localExplorerPath}
+              onBackToConnections={() => {
+                setViewMode('connections');
+                setLocalExplorerPath(null);
+              }}
+              sidebarCollapsed={sidebarCollapsed}
+              setSidebarCollapsed={setSidebarCollapsed}
+              explorerFont={explorerFont}
+              explorerFontSize={explorerFontSize}
+              uiTheme={uiTheme}
+              showToast={showToast}
             />
           ) : (
             // Vista de passwords

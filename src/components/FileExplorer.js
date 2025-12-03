@@ -732,6 +732,77 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         }
     };
 
+    const handleShowHomeInSidebar = async () => {
+        try {
+            console.log('🏠 [FileExplorer] Iniciando obtención de directorio home...');
+            
+            let homePath = null;
+            
+            // Método 1: Intentar con handler IPC
+            if (window.electron && window.electron.ipcRenderer) {
+                try {
+                    console.log('🏠 [FileExplorer] Llamando a get-user-home...');
+                    const result = await window.electron.ipcRenderer.invoke('get-user-home');
+                    console.log('🏠 [FileExplorer] Respuesta IPC recibida:', result, 'tipo:', typeof result);
+                    
+                    if (result && typeof result === 'string' && result.trim().length > 0) {
+                        homePath = result.trim();
+                        console.log('✅ [FileExplorer] Home obtenido via IPC:', homePath);
+                    } else {
+                        console.warn('⚠️ [FileExplorer] IPC retornó valor inválido:', result);
+                    }
+                } catch (ipcError) {
+                    console.error('❌ [FileExplorer] Error en IPC:', ipcError);
+                }
+            } else {
+                console.error('❌ [FileExplorer] Electron IPC no disponible');
+            }
+            
+            // Método 2: Si IPC falla, usar un fallback mejor
+            if (!homePath) {
+                const platform = window.electron?.platform || 'win32';
+                // Llamar al handler de nuevo con un método alternativo o usar un fallback
+                // Por ahora, usar un path que el usuario pueda ajustar
+                homePath = platform === 'win32' ? 'C:\\Users\\User' : '/home/user';
+                console.warn('⚠️ [FileExplorer] IPC falló, usando path por defecto:', homePath);
+                console.warn('⚠️ [FileExplorer] Nota: Reinicia la aplicación para que el handler IPC funcione correctamente');
+            }
+            
+            console.log('✅ [FileExplorer] Home path final:', homePath);
+            
+            // Disparar evento para mostrar explorador local en sidebar
+            window.dispatchEvent(new CustomEvent('show-local-file-explorer', {
+                detail: { path: homePath }
+            }));
+            
+            toast.current?.show({
+                severity: 'success',
+                summary: 'Explorador local',
+                detail: `Mostrando directorio: ${homePath}`,
+                life: 2000
+            });
+        } catch (err) {
+            console.error('❌ [FileExplorer] Error completo:', err);
+            
+            // Aún así, intentar abrir con un path por defecto
+            const platform = window.electron?.platform || 'win32';
+            const defaultPath = platform === 'win32' ? 'C:\\Users\\User' : '/home/user';
+            
+            console.log('⚠️ [FileExplorer] Usando path por defecto debido a error:', defaultPath);
+            
+            window.dispatchEvent(new CustomEvent('show-local-file-explorer', {
+                detail: { path: defaultPath }
+            }));
+            
+            toast.current?.show({
+                severity: 'warn',
+                summary: 'Explorador local',
+                detail: `Abriendo directorio: ${defaultPath}`,
+                life: 3000
+            });
+        }
+    };
+
     const themeColors = getThemeColors(explorerColorTheme);
     const isDarkTheme = themeColors.contentBackground && 
         (themeColors.contentBackground.includes('#') && 
@@ -855,6 +926,12 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                             icon={showDotfiles ? <FaEyeSlash /> : <FaEye />}
                             onClick={() => setShowDotfiles(v => !v)}
                             tooltip={showDotfiles ? t('tooltips.hideHiddenFiles') : t('tooltips.showHiddenFiles')}
+                            className="toolbar-button"
+                        />
+                        <Button 
+                            icon={<FaHome />}
+                            onClick={handleShowHomeInSidebar}
+                            tooltip="Mostrar home local en sidebar"
                             className="toolbar-button"
                         />
                     </div>

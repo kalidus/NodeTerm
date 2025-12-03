@@ -1,5 +1,6 @@
 const { ipcMain, clipboard, dialog, BrowserWindow, app, shell } = require('electron');
 const fs = require('fs');
+const path = require('path');
 const crypto = require('crypto');
 const os = require('os');
 
@@ -41,6 +42,7 @@ function hashFileSync(path) {
  * Registra todos los handlers del sistema
  */
 function registerSystemHandlers() {
+  console.log('📋 [registerSystemHandlers] Iniciando registro de handlers del sistema...');
   
   // === CLIPBOARD HANDLERS ===
   
@@ -130,6 +132,157 @@ function registerSystemHandlers() {
       return { ok: false, error: e?.message };
     }
   });
+
+  // Handler para obtener el directorio home del usuario
+  // IMPORTANTE: Este handler SIEMPRE debe retornar un string válido
+  ipcMain.handle('get-user-home', async (event) => {
+    console.log('🏠 [get-user-home] Handler INVOCADO');
+    
+    // Método 1: app.getPath('home') - MÁS CONFIABLE en Electron
+    try {
+      const homePath = app.getPath('home');
+      if (homePath && typeof homePath === 'string' && homePath.trim().length > 0) {
+        console.log('✅ [get-user-home] Home obtenido de app.getPath:', homePath);
+        return homePath;
+      }
+      console.warn('⚠️ [get-user-home] app.getPath retornó valor vacío:', homePath);
+    } catch (e) {
+      console.warn('⚠️ [get-user-home] app.getPath falló:', e.message);
+    }
+    
+    // Método 2: os.homedir() - fallback
+    try {
+      const homePath = os.homedir();
+      if (homePath && typeof homePath === 'string' && homePath.trim().length > 0) {
+        console.log('✅ [get-user-home] Home obtenido con os.homedir():', homePath);
+        return homePath;
+      }
+      console.warn('⚠️ [get-user-home] os.homedir() retornó valor vacío:', homePath);
+    } catch (e) {
+      console.warn('⚠️ [get-user-home] os.homedir() falló:', e.message);
+    }
+    
+    // Método 3: Variables de entorno (Windows)
+    if (process.platform === 'win32') {
+      // Primero intentar USERPROFILE que es la más confiable
+      if (process.env.USERPROFILE) {
+        const homePath = process.env.USERPROFILE.trim();
+        if (homePath.length > 0) {
+          console.log('✅ [get-user-home] Home obtenido de USERPROFILE:', homePath);
+          return homePath;
+        }
+      }
+      
+      // Segundo: construir desde HOMEDRIVE + HOMEPATH
+      if (process.env.HOMEDRIVE && process.env.HOMEPATH) {
+        const homePath = (process.env.HOMEDRIVE + process.env.HOMEPATH).trim();
+        if (homePath.length > 0) {
+          console.log('✅ [get-user-home] Home obtenido de HOMEDRIVE+HOMEPATH:', homePath);
+          return homePath;
+        }
+      }
+      
+      // Tercero: construir desde USERNAME
+      if (process.env.USERNAME) {
+        const homePath = `C:\\Users\\${process.env.USERNAME}`;
+        console.log('✅ [get-user-home] Home obtenido de USERNAME:', homePath);
+        return homePath;
+      }
+    } else {
+      // Linux/Mac
+      if (process.env.HOME) {
+        const homePath = process.env.HOME.trim();
+        if (homePath.length > 0) {
+          console.log('✅ [get-user-home] Home obtenido de HOME:', homePath);
+          return homePath;
+        }
+      }
+      
+      if (process.env.USER) {
+        const homePath = `/home/${process.env.USER}`;
+        console.log('✅ [get-user-home] Home obtenido de USER:', homePath);
+        return homePath;
+      }
+    }
+    
+    // Último recurso: path por defecto (no debería llegar aquí nunca)
+    const defaultPath = process.platform === 'win32' ? 'C:\\Users\\User' : '/home/user';
+    console.error('❌ [get-user-home] Usando path por defecto:', defaultPath);
+    console.error('❌ [get-user-home] Variables de entorno disponibles:', {
+      USERPROFILE: process.env.USERPROFILE,
+      HOMEDRIVE: process.env.HOMEDRIVE,
+      HOMEPATH: process.env.HOMEPATH,
+      USERNAME: process.env.USERNAME,
+      HOME: process.env.HOME,
+      USER: process.env.USER
+    });
+    return defaultPath;
+  });
+  console.log('✅ [registerSystemHandlers] Handler get-user-home registrado');
+
+  // Handler para listar archivos locales
+  ipcMain.handle('local:list-files', async (event, dirPath) => {
+    try {
+      console.log('📁 [local:list-files] Handler INVOCADO con path:', dirPath);
+      
+      if (!dirPath || typeof dirPath !== 'string') {
+        console.error('❌ [local:list-files] Path inválido:', dirPath);
+        return { success: false, error: 'Path inválido' };
+      }
+
+      // Normalizar el path (asegurar que exista)
+      const normalizedPath = path.normalize(dirPath);
+      console.log('📁 [local:list-files] Path normalizado:', normalizedPath);
+
+      // Verificar que el directorio existe
+      try {
+        const stat = fs.statSync(normalizedPath);
+        if (!stat.isDirectory()) {
+          console.error('❌ [local:list-files] Path no es un directorio:', normalizedPath);
+          return { success: false, error: 'El path no es un directorio' };
+        }
+      } catch (statError) {
+        console.error('❌ [local:list-files] Error verificando directorio:', statError.message);
+        return { success: false, error: `El directorio no existe o no es accesible: ${statError.message}` };
+      }
+
+      console.log('📁 [local:list-files] Leyendo directorio...');
+      const entries = await fs.promises.readdir(normalizedPath, { withFileTypes: true });
+      console.log('📁 [local:list-files] Entradas encontradas:', entries.length);
+
+      const files = entries.map(entry => {
+        try {
+          const fullPath = path.join(normalizedPath, entry.name);
+          const stat = fs.statSync(fullPath);
+          return {
+            name: entry.name,
+            type: entry.isDirectory() ? 'directory' : 'file',
+            size: stat.size,
+            modified: stat.mtime.toISOString(),
+            path: fullPath
+          };
+        } catch (entryError) {
+          console.warn('⚠️ [local:list-files] Error procesando entrada:', entry.name, entryError.message);
+          // Retornar entrada básica si hay error al obtener stat
+          return {
+            name: entry.name,
+            type: entry.isDirectory() ? 'directory' : 'file',
+            size: 0,
+            modified: new Date().toISOString(),
+            path: path.join(normalizedPath, entry.name)
+          };
+        }
+      });
+
+      console.log('✅ [local:list-files] Archivos procesados:', files.length);
+      return { success: true, files };
+    } catch (error) {
+      console.error('❌ [local:list-files] Error completo:', error);
+      console.error('❌ [local:list-files] Stack:', error.stack);
+      return { success: false, error: error.message || 'Error desconocido al listar archivos' };
+    }
+  });
+  console.log('✅ [registerSystemHandlers] Handler local:list-files registrado');
 
   // Handler para encontrar el archivo XML más reciente en descargas
   ipcMain.handle('import:find-latest-xml-download', async (event, { sinceMs } = {}) => {
@@ -495,6 +648,8 @@ function registerSystemHandlers() {
       };
     }
   });
+  
+  console.log('✅ [registerSystemHandlers] Todos los handlers del sistema registrados correctamente');
 }
 
 module.exports = {
