@@ -123,6 +123,36 @@ export const FolderIconRenderer = ({ preset, size = 'medium', pixelSize = null }
     emojiSize = dims.emoji;
   }
 
+  // Mapa de emojis que se ven más pequeños y necesitan escalado adicional
+  // Solo aplicamos escalado a estos emojis específicos para mantener uniformidad
+  const smallEmojiScaleMap = {
+    '👁️': 1.20, // Nagios - ojo se ve más pequeño
+    '🔒': 1.15, // Seguridad - candado se ve más pequeño
+    '📦': 1.12, // Containers/Homeservers - caja se ve más pequeña
+    '⭐': 1.12, // Favoritos - estrella se ve más pequeña
+    '🔍': 1.10, // Elasticsearch - lupa se ve más pequeña
+    '🔴': 1.10, // Redis/Ansible - círculo se ve más pequeño
+    '⚡': 1.10, // DevOps - rayo se ve más pequeño
+    '🪟': 1.10, // Windows - ventana se ve más pequeña
+    '🐧': 1.10, // Linux - pingüino se ve más pequeño
+    '🛡️': 1.10, // Sistema Seguridad - escudo se ve más pequeño
+    '💿': 1.10, // Backup - disco se ve más pequeño
+    '🍃': 1.10, // MongoDB - hoja se ve más pequeña
+    '🔥': 1.10, // Prometheus - fuego se ve más pequeño
+    '📈': 1.10, // Zabbix - gráfico se ve más pequeño
+    '🦌': 1.10, // ELK - ciervo se ve más pequeño
+    '🧂': 1.10, // SaltStack - sal se ve más pequeña
+    '📋': 1.10, // Logs - clipboard se ve más pequeño
+    '📜': 1.10, // Scripts - pergamino se ve más pequeño
+    '🔄': 1.10  // Sync - sincronización se ve más pequeño
+  };
+
+  // Obtener el factor de escala para este emoji, o 1.0 si no necesita escalado
+  const emojiScale = smallEmojiScaleMap[preset.emoji] || 1.0;
+
+  // Calcular el fontSize del emoji en unidades del viewBox
+  const emojiFontSizeInViewBox = pixelSize ? (emojiSize / containerSize) * 100 : emojiSize;
+
   return (
     <svg width={containerSize} height={containerSize} viewBox="0 0 100 100" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>
       <defs>
@@ -134,16 +164,32 @@ export const FolderIconRenderer = ({ preset, size = 'medium', pixelSize = null }
       <path d="M 10 35 L 30 20 L 40 20 L 40 35 Z" fill={`url(#grad-${preset.id})`} opacity="0.9" />
       <path d="M 10 35 L 10 85 Q 10 90 15 90 L 85 90 Q 90 90 90 85 L 90 40 Q 90 35 85 35 L 40 35 L 40 30 Q 40 25 35 25 L 15 25 Q 10 25 10 30 Z" fill={`url(#grad-${preset.id})`} />
       <path d="M 10 35 L 10 85 Q 10 90 15 90 L 85 90 Q 90 90 90 85 L 90 40 Q 90 35 85 35 L 40 35 L 40 30 Q 40 25 35 25 L 15 25 Q 10 25 10 30 Z" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-      <text 
-        x="70" 
-        y="75" 
-        fontSize={pixelSize ? (emojiSize / containerSize) * 100 : emojiSize} 
-        textAnchor="middle" 
-        dominantBaseline="middle" 
-        style={{ userSelect: 'none', pointerEvents: 'none' }}
-      >
-        {preset.emoji}
-      </text>
+      {/* Emoji con escalado solo para los que se ven más pequeños */}
+      {emojiScale !== 1.0 ? (
+        <g transform={`translate(70, 75)`}>
+          <text 
+            x="0" 
+            y="0" 
+            fontSize={emojiFontSizeInViewBox * emojiScale} 
+            textAnchor="middle" 
+            dominantBaseline="central"
+            style={{ userSelect: 'none', pointerEvents: 'none' }}
+          >
+            {preset.emoji}
+          </text>
+        </g>
+      ) : (
+        <text 
+          x="70" 
+          y="75" 
+          fontSize={emojiFontSizeInViewBox} 
+          textAnchor="middle" 
+          dominantBaseline="central"
+          style={{ userSelect: 'none', pointerEvents: 'none' }}
+        >
+          {preset.emoji}
+        </text>
+      )}
       <circle cx="70" cy="70" r="22" fill="rgba(255,255,255,0.15)" opacity="0.6" />
     </svg>
   );
