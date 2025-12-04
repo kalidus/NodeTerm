@@ -635,6 +635,120 @@ export const sessionActionIconThemes = {
         </svg>
       )
     }
+  },
+  
+  outline: {
+    name: 'Outline',
+    description: 'Iconos outline minimalistas con estilo lineal',
+    icons: {
+      // Icono de nueva conexión (servidor con conexión)
+      newConnection: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* Servidor */}
+          <rect x="5" y="4" width="14" height="12" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+          <line x1="8" y1="8" x2="16" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          {/* Indicadores de estado */}
+          <circle cx="10" cy="6" r="0.8" fill="currentColor"/>
+          <circle cx="12.5" cy="6" r="0.8" fill="currentColor"/>
+          {/* Conexión - líneas que salen del servidor */}
+          <line x1="12" y1="16" x2="12" y2="19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <line x1="8" y1="19" x2="16" y2="19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <line x1="8" y1="19" x2="6" y2="21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <line x1="16" y1="19" x2="18" y2="21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      ),
+      // Icono de nueva carpeta (carpeta con lupa superpuesta en la parte frontal)
+      newFolder: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* Carpeta estándar */}
+          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" 
+                stroke="currentColor" 
+                strokeWidth="1.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                fill="none"/>
+          <path d="M3 7l2-2h4l2 2" 
+                stroke="currentColor" 
+                strokeWidth="1.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                fill="none"/>
+          {/* Lupa superpuesta en la parte frontal de la carpeta */}
+          <circle cx="14.5" cy="10.5" r="2.5" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+          <line x1="16.5" y1="12.5" x2="18" y2="14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      ),
+      // Icono de nuevo grupo (cuadrícula 3x3 de 9 cuadrados pequeños rellenos)
+      newGroup: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* Cuadrícula 3x3 - 9 cuadrados pequeños rellenos */}
+          <rect x="4" y="4" width="4" height="4" fill="currentColor"/>
+          <rect x="10" y="4" width="4" height="4" fill="currentColor"/>
+          <rect x="16" y="4" width="4" height="4" fill="currentColor"/>
+          <rect x="4" y="10" width="4" height="4" fill="currentColor"/>
+          <rect x="10" y="10" width="4" height="4" fill="currentColor"/>
+          <rect x="16" y="10" width="4" height="4" fill="currentColor"/>
+          <rect x="4" y="16" width="4" height="4" fill="currentColor"/>
+          <rect x="10" y="16" width="4" height="4" fill="currentColor"/>
+          <rect x="16" y="16" width="4" height="4" fill="currentColor"/>
+        </svg>
+      ),
+      // Icono de gestor de contraseñas (llave)
+      passwordManager: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="9" cy="12" r="3.5" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+          <rect x="9" y="10" width="8" height="4" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+          <rect x="12" y="8" width="1.5" height="2" rx="0.75" fill="currentColor"/>
+          <rect x="14" y="9" width="1.5" height="2" rx="0.75" fill="currentColor"/>
+          <rect x="15.5" y="14" width="1.5" height="2" rx="0.75" fill="currentColor"/>
+        </svg>
+      ),
+      // Icono de colapsar (chevron izquierdo angular - flecha angular apuntando a la izquierda)
+      collapseLeft: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter" fill="none"/>
+        </svg>
+      ),
+      // Icono de expandir (chevron derecho)
+      expandRight: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+      // Icono de menú (tres líneas horizontales)
+      menu: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      ),
+      // Icono de expandir todo
+      expandAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7 13l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+          <path d="M7 6l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+      // Icono de colapsar todo
+      collapseAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17 11l-5-5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+          <path d="M17 18l-5-5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+      // Icono de configuración
+      settings: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+          <path d="M12 1v6m0 6v6M23 12h-6m-6 0H1M19.07 4.93l-4.24 4.24m0 2.83l4.24 4.24M4.93 19.07l4.24-4.24m0-2.83L4.93 4.93" 
+                stroke="currentColor" 
+                strokeWidth="1.5" 
+                strokeLinecap="round"/>
+        </svg>
+      )
+    }
   }
 };
 
