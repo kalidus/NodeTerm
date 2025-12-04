@@ -369,6 +369,7 @@ async function initializeGuacamoleServices() {
     
     if (!guacdReady) {
       console.warn('⚠️ No se pudo inicializar guacd. RDP Guacamole no estará disponible.');
+      guacamoleInitializing = false; // Reset flag en caso de error
       return;
     }
 
@@ -411,7 +412,16 @@ async function initializeGuacamoleServices() {
       }
     }
     // Crear servidor Guacamole-lite
-    guacamoleServer = new GuacamoleLite(websocketOptions, guacdOptions, clientOptions);
+    try {
+      guacamoleServer = new GuacamoleLite(websocketOptions, guacdOptions, clientOptions);
+      console.log('🌐 [initializeGuacamoleServices] Servidor Guacamole-lite creado:', !!guacamoleServer);
+      if (guacamoleServer) {
+        console.log('🌐 [initializeGuacamoleServices] Servidor tiene port:', guacamoleServer.port || 'no definido');
+      }
+    } catch (serverError) {
+      console.error('❌ [initializeGuacamoleServices] Error creando servidor Guacamole-lite:', serverError);
+      throw serverError;
+    }
     
     // Configurar eventos del servidor
     guacamoleServer.on('open', (clientConnection) => {
@@ -467,9 +477,11 @@ async function initializeGuacamoleServices() {
 
     guacamoleServerReadyAt = Date.now();
     guacamoleInitialized = true;
+    guacamoleInitializing = false; // Reset flag después de inicialización exitosa
     console.log('✅ Servicios Guacamole inicializados correctamente');
     console.log(`🌐 Servidor WebSocket: localhost:${websocketOptions.port}`);
     console.log(`🔧 GuacD: ${guacdOptions.host}:${guacdOptions.port}`);
+    console.log(`📊 [initializeGuacamoleServices] guacamoleServer asignado:`, !!guacamoleServer);
     
   } catch (error) {
     console.error('❌ Error inicializando servicios Guacamole:', error);
@@ -742,25 +754,8 @@ function createWindow() {
       getGuacamoleServerReadyAt: () => guacamoleServerReadyAt
     });
     
-    // Handler simple para obtener el directorio home del usuario local
-    // Se registra después de registerAllHandlers para tener prioridad
-    ipcMain.handle('get-user-home', async () => {
-      try {
-        const os = require('os');
-        const homePath = app.getPath('home') || os.homedir();
-        console.log('🏠 [main.js] get-user-home retornando:', homePath);
-        return homePath;
-      } catch (e) {
-        console.error('❌ [main.js] Error en get-user-home:', e);
-        const os = require('os');
-        const fallback = os.homedir();
-        console.log('🏠 [main.js] get-user-home usando fallback:', fallback);
-        return fallback;
-      }
-    });
-    console.log('✅ [main.js] Handler get-user-home registrado después de registerAllHandlers');
-    
     // Handlers registrados exitosamente
+    // Nota: get-user-home ya está registrado en registerSystemHandlers()
     
     // Inicializar servicios de Guacamole después de registrar los handlers
     initializeGuacamoleServices().catch((error) => {
