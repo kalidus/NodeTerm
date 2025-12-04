@@ -1810,6 +1810,13 @@ const App = () => {
   useEffect(() => {
     const handleOpenNewUnifiedConnectionDialog = (e) => {
       const activeTab = e?.detail?.activeTab;
+      const initialCategory = e?.detail?.initialCategory;
+      
+      // Si hay initialCategory, dejar que DialogsManager lo maneje
+      if (initialCategory) {
+        return;
+      }
+      
       if (activeTab === 'password') {
         // Abrir diálogo unificado directamente en pestaña Password
         if (setShowUnifiedConnectionDialog) {

@@ -272,6 +272,9 @@ const DialogsManager = ({
   const [showNewSSHDialog, setShowNewSSHDialog] = useState(false);
   const [showNewRDPDialog, setShowNewRDPDialog] = useState(false);
   const [showNewVNCDialog, setShowNewVNCDialog] = useState(false);
+  
+  // Estado para la categoría inicial del diálogo de selección de protocolo
+  const [protocolSelectionInitialCategory, setProtocolSelectionInitialCategory] = useState(null);
 
   // Handler para cuando se selecciona un protocolo
   const handleProtocolSelect = useCallback((protocolId) => {
@@ -304,6 +307,31 @@ const DialogsManager = ({
         console.warn('Protocolo no reconocido:', protocolId);
     }
   }, [setShowFileConnectionDialog, setFileConnectionProtocol]);
+
+  // Escuchar evento para abrir diálogo de selección de protocolo con categoría inicial
+  useEffect(() => {
+    const handleOpenProtocolSelection = (e) => {
+      const initialCategory = e?.detail?.initialCategory;
+      if (initialCategory) {
+        setProtocolSelectionInitialCategory(initialCategory);
+      } else {
+        setProtocolSelectionInitialCategory(null);
+      }
+      setShowProtocolSelectionDialog(true);
+    };
+
+    window.addEventListener('open-new-unified-connection-dialog', handleOpenProtocolSelection);
+    return () => {
+      window.removeEventListener('open-new-unified-connection-dialog', handleOpenProtocolSelection);
+    };
+  }, []);
+
+  // Limpiar categoría inicial cuando se cierra el diálogo
+  useEffect(() => {
+    if (!showProtocolSelectionDialog) {
+      setProtocolSelectionInitialCategory(null);
+    }
+  }, [showProtocolSelectionDialog]);
 
   // Handler para volver al diálogo de selección de protocolo
   const handleGoBackToProtocolSelection = useCallback(() => {
@@ -628,6 +656,7 @@ const DialogsManager = ({
         visible={showProtocolSelectionDialog}
         onHide={() => setShowProtocolSelectionDialog(false)}
         onSelectProtocol={handleProtocolSelect}
+        initialCategory={protocolSelectionInitialCategory}
       />
     </>
   );
