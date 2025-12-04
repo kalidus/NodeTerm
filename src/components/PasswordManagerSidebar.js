@@ -11,6 +11,7 @@ import SidebarFooter from './SidebarFooter';
 import { iconThemes } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import { sessionActionIconThemes } from '../themes/session-action-icons';
 import '../styles/components/password-manager-sidebar.css';
 import '../styles/components/tree-themes.css';
 
@@ -1186,33 +1187,86 @@ const PasswordManagerSidebar = ({
       {/* Header igual que la sidebar de conexiones */}
       <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
         <Button 
-          icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
-          className="p-button-rounded p-button-text sidebar-action-button" 
+          className="p-button-rounded p-button-text sidebar-action-button glass-button" 
           onClick={() => setSidebarCollapsed && setSidebarCollapsed(v => !v)} 
           tooltip={sidebarCollapsed ? tCommon('tooltips.expandSidebar') : tCommon('tooltips.collapseSidebar')} 
           tooltipOptions={{ position: 'bottom' }} 
-          style={{ marginRight: 8 }} 
-        />
+          style={{ 
+            marginRight: 8,
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: '40px',
+            height: '40px',
+            padding: 0
+          }} 
+        >
+          <span style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: '20px',
+            height: '20px',
+            color: 'var(--ui-sidebar-text)'
+          }}>
+            {sidebarCollapsed 
+              ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
+              : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft}
+          </span>
+        </Button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
           <Button 
-            icon="pi pi-key" 
-            className="p-button-rounded p-button-text sidebar-action-button" 
+            className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={handleNewPassword} 
             tooltip={t('passwordManager.tooltips.newPassword')} 
             tooltipOptions={{ position: 'bottom' }} 
-            style={{ color: '#ffc107' }}
-          />
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              padding: 0
+            }}
+          >
+            <span style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '20px',
+              height: '20px',
+              color: '#ffc107'
+            }}>
+              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
+            </span>
+          </Button>
           <Button 
-            icon="pi pi-folder" 
-            className="p-button-rounded p-button-text sidebar-action-button" 
+            className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={handleNewFolder} 
             tooltip={tCommon('tooltips.newFolder')} 
             tooltipOptions={{ position: 'bottom' }} 
-            style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
-          />
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              padding: 0
+            }}
+          >
+            <span style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '20px',
+              height: '20px',
+              color: 'var(--ui-sidebar-text)'
+            }}>
+              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
+            </span>
+          </Button>
           <Button 
-            icon="pi pi-th-large" 
-            className="p-button-rounded p-button-text sidebar-action-button" 
+            className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={() => {
               // Volver a la vista de conexiones y crear grupo
               onBackToConnections();
@@ -1223,16 +1277,51 @@ const PasswordManagerSidebar = ({
             }} 
             tooltip={tCommon('tooltips.createGroup')} 
             tooltipOptions={{ position: 'bottom' }} 
-            style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
-          />
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              padding: 0
+            }}
+          >
+            <span style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '20px',
+              height: '20px',
+              color: 'var(--ui-sidebar-text)'
+            }}>
+              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
+            </span>
+          </Button>
           <Button 
-            icon="pi pi-sitemap" 
-            className="p-button-rounded p-button-text sidebar-action-button" 
+            className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={onBackToConnections} 
             tooltip={tCommon('tooltips.goToConnections')} 
             tooltipOptions={{ position: 'bottom' }} 
-            style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
-          />
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              padding: 0
+            }}
+          >
+            <span style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '20px',
+              height: '20px',
+              color: 'var(--ui-sidebar-text)'
+            }}>
+              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
+            </span>
+          </Button>
         </div>
       </div>
       <Divider className="my-2" />

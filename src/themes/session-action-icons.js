@@ -641,21 +641,26 @@ export const sessionActionIconThemes = {
     name: 'Outline',
     description: 'Iconos outline minimalistas con estilo lineal',
     icons: {
-      // Icono de nueva conexión (servidor con conexión)
+      // Icono de nueva conexión (organigrama/red - nodo arriba conectado a tres nodos abajo)
       newConnection: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* Servidor */}
-          <rect x="5" y="4" width="14" height="12" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-          <line x1="8" y1="8" x2="16" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          {/* Indicadores de estado */}
-          <circle cx="10" cy="6" r="0.8" fill="currentColor"/>
-          <circle cx="12.5" cy="6" r="0.8" fill="currentColor"/>
-          {/* Conexión - líneas que salen del servidor */}
-          <line x1="12" y1="16" x2="12" y2="19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          <line x1="8" y1="19" x2="16" y2="19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          <line x1="8" y1="19" x2="6" y2="21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          <line x1="16" y1="19" x2="18" y2="21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          {/* Nodo superior */}
+          <circle cx="12" cy="5" r="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+          {/* Línea vertical desde el nodo superior */}
+          <line x1="12" y1="7" x2="12" y2="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          {/* Línea horizontal que conecta los tres nodos inferiores */}
+          <line x1="5" y1="13" x2="19" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          {/* Líneas verticales desde la línea horizontal a los nodos */}
+          <line x1="5" y1="10" x2="5" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <line x1="12" y1="10" x2="12" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <line x1="19" y1="10" x2="19" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          {/* Tres nodos inferiores */}
+          <circle cx="5" cy="17" r="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+          <circle cx="12" cy="17" r="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+          <circle cx="19" cy="17" r="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+          {/* Líneas horizontales conectando los nodos inferiores entre sí */}
+          <line x1="7" y1="17" x2="10" y2="17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <line x1="14" y1="17" x2="17" y2="17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
         </svg>
       ),
       // Icono de nueva carpeta (carpeta con lupa superpuesta en la parte frontal)
