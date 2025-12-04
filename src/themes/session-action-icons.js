@@ -9,7 +9,7 @@ export const sessionActionIconThemes = {
     name: 'Moderno',
     description: 'Iconos modernos con gradientes y sombras suaves',
     icons: {
-      // Icono de nueva conexión (organigrama)
+      // Icono de nueva conexión (círculo con plus)
       newConnection: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -29,20 +29,12 @@ export const sessionActionIconThemes = {
               </feMerge>
             </filter>
           </defs>
-          {/* Nodo raíz */}
-          <rect x="10" y="2" width="4" height="4" rx="1" fill="url(#modernConnectionGrad)" filter="url(#modernShadow)"/>
-          {/* Línea vertical */}
-          <line x1="12" y1="6" x2="12" y2="9" stroke="url(#modernConnectionGrad)" strokeWidth="1.5" strokeLinecap="round"/>
-          {/* Línea horizontal */}
-          <line x1="12" y1="9" x2="12" y2="9" stroke="url(#modernConnectionGrad)" strokeWidth="1.5" strokeLinecap="round"/>
-          {/* Nodos hijos */}
-          <rect x="3" y="12" width="4" height="4" rx="1" fill="url(#modernConnectionGrad)" opacity="0.8" filter="url(#modernShadow)"/>
-          <rect x="10" y="12" width="4" height="4" rx="1" fill="url(#modernConnectionGrad)" opacity="0.8" filter="url(#modernShadow)"/>
-          <rect x="17" y="12" width="4" height="4" rx="1" fill="url(#modernConnectionGrad)" opacity="0.8" filter="url(#modernShadow)"/>
-          {/* Líneas de conexión */}
-          <line x1="12" y1="9" x2="5" y2="12" stroke="url(#modernConnectionGrad)" strokeWidth="1.2" strokeLinecap="round" opacity="0.6"/>
-          <line x1="12" y1="9" x2="12" y2="12" stroke="url(#modernConnectionGrad)" strokeWidth="1.2" strokeLinecap="round" opacity="0.6"/>
-          <line x1="12" y1="9" x2="19" y2="12" stroke="url(#modernConnectionGrad)" strokeWidth="1.2" strokeLinecap="round" opacity="0.6"/>
+          {/* Círculo exterior */}
+          <circle cx="12" cy="12" r="8" fill="url(#modernConnectionGrad)" opacity="0.15" filter="url(#modernShadow)"/>
+          <circle cx="12" cy="12" r="8" stroke="url(#modernConnectionGrad)" strokeWidth="1.8" strokeLinecap="round" filter="url(#modernShadow)"/>
+          {/* Símbolo plus */}
+          <line x1="12" y1="8" x2="12" y2="16" stroke="url(#modernConnectionGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#modernShadow)"/>
+          <line x1="8" y1="12" x2="16" y2="12" stroke="url(#modernConnectionGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#modernShadow)"/>
         </svg>
       ),
       // Icono de nueva carpeta
@@ -236,14 +228,11 @@ export const sessionActionIconThemes = {
     icons: {
       newConnection: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="12" cy="5" r="2" stroke="currentColor" strokeWidth="2" fill="none"/>
-          <line x1="12" y1="7" x2="12" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          <line x1="12" y1="10" x2="5" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          <line x1="12" y1="10" x2="12" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          <line x1="12" y1="10" x2="19" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          <circle cx="5" cy="17" r="2" stroke="currentColor" strokeWidth="2" fill="none"/>
-          <circle cx="12" cy="17" r="2" stroke="currentColor" strokeWidth="2" fill="none"/>
-          <circle cx="19" cy="17" r="2" stroke="currentColor" strokeWidth="2" fill="none"/>
+          {/* Círculo exterior */}
+          <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" fill="none"/>
+          {/* Símbolo plus */}
+          <line x1="12" y1="8" x2="12" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
         </svg>
       ),
       newFolder: (
@@ -326,14 +315,12 @@ export const sessionActionIconThemes = {
     icons: {
       newConnection: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h4z" fill="currentColor"/>
-          <path d="M5 12a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-2z" fill="currentColor"/>
-          <path d="M15 12a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-2z" fill="currentColor"/>
-          <path d="M12 18a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h2z" fill="currentColor"/>
-          <line x1="12" y1="8" x2="12" y2="10" stroke="currentColor" strokeWidth="1.5"/>
-          <line x1="8" y1="12" x2="10" y2="12" stroke="currentColor" strokeWidth="1.5"/>
-          <line x1="14" y1="12" x2="16" y2="12" stroke="currentColor" strokeWidth="1.5"/>
-          <line x1="12" y1="16" x2="12" y2="18" stroke="currentColor" strokeWidth="1.5"/>
+          {/* Círculo exterior */}
+          <circle cx="12" cy="12" r="8" fill="currentColor" opacity="0.1"/>
+          <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" fill="none"/>
+          {/* Símbolo plus */}
+          <line x1="12" y1="8" x2="12" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
         </svg>
       ),
       newFolder: (
@@ -433,14 +420,11 @@ export const sessionActionIconThemes = {
               </feMerge>
             </filter>
           </defs>
-          <circle cx="12" cy="5" r="2" fill="url(#neonConnectionGrad)" filter="url(#neonGlow)"/>
-          <line x1="12" y1="7" x2="12" y2="10" stroke="url(#neonConnectionGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#neonGlow)"/>
-          <line x1="12" y1="10" x2="5" y2="14" stroke="url(#neonConnectionGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#neonGlow)"/>
-          <line x1="12" y1="10" x2="12" y2="14" stroke="url(#neonConnectionGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#neonGlow)"/>
-          <line x1="12" y1="10" x2="19" y2="14" stroke="url(#neonConnectionGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#neonGlow)"/>
-          <circle cx="5" cy="17" r="2" fill="url(#neonConnectionGrad)" filter="url(#neonGlow)"/>
-          <circle cx="12" cy="17" r="2" fill="url(#neonConnectionGrad)" filter="url(#neonGlow)"/>
-          <circle cx="19" cy="17" r="2" fill="url(#neonConnectionGrad)" filter="url(#neonGlow)"/>
+          {/* Círculo exterior */}
+          <circle cx="12" cy="12" r="8" stroke="url(#neonConnectionGrad)" strokeWidth="2" fill="none" filter="url(#neonGlow)"/>
+          {/* Símbolo plus */}
+          <line x1="12" y1="8" x2="12" y2="16" stroke="url(#neonConnectionGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#neonGlow)"/>
+          <line x1="8" y1="12" x2="16" y2="12" stroke="url(#neonConnectionGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#neonGlow)"/>
         </svg>
       ),
       newFolder: (
@@ -641,72 +625,81 @@ export const sessionActionIconThemes = {
     name: 'Outline',
     description: 'Iconos outline minimalistas con estilo lineal',
     icons: {
-      // Icono de nueva conexión (organigrama/red - nodo arriba conectado a tres nodos abajo)
+      // Icono de nueva conexión (servidor/base de datos conectado a red)
       newConnection: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* Nodo superior */}
-          <circle cx="12" cy="5" r="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-          {/* Línea vertical desde el nodo superior */}
-          <line x1="12" y1="7" x2="12" y2="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          {/* Línea horizontal que conecta los tres nodos inferiores */}
-          <line x1="5" y1="13" x2="19" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          {/* Líneas verticales desde la línea horizontal a los nodos */}
-          <line x1="5" y1="10" x2="5" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          <line x1="12" y1="10" x2="12" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          <line x1="19" y1="10" x2="19" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          {/* Tres nodos inferiores */}
-          <circle cx="5" cy="17" r="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-          <circle cx="12" cy="17" r="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-          <circle cx="19" cy="17" r="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-          {/* Líneas horizontales conectando los nodos inferiores entre sí */}
-          <line x1="7" y1="17" x2="10" y2="17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          <line x1="14" y1="17" x2="17" y2="17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          {/* Pila de servidor/base de datos - tres cilindros horizontales más grandes y centrados */}
+          {/* Cilindro superior */}
+          <ellipse cx="12" cy="4.5" rx="6.5" ry="2.5" stroke="currentColor" strokeWidth="2" fill="none"/>
+          <line x1="5.5" y1="4.5" x2="18.5" y2="4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          {/* Cilindro medio */}
+          <ellipse cx="12" cy="8.5" rx="6.5" ry="2.5" stroke="currentColor" strokeWidth="2" fill="none"/>
+          <line x1="5.5" y1="8.5" x2="18.5" y2="8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          {/* Cilindro inferior */}
+          <ellipse cx="12" cy="12.5" rx="6.5" ry="2.5" stroke="currentColor" strokeWidth="2" fill="none"/>
+          <line x1="5.5" y1="12.5" x2="18.5" y2="12.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          {/* Línea vertical de conexión */}
+          <line x1="12" y1="15" x2="12" y2="17.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          {/* Línea horizontal de red */}
+          <line x1="2" y1="19.5" x2="22" y2="19.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          {/* Tres nodos cuadrados en la red - más grandes y centrados */}
+          <rect x="2" y="18.5" width="3" height="3" fill="currentColor"/>
+          <rect x="10.5" y="18.5" width="3" height="3" fill="currentColor"/>
+          <rect x="19" y="18.5" width="3" height="3" fill="currentColor"/>
         </svg>
       ),
       // Icono de nueva carpeta (carpeta con lupa superpuesta en la parte frontal)
       newFolder: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* Carpeta estándar */}
-          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" 
+          {/* Carpeta estándar - más grande */}
+          <path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z" 
                 stroke="currentColor" 
-                strokeWidth="1.5" 
+                strokeWidth="2" 
                 strokeLinecap="round" 
                 strokeLinejoin="round" 
                 fill="none"/>
-          <path d="M3 7l2-2h4l2 2" 
+          <path d="M2 6l2-2h5l2 2" 
                 stroke="currentColor" 
-                strokeWidth="1.5" 
+                strokeWidth="2" 
                 strokeLinecap="round" 
                 strokeLinejoin="round" 
                 fill="none"/>
-          {/* Lupa superpuesta en la parte frontal de la carpeta */}
-          <circle cx="14.5" cy="10.5" r="2.5" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-          <line x1="16.5" y1="12.5" x2="18" y2="14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          {/* Líneas decorativas en la carpeta */}
+          <line x1="6" y1="11" x2="16" y2="11" stroke="currentColor" strokeWidth="1.5" opacity="0.5" strokeLinecap="round"/>
+          <line x1="6" y1="14" x2="14" y2="14" stroke="currentColor" strokeWidth="1.5" opacity="0.5" strokeLinecap="round"/>
+          {/* Lupa superpuesta en la parte frontal de la carpeta - más grande */}
+          <circle cx="15.5" cy="10.5" r="3" stroke="currentColor" strokeWidth="2" fill="none"/>
+          <line x1="17.5" y1="12.5" x2="19.5" y2="14.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
         </svg>
       ),
       // Icono de nuevo grupo (cuadrícula 3x3 de 9 cuadrados pequeños rellenos)
       newGroup: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* Cuadrícula 3x3 - 9 cuadrados pequeños rellenos */}
-          <rect x="4" y="4" width="4" height="4" fill="currentColor"/>
-          <rect x="10" y="4" width="4" height="4" fill="currentColor"/>
-          <rect x="16" y="4" width="4" height="4" fill="currentColor"/>
-          <rect x="4" y="10" width="4" height="4" fill="currentColor"/>
-          <rect x="10" y="10" width="4" height="4" fill="currentColor"/>
-          <rect x="16" y="10" width="4" height="4" fill="currentColor"/>
-          <rect x="4" y="16" width="4" height="4" fill="currentColor"/>
-          <rect x="10" y="16" width="4" height="4" fill="currentColor"/>
-          <rect x="16" y="16" width="4" height="4" fill="currentColor"/>
+          {/* Cuadrícula 3x3 - 9 cuadrados más grandes y mejor espaciados */}
+          <rect x="2.5" y="2.5" width="5" height="5" fill="currentColor"/>
+          <rect x="9.5" y="2.5" width="5" height="5" fill="currentColor"/>
+          <rect x="16.5" y="2.5" width="5" height="5" fill="currentColor"/>
+          <rect x="2.5" y="9.5" width="5" height="5" fill="currentColor"/>
+          <rect x="9.5" y="9.5" width="5" height="5" fill="currentColor"/>
+          <rect x="16.5" y="9.5" width="5" height="5" fill="currentColor"/>
+          <rect x="2.5" y="16.5" width="5" height="5" fill="currentColor"/>
+          <rect x="9.5" y="16.5" width="5" height="5" fill="currentColor"/>
+          <rect x="16.5" y="16.5" width="5" height="5" fill="currentColor"/>
         </svg>
       ),
       // Icono de gestor de contraseñas (llave)
       passwordManager: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="9" cy="12" r="3.5" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-          <rect x="9" y="10" width="8" height="4" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-          <rect x="12" y="8" width="1.5" height="2" rx="0.75" fill="currentColor"/>
-          <rect x="14" y="9" width="1.5" height="2" rx="0.75" fill="currentColor"/>
-          <rect x="15.5" y="14" width="1.5" height="2" rx="0.75" fill="currentColor"/>
+          {/* Anillo de la llave - más grande */}
+          <circle cx="8.5" cy="12" r="4" stroke="currentColor" strokeWidth="2" fill="none"/>
+          {/* Cuerpo de la llave - más grande */}
+          <rect x="8.5" y="9.5" width="9" height="5" rx="2.5" stroke="currentColor" strokeWidth="2" fill="none"/>
+          {/* Dientes de la llave - más grandes y detallados */}
+          <rect x="11.5" y="7" width="2" height="2.5" rx="1" fill="currentColor"/>
+          <rect x="13.5" y="8.5" width="2" height="2.5" rx="1" fill="currentColor"/>
+          <rect x="15.5" y="14.5" width="2" height="2.5" rx="1" fill="currentColor"/>
+          {/* Brillo decorativo en el anillo */}
+          <circle cx="8.5" cy="12" r="2" fill="currentColor" opacity="0.3"/>
         </svg>
       ),
       // Icono de colapsar (chevron izquierdo angular - flecha angular apuntando a la izquierda)
