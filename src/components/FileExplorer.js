@@ -6,7 +6,7 @@ import { ProgressBar } from 'primereact/progressbar';
 import { Message } from 'primereact/message';
 import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
-import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
+import { confirmDialog } from 'primereact/confirmdialog';
 import { uiThemes } from '../themes/ui-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
@@ -56,6 +56,8 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     
     const containerRef = React.useRef(null);
     const filesContainerRef = React.useRef(null);
+    const isDeleteDialogOpenRef = React.useRef(false);
+    const deleteTimeoutRef = React.useRef(null);
 
     useEffect(() => {
         setSshReady(true);
@@ -437,8 +439,29 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     };
 
     const handleDeleteFiles = (filesToDelete) => {
+        // Prevenir diálogos duplicados usando ref para evitar problemas de timing
+        if (isDeleteDialogOpenRef.current) {
+            console.log('[FileExplorer] Diálogo de eliminación ya está abierto, ignorando llamada duplicada');
+            return;
+        }
+        
         const filesTarget = filesToDelete || selectedFiles;
         if (filesTarget.length === 0) return;
+        
+        // Limpiar timeout anterior si existe
+        if (deleteTimeoutRef.current) {
+            clearTimeout(deleteTimeoutRef.current);
+            deleteTimeoutRef.current = null;
+        }
+        
+        // Marcar como abierto inmediatamente
+        isDeleteDialogOpenRef.current = true;
+        
+        // Usar timeout para resetear el flag después de un tiempo (fallback de seguridad)
+        deleteTimeoutRef.current = setTimeout(() => {
+            isDeleteDialogOpenRef.current = false;
+            deleteTimeoutRef.current = null;
+        }, 1000);
         
         const fileNames = filesTarget.map(f => f.name).join(', ');
         confirmDialog({
@@ -446,6 +469,12 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
             header: 'Confirmar eliminación',
             icon: 'pi pi-exclamation-triangle',
             accept: async () => {
+                isDeleteDialogOpenRef.current = false;
+                if (deleteTimeoutRef.current) {
+                    clearTimeout(deleteTimeoutRef.current);
+                    deleteTimeoutRef.current = null;
+                }
+                
                 setTransferProgress({ type: 'delete', current: 0, total: filesTarget.length });
                 for (let i = 0; i < filesTarget.length; i++) {
                     const file = filesTarget[i];
@@ -475,6 +504,13 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 setTransferProgress(null);
                 setSelectedFiles([]);
                 loadFiles(currentPath);
+            },
+            reject: () => {
+                isDeleteDialogOpenRef.current = false;
+                if (deleteTimeoutRef.current) {
+                    clearTimeout(deleteTimeoutRef.current);
+                    deleteTimeoutRef.current = null;
+                }
             }
         });
     };
@@ -1097,7 +1133,14 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                                                     />
                                                     <Button
                                                         icon={<FaTrash />}
-                                                        onClick={() => handleDeleteFiles([file])}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            e.preventDefault();
+                                                            // Usar setTimeout para asegurar que el evento no se propague
+                                                            setTimeout(() => {
+                                                                handleDeleteFiles([file]);
+                                                            }, 0);
+                                                        }}
                                                         tooltip={t('tooltips.delete')}
                                                         className="file-action-button file-action-danger"
                                                     />
@@ -1234,7 +1277,6 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
             </Dialog>
             
             <Toast ref={toast} />
-            <ConfirmDialog />
         </div>
     );
 };
