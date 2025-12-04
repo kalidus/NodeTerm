@@ -72,6 +72,11 @@ function registerGuacamoleHandlers({
       const currentServer = getGuacamoleServer ? getGuacamoleServer() : guacamoleServer;
       const currentReadyAt = getGuacamoleServerReadyAt ? getGuacamoleServerReadyAt() : guacamoleServerReadyAt;
       
+      // Logging para diagnóstico
+      if (!currentServer) {
+        console.log('⚠️ [guacamole:get-status] guacamoleServer es null. guacdStatus:', guacdStatus);
+      }
+      
       const result = {
         guacd: guacdStatus,
         server: currentServer ? {
