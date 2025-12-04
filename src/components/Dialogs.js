@@ -3062,20 +3062,22 @@ export function EditVNCConnectionDialog({
 export function ProtocolSelectionDialog({
   visible,
   onHide,
-  onSelectProtocol // Callback: (protocol) => void
+  onSelectProtocol, // Callback: (protocol) => void
+  initialCategory = null // Categoría inicial a seleccionar
 }) {
   // Hook de internacionalización
   const { t } = useTranslation('dialogs');
   
   const remoteAccessCategory = t('protocolSelection.categories.remoteAccess');
-  const [selectedCategory, setSelectedCategory] = useState(remoteAccessCategory);
+  const passwordManagementCategory = t('protocolSelection.categories.passwordManagement');
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory || remoteAccessCategory);
 
   // Resetear categoría cuando se abre el diálogo
   useEffect(() => {
     if (visible) {
-      setSelectedCategory(remoteAccessCategory);
+      setSelectedCategory(initialCategory || remoteAccessCategory);
     }
-  }, [visible, remoteAccessCategory]);
+  }, [visible, remoteAccessCategory, initialCategory]);
 
   const protocolSections = [
     {

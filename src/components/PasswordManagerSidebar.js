@@ -42,6 +42,9 @@ const PasswordManagerSidebar = ({
   const { t } = useTranslation('dialogs');
   const { t: tCommon } = useTranslation('common');
   
+  // Obtener la categoría de Gestión de Contraseñas para el diálogo
+  const passwordManagementCategory = t('protocolSelection.categories.passwordManagement');
+  
   // Estado separado para passwords - no usar el árbol principal de conexiones
   const [passwordNodes, setPasswordNodes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -1217,8 +1220,13 @@ const PasswordManagerSidebar = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
           <Button 
             className="p-button-rounded p-button-text sidebar-action-button glass-button" 
-            onClick={handleNewPassword} 
-            tooltip={t('passwordManager.tooltips.newPassword')} 
+            onClick={() => {
+              // Abrir diálogo de selección de protocolo directamente en la categoría de Gestión de Contraseñas
+              window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog', {
+                detail: { initialCategory: passwordManagementCategory }
+              }));
+            }} 
+            tooltip={tCommon('tooltips.newConnection')} 
             tooltipOptions={{ position: 'bottom' }} 
             style={{ 
               display: 'flex', 
@@ -1235,9 +1243,9 @@ const PasswordManagerSidebar = ({
               justifyContent: 'center',
               width: '20px',
               height: '20px',
-              color: '#ffc107'
+              color: 'var(--ui-sidebar-text)'
             }}>
-              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
+              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
             </span>
           </Button>
           <Button 
