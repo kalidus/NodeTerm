@@ -138,6 +138,7 @@ const SplitLayout = ({
   statusBarIconTheme = 'classic',
   externalPaneSize = null, // Nuevo prop para controlar el tamaño externamente
   onManualResize = null, // Callback para notificar redimensionamiento manual
+  onPaneSizeChange = null, // Callback para notificar cambio de tamaño durante redimensionamiento
   splitterColor, // <-- nuevo prop
   onCloseLeft = null, // Callback para cerrar panel izquierdo
   onCloseRight = null // Callback para cerrar panel derecho
@@ -284,13 +285,14 @@ const SplitLayout = ({
 
     // Necesitamos agregar el handle de resize horizontal
     const [internalPaneSize, setInternalPaneSize] = useState(() => {
-      // Calcular 30% menos de la altura de la ventana (70% del tamaño original)
-      return Math.max(window.innerHeight * 0.7, 200);
+      // Si hay un externalPaneSize, usarlo como inicial, sino calcular 70% de la altura
+      return externalPaneSize !== null ? externalPaneSize : Math.max(window.innerHeight * 0.7, 200);
     });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0, size: 0 });
     
-    const finalPrimaryPaneSize = externalPaneSize !== null ? externalPaneSize : internalPaneSize;
+    // Durante el redimensionamiento, usar internalPaneSize, sino usar externalPaneSize si está disponible
+    const finalPrimaryPaneSize = isDragging ? internalPaneSize : (externalPaneSize !== null ? externalPaneSize : internalPaneSize);
     
     // Actualizar los estilos con el tamaño final
     const finalPrimaryPaneStyle = {
@@ -330,7 +332,12 @@ const SplitLayout = ({
       
       const clampedSize = Math.max(minSize, Math.min(maxSize, newSize));
       setInternalPaneSize(clampedSize);
-    }, [isDragging, dragStart]);
+      
+      // Notificar el cambio de tamaño al componente padre
+      if (onPaneSizeChange) {
+        onPaneSizeChange(clampedSize);
+      }
+    }, [isDragging, dragStart, onPaneSizeChange]);
 
     const handleMouseUp = useCallback(() => {
       if (isDragging) {
