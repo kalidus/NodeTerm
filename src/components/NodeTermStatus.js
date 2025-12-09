@@ -4,11 +4,31 @@ import SyncManager from '../utils/SyncManager';
 import SecureStorage from '../services/SecureStorage';
 import { aiService } from '../services/AIService';
 
-const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnectionsCount = 0, themeColors = {}, horizontal = false, compact = false }) => {
+const NodeTermStatus = ({ 
+	sshConnectionsCount = 0, 
+	foldersCount = 0, 
+	rdpConnectionsCount = 0, 
+	themeColors = {}, 
+	horizontal = false, 
+	compact = false,
+	onCreateSSHConnection,
+	onCreateFolder,
+	onOpenFileExplorer,
+	onOpenSettings,
+	onToggleTerminalVisibility,
+	onToggleAIChat,
+	onToggleStatusBar,
+	showAIChat = false,
+	statusBarVisible = true
+}) => {
 	const [syncState, setSyncState] = useState({ configured: false, enabled: false, lastSync: null, connectivity: 'unknown' });
 	const [guacdState, setGuacdState] = useState({ isRunning: false, method: 'unknown', host: '127.0.0.1', port: 4822 });
 	const [vaultState, setVaultState] = useState({ configured: false, unlocked: false });
 	const [ollamaState, setOllamaState] = useState({ isRunning: false, url: 'http://localhost:11434', isRemote: false });
+	const [wslDistributions, setWSLDistributions] = useState([]);
+	const [cygwinAvailable, setCygwinAvailable] = useState(false);
+	const [dockerContainers, setDockerContainers] = useState([]);
+	const [availableTerminals, setAvailableTerminals] = useState([]);
 	const syncManagerRef = useRef(null);
 	const secureStorageRef = useRef(null);
 
@@ -93,6 +113,167 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 		};
 	}, []);
 
+	// Detectar distribuciones WSL
+	useEffect(() => {
+		if (!horizontal || !compact) return;
+		const detectWSLDistributions = async () => {
+			try {
+				if (window.electron && window.electron.ipcRenderer) {
+					const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
+					if (Array.isArray(distributions)) {
+						setWSLDistributions(distributions);
+					} else {
+						setWSLDistributions([]);
+					}
+				} else {
+					setWSLDistributions([]);
+				}
+			} catch (error) {
+				console.error('Error en detección de distribuciones WSL:', error);
+				setWSLDistributions([]);
+			}
+		};
+		detectWSLDistributions();
+	}, [horizontal, compact]);
+
+	// Detectar disponibilidad de Cygwin
+	useEffect(() => {
+		if (!horizontal || !compact) return;
+		const detectCygwin = async () => {
+			if (window.electron && window.electron.platform === 'win32') {
+				try {
+					const result = await window.electronAPI.invoke('cygwin:detect');
+					if (result && typeof result.available === 'boolean') {
+						setCygwinAvailable(result.available);
+					} else {
+						setCygwinAvailable(false);
+					}
+				} catch (error) {
+					console.error('Error detectando Cygwin:', error);
+					setCygwinAvailable(false);
+				}
+			} else {
+				setCygwinAvailable(false);
+			}
+		};
+		detectCygwin();
+	}, [horizontal, compact]);
+
+	// Detectar contenedores Docker
+	useEffect(() => {
+		if (!horizontal || !compact) return;
+		let mounted = true;
+		const detectDocker = async () => {
+			try {
+				if (window.electron && window.electronAPI && mounted) {
+					const result = await window.electronAPI.invoke('docker:list');
+					if (mounted && result && result.success && Array.isArray(result.containers)) {
+						setDockerContainers(result.containers);
+					} else {
+						setDockerContainers([]);
+					}
+				}
+			} catch (error) {
+				console.error('Error detectando Docker:', error);
+				setDockerContainers([]);
+			}
+		};
+		detectDocker();
+		return () => { mounted = false; };
+	}, [horizontal, compact]);
+
+	// Función para obtener colores según la categoría
+	const getColorForCategory = (category) => {
+		const colorMap = {
+			'ubuntu': '#E95420',
+			'debian': '#A81D33',
+			'kali': '#557C94',
+			'alpine': '#0D597F',
+			'opensuse': '#73BA25',
+			'fedora': '#294172',
+			'centos': '#262577',
+			'default': '#8ae234'
+		};
+		return colorMap[category] || colorMap.default;
+	};
+
+	// Handler para abrir terminales
+	const handleOpenTerminal = (terminalType, distroInfo = null) => {
+		try {
+			window.dispatchEvent(new CustomEvent('create-terminal-tab', {
+				detail: { 
+					type: terminalType,
+					distroInfo: distroInfo
+				}
+			}));
+		} catch (e) { /* noop */ }
+	};
+
+	// Generar lista de terminales disponibles
+	useEffect(() => {
+		if (!horizontal || !compact) return;
+		const platform = window.electron?.platform || 'unknown';
+		const terminals = [];
+
+		if (platform === 'win32') {
+			terminals.push({
+				label: 'PowerShell',
+				value: 'powershell',
+				icon: 'pi pi-microsoft',
+				color: '#0078D4',
+				action: () => handleOpenTerminal('powershell')
+			});
+			terminals.push({
+				label: 'WSL',
+				value: 'wsl',
+				icon: 'pi pi-server',
+				color: '#4fc3f7',
+				action: () => handleOpenTerminal('wsl')
+			});
+			if (cygwinAvailable) {
+				terminals.push({
+					label: 'Cygwin',
+					value: 'cygwin',
+					icon: 'pi pi-code',
+					color: '#00FF00',
+					action: () => handleOpenTerminal('cygwin')
+				});
+			}
+			wslDistributions.forEach(distro => {
+				const isBasicUbuntu = distro.name === 'ubuntu' && !distro.label.includes('24.04');
+				const isBasicDebian = distro.name === 'debian';
+				if (!isBasicUbuntu && !isBasicDebian) {
+					terminals.push({
+						label: distro.label,
+						value: `wsl-${distro.name}`,
+						icon: distro.icon,
+						color: getColorForCategory(distro.category),
+						action: () => handleOpenTerminal(`wsl-${distro.name}`, distro),
+						distroInfo: distro
+					});
+				}
+			});
+		} else if (platform === 'linux' || platform === 'darwin') {
+			terminals.push({
+				label: 'Terminal',
+				value: 'linux-terminal',
+				icon: 'pi pi-desktop',
+				color: '#4fc3f7',
+				action: () => handleOpenTerminal('linux-terminal')
+			});
+		} else {
+			terminals.push({
+				label: 'Terminal',
+				value: 'powershell',
+				icon: 'pi pi-desktop',
+				color: '#4fc3f7',
+				action: () => handleOpenTerminal('powershell')
+			});
+		}
+
+		setAvailableTerminals(terminals);
+	}, [wslDistributions, cygwinAvailable, horizontal, compact]);
+
 	const getRelativeTime = (date) => {
 		try {
 			if (!date) return null;
@@ -171,297 +352,832 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 		</div>
 	);
 
-	// Layout horizontal compacto
+	// Layout horizontal compacto - DISEÑO CON TÍTULOS Y SERVICIOS MEJORADOS
 	if (horizontal && compact) {
 		return (
 			<div style={{ 
-				padding: '0.75rem 1rem',
+				padding: '0.8rem 1rem',
 				display: 'flex',
-				alignItems: 'center',
-				gap: '1.5rem',
-				flexWrap: 'wrap'
+				alignItems: 'flex-start',
+				gap: '1rem',
+				width: '100%',
+				background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.2) 100%)',
+				borderRadius: '10px',
+				border: '1px solid rgba(79, 195, 247, 0.15)',
+				minHeight: '60px'
 			}}>
-				{/* Header compacto */}
-				<div style={{ 
-					display: 'flex', 
-					alignItems: 'center', 
-					gap: '0.5rem',
-					marginRight: 'auto'
-				}}>
-					<div style={{
-						width: '20px',
-						height: '20px',
-						borderRadius: '4px',
-						background: 'linear-gradient(135deg, rgba(79, 195, 247, 0.2) 0%, rgba(79, 195, 247, 0.1) 100%)',
-						border: '1px solid rgba(79, 195, 247, 0.3)',
-						display: 'flex',
-						alignItems: 'center',
-						justifyContent: 'center',
-						boxShadow: '0 1px 4px rgba(79, 195, 247, 0.15)'
-					}}>
-						<i className="pi pi-chart-bar" style={{ color: '#4fc3f7', fontSize: '0.7rem' }} />
-					</div>
-					<h3 style={{ 
-						margin: 0, 
-						color: themeColors.textPrimary || 'var(--text-color)', 
-						fontSize: '0.75rem',
-						fontWeight: '700',
-						letterSpacing: '0.1px',
-						whiteSpace: 'nowrap'
-					}}>
-						Estado de NodeTerm
-					</h3>
-					<div style={{
-						width: '6px',
-						height: '6px',
-						borderRadius: '50%',
-						background: '#22c55e',
-						boxShadow: '0 0 6px rgba(34, 197, 94, 0.6)'
-					}} />
-				</div>
+				{/* Estilos globales para animaciones */}
+				<style>{`
+					@keyframes pulse {
+						0%, 100% {
+							opacity: 1;
+							box-shadow: 0 0 12px rgba(34, 197, 94, 0.8);
+						}
+						50% {
+							opacity: 0.6;
+							box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+						}
+					}
+				`}</style>
 
-				{/* Métricas en horizontal */}
+				{/* SECCIÓN 1: ACCIONES */}
 				<div style={{
 					display: 'flex',
-					alignItems: 'center',
-					gap: '1rem',
-					flexWrap: 'wrap'
+					flexDirection: 'column',
+					gap: '0.4rem',
+					minWidth: 'fit-content'
 				}}>
-					{/* SSH */}
+					{/* Título */}
+					<div style={{
+						fontSize: '0.55rem',
+						fontWeight: '700',
+						color: themeColors.textSecondary || '#9E9E9E',
+						textTransform: 'uppercase',
+						letterSpacing: '0.5px',
+						marginBottom: '0.2rem'
+					}}>
+						Acciones
+					</div>
+					{/* Botones */}
 					<div style={{
 						display: 'flex',
 						alignItems: 'center',
-						gap: '0.4rem',
-						padding: '0.3rem 0.6rem',
-						background: 'linear-gradient(135deg, rgba(79, 195, 247, 0.1) 0%, rgba(79, 195, 247, 0.05) 100%)',
-						borderRadius: '6px',
-						border: '1px solid rgba(79, 195, 247, 0.2)'
+						gap: '0.35rem',
+						flexWrap: 'wrap'
 					}}>
-						<i className="pi pi-server" style={{ color: '#4fc3f7', fontSize: '0.65rem' }} />
-						<span style={{
-							color: themeColors.textPrimary || 'var(--text-color)',
-							fontSize: '0.7rem',
-							fontWeight: '700'
-						}}>
-							{sshConnectionsCount}
-						</span>
-						<span style={{
-							color: themeColors.textSecondary || '#9E9E9E',
-							fontSize: '0.55rem',
-							fontWeight: '500'
-						}}>
-							SSH
-						</span>
+					{/* Botón Terminal */}
+					{onToggleTerminalVisibility && (
+						<button
+							title="Mostrar/ocultar terminal local"
+							onClick={onToggleTerminalVisibility}
+							style={{
+								cursor: 'pointer',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								width: '24px',
+								height: '24px',
+								borderRadius: '5px',
+								background: 'linear-gradient(135deg, rgba(0, 188, 212, 0.25) 0%, rgba(0, 188, 212, 0.15) 100%)',
+								border: '1px solid rgba(0, 188, 212, 0.35)',
+								boxShadow: '0 1px 4px rgba(0, 188, 212, 0.2)',
+								transition: 'all 0.2s ease',
+								padding: 0
+							}}
+							onMouseEnter={(e) => {
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 188, 212, 0.35) 0%, rgba(0, 188, 212, 0.25) 100%)';
+								e.currentTarget.style.transform = 'scale(1.1)';
+							}}
+							onMouseLeave={(e) => {
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 188, 212, 0.25) 0%, rgba(0, 188, 212, 0.15) 100%)';
+								e.currentTarget.style.transform = 'scale(1)';
+							}}
+						>
+							<i className="pi pi-desktop" style={{ color: '#00BCD4', fontSize: '0.6rem' }} />
+						</button>
+					)}
+
+					{/* Botón Chat IA */}
+					{onToggleAIChat && (
+						<button
+							title={showAIChat ? 'Ocultar chat de IA' : 'Mostrar chat de IA'}
+							onClick={onToggleAIChat}
+							style={{
+								cursor: 'pointer',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								width: '24px',
+								height: '24px',
+								borderRadius: '5px',
+								background: showAIChat
+									? 'linear-gradient(135deg, rgba(138, 43, 226, 0.35) 0%, rgba(138, 43, 226, 0.25) 100%)'
+									: 'linear-gradient(135deg, rgba(138, 43, 226, 0.25) 0%, rgba(138, 43, 226, 0.15) 100%)',
+								border: '1px solid rgba(138, 43, 226, 0.35)',
+								boxShadow: '0 1px 4px rgba(138, 43, 226, 0.2)',
+								transition: 'all 0.2s ease',
+								padding: 0
+							}}
+							onMouseEnter={(e) => {
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(138, 43, 226, 0.35) 0%, rgba(138, 43, 226, 0.25) 100%)';
+								e.currentTarget.style.transform = 'scale(1.1)';
+							}}
+							onMouseLeave={(e) => {
+								e.currentTarget.style.background = showAIChat
+									? 'linear-gradient(135deg, rgba(138, 43, 226, 0.35) 0%, rgba(138, 43, 226, 0.25) 100%)'
+									: 'linear-gradient(135deg, rgba(138, 43, 226, 0.25) 0%, rgba(138, 43, 226, 0.15) 100%)';
+								e.currentTarget.style.transform = 'scale(1)';
+							}}
+						>
+							<i 
+								className={showAIChat ? 'pi pi-times' : 'pi pi-comments'} 
+								style={{ color: '#8A2BE2', fontSize: '0.6rem' }} 
+							/>
+						</button>
+					)}
+
+					{/* Botón Historial */}
+					<button
+						title="Ver historial de conexiones"
+						onClick={() => {
+							const expandSidebarEvent = new CustomEvent('expand-sidebar');
+							window.dispatchEvent(expandSidebarEvent);
+							const switchToConnectionsEvent = new CustomEvent('switch-to-connections');
+							window.dispatchEvent(switchToConnectionsEvent);
+						}}
+						style={{
+							cursor: 'pointer',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							width: '24px',
+							height: '24px',
+							borderRadius: '5px',
+							background: 'linear-gradient(135deg, rgba(100, 200, 255, 0.25) 0%, rgba(100, 200, 255, 0.15) 100%)',
+							border: '1px solid rgba(100, 200, 255, 0.35)',
+							boxShadow: '0 1px 4px rgba(100, 200, 255, 0.2)',
+							transition: 'all 0.2s ease',
+							padding: 0
+						}}
+						onMouseEnter={(e) => {
+							e.currentTarget.style.background = 'linear-gradient(135deg, rgba(100, 200, 255, 0.35) 0%, rgba(100, 200, 255, 0.25) 100%)';
+							e.currentTarget.style.transform = 'scale(1.1)';
+						}}
+						onMouseLeave={(e) => {
+							e.currentTarget.style.background = 'linear-gradient(135deg, rgba(100, 200, 255, 0.25) 0%, rgba(100, 200, 255, 0.15) 100%)';
+							e.currentTarget.style.transform = 'scale(1)';
+						}}
+					>
+						<i className="pi pi-list" style={{ color: '#64C8FF', fontSize: '0.6rem' }} />
+					</button>
+
+					{/* Botón Passwords */}
+					<button
+						title="Gestor de contraseñas"
+						onClick={() => {
+							const expandSidebarEvent = new CustomEvent('expand-sidebar');
+							window.dispatchEvent(expandSidebarEvent);
+							window.dispatchEvent(new CustomEvent('open-password-manager'));
+						}}
+						style={{
+							cursor: 'pointer',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							width: '24px',
+							height: '24px',
+							borderRadius: '5px',
+							background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)',
+							border: '1px solid rgba(255, 193, 7, 0.35)',
+							boxShadow: '0 1px 4px rgba(255, 193, 7, 0.2)',
+							transition: 'all 0.2s ease',
+							padding: 0
+						}}
+						onMouseEnter={(e) => {
+							e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 193, 7, 0.35) 0%, rgba(255, 193, 7, 0.25) 100%)';
+							e.currentTarget.style.transform = 'scale(1.1)';
+						}}
+						onMouseLeave={(e) => {
+							e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)';
+							e.currentTarget.style.transform = 'scale(1)';
+						}}
+					>
+						<i className="pi pi-key" style={{ color: '#FFC107', fontSize: '0.6rem' }} />
+					</button>
+
+					{/* Botón Configuración */}
+					{onOpenSettings && (
+						<button
+							title="Configuración"
+							onClick={onOpenSettings}
+							style={{
+								cursor: 'pointer',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								width: '24px',
+								height: '24px',
+								borderRadius: '5px',
+								background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.25) 0%, rgba(76, 175, 80, 0.15) 100%)',
+								border: '1px solid rgba(76, 175, 80, 0.35)',
+								boxShadow: '0 1px 4px rgba(76, 175, 80, 0.2)',
+								transition: 'all 0.2s ease',
+								padding: 0
+							}}
+							onMouseEnter={(e) => {
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 0.35) 0%, rgba(76, 175, 80, 0.25) 100%)';
+								e.currentTarget.style.transform = 'scale(1.1)';
+							}}
+							onMouseLeave={(e) => {
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 0.25) 0%, rgba(76, 175, 80, 0.15) 100%)';
+								e.currentTarget.style.transform = 'scale(1)';
+							}}
+						>
+							<i className="pi pi-cog" style={{ color: '#4CAF50', fontSize: '0.6rem' }} />
+						</button>
+					)}
+
+					{/* Botón Status Bar */}
+					{onToggleStatusBar && (
+						<button
+							title={statusBarVisible ? 'Ocultar status bar' : 'Mostrar status bar'}
+							onClick={onToggleStatusBar}
+							style={{
+								cursor: 'pointer',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								width: '24px',
+								height: '24px',
+								borderRadius: '5px',
+								background: statusBarVisible
+									? 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)'
+									: 'linear-gradient(135deg, rgba(79, 195, 247, 0.25) 0%, rgba(79, 195, 247, 0.15) 100%)',
+								border: '1px solid rgba(79, 195, 247, 0.35)',
+								boxShadow: '0 1px 4px rgba(79, 195, 247, 0.2)',
+								transition: 'all 0.2s ease',
+								padding: 0
+							}}
+							onMouseEnter={(e) => {
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)';
+								e.currentTarget.style.transform = 'scale(1.1)';
+							}}
+							onMouseLeave={(e) => {
+								e.currentTarget.style.background = statusBarVisible
+									? 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)'
+									: 'linear-gradient(135deg, rgba(79, 195, 247, 0.25) 0%, rgba(79, 195, 247, 0.15) 100%)';
+								e.currentTarget.style.transform = 'scale(1)';
+							}}
+						>
+							<i 
+								className={statusBarVisible ? 'pi pi-eye' : 'pi pi-eye-slash'} 
+								style={{ color: '#4fc3f7', fontSize: '0.6rem' }} 
+							/>
+						</button>
+					)}
 					</div>
+				</div>
+
+				{/* Separador */}
+				<div style={{
+					width: '1px',
+					height: '50px',
+					background: 'rgba(255, 255, 255, 0.1)',
+					borderRadius: '1px',
+					alignSelf: 'stretch'
+				}} />
+
+				{/* SECCIÓN 2: TERMINALES */}
+				{availableTerminals.length > 0 && (
+					<div style={{
+						display: 'flex',
+						flexDirection: 'column',
+						gap: '0.4rem',
+						minWidth: 'fit-content'
+					}}>
+						{/* Título */}
+						<div style={{
+							fontSize: '0.55rem',
+							fontWeight: '700',
+							color: themeColors.textSecondary || '#9E9E9E',
+							textTransform: 'uppercase',
+							letterSpacing: '0.5px',
+							marginBottom: '0.2rem'
+						}}>
+							Terminales
+						</div>
+						{/* Botones */}
+						<div style={{
+							display: 'flex',
+							alignItems: 'center',
+							gap: '0.3rem',
+							flexWrap: 'wrap'
+						}}>
+						{availableTerminals.slice(0, 4).map((terminal, index) => (
+							<button
+								key={index}
+								title={terminal.label}
+								onClick={terminal.action}
+								style={{
+									cursor: 'pointer',
+									display: 'flex',
+									alignItems: 'center',
+									justifyContent: 'center',
+									width: '24px',
+									height: '24px',
+									borderRadius: '5px',
+									background: `linear-gradient(135deg, ${terminal.color}25 0%, ${terminal.color}15 100%)`,
+									border: `1px solid ${terminal.color}35`,
+									boxShadow: `0 1px 4px ${terminal.color}20`,
+									transition: 'all 0.2s ease',
+									padding: 0,
+									fontSize: '0.6rem'
+								}}
+								onMouseEnter={(e) => {
+									e.currentTarget.style.background = `linear-gradient(135deg, ${terminal.color}35 0%, ${terminal.color}25 100%)`;
+									e.currentTarget.style.transform = 'scale(1.1)';
+								}}
+								onMouseLeave={(e) => {
+									e.currentTarget.style.background = `linear-gradient(135deg, ${terminal.color}25 0%, ${terminal.color}15 100%)`;
+									e.currentTarget.style.transform = 'scale(1)';
+								}}
+							>
+								<i className={terminal.icon} style={{ color: terminal.color, fontSize: '0.6rem' }} />
+							</button>
+						))}
+
+						{/* Botón Docker si hay contenedores */}
+						{dockerContainers.length > 0 && (
+							<button
+								title={`Docker (${dockerContainers.length})`}
+								onClick={() => handleOpenTerminal(`docker-${dockerContainers[0].name}`, { dockerContainer: dockerContainers[0] })}
+								style={{
+									cursor: 'pointer',
+									display: 'flex',
+									alignItems: 'center',
+									justifyContent: 'center',
+									width: '24px',
+									height: '24px',
+									borderRadius: '5px',
+									background: 'linear-gradient(135deg, rgba(36, 150, 237, 0.25) 0%, rgba(36, 150, 237, 0.15) 100%)',
+									border: '1px solid rgba(36, 150, 237, 0.35)',
+									boxShadow: '0 1px 4px rgba(36, 150, 237, 0.2)',
+									transition: 'all 0.2s ease',
+									padding: 0,
+									position: 'relative',
+									fontSize: '0.6rem'
+								}}
+								onMouseEnter={(e) => {
+									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(36, 150, 237, 0.35) 0%, rgba(36, 150, 237, 0.25) 100%)';
+									e.currentTarget.style.transform = 'scale(1.1)';
+								}}
+								onMouseLeave={(e) => {
+									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(36, 150, 237, 0.25) 0%, rgba(36, 150, 237, 0.15) 100%)';
+									e.currentTarget.style.transform = 'scale(1)';
+								}}
+							>
+								<i className="pi pi-box" style={{ color: '#2496ED', fontSize: '0.6rem' }} />
+								{dockerContainers.length > 1 && (
+									<span style={{
+										position: 'absolute',
+										top: '-6px',
+										right: '-6px',
+										background: '#ff4444',
+										color: 'white',
+										borderRadius: '50%',
+										width: '12px',
+										height: '12px',
+										fontSize: '7px',
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'center',
+										fontWeight: 'bold',
+										border: '1px solid rgba(255,255,255,0.5)'
+									}}>
+										{dockerContainers.length}
+									</span>
+								)}
+							</button>
+						)}
+						</div>
+					</div>
+				)}
+
+				{/* Separador */}
+				<div style={{
+					width: '1px',
+					height: '50px',
+					background: 'rgba(255, 255, 255, 0.1)',
+					borderRadius: '1px',
+					alignSelf: 'stretch'
+				}} />
+
+				{/* SECCIÓN 3: SERVICIOS */}
+				<div style={{
+					display: 'flex',
+					flexDirection: 'column',
+					gap: '0.4rem',
+					minWidth: 'fit-content',
+					flex: 1
+				}}>
+					{/* Título */}
+					<div style={{
+						fontSize: '0.55rem',
+						fontWeight: '700',
+						color: themeColors.textSecondary || '#9E9E9E',
+						textTransform: 'uppercase',
+						letterSpacing: '0.5px',
+						marginBottom: '0.2rem'
+					}}>
+						Servicios
+					</div>
+					{/* Lista de servicios - EN UNA LÍNEA */}
+					<div style={{
+						display: 'flex',
+						flexDirection: 'row',
+						alignItems: 'center',
+						gap: '0.5rem',
+						flexWrap: 'wrap'
+					}}>
+						{/* Nextcloud */}
+						{(() => {
+							const ncConfigured = !!syncState.configured;
+							const ncColor = !ncConfigured ? '#9ca3af' : (syncState.connectivity === 'ok' ? '#22c55e' : (syncState.connectivity === 'checking' ? '#60a5fa' : '#ef4444'));
+							const ncStatus = ncConfigured ? (syncState.connectivity === 'ok' ? 'conectado' : 'error') : 'no configurado';
+							
+							return (
+								<div style={{
+									display: 'flex',
+									alignItems: 'center',
+									gap: '0.3rem',
+									padding: '0.2rem 0.5rem',
+									borderRadius: '5px',
+									background: 'rgba(255, 255, 255, 0.02)',
+									border: `1px solid ${ncColor}25`,
+									whiteSpace: 'nowrap'
+								}}>
+									{/* Indicador de estado */}
+									<div style={{
+										width: '6px',
+										height: '6px',
+										borderRadius: '50%',
+										background: ncColor,
+										boxShadow: `0 0 4px ${ncColor}60`,
+										flexShrink: 0
+									}} />
+									{/* Nombre del servicio */}
+									<span style={{
+										fontSize: '0.6rem',
+										fontWeight: '600',
+										color: themeColors.textPrimary || '#fff'
+									}}>
+										Nextcloud
+									</span>
+									{/* Estado */}
+									<span style={{
+										fontSize: '0.55rem',
+										color: ncColor,
+										fontWeight: '500'
+									}}>
+										{ncStatus}
+									</span>
+									{/* Botón de configuración */}
+									{onOpenSettings && (
+										<button
+											title="Configurar Nextcloud"
+											onClick={onOpenSettings}
+											style={{
+												cursor: 'pointer',
+												display: 'flex',
+												alignItems: 'center',
+												justifyContent: 'center',
+												width: '16px',
+												height: '16px',
+												borderRadius: '3px',
+												background: 'rgba(79, 195, 247, 0.15)',
+												border: '1px solid rgba(79, 195, 247, 0.3)',
+												transition: 'all 0.2s ease',
+												padding: 0,
+												marginLeft: '0.2rem'
+											}}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.25)';
+												e.currentTarget.style.transform = 'scale(1.1)';
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.15)';
+												e.currentTarget.style.transform = 'scale(1)';
+											}}
+										>
+											<i className="pi pi-cog" style={{ color: '#4fc3f7', fontSize: '0.5rem' }} />
+										</button>
+									)}
+								</div>
+							);
+						})()}
+
+						{/* Guacd */}
+						{(() => {
+							const gColor = guacdState.isRunning ? '#22c55e' : '#ef4444';
+							const gStatus = guacdState.isRunning ? 'activo' : 'inactivo';
+							
+							return (
+								<div style={{
+									display: 'flex',
+									alignItems: 'center',
+									gap: '0.3rem',
+									padding: '0.2rem 0.5rem',
+									borderRadius: '5px',
+									background: 'rgba(255, 255, 255, 0.02)',
+									border: `1px solid ${gColor}25`,
+									whiteSpace: 'nowrap'
+								}}>
+									{/* Indicador de estado */}
+									<div style={{
+										width: '6px',
+										height: '6px',
+										borderRadius: '50%',
+										background: gColor,
+										boxShadow: `0 0 4px ${gColor}60`,
+										flexShrink: 0
+									}} />
+									{/* Nombre del servicio */}
+									<span style={{
+										fontSize: '0.6rem',
+										fontWeight: '600',
+										color: themeColors.textPrimary || '#fff'
+									}}>
+										Guacd
+									</span>
+									{/* Estado */}
+									<span style={{
+										fontSize: '0.55rem',
+										color: gColor,
+										fontWeight: '500'
+									}}>
+										{gStatus}
+									</span>
+									{/* Botón de configuración */}
+									{onOpenSettings && (
+										<button
+											title="Configurar Guacd"
+											onClick={onOpenSettings}
+											style={{
+												cursor: 'pointer',
+												display: 'flex',
+												alignItems: 'center',
+												justifyContent: 'center',
+												width: '16px',
+												height: '16px',
+												borderRadius: '3px',
+												background: 'rgba(79, 195, 247, 0.15)',
+												border: '1px solid rgba(79, 195, 247, 0.3)',
+												transition: 'all 0.2s ease',
+												padding: 0,
+												marginLeft: '0.2rem'
+											}}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.25)';
+												e.currentTarget.style.transform = 'scale(1.1)';
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.15)';
+												e.currentTarget.style.transform = 'scale(1)';
+											}}
+										>
+											<i className="pi pi-cog" style={{ color: '#4fc3f7', fontSize: '0.5rem' }} />
+										</button>
+									)}
+								</div>
+							);
+						})()}
+
+						{/* Vault */}
+						{(() => {
+							const configured = vaultState.configured;
+							const unlocked = vaultState.unlocked;
+							const vColor = !configured ? '#9ca3af' : (unlocked ? '#22c55e' : '#f59e0b');
+							const vStatus = !configured ? 'no configurado' : (unlocked ? 'desbloqueado' : 'bloqueado');
+							
+							return (
+								<div style={{
+									display: 'flex',
+									alignItems: 'center',
+									gap: '0.3rem',
+									padding: '0.2rem 0.5rem',
+									borderRadius: '5px',
+									background: 'rgba(255, 255, 255, 0.02)',
+									border: `1px solid ${vColor}25`,
+									whiteSpace: 'nowrap'
+								}}>
+									{/* Indicador de estado */}
+									<div style={{
+										width: '6px',
+										height: '6px',
+										borderRadius: '50%',
+										background: vColor,
+										boxShadow: `0 0 4px ${vColor}60`,
+										flexShrink: 0
+									}} />
+									{/* Nombre del servicio */}
+									<span style={{
+										fontSize: '0.6rem',
+										fontWeight: '600',
+										color: themeColors.textPrimary || '#fff'
+									}}>
+										Vault
+									</span>
+									{/* Estado */}
+									<span style={{
+										fontSize: '0.55rem',
+										color: vColor,
+										fontWeight: '500'
+									}}>
+										{vStatus}
+									</span>
+									{/* Botón de configuración */}
+									{onOpenSettings && (
+										<button
+											title="Configurar Vault"
+											onClick={onOpenSettings}
+											style={{
+												cursor: 'pointer',
+												display: 'flex',
+												alignItems: 'center',
+												justifyContent: 'center',
+												width: '16px',
+												height: '16px',
+												borderRadius: '3px',
+												background: 'rgba(79, 195, 247, 0.15)',
+												border: '1px solid rgba(79, 195, 247, 0.3)',
+												transition: 'all 0.2s ease',
+												padding: 0,
+												marginLeft: '0.2rem'
+											}}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.25)';
+												e.currentTarget.style.transform = 'scale(1.1)';
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.15)';
+												e.currentTarget.style.transform = 'scale(1)';
+											}}
+										>
+											<i className="pi pi-cog" style={{ color: '#4fc3f7', fontSize: '0.5rem' }} />
+										</button>
+									)}
+								</div>
+							);
+						})()}
+
+						{/* Ollama */}
+						{(() => {
+							const isRunning = ollamaState.isRunning;
+							const oColor = isRunning ? '#22c55e' : '#ef4444';
+							const oStatus = isRunning ? 'activo' : 'inactivo';
+							
+							return (
+								<div style={{
+									display: 'flex',
+									alignItems: 'center',
+									gap: '0.3rem',
+									padding: '0.2rem 0.5rem',
+									borderRadius: '5px',
+									background: 'rgba(255, 255, 255, 0.02)',
+									border: `1px solid ${oColor}25`,
+									whiteSpace: 'nowrap'
+								}}>
+									{/* Indicador de estado */}
+									<div style={{
+										width: '6px',
+										height: '6px',
+										borderRadius: '50%',
+										background: oColor,
+										boxShadow: `0 0 4px ${oColor}60`,
+										flexShrink: 0
+									}} />
+									{/* Nombre del servicio */}
+									<span style={{
+										fontSize: '0.6rem',
+										fontWeight: '600',
+										color: themeColors.textPrimary || '#fff'
+									}}>
+										Ollama
+									</span>
+									{/* Estado */}
+									<span style={{
+										fontSize: '0.55rem',
+										color: oColor,
+										fontWeight: '500'
+									}}>
+										{oStatus}
+									</span>
+									{/* Botón de configuración */}
+									{onOpenSettings && (
+										<button
+											title="Configurar Ollama"
+											onClick={onOpenSettings}
+											style={{
+												cursor: 'pointer',
+												display: 'flex',
+												alignItems: 'center',
+												justifyContent: 'center',
+												width: '16px',
+												height: '16px',
+												borderRadius: '3px',
+												background: 'rgba(79, 195, 247, 0.15)',
+												border: '1px solid rgba(79, 195, 247, 0.3)',
+												transition: 'all 0.2s ease',
+												padding: 0,
+												marginLeft: '0.2rem'
+											}}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.25)';
+												e.currentTarget.style.transform = 'scale(1.1)';
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.15)';
+												e.currentTarget.style.transform = 'scale(1)';
+											}}
+										>
+											<i className="pi pi-cog" style={{ color: '#4fc3f7', fontSize: '0.5rem' }} />
+										</button>
+									)}
+								</div>
+							);
+						})()}
+					</div>
+				</div>
+
+				{/* Separador */}
+				<div style={{
+					width: '1px',
+					height: '50px',
+					background: 'rgba(255, 255, 255, 0.1)',
+					borderRadius: '1px',
+					alignSelf: 'stretch'
+				}} />
+
+				{/* SECCIÓN 4: ESTADÍSTICAS */}
+				<div style={{
+					display: 'flex',
+					flexDirection: 'column',
+					gap: '0.4rem',
+					minWidth: 'fit-content',
+					marginLeft: 'auto'
+				}}>
+					{/* Título */}
+					<div style={{
+						fontSize: '0.55rem',
+						fontWeight: '700',
+						color: themeColors.textSecondary || '#9E9E9E',
+						textTransform: 'uppercase',
+						letterSpacing: '0.5px',
+						marginBottom: '0.2rem'
+					}}>
+						Estadísticas
+					</div>
+					{/* KPI Compacto - "Quesito" */}
+					<div style={{
+						display: 'flex',
+						alignItems: 'center',
+						gap: '0.3rem',
+						padding: '0.4rem 0.6rem',
+						background: 'rgba(255, 255, 255, 0.05)',
+						borderRadius: '6px',
+						border: '1px solid rgba(255, 255, 255, 0.1)'
+					}}>
+					<i className="pi pi-chart-pie" style={{ color: '#4fc3f7', fontSize: '0.6rem' }} />
+					
+					{/* SSH */}
+					<span style={{
+						display: 'flex',
+						alignItems: 'center',
+						gap: '0.2rem',
+						fontSize: '0.65rem',
+						fontWeight: '700',
+						color: themeColors.textPrimary || '#fff'
+					}}>
+						<i className="pi pi-server" style={{ color: '#4fc3f7', fontSize: '0.5rem' }} />
+						{sshConnectionsCount}
+					</span>
+
+					<div style={{ width: '1px', height: '14px', background: 'rgba(255, 255, 255, 0.2)' }} />
 
 					{/* RDP */}
-					<div style={{
+					<span style={{
 						display: 'flex',
 						alignItems: 'center',
-						gap: '0.4rem',
-						padding: '0.3rem 0.6rem',
-						background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.05) 100%)',
-						borderRadius: '6px',
-						border: '1px solid rgba(255, 107, 53, 0.2)'
+						gap: '0.2rem',
+						fontSize: '0.65rem',
+						fontWeight: '700',
+						color: themeColors.textPrimary || '#fff'
 					}}>
-						<i className="pi pi-desktop" style={{ color: '#ff6b35', fontSize: '0.65rem' }} />
-						<span style={{
-							color: themeColors.textPrimary || 'var(--text-color)',
-							fontSize: '0.7rem',
-							fontWeight: '700'
-						}}>
-							{rdpConnectionsCount}
-						</span>
-						<span style={{
-							color: themeColors.textSecondary || '#9E9E9E',
-							fontSize: '0.55rem',
-							fontWeight: '500'
-						}}>
-							RDP
-						</span>
-					</div>
+						<i className="pi pi-desktop" style={{ color: '#ff6b35', fontSize: '0.5rem' }} />
+						{rdpConnectionsCount}
+					</span>
 
-					{/* Passwords */}
-					<div style={{
+					<div style={{ width: '1px', height: '14px', background: 'rgba(255, 255, 255, 0.2)' }} />
+
+					{/* Keys */}
+					<span style={{
 						display: 'flex',
 						alignItems: 'center',
-						gap: '0.4rem',
-						padding: '0.3rem 0.6rem',
-						background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 193, 7, 0.05) 100%)',
-						borderRadius: '6px',
-						border: '1px solid rgba(255, 193, 7, 0.2)'
+						gap: '0.2rem',
+						fontSize: '0.65rem',
+						fontWeight: '700',
+						color: themeColors.textPrimary || '#fff'
 					}}>
-						<i className="pi pi-key" style={{ color: '#FFC107', fontSize: '0.65rem' }} />
-						<span style={{
-							color: themeColors.textPrimary || 'var(--text-color)',
-							fontSize: '0.7rem',
-							fontWeight: '700'
-						}}>
-							{passwordsCount}
-						</span>
-						<span style={{
-							color: themeColors.textSecondary || '#9E9E9E',
-							fontSize: '0.55rem',
-							fontWeight: '500'
-						}}>
-							Keys
-						</span>
+						<i className="pi pi-key" style={{ color: '#FFC107', fontSize: '0.5rem' }} />
+						{passwordsCount}
+					</span>
 					</div>
-				</div>
-
-				{/* Servicios en horizontal compacto */}
-				<div style={{
-					display: 'flex',
-					alignItems: 'center',
-					gap: '0.75rem',
-					flexWrap: 'wrap'
-				}}>
-					{/* Nextcloud */}
-					{(() => {
-						const ncConfigured = !!syncState.configured;
-						const ncColor = !ncConfigured ? '#9ca3af' : (syncState.connectivity === 'ok' ? '#22c55e' : (syncState.connectivity === 'checking' ? '#60a5fa' : '#ef4444'));
-						const ncLabel = ncConfigured ? (syncState.connectivity === 'ok' ? 'nextcloud' : (syncState.connectivity === 'checking' ? 'Comprobando...' : 'Error')) : 'Nextcloud';
-						
-						return (
-							<div style={{
-								display: 'flex',
-								alignItems: 'center',
-								gap: '0.4rem',
-								padding: '0.25rem 0.5rem',
-								borderRadius: '6px',
-								background: 'rgba(255,255,255,0.02)',
-								border: `1px solid ${ncColor}30`
-							}}>
-								<div style={{
-									width: '6px',
-									height: '6px',
-									borderRadius: '50%',
-									background: ncColor,
-									boxShadow: `0 0 4px ${ncColor}60`
-								}} />
-								<span style={{
-									color: themeColors.textPrimary || 'var(--text-color)',
-									fontSize: '0.6rem',
-									fontWeight: '600',
-									whiteSpace: 'nowrap'
-								}}>
-									{ncLabel}
-								</span>
-							</div>
-						);
-					})()}
-
-					{/* Guacd */}
-					{(() => {
-						const gColor = guacdState.isRunning ? '#22c55e' : '#ef4444';
-						const gLabel = guacdState.isRunning ? (guacdState.method === 'wsl' ? 'wsl' : (guacdState.method === 'docker' ? 'docker' : 'guacd')) : 'guacd';
-						
-						return (
-							<div style={{
-								display: 'flex',
-								alignItems: 'center',
-								gap: '0.4rem',
-								padding: '0.25rem 0.5rem',
-								borderRadius: '6px',
-								background: 'rgba(255,255,255,0.02)',
-								border: `1px solid ${gColor}30`
-							}}>
-								<div style={{
-									width: '6px',
-									height: '6px',
-									borderRadius: '50%',
-									background: gColor,
-									boxShadow: `0 0 4px ${gColor}60`
-								}} />
-								<span style={{
-									color: themeColors.textPrimary || 'var(--text-color)',
-									fontSize: '0.6rem',
-									fontWeight: '600',
-									whiteSpace: 'nowrap'
-								}}>
-									{gLabel}
-								</span>
-							</div>
-						);
-					})()}
-
-					{/* Vault */}
-					{(() => {
-						const configured = vaultState.configured;
-						const unlocked = vaultState.unlocked;
-						const vColor = !configured ? '#9ca3af' : (unlocked ? '#22c55e' : '#f59e0b');
-						const vLabel = !configured ? 'vault' : (unlocked ? 'vault' : 'vault');
-						
-						return (
-							<div style={{
-								display: 'flex',
-								alignItems: 'center',
-								gap: '0.4rem',
-								padding: '0.25rem 0.5rem',
-								borderRadius: '6px',
-								background: 'rgba(255,255,255,0.02)',
-								border: `1px solid ${vColor}30`
-							}}>
-								<div style={{
-									width: '6px',
-									height: '6px',
-									borderRadius: '50%',
-									background: vColor,
-									boxShadow: `0 0 4px ${vColor}60`
-								}} />
-								<span style={{
-									color: themeColors.textPrimary || 'var(--text-color)',
-									fontSize: '0.6rem',
-									fontWeight: '600',
-									whiteSpace: 'nowrap'
-								}}>
-									{vLabel}
-								</span>
-							</div>
-						);
-					})()}
-
-					{/* Ollama */}
-					{(() => {
-						const isRunning = ollamaState.isRunning;
-						const isRemote = ollamaState.isRemote;
-						const oColor = isRunning ? '#22c55e' : '#ef4444';
-						const oLabel = isRunning ? (isRemote ? 'ollama remoto' : 'ollama') : 'ollama';
-						
-						return (
-							<div style={{
-								display: 'flex',
-								alignItems: 'center',
-								gap: '0.4rem',
-								padding: '0.25rem 0.5rem',
-								borderRadius: '6px',
-								background: 'rgba(255,255,255,0.02)',
-								border: `1px solid ${oColor}30`
-							}}>
-								<div style={{
-									width: '6px',
-									height: '6px',
-									borderRadius: '50%',
-									background: oColor,
-									boxShadow: `0 0 4px ${oColor}60`
-								}} />
-								<span style={{
-									color: themeColors.textPrimary || 'var(--text-color)',
-									fontSize: '0.6rem',
-									fontWeight: '600',
-									whiteSpace: 'nowrap'
-								}}>
-									{oLabel}
-								</span>
-							</div>
-						);
-					})()}
 				</div>
 			</div>
 		);
 	}
 
-	// Layout vertical original
+	// Layout vertical original - mantenido para compatibilidad
 	return (
 		<div style={{ 
 			padding: '1.25rem'
@@ -513,546 +1229,14 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 				display: 'grid',
 				gridTemplateColumns: 'repeat(3, 1fr)',
 				gap: '0.4rem',
-				marginBottom: '1.2rem',
-				padding: '0.75rem',
-				background: 'rgba(255,255,255,0.02)',
-				borderRadius: '10px',
-				border: '1px solid rgba(255,255,255,0.05)'
+				marginBottom: '1.2rem'
 			}}>
-				{/* SSH */}
-				<div style={{
-					display: 'flex',
-					flexDirection: 'column',
-					alignItems: 'center',
-					padding: '0.5rem',
-					background: 'linear-gradient(135deg, rgba(79, 195, 247, 0.1) 0%, rgba(79, 195, 247, 0.05) 100%)',
-					borderRadius: '6px',
-					border: '1px solid rgba(79, 195, 247, 0.2)',
-					position: 'relative',
-					overflow: 'hidden'
-				}}>
-					<div style={{
-						position: 'absolute',
-						top: 0,
-						left: 0,
-						right: 0,
-						height: '1.5px',
-						background: 'linear-gradient(90deg, transparent, #4fc3f7, transparent)'
-					}} />
-					<div style={{
-						width: '24px',
-						height: '24px',
-						borderRadius: '6px',
-						background: 'rgba(79, 195, 247, 0.2)',
-						display: 'flex',
-						alignItems: 'center',
-						justifyContent: 'center',
-						marginBottom: '0.3rem',
-						boxShadow: '0 1px 4px rgba(79, 195, 247, 0.2)'
-					}}>
-						<i className="pi pi-server" style={{ color: '#4fc3f7', fontSize: '0.6rem' }} />
-					</div>
-					<div style={{
-						color: themeColors.textPrimary || 'var(--text-color)',
-						fontSize: '0.9rem',
-						fontWeight: '700',
-						marginBottom: '0.1rem'
-					}}>
-						{sshConnectionsCount}
-					</div>
-					<div style={{
-						color: themeColors.textSecondary || '#9E9E9E',
-						fontSize: '0.5rem',
-						fontWeight: '500',
-						textTransform: 'uppercase',
-						letterSpacing: '0.3px'
-					}}>
-						SSH
-					</div>
-				</div>
-
-				{/* RDP */}
-				<div style={{
-					display: 'flex',
-					flexDirection: 'column',
-					alignItems: 'center',
-					padding: '0.5rem',
-					background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.05) 100%)',
-					borderRadius: '6px',
-					border: '1px solid rgba(255, 107, 53, 0.2)',
-					position: 'relative',
-					overflow: 'hidden'
-				}}>
-					<div style={{
-						position: 'absolute',
-						top: 0,
-						left: 0,
-						right: 0,
-						height: '1.5px',
-						background: 'linear-gradient(90deg, transparent, #ff6b35, transparent)'
-					}} />
-					<div style={{
-						width: '24px',
-						height: '24px',
-						borderRadius: '6px',
-						background: 'rgba(255, 107, 53, 0.2)',
-						display: 'flex',
-						alignItems: 'center',
-						justifyContent: 'center',
-						marginBottom: '0.3rem',
-						boxShadow: '0 1px 4px rgba(255, 107, 53, 0.2)'
-					}}>
-						<i className="pi pi-desktop" style={{ color: '#ff6b35', fontSize: '0.6rem' }} />
-					</div>
-					<div style={{
-						color: themeColors.textPrimary || 'var(--text-color)',
-						fontSize: '0.9rem',
-						fontWeight: '700',
-						marginBottom: '0.1rem'
-					}}>
-						{rdpConnectionsCount}
-					</div>
-					<div style={{
-						color: themeColors.textSecondary || '#9E9E9E',
-						fontSize: '0.5rem',
-						fontWeight: '500',
-						textTransform: 'uppercase',
-						letterSpacing: '0.3px'
-					}}>
-						RDP
-					</div>
-				</div>
-
-				{/* Passwords */}
-				<div style={{
-					display: 'flex',
-					flexDirection: 'column',
-					alignItems: 'center',
-					padding: '0.5rem',
-					background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 193, 7, 0.05) 100%)',
-					borderRadius: '6px',
-					border: '1px solid rgba(255, 193, 7, 0.2)',
-					position: 'relative',
-					overflow: 'hidden'
-				}}>
-					<div style={{
-						position: 'absolute',
-						top: 0,
-						left: 0,
-						right: 0,
-						height: '1.5px',
-						background: 'linear-gradient(90deg, transparent, #FFC107, transparent)'
-					}} />
-					<div style={{
-						width: '24px',
-						height: '24px',
-						borderRadius: '6px',
-						background: 'rgba(255, 193, 7, 0.2)',
-						display: 'flex',
-						alignItems: 'center',
-						justifyContent: 'center',
-						marginBottom: '0.3rem',
-						boxShadow: '0 1px 4px rgba(255, 193, 7, 0.2)'
-					}}>
-						<i className="pi pi-key" style={{ color: '#FFC107', fontSize: '0.6rem' }} />
-					</div>
-					<div style={{
-						color: themeColors.textPrimary || 'var(--text-color)',
-						fontSize: '0.9rem',
-						fontWeight: '700',
-						marginBottom: '0.1rem'
-					}}>
-						{passwordsCount}
-					</div>
-					<div style={{
-						color: themeColors.textSecondary || '#9E9E9E',
-						fontSize: '0.5rem',
-						fontWeight: '500',
-						textTransform: 'uppercase',
-						letterSpacing: '0.3px'
-					}}>
-						Keys
-					</div>
-				</div>
-			</div>
-
-			{/* Estado de servicios con diseño moderno */}
-			<div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-				{/* Nextcloud */}
-				{(() => {
-					const ncConfigured = !!syncState.configured;
-					const ncColor = !ncConfigured ? '#9ca3af' : (syncState.connectivity === 'ok' ? '#22c55e' : (syncState.connectivity === 'checking' ? '#60a5fa' : '#ef4444'));
-					const ncLabel = ncConfigured ? (syncState.connectivity === 'ok' ? 'nextcloud' : (syncState.connectivity === 'checking' ? 'Comprobando...' : 'Error')) : 'Nextcloud no configurado';
-					const ncStatus = ncConfigured ? (syncState.connectivity === 'ok' ? 'conectado' : (syncState.connectivity === 'checking' ? 'Verificando...' : 'Error de conexión')) : 'No configurado';
-					const ncSubStatus = ncConfigured && syncState.connectivity === 'ok' ? 'Sincronización activa' : '';
-					const last = getRelativeTime(syncState.lastSync);
-					
-					return (
-						<div style={{
-							display: 'flex',
-							alignItems: 'center',
-							gap: '0.75rem',
-							padding: '0.75rem',
-							borderRadius: '10px',
-							background: 'rgba(255,255,255,0.02)',
-							border: `1px solid ${ncColor}30`,
-							position: 'relative',
-							overflow: 'hidden'
-						}}>
-							{/* Indicador de estado */}
-							<div style={{
-								position: 'absolute',
-								top: 0,
-								left: 0,
-								width: '3px',
-								height: '100%',
-								background: ncColor,
-								borderRadius: '0 2px 2px 0'
-							}} />
-							
-							<div style={{
-								width: '28px',
-								height: '28px',
-								borderRadius: '8px',
-								background: `${ncColor}20`,
-								border: `1px solid ${ncColor}40`,
-								display: 'flex',
-								alignItems: 'center',
-								justifyContent: 'center',
-								boxShadow: `0 2px 4px ${ncColor}20`
-							}}>
-								<i className="pi pi-cloud" style={{ color: ncColor, fontSize: '0.8rem' }} />
-							</div>
-							
-							<div style={{ flex: 1 }}>
-								<div style={{ 
-									display: 'flex', 
-									alignItems: 'center', 
-									gap: '0.5rem',
-									marginBottom: '0.2rem'
-								}}>
-								<span style={{ 
-									color: themeColors.textPrimary || 'var(--text-color)', 
-										fontWeight: '600', 
-										fontSize: '0.7rem' 
-									}}>
-										{ncLabel}
-									</span>
-									<div style={{
-										width: '6px',
-										height: '6px',
-										borderRadius: '50%',
-										background: ncColor,
-										boxShadow: `0 0 4px ${ncColor}60`
-									}} />
-								</div>
-								<div style={{ 
-									color: themeColors.textSecondary || 'var(--text-color-secondary)', 
-									fontSize: '0.55rem',
-									lineHeight: '1.3'
-								}}>
-									{last ? `Última sync: ${last}` : ncStatus}
-								</div>
-								{ncSubStatus && (
-									<div style={{ 
-										color: ncColor, 
-										fontSize: '0.5rem', 
-										marginTop: '0.2rem',
-										fontWeight: '500'
-									}}>
-										{ncSubStatus}
-									</div>
-								)}
-							</div>
-						</div>
-					);
-				})()}
-
-				{/* Docker/Guacd */}
-				{(() => {
-					const gColor = guacdState.isRunning ? '#22c55e' : '#ef4444';
-					
-					// Determinar el método y etiqueta correctos
-					let gLabel, gStatus, gSubStatus;
-					if (guacdState.isRunning) {
-						const method = guacdState.method || 'unknown';
-						switch (method.toLowerCase()) {
-							case 'docker':
-								gLabel = 'docker activo';
-								gStatus = 'Sesión activa';
-								break;
-							case 'wsl':
-								gLabel = 'wsl activo';
-								gStatus = 'Sesión activa';
-								break;
-							case 'native':
-								gLabel = 'nativo activo';
-								gStatus = 'Sesión activa';
-								break;
-							case 'mock':
-								gLabel = 'modo simulación';
-								gStatus = 'Simulando';
-								break;
-							default:
-								gLabel = 'guacd activo';
-								gStatus = 'Sesión activa';
-						}
-						gSubStatus = `${guacdState.host}:${guacdState.port}`;
-					} else {
-						gLabel = 'Guacd detenido';
-						gStatus = 'Inactivo';
-						gSubStatus = 'Preferido: Docker/WSL';
-					}
-					
-					return (
-						<div style={{
-							display: 'flex',
-							alignItems: 'center',
-							gap: '0.75rem',
-							padding: '0.75rem',
-							borderRadius: '10px',
-							background: 'rgba(255,255,255,0.02)',
-							border: `1px solid ${gColor}30`,
-							position: 'relative',
-							overflow: 'hidden'
-						}}>
-							{/* Indicador de estado */}
-							<div style={{
-								position: 'absolute',
-								top: 0,
-								left: 0,
-								width: '3px',
-								height: '100%',
-								background: gColor,
-								borderRadius: '0 2px 2px 0'
-							}} />
-							
-							<div style={{
-								width: '28px',
-								height: '28px',
-								borderRadius: '8px',
-								background: `${gColor}20`,
-								border: `1px solid ${gColor}40`,
-								display: 'flex',
-								alignItems: 'center',
-								justifyContent: 'center',
-								boxShadow: `0 2px 4px ${gColor}20`
-							}}>
-								<i className="pi pi-desktop" style={{ color: gColor, fontSize: '0.8rem' }} />
-							</div>
-							
-							<div style={{ flex: 1 }}>
-								<div style={{ 
-									display: 'flex', 
-									alignItems: 'center', 
-									gap: '0.5rem',
-									marginBottom: '0.2rem'
-								}}>
-								<span style={{ 
-									color: themeColors.textPrimary || 'var(--text-color)', 
-										fontWeight: '600', 
-										fontSize: '0.7rem' 
-									}}>
-										{gLabel}
-									</span>
-									<div style={{
-										width: '6px',
-										height: '6px',
-										borderRadius: '50%',
-										background: gColor,
-										boxShadow: `0 0 4px ${gColor}60`
-									}} />
-								</div>
-								<div style={{ 
-									color: themeColors.textSecondary || 'var(--text-color-secondary)', 
-									fontSize: '0.55rem',
-									lineHeight: '1.3'
-								}}>
-									{gStatus}
-								</div>
-								<div style={{ 
-									color: gColor, 
-									fontSize: '0.5rem', 
-									marginTop: '0.2rem',
-									fontWeight: '500'
-								}}>
-									{gSubStatus}
-								</div>
-							</div>
-						</div>
-					);
-				})()}
-
-				{/* Vault */}
-				{(() => {
-					const configured = vaultState.configured;
-					const unlocked = vaultState.unlocked;
-					const vColor = !configured ? '#9ca3af' : (unlocked ? '#22c55e' : '#f59e0b');
-					const vLabel = !configured ? 'Vault no configurado' : (unlocked ? 'Vault desbloqueado' : 'Vault bloqueado');
-					const vStatus = !configured ? 'Configura la clave maestra' : (unlocked ? 'Sesión activa' : 'Se requerirá clave maestra');
-					
-					return (
-						<div style={{
-							display: 'flex',
-							alignItems: 'center',
-							gap: '0.75rem',
-							padding: '0.75rem',
-							borderRadius: '10px',
-							background: 'rgba(255,255,255,0.02)',
-							border: `1px solid ${vColor}30`,
-							position: 'relative',
-							overflow: 'hidden'
-						}}>
-							{/* Indicador de estado */}
-							<div style={{
-								position: 'absolute',
-								top: 0,
-								left: 0,
-								width: '3px',
-								height: '100%',
-								background: vColor,
-								borderRadius: '0 2px 2px 0'
-							}} />
-							
-							<div style={{
-								width: '28px',
-								height: '28px',
-								borderRadius: '8px',
-								background: `${vColor}20`,
-								border: `1px solid ${vColor}40`,
-								display: 'flex',
-								alignItems: 'center',
-								justifyContent: 'center',
-								boxShadow: `0 2px 4px ${vColor}20`
-							}}>
-								<i className={unlocked ? "pi pi-unlock" : "pi pi-lock"} style={{ color: vColor, fontSize: '0.8rem' }} />
-							</div>
-							
-							<div style={{ flex: 1 }}>
-								<div style={{ 
-									display: 'flex', 
-									alignItems: 'center', 
-									gap: '0.5rem',
-									marginBottom: '0.2rem'
-								}}>
-								<span style={{ 
-									color: themeColors.textPrimary || 'var(--text-color)', 
-										fontWeight: '600', 
-										fontSize: '0.7rem' 
-									}}>
-										{vLabel}
-									</span>
-									<div style={{
-										width: '6px',
-										height: '6px',
-										borderRadius: '50%',
-										background: vColor,
-										boxShadow: `0 0 4px ${vColor}60`
-									}} />
-								</div>
-								<div style={{ 
-									color: themeColors.textSecondary || 'var(--text-color-secondary)', 
-									fontSize: '0.55rem',
-									lineHeight: '1.3'
-								}}>
-									{vStatus}
-								</div>
-							</div>
-						</div>
-					);
-				})()}
-
-				{/* Ollama */}
-				{(() => {
-					const isRunning = ollamaState.isRunning;
-					const isRemote = ollamaState.isRemote;
-					const oColor = isRunning ? '#22c55e' : '#ef4444';
-					const oLabel = isRunning ? (isRemote ? 'Ollama remoto' : 'Ollama activo') : 'Ollama detenido';
-					const oStatus = isRunning ? 'Servicio activo' : 'Servicio inactivo';
-					const oSubStatus = isRunning ? ollamaState.url : (isRemote ? 'Servidor remoto no disponible' : 'Local no disponible');
-					
-					return (
-						<div style={{
-							display: 'flex',
-							alignItems: 'center',
-							gap: '0.75rem',
-							padding: '0.75rem',
-							borderRadius: '10px',
-							background: 'rgba(255,255,255,0.02)',
-							border: `1px solid ${oColor}30`,
-							position: 'relative',
-							overflow: 'hidden'
-						}}>
-							{/* Indicador de estado */}
-							<div style={{
-								position: 'absolute',
-								top: 0,
-								left: 0,
-								width: '3px',
-								height: '100%',
-								background: oColor,
-								borderRadius: '0 2px 2px 0'
-							}} />
-							
-							<div style={{
-								width: '28px',
-								height: '28px',
-								borderRadius: '8px',
-								background: `${oColor}20`,
-								border: `1px solid ${oColor}40`,
-								display: 'flex',
-								alignItems: 'center',
-								justifyContent: 'center',
-								boxShadow: `0 2px 4px ${oColor}20`
-							}}>
-								<i className={isRemote ? "pi pi-cloud" : "pi pi-server"} style={{ color: oColor, fontSize: '0.8rem' }} />
-							</div>
-							
-							<div style={{ flex: 1 }}>
-								<div style={{ 
-									display: 'flex', 
-									alignItems: 'center', 
-									gap: '0.5rem',
-									marginBottom: '0.2rem'
-								}}>
-								<span style={{ 
-									color: themeColors.textPrimary || 'var(--text-color)', 
-										fontWeight: '600', 
-										fontSize: '0.7rem' 
-									}}>
-										{oLabel}
-									</span>
-									<div style={{
-										width: '6px',
-										height: '6px',
-										borderRadius: '50%',
-										background: oColor,
-										boxShadow: `0 0 4px ${oColor}60`
-									}} />
-								</div>
-								<div style={{ 
-									color: themeColors.textSecondary || 'var(--text-color-secondary)', 
-									fontSize: '0.55rem',
-									lineHeight: '1.3'
-								}}>
-									{oStatus}
-								</div>
-								<div style={{ 
-									color: oColor, 
-									fontSize: '0.5rem', 
-									marginTop: '0.2rem',
-									fontWeight: '500'
-								}}>
-									{oSubStatus}
-								</div>
-							</div>
-						</div>
-					);
-				})()}
+				<StatItem icon="pi pi-server" value={sshConnectionsCount} label="SSH" color="#4fc3f7" compact={true} />
+				<StatItem icon="pi pi-desktop" value={rdpConnectionsCount} label="RDP" color="#ff6b35" compact={true} />
+				<StatItem icon="pi pi-key" value={passwordsCount} label="Keys" color="#FFC107" compact={true} />
 			</div>
 		</div>
 	);
 };
 
 export default NodeTermStatus;
-
