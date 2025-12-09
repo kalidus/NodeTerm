@@ -12,7 +12,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	});
 	const [favQuery, setFavQuery] = useState('');
 	const [currentPage, setCurrentPage] = useState(1);
-	const itemsPerPage = 15;
+	const itemsPerPage = 14; // Máximo 7 filas con 2 columnas = 14 items
 
 	useEffect(() => {
 		loadConnectionHistory();
@@ -249,13 +249,13 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 					display: 'grid',
 					gridTemplateColumns: 'auto 1fr auto 12px',
 					alignItems: 'center',
-					gap: micro ? '6px' : (compact ? '8px' : '12px'),
-					padding: micro ? '4px 8px' : (compact ? '6px 10px' : '10px 14px'),
+					gap: micro ? '3px' : (compact ? '4px' : '12px'),
+					padding: micro ? '2px 5px' : (compact ? '3px 6px' : '10px 14px'),
 					border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.14)'}`,
-					borderRadius: micro ? '8px' : (compact ? '10px' : '14px'),
+					borderRadius: micro ? '5px' : (compact ? '6px' : '14px'),
 					background: themeColors.itemBackground || 'rgba(16, 20, 28, 0.45)',
 					backdropFilter: 'blur(10px) saturate(140%)',
-					boxShadow: micro ? '0 3px 12px rgba(0,0,0,0.2)' : (compact ? '0 4px 16px rgba(0,0,0,0.22)' : '0 6px 24px rgba(0,0,0,0.25)'),
+					boxShadow: micro ? '0 2px 6px rgba(0,0,0,0.2)' : (compact ? '0 2px 10px rgba(0,0,0,0.22)' : '0 6px 24px rgba(0,0,0,0.25)'),
 					cursor: 'pointer',
 					transition: 'all 0.2s ease'
 				}}
@@ -273,29 +273,29 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 					display: 'flex',
 					alignItems: 'center',
 					justifyContent: 'center',
-					width: micro ? 26 : (compact ? 32 : 38),
-					height: micro ? 26 : (compact ? 32 : 38),
-					borderRadius: micro ? 8 : (compact ? 10 : 12),
+					width: micro ? 20 : (compact ? 24 : 38),
+					height: micro ? 20 : (compact ? 24 : 38),
+					borderRadius: micro ? 5 : (compact ? 6 : 12),
 					background: `linear-gradient(135deg, ${getConnectionTypeColor(connection.type)}88, ${getConnectionTypeColor(connection.type)}44)`,
 					border: '1px solid rgba(255,255,255,0.18)',
 					boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)'
 				}}>
-					<i className={getConnectionTypeIcon(connection.type)} style={{ color: '#fff', fontSize: micro ? 12 : (compact ? 14 : 16) }} />
+					<i className={getConnectionTypeIcon(connection.type)} style={{ color: '#fff', fontSize: micro ? 9 : (compact ? 11 : 16) }} />
 				</div>
 
 				<div style={{ minWidth: 0 }}>
-					<div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-						<span style={{ color: themeColors.textPrimary || 'var(--text-color)', fontWeight: 700, fontSize: micro ? 12 : (compact ? 13 : 14), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{connection.name}</span>
+					<div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+						<span style={{ color: themeColors.textPrimary || 'var(--text-color)', fontWeight: 700, fontSize: micro ? 9 : (compact ? 10 : 14), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{connection.name}</span>
 						<span style={{
 							display: 'inline-flex',
 							alignItems: 'center',
-							gap: 6,
-							padding: micro ? '1px 6px' : (compact ? '2px 8px' : '4px 10px'),
+							gap: 3,
+							padding: micro ? '1px 3px' : (compact ? '1px 5px' : '4px 10px'),
 							borderRadius: 999,
 							background: 'rgba(255,255,255,0.06)',
 							border: '1px solid rgba(255,255,255,0.16)',
 							color: getConnectionTypeColor(connection.type),
-							fontSize: micro ? 9 : (compact ? 10 : 11),
+							fontSize: micro ? 7 : (compact ? 8 : 11),
 							fontWeight: 700
 						}}>
 							{connection.type === 'rdp-guacamole' || connection.type === 'rdp' ? 'RDP' : 
@@ -339,8 +339,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 							<span
 								title={connection.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
 								style={{
-									width: micro ? 20 : (compact ? 24 : 28),
-									height: micro ? 20 : (compact ? 24 : 28),
+									width: micro ? 16 : (compact ? 20 : 28),
+									height: micro ? 16 : (compact ? 20 : 28),
 									borderRadius: '50%',
 									display: 'inline-flex',
 									alignItems: 'center',
@@ -355,15 +355,15 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 								onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary || 'var(--text-color)'; }}
 								onClick={() => { toggleFavorite(connection); loadConnectionHistory(); }}
 							>
-								<i className={connection.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: micro ? 10 : (compact ? 12 : 14) }} />
+								<i className={connection.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: micro ? 8 : (compact ? 10 : 14) }} />
 							</span>
 						)}
 						{onEdit && (
 							<span
 								title="Editar"
 								style={{
-									width: micro ? 20 : (compact ? 24 : 28),
-									height: micro ? 20 : (compact ? 24 : 28),
+									width: micro ? 16 : (compact ? 20 : 28),
+									height: micro ? 16 : (compact ? 20 : 28),
 									borderRadius: '50%',
 									display: 'inline-flex',
 									alignItems: 'center',
@@ -378,14 +378,14 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 								onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary || 'var(--text-color)'; }}
 								onClick={() => onEdit(connection)}
 							>
-								<i className="pi pi-pencil" style={{ fontSize: micro ? 10 : (compact ? 12 : 14) }} />
+								<i className="pi pi-pencil" style={{ fontSize: micro ? 8 : (compact ? 10 : 14) }} />
 							</span>
 						)}
 						<span
 							title="Conectar"
 							style={{
-								width: micro ? 20 : (compact ? 24 : 28),
-								height: micro ? 20 : (compact ? 24 : 28),
+								width: micro ? 16 : (compact ? 20 : 28),
+								height: micro ? 16 : (compact ? 20 : 28),
 								borderRadius: '50%',
 								display: 'inline-flex',
 								alignItems: 'center',
@@ -402,13 +402,13 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 255,255,0.08)'; e.style.color = 'var(--text-color)'; }}
 							onClick={() => onConnectToHistory?.(connection)}
 						>
-							<i className="pi pi-external-link" style={{ fontSize: micro ? 10 : (compact ? 12 : 14) }} />
+							<i className="pi pi-external-link" style={{ fontSize: micro ? 8 : (compact ? 10 : 14) }} />
 						</span>
 					</div>
 				</div>
 
 				<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-						<span style={{ width: micro ? 6 : (compact ? 8 : 10), height: micro ? 6 : (compact ? 8 : 10), borderRadius: '50%', background: isActive ? '#22c55e' : '#9E9E9E', boxShadow: isActive ? '0 0 10px rgba(34,197,94,0.5)' : 'none' }} />
+						<span style={{ width: micro ? 5 : (compact ? 6 : 10), height: micro ? 5 : (compact ? 6 : 10), borderRadius: '50%', background: isActive ? '#22c55e' : '#9E9E9E', boxShadow: isActive ? '0 0 8px rgba(34,197,94,0.5)' : 'none' }} />
 				</div>
 			</div>
 		);
@@ -514,8 +514,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 					
 					{/* Contenedor con altura fija para los favoritos */}
 					<div style={{ 
-						maxHeight: '380px', 
-						minHeight: '380px',
+						maxHeight: '320px', 
+						minHeight: '320px',
 						overflow: 'hidden',
 						display: 'flex',
 						flexDirection: 'column',
@@ -527,7 +527,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 								<div style={{ 
 									display: 'grid', 
 									gridTemplateColumns: `repeat(${favoritesColumns}, 1fr)`, 
-									gap: 4,
+									gap: 2,
 									flex: '0 0 auto',
 									paddingRight: '4px',
 									background: 'transparent !important',

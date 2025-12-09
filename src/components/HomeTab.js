@@ -32,8 +32,9 @@ const HomeTab = ({
   onLoadGroup,
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [terminalState, setTerminalState] = useState('minimized'); // Cambiado a 'minimized' como en redesigned
-  const [terminalHidden, setTerminalHidden] = useState(true);
+  const [terminalState, setTerminalState] = useState('normal'); // Estado normal para tamaño correcto
+  const [terminalHidden, setTerminalHidden] = useState(false); // Terminal visible por defecto
+  const [manualPaneSize, setManualPaneSize] = useState(null); // Tamaño manual del panel superior
   const [isTerminalTransitioning, setIsTerminalTransitioning] = useState(false);
   const [favType, setFavType] = useState('all'); // Nuevo estado para filtros
   const [recentConnections, setRecentConnections] = useState([]); // Estado para conexiones recientes
@@ -90,7 +91,7 @@ const HomeTab = ({
 
   const loadRecentConnections = () => {
     try {
-      const recents = getRecents(5); // Limitar a 5 conexiones recientes
+      const recents = getRecents(8); // Limitar a 8 conexiones recientes
       setRecentConnections(recents);
     } catch (error) {
       console.error('Error cargando conexiones recientes:', error);
@@ -371,9 +372,16 @@ const HomeTab = ({
   // Función para resetear a modo manual cuando el usuario redimensiona
   const handleManualResize = () => {
     if (terminalState !== 'normal') {
-      // console.log('🖱️ Redimensionamiento manual detectado, volviendo a modo normal');
       setTerminalState('normal');
     }
+    // Cuando el usuario redimensiona, necesitamos obtener el nuevo tamaño del SplitLayout
+    // Esto se manejará a través del callback de redimensionamiento
+  };
+  
+  // Callback para cuando el usuario redimensiona manualmente
+  const handlePaneSizeChange = (newSize) => {
+    setManualPaneSize(newSize);
+    setTerminalState('normal');
   };
 
   // Función para toggle de visibilidad del terminal
@@ -459,6 +467,11 @@ const HomeTab = ({
       return window.innerHeight - 20; // Ocupar casi toda la pantalla, dejando un pequeño margen
     }
 
+    // Si hay un tamaño manual guardado, usarlo
+    if (manualPaneSize !== null) {
+      return manualPaneSize;
+    }
+
     const containerHeight = window.innerHeight;
     let size;
 
@@ -470,8 +483,14 @@ const HomeTab = ({
         size = 0;
         break;
       default:
-        // Para 'normal', no forzar tamaño fijo, dejar que SplitLayout maneje el redimensionamiento
-        return null;
+        // Para 'normal', calcular tamaño basado en el contenido (cards + margen)
+        // Las cards tienen ~280px de altura, más padding y márgenes
+        const statusBarHeight = statusBarVisible ? 40 : 0;
+        const availableHeight = containerHeight - statusBarHeight;
+        // Usar aproximadamente 50% de la altura disponible para el panel superior
+        // Esto deja suficiente espacio para las cards y la terminal
+        size = Math.max(availableHeight * 0.5, 400);
+        break;
     }
 
     return size;
@@ -772,18 +791,18 @@ const HomeTab = ({
                   marginBottom: '0.5rem'
                 }} />
                 {/* Lista de conexiones recientes */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', overflowY: 'auto', flex: 1 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto', flex: 1 }}>
                   {recentConnections.length > 0 ? (
                     recentConnections.map(recentConn => (
                       <div key={recentConn.id} style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.4rem',
+                        gap: '0.25rem',
                         color: themeColors.textSecondary,
-                        fontSize: '0.75rem',
+                        fontSize: '0.65rem',
                         background: themeColors.itemBackground,
-                        padding: '0.3rem 0.5rem',
-                        borderRadius: '6px',
+                        padding: '0.2rem 0.35rem',
+                        borderRadius: '5px',
                         border: '1px solid transparent',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease'
@@ -800,7 +819,7 @@ const HomeTab = ({
                         {/* Icono del tipo de conexión */}
                         <i className={getConnectionTypeIcon(recentConn.type)} style={{
                           color: getConnectionTypeColor(recentConn.type),
-                          fontSize: '0.75rem'
+                          fontSize: '0.6rem'
                         }} />
                         
                         {/* Nombre de la conexión */}
@@ -817,8 +836,8 @@ const HomeTab = ({
                           <span
                             title={recentConn.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
                             style={{
-                              width: '18px',
-                              height: '18px',
+                              width: '16px',
+                              height: '16px',
                               borderRadius: '50%',
                               display: 'inline-flex',
                               alignItems: 'center',
@@ -833,7 +852,7 @@ const HomeTab = ({
                             onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
                             onClick={() => handleToggleFavorite(recentConn)}
                           >
-                            <i className={recentConn.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '9px' }} />
+                            <i className={recentConn.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '8px' }} />
                           </span>
 
                           {/* Botón de editar */}
@@ -841,8 +860,8 @@ const HomeTab = ({
                             <span
                               title="Editar"
                               style={{
-                                width: '18px',
-                                height: '18px',
+                                width: '16px',
+                                height: '16px',
                                 borderRadius: '50%',
                                 display: 'inline-flex',
                                 alignItems: 'center',
@@ -857,7 +876,7 @@ const HomeTab = ({
                               onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
                               onClick={() => onEditConnection(recentConn)}
                             >
-                              <i className="pi pi-pencil" style={{ fontSize: '9px' }} />
+                              <i className="pi pi-pencil" style={{ fontSize: '8px' }} />
                             </span>
                           )}
 
@@ -865,8 +884,8 @@ const HomeTab = ({
                           <span
                             title="Conectar"
                             style={{
-                              width: '18px',
-                              height: '18px',
+                              width: '16px',
+                              height: '16px',
                               borderRadius: '50%',
                               display: 'inline-flex',
                               alignItems: 'center',
@@ -881,7 +900,7 @@ const HomeTab = ({
                             onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
                             onClick={() => handleConnectToHistory(recentConn)}
                           >
-                            <i className="pi pi-external-link" style={{ fontSize: '9px' }} />
+                            <i className="pi pi-external-link" style={{ fontSize: '8px' }} />
                           </span>
                         </div>
                       </div>
@@ -986,6 +1005,7 @@ const HomeTab = ({
           isHomeTab={true}
           externalPaneSize={getTopPanelSize()}
           onManualResize={handleManualResize}
+          onPaneSizeChange={handlePaneSizeChange}
           splitterColor={splitterColor}
         />
       </div>

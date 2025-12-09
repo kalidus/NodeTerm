@@ -61,7 +61,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     };
     
     // Determinar la pestaña inicial según el SO
-    const getInitialTab = () => {
+    const getInitialTab = (useCygwin = false) => {
         const platform = window.electron?.platform || 'unknown';
         if (platform === 'linux') {
             return {
@@ -75,6 +75,15 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 id: 'tab-1',
                 title: 'Terminal macOS',
                 type: 'powershell', // Reutilizar la lógica de PowerShell
+                active: true
+            };
+        }
+        // Si Cygwin está disponible, usarlo como predeterminado en Windows
+        if (useCygwin) {
+            return {
+                id: 'tab-1',
+                title: 'Cygwin',
+                type: 'cygwin',
                 active: true
             };
         }
@@ -370,6 +379,22 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     const result = await window.electronAPI.invoke('cygwin:detect');
                     if (result && typeof result.available === 'boolean') {
                         setCygwinAvailable(result.available);
+                        // Si Cygwin está disponible y aún no hay tab de Cygwin, actualizar el tab inicial
+                        if (result.available) {
+                            setTabs(prevTabs => {
+                                // Solo actualizar si el tab actual es PowerShell (el inicial)
+                                const firstTab = prevTabs[0];
+                                if (firstTab && firstTab.type === 'powershell' && firstTab.id === 'tab-1') {
+                                    return [{
+                                        id: 'tab-1',
+                                        title: 'Cygwin',
+                                        type: 'cygwin',
+                                        active: true
+                                    }];
+                                }
+                                return prevTabs;
+                            });
+                        }
                         // Cygwin detectado silenciosamente
                     } else {
                         console.warn('⚠️ Cygwin: Respuesta inválida');
