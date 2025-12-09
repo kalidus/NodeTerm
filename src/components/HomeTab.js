@@ -633,7 +633,7 @@ const HomeTab = ({
                 border: `1px solid ${themeColors.cardBorder}`,
                 borderRadius: '12px',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-                padding: '0.5rem',
+                padding: '0.75rem',
                 maxHeight: '320px',
                 display: 'flex',
                 flexDirection: 'column',
@@ -725,8 +725,8 @@ const HomeTab = ({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '20px',
-                    height: '20px',
+                    width: '24px',
+                    height: '24px',
                     borderRadius: '6px',
                     background: 'linear-gradient(135deg, rgba(79, 195, 247, 0.2) 0%, rgba(79, 195, 247, 0.1) 100%)',
                     border: '1px solid rgba(79, 195, 247, 0.3)',
@@ -735,7 +735,7 @@ const HomeTab = ({
                   }}>
                     <i className="pi pi-history" style={{ 
                       color: '#4fc3f7', 
-                      fontSize: '0.75rem',
+                      fontSize: '0.9rem',
                       filter: 'drop-shadow(0 0 2px rgba(79, 195, 247, 0.4))'
                     }} />
                     {/* Efecto de brillo sutil */}
@@ -743,8 +743,8 @@ const HomeTab = ({
                       position: 'absolute',
                       top: '12%',
                       left: '35%',
-                      width: '3px',
-                      height: '3px',
+                      width: '4px',
+                      height: '4px',
                       borderRadius: '50%',
                       background: 'rgba(255, 255, 255, 0.6)',
                       filter: 'blur(1px)',
@@ -756,7 +756,7 @@ const HomeTab = ({
                   <h3 style={{ 
                     margin: 0, 
                     color: themeColors.textPrimary, 
-                    fontSize: '0.8rem',
+                    fontSize: '0.9rem',
                     fontWeight: '700',
                     letterSpacing: '0.1px',
                     textShadow: '0 1px 2px rgba(0,0,0,0.1)'

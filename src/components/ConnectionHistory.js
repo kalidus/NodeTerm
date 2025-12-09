@@ -416,7 +416,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 
 	return (
 		<div style={{ 
-			padding: '0.5rem 0.5rem 0.25rem 0.5rem', 
+			padding: '0.25rem 0.5rem 0.25rem 0.5rem', 
 			height: '100%', 
 			display: 'flex', 
 			flexDirection: 'column',
@@ -428,11 +428,11 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 				<div style={{ display: 'flex', flexDirection: 'column', background: 'transparent !important', backgroundColor: 'transparent !important' }}>
 					{/* Título mejorado con mejor separación visual */}
 					<div style={{ 
-						marginBottom: '0.9rem',
-						padding: '0.5rem 0',
+						marginBottom: '0.5rem',
+						padding: 0,
 						position: 'relative'
 					}}>
-						<div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
+						<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
 							{/* Icono con efecto visual mejorado */}
 							<div style={{
 								display: 'flex',
