@@ -558,6 +558,71 @@ const HomeTab = ({
             display: 'flex',
             flexDirection: 'column'
           }}>
+            {/* Card de Estado de NodeTerm arriba del todo - horizontal y compacta */}
+            <div style={{
+              background: `linear-gradient(135deg,
+                rgba(16, 20, 28, 0.6) 0%,
+                rgba(16, 20, 28, 0.4) 100%)`,
+              backdropFilter: 'blur(8px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+              border: `1px solid ${themeColors.cardBorder}`,
+              borderRadius: '12px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+              position: 'relative',
+              marginBottom: '1rem'
+            }}>
+              <NodeTermStatus
+                sshConnectionsCount={sshConnectionsCount}
+                foldersCount={foldersCount}
+                rdpConnectionsCount={rdpConnectionsCount}
+                themeColors={themeColors}
+                horizontal={true}
+                compact={true}
+              />
+              
+              {/* Overlay de transición para Estado de NodeTerm */}
+              {isTerminalTransitioning && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.6)',
+                  backdropFilter: 'blur(4px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '12px',
+                  zIndex: 10
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    color: 'white'
+                  }}>
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '3px solid rgba(255,255,255,0.3)',
+                      borderTop: '3px solid #00BCD4',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }} />
+                    <div style={{
+                      fontSize: '0.9rem',
+                      fontWeight: '500',
+                      textAlign: 'center'
+                    }}>
+                      Actualizando terminal...
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Cards de Conexiones Recientes y Passwords Recientes en la parte superior */}
             <div style={{
               display: 'grid',
@@ -1020,116 +1085,6 @@ const HomeTab = ({
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Columna derecha: Estado y Recientes */}
-          <div style={{
-            width: '300px',
-            padding: '1rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem'
-          }}>
-            {/* Estado de NodeTerm */}
-            <div style={{
-              background: `linear-gradient(135deg,
-                rgba(16, 20, 28, 0.6) 0%,
-                rgba(16, 20, 28, 0.4) 100%)`,
-              backdropFilter: 'blur(8px) saturate(140%)',
-              WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-              border: `1px solid ${themeColors.cardBorder}`,
-              borderRadius: '12px',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-              position: 'relative'
-            }}>
-              <NodeTermStatus
-                sshConnectionsCount={sshConnectionsCount}
-                foldersCount={foldersCount}
-                rdpConnectionsCount={rdpConnectionsCount}
-                themeColors={themeColors}
-              />
-              
-              {/* Overlay de transición para Estado de NodeTerm */}
-              {isTerminalTransitioning && (
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: 'rgba(0, 0, 0, 0.6)',
-                  backdropFilter: 'blur(4px)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '12px',
-                  zIndex: 10
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    color: 'white'
-                  }}>
-                    <div style={{
-                      width: '32px',
-                      height: '32px',
-                      border: '3px solid rgba(255,255,255,0.3)',
-                      borderTop: '3px solid #00BCD4',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite'
-                    }} />
-                    <div style={{
-                      fontSize: '0.9rem',
-                      fontWeight: '500',
-                      textAlign: 'center'
-                    }}>
-                      Actualizando terminal...
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Card adicional para futuras funcionalidades */}
-            <div style={{
-              background: `linear-gradient(135deg,
-                rgba(16, 20, 28, 0.6) 0%,
-                rgba(16, 20, 28, 0.4) 100%)`,
-              backdropFilter: 'blur(8px) saturate(140%)',
-              WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-              border: `1px solid ${themeColors.cardBorder}`,
-              borderRadius: '12px',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-              padding: '1rem',
-              minHeight: '120px'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                marginBottom: '0.75rem'
-              }}>
-                <i className="pi pi-plus-circle" style={{ color: themeColors.textSecondary }} />
-                <h3 style={{
-                  margin: 0,
-                  color: themeColors.textPrimary,
-                  fontSize: '1rem',
-                  fontWeight: '600'
-                }}>
-                  Nueva Funcionalidad
-                </h3>
-              </div>
-              <div style={{
-                color: themeColors.textSecondary,
-                fontSize: '0.8rem',
-                textAlign: 'center',
-                padding: '1rem 0'
-              }}>
-                Espacio reservado para futuras funcionalidades
-              </div>
             </div>
           </div>
           </>
