@@ -6,7 +6,6 @@ import { Divider } from 'primereact/divider';
 import { getVersionInfo } from '../version-info';
 import TabbedTerminal from './TabbedTerminal';
 import ConnectionHistory from './ConnectionHistory';
-import QuickAccessSidebar from './QuickAccessSidebar';
 import NodeTermStatus from './NodeTermStatus';
 import AIChatWithHistory from './AIChatWithHistory';
 import StandaloneStatusBar from './StandaloneStatusBar';
@@ -501,27 +500,12 @@ const HomeTab = ({
       transition: 'opacity 0.1s ease, visibility 0.1s ease'
     }}>
       <div className="home-page-scroll" style={{ flex: 1, overflow: 'auto' }}>
-        {/* Layout principal con 3 columnas */}
+        {/* Layout principal sin QuickAccessSidebar */}
         <div style={{
           display: 'flex',
           height: '100%',
           minHeight: '600px'
         }}>
-          {/* Columna izquierda: Accesos Rápidos */}
-          <QuickAccessSidebar
-            onCreateSSHConnection={onCreateSSHConnection}
-            onCreateFolder={onCreateFolder}
-            onOpenFileExplorer={onOpenFileExplorer}
-            onOpenSettings={onOpenSettings}
-            onToggleTerminalVisibility={handleToggleTerminalVisibility}
-            onToggleAIChat={handleToggleAIChat}
-            onToggleStatusBar={handleToggleStatusBar}
-            showAIChat={showAIChat}
-            statusBarVisible={statusBarVisible}
-            sshConnectionsCount={sshConnectionsCount}
-            foldersCount={foldersCount}
-          />
-
           {/* Mostrar Chat de IA o contenido normal */}
           {showAIChat ? (
             // Panel de Chat de IA
@@ -632,13 +616,88 @@ const HomeTab = ({
               )}
             </div>
 
-            {/* Cards de Conexiones Recientes y Passwords Recientes en la parte superior */}
+            {/* Cards de Conexiones Favoritas y Conexiones Recientes en la parte superior */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              gridTemplateColumns: '2fr 1fr',
               gap: '1rem',
               marginBottom: '1rem'
             }}>
+              {/* Card de ConnectionHistory (Conexiones Favoritas) */}
+              <div style={{
+                background: `linear-gradient(135deg,
+                  rgba(16, 20, 28, 0.6) 0%,
+                  rgba(16, 20, 28, 0.4) 100%)`,
+                backdropFilter: 'blur(8px) saturate(140%)',
+                WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+                border: `1px solid ${themeColors.cardBorder}`,
+                borderRadius: '12px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+                padding: '0.5rem',
+                maxHeight: '320px',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                position: 'relative'
+              }}>
+                <ConnectionHistory 
+                  onConnectToHistory={handleConnectToHistory}
+                  layout="two-columns"
+                  recentsLimit={10}
+                  activeIds={new Set()}
+                  templateColumns="3fr 2fr"
+                  favoritesColumns={2}
+                  recentsColumns={1}
+                  onEdit={onEditConnection}
+                  sshConnectionsCount={sshConnectionsCount}
+                  foldersCount={foldersCount}
+                  rdpConnectionsCount={rdpConnectionsCount}
+                  themeColors={themeColors}
+                />
+                
+                {/* Overlay de transición para favoritos */}
+                {isTerminalTransitioning && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.6)',
+                    backdropFilter: 'blur(4px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '12px',
+                    zIndex: 10
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '1rem',
+                      color: 'white'
+                    }}>
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        border: '3px solid rgba(255,255,255,0.3)',
+                        borderTop: '3px solid #00BCD4',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                      }} />
+                      <div style={{
+                        fontSize: '0.9rem',
+                        fontWeight: '500',
+                        textAlign: 'center'
+                      }}>
+                        Actualizando terminal...
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Card de Conexiones Recientes */}
               <div style={{
                 background: `linear-gradient(135deg,
@@ -649,21 +708,25 @@ const HomeTab = ({
                 border: `1px solid ${themeColors.cardBorder}`,
                 borderRadius: '12px',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-                padding: '1rem'
+                padding: '0.75rem',
+                maxHeight: '320px',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
               }}>
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.6rem',
-                  marginBottom: '0.75rem'
+                  gap: '0.5rem',
+                  marginBottom: '0.5rem'
                 }}>
                   {/* Icono con efecto visual mejorado */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '24px',
-                    height: '24px',
+                    width: '20px',
+                    height: '20px',
                     borderRadius: '6px',
                     background: 'linear-gradient(135deg, rgba(79, 195, 247, 0.2) 0%, rgba(79, 195, 247, 0.1) 100%)',
                     border: '1px solid rgba(79, 195, 247, 0.3)',
@@ -672,7 +735,7 @@ const HomeTab = ({
                   }}>
                     <i className="pi pi-history" style={{ 
                       color: '#4fc3f7', 
-                      fontSize: '0.9rem',
+                      fontSize: '0.75rem',
                       filter: 'drop-shadow(0 0 2px rgba(79, 195, 247, 0.4))'
                     }} />
                     {/* Efecto de brillo sutil */}
@@ -680,8 +743,8 @@ const HomeTab = ({
                       position: 'absolute',
                       top: '12%',
                       left: '35%',
-                      width: '4px',
-                      height: '4px',
+                      width: '3px',
+                      height: '3px',
                       borderRadius: '50%',
                       background: 'rgba(255, 255, 255, 0.6)',
                       filter: 'blur(1px)',
@@ -693,7 +756,7 @@ const HomeTab = ({
                   <h3 style={{ 
                     margin: 0, 
                     color: themeColors.textPrimary, 
-                    fontSize: '0.9rem',
+                    fontSize: '0.8rem',
                     fontWeight: '700',
                     letterSpacing: '0.1px',
                     textShadow: '0 1px 2px rgba(0,0,0,0.1)'
@@ -706,21 +769,21 @@ const HomeTab = ({
                   height: '1px',
                   background: 'linear-gradient(90deg, transparent, rgba(79, 195, 247, 0.3), transparent)',
                   borderRadius: '1px',
-                  marginBottom: '0.75rem'
+                  marginBottom: '0.5rem'
                 }} />
                 {/* Lista de conexiones recientes */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', overflowY: 'auto', flex: 1 }}>
                   {recentConnections.length > 0 ? (
                     recentConnections.map(recentConn => (
                       <div key={recentConn.id} style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.5rem',
+                        gap: '0.4rem',
                         color: themeColors.textSecondary,
-                        fontSize: '0.8rem',
+                        fontSize: '0.75rem',
                         background: themeColors.itemBackground,
-                        padding: '0.4rem 0.6rem',
-                        borderRadius: '8px',
+                        padding: '0.3rem 0.5rem',
+                        borderRadius: '6px',
                         border: '1px solid transparent',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease'
@@ -737,7 +800,7 @@ const HomeTab = ({
                         {/* Icono del tipo de conexión */}
                         <i className={getConnectionTypeIcon(recentConn.type)} style={{
                           color: getConnectionTypeColor(recentConn.type),
-                          fontSize: '0.9rem'
+                          fontSize: '0.75rem'
                         }} />
                         
                         {/* Nombre de la conexión */}
@@ -754,8 +817,8 @@ const HomeTab = ({
                           <span
                             title={recentConn.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
                             style={{
-                              width: '20px',
-                              height: '20px',
+                              width: '18px',
+                              height: '18px',
                               borderRadius: '50%',
                               display: 'inline-flex',
                               alignItems: 'center',
@@ -770,7 +833,7 @@ const HomeTab = ({
                             onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
                             onClick={() => handleToggleFavorite(recentConn)}
                           >
-                            <i className={recentConn.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '10px' }} />
+                            <i className={recentConn.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '9px' }} />
                           </span>
 
                           {/* Botón de editar */}
@@ -778,8 +841,8 @@ const HomeTab = ({
                             <span
                               title="Editar"
                               style={{
-                                width: '20px',
-                                height: '20px',
+                                width: '18px',
+                                height: '18px',
                                 borderRadius: '50%',
                                 display: 'inline-flex',
                                 alignItems: 'center',
@@ -794,7 +857,7 @@ const HomeTab = ({
                               onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
                               onClick={() => onEditConnection(recentConn)}
                             >
-                              <i className="pi pi-pencil" style={{ fontSize: '10px' }} />
+                              <i className="pi pi-pencil" style={{ fontSize: '9px' }} />
                             </span>
                           )}
 
@@ -802,8 +865,8 @@ const HomeTab = ({
                           <span
                             title="Conectar"
                             style={{
-                              width: '20px',
-                              height: '20px',
+                              width: '18px',
+                              height: '18px',
                               borderRadius: '50%',
                               display: 'inline-flex',
                               alignItems: 'center',
@@ -818,7 +881,7 @@ const HomeTab = ({
                             onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
                             onClick={() => handleConnectToHistory(recentConn)}
                           >
-                            <i className="pi pi-external-link" style={{ fontSize: '10px' }} />
+                            <i className="pi pi-external-link" style={{ fontSize: '9px' }} />
                           </span>
                         </div>
                       </div>
@@ -828,9 +891,9 @@ const HomeTab = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      padding: '1rem',
+                      padding: '0.75rem',
                       color: themeColors.textSecondary,
-                      fontSize: '0.8rem',
+                      fontSize: '0.75rem',
                       fontStyle: 'italic'
                     }}>
                       No hay conexiones recientes
@@ -838,262 +901,6 @@ const HomeTab = ({
                   )}
                 </div>
               </div>
-
-              {/* Card de Passwords Recientes */}
-              <div style={{
-                background: `linear-gradient(135deg,
-                  rgba(16, 20, 28, 0.6) 0%,
-                  rgba(16, 20, 28, 0.4) 100%)`,
-                backdropFilter: 'blur(8px) saturate(140%)',
-                WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-                border: `1px solid ${themeColors.cardBorder}`,
-                borderRadius: '12px',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-                padding: '1rem'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.6rem',
-                  marginBottom: '0.75rem'
-                }}>
-                  {/* Icono con efecto visual mejorado */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '6px',
-                    background: 'linear-gradient(135deg, rgba(102, 187, 106, 0.2) 0%, rgba(102, 187, 106, 0.1) 100%)',
-                    border: '1px solid rgba(102, 187, 106, 0.3)',
-                    boxShadow: '0 1px 4px rgba(102, 187, 106, 0.15)',
-                    position: 'relative'
-                  }}>
-                    <i className="pi pi-key" style={{ 
-                      color: '#66bb6a', 
-                      fontSize: '0.9rem',
-                      filter: 'drop-shadow(0 0 2px rgba(102, 187, 106, 0.4))'
-                    }} />
-                    {/* Efecto de brillo sutil */}
-                    <div style={{
-                      position: 'absolute',
-                      top: '12%',
-                      left: '35%',
-                      width: '4px',
-                      height: '4px',
-                      borderRadius: '50%',
-                      background: 'rgba(255, 255, 255, 0.6)',
-                      filter: 'blur(1px)',
-                      animation: 'twinkle 4s infinite'
-                    }} />
-                  </div>
-                  
-                  {/* Título con mejor tipografía */}
-                  <h3 style={{ 
-                    margin: 0, 
-                    color: themeColors.textPrimary, 
-                    fontSize: '0.9rem',
-                    fontWeight: '700',
-                    letterSpacing: '0.1px',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.1)'
-                  }}>
-                    Passwords Recientes
-                  </h3>
-                </div>
-                {/* Línea decorativa con gradiente verde */}
-                <div style={{
-                  height: '1px',
-                  background: 'linear-gradient(90deg, transparent, rgba(102, 187, 106, 0.3), transparent)',
-                  borderRadius: '1px',
-                  marginBottom: '0.75rem'
-                }} />
-                {/* Lista de passwords recientes */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {recentPasswords.length > 0 ? (
-                    recentPasswords.map(recentPass => (
-                      <div key={recentPass.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        color: themeColors.textSecondary,
-                        fontSize: '0.8rem',
-                        background: themeColors.itemBackground,
-                        padding: '0.4rem 0.6rem',
-                        borderRadius: '8px',
-                        border: '1px solid transparent',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = themeColors.hoverBackground;
-                        e.currentTarget.style.border = `1px solid ${themeColors.borderColor}`;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = themeColors.itemBackground;
-                        e.currentTarget.style.border = '1px solid transparent';
-                      }}
-                      >
-                        {/* Icono del tipo de password */}
-                        <i className={getPasswordTypeIcon(recentPass.type)} style={{
-                          color: getPasswordTypeColor(recentPass.type),
-                          fontSize: '0.9rem'
-                        }} />
-                        
-                        {/* Nombre del password - clickeable para abrir pestaña */}
-                        <span 
-                          style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
-                          onClick={() => openPasswordTab(recentPass)}
-                          title={`Abrir ${recentPass.name}`}
-                        >
-                          {recentPass.name}
-                        </span>
-
-                        {/* Botones interactivos */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }} onClick={(e) => e.stopPropagation()}>
-                          {/* Botón de copiar usuario */}
-                          {recentPass.username && (
-                            <span
-                              title="Copiar usuario"
-                              style={{
-                                width: '20px',
-                                height: '20px',
-                                borderRadius: '50%',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: themeColors.textPrimary,
-                                background: 'rgba(255,255,255,0.08)',
-                                border: `1px solid ${themeColors.borderColor}`,
-                                transition: 'all .15s ease',
-                                cursor: 'pointer'
-                              }}
-                              onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground; e.style.color = themeColors.textPrimary; }}
-                              onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
-                              onClick={() => copyToClipboard(recentPass.username, 'Usuario')}
-                            >
-                              <i className="pi pi-user" style={{ fontSize: '10px' }} />
-                            </span>
-                          )}
-
-                          {/* Botón de copiar contraseña */}
-                          {recentPass.password && (
-                            <span
-                              title="Copiar contraseña"
-                              style={{
-                                width: '20px',
-                                height: '20px',
-                                borderRadius: '50%',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: themeColors.textPrimary,
-                                background: 'rgba(255,255,255,0.08)',
-                                border: `1px solid ${themeColors.borderColor}`,
-                                transition: 'all .15s ease',
-                                cursor: 'pointer'
-                              }}
-                              onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground; e.style.color = themeColors.textPrimary; }}
-                              onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
-                              onClick={() => copyToClipboard(recentPass.password, 'Contraseña')}
-                            >
-                              <i className="pi pi-key" style={{ fontSize: '10px' }} />
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '1rem',
-                      color: themeColors.textSecondary,
-                      fontSize: '0.8rem',
-                      fontStyle: 'italic'
-                    }}>
-                      No hay passwords recientes
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Card de ConnectionHistory (Conexiones Favoritas) en la parte inferior */}
-            <div style={{
-              background: `linear-gradient(135deg,
-                rgba(16, 20, 28, 0.6) 0%,
-                rgba(16, 20, 28, 0.4) 100%)`,
-              backdropFilter: 'blur(8px) saturate(140%)',
-              WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-              border: `1px solid ${themeColors.cardBorder}`,
-              borderRadius: '12px',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-              padding: '0.5rem',
-              maxHeight: '440px',
-              minHeight: '440px',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              position: 'relative'
-            }}>
-              <ConnectionHistory 
-                onConnectToHistory={handleConnectToHistory}
-                layout="two-columns"
-                recentsLimit={10}
-                activeIds={new Set()}
-                templateColumns="3fr 2fr"
-                favoritesColumns={2}
-                recentsColumns={1}
-                onEdit={onEditConnection}
-                sshConnectionsCount={sshConnectionsCount}
-                foldersCount={foldersCount}
-                rdpConnectionsCount={rdpConnectionsCount}
-                themeColors={themeColors}
-              />
-              
-              {/* Overlay de transición para favoritos */}
-              {isTerminalTransitioning && (
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: 'rgba(0, 0, 0, 0.6)',
-                  backdropFilter: 'blur(4px)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '12px',
-                  zIndex: 10
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    color: 'white'
-                  }}>
-                    <div style={{
-                      width: '32px',
-                      height: '32px',
-                      border: '3px solid rgba(255,255,255,0.3)',
-                      borderTop: '3px solid #00BCD4',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite'
-                    }} />
-                    <div style={{
-                      fontSize: '0.9rem',
-                      fontWeight: '500',
-                      textAlign: 'center'
-                    }}>
-                      Actualizando terminal...
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
           </>

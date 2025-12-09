@@ -847,87 +847,71 @@ const NodeTermStatus = ({
 						<i className="pi pi-server" style={{ color: '#ff6b35', fontSize: '0.65rem' }} />
 						<span>Servicios</span>
 					</div>
-					{/* Lista de servicios - EN UNA LÍNEA */}
+					{/* Lista de servicios - INTEGRADOS EN UNA LÍNEA */}
 					<div style={{
 						display: 'flex',
 						flexDirection: 'row',
 						alignItems: 'center',
-						gap: '0.35rem',
-						flexWrap: 'wrap'
+						gap: '0.5rem',
+						flexWrap: 'wrap',
+						padding: '0.3rem 0.6rem',
+						background: 'rgba(255, 255, 255, 0.03)',
+						borderRadius: '6px',
+						border: '1px solid rgba(255, 255, 255, 0.08)'
 					}}>
 						{/* Nextcloud */}
 						{(() => {
 							const ncConfigured = !!syncState.configured;
 							const ncColor = !ncConfigured ? '#9ca3af' : (syncState.connectivity === 'ok' ? '#22c55e' : (syncState.connectivity === 'checking' ? '#60a5fa' : '#ef4444'));
-							const ncStatus = ncConfigured ? (syncState.connectivity === 'ok' ? 'conectado' : 'error') : 'no configurado';
+							const ncIcon = '☁';
 							
 							return (
-								<div style={{
-									display: 'flex',
-									alignItems: 'center',
-									gap: '0.25rem',
-									padding: '0.15rem 0.4rem',
-									borderRadius: '4px',
-									background: 'rgba(255, 255, 255, 0.02)',
-									border: `1px solid ${ncColor}25`,
-									whiteSpace: 'nowrap'
-								}}>
-									{/* Indicador de estado */}
+								<div 
+									onClick={onOpenSettings}
+									title={`Nextcloud: ${ncConfigured ? (syncState.connectivity === 'ok' ? 'Conectado' : 'Error') : 'No configurado'}`}
+									style={{
+										display: 'flex',
+										alignItems: 'center',
+										gap: '0.35rem',
+										padding: '0.25rem 0.5rem',
+										borderRadius: '12px',
+										background: `linear-gradient(135deg, ${ncColor}18 0%, ${ncColor}08 100%)`,
+										border: `1px solid ${ncColor}35`,
+										cursor: onOpenSettings ? 'pointer' : 'default',
+										transition: 'all 0.2s ease',
+										whiteSpace: 'nowrap'
+									}}
+									onMouseEnter={(e) => {
+										if (onOpenSettings) {
+											e.currentTarget.style.background = `linear-gradient(135deg, ${ncColor}28 0%, ${ncColor}18 100%)`;
+											e.currentTarget.style.transform = 'scale(1.05)';
+										}
+									}}
+									onMouseLeave={(e) => {
+										if (onOpenSettings) {
+											e.currentTarget.style.background = `linear-gradient(135deg, ${ncColor}18 0%, ${ncColor}08 100%)`;
+											e.currentTarget.style.transform = 'scale(1)';
+										}
+									}}
+								>
+									{/* Indicador de estado con animación */}
 									<div style={{
-										width: '5px',
-										height: '5px',
+										width: '6px',
+										height: '6px',
 										borderRadius: '50%',
 										background: ncColor,
-										boxShadow: `0 0 3px ${ncColor}60`,
-										flexShrink: 0
+										boxShadow: `0 0 6px ${ncColor}`,
+										flexShrink: 0,
+										animation: syncState.connectivity === 'ok' ? 'pulse 2s infinite' : 'none'
 									}} />
-									{/* Nombre del servicio */}
+									{/* Nombre del servicio con emoji */}
 									<span style={{
-										fontSize: '0.55rem',
-										fontWeight: '600',
+										fontSize: '0.6rem',
+										fontWeight: '700',
 										color: themeColors.textPrimary || '#fff'
 									}}>
-										Nextcloud
+										{ncIcon} NC
 									</span>
-									{/* Estado */}
-									<span style={{
-										fontSize: '0.5rem',
-										color: ncColor,
-										fontWeight: '500'
-									}}>
-										{ncStatus}
-									</span>
-									{/* Botón de configuración */}
-									{onOpenSettings && (
-										<button
-											title="Configurar Nextcloud"
-											onClick={onOpenSettings}
-											style={{
-												cursor: 'pointer',
-												display: 'flex',
-												alignItems: 'center',
-												justifyContent: 'center',
-												width: '14px',
-												height: '14px',
-												borderRadius: '3px',
-												background: 'rgba(79, 195, 247, 0.15)',
-												border: '1px solid rgba(79, 195, 247, 0.3)',
-												transition: 'all 0.2s ease',
-												padding: 0,
-												marginLeft: '0.15rem'
-											}}
-											onMouseEnter={(e) => {
-												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.25)';
-												e.currentTarget.style.transform = 'scale(1.1)';
-											}}
-											onMouseLeave={(e) => {
-												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.15)';
-												e.currentTarget.style.transform = 'scale(1)';
-											}}
-										>
-											<i className="pi pi-cog" style={{ color: '#4fc3f7', fontSize: '0.45rem' }} />
-										</button>
-									)}
 								</div>
 							);
 						})()}
@@ -935,75 +919,55 @@ const NodeTermStatus = ({
 						{/* Guacd */}
 						{(() => {
 							const gColor = guacdState.isRunning ? '#22c55e' : '#ef4444';
-							const gStatus = guacdState.isRunning ? 'activo' : 'inactivo';
+							const gIcon = '🖥';
 							
 							return (
-								<div style={{
-									display: 'flex',
-									alignItems: 'center',
-									gap: '0.25rem',
-									padding: '0.15rem 0.4rem',
-									borderRadius: '4px',
-									background: 'rgba(255, 255, 255, 0.02)',
-									border: `1px solid ${gColor}25`,
-									whiteSpace: 'nowrap'
-								}}>
-									{/* Indicador de estado */}
+								<div 
+									onClick={onOpenSettings}
+									title={`Guacd: ${guacdState.isRunning ? 'Activo' : 'Inactivo'}`}
+									style={{
+										display: 'flex',
+										alignItems: 'center',
+										gap: '0.35rem',
+										padding: '0.25rem 0.5rem',
+										borderRadius: '12px',
+										background: `linear-gradient(135deg, ${gColor}18 0%, ${gColor}08 100%)`,
+										border: `1px solid ${gColor}35`,
+										cursor: onOpenSettings ? 'pointer' : 'default',
+										transition: 'all 0.2s ease',
+										whiteSpace: 'nowrap'
+									}}
+									onMouseEnter={(e) => {
+										if (onOpenSettings) {
+											e.currentTarget.style.background = `linear-gradient(135deg, ${gColor}28 0%, ${gColor}18 100%)`;
+											e.currentTarget.style.transform = 'scale(1.05)';
+										}
+									}}
+									onMouseLeave={(e) => {
+										if (onOpenSettings) {
+											e.currentTarget.style.background = `linear-gradient(135deg, ${gColor}18 0%, ${gColor}08 100%)`;
+											e.currentTarget.style.transform = 'scale(1)';
+										}
+									}}
+								>
+									{/* Indicador de estado con animación */}
 									<div style={{
-										width: '5px',
-										height: '5px',
+										width: '6px',
+										height: '6px',
 										borderRadius: '50%',
 										background: gColor,
-										boxShadow: `0 0 3px ${gColor}60`,
-										flexShrink: 0
+										boxShadow: `0 0 6px ${gColor}`,
+										flexShrink: 0,
+										animation: guacdState.isRunning ? 'pulse 2s infinite' : 'none'
 									}} />
 									{/* Nombre del servicio */}
 									<span style={{
-										fontSize: '0.55rem',
-										fontWeight: '600',
+										fontSize: '0.6rem',
+										fontWeight: '700',
 										color: themeColors.textPrimary || '#fff'
 									}}>
-										Guacd
+										{gIcon} Guacd
 									</span>
-									{/* Estado */}
-									<span style={{
-										fontSize: '0.5rem',
-										color: gColor,
-										fontWeight: '500'
-									}}>
-										{gStatus}
-									</span>
-									{/* Botón de configuración */}
-									{onOpenSettings && (
-										<button
-											title="Configurar Guacd"
-											onClick={onOpenSettings}
-											style={{
-												cursor: 'pointer',
-												display: 'flex',
-												alignItems: 'center',
-												justifyContent: 'center',
-												width: '14px',
-												height: '14px',
-												borderRadius: '3px',
-												background: 'rgba(79, 195, 247, 0.15)',
-												border: '1px solid rgba(79, 195, 247, 0.3)',
-												transition: 'all 0.2s ease',
-												padding: 0,
-												marginLeft: '0.15rem'
-											}}
-											onMouseEnter={(e) => {
-												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.25)';
-												e.currentTarget.style.transform = 'scale(1.1)';
-											}}
-											onMouseLeave={(e) => {
-												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.15)';
-												e.currentTarget.style.transform = 'scale(1)';
-											}}
-										>
-											<i className="pi pi-cog" style={{ color: '#4fc3f7', fontSize: '0.45rem' }} />
-										</button>
-									)}
 								</div>
 							);
 						})()}
@@ -1013,75 +977,56 @@ const NodeTermStatus = ({
 							const configured = vaultState.configured;
 							const unlocked = vaultState.unlocked;
 							const vColor = !configured ? '#9ca3af' : (unlocked ? '#22c55e' : '#f59e0b');
-							const vStatus = !configured ? 'no configurado' : (unlocked ? 'desbloqueado' : 'bloqueado');
+							const vIcon = unlocked ? '🔓' : '🔒';
+							const vStatus = !configured ? 'Sin configurar' : (unlocked ? 'Desbloqueado' : 'Bloqueado');
 							
 							return (
-								<div style={{
-									display: 'flex',
-									alignItems: 'center',
-									gap: '0.25rem',
-									padding: '0.15rem 0.4rem',
-									borderRadius: '4px',
-									background: 'rgba(255, 255, 255, 0.02)',
-									border: `1px solid ${vColor}25`,
-									whiteSpace: 'nowrap'
-								}}>
-									{/* Indicador de estado */}
+								<div 
+									onClick={onOpenSettings}
+									title={`Vault: ${vStatus}`}
+									style={{
+										display: 'flex',
+										alignItems: 'center',
+										gap: '0.35rem',
+										padding: '0.25rem 0.5rem',
+										borderRadius: '12px',
+										background: `linear-gradient(135deg, ${vColor}18 0%, ${vColor}08 100%)`,
+										border: `1px solid ${vColor}35`,
+										cursor: onOpenSettings ? 'pointer' : 'default',
+										transition: 'all 0.2s ease',
+										whiteSpace: 'nowrap'
+									}}
+									onMouseEnter={(e) => {
+										if (onOpenSettings) {
+											e.currentTarget.style.background = `linear-gradient(135deg, ${vColor}28 0%, ${vColor}18 100%)`;
+											e.currentTarget.style.transform = 'scale(1.05)';
+										}
+									}}
+									onMouseLeave={(e) => {
+										if (onOpenSettings) {
+											e.currentTarget.style.background = `linear-gradient(135deg, ${vColor}18 0%, ${vColor}08 100%)`;
+											e.currentTarget.style.transform = 'scale(1)';
+										}
+									}}
+								>
+									{/* Indicador de estado con animación */}
 									<div style={{
-										width: '5px',
-										height: '5px',
+										width: '6px',
+										height: '6px',
 										borderRadius: '50%',
 										background: vColor,
-										boxShadow: `0 0 3px ${vColor}60`,
-										flexShrink: 0
+										boxShadow: `0 0 6px ${vColor}`,
+										flexShrink: 0,
+										animation: unlocked ? 'pulse 2s infinite' : 'none'
 									}} />
 									{/* Nombre del servicio */}
 									<span style={{
-										fontSize: '0.55rem',
-										fontWeight: '600',
+										fontSize: '0.6rem',
+										fontWeight: '700',
 										color: themeColors.textPrimary || '#fff'
 									}}>
-										Vault
+										{vIcon} Vault
 									</span>
-									{/* Estado */}
-									<span style={{
-										fontSize: '0.5rem',
-										color: vColor,
-										fontWeight: '500'
-									}}>
-										{vStatus}
-									</span>
-									{/* Botón de configuración */}
-									{onOpenSettings && (
-										<button
-											title="Configurar Vault"
-											onClick={onOpenSettings}
-											style={{
-												cursor: 'pointer',
-												display: 'flex',
-												alignItems: 'center',
-												justifyContent: 'center',
-												width: '14px',
-												height: '14px',
-												borderRadius: '3px',
-												background: 'rgba(79, 195, 247, 0.15)',
-												border: '1px solid rgba(79, 195, 247, 0.3)',
-												transition: 'all 0.2s ease',
-												padding: 0,
-												marginLeft: '0.15rem'
-											}}
-											onMouseEnter={(e) => {
-												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.25)';
-												e.currentTarget.style.transform = 'scale(1.1)';
-											}}
-											onMouseLeave={(e) => {
-												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.15)';
-												e.currentTarget.style.transform = 'scale(1)';
-											}}
-										>
-											<i className="pi pi-cog" style={{ color: '#4fc3f7', fontSize: '0.45rem' }} />
-										</button>
-									)}
 								</div>
 							);
 						})()}
@@ -1090,75 +1035,55 @@ const NodeTermStatus = ({
 						{(() => {
 							const isRunning = ollamaState.isRunning;
 							const oColor = isRunning ? '#22c55e' : '#ef4444';
-							const oStatus = isRunning ? 'activo' : 'inactivo';
+							const oIcon = '🤖';
 							
 							return (
-								<div style={{
-									display: 'flex',
-									alignItems: 'center',
-									gap: '0.25rem',
-									padding: '0.15rem 0.4rem',
-									borderRadius: '4px',
-									background: 'rgba(255, 255, 255, 0.02)',
-									border: `1px solid ${oColor}25`,
-									whiteSpace: 'nowrap'
-								}}>
-									{/* Indicador de estado */}
+								<div 
+									onClick={onOpenSettings}
+									title={`Ollama: ${isRunning ? 'Activo' : 'Inactivo'}`}
+									style={{
+										display: 'flex',
+										alignItems: 'center',
+										gap: '0.35rem',
+										padding: '0.25rem 0.5rem',
+										borderRadius: '12px',
+										background: `linear-gradient(135deg, ${oColor}18 0%, ${oColor}08 100%)`,
+										border: `1px solid ${oColor}35`,
+										cursor: onOpenSettings ? 'pointer' : 'default',
+										transition: 'all 0.2s ease',
+										whiteSpace: 'nowrap'
+									}}
+									onMouseEnter={(e) => {
+										if (onOpenSettings) {
+											e.currentTarget.style.background = `linear-gradient(135deg, ${oColor}28 0%, ${oColor}18 100%)`;
+											e.currentTarget.style.transform = 'scale(1.05)';
+										}
+									}}
+									onMouseLeave={(e) => {
+										if (onOpenSettings) {
+											e.currentTarget.style.background = `linear-gradient(135deg, ${oColor}18 0%, ${oColor}08 100%)`;
+											e.currentTarget.style.transform = 'scale(1)';
+										}
+									}}
+								>
+									{/* Indicador de estado con animación */}
 									<div style={{
-										width: '5px',
-										height: '5px',
+										width: '6px',
+										height: '6px',
 										borderRadius: '50%',
 										background: oColor,
-										boxShadow: `0 0 3px ${oColor}60`,
-										flexShrink: 0
+										boxShadow: `0 0 6px ${oColor}`,
+										flexShrink: 0,
+										animation: isRunning ? 'pulse 2s infinite' : 'none'
 									}} />
 									{/* Nombre del servicio */}
 									<span style={{
-										fontSize: '0.55rem',
-										fontWeight: '600',
+										fontSize: '0.6rem',
+										fontWeight: '700',
 										color: themeColors.textPrimary || '#fff'
 									}}>
-										Ollama
+										{oIcon} Ollama
 									</span>
-									{/* Estado */}
-									<span style={{
-										fontSize: '0.5rem',
-										color: oColor,
-										fontWeight: '500'
-									}}>
-										{oStatus}
-									</span>
-									{/* Botón de configuración */}
-									{onOpenSettings && (
-										<button
-											title="Configurar Ollama"
-											onClick={onOpenSettings}
-											style={{
-												cursor: 'pointer',
-												display: 'flex',
-												alignItems: 'center',
-												justifyContent: 'center',
-												width: '14px',
-												height: '14px',
-												borderRadius: '3px',
-												background: 'rgba(79, 195, 247, 0.15)',
-												border: '1px solid rgba(79, 195, 247, 0.3)',
-												transition: 'all 0.2s ease',
-												padding: 0,
-												marginLeft: '0.15rem'
-											}}
-											onMouseEnter={(e) => {
-												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.25)';
-												e.currentTarget.style.transform = 'scale(1.1)';
-											}}
-											onMouseLeave={(e) => {
-												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.15)';
-												e.currentTarget.style.transform = 'scale(1)';
-											}}
-										>
-											<i className="pi pi-cog" style={{ color: '#4fc3f7', fontSize: '0.45rem' }} />
-										</button>
-									)}
 								</div>
 							);
 						})()}
@@ -1195,9 +1120,9 @@ const NodeTermStatus = ({
 						const rdpColor = '#ff6b35';
 						const keysColor = '#FFC107';
 						
-						// Radio y centro del círculo
-						const radius = 18;
-						const centerX = 24;
+						// Radio y centro del círculo (gráfico más ancho pero menos alto)
+						const radius = 20;
+						const centerX = 40;
 						const centerY = 24;
 						const circumference = 2 * Math.PI * radius;
 						
@@ -1228,14 +1153,15 @@ const NodeTermStatus = ({
 							<div style={{
 								display: 'flex',
 								alignItems: 'center',
-								gap: '0.4rem',
-								padding: '0.25rem 0.4rem',
+								gap: '0.5rem',
+								padding: '0.25rem 0.5rem',
 								background: 'rgba(255, 255, 255, 0.05)',
-								borderRadius: '6px',
-								border: '1px solid rgba(255, 255, 255, 0.1)'
+								borderRadius: '8px',
+								border: '1px solid rgba(255, 255, 255, 0.1)',
+								height: 'fit-content'
 							}}>
-								{/* SVG Pie Chart */}
-								<svg width="48" height="48" style={{ flexShrink: 0 }}>
+								{/* SVG Donut Chart - Más ancho pero menos alto */}
+								<svg width="80" height="48" style={{ flexShrink: 0 }}>
 									{/* Segmento SSH */}
 									{sshPercent > 0 && (
 										<path
@@ -1273,21 +1199,22 @@ const NodeTermStatus = ({
 								<div style={{
 									display: 'flex',
 									flexDirection: 'column',
-									gap: '0.15rem',
+									gap: '0.25rem',
 									minWidth: 'fit-content'
 								}}>
 									{/* SSH */}
 									<div style={{
 										display: 'flex',
 										alignItems: 'center',
-										gap: '0.25rem',
-										fontSize: '0.55rem'
+										gap: '0.35rem',
+										fontSize: '0.6rem'
 									}}>
 										<div style={{
-											width: '7px',
-											height: '7px',
+											width: '8px',
+											height: '8px',
 											borderRadius: '50%',
 											background: sshColor,
+											boxShadow: `0 0 4px ${sshColor}60`,
 											flexShrink: 0
 										}} />
 										<span style={{
@@ -1302,14 +1229,15 @@ const NodeTermStatus = ({
 									<div style={{
 										display: 'flex',
 										alignItems: 'center',
-										gap: '0.25rem',
-										fontSize: '0.55rem'
+										gap: '0.35rem',
+										fontSize: '0.6rem'
 									}}>
 										<div style={{
-											width: '7px',
-											height: '7px',
+											width: '8px',
+											height: '8px',
 											borderRadius: '50%',
 											background: rdpColor,
+											boxShadow: `0 0 4px ${rdpColor}60`,
 											flexShrink: 0
 										}} />
 										<span style={{
@@ -1324,14 +1252,15 @@ const NodeTermStatus = ({
 									<div style={{
 										display: 'flex',
 										alignItems: 'center',
-										gap: '0.25rem',
-										fontSize: '0.55rem'
+										gap: '0.35rem',
+										fontSize: '0.6rem'
 									}}>
 										<div style={{
-											width: '7px',
-											height: '7px',
+											width: '8px',
+											height: '8px',
 											borderRadius: '50%',
 											background: keysColor,
+											boxShadow: `0 0 4px ${keysColor}60`,
 											flexShrink: 0
 										}} />
 										<span style={{
