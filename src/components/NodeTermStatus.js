@@ -1182,81 +1182,169 @@ const NodeTermStatus = ({
 					minWidth: 'fit-content',
 					marginLeft: 'auto'
 				}}>
-					{/* Título */}
-					<div style={{
-						display: 'flex',
-						alignItems: 'center',
-						justifyContent: 'center',
-						gap: '0.3rem',
-						fontSize: '0.6rem',
-						fontWeight: '700',
-						color: themeColors.textPrimary || '#fff',
-						textTransform: 'uppercase',
-						letterSpacing: '0.8px',
-						marginBottom: '0.3rem',
-						padding: '0.2rem 0.5rem',
-						background: 'rgba(255, 193, 7, 0.1)',
-						borderRadius: '6px',
-						border: '1px solid rgba(255, 193, 7, 0.2)'
-					}}>
-						<i className="pi pi-chart-pie" style={{ color: '#FFC107', fontSize: '0.65rem' }} />
-						<span>Estadísticas</span>
-					</div>
-					{/* KPI Compacto - "Quesito" */}
-					<div style={{
-						display: 'flex',
-						alignItems: 'center',
-						gap: '0.3rem',
-						padding: '0.4rem 0.6rem',
-						background: 'rgba(255, 255, 255, 0.05)',
-						borderRadius: '6px',
-						border: '1px solid rgba(255, 255, 255, 0.1)'
-					}}>
-					<i className="pi pi-chart-pie" style={{ color: '#4fc3f7', fontSize: '0.6rem' }} />
-					
-					{/* SSH */}
-					<span style={{
-						display: 'flex',
-						alignItems: 'center',
-						gap: '0.2rem',
-						fontSize: '0.65rem',
-						fontWeight: '700',
-						color: themeColors.textPrimary || '#fff'
-					}}>
-						<i className="pi pi-server" style={{ color: '#4fc3f7', fontSize: '0.5rem' }} />
-						{sshConnectionsCount}
-					</span>
-
-					<div style={{ width: '1px', height: '14px', background: 'rgba(255, 255, 255, 0.2)' }} />
-
-					{/* RDP */}
-					<span style={{
-						display: 'flex',
-						alignItems: 'center',
-						gap: '0.2rem',
-						fontSize: '0.65rem',
-						fontWeight: '700',
-						color: themeColors.textPrimary || '#fff'
-					}}>
-						<i className="pi pi-desktop" style={{ color: '#ff6b35', fontSize: '0.5rem' }} />
-						{rdpConnectionsCount}
-					</span>
-
-					<div style={{ width: '1px', height: '14px', background: 'rgba(255, 255, 255, 0.2)' }} />
-
-					{/* Keys */}
-					<span style={{
-						display: 'flex',
-						alignItems: 'center',
-						gap: '0.2rem',
-						fontSize: '0.65rem',
-						fontWeight: '700',
-						color: themeColors.textPrimary || '#fff'
-					}}>
-						<i className="pi pi-key" style={{ color: '#FFC107', fontSize: '0.5rem' }} />
-						{passwordsCount}
-					</span>
-					</div>
+					{/* Gráfico Circular (Pie Chart) */}
+					{(() => {
+						// Calcular total y porcentajes
+						const total = sshConnectionsCount + rdpConnectionsCount + passwordsCount;
+						const sshPercent = total > 0 ? (sshConnectionsCount / total) * 100 : 0;
+						const rdpPercent = total > 0 ? (rdpConnectionsCount / total) * 100 : 0;
+						const keysPercent = total > 0 ? (passwordsCount / total) * 100 : 0;
+						
+						// Colores
+						const sshColor = '#4fc3f7';
+						const rdpColor = '#ff6b35';
+						const keysColor = '#FFC107';
+						
+						// Radio y centro del círculo
+						const radius = 18;
+						const centerX = 24;
+						const centerY = 24;
+						const circumference = 2 * Math.PI * radius;
+						
+						// Función para calcular el path de un arco
+						const createArcPath = (startPercent, endPercent) => {
+							const startAngle = (startPercent / 100) * 2 * Math.PI - Math.PI / 2;
+							const endAngle = (endPercent / 100) * 2 * Math.PI - Math.PI / 2;
+							
+							const x1 = centerX + radius * Math.cos(startAngle);
+							const y1 = centerY + radius * Math.sin(startAngle);
+							const x2 = centerX + radius * Math.cos(endAngle);
+							const y2 = centerY + radius * Math.sin(endAngle);
+							
+							const largeArcFlag = endPercent - startPercent > 50 ? 1 : 0;
+							
+							return `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+						};
+						
+						// Calcular los rangos de cada segmento
+						const sshStart = 0;
+						const sshEnd = sshPercent;
+						const rdpStart = sshEnd;
+						const rdpEnd = sshEnd + rdpPercent;
+						const keysStart = rdpEnd;
+						const keysEnd = rdpEnd + keysPercent;
+						
+						return (
+							<div style={{
+								display: 'flex',
+								alignItems: 'center',
+								gap: '0.4rem',
+								padding: '0.25rem 0.4rem',
+								background: 'rgba(255, 255, 255, 0.05)',
+								borderRadius: '6px',
+								border: '1px solid rgba(255, 255, 255, 0.1)'
+							}}>
+								{/* SVG Pie Chart */}
+								<svg width="48" height="48" style={{ flexShrink: 0 }}>
+									{/* Segmento SSH */}
+									{sshPercent > 0 && (
+										<path
+											d={createArcPath(sshStart, sshEnd)}
+											fill={sshColor}
+											opacity="0.8"
+										/>
+									)}
+									{/* Segmento RDP */}
+									{rdpPercent > 0 && (
+										<path
+											d={createArcPath(rdpStart, rdpEnd)}
+											fill={rdpColor}
+											opacity="0.8"
+										/>
+									)}
+									{/* Segmento Keys */}
+									{keysPercent > 0 && (
+										<path
+											d={createArcPath(keysStart, keysEnd)}
+											fill={keysColor}
+											opacity="0.8"
+										/>
+									)}
+									{/* Círculo central (donut effect) */}
+									<circle
+										cx={centerX}
+										cy={centerY}
+										r={radius * 0.5}
+										fill="rgba(15, 23, 42, 0.8)"
+									/>
+								</svg>
+								
+								{/* Leyenda con valores */}
+								<div style={{
+									display: 'flex',
+									flexDirection: 'column',
+									gap: '0.15rem',
+									minWidth: 'fit-content'
+								}}>
+									{/* SSH */}
+									<div style={{
+										display: 'flex',
+										alignItems: 'center',
+										gap: '0.25rem',
+										fontSize: '0.55rem'
+									}}>
+										<div style={{
+											width: '7px',
+											height: '7px',
+											borderRadius: '50%',
+											background: sshColor,
+											flexShrink: 0
+										}} />
+										<span style={{
+											fontWeight: '700',
+											color: themeColors.textPrimary || '#fff'
+										}}>
+											SSH: {sshConnectionsCount}
+										</span>
+									</div>
+									
+									{/* RDP */}
+									<div style={{
+										display: 'flex',
+										alignItems: 'center',
+										gap: '0.25rem',
+										fontSize: '0.55rem'
+									}}>
+										<div style={{
+											width: '7px',
+											height: '7px',
+											borderRadius: '50%',
+											background: rdpColor,
+											flexShrink: 0
+										}} />
+										<span style={{
+											fontWeight: '700',
+											color: themeColors.textPrimary || '#fff'
+										}}>
+											RDP: {rdpConnectionsCount}
+										</span>
+									</div>
+									
+									{/* Keys */}
+									<div style={{
+										display: 'flex',
+										alignItems: 'center',
+										gap: '0.25rem',
+										fontSize: '0.55rem'
+									}}>
+										<div style={{
+											width: '7px',
+											height: '7px',
+											borderRadius: '50%',
+											background: keysColor,
+											flexShrink: 0
+										}} />
+										<span style={{
+											fontWeight: '700',
+											color: themeColors.textPrimary || '#fff'
+										}}>
+											Keys: {passwordsCount}
+										</span>
+									</div>
+								</div>
+							</div>
+						);
+					})()}
 				</div>
 			</div>
 		);
