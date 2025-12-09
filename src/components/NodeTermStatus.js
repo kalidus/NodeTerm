@@ -389,14 +389,23 @@ const NodeTermStatus = ({
 				}}>
 					{/* Título */}
 					<div style={{
-						fontSize: '0.55rem',
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						gap: '0.3rem',
+						fontSize: '0.6rem',
 						fontWeight: '700',
-						color: themeColors.textSecondary || '#9E9E9E',
+						color: themeColors.textPrimary || '#fff',
 						textTransform: 'uppercase',
-						letterSpacing: '0.5px',
-						marginBottom: '0.2rem'
+						letterSpacing: '0.8px',
+						marginBottom: '0.3rem',
+						padding: '0.2rem 0.5rem',
+						background: 'rgba(79, 195, 247, 0.1)',
+						borderRadius: '6px',
+						border: '1px solid rgba(79, 195, 247, 0.2)'
 					}}>
-						Acciones
+						<i className="pi pi-bolt" style={{ color: '#4fc3f7', fontSize: '0.65rem' }} />
+						<span>Acciones</span>
 					</div>
 					{/* Botones */}
 					<div style={{
@@ -405,6 +414,38 @@ const NodeTermStatus = ({
 						gap: '0.35rem',
 						flexWrap: 'wrap'
 					}}>
+					{/* Botón Nueva Conexión */}
+					<button
+						title="Nueva conexión SSH/RDP/VNC"
+						onClick={() => {
+							window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
+						}}
+							style={{
+								cursor: 'pointer',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								width: '24px',
+								height: '24px',
+								borderRadius: '5px',
+								background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(34, 197, 94, 0.15) 100%)',
+								border: '1px solid rgba(34, 197, 94, 0.35)',
+								boxShadow: '0 1px 4px rgba(34, 197, 94, 0.2)',
+								transition: 'all 0.2s ease',
+								padding: 0
+							}}
+							onMouseEnter={(e) => {
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.35) 0%, rgba(34, 197, 94, 0.25) 100%)';
+								e.currentTarget.style.transform = 'scale(1.1)';
+							}}
+							onMouseLeave={(e) => {
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(34, 197, 94, 0.15) 100%)';
+								e.currentTarget.style.transform = 'scale(1)';
+							}}
+						>
+							<i className="pi pi-plus-circle" style={{ color: '#22c55e', fontSize: '0.6rem' }} />
+						</button>
+
 					{/* Botón Terminal */}
 					{onToggleTerminalVisibility && (
 						<button
@@ -434,45 +475,6 @@ const NodeTermStatus = ({
 							}}
 						>
 							<i className="pi pi-desktop" style={{ color: '#00BCD4', fontSize: '0.6rem' }} />
-						</button>
-					)}
-
-					{/* Botón Chat IA */}
-					{onToggleAIChat && (
-						<button
-							title={showAIChat ? 'Ocultar chat de IA' : 'Mostrar chat de IA'}
-							onClick={onToggleAIChat}
-							style={{
-								cursor: 'pointer',
-								display: 'flex',
-								alignItems: 'center',
-								justifyContent: 'center',
-								width: '24px',
-								height: '24px',
-								borderRadius: '5px',
-								background: showAIChat
-									? 'linear-gradient(135deg, rgba(138, 43, 226, 0.35) 0%, rgba(138, 43, 226, 0.25) 100%)'
-									: 'linear-gradient(135deg, rgba(138, 43, 226, 0.25) 0%, rgba(138, 43, 226, 0.15) 100%)',
-								border: '1px solid rgba(138, 43, 226, 0.35)',
-								boxShadow: '0 1px 4px rgba(138, 43, 226, 0.2)',
-								transition: 'all 0.2s ease',
-								padding: 0
-							}}
-							onMouseEnter={(e) => {
-								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(138, 43, 226, 0.35) 0%, rgba(138, 43, 226, 0.25) 100%)';
-								e.currentTarget.style.transform = 'scale(1.1)';
-							}}
-							onMouseLeave={(e) => {
-								e.currentTarget.style.background = showAIChat
-									? 'linear-gradient(135deg, rgba(138, 43, 226, 0.35) 0%, rgba(138, 43, 226, 0.25) 100%)'
-									: 'linear-gradient(135deg, rgba(138, 43, 226, 0.25) 0%, rgba(138, 43, 226, 0.15) 100%)';
-								e.currentTarget.style.transform = 'scale(1)';
-							}}
-						>
-							<i 
-								className={showAIChat ? 'pi pi-times' : 'pi pi-comments'} 
-								style={{ color: '#8A2BE2', fontSize: '0.6rem' }} 
-							/>
 						</button>
 					)}
 
@@ -615,6 +617,62 @@ const NodeTermStatus = ({
 							/>
 						</button>
 					)}
+
+					{/* Botón Grabaciones y Auditoría */}
+					<button
+						title="Ver grabaciones y auditoría"
+						onClick={async () => {
+							try {
+								if (window?.electron?.ipcRenderer) {
+									const result = await window.electron.ipcRenderer.invoke('recording:list', {});
+									if (result && result.success && Array.isArray(result.recordings) && result.recordings.length > 0) {
+										const auditTabId = `audit_global_${Date.now()}`;
+										window.dispatchEvent(new CustomEvent('create-audit-tab', {
+											detail: {
+												tabId: auditTabId,
+												title: 'Auditoría Global',
+												recordings: result.recordings
+											}
+										}));
+									} else {
+										// Si no hay grabaciones, mostrar mensaje
+										if (window.showToast) {
+											window.showToast('info', 'Sin grabaciones', 'No hay grabaciones disponibles para mostrar');
+										}
+									}
+								}
+							} catch (e) {
+								console.warn('[NodeTermStatus] Error abriendo auditoría global:', e?.message || e);
+								if (window.showToast) {
+									window.showToast('error', 'Error', 'Error al cargar las grabaciones');
+								}
+							}
+						}}
+						style={{
+							cursor: 'pointer',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							width: '24px',
+							height: '24px',
+							borderRadius: '5px',
+							background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)',
+							border: '1px solid rgba(168, 85, 247, 0.35)',
+							boxShadow: '0 1px 4px rgba(168, 85, 247, 0.2)',
+							transition: 'all 0.2s ease',
+							padding: 0
+						}}
+						onMouseEnter={(e) => {
+							e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.35) 0%, rgba(168, 85, 247, 0.25) 100%)';
+							e.currentTarget.style.transform = 'scale(1.1)';
+						}}
+						onMouseLeave={(e) => {
+							e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)';
+							e.currentTarget.style.transform = 'scale(1)';
+						}}
+					>
+						<i className="pi pi-video" style={{ color: '#a855f7', fontSize: '0.6rem' }} />
+					</button>
 					</div>
 				</div>
 
@@ -637,14 +695,23 @@ const NodeTermStatus = ({
 					}}>
 						{/* Título */}
 						<div style={{
-							fontSize: '0.55rem',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							gap: '0.3rem',
+							fontSize: '0.6rem',
 							fontWeight: '700',
-							color: themeColors.textSecondary || '#9E9E9E',
+							color: themeColors.textPrimary || '#fff',
 							textTransform: 'uppercase',
-							letterSpacing: '0.5px',
-							marginBottom: '0.2rem'
+							letterSpacing: '0.8px',
+							marginBottom: '0.3rem',
+							padding: '0.2rem 0.5rem',
+							background: 'rgba(34, 197, 94, 0.1)',
+							borderRadius: '6px',
+							border: '1px solid rgba(34, 197, 94, 0.2)'
 						}}>
-							Terminales
+							<i className="pi pi-terminal" style={{ color: '#22c55e', fontSize: '0.65rem' }} />
+							<span>Terminales</span>
 						</div>
 						{/* Botones */}
 						<div style={{
@@ -653,7 +720,7 @@ const NodeTermStatus = ({
 							gap: '0.3rem',
 							flexWrap: 'wrap'
 						}}>
-						{availableTerminals.slice(0, 4).map((terminal, index) => (
+						{availableTerminals.map((terminal, index) => (
 							<button
 								key={index}
 								title={terminal.label}
@@ -762,21 +829,30 @@ const NodeTermStatus = ({
 				}}>
 					{/* Título */}
 					<div style={{
-						fontSize: '0.55rem',
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						gap: '0.3rem',
+						fontSize: '0.6rem',
 						fontWeight: '700',
-						color: themeColors.textSecondary || '#9E9E9E',
+						color: themeColors.textPrimary || '#fff',
 						textTransform: 'uppercase',
-						letterSpacing: '0.5px',
-						marginBottom: '0.2rem'
+						letterSpacing: '0.8px',
+						marginBottom: '0.3rem',
+						padding: '0.2rem 0.5rem',
+						background: 'rgba(255, 107, 53, 0.1)',
+						borderRadius: '6px',
+						border: '1px solid rgba(255, 107, 53, 0.2)'
 					}}>
-						Servicios
+						<i className="pi pi-server" style={{ color: '#ff6b35', fontSize: '0.65rem' }} />
+						<span>Servicios</span>
 					</div>
 					{/* Lista de servicios - EN UNA LÍNEA */}
 					<div style={{
 						display: 'flex',
 						flexDirection: 'row',
 						alignItems: 'center',
-						gap: '0.5rem',
+						gap: '0.35rem',
 						flexWrap: 'wrap'
 					}}>
 						{/* Nextcloud */}
@@ -789,25 +865,25 @@ const NodeTermStatus = ({
 								<div style={{
 									display: 'flex',
 									alignItems: 'center',
-									gap: '0.3rem',
-									padding: '0.2rem 0.5rem',
-									borderRadius: '5px',
+									gap: '0.25rem',
+									padding: '0.15rem 0.4rem',
+									borderRadius: '4px',
 									background: 'rgba(255, 255, 255, 0.02)',
 									border: `1px solid ${ncColor}25`,
 									whiteSpace: 'nowrap'
 								}}>
 									{/* Indicador de estado */}
 									<div style={{
-										width: '6px',
-										height: '6px',
+										width: '5px',
+										height: '5px',
 										borderRadius: '50%',
 										background: ncColor,
-										boxShadow: `0 0 4px ${ncColor}60`,
+										boxShadow: `0 0 3px ${ncColor}60`,
 										flexShrink: 0
 									}} />
 									{/* Nombre del servicio */}
 									<span style={{
-										fontSize: '0.6rem',
+										fontSize: '0.55rem',
 										fontWeight: '600',
 										color: themeColors.textPrimary || '#fff'
 									}}>
@@ -815,7 +891,7 @@ const NodeTermStatus = ({
 									</span>
 									{/* Estado */}
 									<span style={{
-										fontSize: '0.55rem',
+										fontSize: '0.5rem',
 										color: ncColor,
 										fontWeight: '500'
 									}}>
@@ -831,14 +907,14 @@ const NodeTermStatus = ({
 												display: 'flex',
 												alignItems: 'center',
 												justifyContent: 'center',
-												width: '16px',
-												height: '16px',
+												width: '14px',
+												height: '14px',
 												borderRadius: '3px',
 												background: 'rgba(79, 195, 247, 0.15)',
 												border: '1px solid rgba(79, 195, 247, 0.3)',
 												transition: 'all 0.2s ease',
 												padding: 0,
-												marginLeft: '0.2rem'
+												marginLeft: '0.15rem'
 											}}
 											onMouseEnter={(e) => {
 												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.25)';
@@ -849,7 +925,7 @@ const NodeTermStatus = ({
 												e.currentTarget.style.transform = 'scale(1)';
 											}}
 										>
-											<i className="pi pi-cog" style={{ color: '#4fc3f7', fontSize: '0.5rem' }} />
+											<i className="pi pi-cog" style={{ color: '#4fc3f7', fontSize: '0.45rem' }} />
 										</button>
 									)}
 								</div>
@@ -865,25 +941,25 @@ const NodeTermStatus = ({
 								<div style={{
 									display: 'flex',
 									alignItems: 'center',
-									gap: '0.3rem',
-									padding: '0.2rem 0.5rem',
-									borderRadius: '5px',
+									gap: '0.25rem',
+									padding: '0.15rem 0.4rem',
+									borderRadius: '4px',
 									background: 'rgba(255, 255, 255, 0.02)',
 									border: `1px solid ${gColor}25`,
 									whiteSpace: 'nowrap'
 								}}>
 									{/* Indicador de estado */}
 									<div style={{
-										width: '6px',
-										height: '6px',
+										width: '5px',
+										height: '5px',
 										borderRadius: '50%',
 										background: gColor,
-										boxShadow: `0 0 4px ${gColor}60`,
+										boxShadow: `0 0 3px ${gColor}60`,
 										flexShrink: 0
 									}} />
 									{/* Nombre del servicio */}
 									<span style={{
-										fontSize: '0.6rem',
+										fontSize: '0.55rem',
 										fontWeight: '600',
 										color: themeColors.textPrimary || '#fff'
 									}}>
@@ -891,7 +967,7 @@ const NodeTermStatus = ({
 									</span>
 									{/* Estado */}
 									<span style={{
-										fontSize: '0.55rem',
+										fontSize: '0.5rem',
 										color: gColor,
 										fontWeight: '500'
 									}}>
@@ -907,14 +983,14 @@ const NodeTermStatus = ({
 												display: 'flex',
 												alignItems: 'center',
 												justifyContent: 'center',
-												width: '16px',
-												height: '16px',
+												width: '14px',
+												height: '14px',
 												borderRadius: '3px',
 												background: 'rgba(79, 195, 247, 0.15)',
 												border: '1px solid rgba(79, 195, 247, 0.3)',
 												transition: 'all 0.2s ease',
 												padding: 0,
-												marginLeft: '0.2rem'
+												marginLeft: '0.15rem'
 											}}
 											onMouseEnter={(e) => {
 												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.25)';
@@ -925,7 +1001,7 @@ const NodeTermStatus = ({
 												e.currentTarget.style.transform = 'scale(1)';
 											}}
 										>
-											<i className="pi pi-cog" style={{ color: '#4fc3f7', fontSize: '0.5rem' }} />
+											<i className="pi pi-cog" style={{ color: '#4fc3f7', fontSize: '0.45rem' }} />
 										</button>
 									)}
 								</div>
@@ -943,25 +1019,25 @@ const NodeTermStatus = ({
 								<div style={{
 									display: 'flex',
 									alignItems: 'center',
-									gap: '0.3rem',
-									padding: '0.2rem 0.5rem',
-									borderRadius: '5px',
+									gap: '0.25rem',
+									padding: '0.15rem 0.4rem',
+									borderRadius: '4px',
 									background: 'rgba(255, 255, 255, 0.02)',
 									border: `1px solid ${vColor}25`,
 									whiteSpace: 'nowrap'
 								}}>
 									{/* Indicador de estado */}
 									<div style={{
-										width: '6px',
-										height: '6px',
+										width: '5px',
+										height: '5px',
 										borderRadius: '50%',
 										background: vColor,
-										boxShadow: `0 0 4px ${vColor}60`,
+										boxShadow: `0 0 3px ${vColor}60`,
 										flexShrink: 0
 									}} />
 									{/* Nombre del servicio */}
 									<span style={{
-										fontSize: '0.6rem',
+										fontSize: '0.55rem',
 										fontWeight: '600',
 										color: themeColors.textPrimary || '#fff'
 									}}>
@@ -969,7 +1045,7 @@ const NodeTermStatus = ({
 									</span>
 									{/* Estado */}
 									<span style={{
-										fontSize: '0.55rem',
+										fontSize: '0.5rem',
 										color: vColor,
 										fontWeight: '500'
 									}}>
@@ -985,14 +1061,14 @@ const NodeTermStatus = ({
 												display: 'flex',
 												alignItems: 'center',
 												justifyContent: 'center',
-												width: '16px',
-												height: '16px',
+												width: '14px',
+												height: '14px',
 												borderRadius: '3px',
 												background: 'rgba(79, 195, 247, 0.15)',
 												border: '1px solid rgba(79, 195, 247, 0.3)',
 												transition: 'all 0.2s ease',
 												padding: 0,
-												marginLeft: '0.2rem'
+												marginLeft: '0.15rem'
 											}}
 											onMouseEnter={(e) => {
 												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.25)';
@@ -1003,7 +1079,7 @@ const NodeTermStatus = ({
 												e.currentTarget.style.transform = 'scale(1)';
 											}}
 										>
-											<i className="pi pi-cog" style={{ color: '#4fc3f7', fontSize: '0.5rem' }} />
+											<i className="pi pi-cog" style={{ color: '#4fc3f7', fontSize: '0.45rem' }} />
 										</button>
 									)}
 								</div>
@@ -1020,25 +1096,25 @@ const NodeTermStatus = ({
 								<div style={{
 									display: 'flex',
 									alignItems: 'center',
-									gap: '0.3rem',
-									padding: '0.2rem 0.5rem',
-									borderRadius: '5px',
+									gap: '0.25rem',
+									padding: '0.15rem 0.4rem',
+									borderRadius: '4px',
 									background: 'rgba(255, 255, 255, 0.02)',
 									border: `1px solid ${oColor}25`,
 									whiteSpace: 'nowrap'
 								}}>
 									{/* Indicador de estado */}
 									<div style={{
-										width: '6px',
-										height: '6px',
+										width: '5px',
+										height: '5px',
 										borderRadius: '50%',
 										background: oColor,
-										boxShadow: `0 0 4px ${oColor}60`,
+										boxShadow: `0 0 3px ${oColor}60`,
 										flexShrink: 0
 									}} />
 									{/* Nombre del servicio */}
 									<span style={{
-										fontSize: '0.6rem',
+										fontSize: '0.55rem',
 										fontWeight: '600',
 										color: themeColors.textPrimary || '#fff'
 									}}>
@@ -1046,7 +1122,7 @@ const NodeTermStatus = ({
 									</span>
 									{/* Estado */}
 									<span style={{
-										fontSize: '0.55rem',
+										fontSize: '0.5rem',
 										color: oColor,
 										fontWeight: '500'
 									}}>
@@ -1062,14 +1138,14 @@ const NodeTermStatus = ({
 												display: 'flex',
 												alignItems: 'center',
 												justifyContent: 'center',
-												width: '16px',
-												height: '16px',
+												width: '14px',
+												height: '14px',
 												borderRadius: '3px',
 												background: 'rgba(79, 195, 247, 0.15)',
 												border: '1px solid rgba(79, 195, 247, 0.3)',
 												transition: 'all 0.2s ease',
 												padding: 0,
-												marginLeft: '0.2rem'
+												marginLeft: '0.15rem'
 											}}
 											onMouseEnter={(e) => {
 												e.currentTarget.style.background = 'rgba(79, 195, 247, 0.25)';
@@ -1080,7 +1156,7 @@ const NodeTermStatus = ({
 												e.currentTarget.style.transform = 'scale(1)';
 											}}
 										>
-											<i className="pi pi-cog" style={{ color: '#4fc3f7', fontSize: '0.5rem' }} />
+											<i className="pi pi-cog" style={{ color: '#4fc3f7', fontSize: '0.45rem' }} />
 										</button>
 									)}
 								</div>
@@ -1108,14 +1184,23 @@ const NodeTermStatus = ({
 				}}>
 					{/* Título */}
 					<div style={{
-						fontSize: '0.55rem',
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						gap: '0.3rem',
+						fontSize: '0.6rem',
 						fontWeight: '700',
-						color: themeColors.textSecondary || '#9E9E9E',
+						color: themeColors.textPrimary || '#fff',
 						textTransform: 'uppercase',
-						letterSpacing: '0.5px',
-						marginBottom: '0.2rem'
+						letterSpacing: '0.8px',
+						marginBottom: '0.3rem',
+						padding: '0.2rem 0.5rem',
+						background: 'rgba(255, 193, 7, 0.1)',
+						borderRadius: '6px',
+						border: '1px solid rgba(255, 193, 7, 0.2)'
 					}}>
-						Estadísticas
+						<i className="pi pi-chart-pie" style={{ color: '#FFC107', fontSize: '0.65rem' }} />
+						<span>Estadísticas</span>
 					</div>
 					{/* KPI Compacto - "Quesito" */}
 					<div style={{
