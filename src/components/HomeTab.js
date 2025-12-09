@@ -578,6 +578,15 @@ const HomeTab = ({
                 themeColors={themeColors}
                 horizontal={true}
                 compact={true}
+                onCreateSSHConnection={onCreateSSHConnection}
+                onCreateFolder={onCreateFolder}
+                onOpenFileExplorer={onOpenFileExplorer}
+                onOpenSettings={onOpenSettings}
+                onToggleTerminalVisibility={handleToggleTerminalVisibility}
+                onToggleAIChat={handleToggleAIChat}
+                onToggleStatusBar={handleToggleStatusBar}
+                showAIChat={showAIChat}
+                statusBarVisible={statusBarVisible}
               />
               
               {/* Overlay de transición para Estado de NodeTerm */}
