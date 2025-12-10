@@ -1062,6 +1062,7 @@ const App = () => {
     sshPort, setSSHPort,
     sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
+    sshDescription, setSSHDescription,
     // Estados de formularios Edit SSH
     editSSHNode, setEditSSHNode,
     editSSHName, setEditSSHName,
@@ -1071,6 +1072,7 @@ const App = () => {
     editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
+    editSSHDescription, setEditSSHDescription,
     // Estados de formularios RDP
     rdpName, setRdpName,
     rdpServer, setRdpServer,
@@ -1218,6 +1220,7 @@ const App = () => {
     sshPassword, setSSHPassword, sshRemoteFolder, setSSHRemoteFolder, 
     sshPort, setSSHPort, sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
+    sshDescription,
     closeSSHDialogWithReset,
     // Estados SSH para edición
     editSSHNode, setEditSSHNode,
@@ -1228,6 +1231,7 @@ const App = () => {
     editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
+    editSSHDescription, setEditSSHDescription,
     closeEditSSHDialogWithReset,
     // Estados RDP
     rdpName, setRdpName,
@@ -2094,6 +2098,7 @@ const App = () => {
     sshRemoteFolder, setSSHRemoteFolder,
     sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
+    sshDescription,
     
     // Estados de formularios Edit SSH
     editSSHName, setEditSSHName,
@@ -2103,6 +2108,7 @@ const App = () => {
     editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
+    editSSHDescription, setEditSSHDescription,
     
     // Estados para modo edición
     editSSHNode, setEditSSHNode,
@@ -2134,9 +2140,11 @@ const App = () => {
     sshName, setSSHName, sshHost, setSSHHost, sshUser, setSSHUser, sshPassword, setSSHPassword,
     sshPort, setSSHPort, sshRemoteFolder, setSSHRemoteFolder, sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
+    sshDescription,
     editSSHName, setEditSSHName, editSSHHost, setEditSSHHost, editSSHUser, setEditSSHUser,
     editSSHPassword, setEditSSHPassword, editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort, editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
+    editSSHDescription, setEditSSHDescription,
     editSSHNode, setEditSSHNode,
     rdpNodeData, setRdpNodeData, editingRdpNode, setEditingRdpNode,
     
@@ -2432,6 +2440,8 @@ const App = () => {
         setSSHTargetFolder={setSSHTargetFolder}
         sshAutoCopyPassword={sshAutoCopyPassword}
         setSSHAutoCopyPassword={setSSHAutoCopyPassword}
+        sshDescription={sshDescription}
+        setSSHDescription={setSSHDescription}
         
         // Estados de formularios Edit SSH
         editSSHName={editSSHName}
@@ -2448,6 +2458,8 @@ const App = () => {
         setEditSSHPort={setEditSSHPort}
         editSSHAutoCopyPassword={editSSHAutoCopyPassword}
         setEditSSHAutoCopyPassword={setEditSSHAutoCopyPassword}
+        editSSHDescription={editSSHDescription}
+        setEditSSHDescription={setEditSSHDescription}
         
         // Estados para modo edición
         editSSHNode={editSSHNode}

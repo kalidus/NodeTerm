@@ -569,6 +569,7 @@ export function EditSSHConnectionDialog({
   sshRemoteFolder, setSSHRemoteFolder,
   sshTargetFolder, setSSHTargetFolder,
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
+  sshDescription = '', setSSHDescription = () => {},
   foldersOptions = [],
   onSSHConfirm,
   sshLoading = false
@@ -588,8 +589,11 @@ export function EditSSHConnectionDialog({
       if (setSSHAutoCopyPassword && typeof setSSHAutoCopyPassword === 'function') {
         setSSHAutoCopyPassword(editNodeData.data?.autoCopyPassword || false);
       }
+      if (setSSHDescription && typeof setSSHDescription === 'function') {
+        setSSHDescription(editNodeData.data?.description || '');
+      }
     }
-  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword]);
+  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHDescription]);
 
   const headerTemplate = (
     <div className="protocol-dialog-header-custom">
@@ -630,6 +634,8 @@ export function EditSSHConnectionDialog({
           setSSHTargetFolder={setSSHTargetFolder}
           sshAutoCopyPassword={sshAutoCopyPassword}
           setSSHAutoCopyPassword={setSSHAutoCopyPassword}
+          sshDescription={sshDescription}
+          setSSHDescription={setSSHDescription}
           foldersOptions={foldersOptions}
           onSSHConfirm={onSSHConfirm}
           onHide={onHide}
@@ -1478,6 +1484,7 @@ export function EnhancedSSHForm({
   sshRemoteFolder, setSSHRemoteFolder,
   sshTargetFolder, setSSHTargetFolder,
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
+  sshDescription = '', setSSHDescription = () => {},
   foldersOptions = [],
   onSSHConfirm,
   onHide,
@@ -1551,13 +1558,14 @@ export function EnhancedSSHForm({
       targetFolder: sshTargetFolder || '',
       autoCopyPassword: autoCopyPassword,
       authMethod: authMethod,
-      privateKey: authMethod === 'key' ? sshPrivateKey : ''
+      privateKey: authMethod === 'key' ? sshPrivateKey : '',
+      description: sshDescription || ''
     };
     
     if (onSSHConfirm && typeof onSSHConfirm === 'function') {
       onSSHConfirm(connectionData);
     }
-  }, [sshName, sshHost, sshUser, sshPassword, sshPort, sshRemoteFolder, sshTargetFolder, autoCopyPassword, authMethod, sshPrivateKey, validateForm, onSSHConfirm]);
+  }, [sshName, sshHost, sshUser, sshPassword, sshPort, sshRemoteFolder, sshTargetFolder, autoCopyPassword, authMethod, sshPrivateKey, sshDescription, validateForm, onSSHConfirm]);
 
   // Handler para subir archivo de clave privada
   const handleFileUpload = (event) => {
@@ -1630,6 +1638,31 @@ export function EnhancedSSHForm({
                   </div>
                 </div>
                 {validationErrors.name && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem', marginLeft: '2.75rem' }}>{validationErrors.name}</small>}
+              </div>
+
+              <div className="general-setting-card">
+                <div className="general-setting-content">
+                  <div className="general-setting-icon lock">
+                    <i className="pi pi-file-edit"></i>
+                  </div>
+                  <div className="general-setting-info">
+                    <label htmlFor="sshDescription" className="general-setting-label">
+                      Description <span style={{ opacity: 0.6, fontSize: '0.9rem' }}>({tCommon('labels.optional')})</span>
+                    </label>
+                    <p className="general-setting-description">
+                      Descripción adicional de la conexión
+                    </p>
+                  </div>
+                  <div className="general-setting-control">
+                    <InputText 
+                      id="sshDescription"
+                      value={sshDescription} 
+                      onChange={(e) => setSSHDescription(e.target.value)}
+                      placeholder="My server"
+                      style={{ width: '100%', fontSize: '0.875rem' }}
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="general-setting-card">
@@ -1958,6 +1991,7 @@ export function NewSSHConnectionDialog({
   sshRemoteFolder, setSSHRemoteFolder,
   sshTargetFolder, setSSHTargetFolder,
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
+  sshDescription = '', setSSHDescription = () => {},
   foldersOptions = [],
   onSSHConfirm,
   sshLoading = false
@@ -2004,6 +2038,8 @@ export function NewSSHConnectionDialog({
           setSSHTargetFolder={setSSHTargetFolder}
           sshAutoCopyPassword={sshAutoCopyPassword}
           setSSHAutoCopyPassword={setSSHAutoCopyPassword}
+          sshDescription={sshDescription}
+          setSSHDescription={setSSHDescription}
           foldersOptions={foldersOptions}
           onSSHConfirm={onSSHConfirm}
           onHide={onHide}
