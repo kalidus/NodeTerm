@@ -216,6 +216,50 @@ const Sidebar = React.memo(({
     }));
   }, [nodes]);
 
+  // Sincronizar selectedNodeForDetails cuando cambia el nodo en el árbol
+  useEffect(() => {
+    // Helper local para encontrar nodo por key
+    const findNodeInTree = (nodeList, targetKey) => {
+      if (targetKey === null || targetKey === undefined) return null;
+      for (let node of nodeList) {
+        if (node.key === targetKey) return node;
+        if (node.children && node.children.length > 0) {
+          const found = findNodeInTree(node.children, targetKey);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const currentKey = typeof selectedNodeKey === 'object' && selectedNodeKey !== null
+      ? Object.keys(selectedNodeKey)[0]
+      : selectedNodeKey;
+    
+    // Si hay una key seleccionada, buscar el nodo actualizado en el árbol
+    if (currentKey) {
+      const updatedNode = findNodeInTree(nodes, currentKey);
+      if (updatedNode) {
+        // Solo actualizar si hay cambios reales comparando con el nodo actual
+        setSelectedNodeForDetails(prevNode => {
+          if (!prevNode || prevNode.key !== currentKey) {
+            // Si no hay nodo previo o la key cambió, actualizar directamente
+            return updatedNode;
+          }
+          
+          // Comparar si realmente hay cambios significativos
+          const hasChanges = 
+            updatedNode.label !== prevNode.label ||
+            JSON.stringify(updatedNode.data) !== JSON.stringify(prevNode.data);
+          
+          return hasChanges ? updatedNode : prevNode;
+        });
+      } else if (selectedNodeForDetails && selectedNodeForDetails.key === currentKey) {
+        // Si el nodo ya no existe en el árbol, limpiar la selección
+        setSelectedNodeForDetails(null);
+      }
+    }
+  }, [nodes, selectedNodeKey]); // Solo depender de nodes y selectedNodeKey, no de selectedNodeForDetails
+
   // Escuchar evento para cambiar a vista de conexiones
   useEffect(() => {
     const handleSwitchToConnections = () => {
