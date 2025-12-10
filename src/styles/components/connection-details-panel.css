@@ -3,18 +3,43 @@
   background-color: var(--ui-sidebar-bg) !important;
   border-top: 1px solid var(--ui-sidebar-border) !important;
   width: 100%;
-  max-height: 300px;
+  max-height: 500px;
   min-height: 24px;
   display: flex;
   flex-direction: column;
-  transition: max-height 0.3s ease;
+  transition: max-height 0.3s ease, height 0.3s ease;
   overflow: hidden;
   position: relative;
   z-index: 10;
+  resize: none;
 }
 
 .connection-details-panel.collapsed {
   max-height: 24px;
+  height: 24px !important;
+}
+
+.connection-details-panel.resizing {
+  transition: none !important;
+}
+
+/* Resizer handle en la parte superior */
+.panel-resizer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: row-resize;
+  z-index: 20;
+  background: transparent;
+  border-top: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.panel-resizer:hover {
+  border-top-color: var(--ui-primary-color, #64b5f6);
+  background: rgba(100, 181, 246, 0.1);
 }
 
 .details-header {
@@ -49,6 +74,7 @@
   padding: 8px 12px;
   flex: 1;
   min-height: 0;
+  max-height: calc(100% - 24px); /* Altura total menos el header */
   background-color: var(--ui-sidebar-bg) !important;
 }
 
