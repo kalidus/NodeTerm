@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from 'primereact/button';
 import { Tree } from 'primereact/tree';
 import { Divider } from 'primereact/divider';
@@ -141,6 +141,41 @@ const Sidebar = React.memo(({
   
   // Estado para el nodo seleccionado actualmente (para el panel de detalles)
   const [selectedNodeForDetails, setSelectedNodeForDetails] = useState(null);
+
+  // Función para actualizar un nodo en el árbol
+  const updateNodeInTree = useCallback((updatedNode) => {
+    const findAndUpdateNode = (nodeList, targetKey) => {
+      return nodeList.map(node => {
+        if (node.key === targetKey) {
+          return updatedNode;
+        }
+        if (node.children) {
+          return {
+            ...node,
+            children: findAndUpdateNode(node.children, targetKey)
+          };
+        }
+        return node;
+      });
+    };
+
+    if (updatedNode && updatedNode.key) {
+      const updatedNodes = findAndUpdateNode(nodes, updatedNode.key);
+      setNodes(updatedNodes);
+      
+      // Actualizar también el nodo seleccionado
+      setSelectedNodeForDetails(updatedNode);
+      
+      if (showToast) {
+        showToast({
+          severity: 'success',
+          summary: 'Actualizado',
+          detail: 'Cambios guardados correctamente',
+          life: 2000
+        });
+      }
+    }
+  }, [nodes, setNodes, showToast]);
   const [filesystemStatus, setFilesystemStatus] = useState({
     active: false,
     allowedPaths: [],
@@ -2587,6 +2622,7 @@ const Sidebar = React.memo(({
                 selectedNode={selectedNodeForDetails}
                 uiTheme={uiTheme}
                 sessionActionIconTheme={sessionActionIconTheme}
+                onNodeUpdate={updateNodeInTree}
               />
               
               <SidebarFooter 

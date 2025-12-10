@@ -111,8 +111,18 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
-  padding-bottom: 4px;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--ui-sidebar-border) !important;
+  display: flex;
+  align-items: center;
+  background: rgba(100, 181, 246, 0.08);
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+.section-title i {
+  color: var(--ui-primary-color, #64b5f6);
+  font-size: 12px;
 }
 
 .detail-row {
@@ -150,6 +160,38 @@
   border-radius: 4px;
   font-size: 11px;
   line-height: 1.5;
+}
+
+.detail-value.editable-value {
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.detail-row:hover .editable-value {
+  background-color: var(--ui-sidebar-hover, rgba(255, 255, 255, 0.05));
+  border-radius: 3px;
+  padding: 2px 4px;
+}
+
+.detail-row.editing {
+  background-color: var(--ui-sidebar-hover, rgba(100, 181, 246, 0.1));
+  border-radius: 4px;
+  padding: 2px 0;
+}
+
+.editable-input {
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+  background-color: var(--ui-content-bg, rgba(255, 255, 255, 0.1)) !important;
+  border: 1px solid var(--ui-primary-color, #64b5f6) !important;
+  color: var(--ui-sidebar-text) !important;
+  border-radius: 3px !important;
+}
+
+.editable-input:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(100, 181, 246, 0.2) !important;
 }
 
 .color-indicator {
