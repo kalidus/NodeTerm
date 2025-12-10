@@ -20,7 +20,7 @@ export const useFormHandlers = ({
   setShowProtocolSelectionDialog,
 
   // Estados de formularios SSH
-  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword,
+  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshDescription,
   closeSSHDialogWithReset,
   
   // Estados de formularios Edit SSH  
@@ -31,7 +31,7 @@ export const useFormHandlers = ({
   editSSHPassword, setEditSSHPassword,
   editSSHRemoteFolder, setEditSSHRemoteFolder,
   editSSHPort, setEditSSHPort,
-  editSSHAutoCopyPassword,
+  editSSHAutoCopyPassword, editSSHDescription, setEditSSHDescription,
   closeEditSSHDialogWithReset,
   
   // Estados de formularios RDP
@@ -223,7 +223,9 @@ export const useFormHandlers = ({
         bastionUser: userInfo.isWallix ? userInfo.bastionUser : '',
         targetServer: userInfo.isWallix ? userInfo.targetServer : '',
         // Opción de copiar password automáticamente
-        autoCopyPassword: sshAutoCopyPassword || false
+        autoCopyPassword: sshAutoCopyPassword || false,
+        // Descripción de la conexión
+        description: sshDescription || ''
       },
       draggable: true,
       droppable: false, // Las sesiones SSH NO pueden contener otros elementos
@@ -254,7 +256,7 @@ export const useFormHandlers = ({
       detail: `Conexión SSH "${sshName}" añadida al árbol`,
       life: 3000
     });
-  }, [sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
+  }, [sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshDescription, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
 
   /**
    * Crear nueva conexión RDP
@@ -416,7 +418,9 @@ export const useFormHandlers = ({
         bastionUser: userInfo.isWallix ? userInfo.bastionUser : '',
         targetServer: userInfo.isWallix ? userInfo.targetServer : '',
         // Opción de copiar password automáticamente
-        autoCopyPassword: editSSHAutoCopyPassword || false
+        autoCopyPassword: editSSHAutoCopyPassword || false,
+        // Descripción de la conexión
+        description: editSSHDescription || ''
       };
       nodeToEdit.droppable = false; // Asegurar que las sesiones SSH no sean droppable
       
@@ -437,6 +441,7 @@ export const useFormHandlers = ({
     setEditSSHPassword('');
     setEditSSHRemoteFolder('');
     setEditSSHPort(22);
+    setEditSSHDescription('');
     
     toast.current.show({
       severity: 'success',
@@ -444,7 +449,7 @@ export const useFormHandlers = ({
       detail: `Sesión SSH actualizada`,
       life: 3000
     });
-  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHNode, nodes, setNodes, findNodeByKey, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, toast]);
+  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHDescription, editSSHNode, nodes, setNodes, findNodeByKey, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, toast]);
 
   /**
    * Guardar edición de carpeta
@@ -503,9 +508,10 @@ export const useFormHandlers = ({
     setEditSSHPassword(node.data?.password || '');
     setEditSSHRemoteFolder(node.data?.remoteFolder || '');
     setEditSSHPort(node.data?.port || 22);
+    setEditSSHDescription(node.data?.description || '');
     // Usar el diálogo unificado en modo edición SSH
     setShowUnifiedConnectionDialog(true);
-  }, [setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setShowUnifiedConnectionDialog]);
+  }, [setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setShowUnifiedConnectionDialog]);
 
   /**
    * Abrir diálogo de selección de protocolo para nueva conexión (limpia todos los estados de edición)
