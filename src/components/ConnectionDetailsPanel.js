@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from 'primereact/button';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/connection-details-panel.css';
@@ -8,10 +8,61 @@ const ConnectionDetailsPanel = ({
   uiTheme = 'Light',
   sessionActionIconTheme = 'modern'
 }) => {
+  // TODOS LOS HOOKS DEBEN IR AL PRINCIPIO, ANTES DE CUALQUIER RETORNO CONDICIONAL
   const { t } = useTranslation('common');
   const [collapsed, setCollapsed] = useState(false);
+  const [panelHeight, setPanelHeight] = useState(() => {
+    // Cargar altura guardada del localStorage
+    const saved = localStorage.getItem('connectionDetailsPanelHeight');
+    return saved ? parseInt(saved, 10) : 200;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const panelRef = useRef(null);
+  const resizeStartY = useRef(0);
+  const resizeStartHeight = useRef(0);
 
+  // Handlers para redimensionamiento
+  const handleResizeStart = useCallback((e) => {
+    e.preventDefault();
+    setIsResizing(true);
+    resizeStartY.current = e.clientY;
+    resizeStartHeight.current = panelHeight;
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+  }, [panelHeight]);
 
+  const handleResizeMove = useCallback((e) => {
+    if (!isResizing) return;
+    
+    const delta = resizeStartY.current - e.clientY; // Invertido porque arrastramos hacia arriba
+    const newHeight = Math.max(150, Math.min(500, resizeStartHeight.current + delta));
+    setPanelHeight(newHeight);
+  }, [isResizing]);
+
+  const handleResizeEnd = useCallback(() => {
+    if (isResizing) {
+      setIsResizing(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      // Guardar altura en localStorage
+      localStorage.setItem('connectionDetailsPanelHeight', panelHeight.toString());
+    }
+  }, [isResizing, panelHeight]);
+
+  // Event listeners para el redimensionamiento
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleResizeMove);
+      document.addEventListener('mouseup', handleResizeEnd);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleResizeMove);
+        document.removeEventListener('mouseup', handleResizeEnd);
+      };
+    }
+  }, [isResizing, handleResizeMove, handleResizeEnd]);
+
+  // AHORA SÍ PODEMOS HACER RETORNOS CONDICIONALES
   if (!selectedNode) {
     return null;
   }
@@ -31,7 +82,17 @@ const ConnectionDetailsPanel = ({
   // Si es una carpeta, mostrar información básica
   if (isFolder) {
     return (
-      <div className={`connection-details-panel ${collapsed ? 'collapsed' : ''}`}>
+      <div 
+        ref={panelRef}
+        className={`connection-details-panel ${collapsed ? 'collapsed' : ''} ${isResizing ? 'resizing' : ''}`}
+        style={!collapsed ? { height: `${panelHeight}px`, maxHeight: `${panelHeight}px` } : {}}
+      >
+        {!collapsed && (
+          <div 
+            className="panel-resizer"
+            onMouseDown={handleResizeStart}
+          />
+        )}
         <div className="details-header">
         <div className="details-title">
           <i className="pi pi-folder" style={{ marginRight: '6px', fontSize: '12px', color: selectedNode.color || '#ffa726' }}></i>
@@ -89,7 +150,17 @@ const ConnectionDetailsPanel = ({
   // Si es un password, mostrar información del password manager
   if (isPassword) {
     return (
-      <div className={`connection-details-panel ${collapsed ? 'collapsed' : ''}`}>
+      <div 
+        ref={panelRef}
+        className={`connection-details-panel ${collapsed ? 'collapsed' : ''} ${isResizing ? 'resizing' : ''}`}
+        style={!collapsed ? { height: `${panelHeight}px`, maxHeight: `${panelHeight}px` } : {}}
+      >
+        {!collapsed && (
+          <div 
+            className="panel-resizer"
+            onMouseDown={handleResizeStart}
+          />
+        )}
         <div className="details-header">
         <div className="details-title">
           <i className="pi pi-key" style={{ marginRight: '6px', fontSize: '12px', color: '#ffc107' }}></i>
@@ -143,7 +214,17 @@ const ConnectionDetailsPanel = ({
 
   // Para conexiones SSH, RDP, VNC
   return (
-    <div className={`connection-details-panel ${collapsed ? 'collapsed' : ''}`}>
+    <div 
+      ref={panelRef}
+      className={`connection-details-panel ${collapsed ? 'collapsed' : ''} ${isResizing ? 'resizing' : ''}`}
+      style={!collapsed ? { height: `${panelHeight}px`, maxHeight: `${panelHeight}px` } : {}}
+    >
+      {!collapsed && (
+        <div 
+          className="panel-resizer"
+          onMouseDown={handleResizeStart}
+        />
+      )}
       <div className="details-header">
         <div className="details-title">
           <i 
@@ -160,7 +241,13 @@ const ConnectionDetailsPanel = ({
           icon={collapsed ? "pi pi-chevron-up" : "pi pi-chevron-down"}
           className="p-button-text p-button-sm"
           onClick={() => setCollapsed(!collapsed)}
-          style={{ minWidth: '32px', height: '32px' }}
+          style={{ 
+            minWidth: '20px', 
+            width: '20px',
+            height: '20px',
+            padding: 0,
+            fontSize: '10px'
+          }}
         />
       </div>
       
