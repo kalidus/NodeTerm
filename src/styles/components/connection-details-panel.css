@@ -1,45 +1,46 @@
 /* Connection Details Panel - Similar a mRemoteNG */
 .connection-details-panel {
-  background-color: var(--ui-sidebar-bg, rgba(30, 30, 30, 0.95));
-  border-top: 2px solid var(--ui-sidebar-border, rgba(100, 181, 246, 0.3));
+  background-color: var(--ui-sidebar-bg) !important;
+  border-top: 1px solid var(--ui-sidebar-border) !important;
   width: 100%;
   max-height: 300px;
-  min-height: 42px;
+  min-height: 24px;
   display: flex;
   flex-direction: column;
   transition: max-height 0.3s ease;
   overflow: hidden;
   position: relative;
   z-index: 10;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .connection-details-panel.collapsed {
-  max-height: 42px;
+  max-height: 24px;
 }
 
 .details-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  background-color: var(--ui-sidebar-header-bg, rgba(40, 40, 40, 0.8));
-  border-bottom: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.08));
-  min-height: 42px;
+  padding: 3px 8px;
+  background-color: var(--ui-sidebar-bg) !important;
+  border-bottom: 1px solid var(--ui-sidebar-border) !important;
+  min-height: 24px;
+  height: 24px;
   cursor: pointer;
 }
 
 .details-header:hover {
-  background-color: var(--ui-sidebar-header-hover-bg, rgba(50, 50, 50, 0.8));
+  background-color: var(--ui-sidebar-hover) !important;
 }
 
 .details-title {
   display: flex;
   align-items: center;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ui-sidebar-text, #ffffff);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ui-sidebar-text) !important;
   user-select: none;
+  line-height: 1.2;
 }
 
 .details-content {
@@ -48,6 +49,7 @@
   padding: 8px 12px;
   flex: 1;
   min-height: 0;
+  background-color: var(--ui-sidebar-bg) !important;
 }
 
 /* Scrollbar personalizado para el panel */
@@ -84,7 +86,7 @@
   letter-spacing: 0.5px;
   margin-bottom: 8px;
   padding-bottom: 4px;
-  border-bottom: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.05));
+  border-bottom: 1px solid var(--ui-sidebar-border) !important;
 }
 
 .detail-row {
@@ -98,14 +100,15 @@
 .detail-label {
   flex: 0 0 140px;
   font-weight: 500;
-  color: var(--ui-sidebar-text-secondary, rgba(255, 255, 255, 0.7));
+  color: var(--ui-sidebar-text) !important;
+  opacity: 0.7;
   padding-right: 12px;
   user-select: none;
 }
 
 .detail-value {
   flex: 1;
-  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.95));
+  color: var(--ui-sidebar-text) !important;
   word-break: break-word;
   display: flex;
   align-items: center;
@@ -133,11 +136,28 @@
 
 /* Estilos para el botón de colapsar */
 .connection-details-panel .p-button-text {
-  color: var(--ui-sidebar-text, #ffffff);
+  color: var(--ui-sidebar-text) !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 2px !important;
+  min-width: 20px !important;
+  width: 20px !important;
+  height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .connection-details-panel .p-button-text:hover {
-  background-color: var(--ui-sidebar-hover-bg, rgba(255, 255, 255, 0.1));
+  background-color: var(--ui-sidebar-hover) !important;
+}
+
+.connection-details-panel .p-button-sm {
+  min-width: 20px !important;
+  width: 20px !important;
+  height: 20px !important;
+  padding: 0 !important;
+  font-size: 10px !important;
 }
 
 /* Adaptación para temas claros */

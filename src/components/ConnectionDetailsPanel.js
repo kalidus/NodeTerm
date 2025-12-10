@@ -11,12 +11,6 @@ const ConnectionDetailsPanel = ({
   const { t } = useTranslation('common');
   const [collapsed, setCollapsed] = useState(false);
 
-  // Debug: verificar que se está recibiendo el nodo
-  React.useEffect(() => {
-    if (selectedNode) {
-      console.log('🔍 [ConnectionDetailsPanel] Nodo seleccionado:', selectedNode);
-    }
-  }, [selectedNode]);
 
   if (!selectedNode) {
     return null;
@@ -39,15 +33,21 @@ const ConnectionDetailsPanel = ({
     return (
       <div className={`connection-details-panel ${collapsed ? 'collapsed' : ''}`}>
         <div className="details-header">
-          <div className="details-title">
-            <i className="pi pi-folder" style={{ marginRight: '8px', color: selectedNode.color || '#ffa726' }}></i>
-            <span>{label}</span>
-          </div>
+        <div className="details-title">
+          <i className="pi pi-folder" style={{ marginRight: '6px', fontSize: '12px', color: selectedNode.color || '#ffa726' }}></i>
+          <span>{label}</span>
+        </div>
           <Button
             icon={collapsed ? "pi pi-chevron-up" : "pi pi-chevron-down"}
             className="p-button-text p-button-sm"
             onClick={() => setCollapsed(!collapsed)}
-            style={{ minWidth: '32px', height: '32px' }}
+            style={{ 
+              minWidth: '20px', 
+              width: '20px',
+              height: '20px',
+              padding: 0,
+              fontSize: '10px'
+            }}
           />
         </div>
         {!collapsed && (
@@ -91,15 +91,21 @@ const ConnectionDetailsPanel = ({
     return (
       <div className={`connection-details-panel ${collapsed ? 'collapsed' : ''}`}>
         <div className="details-header">
-          <div className="details-title">
-            <i className="pi pi-key" style={{ marginRight: '8px', color: '#ffc107' }}></i>
-            <span>{label}</span>
-          </div>
+        <div className="details-title">
+          <i className="pi pi-key" style={{ marginRight: '6px', fontSize: '12px', color: '#ffc107' }}></i>
+          <span>{label}</span>
+        </div>
           <Button
             icon={collapsed ? "pi pi-chevron-up" : "pi pi-chevron-down"}
             className="p-button-text p-button-sm"
             onClick={() => setCollapsed(!collapsed)}
-            style={{ minWidth: '32px', height: '32px' }}
+            style={{ 
+              minWidth: '20px', 
+              width: '20px',
+              height: '20px',
+              padding: 0,
+              fontSize: '10px'
+            }}
           />
         </div>
         {!collapsed && (
@@ -143,7 +149,8 @@ const ConnectionDetailsPanel = ({
           <i 
             className={`pi ${isSSH ? 'pi-desktop' : isRDP ? 'pi-window-maximize' : 'pi-eye'}`} 
             style={{ 
-              marginRight: '8px', 
+              marginRight: '6px',
+              fontSize: '12px',
               color: isSSH ? '#4caf50' : isRDP ? '#2196f3' : '#ff9800' 
             }}
           ></i>

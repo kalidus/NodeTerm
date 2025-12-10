@@ -2531,10 +2531,6 @@ const Sidebar = React.memo(({
                     selectionMode="single"
                     selectionKeys={selectedNodeKey}
                     onSelectionChange={e => {
-                      console.log('🎯 [Tree] onSelectionChange event:', e);
-                      console.log('🎯 [Tree] e.value:', e.value);
-                      console.log('🎯 [Tree] e.node:', e.node);
-                      
                       setSelectedNodeKey(e.value);
                       
                       // Encontrar el nodo completo para el panel de detalles
@@ -2557,11 +2553,7 @@ const Sidebar = React.memo(({
                         selectedKey = Object.keys(e.value)[0];
                       }
                       
-                      console.log('🔑 [Tree] selectedKey extraído:', selectedKey);
-                      
                       const node = selectedKey ? findNode(nodes, selectedKey) : null;
-                      console.log('📦 [Tree] nodo encontrado:', node);
-                      
                       setSelectedNodeForDetails(node);
                     }}
                     expandedKeys={expandedKeys}
@@ -2591,34 +2583,11 @@ const Sidebar = React.memo(({
               </div>
               
               {/* Panel de detalles de conexión */}
-              {(() => {
-                console.log('🔍 [Sidebar] selectedNodeForDetails:', selectedNodeForDetails);
-                return (
-                  <>
-                    <ConnectionDetailsPanel 
-                      selectedNode={selectedNodeForDetails}
-                      uiTheme={uiTheme}
-                      sessionActionIconTheme={sessionActionIconTheme}
-                    />
-                    {/* Panel de prueba temporal - ELIMINAR DESPUÉS */}
-                    <div style={{
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      color: 'white',
-                      padding: '8px',
-                      textAlign: 'center',
-                      fontSize: '11px',
-                      fontWeight: 'bold',
-                      borderTop: '1px solid rgba(255,255,255,0.2)',
-                      minHeight: '30px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      {selectedNodeForDetails ? `📋 Panel activo: ${selectedNodeForDetails.label}` : '⚠️ Haz clic en una conexión'}
-                    </div>
-                  </>
-                );
-              })()}
+              <ConnectionDetailsPanel 
+                selectedNode={selectedNodeForDetails}
+                uiTheme={uiTheme}
+                sessionActionIconTheme={sessionActionIconTheme}
+              />
               
               <SidebarFooter 
                 onConfigClick={() => setShowSettingsDialog(true)} 
