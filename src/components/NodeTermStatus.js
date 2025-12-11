@@ -359,7 +359,9 @@ const NodeTermStatus = ({
 				display: 'grid',
 				gridTemplateColumns: '1fr 1fr',
 				gap: '1rem',
-				width: '100%'
+				width: '100%',
+				maxWidth: '100%',
+				overflow: 'hidden'
 			}}>
 				{/* Estilos globales para animaciones */}
 				<style>{`
@@ -388,15 +390,24 @@ const NodeTermStatus = ({
 					padding: '0.75rem',
 					display: 'flex',
 					alignItems: 'flex-start',
-					gap: '1rem',
-					minHeight: '60px'
+					gap: '0.75rem',
+					height: 'fit-content',
+					maxHeight: '100px',
+					overflow: 'hidden',
+					flex: '1 1 0',
+					minWidth: 0,
+					maxWidth: '100%',
+					width: '100%'
 				}}>
 					{/* SECCIÓN 1: ACCIONES */}
 				<div style={{
 					display: 'flex',
 					flexDirection: 'column',
 					gap: '0.4rem',
-					minWidth: 'fit-content'
+					minWidth: 0,
+					flex: '1 1 0',
+					overflow: 'hidden',
+					maxWidth: '50%'
 				}}>
 					{/* Título */}
 					<div style={{
@@ -422,404 +433,601 @@ const NodeTermStatus = ({
 					<div style={{
 						display: 'flex',
 						alignItems: 'center',
-						gap: '0.35rem',
-						flexWrap: 'wrap'
+						gap: '0.2rem',
+						flexWrap: 'wrap',
+						maxWidth: '100%',
+						overflow: 'hidden',
+						width: '100%',
+						flexShrink: 1
 					}}>
-					{/* Botón Nueva Conexión */}
-					<button
-						title="Nueva conexión SSH/RDP/VNC"
-						onClick={() => {
-							window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
-						}}
+						{/* Botón Nueva Conexión */}
+						<button
+							title="Nueva conexión SSH/RDP/VNC"
+							onClick={() => {
+								window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
+							}}
 							style={{
 								cursor: 'pointer',
 								display: 'flex',
+								flexDirection: 'column',
 								alignItems: 'center',
 								justifyContent: 'center',
-								width: '24px',
-								height: '24px',
-								borderRadius: '5px',
+								gap: '0.2rem',
+								flex: '1 1 0',
+								minWidth: '28px',
+								maxWidth: '42px',
+								width: 'auto',
+								minWidth: '32px',
+								maxWidth: '42px',
+								height: '40px',
+								padding: '0.25rem 0.15rem',
+								borderRadius: '6px',
 								background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(34, 197, 94, 0.15) 100%)',
 								border: '1px solid rgba(34, 197, 94, 0.35)',
 								boxShadow: '0 1px 4px rgba(34, 197, 94, 0.2)',
 								transition: 'all 0.2s ease',
-								padding: 0
+								position: 'relative'
 							}}
 							onMouseEnter={(e) => {
 								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.35) 0%, rgba(34, 197, 94, 0.25) 100%)';
-								e.currentTarget.style.transform = 'scale(1.1)';
+								e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+								e.currentTarget.style.boxShadow = '0 3px 8px rgba(34, 197, 94, 0.3)';
 							}}
 							onMouseLeave={(e) => {
 								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(34, 197, 94, 0.15) 100%)';
-								e.currentTarget.style.transform = 'scale(1)';
+								e.currentTarget.style.transform = 'translateY(0) scale(1)';
+								e.currentTarget.style.boxShadow = '0 1px 4px rgba(34, 197, 94, 0.2)';
 							}}
 						>
-							<i className="pi pi-plus-circle" style={{ color: '#22c55e', fontSize: '0.6rem' }} />
+							<i className="pi pi-plus-circle" style={{ color: '#22c55e', fontSize: 'clamp(0.5rem, 2vw, 0.7rem)', fontWeight: 'bold' }} />
+							<span style={{
+								fontSize: 'clamp(0.35rem, 1.2vw, 0.4rem)',
+								fontWeight: '600',
+								color: themeColors.textPrimary || '#fff',
+								textAlign: 'center',
+								lineHeight: '1.1',
+								overflow: 'hidden',
+								textOverflow: 'ellipsis',
+								whiteSpace: 'nowrap',
+								width: '100%'
+							}}>
+								Nueva
+							</span>
 						</button>
 
-					{/* Botón Terminal */}
-					{onToggleTerminalVisibility && (
+						{/* Botón Terminal */}
+						{onToggleTerminalVisibility && (
+							<button
+								title="Mostrar/ocultar terminal local"
+								onClick={onToggleTerminalVisibility}
+								style={{
+									cursor: 'pointer',
+									display: 'flex',
+									flexDirection: 'column',
+									alignItems: 'center',
+									justifyContent: 'center',
+									gap: '0.2rem',
+									flex: '1 1 0',
+									minWidth: '28px',
+									maxWidth: '42px',
+									width: 'auto',
+									height: '40px',
+									padding: '0.2rem 0.15rem',
+									borderRadius: '6px',
+									background: 'linear-gradient(135deg, rgba(0, 188, 212, 0.25) 0%, rgba(0, 188, 212, 0.15) 100%)',
+									border: '1px solid rgba(0, 188, 212, 0.35)',
+									boxShadow: '0 1px 4px rgba(0, 188, 212, 0.2)',
+									transition: 'all 0.2s ease',
+									position: 'relative'
+								}}
+								onMouseEnter={(e) => {
+									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 188, 212, 0.35) 0%, rgba(0, 188, 212, 0.25) 100%)';
+									e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+									e.currentTarget.style.boxShadow = '0 3px 8px rgba(0, 188, 212, 0.3)';
+								}}
+								onMouseLeave={(e) => {
+									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 188, 212, 0.25) 0%, rgba(0, 188, 212, 0.15) 100%)';
+									e.currentTarget.style.transform = 'translateY(0) scale(1)';
+									e.currentTarget.style.boxShadow = '0 1px 4px rgba(0, 188, 212, 0.2)';
+								}}
+							>
+								<i className="pi pi-desktop" style={{ color: '#00BCD4', fontSize: 'clamp(0.5rem, 2vw, 0.7rem)', fontWeight: 'bold' }} />
+								<span style={{
+									fontSize: 'clamp(0.35rem, 1.2vw, 0.4rem)',
+									fontWeight: '600',
+									color: themeColors.textPrimary || '#fff',
+									textAlign: 'center',
+									lineHeight: '1.1',
+									overflow: 'hidden',
+									textOverflow: 'ellipsis',
+									whiteSpace: 'nowrap',
+									width: '100%'
+								}}>
+									Terminal
+								</span>
+							</button>
+						)}
+
+						{/* Botón Historial */}
 						<button
-							title="Mostrar/ocultar terminal local"
-							onClick={onToggleTerminalVisibility}
+							title="Ver historial de conexiones"
+							onClick={() => {
+								const expandSidebarEvent = new CustomEvent('expand-sidebar');
+								window.dispatchEvent(expandSidebarEvent);
+								const switchToConnectionsEvent = new CustomEvent('switch-to-connections');
+								window.dispatchEvent(switchToConnectionsEvent);
+							}}
 							style={{
 								cursor: 'pointer',
 								display: 'flex',
+								flexDirection: 'column',
 								alignItems: 'center',
 								justifyContent: 'center',
-								width: '24px',
-								height: '24px',
-								borderRadius: '5px',
-								background: 'linear-gradient(135deg, rgba(0, 188, 212, 0.25) 0%, rgba(0, 188, 212, 0.15) 100%)',
-								border: '1px solid rgba(0, 188, 212, 0.35)',
-								boxShadow: '0 1px 4px rgba(0, 188, 212, 0.2)',
+								gap: '0.2rem',
+								flex: '1 1 0',
+								minWidth: '28px',
+								maxWidth: '42px',
+								width: 'auto',
+								minWidth: '32px',
+								maxWidth: '42px',
+								height: '40px',
+								padding: '0.25rem 0.15rem',
+								borderRadius: '6px',
+								background: 'linear-gradient(135deg, rgba(100, 200, 255, 0.25) 0%, rgba(100, 200, 255, 0.15) 100%)',
+								border: '1px solid rgba(100, 200, 255, 0.35)',
+								boxShadow: '0 1px 4px rgba(100, 200, 255, 0.2)',
 								transition: 'all 0.2s ease',
-								padding: 0
+								position: 'relative'
 							}}
 							onMouseEnter={(e) => {
-								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 188, 212, 0.35) 0%, rgba(0, 188, 212, 0.25) 100%)';
-								e.currentTarget.style.transform = 'scale(1.1)';
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(100, 200, 255, 0.35) 0%, rgba(100, 200, 255, 0.25) 100%)';
+								e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+								e.currentTarget.style.boxShadow = '0 3px 8px rgba(100, 200, 255, 0.3)';
 							}}
 							onMouseLeave={(e) => {
-								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 188, 212, 0.25) 0%, rgba(0, 188, 212, 0.15) 100%)';
-								e.currentTarget.style.transform = 'scale(1)';
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(100, 200, 255, 0.25) 0%, rgba(100, 200, 255, 0.15) 100%)';
+								e.currentTarget.style.transform = 'translateY(0) scale(1)';
+								e.currentTarget.style.boxShadow = '0 1px 4px rgba(100, 200, 255, 0.2)';
 							}}
 						>
-							<i className="pi pi-desktop" style={{ color: '#00BCD4', fontSize: '0.6rem' }} />
+							<i className="pi pi-list" style={{ color: '#64C8FF', fontSize: 'clamp(0.5rem, 2vw, 0.7rem)', fontWeight: 'bold' }} />
+							<span style={{
+								fontSize: 'clamp(0.35rem, 1.2vw, 0.4rem)',
+								fontWeight: '600',
+								color: themeColors.textPrimary || '#fff',
+								textAlign: 'center',
+								lineHeight: '1.1',
+								overflow: 'hidden',
+								textOverflow: 'ellipsis',
+								whiteSpace: 'nowrap',
+								width: '100%'
+							}}>
+								Historial
+							</span>
 						</button>
-					)}
 
-					{/* Botón Historial */}
-					<button
-						title="Ver historial de conexiones"
-						onClick={() => {
-							const expandSidebarEvent = new CustomEvent('expand-sidebar');
-							window.dispatchEvent(expandSidebarEvent);
-							const switchToConnectionsEvent = new CustomEvent('switch-to-connections');
-							window.dispatchEvent(switchToConnectionsEvent);
-						}}
-						style={{
-							cursor: 'pointer',
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-							width: '24px',
-							height: '24px',
-							borderRadius: '5px',
-							background: 'linear-gradient(135deg, rgba(100, 200, 255, 0.25) 0%, rgba(100, 200, 255, 0.15) 100%)',
-							border: '1px solid rgba(100, 200, 255, 0.35)',
-							boxShadow: '0 1px 4px rgba(100, 200, 255, 0.2)',
-							transition: 'all 0.2s ease',
-							padding: 0
-						}}
-						onMouseEnter={(e) => {
-							e.currentTarget.style.background = 'linear-gradient(135deg, rgba(100, 200, 255, 0.35) 0%, rgba(100, 200, 255, 0.25) 100%)';
-							e.currentTarget.style.transform = 'scale(1.1)';
-						}}
-						onMouseLeave={(e) => {
-							e.currentTarget.style.background = 'linear-gradient(135deg, rgba(100, 200, 255, 0.25) 0%, rgba(100, 200, 255, 0.15) 100%)';
-							e.currentTarget.style.transform = 'scale(1)';
-						}}
-					>
-						<i className="pi pi-list" style={{ color: '#64C8FF', fontSize: '0.6rem' }} />
-					</button>
-
-					{/* Botón Passwords */}
-					<button
-						title="Gestor de contraseñas"
-						onClick={() => {
-							const expandSidebarEvent = new CustomEvent('expand-sidebar');
-							window.dispatchEvent(expandSidebarEvent);
-							window.dispatchEvent(new CustomEvent('open-password-manager'));
-						}}
-						style={{
-							cursor: 'pointer',
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-							width: '24px',
-							height: '24px',
-							borderRadius: '5px',
-							background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)',
-							border: '1px solid rgba(255, 193, 7, 0.35)',
-							boxShadow: '0 1px 4px rgba(255, 193, 7, 0.2)',
-							transition: 'all 0.2s ease',
-							padding: 0
-						}}
-						onMouseEnter={(e) => {
-							e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 193, 7, 0.35) 0%, rgba(255, 193, 7, 0.25) 100%)';
-							e.currentTarget.style.transform = 'scale(1.1)';
-						}}
-						onMouseLeave={(e) => {
-							e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)';
-							e.currentTarget.style.transform = 'scale(1)';
-						}}
-					>
-						<i className="pi pi-key" style={{ color: '#FFC107', fontSize: '0.6rem' }} />
-					</button>
-
-					{/* Botón Configuración */}
-					{onOpenSettings && (
+						{/* Botón Passwords */}
 						<button
-							title="Configuración"
-							onClick={onOpenSettings}
+							title="Gestor de contraseñas"
+							onClick={() => {
+								const expandSidebarEvent = new CustomEvent('expand-sidebar');
+								window.dispatchEvent(expandSidebarEvent);
+								window.dispatchEvent(new CustomEvent('open-password-manager'));
+							}}
 							style={{
 								cursor: 'pointer',
 								display: 'flex',
+								flexDirection: 'column',
 								alignItems: 'center',
 								justifyContent: 'center',
-								width: '24px',
-								height: '24px',
-								borderRadius: '5px',
-								background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.25) 0%, rgba(76, 175, 80, 0.15) 100%)',
-								border: '1px solid rgba(76, 175, 80, 0.35)',
-								boxShadow: '0 1px 4px rgba(76, 175, 80, 0.2)',
+								gap: '0.2rem',
+								flex: '1 1 0',
+								minWidth: '28px',
+								maxWidth: '42px',
+								width: 'auto',
+								minWidth: '32px',
+								maxWidth: '42px',
+								height: '40px',
+								padding: '0.25rem 0.15rem',
+								borderRadius: '6px',
+								background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)',
+								border: '1px solid rgba(255, 193, 7, 0.35)',
+								boxShadow: '0 1px 4px rgba(255, 193, 7, 0.2)',
 								transition: 'all 0.2s ease',
-								padding: 0
+								position: 'relative'
 							}}
 							onMouseEnter={(e) => {
-								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 0.35) 0%, rgba(76, 175, 80, 0.25) 100%)';
-								e.currentTarget.style.transform = 'scale(1.1)';
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 193, 7, 0.35) 0%, rgba(255, 193, 7, 0.25) 100%)';
+								e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+								e.currentTarget.style.boxShadow = '0 3px 8px rgba(255, 193, 7, 0.3)';
 							}}
 							onMouseLeave={(e) => {
-								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 0.25) 0%, rgba(76, 175, 80, 0.15) 100%)';
-								e.currentTarget.style.transform = 'scale(1)';
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)';
+								e.currentTarget.style.transform = 'translateY(0) scale(1)';
+								e.currentTarget.style.boxShadow = '0 1px 4px rgba(255, 193, 7, 0.2)';
 							}}
 						>
-							<i className="pi pi-cog" style={{ color: '#4CAF50', fontSize: '0.6rem' }} />
+							<i className="pi pi-key" style={{ color: '#FFC107', fontSize: 'clamp(0.5rem, 2vw, 0.7rem)', fontWeight: 'bold' }} />
+							<span style={{
+								fontSize: 'clamp(0.35rem, 1.2vw, 0.4rem)',
+								fontWeight: '600',
+								color: themeColors.textPrimary || '#fff',
+								textAlign: 'center',
+								lineHeight: '1.1',
+								overflow: 'hidden',
+								textOverflow: 'ellipsis',
+								whiteSpace: 'nowrap',
+								width: '100%'
+							}}>
+								Keys
+							</span>
 						</button>
-					)}
 
-					{/* Botón Status Bar */}
-					{onToggleStatusBar && (
+						{/* Botón Configuración */}
+						{onOpenSettings && (
+							<button
+								title="Configuración"
+								onClick={onOpenSettings}
+								style={{
+									cursor: 'pointer',
+									display: 'flex',
+									flexDirection: 'column',
+									alignItems: 'center',
+									justifyContent: 'center',
+									gap: '0.2rem',
+									flex: '1 1 0',
+									minWidth: '28px',
+									maxWidth: '42px',
+									width: 'auto',
+									height: '40px',
+									padding: '0.2rem 0.15rem',
+									borderRadius: '6px',
+									background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.25) 0%, rgba(76, 175, 80, 0.15) 100%)',
+									border: '1px solid rgba(76, 175, 80, 0.35)',
+									boxShadow: '0 1px 4px rgba(76, 175, 80, 0.2)',
+									transition: 'all 0.2s ease',
+									position: 'relative'
+								}}
+								onMouseEnter={(e) => {
+									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 0.35) 0%, rgba(76, 175, 80, 0.25) 100%)';
+									e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+									e.currentTarget.style.boxShadow = '0 3px 8px rgba(76, 175, 80, 0.3)';
+								}}
+								onMouseLeave={(e) => {
+									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 0.25) 0%, rgba(76, 175, 80, 0.15) 100%)';
+									e.currentTarget.style.transform = 'translateY(0) scale(1)';
+									e.currentTarget.style.boxShadow = '0 1px 4px rgba(76, 175, 80, 0.2)';
+								}}
+							>
+								<i className="pi pi-cog" style={{ color: '#4CAF50', fontSize: 'clamp(0.5rem, 2vw, 0.7rem)', fontWeight: 'bold' }} />
+								<span style={{
+									fontSize: 'clamp(0.35rem, 1.2vw, 0.4rem)',
+									fontWeight: '600',
+									color: themeColors.textPrimary || '#fff',
+									textAlign: 'center',
+									lineHeight: '1.1',
+									overflow: 'hidden',
+									textOverflow: 'ellipsis',
+									whiteSpace: 'nowrap',
+									width: '100%'
+								}}>
+									Config
+								</span>
+							</button>
+						)}
+
+						{/* Botón Status Bar */}
+						{onToggleStatusBar && (
+							<button
+								title={statusBarVisible ? 'Ocultar status bar' : 'Mostrar status bar'}
+								onClick={onToggleStatusBar}
+								style={{
+									cursor: 'pointer',
+									display: 'flex',
+									flexDirection: 'column',
+									alignItems: 'center',
+									justifyContent: 'center',
+									gap: '0.2rem',
+									flex: '1 1 0',
+									minWidth: '28px',
+									maxWidth: '42px',
+									width: 'auto',
+									height: '40px',
+									padding: '0.2rem 0.15rem',
+									borderRadius: '6px',
+									background: statusBarVisible
+										? 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)'
+										: 'linear-gradient(135deg, rgba(79, 195, 247, 0.25) 0%, rgba(79, 195, 247, 0.15) 100%)',
+									border: '1px solid rgba(79, 195, 247, 0.35)',
+									boxShadow: '0 1px 4px rgba(79, 195, 247, 0.2)',
+									transition: 'all 0.2s ease',
+									position: 'relative'
+								}}
+								onMouseEnter={(e) => {
+									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)';
+									e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+									e.currentTarget.style.boxShadow = '0 3px 8px rgba(79, 195, 247, 0.3)';
+								}}
+								onMouseLeave={(e) => {
+									e.currentTarget.style.background = statusBarVisible
+										? 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)'
+										: 'linear-gradient(135deg, rgba(79, 195, 247, 0.25) 0%, rgba(79, 195, 247, 0.15) 100%)';
+									e.currentTarget.style.transform = 'translateY(0) scale(1)';
+									e.currentTarget.style.boxShadow = '0 1px 4px rgba(79, 195, 247, 0.2)';
+								}}
+							>
+								<i 
+									className={statusBarVisible ? 'pi pi-eye' : 'pi pi-eye-slash'} 
+									style={{ color: '#4fc3f7', fontSize: 'clamp(0.5rem, 2vw, 0.7rem)', fontWeight: 'bold' }} 
+								/>
+								<span style={{
+									fontSize: 'clamp(0.35rem, 1.2vw, 0.4rem)',
+									fontWeight: '600',
+									color: themeColors.textPrimary || '#fff',
+									textAlign: 'center',
+									lineHeight: '1.1',
+									overflow: 'hidden',
+									textOverflow: 'ellipsis',
+									whiteSpace: 'nowrap',
+									width: '100%'
+								}}>
+									Status
+								</span>
+							</button>
+						)}
+
+						{/* Botón Grabaciones y Auditoría */}
 						<button
-							title={statusBarVisible ? 'Ocultar status bar' : 'Mostrar status bar'}
-							onClick={onToggleStatusBar}
-							style={{
-								cursor: 'pointer',
-								display: 'flex',
-								alignItems: 'center',
-								justifyContent: 'center',
-								width: '24px',
-								height: '24px',
-								borderRadius: '5px',
-								background: statusBarVisible
-									? 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)'
-									: 'linear-gradient(135deg, rgba(79, 195, 247, 0.25) 0%, rgba(79, 195, 247, 0.15) 100%)',
-								border: '1px solid rgba(79, 195, 247, 0.35)',
-								boxShadow: '0 1px 4px rgba(79, 195, 247, 0.2)',
-								transition: 'all 0.2s ease',
-								padding: 0
-							}}
-							onMouseEnter={(e) => {
-								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)';
-								e.currentTarget.style.transform = 'scale(1.1)';
-							}}
-							onMouseLeave={(e) => {
-								e.currentTarget.style.background = statusBarVisible
-									? 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)'
-									: 'linear-gradient(135deg, rgba(79, 195, 247, 0.25) 0%, rgba(79, 195, 247, 0.15) 100%)';
-								e.currentTarget.style.transform = 'scale(1)';
-							}}
-						>
-							<i 
-								className={statusBarVisible ? 'pi pi-eye' : 'pi pi-eye-slash'} 
-								style={{ color: '#4fc3f7', fontSize: '0.6rem' }} 
-							/>
-						</button>
-					)}
-
-					{/* Botón Grabaciones y Auditoría */}
-					<button
-						title="Ver grabaciones y auditoría"
-						onClick={async () => {
-							try {
-								if (window?.electron?.ipcRenderer) {
-									const result = await window.electron.ipcRenderer.invoke('recording:list', {});
-									if (result && result.success && Array.isArray(result.recordings) && result.recordings.length > 0) {
-										const auditTabId = `audit_global_${Date.now()}`;
-										window.dispatchEvent(new CustomEvent('create-audit-tab', {
-											detail: {
-												tabId: auditTabId,
-												title: 'Auditoría Global',
-												recordings: result.recordings
+							title="Ver grabaciones y auditoría"
+							onClick={async () => {
+								try {
+									if (window?.electron?.ipcRenderer) {
+										const result = await window.electron.ipcRenderer.invoke('recording:list', {});
+										if (result && result.success && Array.isArray(result.recordings) && result.recordings.length > 0) {
+											const auditTabId = `audit_global_${Date.now()}`;
+											window.dispatchEvent(new CustomEvent('create-audit-tab', {
+												detail: {
+													tabId: auditTabId,
+													title: 'Auditoría Global',
+													recordings: result.recordings
+												}
+											}));
+										} else {
+											// Si no hay grabaciones, mostrar mensaje
+											if (window.showToast) {
+												window.showToast('info', 'Sin grabaciones', 'No hay grabaciones disponibles para mostrar');
 											}
-										}));
-									} else {
-										// Si no hay grabaciones, mostrar mensaje
-										if (window.showToast) {
-											window.showToast('info', 'Sin grabaciones', 'No hay grabaciones disponibles para mostrar');
 										}
 									}
+								} catch (e) {
+									console.warn('[NodeTermStatus] Error abriendo auditoría global:', e?.message || e);
+									if (window.showToast) {
+										window.showToast('error', 'Error', 'Error al cargar las grabaciones');
+									}
 								}
-							} catch (e) {
-								console.warn('[NodeTermStatus] Error abriendo auditoría global:', e?.message || e);
-								if (window.showToast) {
-									window.showToast('error', 'Error', 'Error al cargar las grabaciones');
-								}
-							}
-						}}
-						style={{
-							cursor: 'pointer',
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-							width: '24px',
-							height: '24px',
-							borderRadius: '5px',
-							background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)',
-							border: '1px solid rgba(168, 85, 247, 0.35)',
-							boxShadow: '0 1px 4px rgba(168, 85, 247, 0.2)',
-							transition: 'all 0.2s ease',
-							padding: 0
-						}}
-						onMouseEnter={(e) => {
-							e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.35) 0%, rgba(168, 85, 247, 0.25) 100%)';
-							e.currentTarget.style.transform = 'scale(1.1)';
-						}}
-						onMouseLeave={(e) => {
-							e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)';
-							e.currentTarget.style.transform = 'scale(1)';
-						}}
-					>
-						<i className="pi pi-video" style={{ color: '#a855f7', fontSize: '0.6rem' }} />
-					</button>
+							}}
+							style={{
+								cursor: 'pointer',
+								display: 'flex',
+								flexDirection: 'column',
+								alignItems: 'center',
+								justifyContent: 'center',
+								gap: '0.2rem',
+								flex: '1 1 0',
+								minWidth: '28px',
+								maxWidth: '42px',
+								width: 'auto',
+								minWidth: '32px',
+								maxWidth: '42px',
+								height: '40px',
+								padding: '0.25rem 0.15rem',
+								borderRadius: '6px',
+								background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)',
+								border: '1px solid rgba(168, 85, 247, 0.35)',
+								boxShadow: '0 1px 4px rgba(168, 85, 247, 0.2)',
+								transition: 'all 0.2s ease',
+								position: 'relative'
+							}}
+							onMouseEnter={(e) => {
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.35) 0%, rgba(168, 85, 247, 0.25) 100%)';
+								e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+								e.currentTarget.style.boxShadow = '0 3px 8px rgba(168, 85, 247, 0.3)';
+							}}
+							onMouseLeave={(e) => {
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)';
+								e.currentTarget.style.transform = 'translateY(0) scale(1)';
+								e.currentTarget.style.boxShadow = '0 1px 4px rgba(168, 85, 247, 0.2)';
+							}}
+						>
+							<i className="pi pi-video" style={{ color: '#a855f7', fontSize: 'clamp(0.5rem, 2vw, 0.7rem)', fontWeight: 'bold' }} />
+							<span style={{
+								fontSize: 'clamp(0.35rem, 1.2vw, 0.4rem)',
+								fontWeight: '600',
+								color: themeColors.textPrimary || '#fff',
+								textAlign: 'center',
+								lineHeight: '1.1',
+								overflow: 'hidden',
+								textOverflow: 'ellipsis',
+								whiteSpace: 'nowrap',
+								width: '100%'
+							}}>
+								Audit
+							</span>
+						</button>
 					</div>
 				</div>
 
-				{/* Separador */}
-				<div style={{
-					width: '1px',
-					height: '50px',
-					background: 'rgba(255, 255, 255, 0.1)',
-					borderRadius: '1px',
-					alignSelf: 'stretch'
-				}} />
-
-				{/* SECCIÓN 2: TERMINALES */}
-				{availableTerminals.length > 0 && (
-					<div style={{
-						display: 'flex',
-						flexDirection: 'column',
-						gap: '0.4rem',
-						minWidth: 'fit-content'
-					}}>
-						{/* Título */}
+					{/* SECCIÓN 2: TERMINALES */}
+					{availableTerminals.length > 0 && (
 						<div style={{
 							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-							gap: '0.3rem',
-							fontSize: '0.6rem',
-							fontWeight: '700',
-							color: themeColors.textPrimary || '#fff',
-							textTransform: 'uppercase',
-							letterSpacing: '0.8px',
-							marginBottom: '0.3rem',
-							padding: '0.2rem 0.5rem',
-							background: 'rgba(34, 197, 94, 0.1)',
-							borderRadius: '6px',
-							border: '1px solid rgba(34, 197, 94, 0.2)'
+							flexDirection: 'column',
+							gap: '0.4rem',
+							minWidth: 0,
+							flex: '1 1 0',
+							overflow: 'hidden',
+							maxWidth: '50%'
 						}}>
-							<i className="pi pi-terminal" style={{ color: '#22c55e', fontSize: '0.65rem' }} />
-							<span>Terminales</span>
-						</div>
-						{/* Botones */}
-						<div style={{
-							display: 'flex',
-							alignItems: 'center',
-							gap: '0.3rem',
-							flexWrap: 'wrap'
-						}}>
-						{availableTerminals.map((terminal, index) => (
-							<button
-								key={index}
-								title={terminal.label}
-								onClick={terminal.action}
-								style={{
-									cursor: 'pointer',
-									display: 'flex',
-									alignItems: 'center',
-									justifyContent: 'center',
-									width: '24px',
-									height: '24px',
-									borderRadius: '5px',
+							{/* Título */}
+							<div style={{
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								gap: '0.3rem',
+								fontSize: '0.6rem',
+								fontWeight: '700',
+								color: themeColors.textPrimary || '#fff',
+								textTransform: 'uppercase',
+								letterSpacing: '0.8px',
+								marginBottom: '0.3rem',
+								padding: '0.2rem 0.5rem',
+								background: 'rgba(34, 197, 94, 0.1)',
+								borderRadius: '6px',
+								border: '1px solid rgba(34, 197, 94, 0.2)'
+							}}>
+								<i className="pi pi-terminal" style={{ color: '#22c55e', fontSize: '0.65rem' }} />
+								<span>Terminales</span>
+							</div>
+							{/* Botones */}
+							<div style={{
+								display: 'flex',
+								alignItems: 'center',
+								gap: '0.2rem',
+								flexWrap: 'wrap',
+								maxWidth: '100%',
+								overflow: 'hidden',
+								width: '100%',
+								flexShrink: 1
+							}}>
+								{availableTerminals.map((terminal, index) => (
+									<button
+										key={index}
+										title={terminal.label}
+										onClick={terminal.action}
+										style={{
+											cursor: 'pointer',
+											display: 'flex',
+											flexDirection: 'column',
+											alignItems: 'center',
+											justifyContent: 'center',
+											gap: '0.2rem',
+									flex: '1 1 0',
+									minWidth: '28px',
+									maxWidth: '42px',
+									width: 'auto',
+									height: '40px',
+									padding: '0.2rem 0.15rem',
+									borderRadius: '6px',
 									background: `linear-gradient(135deg, ${terminal.color}25 0%, ${terminal.color}15 100%)`,
-									border: `1px solid ${terminal.color}35`,
-									boxShadow: `0 1px 4px ${terminal.color}20`,
-									transition: 'all 0.2s ease',
-									padding: 0,
-									fontSize: '0.6rem'
-								}}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.background = `linear-gradient(135deg, ${terminal.color}35 0%, ${terminal.color}25 100%)`;
-									e.currentTarget.style.transform = 'scale(1.1)';
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.background = `linear-gradient(135deg, ${terminal.color}25 0%, ${terminal.color}15 100%)`;
-									e.currentTarget.style.transform = 'scale(1)';
-								}}
-							>
-								<i className={terminal.icon} style={{ color: terminal.color, fontSize: '0.6rem' }} />
-							</button>
-						))}
+											border: `1px solid ${terminal.color}35`,
+											boxShadow: `0 1px 4px ${terminal.color}20`,
+											transition: 'all 0.2s ease',
+											position: 'relative'
+										}}
+										onMouseEnter={(e) => {
+											e.currentTarget.style.background = `linear-gradient(135deg, ${terminal.color}35 0%, ${terminal.color}25 100%)`;
+											e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+											e.currentTarget.style.boxShadow = `0 3px 8px ${terminal.color}30`;
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.style.background = `linear-gradient(135deg, ${terminal.color}25 0%, ${terminal.color}15 100%)`;
+											e.currentTarget.style.transform = 'translateY(0) scale(1)';
+											e.currentTarget.style.boxShadow = `0 1px 4px ${terminal.color}20`;
+										}}
+									>
+										<i className={terminal.icon} style={{ color: terminal.color, fontSize: 'clamp(0.5rem, 2vw, 0.7rem)', fontWeight: 'bold' }} />
+										<span style={{
+											fontSize: 'clamp(0.35rem, 1.2vw, 0.4rem)',
+											fontWeight: '600',
+											color: themeColors.textPrimary || '#fff',
+											textAlign: 'center',
+											lineHeight: '1.1',
+											overflow: 'hidden',
+											textOverflow: 'ellipsis',
+											whiteSpace: 'nowrap',
+											width: '100%'
+										}}>
+											{terminal.label}
+										</span>
+									</button>
+								))}
 
-						{/* Botón Docker si hay contenedores */}
-						{dockerContainers.length > 0 && (
-							<button
-								title={`Docker (${dockerContainers.length})`}
-								onClick={() => handleOpenTerminal(`docker-${dockerContainers[0].name}`, { dockerContainer: dockerContainers[0] })}
-								style={{
-									cursor: 'pointer',
-									display: 'flex',
-									alignItems: 'center',
-									justifyContent: 'center',
-									width: '24px',
-									height: '24px',
-									borderRadius: '5px',
-									background: 'linear-gradient(135deg, rgba(36, 150, 237, 0.25) 0%, rgba(36, 150, 237, 0.15) 100%)',
-									border: '1px solid rgba(36, 150, 237, 0.35)',
-									boxShadow: '0 1px 4px rgba(36, 150, 237, 0.2)',
-									transition: 'all 0.2s ease',
-									padding: 0,
-									position: 'relative',
-									fontSize: '0.6rem'
-								}}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(36, 150, 237, 0.35) 0%, rgba(36, 150, 237, 0.25) 100%)';
-									e.currentTarget.style.transform = 'scale(1.1)';
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(36, 150, 237, 0.25) 0%, rgba(36, 150, 237, 0.15) 100%)';
-									e.currentTarget.style.transform = 'scale(1)';
-								}}
-							>
-								<i className="pi pi-box" style={{ color: '#2496ED', fontSize: '0.6rem' }} />
-								{dockerContainers.length > 1 && (
-									<span style={{
-										position: 'absolute',
-										top: '-6px',
-										right: '-6px',
-										background: '#ff4444',
-										color: 'white',
-										borderRadius: '50%',
-										width: '12px',
-										height: '12px',
-										fontSize: '7px',
-										display: 'flex',
-										alignItems: 'center',
-										justifyContent: 'center',
-										fontWeight: 'bold',
-										border: '1px solid rgba(255,255,255,0.5)'
-									}}>
-										{dockerContainers.length}
-									</span>
+								{/* Botón Docker si hay contenedores */}
+								{dockerContainers.length > 0 && (
+									<button
+										title={`Docker (${dockerContainers.length})`}
+										onClick={() => handleOpenTerminal(`docker-${dockerContainers[0].name}`, { dockerContainer: dockerContainers[0] })}
+										style={{
+											cursor: 'pointer',
+											display: 'flex',
+											flexDirection: 'column',
+											alignItems: 'center',
+											justifyContent: 'center',
+											gap: '0.2rem',
+											width: '42px',
+											height: '40px',
+											padding: '0.3rem 0.25rem',
+											borderRadius: '6px',
+											background: 'linear-gradient(135deg, rgba(36, 150, 237, 0.25) 0%, rgba(36, 150, 237, 0.15) 100%)',
+											border: '1px solid rgba(36, 150, 237, 0.35)',
+											boxShadow: '0 1px 4px rgba(36, 150, 237, 0.2)',
+											transition: 'all 0.2s ease',
+											position: 'relative',
+											overflow: 'visible'
+										}}
+										onMouseEnter={(e) => {
+											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(36, 150, 237, 0.35) 0%, rgba(36, 150, 237, 0.25) 100%)';
+											e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+											e.currentTarget.style.boxShadow = '0 3px 8px rgba(36, 150, 237, 0.3)';
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(36, 150, 237, 0.25) 0%, rgba(36, 150, 237, 0.15) 100%)';
+											e.currentTarget.style.transform = 'translateY(0) scale(1)';
+											e.currentTarget.style.boxShadow = '0 1px 4px rgba(36, 150, 237, 0.2)';
+										}}
+									>
+										<div style={{ position: 'relative' }}>
+											<i className="pi pi-box" style={{ color: '#2496ED', fontSize: 'clamp(0.5rem, 2vw, 0.7rem)', fontWeight: 'bold' }} />
+											{dockerContainers.length > 1 && (
+												<span style={{
+													position: 'absolute',
+													top: '-6px',
+													right: '-6px',
+													background: '#ff4444',
+													color: 'white',
+													borderRadius: '50%',
+													width: '14px',
+													height: '14px',
+													fontSize: '0.55rem',
+													display: 'flex',
+													alignItems: 'center',
+													justifyContent: 'center',
+													fontWeight: 'bold',
+													border: '1.5px solid rgba(255,255,255,0.8)',
+													boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+												}}>
+													{dockerContainers.length}
+												</span>
+											)}
+										</div>
+										<span style={{
+											fontSize: 'clamp(0.35rem, 1.2vw, 0.4rem)',
+											fontWeight: '600',
+											color: themeColors.textPrimary || '#fff',
+											textAlign: 'center',
+											lineHeight: '1.1',
+											overflow: 'hidden',
+											textOverflow: 'ellipsis',
+											whiteSpace: 'nowrap',
+											width: '100%'
+										}}>
+											Docker
+										</span>
+									</button>
 								)}
-							</button>
-						)}
+							</div>
 						</div>
-					</div>
-				)}
+					)}
 				</div>
 
 				{/* CARD 2: SERVICIOS Y KPIs */}
@@ -836,7 +1044,9 @@ const NodeTermStatus = ({
 					display: 'flex',
 					alignItems: 'flex-start',
 					gap: '1rem',
-					minHeight: '60px'
+					minHeight: '60px',
+					overflow: 'hidden',
+					flex: '1 1 0'
 				}}>
 					{/* SECCIÓN 3: SERVICIOS */}
 					<div style={{
@@ -1175,7 +1385,7 @@ const NodeTermStatus = ({
 								gap: '0.5rem',
 								padding: '0.25rem 0.5rem',
 								background: 'rgba(255, 255, 255, 0.05)',
-								borderRadius: '8px',
+								borderRadius: '6px',
 								border: '1px solid rgba(255, 255, 255, 0.1)',
 								height: 'fit-content'
 							}}>
@@ -1218,7 +1428,7 @@ const NodeTermStatus = ({
 								<div style={{
 									display: 'flex',
 									flexDirection: 'column',
-									gap: '0.25rem',
+									gap: '0.2rem',
 									minWidth: 'fit-content'
 								}}>
 									{/* SSH */}
