@@ -561,16 +561,8 @@ const HomeTab = ({
             display: 'flex',
             flexDirection: 'column'
           }}>
-            {/* Card de Estado de NodeTerm arriba del todo - horizontal y compacta */}
+            {/* Cards de Estado de NodeTerm - Acciones/Terminales y Servicios/KPIs */}
             <div style={{
-              background: `linear-gradient(135deg,
-                rgba(16, 20, 28, 0.6) 0%,
-                rgba(16, 20, 28, 0.4) 100%)`,
-              backdropFilter: 'blur(8px) saturate(140%)',
-              WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-              border: `1px solid ${themeColors.cardBorder}`,
-              borderRadius: '12px',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
               position: 'relative',
               marginBottom: '1rem'
             }}>
@@ -606,7 +598,8 @@ const HomeTab = ({
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderRadius: '12px',
-                  zIndex: 10
+                  zIndex: 10,
+                  pointerEvents: 'none'
                 }}>
                   <div style={{
                     display: 'flex',
