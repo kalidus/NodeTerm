@@ -1,9 +1,11 @@
-# Script para crear Cygwin portable para NodeTerm
+    # Script para crear Cygwin portable par NodeTerm
 # Ejecutar: .\scripts\create-cygwin-portable.ps1
 
 param(
     [string]$OutputDir = "",
     [switch]$Minimal,
+    [switch]$Medium,
+    [switch]$Full,
     [switch]$NoUltraComplete,
     [switch]$UseTemp
 )
@@ -30,15 +32,25 @@ $SETUP_FILE = Join-Path $ProjectRoot "cygwin-setup-temp.exe"
 # Paquetes minimos
 $MINIMAL_PACKAGES = "bash,coreutils,grep,sed,gawk,findutils,which,less,ncurses"
 
-# Paquetes completos (herramientas básicas + red + desarrollo)
-# Incluye: básicos + red (wget,curl,netcat,ping,telnet,nmap) + desarrollo (gcc,g++,make,cmake)
-$FULL_PACKAGES = "$MINIMAL_PACKAGES,wget,curl,git,vim,nano,openssh,tar,gzip,bzip2,diffutils,file,procps-ng,netcat,iputils,inetutils,telnet,nmap,traceroute,tcpdump,net-tools,openssl,ca-certificates,libcurl4,libssh2,rsync,unzip,zip,less,more,man-db,info,gcc,g++,make,cmake,autoconf,automake,libtool,pkg-config,binutils"
+# Paquetes MEDIUM (básicos + red + utilidades básicas + herramientas avanzadas esenciales)
+# Incluye: básicos + red (wget,curl,netcat,ping,telnet,nmap) + utilidades (tar,gzip,git,vim,nano) + avanzadas (htop,strace,lsof,tcpdump,net-tools)
+# SIN compiladores, lenguajes de programación, documentación pesada ni herramientas redundantes
+$MEDIUM_PACKAGES = "$MINIMAL_PACKAGES,wget,curl,git,vim,nano,openssh,tar,gzip,procps-ng,netcat,iputils,telnet,nmap,tcpdump,net-tools,openssl,ca-certificates,libcurl4,libssh2,rsync,unzip,zip,htop,strace,lsof"
 
-# Paquetes ultra completos (todo incluido)
-$ULTRA_COMPLETE_PACKAGES = "$FULL_PACKAGES,htop,iotop,tree,strace,ltrace,lsof,psmisc,sysstat,util-linux,which,time,parallel,gnuplot,graphviz,imagemagick,ffmpeg,python3,pip,nodejs,npm,yarn,ruby,perl,php,go,rust,java-openjdk"
+# Paquetes completos (MEDIUM + desarrollo)
+# Incluye: MEDIUM + compiladores y herramientas de desarrollo (gcc,g++,make,cmake)
+$FULL_PACKAGES = "$MEDIUM_PACKAGES,gcc,g++,make,cmake,autoconf,automake,libtool,pkg-config,binutils"
 
+# Paquetes ultra completos (FULL + lenguajes de programación + herramientas adicionales)
+$ULTRA_COMPLETE_PACKAGES = "$FULL_PACKAGES,tree,psmisc,util-linux,time,parallel,gnuplot,graphviz,imagemagick,ffmpeg,python3,pip,nodejs,npm,yarn,ruby,perl,php,go,rust,java-openjdk"
+
+# Lógica de selección: MEDIUM es el modo por defecto
 $PACKAGES = if ($Minimal) { 
     $MINIMAL_PACKAGES 
+} elseif ($Medium) { 
+    $MEDIUM_PACKAGES 
+} elseif ($Full) { 
+    $FULL_PACKAGES 
 } elseif ($NoUltraComplete) { 
     $FULL_PACKAGES 
 } else { 
@@ -58,8 +70,11 @@ if ($UseTemp) {
 Write-Host "Configuracion:" -ForegroundColor Yellow
 Write-Host "   Proyecto: $ProjectRoot"
 Write-Host "   Output: $OutputDir"
-$mode = if ($Minimal) { 'Minimal' } elseif ($NoUltraComplete) { 'Full' } else { 'Ultra Complete' }
-Write-Host "   Mode: $mode"
+$mode = if ($Minimal) { 'Minimal' } 
+        elseif ($Medium) { 'Medium' } 
+        elseif ($Full -or $NoUltraComplete) { 'Full' } 
+        else { 'Ultra Complete' }
+Write-Host "   Mode: $mode (por defecto: Medium)"
 Write-Host "   Packages: $PACKAGES"
 Write-Host ""
 
