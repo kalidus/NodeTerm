@@ -181,6 +181,29 @@ $size = (Get-ChildItem $OutputDir -Recurse -ErrorAction SilentlyContinue |
          Measure-Object -Property Length -Sum).Sum / 1MB
 Write-Host "   Tamano total: $([math]::Round($size, 2)) MB" -ForegroundColor Yellow
 
+# Analizar qué ocupa más espacio (solo en modo Medium para diagnóstico)
+if ($mode -like 'Medium*') {
+    Write-Host ""
+    Write-Host "Analizando tamano por directorio..." -ForegroundColor Cyan
+    $dirSizes = @{}
+    $topDirs = @("bin", "lib", "usr\lib", "usr\bin", "usr\share", "usr\include", "usr\src", "usr\local")
+    
+    foreach ($dir in $topDirs) {
+        $fullPath = Join-Path $OutputDir $dir
+        if (Test-Path $fullPath) {
+            $size = (Get-ChildItem $fullPath -Recurse -ErrorAction SilentlyContinue | 
+                    Measure-Object -Property Length -Sum).Sum / 1MB
+            if ($size -gt 0) {
+                $dirSizes[$dir] = $size
+            }
+        }
+    }
+    
+    $dirSizes.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 5 | ForEach-Object {
+        Write-Host "   $($_.Key): $([math]::Round($_.Value, 2)) MB" -ForegroundColor Gray
+    }
+}
+
 # Limpiar archivos temporales y documentación innecesaria
 Write-Host ""
 Write-Host "Limpiando archivos temporales e innecesarios..." -ForegroundColor Cyan
@@ -189,7 +212,12 @@ $cleanupPaths = @(
     "$OutputDir\var\cache\cygwin",
     "$OutputDir\usr\share\man",
     "$OutputDir\usr\share\info",
-    "$OutputDir\usr\share\doc"
+    "$OutputDir\usr\share\doc",
+    "$OutputDir\usr\include",
+    "$OutputDir\usr\src",
+    "$OutputDir\usr\local\include",
+    "$OutputDir\usr\local\lib",
+    "$OutputDir\usr\local\src"
 )
 
 $totalCleaned = 0
@@ -201,6 +229,23 @@ foreach ($cleanPath in $cleanupPaths) {
         if ($sizeBefore -gt 0) {
             Write-Host "   Eliminado: $cleanPath ($([math]::Round($sizeBefore, 2)) MB)" -ForegroundColor Gray
             $totalCleaned += $sizeBefore
+        }
+    }
+}
+
+# Limpiar librerías estáticas (.a) que no son necesarias en runtime
+Write-Host "   Limpiando librerias estaticas (.a)..." -ForegroundColor Gray
+$libDirs = @("$OutputDir\lib", "$OutputDir\usr\lib")
+foreach ($libDir in $libDirs) {
+    if (Test-Path $libDir) {
+        $staticLibs = Get-ChildItem $libDir -Recurse -Filter "*.a" -ErrorAction SilentlyContinue
+        if ($staticLibs) {
+            $sizeBefore = ($staticLibs | Measure-Object -Property Length -Sum).Sum / 1MB
+            $staticLibs | Remove-Item -Force -ErrorAction SilentlyContinue
+            if ($sizeBefore -gt 0) {
+                Write-Host "   Eliminadas librerias estaticas: $([math]::Round($sizeBefore, 2)) MB" -ForegroundColor Gray
+                $totalCleaned += $sizeBefore
+            }
         }
     }
 }

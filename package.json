@@ -50,7 +50,6 @@
       "target": "nsis",
       "icon": "src/assets/app-icon.png",
       "artifactName": "${productName}-Setup-${version}.${ext}",
-      "publisherName": "NodeTerm",
       "verifyUpdateCodeSignature": false,
       "requestedExecutionLevel": "asInvoker"
     },
@@ -62,9 +61,6 @@
       "createStartMenuShortcut": true,
       "shortcutName": "NodeTerm",
       "include": "build/installer.nsh",
-      "installerIcon": "src/assets/app-icon.png",
-      "uninstallerIcon": "src/assets/app-icon.png",
-      "installerHeaderIcon": "src/assets/app-icon.png",
       "deleteAppDataOnUninstall": false
     },
     "linux": {
