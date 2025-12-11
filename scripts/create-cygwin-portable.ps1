@@ -34,10 +34,11 @@ $SETUP_FILE = Join-Path $ProjectRoot "cygwin-setup-temp.exe"
 $MINIMAL_PACKAGES = "bash,coreutils,grep,sed,gawk,findutils,which,less,ncurses"
 
 # Paquetes MEDIUM (básicos + red + utilidades básicas - versión optimizada)
-# Incluye: básicos + red esencial (wget,curl,netcat,ping,openssh,nmap) + utilidades (tar,gzip,git,vim,nano) + sistema (procps-ng,net-tools,htop)
+# Incluye: básicos + red esencial (wget,curl,netcat,openssh) + utilidades (tar,gzip,git,vim,nano) + sistema (procps-ng,net-tools)
 # SIN: tcpdump, strace, lsof (muy pesados con muchas dependencias), telnet (menos usado)
 # SIN compiladores, lenguajes de programación, documentación pesada ni herramientas redundantes
-$MEDIUM_PACKAGES = "$MINIMAL_PACKAGES,wget,curl,git,vim,nano,openssh,tar,gzip,procps-ng,netcat,iputils,net-tools,openssl,ca-certificates,libcurl4,libssh2,rsync,unzip,zip,nmap,htop"
+# NOTA: nmap/htop/ping no se incluyen porque no están disponibles en Cygwin de forma oficial
+$MEDIUM_PACKAGES = "$MINIMAL_PACKAGES,wget,curl,git,vim,nano,openssh,tar,gzip,procps-ng,netcat,net-tools,openssl,ca-certificates,libcurl4,libssh2,rsync,unzip,zip"
 
 # Paquetes completos (MEDIUM + desarrollo)
 # Incluye: MEDIUM + compiladores y herramientas de desarrollo (gcc,g++,make,cmake)
@@ -89,7 +90,7 @@ Write-Host ""
 
 # Verificar tamaño de instalación anterior si existe
 if (Test-Path $OutputDir) {
-    $oldSize = (Get-ChildItem $OutputDir -Recurse -ErrorAction SilentlyContinue | 
+    $oldSize = (Get-ChildItem $OutputDir -Recurse -File -ErrorAction SilentlyContinue | 
                 Measure-Object -Property Length -Sum).Sum / 1MB
     if ($oldSize -gt 0) {
         Write-Host "   Instalacion anterior detectada: $([math]::Round($oldSize, 2)) MB" -ForegroundColor Yellow
@@ -116,7 +117,7 @@ if (-not (Test-Path $SETUP_FILE)) {
 Write-Host ""
 Write-Host "Verificando instalacion anterior..." -ForegroundColor Cyan
 if (Test-Path $OutputDir) {
-    $oldSize = (Get-ChildItem $OutputDir -Recurse -ErrorAction SilentlyContinue | 
+    $oldSize = (Get-ChildItem $OutputDir -Recurse -File -ErrorAction SilentlyContinue | 
                 Measure-Object -Property Length -Sum).Sum / 1MB
     Write-Host "   Instalacion anterior encontrada: $([math]::Round($oldSize, 2)) MB" -ForegroundColor Yellow
     Write-Host "   Eliminando instalacion anterior..." -ForegroundColor Yellow
@@ -177,7 +178,7 @@ if (Test-Path $bashPath) {
 # Calcular tamano
 Write-Host ""
 Write-Host "Calculando tamano..." -ForegroundColor Cyan
-$size = (Get-ChildItem $OutputDir -Recurse -ErrorAction SilentlyContinue | 
+$size = (Get-ChildItem $OutputDir -Recurse -File -ErrorAction SilentlyContinue | 
          Measure-Object -Property Length -Sum).Sum / 1MB
 Write-Host "   Tamano total: $([math]::Round($size, 2)) MB" -ForegroundColor Yellow
 
@@ -191,7 +192,7 @@ if ($mode -like 'Medium*') {
     foreach ($dir in $topDirs) {
         $fullPath = Join-Path $OutputDir $dir
         if (Test-Path $fullPath) {
-            $size = (Get-ChildItem $fullPath -Recurse -ErrorAction SilentlyContinue | 
+            $size = (Get-ChildItem $fullPath -Recurse -File -ErrorAction SilentlyContinue | 
                     Measure-Object -Property Length -Sum).Sum / 1MB
             if ($size -gt 0) {
                 $dirSizes[$dir] = $size
@@ -223,7 +224,7 @@ $cleanupPaths = @(
 $totalCleaned = 0
 foreach ($cleanPath in $cleanupPaths) {
     if (Test-Path $cleanPath) {
-        $sizeBefore = (Get-ChildItem $cleanPath -Recurse -ErrorAction SilentlyContinue | 
+        $sizeBefore = (Get-ChildItem $cleanPath -Recurse -File -ErrorAction SilentlyContinue | 
                       Measure-Object -Property Length -Sum).Sum / 1MB
         Remove-Item $cleanPath -Recurse -Force -ErrorAction SilentlyContinue
         if ($sizeBefore -gt 0) {
@@ -278,6 +279,9 @@ $cygwinrc = @"
 # Set prompt
 export PS1='\[\e[32m\]\u@\h\[\e[0m\]:\[\e[34m\]\w\[\e[0m\]\$ '
 
+# Force TERM to a known terminfo we bundle (para evitar problemas en top/ncurses)
+export TERM=xterm-256color
+
 # Aliases
 alias ll='ls -lah'
 alias ..='cd ..'
@@ -294,6 +298,253 @@ $etcProfilePath = Join-Path $OutputDir "etc\profile.d"
 New-Item -ItemType Directory -Path $etcProfilePath -Force | Out-Null
 $cygwinrc | Out-File -FilePath "$etcProfilePath\nodeterm.sh" -Encoding ASCII
 Write-Host "   Configuracion creada" -ForegroundColor Green
+
+# Crear versión LITE (solo binarios esenciales) al estilo MobaXterm
+Write-Host ""
+Write-Host "Creando version LITE (solo binarios esenciales)..." -ForegroundColor Cyan
+Write-Host "   Se reemplazara la instalacion completa por la version reducida." -ForegroundColor Yellow
+
+$liteDir = Join-Path $ProjectRoot "resources\cygwin64-lite-temp"
+if (Test-Path $liteDir) {
+    Remove-Item $liteDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+New-Item -ItemType Directory -Path $liteDir -Force | Out-Null
+
+# Binarios esenciales basados en MEDIUM (sin nmap/htop)
+$essentialBinaries = @(
+    "bash.exe", "sh.exe", "dash.exe",
+    "ls.exe", "grep.exe", "sed.exe", "awk.exe", "gawk.exe",
+    "find.exe", "which.exe", "less.exe", "tput.exe", "clear.exe", "stty.exe",
+    "wget.exe", "curl.exe", "git.exe",
+    "vim.exe", "nano.exe",
+    "ssh.exe", "scp.exe", "sftp.exe", "ssh-keygen.exe",
+    "tar.exe", "gzip.exe", "gunzip.exe", "zip.exe", "unzip.exe",
+    "nc.exe", "netcat.exe",
+    "ps.exe", "top.exe",
+    "rsync.exe", "cp.exe", "mv.exe", "rm.exe", "mkdir.exe", "rmdir.exe",
+    "cat.exe", "echo.exe", "head.exe", "tail.exe", "sort.exe", "uniq.exe",
+    "chmod.exe", "chown.exe", "ln.exe"
+)
+
+# Estructura mínima necesaria
+$essentialDirs = @(
+    "bin", "lib", "etc", "home",
+    "usr\bin", "usr\lib", "usr\share\terminfo", "usr\share\procps-ng",
+    "var", "var\run", "var\log"
+)
+foreach ($dir in $essentialDirs) {
+    $fullPath = Join-Path $liteDir $dir
+    New-Item -ItemType Directory -Path $fullPath -Force | Out-Null
+}
+
+# Escanear todos los .exe de la instalación completa
+Write-Host "   Escaneando binarios instalados..." -ForegroundColor DarkGray
+$allExeFiles = Get-ChildItem $OutputDir -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue
+Write-Host "   Total binarios encontrados: $($allExeFiles.Count)" -ForegroundColor DarkGray
+
+# Mapeo de binarios alternativos
+$binAlternatives = @{}
+$binAlternatives["awk.exe"] = @("gawk.exe", "gawk-*.exe")
+$binAlternatives["gunzip.exe"] = @("gzip.exe")
+$binAlternatives["netcat.exe"] = @("nc.exe")
+
+$binLocationMap = @{}
+
+foreach ($bin in $essentialBinaries) {
+    $baseName = $bin -replace "\.exe$", ""
+
+    # Nombre exacto
+    $exactMatch = $allExeFiles | Where-Object { $_.Name -eq $bin } | Select-Object -First 1
+    if ($exactMatch) {
+        $binLocationMap[$bin] = $exactMatch.FullName
+        continue
+    }
+
+    # Variantes con prefijo/base
+    $foundMatches = $allExeFiles | Where-Object {
+        $_.Name -like "$baseName*.exe" -or $_.Name -like "*$baseName*.exe"
+    }
+    if ($foundMatches) {
+        $preferred = $foundMatches | Where-Object { $_.Name -like "$baseName*.exe" } | Select-Object -First 1
+        $selected = if ($preferred) { $preferred } else { $foundMatches | Select-Object -First 1 }
+        $binLocationMap[$bin] = $selected.FullName
+        continue
+    }
+
+    # Alternativos
+    if ($binAlternatives.ContainsKey($bin)) {
+        $foundAlt = $false
+        foreach ($altPattern in $binAlternatives[$bin]) {
+            if ($altPattern -like "*`**") {
+                $altBase = $altPattern -replace "\.exe$", "" -replace "\*", ""
+                $altMatches = $allExeFiles | Where-Object { $_.Name -like "$altBase*.exe" }
+                if ($altMatches) {
+                    $selectedAlt = $altMatches | Select-Object -First 1
+                    $binLocationMap[$bin] = $selectedAlt.FullName
+                    $foundAlt = $true
+                    break
+                }
+            } else {
+                $altExact = $allExeFiles | Where-Object { $_.Name -eq $altPattern } | Select-Object -First 1
+                if ($altExact) {
+                    $binLocationMap[$bin] = $altExact.FullName
+                    $foundAlt = $true
+                    break
+                }
+            }
+        }
+        if ($foundAlt) { continue }
+    }
+}
+
+# Copiar binarios esenciales
+$copiedBinaries = 0
+$missingBinaries = @()
+foreach ($bin in $essentialBinaries) {
+    if ($binLocationMap.ContainsKey($bin)) {
+        $actualBinPath = $binLocationMap[$bin]
+        $destPath = Join-Path $liteDir "bin\$bin"
+        Copy-Item $actualBinPath $destPath -Force -ErrorAction SilentlyContinue
+        $copiedBinaries++
+    } else {
+        $missingBinaries += $bin
+    }
+}
+
+# Crear binarios alternativos (gunzip desde gzip, netcat desde nc)
+$alternativeMappings = @{
+    "gunzip.exe" = "gzip.exe"
+    "netcat.exe" = "nc.exe"
+}
+
+foreach ($altBin in $alternativeMappings.Keys) {
+    $sourceBin = $alternativeMappings[$altBin]
+    $sourcePath = Join-Path $liteDir "bin\$sourceBin"
+    $destPath = Join-Path $liteDir "bin\$altBin"
+    if (Test-Path $sourcePath) {
+        Copy-Item $sourcePath $destPath -Force -ErrorAction SilentlyContinue
+        $copiedBinaries++
+        $missingBinaries = $missingBinaries | Where-Object { $_ -ne $altBin }
+    }
+}
+
+# Integrar ping.exe desde Windows si está disponible
+$pingDest = Join-Path $liteDir "bin\ping.exe"
+if (-not (Test-Path $pingDest)) {
+    $windowsPing = "C:\Windows\System32\ping.exe"
+    if (Test-Path $windowsPing) {
+        Copy-Item $windowsPing $pingDest -Force -ErrorAction SilentlyContinue
+        $copiedBinaries++
+    }
+}
+
+# Reportar faltantes (informativo)
+$missingReport = $missingBinaries | Where-Object { $_ -ne "ping.exe" }
+if ($missingReport.Count -gt 0) {
+    Write-Host "   Binarios no encontrados (se omitiran en LITE): $($missingReport -join ', ')" -ForegroundColor Yellow
+}
+
+# Copiar DLLs de lib y bin (enfoque seguro)
+Write-Host "   Copiando DLLs..." -ForegroundColor Gray
+$copiedDlls = 0
+$libDlls = Get-ChildItem (Join-Path $OutputDir "lib") -Filter "*.dll" -ErrorAction SilentlyContinue
+foreach ($dll in $libDlls) {
+    $dllDest = Join-Path $liteDir "lib\$($dll.Name)"
+    Copy-Item $dll.FullName $dllDest -Force -ErrorAction SilentlyContinue
+    $copiedDlls++
+}
+$binDlls = Get-ChildItem (Join-Path $OutputDir "bin") -Filter "*.dll" -ErrorAction SilentlyContinue
+foreach ($dll in $binDlls) {
+    $dllDest = Join-Path $liteDir "bin\$($dll.Name)"
+    Copy-Item $dll.FullName $dllDest -Force -ErrorAction SilentlyContinue
+    $copiedDlls++
+}
+# DLLs en usr\bin y usr\lib (algunas dependencias adicionales)
+$usrBinDlls = Get-ChildItem (Join-Path $OutputDir "usr\bin") -Filter "*.dll" -ErrorAction SilentlyContinue
+foreach ($dll in $usrBinDlls) {
+    $dllDest = Join-Path $liteDir "usr\bin\$($dll.Name)"
+    Copy-Item $dll.FullName $dllDest -Force -ErrorAction SilentlyContinue
+    $copiedDlls++
+}
+$usrLibDlls = Get-ChildItem (Join-Path $OutputDir "usr\lib") -Filter "*.dll" -ErrorAction SilentlyContinue
+foreach ($dll in $usrLibDlls) {
+    $dllDest = Join-Path $liteDir "usr\lib\$($dll.Name)"
+    Copy-Item $dll.FullName $dllDest -Force -ErrorAction SilentlyContinue
+    $copiedDlls++
+}
+
+# Copiar configuración esencial
+$etcFiles = @("fstab", "nsswitch.conf", "profile")
+foreach ($file in $etcFiles) {
+    $src = Join-Path $OutputDir "etc\$file"
+    if (Test-Path $src) {
+        $dest = Join-Path $liteDir "etc\$file"
+        Copy-Item $src $dest -Force -ErrorAction SilentlyContinue
+    }
+}
+
+if (Test-Path "$OutputDir\etc\profile.d") {
+    $profileDest = Join-Path $liteDir "etc\profile.d"
+    New-Item -ItemType Directory -Path $profileDest -Force | Out-Null
+    $profileFiles = Get-ChildItem "$OutputDir\etc\profile.d" -File -ErrorAction SilentlyContinue
+    if ($profileFiles) {
+        Copy-Item $profileFiles.FullName $profileDest -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# Copiar home (estructura)
+if (Test-Path "$OutputDir\home") {
+    Copy-Item "$OutputDir\home" "$liteDir\" -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# Terminfo completo (para evitar problemas con top/ncurses)
+if (Test-Path "$OutputDir\usr\share\terminfo") {
+    Write-Host "   Copiando terminfo completo..." -ForegroundColor Gray
+    Copy-Item "$OutputDir\usr\share\terminfo" (Join-Path $liteDir "usr\share") -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# Datos de procps-ng (top) si existen
+if (Test-Path "$OutputDir\usr\share\procps-ng") {
+    Write-Host "   Copiando datos de procps-ng..." -ForegroundColor Gray
+    Copy-Item "$OutputDir\usr\share\procps-ng" (Join-Path $liteDir "usr\share") -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# Archivos utmp/wtmp para top/ps (vacíos)
+$utmpPath = Join-Path $liteDir "var\run\utmp"
+if (-not (Test-Path $utmpPath)) {
+    New-Item -ItemType File -Path $utmpPath -Force | Out-Null
+}
+$wtmpPath = Join-Path $liteDir "var\log\wtmp"
+if (-not (Test-Path $wtmpPath)) {
+    New-Item -ItemType File -Path $wtmpPath -Force | Out-Null
+}
+
+# Reemplazar instalación completa con la versión LITE
+Write-Host "   Reemplazando instalacion completa con version LITE..." -ForegroundColor Yellow
+$backupDir = "$OutputDir-backup"
+if (Test-Path $backupDir) {
+    Remove-Item $backupDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+Rename-Item $OutputDir $backupDir -Force
+Move-Item $liteDir $OutputDir -Force
+
+# Calcular reducción
+$oldSizeFiles = Get-ChildItem $backupDir -Recurse -File -ErrorAction SilentlyContinue
+$oldSize = if ($oldSizeFiles) { ($oldSizeFiles | Measure-Object -Property Length -Sum).Sum / 1MB } else { 0 }
+$newSizeFiles = Get-ChildItem $OutputDir -Recurse -File -ErrorAction SilentlyContinue
+$newSize = if ($newSizeFiles) { ($newSizeFiles | Measure-Object -Property Length -Sum).Sum / 1MB } else { 0 }
+$reduction = $oldSize - $newSize
+
+Write-Host "   Binarios copiados: $copiedBinaries" -ForegroundColor Green
+Write-Host "   DLLs copiadas: $copiedDlls" -ForegroundColor Green
+Write-Host "   Tamano anterior: $([math]::Round($oldSize, 2)) MB" -ForegroundColor Gray
+Write-Host "   Tamano nuevo: $([math]::Round($newSize, 2)) MB" -ForegroundColor Green
+if ($oldSize -gt 0) {
+    Write-Host "   Reduccion: $([math]::Round($reduction, 2)) MB ($([math]::Round(($reduction/$oldSize)*100, 1))%)" -ForegroundColor Cyan
+}
+
+# Limpiar backup
+Remove-Item $backupDir -Recurse -Force -ErrorAction SilentlyContinue
 
 # Limpiar setup
 Write-Host ""
@@ -345,7 +596,7 @@ if ($TempInstall) {
 # Recalcular tamaño final después de toda la limpieza
 Write-Host ""
 Write-Host "Recalculando tamano final..." -ForegroundColor Cyan
-$size = (Get-ChildItem $OutputDir -Recurse -ErrorAction SilentlyContinue | 
+$size = (Get-ChildItem $OutputDir -Recurse -File -ErrorAction SilentlyContinue | 
          Measure-Object -Property Length -Sum).Sum / 1MB
 
 # Resumen final
