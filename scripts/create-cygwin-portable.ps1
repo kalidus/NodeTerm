@@ -251,6 +251,21 @@ foreach ($libDir in $libDirs) {
     }
 }
 
+# Limpiar archivos de depuracion y metadatos que sobran
+Write-Host "   Eliminando archivos de depuracion (*.pdb, *.dbg, *.la, *.exp)..." -ForegroundColor Gray
+$debugPatterns = @("*.pdb", "*.dbg", "*.la", "*.exp")
+foreach ($pattern in $debugPatterns) {
+    $debugFiles = Get-ChildItem $OutputDir -Recurse -Filter $pattern -ErrorAction SilentlyContinue
+    if ($debugFiles) {
+        $sizeBefore = ($debugFiles | Measure-Object -Property Length -Sum).Sum / 1MB
+        $debugFiles | Remove-Item -Force -ErrorAction SilentlyContinue
+        if ($sizeBefore -gt 0) {
+            Write-Host "   Eliminado $pattern`: $([math]::Round($sizeBefore, 2)) MB" -ForegroundColor Gray
+            $totalCleaned += $sizeBefore
+        }
+    }
+}
+
 if ($totalCleaned -gt 0) {
     Write-Host "   Total limpiado: $([math]::Round($totalCleaned, 2)) MB" -ForegroundColor Green
 }
@@ -608,24 +623,6 @@ Write-Host ""
 Write-Host "Modo instalado: $mode" -ForegroundColor Cyan
 Write-Host "Ubicacion: $OutputDir" -ForegroundColor White
 Write-Host "Tamano final: $([math]::Round($size, 2)) MB" -ForegroundColor White
-
-# Mostrar advertencia si el tamaño no coincide con el modo esperado
-$expectedSize = switch ($mode) {
-    'Minimal' { @(50, 100) }
-    { $_ -like 'Medium*' } { @(200, 400) }
-    { $_ -like 'Full*' } { @(500, 800) }
-    'Ultra Complete' { @(1000, 2000) }
-    default { @(200, 400) }
-}
-
-$expectedRange = "$($expectedSize[0])-$($expectedSize[1]) MB"
-if ($size -lt $expectedSize[0] -or $size -gt $expectedSize[1]) {
-    Write-Host "   [ADVERTENCIA] Tamano fuera del rango esperado ($expectedRange)" -ForegroundColor Yellow
-    Write-Host "   Verifica que se instalaron los paquetes correctos" -ForegroundColor Yellow
-} else {
-    Write-Host "   [OK] Tamano dentro del rango esperado ($expectedRange)" -ForegroundColor Green
-}
-
 Write-Host "Bash: $bashPath" -ForegroundColor White
 Write-Host ""
 Write-Host "Siguiente paso: Compilar la aplicacion con Electron Builder" -ForegroundColor Yellow
