@@ -6,6 +6,7 @@ param(
     [switch]$Minimal,
     [switch]$Medium,
     [switch]$Full,
+    [switch]$UltraComplete,
     [switch]$NoUltraComplete,
     [switch]$UseTemp
 )
@@ -44,17 +45,20 @@ $FULL_PACKAGES = "$MEDIUM_PACKAGES,gcc,g++,make,cmake,autoconf,automake,libtool,
 # Paquetes ultra completos (FULL + lenguajes de programación + herramientas adicionales)
 $ULTRA_COMPLETE_PACKAGES = "$FULL_PACKAGES,tree,psmisc,util-linux,time,parallel,gnuplot,graphviz,imagemagick,ffmpeg,python3,pip,nodejs,npm,yarn,ruby,perl,php,go,rust,java-openjdk"
 
-# Lógica de selección: MEDIUM es el modo por defecto
+# Lógica de selección: MEDIUM es el modo por defecto (cuando no se especifica ningún parámetro)
 $PACKAGES = if ($Minimal) { 
     $MINIMAL_PACKAGES 
-} elseif ($Medium) { 
-    $MEDIUM_PACKAGES 
 } elseif ($Full) { 
     $FULL_PACKAGES 
-} elseif ($NoUltraComplete) { 
-    $FULL_PACKAGES 
-} else { 
+} elseif ($UltraComplete) { 
     $ULTRA_COMPLETE_PACKAGES 
+} elseif ($NoUltraComplete) { 
+    $FULL_PACKAGES  # NoUltraComplete = Full (sin lenguajes)
+} elseif ($Medium) { 
+    $MEDIUM_PACKAGES 
+} else { 
+    # Por defecto: MEDIUM (sin parámetros)
+    $MEDIUM_PACKAGES 
 }
 
 # Si UseTemp, instalar en directorio temporal
@@ -71,10 +75,12 @@ Write-Host "Configuracion:" -ForegroundColor Yellow
 Write-Host "   Proyecto: $ProjectRoot"
 Write-Host "   Output: $OutputDir"
 $mode = if ($Minimal) { 'Minimal' } 
+        elseif ($Full) { 'Full' } 
+        elseif ($UltraComplete) { 'Ultra Complete' }
+        elseif ($NoUltraComplete) { 'Full (NoUltraComplete)' }
         elseif ($Medium) { 'Medium' } 
-        elseif ($Full -or $NoUltraComplete) { 'Full' } 
-        else { 'Ultra Complete' }
-Write-Host "   Mode: $mode (por defecto: Medium)"
+        else { 'Medium (por defecto)' }
+Write-Host "   Mode: $mode"
 Write-Host "   Packages: $PACKAGES"
 Write-Host ""
 
