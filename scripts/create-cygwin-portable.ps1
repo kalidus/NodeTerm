@@ -33,10 +33,11 @@ $SETUP_FILE = Join-Path $ProjectRoot "cygwin-setup-temp.exe"
 # Paquetes minimos
 $MINIMAL_PACKAGES = "bash,coreutils,grep,sed,gawk,findutils,which,less,ncurses"
 
-# Paquetes MEDIUM (básicos + red + utilidades básicas + herramientas avanzadas esenciales)
-# Incluye: básicos + red (wget,curl,netcat,ping,telnet,nmap) + utilidades (tar,gzip,git,vim,nano) + avanzadas (htop,strace,lsof,tcpdump,net-tools)
+# Paquetes MEDIUM (básicos + red + utilidades básicas - versión optimizada)
+# Incluye: básicos + red esencial (wget,curl,netcat,ping,openssh,nmap) + utilidades (tar,gzip,git,vim,nano) + sistema (procps-ng,net-tools,htop)
+# SIN: tcpdump, strace, lsof (muy pesados con muchas dependencias), telnet (menos usado)
 # SIN compiladores, lenguajes de programación, documentación pesada ni herramientas redundantes
-$MEDIUM_PACKAGES = "$MINIMAL_PACKAGES,wget,curl,git,vim,nano,openssh,tar,gzip,procps-ng,netcat,iputils,telnet,nmap,tcpdump,net-tools,openssl,ca-certificates,libcurl4,libssh2,rsync,unzip,zip,htop,strace,lsof"
+$MEDIUM_PACKAGES = "$MINIMAL_PACKAGES,wget,curl,git,vim,nano,openssh,tar,gzip,procps-ng,netcat,iputils,net-tools,openssl,ca-certificates,libcurl4,libssh2,rsync,unzip,zip,nmap,htop"
 
 # Paquetes completos (MEDIUM + desarrollo)
 # Incluye: MEDIUM + compiladores y herramientas de desarrollo (gcc,g++,make,cmake)
@@ -71,18 +72,31 @@ if ($UseTemp) {
     Write-Host "Luego se movera a: $FinalOutputDir" -ForegroundColor Magenta
 }
 
-Write-Host "Configuracion:" -ForegroundColor Yellow
-Write-Host "   Proyecto: $ProjectRoot"
-Write-Host "   Output: $OutputDir"
+# Determinar modo
 $mode = if ($Minimal) { 'Minimal' } 
         elseif ($Full) { 'Full' } 
         elseif ($UltraComplete) { 'Ultra Complete' }
         elseif ($NoUltraComplete) { 'Full (NoUltraComplete)' }
         elseif ($Medium) { 'Medium' } 
         else { 'Medium (por defecto)' }
-Write-Host "   Mode: $mode"
-Write-Host "   Packages: $PACKAGES"
+
+Write-Host "Configuracion:" -ForegroundColor Yellow
+Write-Host "   Proyecto: $ProjectRoot"
+Write-Host "   Output: $OutputDir"
+Write-Host "   Mode: $mode" -ForegroundColor Cyan
+Write-Host "   Paquetes seleccionados: $($PACKAGES.Split(',').Count) paquetes"
 Write-Host ""
+
+# Verificar tamaño de instalación anterior si existe
+if (Test-Path $OutputDir) {
+    $oldSize = (Get-ChildItem $OutputDir -Recurse -ErrorAction SilentlyContinue | 
+                Measure-Object -Property Length -Sum).Sum / 1MB
+    if ($oldSize -gt 0) {
+        Write-Host "   Instalacion anterior detectada: $([math]::Round($oldSize, 2)) MB" -ForegroundColor Yellow
+        Write-Host "   Se eliminara antes de instalar el modo $mode" -ForegroundColor Yellow
+        Write-Host ""
+    }
+}
 
 # Descargar setup si no existe
 if (-not (Test-Path $SETUP_FILE)) {
@@ -98,7 +112,26 @@ if (-not (Test-Path $SETUP_FILE)) {
     Write-Host "Setup ya existe, reutilizando..." -ForegroundColor Green
 }
 
-# Crear directorio de salida
+# Limpiar instalación anterior si existe
+Write-Host ""
+Write-Host "Verificando instalacion anterior..." -ForegroundColor Cyan
+if (Test-Path $OutputDir) {
+    $oldSize = (Get-ChildItem $OutputDir -Recurse -ErrorAction SilentlyContinue | 
+                Measure-Object -Property Length -Sum).Sum / 1MB
+    Write-Host "   Instalacion anterior encontrada: $([math]::Round($oldSize, 2)) MB" -ForegroundColor Yellow
+    Write-Host "   Eliminando instalacion anterior..." -ForegroundColor Yellow
+    try {
+        Remove-Item -Path $OutputDir -Recurse -Force -ErrorAction Stop
+        Write-Host "   Instalacion anterior eliminada correctamente" -ForegroundColor Green
+    } catch {
+        Write-Host "   Error eliminando instalacion anterior: $_" -ForegroundColor Red
+        Write-Host "   Intentando continuar (puede haber conflictos)..." -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "   No hay instalacion anterior, continuando..." -ForegroundColor Green
+}
+
+# Crear directorio de salida limpio
 Write-Host ""
 Write-Host "Creando directorio de salida..." -ForegroundColor Cyan
 New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
@@ -148,19 +181,32 @@ $size = (Get-ChildItem $OutputDir -Recurse -ErrorAction SilentlyContinue |
          Measure-Object -Property Length -Sum).Sum / 1MB
 Write-Host "   Tamano total: $([math]::Round($size, 2)) MB" -ForegroundColor Yellow
 
-# Limpiar archivos temporales innecesarios
+# Limpiar archivos temporales y documentación innecesaria
 Write-Host ""
-Write-Host "Limpiando archivos temporales..." -ForegroundColor Cyan
+Write-Host "Limpiando archivos temporales e innecesarios..." -ForegroundColor Cyan
 $cleanupPaths = @(
     "$OutputDir\etc\setup",
-    "$OutputDir\var\cache\cygwin"
+    "$OutputDir\var\cache\cygwin",
+    "$OutputDir\usr\share\man",
+    "$OutputDir\usr\share\info",
+    "$OutputDir\usr\share\doc"
 )
 
+$totalCleaned = 0
 foreach ($cleanPath in $cleanupPaths) {
     if (Test-Path $cleanPath) {
+        $sizeBefore = (Get-ChildItem $cleanPath -Recurse -ErrorAction SilentlyContinue | 
+                      Measure-Object -Property Length -Sum).Sum / 1MB
         Remove-Item $cleanPath -Recurse -Force -ErrorAction SilentlyContinue
-        Write-Host "   Eliminado: $cleanPath" -ForegroundColor Gray
+        if ($sizeBefore -gt 0) {
+            Write-Host "   Eliminado: $cleanPath ($([math]::Round($sizeBefore, 2)) MB)" -ForegroundColor Gray
+            $totalCleaned += $sizeBefore
+        }
     }
+}
+
+if ($totalCleaned -gt 0) {
+    Write-Host "   Total limpiado: $([math]::Round($totalCleaned, 2)) MB" -ForegroundColor Green
 }
 
 # Crear archivo .cygwinrc personalizado
@@ -251,16 +297,42 @@ if ($TempInstall) {
     $bashPath = Join-Path $FinalOutputDir "bin\bash.exe"
 }
 
+# Recalcular tamaño final después de toda la limpieza
+Write-Host ""
+Write-Host "Recalculando tamano final..." -ForegroundColor Cyan
+$size = (Get-ChildItem $OutputDir -Recurse -ErrorAction SilentlyContinue | 
+         Measure-Object -Property Length -Sum).Sum / 1MB
+
 # Resumen final
 Write-Host ""
 Write-Host "====================================================" -ForegroundColor Green
 Write-Host "  Cygwin Portable Creado Exitosamente!" -ForegroundColor Green
 Write-Host "====================================================" -ForegroundColor Green
 Write-Host ""
+Write-Host "Modo instalado: $mode" -ForegroundColor Cyan
 Write-Host "Ubicacion: $OutputDir" -ForegroundColor White
-Write-Host "Tamano: $([math]::Round($size, 2)) MB" -ForegroundColor White
+Write-Host "Tamano final: $([math]::Round($size, 2)) MB" -ForegroundColor White
+
+# Mostrar advertencia si el tamaño no coincide con el modo esperado
+$expectedSize = switch ($mode) {
+    'Minimal' { @(50, 100) }
+    { $_ -like 'Medium*' } { @(200, 400) }
+    { $_ -like 'Full*' } { @(500, 800) }
+    'Ultra Complete' { @(1000, 2000) }
+    default { @(200, 400) }
+}
+
+$expectedRange = "$($expectedSize[0])-$($expectedSize[1]) MB"
+if ($size -lt $expectedSize[0] -or $size -gt $expectedSize[1]) {
+    Write-Host "   [ADVERTENCIA] Tamano fuera del rango esperado ($expectedRange)" -ForegroundColor Yellow
+    Write-Host "   Verifica que se instalaron los paquetes correctos" -ForegroundColor Yellow
+} else {
+    Write-Host "   [OK] Tamano dentro del rango esperado ($expectedRange)" -ForegroundColor Green
+}
+
 Write-Host "Bash: $bashPath" -ForegroundColor White
 Write-Host ""
 Write-Host "Siguiente paso: Compilar la aplicacion con Electron Builder" -ForegroundColor Yellow
-Write-Host "   La carpeta 'resources' sera incluida automaticamente" -ForegroundColor Yellow
+$msgFinal = "   La carpeta resources sera incluida automaticamente"
+Write-Host $msgFinal -ForegroundColor Yellow
 Write-Host ""

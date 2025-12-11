@@ -60,14 +60,15 @@ Esto creará `resources\cygwin64\` con todo Cygwin instalado.
 
 **🔹 MODO MEDIUM (`-Medium` o por defecto):**
 - ✅ **Básicos**: bash, coreutils, grep, sed, gawk, findutils, which, less, ncurses
-- ✅ **Red**: wget, curl, openssh, netcat, iputils (ping), telnet, nmap, tcpdump, net-tools, openssl, ca-certificates, libcurl4, libssh2, rsync
+- ✅ **Red esencial**: wget, curl, openssh, netcat, iputils (ping), nmap, net-tools, openssl, ca-certificates, libcurl4, libssh2, rsync
 - ✅ **Utilidades básicas**: git, vim, nano, tar, gzip, zip, unzip, procps-ng
-- ✅ **Herramientas avanzadas esenciales**: htop, strace, lsof
+- ✅ **Herramientas avanzadas**: htop (monitoreo del sistema)
+- ❌ **SIN herramientas pesadas** (tcpdump, strace, lsof, telnet - tienen muchas dependencias)
 - ❌ **SIN compiladores** (gcc, g++, make, cmake)
 - ❌ **SIN lenguajes de programación** (python, nodejs, ruby, etc.)
 - ❌ **SIN documentación pesada** (man-db, info)
 - ❌ **SIN herramientas redundantes** (bzip2, diffutils, file, inetutils, traceroute, ltrace, iotop, sysstat, more)
-- 📦 **Tamaño estimado**: ~150-300 MB (optimizado)
+- 📦 **Tamaño estimado**: ~200-400 MB (optimizado con nmap y htop)
 
 **🔹 MODO FULL (`-Full`):**
 - ✅ **Todo MEDIUM** PLUS:
