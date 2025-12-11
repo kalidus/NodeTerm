@@ -352,19 +352,14 @@ const NodeTermStatus = ({
 		</div>
 	);
 
-	// Layout horizontal compacto - DISEÑO CON TÍTULOS Y SERVICIOS MEJORADOS
+	// Layout horizontal compacto - DISEÑO CON DOS CARDS SEPARADAS
 	if (horizontal && compact) {
 		return (
 			<div style={{ 
-				padding: '0.8rem 1rem',
-				display: 'flex',
-				alignItems: 'flex-start',
+				display: 'grid',
+				gridTemplateColumns: '1fr 1fr',
 				gap: '1rem',
-				width: '100%',
-				background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.2) 100%)',
-				borderRadius: '10px',
-				border: '1px solid rgba(79, 195, 247, 0.15)',
-				minHeight: '60px'
+				width: '100%'
 			}}>
 				{/* Estilos globales para animaciones */}
 				<style>{`
@@ -380,7 +375,23 @@ const NodeTermStatus = ({
 					}
 				`}</style>
 
-				{/* SECCIÓN 1: ACCIONES */}
+				{/* CARD 1: ACCIONES RÁPIDAS Y TERMINALES */}
+				<div style={{ 
+					background: `linear-gradient(135deg,
+						rgba(16, 20, 28, 0.6) 0%,
+						rgba(16, 20, 28, 0.4) 100%)`,
+					backdropFilter: 'blur(8px) saturate(140%)',
+					WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+					border: `1px solid ${themeColors.cardBorder || 'rgba(255,255,255,0.1)'}`,
+					borderRadius: '12px',
+					boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+					padding: '0.75rem',
+					display: 'flex',
+					alignItems: 'flex-start',
+					gap: '1rem',
+					minHeight: '60px'
+				}}>
+					{/* SECCIÓN 1: ACCIONES */}
 				<div style={{
 					display: 'flex',
 					flexDirection: 'column',
@@ -809,24 +820,32 @@ const NodeTermStatus = ({
 						</div>
 					</div>
 				)}
+				</div>
 
-				{/* Separador */}
-				<div style={{
-					width: '1px',
-					height: '50px',
-					background: 'rgba(255, 255, 255, 0.1)',
-					borderRadius: '1px',
-					alignSelf: 'stretch'
-				}} />
-
-				{/* SECCIÓN 3: SERVICIOS */}
-				<div style={{
+				{/* CARD 2: SERVICIOS Y KPIs */}
+				<div style={{ 
+					background: `linear-gradient(135deg,
+						rgba(16, 20, 28, 0.6) 0%,
+						rgba(16, 20, 28, 0.4) 100%)`,
+					backdropFilter: 'blur(8px) saturate(140%)',
+					WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+					border: `1px solid ${themeColors.cardBorder || 'rgba(255,255,255,0.1)'}`,
+					borderRadius: '12px',
+					boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+					padding: '0.75rem',
 					display: 'flex',
-					flexDirection: 'column',
-					gap: '0.4rem',
-					minWidth: 'fit-content',
-					flex: 1
+					alignItems: 'flex-start',
+					gap: '1rem',
+					minHeight: '60px'
 				}}>
+					{/* SECCIÓN 3: SERVICIOS */}
+					<div style={{
+						display: 'flex',
+						flexDirection: 'column',
+						gap: '0.4rem',
+						minWidth: 'fit-content',
+						flex: 1
+					}}>
 					{/* Título */}
 					<div style={{
 						display: 'flex',
@@ -1088,25 +1107,25 @@ const NodeTermStatus = ({
 							);
 						})()}
 					</div>
-				</div>
+					</div>
 
-				{/* Separador */}
-				<div style={{
-					width: '1px',
-					height: '50px',
-					background: 'rgba(255, 255, 255, 0.1)',
-					borderRadius: '1px',
-					alignSelf: 'stretch'
-				}} />
+					{/* Separador dentro de la card */}
+					<div style={{
+						width: '1px',
+						height: '50px',
+						background: 'rgba(255, 255, 255, 0.1)',
+						borderRadius: '1px',
+						alignSelf: 'stretch'
+					}} />
 
-				{/* SECCIÓN 4: ESTADÍSTICAS */}
-				<div style={{
-					display: 'flex',
-					flexDirection: 'column',
-					gap: '0.4rem',
-					minWidth: 'fit-content',
-					marginLeft: 'auto'
-				}}>
+					{/* SECCIÓN 4: ESTADÍSTICAS/KPIs */}
+					<div style={{
+						display: 'flex',
+						flexDirection: 'column',
+						gap: '0.4rem',
+						minWidth: 'fit-content',
+						marginLeft: 'auto'
+					}}>
 					{/* Gráfico Circular (Pie Chart) */}
 					{(() => {
 						// Calcular total y porcentajes
@@ -1274,6 +1293,7 @@ const NodeTermStatus = ({
 							</div>
 						);
 					})()}
+					</div>
 				</div>
 			</div>
 		);
