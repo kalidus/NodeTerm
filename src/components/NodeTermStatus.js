@@ -1332,7 +1332,7 @@ const NodeTermStatus = ({
 						flexShrink: 0
 					}} />
 
-					{/* SECCIÓN 4: ESTADÍSTICAS/KPIs - MÁS GRANDE */}
+					{/* SECCIÓN 4: ESTADÍSTICAS/KPIs - MÁS GRANDE Y MODERNO */}
 					<div style={{
 						display: 'flex',
 						flexDirection: 'column',
@@ -1342,29 +1342,63 @@ const NodeTermStatus = ({
 						justifyContent: 'center',
 						minWidth: 0,
 						overflow: 'visible',
-						height: '100%'
+						height: '100%',
+						padding: '0.2rem'
 					}}>
-					{/* Gráfico Circular (Pie Chart) - MÁS GRANDE */}
+					{/* Gráfico Circular (Pie Chart) - 3D MODERNO Y GRANDE */}
 					{(() => {
-						// Calcular total y porcentajes
-						const total = sshConnectionsCount + rdpConnectionsCount + passwordsCount;
+						// Calcular VNC y SFTP desde localStorage
+						let vncCount = 0;
+						let sftpCount = 0;
+						try {
+							const treeData = localStorage.getItem('basicapp2_tree_data');
+							if (treeData) {
+								const nodes = JSON.parse(treeData);
+								const countConnections = (nodeList) => {
+									if (!Array.isArray(nodeList)) return;
+									nodeList.forEach(node => {
+										if (node.data) {
+											if (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole') {
+												vncCount++;
+											}
+											if (node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp') {
+												sftpCount++;
+											}
+										}
+										if (node.children) {
+											countConnections(node.children);
+										}
+									});
+								};
+								countConnections(nodes);
+							}
+						} catch (e) {
+							console.warn('Error calculando VNC/SFTP:', e);
+						}
+						
+						// Calcular total y porcentajes (incluyendo VNC y SFTP)
+						const total = sshConnectionsCount + rdpConnectionsCount + passwordsCount + vncCount + sftpCount;
 						const sshPercent = total > 0 ? (sshConnectionsCount / total) * 100 : 0;
 						const rdpPercent = total > 0 ? (rdpConnectionsCount / total) * 100 : 0;
 						const keysPercent = total > 0 ? (passwordsCount / total) * 100 : 0;
+						const vncPercent = total > 0 ? (vncCount / total) * 100 : 0;
+						const sftpPercent = total > 0 ? (sftpCount / total) * 100 : 0;
 						
-						// Colores
+						// Colores con gradientes 3D
 						const sshColor = '#4fc3f7';
 						const rdpColor = '#ff6b35';
 						const keysColor = '#FFC107';
+						const vncColor = '#9c27b0';
+						const sftpColor = '#00e676';
 						
-						// Radio y centro del círculo (MÁS GRANDE pero ajustado)
-						const radius = 25;
-						const svgSize = 60;
+						// Radio y centro del círculo (MUCHO MÁS GRANDE)
+						const radius = 40;
+						const svgSize = 90;
 						const centerX = svgSize / 2;
 						const centerY = svgSize / 2;
 						
-						// Función para calcular el path de un arco
-						const createArcPath = (startPercent, endPercent) => {
+						// Función para calcular el path de un arco con efecto 3D
+						const createArcPath = (startPercent, endPercent, color, index) => {
 							const startAngle = (startPercent / 100) * 2 * Math.PI - Math.PI / 2;
 							const endAngle = (endPercent / 100) * 2 * Math.PI - Math.PI / 2;
 							
@@ -1375,7 +1409,19 @@ const NodeTermStatus = ({
 							
 							const largeArcFlag = endPercent - startPercent > 50 ? 1 : 0;
 							
-							return `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+							// Efecto 3D: offset para sombra
+							const shadowOffset = 2;
+							const shadowX = centerX + shadowOffset;
+							const shadowY = centerY + shadowOffset;
+							const shadowX1 = shadowX + radius * Math.cos(startAngle);
+							const shadowY1 = shadowY + radius * Math.sin(startAngle);
+							const shadowX2 = shadowX + radius * Math.cos(endAngle);
+							const shadowY2 = shadowY + radius * Math.sin(endAngle);
+							
+							return {
+								shadow: `M ${shadowX} ${shadowY} L ${shadowX1} ${shadowY1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${shadowX2} ${shadowY2} Z`,
+								main: `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`
+							};
 						};
 						
 						// Calcular los rangos de cada segmento
@@ -1383,69 +1429,150 @@ const NodeTermStatus = ({
 						const sshEnd = sshPercent;
 						const rdpStart = sshEnd;
 						const rdpEnd = sshEnd + rdpPercent;
-						const keysStart = rdpEnd;
-						const keysEnd = rdpEnd + keysPercent;
+						const vncStart = rdpEnd;
+						const vncEnd = rdpEnd + vncPercent;
+						const sftpStart = vncEnd;
+						const sftpEnd = vncEnd + sftpPercent;
+						const keysStart = sftpEnd;
+						const keysEnd = sftpEnd + keysPercent;
 						
 						return (
 							<div style={{
 								display: 'flex',
 								flexDirection: 'row',
 								alignItems: 'center',
-								gap: '0.4rem',
-								padding: '0.25rem',
-								background: 'rgba(255, 255, 255, 0.05)',
-								borderRadius: '6px',
-								border: '1px solid rgba(255, 255, 255, 0.1)',
+								gap: '0.5rem',
+								padding: '0.4rem',
+								background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%)',
+								borderRadius: '10px',
+								border: '1px solid rgba(255, 255, 255, 0.15)',
 								width: '100%',
 								height: '100%',
 								overflow: 'visible',
-								justifyContent: 'center'
+								justifyContent: 'center',
+								boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
 							}}>
-								{/* SVG Donut Chart - MÁS GRANDE y bien ajustado */}
+								{/* SVG Donut Chart - 3D MODERNO Y GRANDE */}
 								<svg 
 									width={svgSize} 
 									height={svgSize} 
 									viewBox={`0 0 ${svgSize} ${svgSize}`}
-									style={{ flexShrink: 0, overflow: 'visible' }}
+									style={{ flexShrink: 0, overflow: 'visible', filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4))' }}
 								>
+									<defs>
+										{/* Gradientes 3D para cada segmento */}
+										<linearGradient id="sshGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+											<stop offset="0%" stopColor={sshColor} stopOpacity="1" />
+											<stop offset="100%" stopColor={sshColor} stopOpacity="0.6" />
+										</linearGradient>
+										<linearGradient id="rdpGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+											<stop offset="0%" stopColor={rdpColor} stopOpacity="1" />
+											<stop offset="100%" stopColor={rdpColor} stopOpacity="0.6" />
+										</linearGradient>
+										<linearGradient id="vncGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+											<stop offset="0%" stopColor={vncColor} stopOpacity="1" />
+											<stop offset="100%" stopColor={vncColor} stopOpacity="0.6" />
+										</linearGradient>
+										<linearGradient id="sftpGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+											<stop offset="0%" stopColor={sftpColor} stopOpacity="1" />
+											<stop offset="100%" stopColor={sftpColor} stopOpacity="0.6" />
+										</linearGradient>
+										<linearGradient id="keysGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+											<stop offset="0%" stopColor={keysColor} stopOpacity="1" />
+											<stop offset="100%" stopColor={keysColor} stopOpacity="0.6" />
+										</linearGradient>
+										{/* Sombra para efecto 3D */}
+										<filter id="shadow3d">
+											<feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+											<feOffset dx="2" dy="2" result="offsetblur"/>
+											<feComponentTransfer>
+												<feFuncA type="linear" slope="0.3"/>
+											</feComponentTransfer>
+											<feMerge>
+												<feMergeNode/>
+												<feMergeNode in="SourceGraphic"/>
+											</feMerge>
+										</filter>
+									</defs>
+									
 									{/* Segmento SSH */}
-									{sshPercent > 0 && (
-										<path
-											d={createArcPath(sshStart, sshEnd)}
-											fill={sshColor}
-											opacity="0.8"
-										/>
-									)}
+									{sshPercent > 0 && (() => {
+										const paths = createArcPath(sshStart, sshEnd, sshColor, 0);
+										return (
+											<g>
+												<path d={paths.shadow} fill="rgba(0, 0, 0, 0.3)" opacity="0.5" />
+												<path d={paths.main} fill="url(#sshGradient)" opacity="0.9" stroke={sshColor} strokeWidth="0.5" />
+											</g>
+										);
+									})()}
+									
 									{/* Segmento RDP */}
-									{rdpPercent > 0 && (
-										<path
-											d={createArcPath(rdpStart, rdpEnd)}
-											fill={rdpColor}
-											opacity="0.8"
-										/>
-									)}
+									{rdpPercent > 0 && (() => {
+										const paths = createArcPath(rdpStart, rdpEnd, rdpColor, 1);
+										return (
+											<g>
+												<path d={paths.shadow} fill="rgba(0, 0, 0, 0.3)" opacity="0.5" />
+												<path d={paths.main} fill="url(#rdpGradient)" opacity="0.9" stroke={rdpColor} strokeWidth="0.5" />
+											</g>
+										);
+									})()}
+									
+									{/* Segmento VNC */}
+									{vncPercent > 0 && (() => {
+										const paths = createArcPath(vncStart, vncEnd, vncColor, 2);
+										return (
+											<g>
+												<path d={paths.shadow} fill="rgba(0, 0, 0, 0.3)" opacity="0.5" />
+												<path d={paths.main} fill="url(#vncGradient)" opacity="0.9" stroke={vncColor} strokeWidth="0.5" />
+											</g>
+										);
+									})()}
+									
+									{/* Segmento SFTP */}
+									{sftpPercent > 0 && (() => {
+										const paths = createArcPath(sftpStart, sftpEnd, sftpColor, 3);
+										return (
+											<g>
+												<path d={paths.shadow} fill="rgba(0, 0, 0, 0.3)" opacity="0.5" />
+												<path d={paths.main} fill="url(#sftpGradient)" opacity="0.9" stroke={sftpColor} strokeWidth="0.5" />
+											</g>
+										);
+									})()}
+									
 									{/* Segmento Keys */}
-									{keysPercent > 0 && (
-										<path
-											d={createArcPath(keysStart, keysEnd)}
-											fill={keysColor}
-											opacity="0.8"
-										/>
-									)}
-									{/* Círculo central (donut effect) */}
+									{keysPercent > 0 && (() => {
+										const paths = createArcPath(keysStart, keysEnd, keysColor, 4);
+										return (
+											<g>
+												<path d={paths.shadow} fill="rgba(0, 0, 0, 0.3)" opacity="0.5" />
+												<path d={paths.main} fill="url(#keysGradient)" opacity="0.9" stroke={keysColor} strokeWidth="0.5" />
+											</g>
+										);
+									})()}
+									
+									{/* Círculo central (donut effect) con efecto 3D */}
 									<circle
 										cx={centerX}
 										cy={centerY}
-										r={radius * 0.5}
-										fill="rgba(15, 23, 42, 0.8)"
+										r={radius * 0.45}
+										fill="rgba(15, 23, 42, 0.9)"
+										stroke="rgba(255, 255, 255, 0.1)"
+										strokeWidth="1"
+									/>
+									<circle
+										cx={centerX + 1}
+										cy={centerY + 1}
+										r={radius * 0.45}
+										fill="rgba(0, 0, 0, 0.2)"
+										opacity="0.3"
 									/>
 								</svg>
 								
-								{/* Leyenda con valores - Compacta y bien ajustada */}
+								{/* Leyenda con valores - Moderna y completa */}
 								<div style={{
 									display: 'flex',
 									flexDirection: 'column',
-									gap: '0.2rem',
+									gap: '0.25rem',
 									flex: '1 1 0',
 									minWidth: 0,
 									justifyContent: 'center'
@@ -1454,30 +1581,39 @@ const NodeTermStatus = ({
 									<div style={{
 										display: 'flex',
 										alignItems: 'center',
-										justifyContent: 'flex-start',
-										gap: '0.25rem',
-										fontSize: '0.5rem',
-										whiteSpace: 'nowrap'
+										justifyContent: 'space-between',
+										gap: '0.3rem',
+										padding: '0.15rem 0.25rem',
+										borderRadius: '4px',
+										background: 'rgba(79, 195, 247, 0.08)',
+										border: `1px solid ${sshColor}30`,
+										transition: 'all 0.2s ease'
 									}}>
 										<div style={{
-											width: '6px',
-											height: '6px',
-											borderRadius: '50%',
-											background: sshColor,
-											boxShadow: `0 0 3px ${sshColor}60`,
-											flexShrink: 0
-										}} />
-										<span style={{
-											fontWeight: '700',
-											color: themeColors.textPrimary || '#fff',
-											marginRight: '0.2rem'
+											display: 'flex',
+											alignItems: 'center',
+											gap: '0.3rem'
 										}}>
-											SSH:
-										</span>
+											<div style={{
+												width: '8px',
+												height: '8px',
+												borderRadius: '50%',
+												background: sshColor,
+												boxShadow: `0 0 6px ${sshColor}80`,
+												flexShrink: 0
+											}} />
+											<span style={{
+												fontWeight: '700',
+												color: themeColors.textPrimary || '#fff',
+												fontSize: '0.5rem'
+											}}>
+												SSH
+											</span>
+										</div>
 										<span style={{
 											fontWeight: '600',
-											color: themeColors.textSecondary || '#999',
-											fontSize: '0.45rem'
+											color: sshColor,
+											fontSize: '0.5rem'
 										}}>
 											{sshConnectionsCount}
 										</span>
@@ -1487,63 +1623,169 @@ const NodeTermStatus = ({
 									<div style={{
 										display: 'flex',
 										alignItems: 'center',
-										justifyContent: 'flex-start',
-										gap: '0.25rem',
-										fontSize: '0.5rem',
-										whiteSpace: 'nowrap'
+										justifyContent: 'space-between',
+										gap: '0.3rem',
+										padding: '0.15rem 0.25rem',
+										borderRadius: '4px',
+										background: 'rgba(255, 107, 53, 0.08)',
+										border: `1px solid ${rdpColor}30`,
+										transition: 'all 0.2s ease'
 									}}>
 										<div style={{
-											width: '6px',
-											height: '6px',
-											borderRadius: '50%',
-											background: rdpColor,
-											boxShadow: `0 0 3px ${rdpColor}60`,
-											flexShrink: 0
-										}} />
-										<span style={{
-											fontWeight: '700',
-											color: themeColors.textPrimary || '#fff',
-											marginRight: '0.2rem'
+											display: 'flex',
+											alignItems: 'center',
+											gap: '0.3rem'
 										}}>
-											RDP:
-										</span>
+											<div style={{
+												width: '8px',
+												height: '8px',
+												borderRadius: '50%',
+												background: rdpColor,
+												boxShadow: `0 0 6px ${rdpColor}80`,
+												flexShrink: 0
+											}} />
+											<span style={{
+												fontWeight: '700',
+												color: themeColors.textPrimary || '#fff',
+												fontSize: '0.5rem'
+											}}>
+												RDP
+											</span>
+										</div>
 										<span style={{
 											fontWeight: '600',
-											color: themeColors.textSecondary || '#999',
-											fontSize: '0.45rem'
+											color: rdpColor,
+											fontSize: '0.5rem'
 										}}>
 											{rdpConnectionsCount}
 										</span>
 									</div>
 									
+									{/* VNC */}
+									{vncCount > 0 && (
+										<div style={{
+											display: 'flex',
+											alignItems: 'center',
+											justifyContent: 'space-between',
+											gap: '0.3rem',
+											padding: '0.15rem 0.25rem',
+											borderRadius: '4px',
+											background: 'rgba(156, 39, 176, 0.08)',
+											border: `1px solid ${vncColor}30`,
+											transition: 'all 0.2s ease'
+										}}>
+											<div style={{
+												display: 'flex',
+												alignItems: 'center',
+												gap: '0.3rem'
+											}}>
+												<div style={{
+													width: '8px',
+													height: '8px',
+													borderRadius: '50%',
+													background: vncColor,
+													boxShadow: `0 0 6px ${vncColor}80`,
+													flexShrink: 0
+												}} />
+												<span style={{
+													fontWeight: '700',
+													color: themeColors.textPrimary || '#fff',
+													fontSize: '0.5rem'
+												}}>
+													VNC
+												</span>
+											</div>
+											<span style={{
+												fontWeight: '600',
+												color: vncColor,
+												fontSize: '0.5rem'
+											}}>
+												{vncCount}
+											</span>
+										</div>
+									)}
+									
+									{/* SFTP */}
+									{sftpCount > 0 && (
+										<div style={{
+											display: 'flex',
+											alignItems: 'center',
+											justifyContent: 'space-between',
+											gap: '0.3rem',
+											padding: '0.15rem 0.25rem',
+											borderRadius: '4px',
+											background: 'rgba(0, 230, 118, 0.08)',
+											border: `1px solid ${sftpColor}30`,
+											transition: 'all 0.2s ease'
+										}}>
+											<div style={{
+												display: 'flex',
+												alignItems: 'center',
+												gap: '0.3rem'
+											}}>
+												<div style={{
+													width: '8px',
+													height: '8px',
+													borderRadius: '50%',
+													background: sftpColor,
+													boxShadow: `0 0 6px ${sftpColor}80`,
+													flexShrink: 0
+												}} />
+												<span style={{
+													fontWeight: '700',
+													color: themeColors.textPrimary || '#fff',
+													fontSize: '0.5rem'
+												}}>
+													SFTP
+												</span>
+											</div>
+											<span style={{
+												fontWeight: '600',
+												color: sftpColor,
+												fontSize: '0.5rem'
+											}}>
+												{sftpCount}
+											</span>
+										</div>
+									)}
+									
 									{/* Keys */}
 									<div style={{
 										display: 'flex',
 										alignItems: 'center',
-										justifyContent: 'flex-start',
-										gap: '0.25rem',
-										fontSize: '0.5rem',
-										whiteSpace: 'nowrap'
+										justifyContent: 'space-between',
+										gap: '0.3rem',
+										padding: '0.15rem 0.25rem',
+										borderRadius: '4px',
+										background: 'rgba(255, 193, 7, 0.08)',
+										border: `1px solid ${keysColor}30`,
+										transition: 'all 0.2s ease'
 									}}>
 										<div style={{
-											width: '6px',
-											height: '6px',
-											borderRadius: '50%',
-											background: keysColor,
-											boxShadow: `0 0 3px ${keysColor}60`,
-											flexShrink: 0
-										}} />
-										<span style={{
-											fontWeight: '700',
-											color: themeColors.textPrimary || '#fff',
-											marginRight: '0.2rem'
+											display: 'flex',
+											alignItems: 'center',
+											gap: '0.3rem'
 										}}>
-											Keys:
-										</span>
+											<div style={{
+												width: '8px',
+												height: '8px',
+												borderRadius: '50%',
+												background: keysColor,
+												boxShadow: `0 0 6px ${keysColor}80`,
+												flexShrink: 0
+											}} />
+											<span style={{
+												fontWeight: '700',
+												color: themeColors.textPrimary || '#fff',
+												fontSize: '0.5rem'
+											}}>
+												Keys
+											</span>
+										</div>
 										<span style={{
 											fontWeight: '600',
-											color: themeColors.textSecondary || '#999',
-											fontSize: '0.45rem'
+											color: keysColor,
+											fontSize: '0.5rem'
 										}}>
 											{passwordsCount}
 										</span>
