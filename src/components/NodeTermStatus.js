@@ -1336,32 +1336,14 @@ const NodeTermStatus = ({
 					<div style={{
 						display: 'flex',
 						flexDirection: 'column',
-						gap: '0.3rem',
+						gap: '0.2rem',
 						flex: '1 1 0',
 						alignItems: 'center',
 						justifyContent: 'center',
-						minWidth: 0
+						minWidth: 0,
+						overflow: 'visible',
+						height: '100%'
 					}}>
-					{/* Título Estadísticas */}
-					<div style={{
-						display: 'flex',
-						alignItems: 'center',
-						justifyContent: 'center',
-						gap: '0.25rem',
-						fontSize: '0.55rem',
-						fontWeight: '700',
-						color: themeColors.textPrimary || '#fff',
-						textTransform: 'uppercase',
-						letterSpacing: '0.5px',
-						padding: '0.15rem 0.4rem',
-						background: 'rgba(255, 193, 7, 0.1)',
-						borderRadius: '5px',
-						border: '1px solid rgba(255, 193, 7, 0.2)'
-					}}>
-						<i className="pi pi-chart-pie" style={{ color: '#FFC107', fontSize: '0.55rem' }} />
-						<span>Stats</span>
-					</div>
-					
 					{/* Gráfico Circular (Pie Chart) - MÁS GRANDE */}
 					{(() => {
 						// Calcular total y porcentajes
@@ -1375,10 +1357,11 @@ const NodeTermStatus = ({
 						const rdpColor = '#ff6b35';
 						const keysColor = '#FFC107';
 						
-						// Radio y centro del círculo (MÁS GRANDE)
-						const radius = 28;
-						const centerX = 35;
-						const centerY = 35;
+						// Radio y centro del círculo (MÁS GRANDE pero ajustado)
+						const radius = 25;
+						const svgSize = 60;
+						const centerX = svgSize / 2;
+						const centerY = svgSize / 2;
 						
 						// Función para calcular el path de un arco
 						const createArcPath = (startPercent, endPercent) => {
@@ -1406,16 +1389,25 @@ const NodeTermStatus = ({
 						return (
 							<div style={{
 								display: 'flex',
-								flexDirection: 'column',
+								flexDirection: 'row',
 								alignItems: 'center',
-								gap: '0.3rem',
-								padding: '0.3rem',
+								gap: '0.4rem',
+								padding: '0.25rem',
 								background: 'rgba(255, 255, 255, 0.05)',
 								borderRadius: '6px',
-								border: '1px solid rgba(255, 255, 255, 0.1)'
+								border: '1px solid rgba(255, 255, 255, 0.1)',
+								width: '100%',
+								height: '100%',
+								overflow: 'visible',
+								justifyContent: 'center'
 							}}>
-								{/* SVG Donut Chart - MÁS GRANDE */}
-								<svg width="70" height="70" style={{ flexShrink: 0 }}>
+								{/* SVG Donut Chart - MÁS GRANDE y bien ajustado */}
+								<svg 
+									width={svgSize} 
+									height={svgSize} 
+									viewBox={`0 0 ${svgSize} ${svgSize}`}
+									style={{ flexShrink: 0, overflow: 'visible' }}
+								>
 									{/* Segmento SSH */}
 									{sshPercent > 0 && (
 										<path
@@ -1449,41 +1441,39 @@ const NodeTermStatus = ({
 									/>
 								</svg>
 								
-								{/* Leyenda con valores - Más legible */}
+								{/* Leyenda con valores - Compacta y bien ajustada */}
 								<div style={{
 									display: 'flex',
 									flexDirection: 'column',
-									gap: '0.15rem',
-									width: '100%'
+									gap: '0.2rem',
+									flex: '1 1 0',
+									minWidth: 0,
+									justifyContent: 'center'
 								}}>
 									{/* SSH */}
 									<div style={{
 										display: 'flex',
 										alignItems: 'center',
-										justifyContent: 'space-between',
-										gap: '0.3rem',
-										fontSize: '0.5rem'
+										justifyContent: 'flex-start',
+										gap: '0.25rem',
+										fontSize: '0.5rem',
+										whiteSpace: 'nowrap'
 									}}>
 										<div style={{
-											display: 'flex',
-											alignItems: 'center',
-											gap: '0.3rem'
+											width: '6px',
+											height: '6px',
+											borderRadius: '50%',
+											background: sshColor,
+											boxShadow: `0 0 3px ${sshColor}60`,
+											flexShrink: 0
+										}} />
+										<span style={{
+											fontWeight: '700',
+											color: themeColors.textPrimary || '#fff',
+											marginRight: '0.2rem'
 										}}>
-											<div style={{
-												width: '6px',
-												height: '6px',
-												borderRadius: '50%',
-												background: sshColor,
-												boxShadow: `0 0 3px ${sshColor}60`,
-												flexShrink: 0
-											}} />
-											<span style={{
-												fontWeight: '700',
-												color: themeColors.textPrimary || '#fff'
-											}}>
-												SSH
-											</span>
-										</div>
+											SSH:
+										</span>
 										<span style={{
 											fontWeight: '600',
 											color: themeColors.textSecondary || '#999',
@@ -1497,30 +1487,26 @@ const NodeTermStatus = ({
 									<div style={{
 										display: 'flex',
 										alignItems: 'center',
-										justifyContent: 'space-between',
-										gap: '0.3rem',
-										fontSize: '0.5rem'
+										justifyContent: 'flex-start',
+										gap: '0.25rem',
+										fontSize: '0.5rem',
+										whiteSpace: 'nowrap'
 									}}>
 										<div style={{
-											display: 'flex',
-											alignItems: 'center',
-											gap: '0.3rem'
+											width: '6px',
+											height: '6px',
+											borderRadius: '50%',
+											background: rdpColor,
+											boxShadow: `0 0 3px ${rdpColor}60`,
+											flexShrink: 0
+										}} />
+										<span style={{
+											fontWeight: '700',
+											color: themeColors.textPrimary || '#fff',
+											marginRight: '0.2rem'
 										}}>
-											<div style={{
-												width: '6px',
-												height: '6px',
-												borderRadius: '50%',
-												background: rdpColor,
-												boxShadow: `0 0 3px ${rdpColor}60`,
-												flexShrink: 0
-											}} />
-											<span style={{
-												fontWeight: '700',
-												color: themeColors.textPrimary || '#fff'
-											}}>
-												RDP
-											</span>
-										</div>
+											RDP:
+										</span>
 										<span style={{
 											fontWeight: '600',
 											color: themeColors.textSecondary || '#999',
@@ -1534,30 +1520,26 @@ const NodeTermStatus = ({
 									<div style={{
 										display: 'flex',
 										alignItems: 'center',
-										justifyContent: 'space-between',
-										gap: '0.3rem',
-										fontSize: '0.5rem'
+										justifyContent: 'flex-start',
+										gap: '0.25rem',
+										fontSize: '0.5rem',
+										whiteSpace: 'nowrap'
 									}}>
 										<div style={{
-											display: 'flex',
-											alignItems: 'center',
-											gap: '0.3rem'
+											width: '6px',
+											height: '6px',
+											borderRadius: '50%',
+											background: keysColor,
+											boxShadow: `0 0 3px ${keysColor}60`,
+											flexShrink: 0
+										}} />
+										<span style={{
+											fontWeight: '700',
+											color: themeColors.textPrimary || '#fff',
+											marginRight: '0.2rem'
 										}}>
-											<div style={{
-												width: '6px',
-												height: '6px',
-												borderRadius: '50%',
-												background: keysColor,
-												boxShadow: `0 0 3px ${keysColor}60`,
-												flexShrink: 0
-											}} />
-											<span style={{
-												fontWeight: '700',
-												color: themeColors.textPrimary || '#fff'
-											}}>
-												Keys
-											</span>
-										</div>
+											Keys:
+										</span>
 										<span style={{
 											fontWeight: '600',
 											color: themeColors.textSecondary || '#999',
