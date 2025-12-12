@@ -357,7 +357,7 @@ const NodeTermStatus = ({
 		return (
 			<div style={{ 
 				display: 'grid',
-				gridTemplateColumns: '1fr 1fr',
+				gridTemplateColumns: '2fr 1fr',
 				gap: '1rem',
 				width: '100%',
 				maxWidth: '100%',
@@ -1040,107 +1040,108 @@ const NodeTermStatus = ({
 					border: `1px solid ${themeColors.cardBorder || 'rgba(255,255,255,0.1)'}`,
 					borderRadius: '12px',
 					boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-					padding: '0.75rem',
+					padding: '0.6rem',
 					display: 'flex',
 					alignItems: 'flex-start',
-					gap: '1rem',
+					gap: '0.5rem',
 					minHeight: '60px',
+					maxHeight: '100px',
 					overflow: 'hidden',
 					flex: '1 1 0'
 				}}>
-					{/* SECCIÓN 3: SERVICIOS */}
+					{/* SECCIÓN 3: SERVICIOS - BADGES CIRCULARES */}
 					<div style={{
 						display: 'flex',
 						flexDirection: 'column',
-						gap: '0.4rem',
-						minWidth: 'fit-content',
-						flex: 1
+						gap: '0.3rem',
+						flex: '0 0 auto',
+						alignItems: 'center',
+						justifyContent: 'center'
 					}}>
 					{/* Título */}
 					<div style={{
 						display: 'flex',
 						alignItems: 'center',
 						justifyContent: 'center',
-						gap: '0.3rem',
-						fontSize: '0.6rem',
+						gap: '0.25rem',
+						fontSize: '0.55rem',
 						fontWeight: '700',
 						color: themeColors.textPrimary || '#fff',
 						textTransform: 'uppercase',
-						letterSpacing: '0.8px',
-						marginBottom: '0.3rem',
-						padding: '0.2rem 0.5rem',
+						letterSpacing: '0.5px',
+						padding: '0.15rem 0.4rem',
 						background: 'rgba(255, 107, 53, 0.1)',
-						borderRadius: '6px',
+						borderRadius: '5px',
 						border: '1px solid rgba(255, 107, 53, 0.2)'
 					}}>
-						<i className="pi pi-server" style={{ color: '#ff6b35', fontSize: '0.65rem' }} />
+						<i className="pi pi-server" style={{ color: '#ff6b35', fontSize: '0.55rem' }} />
 						<span>Servicios</span>
 					</div>
-					{/* Lista de servicios - INTEGRADOS EN UNA LÍNEA */}
+					{/* Lista de servicios - BADGES CIRCULARES */}
 					<div style={{
 						display: 'flex',
 						flexDirection: 'row',
 						alignItems: 'center',
-						gap: '0.5rem',
+						justifyContent: 'center',
+						gap: '0.4rem',
 						flexWrap: 'wrap',
-						padding: '0.3rem 0.6rem',
-						background: 'rgba(255, 255, 255, 0.03)',
-						borderRadius: '6px',
-						border: '1px solid rgba(255, 255, 255, 0.08)'
+						padding: '0.3rem'
 					}}>
 						{/* Nextcloud */}
 						{(() => {
 							const ncConfigured = !!syncState.configured;
 							const ncColor = !ncConfigured ? '#9ca3af' : (syncState.connectivity === 'ok' ? '#22c55e' : (syncState.connectivity === 'checking' ? '#60a5fa' : '#ef4444'));
-							const ncIcon = '☁';
+							const ncStatus = ncConfigured ? (syncState.connectivity === 'ok' ? 'Conectado' : 'Error') : 'No configurado';
 							
 							return (
 								<div 
 									onClick={onOpenSettings}
-									title={`Nextcloud: ${ncConfigured ? (syncState.connectivity === 'ok' ? 'Conectado' : 'Error') : 'No configurado'}`}
+									title={`Nextcloud: ${ncStatus}`}
 									style={{
-										display: 'flex',
-										alignItems: 'center',
-										gap: '0.35rem',
-										padding: '0.25rem 0.5rem',
-										borderRadius: '12px',
-										background: `linear-gradient(135deg, ${ncColor}18 0%, ${ncColor}08 100%)`,
-										border: `1px solid ${ncColor}35`,
+										position: 'relative',
+										width: '32px',
+										height: '32px',
+										borderRadius: '50%',
+										background: `linear-gradient(135deg, ${ncColor}25 0%, ${ncColor}15 100%)`,
+										border: `2px solid ${ncColor}50`,
 										cursor: onOpenSettings ? 'pointer' : 'default',
 										transition: 'all 0.2s ease',
-										whiteSpace: 'nowrap'
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'center',
+										boxShadow: `0 2px 8px ${ncColor}30`
 									}}
 									onMouseEnter={(e) => {
 										if (onOpenSettings) {
-											e.currentTarget.style.background = `linear-gradient(135deg, ${ncColor}28 0%, ${ncColor}18 100%)`;
-											e.currentTarget.style.transform = 'scale(1.05)';
+											e.currentTarget.style.transform = 'scale(1.15)';
+											e.currentTarget.style.boxShadow = `0 4px 12px ${ncColor}50`;
 										}
 									}}
 									onMouseLeave={(e) => {
 										if (onOpenSettings) {
-											e.currentTarget.style.background = `linear-gradient(135deg, ${ncColor}18 0%, ${ncColor}08 100%)`;
 											e.currentTarget.style.transform = 'scale(1)';
+											e.currentTarget.style.boxShadow = `0 2px 8px ${ncColor}30`;
 										}
 									}}
 								>
-									{/* Indicador de estado con animación */}
+									<i className="pi pi-cloud" style={{ 
+										color: ncColor, 
+										fontSize: '0.75rem',
+										fontWeight: 'bold'
+									}} />
+									{/* Indicador de estado en esquina */}
 									<div style={{
-										width: '6px',
-										height: '6px',
+										position: 'absolute',
+										bottom: '-2px',
+										right: '-2px',
+										width: '10px',
+										height: '10px',
 										borderRadius: '50%',
 										background: ncColor,
-										boxShadow: `0 0 6px ${ncColor}`,
-										flexShrink: 0,
+										border: '2px solid rgba(16, 20, 28, 0.8)',
+										boxShadow: `0 0 4px ${ncColor}`,
 										animation: syncState.connectivity === 'ok' ? 'pulse 2s infinite' : 'none'
 									}} />
-									{/* Nombre del servicio con emoji */}
-									<span style={{
-										fontSize: '0.6rem',
-										fontWeight: '700',
-										color: themeColors.textPrimary || '#fff'
-									}}>
-										{ncIcon} NC
-									</span>
 								</div>
 							);
 						})()}
@@ -1148,55 +1149,56 @@ const NodeTermStatus = ({
 						{/* Guacd */}
 						{(() => {
 							const gColor = guacdState.isRunning ? '#22c55e' : '#ef4444';
-							const gIcon = '🖥';
 							
 							return (
 								<div 
 									onClick={onOpenSettings}
 									title={`Guacd: ${guacdState.isRunning ? 'Activo' : 'Inactivo'}`}
 									style={{
-										display: 'flex',
-										alignItems: 'center',
-										gap: '0.35rem',
-										padding: '0.25rem 0.5rem',
-										borderRadius: '12px',
-										background: `linear-gradient(135deg, ${gColor}18 0%, ${gColor}08 100%)`,
-										border: `1px solid ${gColor}35`,
+										position: 'relative',
+										width: '32px',
+										height: '32px',
+										borderRadius: '50%',
+										background: `linear-gradient(135deg, ${gColor}25 0%, ${gColor}15 100%)`,
+										border: `2px solid ${gColor}50`,
 										cursor: onOpenSettings ? 'pointer' : 'default',
 										transition: 'all 0.2s ease',
-										whiteSpace: 'nowrap'
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'center',
+										boxShadow: `0 2px 8px ${gColor}30`
 									}}
 									onMouseEnter={(e) => {
 										if (onOpenSettings) {
-											e.currentTarget.style.background = `linear-gradient(135deg, ${gColor}28 0%, ${gColor}18 100%)`;
-											e.currentTarget.style.transform = 'scale(1.05)';
+											e.currentTarget.style.transform = 'scale(1.15)';
+											e.currentTarget.style.boxShadow = `0 4px 12px ${gColor}50`;
 										}
 									}}
 									onMouseLeave={(e) => {
 										if (onOpenSettings) {
-											e.currentTarget.style.background = `linear-gradient(135deg, ${gColor}18 0%, ${gColor}08 100%)`;
 											e.currentTarget.style.transform = 'scale(1)';
+											e.currentTarget.style.boxShadow = `0 2px 8px ${gColor}30`;
 										}
 									}}
 								>
-									{/* Indicador de estado con animación */}
+									<i className="pi pi-desktop" style={{ 
+										color: gColor, 
+										fontSize: '0.75rem',
+										fontWeight: 'bold'
+									}} />
+									{/* Indicador de estado en esquina */}
 									<div style={{
-										width: '6px',
-										height: '6px',
+										position: 'absolute',
+										bottom: '-2px',
+										right: '-2px',
+										width: '10px',
+										height: '10px',
 										borderRadius: '50%',
 										background: gColor,
-										boxShadow: `0 0 6px ${gColor}`,
-										flexShrink: 0,
+										border: '2px solid rgba(16, 20, 28, 0.8)',
+										boxShadow: `0 0 4px ${gColor}`,
 										animation: guacdState.isRunning ? 'pulse 2s infinite' : 'none'
 									}} />
-									{/* Nombre del servicio */}
-									<span style={{
-										fontSize: '0.6rem',
-										fontWeight: '700',
-										color: themeColors.textPrimary || '#fff'
-									}}>
-										{gIcon} Guacd
-									</span>
 								</div>
 							);
 						})()}
@@ -1206,7 +1208,6 @@ const NodeTermStatus = ({
 							const configured = vaultState.configured;
 							const unlocked = vaultState.unlocked;
 							const vColor = !configured ? '#9ca3af' : (unlocked ? '#22c55e' : '#f59e0b');
-							const vIcon = unlocked ? '🔓' : '🔒';
 							const vStatus = !configured ? 'Sin configurar' : (unlocked ? 'Desbloqueado' : 'Bloqueado');
 							
 							return (
@@ -1214,48 +1215,50 @@ const NodeTermStatus = ({
 									onClick={onOpenSettings}
 									title={`Vault: ${vStatus}`}
 									style={{
-										display: 'flex',
-										alignItems: 'center',
-										gap: '0.35rem',
-										padding: '0.25rem 0.5rem',
-										borderRadius: '12px',
-										background: `linear-gradient(135deg, ${vColor}18 0%, ${vColor}08 100%)`,
-										border: `1px solid ${vColor}35`,
+										position: 'relative',
+										width: '32px',
+										height: '32px',
+										borderRadius: '50%',
+										background: `linear-gradient(135deg, ${vColor}25 0%, ${vColor}15 100%)`,
+										border: `2px solid ${vColor}50`,
 										cursor: onOpenSettings ? 'pointer' : 'default',
 										transition: 'all 0.2s ease',
-										whiteSpace: 'nowrap'
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'center',
+										boxShadow: `0 2px 8px ${vColor}30`
 									}}
 									onMouseEnter={(e) => {
 										if (onOpenSettings) {
-											e.currentTarget.style.background = `linear-gradient(135deg, ${vColor}28 0%, ${vColor}18 100%)`;
-											e.currentTarget.style.transform = 'scale(1.05)';
+											e.currentTarget.style.transform = 'scale(1.15)';
+											e.currentTarget.style.boxShadow = `0 4px 12px ${vColor}50`;
 										}
 									}}
 									onMouseLeave={(e) => {
 										if (onOpenSettings) {
-											e.currentTarget.style.background = `linear-gradient(135deg, ${vColor}18 0%, ${vColor}08 100%)`;
 											e.currentTarget.style.transform = 'scale(1)';
+											e.currentTarget.style.boxShadow = `0 2px 8px ${vColor}30`;
 										}
 									}}
 								>
-									{/* Indicador de estado con animación */}
+									<i className={unlocked ? 'pi pi-unlock' : 'pi pi-lock'} style={{ 
+										color: vColor, 
+										fontSize: '0.75rem',
+										fontWeight: 'bold'
+									}} />
+									{/* Indicador de estado en esquina */}
 									<div style={{
-										width: '6px',
-										height: '6px',
+										position: 'absolute',
+										bottom: '-2px',
+										right: '-2px',
+										width: '10px',
+										height: '10px',
 										borderRadius: '50%',
 										background: vColor,
-										boxShadow: `0 0 6px ${vColor}`,
-										flexShrink: 0,
+										border: '2px solid rgba(16, 20, 28, 0.8)',
+										boxShadow: `0 0 4px ${vColor}`,
 										animation: unlocked ? 'pulse 2s infinite' : 'none'
 									}} />
-									{/* Nombre del servicio */}
-									<span style={{
-										fontSize: '0.6rem',
-										fontWeight: '700',
-										color: themeColors.textPrimary || '#fff'
-									}}>
-										{vIcon} Vault
-									</span>
 								</div>
 							);
 						})()}
@@ -1264,79 +1267,102 @@ const NodeTermStatus = ({
 						{(() => {
 							const isRunning = ollamaState.isRunning;
 							const oColor = isRunning ? '#22c55e' : '#ef4444';
-							const oIcon = '🤖';
 							
 							return (
 								<div 
 									onClick={onOpenSettings}
 									title={`Ollama: ${isRunning ? 'Activo' : 'Inactivo'}`}
 									style={{
-										display: 'flex',
-										alignItems: 'center',
-										gap: '0.35rem',
-										padding: '0.25rem 0.5rem',
-										borderRadius: '12px',
-										background: `linear-gradient(135deg, ${oColor}18 0%, ${oColor}08 100%)`,
-										border: `1px solid ${oColor}35`,
+										position: 'relative',
+										width: '32px',
+										height: '32px',
+										borderRadius: '50%',
+										background: `linear-gradient(135deg, ${oColor}25 0%, ${oColor}15 100%)`,
+										border: `2px solid ${oColor}50`,
 										cursor: onOpenSettings ? 'pointer' : 'default',
 										transition: 'all 0.2s ease',
-										whiteSpace: 'nowrap'
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'center',
+										boxShadow: `0 2px 8px ${oColor}30`
 									}}
 									onMouseEnter={(e) => {
 										if (onOpenSettings) {
-											e.currentTarget.style.background = `linear-gradient(135deg, ${oColor}28 0%, ${oColor}18 100%)`;
-											e.currentTarget.style.transform = 'scale(1.05)';
+											e.currentTarget.style.transform = 'scale(1.15)';
+											e.currentTarget.style.boxShadow = `0 4px 12px ${oColor}50`;
 										}
 									}}
 									onMouseLeave={(e) => {
 										if (onOpenSettings) {
-											e.currentTarget.style.background = `linear-gradient(135deg, ${oColor}18 0%, ${oColor}08 100%)`;
 											e.currentTarget.style.transform = 'scale(1)';
+											e.currentTarget.style.boxShadow = `0 2px 8px ${oColor}30`;
 										}
 									}}
 								>
-									{/* Indicador de estado con animación */}
+									<i className="pi pi-android" style={{ 
+										color: oColor, 
+										fontSize: '0.75rem',
+										fontWeight: 'bold'
+									}} />
+									{/* Indicador de estado en esquina */}
 									<div style={{
-										width: '6px',
-										height: '6px',
+										position: 'absolute',
+										bottom: '-2px',
+										right: '-2px',
+										width: '10px',
+										height: '10px',
 										borderRadius: '50%',
 										background: oColor,
-										boxShadow: `0 0 6px ${oColor}`,
-										flexShrink: 0,
+										border: '2px solid rgba(16, 20, 28, 0.8)',
+										boxShadow: `0 0 4px ${oColor}`,
 										animation: isRunning ? 'pulse 2s infinite' : 'none'
 									}} />
-									{/* Nombre del servicio */}
-									<span style={{
-										fontSize: '0.6rem',
-										fontWeight: '700',
-										color: themeColors.textPrimary || '#fff'
-									}}>
-										{oIcon} Ollama
-									</span>
 								</div>
 							);
 						})()}
 					</div>
 					</div>
 
-					{/* Separador dentro de la card */}
+					{/* Separador vertical */}
 					<div style={{
 						width: '1px',
-						height: '50px',
+						height: '100%',
 						background: 'rgba(255, 255, 255, 0.1)',
 						borderRadius: '1px',
-						alignSelf: 'stretch'
+						flexShrink: 0
 					}} />
 
-					{/* SECCIÓN 4: ESTADÍSTICAS/KPIs */}
+					{/* SECCIÓN 4: ESTADÍSTICAS/KPIs - MÁS GRANDE */}
 					<div style={{
 						display: 'flex',
 						flexDirection: 'column',
-						gap: '0.4rem',
-						minWidth: 'fit-content',
-						marginLeft: 'auto'
+						gap: '0.3rem',
+						flex: '1 1 0',
+						alignItems: 'center',
+						justifyContent: 'center',
+						minWidth: 0
 					}}>
-					{/* Gráfico Circular (Pie Chart) */}
+					{/* Título Estadísticas */}
+					<div style={{
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						gap: '0.25rem',
+						fontSize: '0.55rem',
+						fontWeight: '700',
+						color: themeColors.textPrimary || '#fff',
+						textTransform: 'uppercase',
+						letterSpacing: '0.5px',
+						padding: '0.15rem 0.4rem',
+						background: 'rgba(255, 193, 7, 0.1)',
+						borderRadius: '5px',
+						border: '1px solid rgba(255, 193, 7, 0.2)'
+					}}>
+						<i className="pi pi-chart-pie" style={{ color: '#FFC107', fontSize: '0.55rem' }} />
+						<span>Stats</span>
+					</div>
+					
+					{/* Gráfico Circular (Pie Chart) - MÁS GRANDE */}
 					{(() => {
 						// Calcular total y porcentajes
 						const total = sshConnectionsCount + rdpConnectionsCount + passwordsCount;
@@ -1349,11 +1375,10 @@ const NodeTermStatus = ({
 						const rdpColor = '#ff6b35';
 						const keysColor = '#FFC107';
 						
-						// Radio y centro del círculo (gráfico más ancho pero menos alto)
-						const radius = 20;
-						const centerX = 40;
-						const centerY = 24;
-						const circumference = 2 * Math.PI * radius;
+						// Radio y centro del círculo (MÁS GRANDE)
+						const radius = 28;
+						const centerX = 35;
+						const centerY = 35;
 						
 						// Función para calcular el path de un arco
 						const createArcPath = (startPercent, endPercent) => {
@@ -1381,16 +1406,16 @@ const NodeTermStatus = ({
 						return (
 							<div style={{
 								display: 'flex',
+								flexDirection: 'column',
 								alignItems: 'center',
-								gap: '0.5rem',
-								padding: '0.25rem 0.5rem',
+								gap: '0.3rem',
+								padding: '0.3rem',
 								background: 'rgba(255, 255, 255, 0.05)',
 								borderRadius: '6px',
-								border: '1px solid rgba(255, 255, 255, 0.1)',
-								height: 'fit-content'
+								border: '1px solid rgba(255, 255, 255, 0.1)'
 							}}>
-								{/* SVG Donut Chart - Más ancho pero menos alto */}
-								<svg width="80" height="48" style={{ flexShrink: 0 }}>
+								{/* SVG Donut Chart - MÁS GRANDE */}
+								<svg width="70" height="70" style={{ flexShrink: 0 }}>
 									{/* Segmento SSH */}
 									{sshPercent > 0 && (
 										<path
@@ -1424,33 +1449,47 @@ const NodeTermStatus = ({
 									/>
 								</svg>
 								
-								{/* Leyenda con valores */}
+								{/* Leyenda con valores - Más legible */}
 								<div style={{
 									display: 'flex',
 									flexDirection: 'column',
-									gap: '0.2rem',
-									minWidth: 'fit-content'
+									gap: '0.15rem',
+									width: '100%'
 								}}>
 									{/* SSH */}
 									<div style={{
 										display: 'flex',
 										alignItems: 'center',
-										gap: '0.35rem',
-										fontSize: '0.6rem'
+										justifyContent: 'space-between',
+										gap: '0.3rem',
+										fontSize: '0.5rem'
 									}}>
 										<div style={{
-											width: '8px',
-											height: '8px',
-											borderRadius: '50%',
-											background: sshColor,
-											boxShadow: `0 0 4px ${sshColor}60`,
-											flexShrink: 0
-										}} />
-										<span style={{
-											fontWeight: '700',
-											color: themeColors.textPrimary || '#fff'
+											display: 'flex',
+											alignItems: 'center',
+											gap: '0.3rem'
 										}}>
-											SSH: {sshConnectionsCount}
+											<div style={{
+												width: '6px',
+												height: '6px',
+												borderRadius: '50%',
+												background: sshColor,
+												boxShadow: `0 0 3px ${sshColor}60`,
+												flexShrink: 0
+											}} />
+											<span style={{
+												fontWeight: '700',
+												color: themeColors.textPrimary || '#fff'
+											}}>
+												SSH
+											</span>
+										</div>
+										<span style={{
+											fontWeight: '600',
+											color: themeColors.textSecondary || '#999',
+											fontSize: '0.45rem'
+										}}>
+											{sshConnectionsCount}
 										</span>
 									</div>
 									
@@ -1458,22 +1497,36 @@ const NodeTermStatus = ({
 									<div style={{
 										display: 'flex',
 										alignItems: 'center',
-										gap: '0.35rem',
-										fontSize: '0.6rem'
+										justifyContent: 'space-between',
+										gap: '0.3rem',
+										fontSize: '0.5rem'
 									}}>
 										<div style={{
-											width: '8px',
-											height: '8px',
-											borderRadius: '50%',
-											background: rdpColor,
-											boxShadow: `0 0 4px ${rdpColor}60`,
-											flexShrink: 0
-										}} />
-										<span style={{
-											fontWeight: '700',
-											color: themeColors.textPrimary || '#fff'
+											display: 'flex',
+											alignItems: 'center',
+											gap: '0.3rem'
 										}}>
-											RDP: {rdpConnectionsCount}
+											<div style={{
+												width: '6px',
+												height: '6px',
+												borderRadius: '50%',
+												background: rdpColor,
+												boxShadow: `0 0 3px ${rdpColor}60`,
+												flexShrink: 0
+											}} />
+											<span style={{
+												fontWeight: '700',
+												color: themeColors.textPrimary || '#fff'
+											}}>
+												RDP
+											</span>
+										</div>
+										<span style={{
+											fontWeight: '600',
+											color: themeColors.textSecondary || '#999',
+											fontSize: '0.45rem'
+										}}>
+											{rdpConnectionsCount}
 										</span>
 									</div>
 									
@@ -1481,22 +1534,36 @@ const NodeTermStatus = ({
 									<div style={{
 										display: 'flex',
 										alignItems: 'center',
-										gap: '0.35rem',
-										fontSize: '0.6rem'
+										justifyContent: 'space-between',
+										gap: '0.3rem',
+										fontSize: '0.5rem'
 									}}>
 										<div style={{
-											width: '8px',
-											height: '8px',
-											borderRadius: '50%',
-											background: keysColor,
-											boxShadow: `0 0 4px ${keysColor}60`,
-											flexShrink: 0
-										}} />
-										<span style={{
-											fontWeight: '700',
-											color: themeColors.textPrimary || '#fff'
+											display: 'flex',
+											alignItems: 'center',
+											gap: '0.3rem'
 										}}>
-											Keys: {passwordsCount}
+											<div style={{
+												width: '6px',
+												height: '6px',
+												borderRadius: '50%',
+												background: keysColor,
+												boxShadow: `0 0 3px ${keysColor}60`,
+												flexShrink: 0
+											}} />
+											<span style={{
+												fontWeight: '700',
+												color: themeColors.textPrimary || '#fff'
+											}}>
+												Keys
+											</span>
+										</div>
+										<span style={{
+											fontWeight: '600',
+											color: themeColors.textSecondary || '#999',
+											fontSize: '0.45rem'
+										}}>
+											{passwordsCount}
 										</span>
 									</div>
 								</div>
