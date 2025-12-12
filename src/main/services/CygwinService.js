@@ -113,6 +113,13 @@ async function startCygwinSession(tabId, { cols, rows }) {
       // Home creado silenciosamente
     }
 
+    // Crear directorio /tmp si no existe (requerido por Cygwin)
+    const cygwinTmp = path.join(paths.root, 'tmp');
+    if (!fs.existsSync(cygwinTmp)) {
+      fs.mkdirSync(cygwinTmp, { recursive: true });
+      // /tmp creado silenciosamente
+    }
+
     // Crear un archivo .bashrc moderno estilo MobaXterm (siempre regenerar para aplicar cambios)
     const bashrcPath = path.join(cygwinHome, '.bashrc');
     // Eliminar el archivo existente para forzar la regeneración con los cambios
