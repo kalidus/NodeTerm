@@ -21,16 +21,19 @@
     "appId": "com.electron.nodeterm",
     "productName": "NodeTerm",
     "copyright": "Copyright © 2024",
-    "compression": "maximum",
+    "compression": "normal",
     "files": [
       "dist/",
       "binaries/**",
-      "src/**",
       "node_modules/",
       "main.js",
       "preload.js",
       "system-stats-worker.js",
-      "package.json"
+      "package.json",
+      "src/main/**",
+      "src/services/**",
+      "src/utils/**",
+      "src/components/bastion-ssh.js"
     ],
     "extraResources": [
       {
@@ -61,7 +64,9 @@
       "createStartMenuShortcut": true,
       "shortcutName": "NodeTerm",
       "include": "build/installer.nsh",
-      "deleteAppDataOnUninstall": false
+      "deleteAppDataOnUninstall": false,
+      "differentialPackage": false,
+      "warningsAsErrors": false
     },
     "linux": {
       "target": "AppImage",
