@@ -628,29 +628,32 @@ const HomeTab = ({
               )}
             </div>
 
-            {/* Cards de Conexiones Favoritas y Conexiones Recientes en la parte superior */}
+            {/* Card única para Favoritos y Recientes */}
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: '2fr 1fr',
-              gap: '1rem',
-              marginBottom: '1rem'
+              background: `linear-gradient(135deg,
+                rgba(16, 20, 28, 0.7) 0%,
+                rgba(16, 20, 28, 0.5) 100%)`,
+              backdropFilter: 'blur(12px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(12px) saturate(140%)',
+              border: `1px solid ${themeColors.cardBorder || 'rgba(255,255,255,0.15)'}`,
+              borderRadius: '16px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
+              padding: '1.5rem',
+              marginBottom: '1rem',
+              display: 'flex',
+              flexDirection: 'row',
+              gap: '1.5rem',
+              position: 'relative',
+              alignItems: 'stretch'
             }}>
-              {/* Card de ConnectionHistory (Conexiones Favoritas) */}
+              {/* Sección de Favoritos */}
               <div style={{
-                background: `linear-gradient(135deg,
-                  rgba(16, 20, 28, 0.6) 0%,
-                  rgba(16, 20, 28, 0.4) 100%)`,
-                backdropFilter: 'blur(8px) saturate(140%)',
-                WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-                border: `1px solid ${themeColors.cardBorder}`,
-                borderRadius: '12px',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-                padding: '0.75rem',
-                maxHeight: '320px',
                 display: 'flex',
                 flexDirection: 'column',
-                overflow: 'hidden',
-                position: 'relative'
+                flex: '2 1 0',
+                minWidth: 0,
+                position: 'relative',
+                overflow: 'hidden'
               }}>
                 <ConnectionHistory 
                   onConnectToHistory={handleConnectToHistory}
@@ -710,21 +713,22 @@ const HomeTab = ({
                 )}
               </div>
 
-              {/* Card de Conexiones Recientes */}
+              {/* Separador decorativo vertical */}
               <div style={{
-                background: `linear-gradient(135deg,
-                  rgba(16, 20, 28, 0.6) 0%,
-                  rgba(16, 20, 28, 0.4) 100%)`,
-                backdropFilter: 'blur(8px) saturate(140%)',
-                WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-                border: `1px solid ${themeColors.cardBorder}`,
-                borderRadius: '12px',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-                padding: '0.75rem',
-                maxHeight: '320px',
+                width: '1px',
+                height: '100%',
+                background: 'linear-gradient(180deg, transparent, rgba(255,255,255,0.2), transparent)',
+                borderRadius: '1px',
+                flexShrink: 0
+              }} />
+
+              {/* Sección de Conexiones Recientes */}
+              <div style={{
                 display: 'flex',
                 flexDirection: 'column',
-                overflow: 'hidden'
+                flex: '1 1 0',
+                minWidth: 0,
+                minHeight: 0
               }}>
                 <div style={{
                   display: 'flex',
