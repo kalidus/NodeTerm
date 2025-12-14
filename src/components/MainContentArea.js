@@ -103,10 +103,23 @@ const MainContentArea = ({
   const [canScrollRight, setCanScrollRight] = useState(false);
   const tabsContainerRef = useRef(null);
   
+  // Función para obtener el terminal por defecto desde configuración
+  const getDefaultTerminalFromConfig = () => {
+    const saved = localStorage.getItem('nodeterm_default_local_terminal');
+    if (saved) return saved;
+    
+    // Fallback según plataforma
+    const platform = window.electron?.platform || 'unknown';
+    if (platform === 'linux' || platform === 'darwin') {
+      return 'linux-terminal';
+    }
+    return 'powershell';
+  };
+
   // Estado para recordar último tipo de terminal local
-  const [lastLocalTerminalType, setLastLocalTerminalType] = useState('powershell');
+  const [lastLocalTerminalType, setLastLocalTerminalType] = useState(() => getDefaultTerminalFromConfig());
   // Referencia para mantener el último tipo usado de forma síncrona
-  const lastLocalTerminalTypeRef = useRef('powershell');
+  const lastLocalTerminalTypeRef = useRef(getDefaultTerminalFromConfig());
   
   // Función para detectar el último tipo de terminal local usado
   const getLastLocalTerminalType = () => {
@@ -250,6 +263,25 @@ const MainContentArea = ({
     
     return () => {
       window.removeEventListener('create-local-terminal', handleCreateLocalTerminal);
+    };
+  }, []);
+
+  // Escuchar cambios en la configuración de terminal por defecto
+  useEffect(() => {
+    const handleDefaultTerminalChange = (e) => {
+      const newDefaultTerminal = e.detail?.terminalType;
+      if (newDefaultTerminal) {
+        // Si no hay un último tipo usado, actualizar con el nuevo por defecto
+        if (!lastLocalTerminalTypeRef.current || lastLocalTerminalTypeRef.current === getDefaultTerminalFromConfig()) {
+          lastLocalTerminalTypeRef.current = newDefaultTerminal;
+          setLastLocalTerminalType(newDefaultTerminal);
+        }
+      }
+    };
+    
+    window.addEventListener('default-terminal-changed', handleDefaultTerminalChange);
+    return () => {
+      window.removeEventListener('default-terminal-changed', handleDefaultTerminalChange);
     };
   }, []);
   
@@ -586,21 +618,56 @@ const MainContentArea = ({
       }
     });
     plusButton.addEventListener('click', () => {
-      // Usar la referencia que se actualiza de forma síncrona
-      const terminalTypeToUse = lastLocalTerminalTypeRef.current;
-      console.log('Botón + presionado. Usando último tipo guardado (ref):', terminalTypeToUse);
+      // Usar la referencia que se actualiza de forma síncrona, o la configuración por defecto
+      let terminalTypeToUse = lastLocalTerminalTypeRef.current;
+      
+      // Si no hay último tipo usado, usar la configuración guardada
+      if (!terminalTypeToUse || terminalTypeToUse === 'powershell') {
+        const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
+        if (defaultTerminal) {
+          terminalTypeToUse = defaultTerminal;
+        }
+      }
+      
+      console.log('Botón + presionado. Usando tipo:', terminalTypeToUse);
       
       // Buscar la distribución correcta
       let distro = null;
-      if (terminalTypeToUse.startsWith('wsl-')) {
+      
+      // Si es Docker
+      if (terminalTypeToUse.startsWith('docker-')) {
+        const containerName = terminalTypeToUse.replace('docker-', '');
+        const container = dockerContainers.find(c => c.name === containerName);
+        if (container) {
+          createLocalTerminalTab(terminalTypeToUse, { dockerContainer: container });
+          return;
+        }
+      }
+      // Si es una distribución WSL (puede ser el nombre directo como "Ubuntu-24.04" o "wsl-Ubuntu")
+      else if (terminalTypeToUse.startsWith('wsl-')) {
         // Extraer el nombre de la distribución (ej: 'wsl-Ubuntu' -> 'Ubuntu')
         const distroName = terminalTypeToUse.replace('wsl-', '');
-        console.log('Distribuciones disponibles:', wslDistributions.map(d => d.name));
-        distro = wslDistributions.find(d => d.name === distroName);
-        console.log('Buscando distribución:', distroName, 'Encontrada:', distro);
+        distro = wslDistributions.find(d => d.name === distroName || d.label === distroName);
+        if (distro) {
+          // Usar el nombre de la distribución como tipo
+          terminalTypeToUse = distro.name;
+        }
+      } else {
+        // Buscar por nombre directo (ej: "Ubuntu-24.04")
+        distro = wslDistributions.find(d => d.name === terminalTypeToUse || d.label === terminalTypeToUse);
+        if (distro) {
+          // Si encontramos la distribución, usar su nombre como tipo
+          terminalTypeToUse = distro.name;
+        }
       }
       
-      createLocalTerminalTab(terminalTypeToUse, distro || null);
+      // Si encontramos una distribución, crear la pestaña con distroInfo
+      if (distro) {
+        createLocalTerminalTab(terminalTypeToUse, distro);
+      } else {
+        // Si no es una distribución, crear normalmente
+        createLocalTerminalTab(terminalTypeToUse, null);
+      }
     });
     
     // Botón dropdown

@@ -821,15 +821,17 @@ ipcMain.on('app:save-passwords-for-mcp', async (event, passwords) => {
 
 // IPC handler para detectar todas las distribuciones WSL
 ipcMain.handle('detect-wsl-distributions', async () => {
-  // console.log('🚀 Detectando distribuciones WSL...'); // Eliminado por limpieza de logs
+  console.log('🚀 [MAIN] Detectando distribuciones WSL...');
   
   try {
     const distributions = await WSL.detectAllWSLDistributions();
-    // console.log('✅ Detección completada:', distributions.length, 'distribuciones encontradas'); // Eliminado por limpieza de logs
-    // distributions.forEach(distro => console.log(`  - ${distro.label} (${distro.executable})`)); // Eliminado por limpieza de logs
+    console.log('✅ [MAIN] Detección completada:', distributions.length, 'distribuciones encontradas');
+    if (distributions.length > 0) {
+      distributions.forEach(distro => console.log(`  - ${distro.name} (${distro.label}, ${distro.category})`));
+    }
     return distributions;
   } catch (error) {
-    console.error('❌ Error en detección de distribuciones WSL:', error);
+    console.error('❌ [MAIN] Error en detección de distribuciones WSL:', error);
     return [];
   }
 });

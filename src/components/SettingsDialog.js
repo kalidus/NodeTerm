@@ -109,6 +109,29 @@ const SettingsDialog = ({
   
   // Hook para internacionalización
   const { t, locale, setLocale, availableLocales } = useTranslation('settings');
+
+  // Estados para terminal por defecto
+  const getDefaultTerminalType = () => {
+    const platform = window.electron?.platform || 'unknown';
+    if (platform === 'linux' || platform === 'darwin') {
+      return 'linux-terminal';
+    }
+    return 'powershell';
+  };
+
+  const [defaultLocalTerminal, setDefaultLocalTerminal] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.DEFAULT_LOCAL_TERMINAL);
+    if (saved) return saved;
+    return getDefaultTerminalType();
+  });
+
+  // Estados para detectar terminales disponibles
+  const [wslDistributions, setWslDistributions] = useState([]);
+  const [dockerContainers, setDockerContainers] = useState([]);
+  const [cygwinAvailable, setCygwinAvailable] = useState(false);
+  const [platform, setPlatform] = useState(() => {
+    return window.electron?.platform || 'unknown';
+  });
   
   // Hook para redimensionamiento del diálogo
   // storageKey: null para que siempre se abra con el tamaño por defecto
@@ -673,6 +696,149 @@ const SettingsDialog = ({
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.LOCK_HOME_BUTTON, JSON.stringify(lockHomeButton));
   }, [lockHomeButton]);
+
+  // Detectar plataforma
+  useEffect(() => {
+    if (window.electron?.platform) {
+      setPlatform(window.electron.platform);
+    }
+  }, []);
+
+  // Detectar distribuciones WSL
+  useEffect(() => {
+    const detectWSLDistributions = async () => {
+      try {
+        if (platform === 'win32' && window.electron && window.electron.ipcRenderer) {
+          const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
+          if (Array.isArray(distributions)) {
+            setWslDistributions(distributions);
+          } else {
+            setWslDistributions([]);
+          }
+        } else {
+          setWslDistributions([]);
+        }
+      } catch (error) {
+        console.error('Error en detección de distribuciones WSL:', error);
+        setWslDistributions([]);
+      }
+    };
+    
+    detectWSLDistributions();
+  }, [platform]);
+
+  // Detectar disponibilidad de Cygwin
+  useEffect(() => {
+    const detectCygwin = async () => {
+      if (platform === 'win32' && window.electronAPI) {
+        try {
+          const result = await window.electronAPI.invoke('cygwin:detect');
+          if (result && typeof result.available === 'boolean') {
+            setCygwinAvailable(result.available);
+          } else {
+            setCygwinAvailable(false);
+          }
+        } catch (error) {
+          console.error('Error detectando Cygwin:', error);
+          setCygwinAvailable(false);
+        }
+      } else {
+        setCygwinAvailable(false);
+      }
+    };
+    
+    if (platform === 'win32') {
+      detectCygwin();
+    }
+  }, [platform]);
+
+  // Detectar contenedores Docker disponibles
+  useEffect(() => {
+    let mounted = true;
+    
+    const detectDocker = async () => {
+      try {
+        if (window.electron && window.electronAPI && mounted) {
+          const result = await window.electronAPI.invoke('docker:list');
+          if (mounted && result && result.success && Array.isArray(result.containers)) {
+            setDockerContainers(result.containers);
+          } else {
+            setDockerContainers([]);
+          }
+        }
+      } catch (error) {
+        console.error('Error detectando Docker:', error);
+        setDockerContainers([]);
+      }
+    };
+    
+    detectDocker();
+    
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Opciones de terminal por defecto basadas en plataforma
+  const defaultTerminalOptions = useMemo(() => {
+    const options = [];
+    
+    if (platform === 'win32') {
+      // PowerShell siempre disponible
+      options.push({ label: 'PowerShell', value: 'powershell' });
+      
+      // WSL genérico
+      options.push({ label: 'WSL', value: 'wsl' });
+      
+      // Agregar distribuciones WSL específicas
+      if (wslDistributions && wslDistributions.length > 0) {
+        wslDistributions.forEach(distro => {
+          options.push({
+            label: distro.label || distro.name,
+            value: distro.name
+          });
+        });
+      }
+      
+      // Cygwin si está disponible
+      if (cygwinAvailable) {
+        options.push({ label: 'Cygwin', value: 'cygwin' });
+      }
+      
+      // Agregar contenedores Docker si están disponibles
+      if (dockerContainers && dockerContainers.length > 0) {
+        dockerContainers.forEach(container => {
+          options.push({
+            label: `🐳 ${container.name}`,
+            value: `docker-${container.name}`
+          });
+        });
+      }
+    } else if (platform === 'linux' || platform === 'darwin') {
+      options.push(
+        { label: 'Terminal Linux/macOS', value: 'linux-terminal' }
+      );
+    } else {
+      // Fallback
+      options.push(
+        { label: 'PowerShell', value: 'powershell' },
+        { label: 'Terminal', value: 'linux-terminal' }
+      );
+    }
+    
+    return options;
+  }, [platform, wslDistributions, cygwinAvailable, dockerContainers]);
+
+  // Handler para cambiar terminal por defecto
+  const handleDefaultTerminalChange = useCallback((terminalType) => {
+    console.log('🔧 Cambiando terminal por defecto a:', terminalType);
+    setDefaultLocalTerminal(terminalType);
+    localStorage.setItem(STORAGE_KEYS.DEFAULT_LOCAL_TERMINAL, terminalType);
+    // Dispatch event to notify other components
+    window.dispatchEvent(new CustomEvent('default-terminal-changed', {
+      detail: { terminalType }
+    }));
+  }, []);
 
   // Persistir configuración del icono interactivo
   useEffect(() => {
@@ -1548,6 +1714,45 @@ const SettingsDialog = ({
                           id="sidebar-start-collapsed"
                           checked={sidebarStartCollapsed}
                           onChange={(e) => setSidebarStartCollapsed(e.checked)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sección de Terminal por Defecto */}
+              <div className="general-settings-section">
+                <div className="general-section-header">
+                  <div className="general-section-icon">
+                    <i className="pi pi-terminal"></i>
+                  </div>
+                  <h4 className="general-section-title">Terminal por Defecto</h4>
+                </div>
+                
+                <div className="general-settings-options">
+                  <div className="general-setting-card">
+                    <div className="general-setting-content">
+                      <div className="general-setting-icon" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                        <i className="pi pi-terminal"></i>
+                      </div>
+                      <div className="general-setting-info">
+                        <label htmlFor="default-terminal-select" className="general-setting-label">
+                          Terminal Local por Defecto
+                        </label>
+                        <p className="general-setting-description">
+                          Selecciona el terminal que se usará por defecto al crear nuevas pestañas en la home tab y en la barra de pestañas general
+                        </p>
+                      </div>
+                      <div className="general-setting-control" onClick={(e) => e.stopPropagation()} style={{ minWidth: '200px' }}>
+                        <Dropdown
+                          id="default-terminal-select"
+                          value={defaultLocalTerminal}
+                          options={defaultTerminalOptions.length > 0 ? defaultTerminalOptions : [{ label: 'PowerShell', value: 'powershell' }]}
+                          onChange={(e) => handleDefaultTerminalChange(e.value)}
+                          placeholder="Seleccionar terminal"
+                          style={{ width: '100%' }}
+                          disabled={defaultTerminalOptions.length === 0}
                         />
                       </div>
                     </div>
