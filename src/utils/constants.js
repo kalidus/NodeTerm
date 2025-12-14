@@ -4,7 +4,8 @@ export const STORAGE_KEYS = {
   UI_THEME: 'ui_theme',
   LOCK_HOME_BUTTON: 'lock_home_button',
   HOME_TAB_ICON: 'home_tab_icon',
-  SIDEBAR_START_COLLAPSED: 'sidebar_start_collapsed'
+  SIDEBAR_START_COLLAPSED: 'sidebar_start_collapsed',
+  DEFAULT_LOCAL_TERMINAL: 'nodeterm_default_local_terminal'
 };
 
 // Constantes de grupos
