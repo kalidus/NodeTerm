@@ -1721,45 +1721,6 @@ const SettingsDialog = ({
                 </div>
               </div>
 
-              {/* Sección de Terminal por Defecto */}
-              <div className="general-settings-section">
-                <div className="general-section-header">
-                  <div className="general-section-icon">
-                    <i className="pi pi-terminal"></i>
-                  </div>
-                  <h4 className="general-section-title">Terminal por Defecto</h4>
-                </div>
-                
-                <div className="general-settings-options">
-                  <div className="general-setting-card">
-                    <div className="general-setting-content">
-                      <div className="general-setting-icon" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-                        <i className="pi pi-terminal"></i>
-                      </div>
-                      <div className="general-setting-info">
-                        <label htmlFor="default-terminal-select" className="general-setting-label">
-                          Terminal Local por Defecto
-                        </label>
-                        <p className="general-setting-description">
-                          Selecciona el terminal que se usará por defecto al crear nuevas pestañas en la home tab y en la barra de pestañas general
-                        </p>
-                      </div>
-                      <div className="general-setting-control" onClick={(e) => e.stopPropagation()} style={{ minWidth: '200px' }}>
-                        <Dropdown
-                          id="default-terminal-select"
-                          value={defaultLocalTerminal}
-                          options={defaultTerminalOptions.length > 0 ? defaultTerminalOptions : [{ label: 'PowerShell', value: 'powershell' }]}
-                          onChange={(e) => handleDefaultTerminalChange(e.value)}
-                          placeholder="Seleccionar terminal"
-                          style={{ width: '100%' }}
-                          disabled={defaultTerminalOptions.length === 0}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* Sección de Idioma */}
               <div className="general-settings-section">
                 <div className="general-section-header">
@@ -2761,6 +2722,9 @@ const SettingsDialog = ({
                 setLocalPowerShellTheme={setLocalPowerShellTheme}
                 localLinuxTerminalTheme={localLinuxTerminalTheme}
                 setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
+                defaultLocalTerminal={defaultLocalTerminal}
+                defaultTerminalOptions={defaultTerminalOptions}
+                onDefaultTerminalChange={handleDefaultTerminalChange}
               />
             )}
             {activeSubTab === 'status-bar' && (

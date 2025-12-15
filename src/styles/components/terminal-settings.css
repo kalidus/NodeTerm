@@ -106,7 +106,8 @@
 
 .terminal-cursor-group,
 .terminal-blink-group,
-.terminal-scrollback-group {
+.terminal-scrollback-group,
+.terminal-default-group {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
