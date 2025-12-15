@@ -192,6 +192,7 @@ const MainContentArea = ({
   
   // Estado para distribuciones WSL disponibles
   const [wslDistributions, setWslDistributions] = useState([]);
+  const wslDistributionsRef = useRef([]);
   
   // Estado para contenedores Docker disponibles
   const [dockerContainers, setDockerContainers] = useState([]);
@@ -227,6 +228,11 @@ const MainContentArea = ({
       mounted = false;
     };
   }, []);
+
+  // Mantener ref de distros WSL actualizada para usar en callbacks
+  useEffect(() => {
+    wslDistributionsRef.current = wslDistributions;
+  }, [wslDistributions]);
 
   // Escuchar cambios en el localStorage para lock_home_button
   useEffect(() => {
@@ -618,23 +624,27 @@ const MainContentArea = ({
       }
     });
     plusButton.addEventListener('click', () => {
-      // Usar la referencia que se actualiza de forma síncrona, o la configuración por defecto
-      let terminalTypeToUse = lastLocalTerminalTypeRef.current;
-      
-      // Si no hay último tipo usado, usar la configuración guardada
-      if (!terminalTypeToUse || terminalTypeToUse === 'powershell') {
-        const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
-        if (defaultTerminal) {
-          terminalTypeToUse = defaultTerminal;
-        }
-      }
-      
-      console.log('Botón + presionado. Usando tipo:', terminalTypeToUse);
-      
-      // Buscar la distribución correcta
-      let distro = null;
-      
-      // Si es Docker
+      // Usar la configuración guardada; si no existe, último tipo local; luego fallback por plataforma
+      const storedDefault = localStorage.getItem('nodeterm_default_local_terminal');
+      const lastType = lastLocalTerminalTypeRef.current;
+      const fallbackDefault = getDefaultTerminalFromConfig();
+      let terminalTypeToUse = storedDefault || lastType || fallbackDefault;
+      console.log('Botón + presionado (barra superior). Tipo base:', terminalTypeToUse);
+
+      // Helper para localizar distro WSL por nombre/label (con o sin prefijo wsl-)
+      const findDistro = (value) => {
+        if (!value) return null;
+        const normalized = value.startsWith('wsl-') ? value.replace('wsl-', '') : value;
+        const distros = wslDistributionsRef.current || [];
+        return distros.find(d =>
+          d.name === normalized ||
+          d.label === normalized ||
+          d.name?.toLowerCase?.() === normalized.toLowerCase() ||
+          d.label?.toLowerCase?.() === normalized.toLowerCase()
+        );
+      };
+
+      // Resolver docker o distro antes de crear
       if (terminalTypeToUse.startsWith('docker-')) {
         const containerName = terminalTypeToUse.replace('docker-', '');
         const container = dockerContainers.find(c => c.name === containerName);
@@ -643,29 +653,12 @@ const MainContentArea = ({
           return;
         }
       }
-      // Si es una distribución WSL (puede ser el nombre directo como "Ubuntu-24.04" o "wsl-Ubuntu")
-      else if (terminalTypeToUse.startsWith('wsl-')) {
-        // Extraer el nombre de la distribución (ej: 'wsl-Ubuntu' -> 'Ubuntu')
-        const distroName = terminalTypeToUse.replace('wsl-', '');
-        distro = wslDistributions.find(d => d.name === distroName || d.label === distroName);
-        if (distro) {
-          // Usar el nombre de la distribución como tipo
-          terminalTypeToUse = distro.name;
-        }
-      } else {
-        // Buscar por nombre directo (ej: "Ubuntu-24.04")
-        distro = wslDistributions.find(d => d.name === terminalTypeToUse || d.label === terminalTypeToUse);
-        if (distro) {
-          // Si encontramos la distribución, usar su nombre como tipo
-          terminalTypeToUse = distro.name;
-        }
-      }
-      
-      // Si encontramos una distribución, crear la pestaña con distroInfo
+
+      const distro = findDistro(terminalTypeToUse);
       if (distro) {
-        createLocalTerminalTab(terminalTypeToUse, distro);
+        // Forzar uso de info completa de la distro
+        createLocalTerminalTab(distro.name, distro);
       } else {
-        // Si no es una distribución, crear normalmente
         createLocalTerminalTab(terminalTypeToUse, null);
       }
     });
@@ -765,11 +758,25 @@ const MainContentArea = ({
         window.electron.ipcRenderer.send('register-tab-events', tabId);
       }
       
-      // Determinar el label según el tipo de terminal
+    // Determinar el label según el tipo de terminal
       let label = 'Terminal';
       let finalTerminalType = terminalType;
       let tabType = 'local-terminal';
       let finalDistroInfo = distroInfo;
+
+    // Si no vino distroInfo, intentar resolver distribución WSL por nombre/label directo usando ref (estado más fresco)
+    if (!finalDistroInfo && !terminalType.startsWith('docker-')) {
+      const distros = wslDistributionsRef.current || [];
+      const distro = distros.find(d =>
+        d.name === terminalType ||
+        d.label === terminalType ||
+        d.name?.toLowerCase?.() === terminalType.toLowerCase() ||
+        d.label?.toLowerCase?.() === terminalType.toLowerCase()
+      );
+        if (distro) {
+          finalDistroInfo = distro;
+        }
+      }
       
       // PRIMERO: Comprobar si es Docker (ANTES de distroInfo)
       if (terminalType.startsWith('docker-')) {
@@ -783,10 +790,10 @@ const MainContentArea = ({
           containerId: distroInfo?.dockerContainer?.id,
           shortId: distroInfo?.dockerContainer?.shortId
         };
-      } else if (distroInfo) {
-        // Si hay distroInfo, usamos sus datos
-        label = distroInfo.label;
-        finalTerminalType = distroInfo.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+      } else if (finalDistroInfo) {
+        // Si hay distroInfo, usamos sus datos (resuelto arriba o pasado explícitamente)
+        label = finalDistroInfo.label;
+        finalTerminalType = finalDistroInfo.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
       } else {
         // Si no hay distroInfo, usar lógica anterior
         switch(terminalType) {
