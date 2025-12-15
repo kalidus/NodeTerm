@@ -74,7 +74,10 @@ const TerminalSettingsTab = ({
   localPowerShellTheme,
   setLocalPowerShellTheme,
   localLinuxTerminalTheme,
-  setLocalLinuxTerminalTheme
+  setLocalLinuxTerminalTheme,
+  defaultLocalTerminal,
+  defaultTerminalOptions = [],
+  onDefaultTerminalChange
 }) => {
   const { t } = useTranslation('common');
   
@@ -450,6 +453,19 @@ const TerminalSettingsTab = ({
                 style={{ width: '100px' }}
               />
             </div>
+            {defaultLocalTerminal !== undefined && onDefaultTerminalChange && (
+              <div className="terminal-default-group">
+                <span className="terminal-mini-label">Terminal por Defecto</span>
+                <Dropdown
+                  value={defaultLocalTerminal}
+                  options={defaultTerminalOptions.length > 0 ? defaultTerminalOptions : [{ label: 'PowerShell', value: 'powershell' }]}
+                  onChange={(e) => onDefaultTerminalChange(e.value)}
+                  placeholder="Seleccionar terminal"
+                  style={{ width: '200px', fontSize: '0.75rem' }}
+                  disabled={defaultTerminalOptions.length === 0}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
