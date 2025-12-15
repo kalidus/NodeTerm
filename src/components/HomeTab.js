@@ -40,6 +40,8 @@ const HomeTab = ({
   const [recentConnections, setRecentConnections] = useState([]); // Estado para conexiones recientes
   const [recentPasswords, setRecentPasswords] = useState([]); // Estado para passwords recientes
   const [showAIChat, setShowAIChat] = useState(false); // Estado para mostrar/ocultar chat de IA
+  const [recentContainerHeight, setRecentContainerHeight] = useState(400); // Altura del contenedor de recientes
+  const recentContainerRef = useRef(null);
   const [statusBarVisible, setStatusBarVisible] = useState(() => {
     // Cargar preferencia desde localStorage, por defecto visible
     try {
@@ -78,6 +80,46 @@ const HomeTab = ({
     };
   }, []);
 
+  // Calcular número dinámico de recientes basado en la altura disponible
+  const calculateRecentLimit = React.useCallback(() => {
+    if (recentContainerHeight < 200) return 8; // Mínimo
+    const headerHeight = 50; // Altura del header
+    const itemHeight = 28; // Altura aproximada de cada item (incluyendo gap)
+    const availableHeight = recentContainerHeight - headerHeight;
+    const itemsCount = Math.floor(availableHeight / itemHeight);
+    return Math.max(8, itemsCount); // Mínimo 8, luego dinámico
+  }, [recentContainerHeight]);
+
+  const loadRecentConnections = React.useCallback(() => {
+    try {
+      const limit = calculateRecentLimit();
+      const recents = getRecents(limit); // Número dinámico de conexiones recientes
+      setRecentConnections(recents);
+    } catch (error) {
+      console.error('Error cargando conexiones recientes:', error);
+    }
+  }, [calculateRecentLimit]);
+
+  // Observar cambios en el tamaño del contenedor de recientes
+  useEffect(() => {
+    if (!recentContainerRef.current) return;
+    
+    const resizeObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        const height = entry.contentRect.height;
+        if (height > 0) {
+          setRecentContainerHeight(height);
+        }
+      }
+    });
+    
+    resizeObserver.observe(recentContainerRef.current);
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
   // Cargar conexiones recientes y passwords recientes
   useEffect(() => {
     loadRecentConnections();
@@ -87,16 +129,7 @@ const HomeTab = ({
       loadRecentPasswords();
     });
     return () => off && off();
-  }, []);
-
-  const loadRecentConnections = () => {
-    try {
-      const recents = getRecents(8); // Limitar a 8 conexiones recientes
-      setRecentConnections(recents);
-    } catch (error) {
-      console.error('Error cargando conexiones recientes:', error);
-    }
-  };
+  }, [loadRecentConnections]);
 
   const loadRecentPasswords = () => {
     try {
@@ -803,7 +836,9 @@ const HomeTab = ({
                   flexShrink: 0
                 }} />
                 {/* Lista de conexiones recientes */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto', flex: 1 }}>
+                <div 
+                  ref={recentContainerRef}
+                  style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto', flex: 1, height: '100%' }}>
                   {recentConnections.length > 0 ? (
                     recentConnections.map(recentConn => (
                       <div key={recentConn.id} style={{
