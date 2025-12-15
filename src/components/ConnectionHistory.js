@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Badge } from 'primereact/badge';
 import { getFavorites, toggleFavorite, onUpdate } from '../utils/connectionStore';
 
@@ -12,13 +12,51 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	});
 	const [favQuery, setFavQuery] = useState('');
 	const [currentPage, setCurrentPage] = useState(1);
-	const itemsPerPage = 14; // Máximo 7 filas con 2 columnas = 14 items
+	const [containerHeight, setContainerHeight] = useState(400); // Altura inicial estimada
+	const favoritesContainerRef = useRef(null);
+	
+	// Calcular items por página dinámicamente basado en la altura disponible
+	// Cada item tiene aproximadamente 24px de altura, más gaps de 2px
+	const itemHeight = 26; // Altura aproximada de cada item (24px + 2px gap)
+	const itemsPerRow = favoritesColumns;
+	const calculateItemsPerPage = useCallback(() => {
+		if (containerHeight < 200) return 14; // Mínimo
+		const headerHeight = 80; // Altura del header con filtros
+		const paginationHeight = 40; // Altura de la paginación (si existe)
+		const availableHeight = containerHeight - headerHeight - paginationHeight;
+		const rowsPerPage = Math.max(1, Math.floor(availableHeight / itemHeight));
+		const calculatedItems = rowsPerPage * itemsPerRow;
+		// Mínimo 14 items, pero permitir que crezca dinámicamente
+		return Math.max(14, calculatedItems);
+	}, [containerHeight, favoritesColumns]);
+	
+	const itemsPerPage = calculateItemsPerPage();
 
 	useEffect(() => {
 		loadConnectionHistory();
 		const off = onUpdate(() => loadConnectionHistory());
 		return () => off && off();
 	}, [recentsLimit]);
+
+	// Observar cambios en el tamaño del contenedor de favoritos
+	useEffect(() => {
+		if (!favoritesContainerRef.current) return;
+		
+		const resizeObserver = new ResizeObserver(entries => {
+			for (let entry of entries) {
+				const height = entry.contentRect.height;
+				if (height > 0) {
+					setContainerHeight(height);
+				}
+			}
+		});
+		
+		resizeObserver.observe(favoritesContainerRef.current);
+		
+		return () => {
+			resizeObserver.disconnect();
+		};
+	}, []);
 
 
 	const loadConnectionHistory = () => {
@@ -417,20 +455,23 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	return (
 		<div style={{ 
 			padding: '0.25rem 0.5rem 0.25rem 0.5rem', 
-			height: '100%', 
+			flex: 1,
+			height: '100%',
+			minHeight: 0,
 			display: 'flex', 
 			flexDirection: 'column',
 			background: 'transparent !important',
 			backgroundColor: 'transparent !important'
 		}}>
-			<div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.25rem', flex: '0 0 auto' }}>
+			<div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0', height: '100%', minHeight: 0 }}>
 				{/* Columna única: Favoritos */}
-				<div style={{ display: 'flex', flexDirection: 'column', background: 'transparent !important', backgroundColor: 'transparent !important' }}>
+				<div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', minHeight: 0, background: 'transparent !important', backgroundColor: 'transparent !important' }}>
 					{/* Título mejorado con mejor separación visual */}
 					<div style={{ 
 						marginBottom: '0.5rem',
 						padding: 0,
-						position: 'relative'
+						position: 'relative',
+						flexShrink: 0
 					}}>
 						<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
 							{/* Icono con efecto visual mejorado */}
@@ -512,16 +553,20 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 						}} />
 					</div>
 					
-					{/* Contenedor con altura fija para los favoritos */}
-					<div style={{ 
-						maxHeight: '320px', 
-						minHeight: '320px',
-						overflow: 'hidden',
-						display: 'flex',
-						flexDirection: 'column',
-						background: 'transparent !important',
-						backgroundColor: 'transparent !important'
-					}}>
+					{/* Contenedor con altura dinámica para los favoritos */}
+					<div 
+						ref={favoritesContainerRef}
+						style={{ 
+							flex: 1,
+							height: '100%',
+							minHeight: 0,
+							overflow: 'auto',
+							overflowX: 'hidden',
+							display: 'flex',
+							flexDirection: 'column',
+							background: 'transparent !important',
+							backgroundColor: 'transparent !important'
+						}}>
 						{filteredFavorites.length > 0 ? (
 							<>
 								<div style={{ 
