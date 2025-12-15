@@ -1235,12 +1235,27 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
     // Función para crear una nueva pestaña
     const createNewTab = (terminalTypeOverride = null) => {
-        const terminalTypeToUse = terminalTypeOverride || selectedTerminalType;
+        // Usar siempre el terminal por defecto (configuración guardada). El dropdown sigue pudiendo pasar un override.
+        const defaultTerminalType = getDefaultTerminalType();
+        const terminalTypeToUse = terminalTypeOverride || defaultTerminalType || selectedTerminalType;
         // console.log('Creating new tab, type:', terminalTypeToUse);
         const newTabId = `tab-${nextTabId}`;
         
         // Determinar título y tipo basado en la selección
         let title, terminalType, distroInfo = null;
+
+        // Detectar si el valor seleccionado es directamente el nombre/label de una distro WSL
+        const findDistroByValue = (value) => {
+            if (!value) return null;
+            const normalized = value.startsWith('wsl-') ? value.replace('wsl-', '') : value;
+            return wslDistributions.find(d =>
+                d.name === normalized ||
+                d.label === normalized ||
+                d.name?.toLowerCase?.() === normalized.toLowerCase() ||
+                d.label?.toLowerCase?.() === normalized.toLowerCase()
+            );
+        };
+        const matchedDistro = findDistroByValue(terminalTypeToUse);
         
         if (terminalTypeToUse === 'powershell') {
             title = 'Windows PowerShell';
@@ -1283,11 +1298,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             
             title = 'Cygwin';
             terminalType = 'cygwin';
-        } else if (terminalTypeToUse.startsWith('wsl-')) {
-            // Extraer información de la distribución WSL seleccionada
-            const distroName = terminalTypeToUse.replace('wsl-', '');
-            const selectedDistro = wslDistributions.find(d => d.name === distroName);
-            
+        } else if (terminalTypeToUse.startsWith('wsl-') || matchedDistro) {
+            // Extraer información de la distribución WSL seleccionada (permite tanto "wsl-<name>" como "<name>")
+            const selectedDistro = matchedDistro || findDistroByValue(terminalTypeToUse);
+
             if (selectedDistro) {
                 title = selectedDistro.label;
                 terminalType = selectedDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
