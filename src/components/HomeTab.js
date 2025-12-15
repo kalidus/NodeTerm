@@ -483,13 +483,12 @@ const HomeTab = ({
         size = 0;
         break;
       default:
-        // Para 'normal', calcular tamaño basado en el contenido (cards + margen)
-        // Las cards tienen ~280px de altura, más padding y márgenes
+        // Para 'normal', la terminal ocupa un poco menos de la mitad (45%)
+        // Esto significa que el panel superior ocupa 55% de la altura disponible
         const statusBarHeight = statusBarVisible ? 40 : 0;
         const availableHeight = containerHeight - statusBarHeight;
-        // Usar aproximadamente 50% de la altura disponible para el panel superior
-        // Esto deja suficiente espacio para las cards y la terminal
-        size = Math.max(availableHeight * 0.5, 400);
+        // Usar 55% de la altura disponible para el panel superior (terminal ocupa 45%)
+        size = Math.max(availableHeight * 0.55, 400);
         break;
     }
 
@@ -518,12 +517,13 @@ const HomeTab = ({
       visibility: terminalState === 'maximized' ? 'hidden' : 'visible',
       transition: 'opacity 0.1s ease, visibility 0.1s ease'
     }}>
-      <div className="home-page-scroll" style={{ flex: 1, overflow: 'auto' }}>
+      <div className="home-page-scroll" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {/* Layout principal sin QuickAccessSidebar */}
         <div style={{
           display: 'flex',
-          height: '100%',
-          minHeight: '600px'
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden'
         }}>
           {/* Mostrar Chat de IA o contenido normal */}
           {showAIChat ? (
@@ -559,12 +559,15 @@ const HomeTab = ({
             flex: 1,
             padding: '1rem',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            minHeight: 0,
+            overflow: 'hidden'
           }}>
             {/* Cards de Estado de NodeTerm - Acciones/Terminales y Servicios/KPIs */}
             <div style={{
               position: 'relative',
-              marginBottom: '1rem'
+              marginBottom: '1rem',
+              flexShrink: 0
             }}>
               <NodeTermStatus
                 sshConnectionsCount={sshConnectionsCount}
@@ -644,7 +647,10 @@ const HomeTab = ({
               flexDirection: 'row',
               gap: '1.5rem',
               position: 'relative',
-              alignItems: 'stretch'
+              alignItems: 'stretch',
+              flex: 1,
+              minHeight: 0,
+              overflow: 'hidden'
             }}>
               {/* Sección de Favoritos */}
               <div style={{
@@ -653,7 +659,8 @@ const HomeTab = ({
                 flex: '2 1 0',
                 minWidth: 0,
                 position: 'relative',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                minHeight: 0
               }}>
                 <ConnectionHistory 
                   onConnectToHistory={handleConnectToHistory}
@@ -728,7 +735,8 @@ const HomeTab = ({
                 flexDirection: 'column',
                 flex: '1 1 0',
                 minWidth: 0,
-                minHeight: 0
+                minHeight: 0,
+                overflow: 'hidden'
               }}>
                 <div style={{
                   display: 'flex',
