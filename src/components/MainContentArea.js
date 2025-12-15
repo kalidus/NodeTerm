@@ -564,7 +564,6 @@ const MainContentArea = ({
     plusButton.innerHTML = '<i class="pi pi-plus"></i>';
     plusButton.className = 'p-button p-button-text p-button-sm tab-action-button';
     plusButton.style.cssText = `
-      color: var(--ui-tab-text, rgba(255, 255, 255, 0.7)) !important;
       padding: 0 !important;
       width: 18px !important;
       min-width: 18px !important;
@@ -573,56 +572,15 @@ const MainContentArea = ({
       min-height: 18px !important;
       max-height: 18px !important;
       font-size: 10px !important;
-      background: transparent !important;
-      background-color: transparent !important;
-      border: 1px solid rgba(255, 255, 255, 0.2) !important;
-      border-color: rgba(255, 255, 255, 0.2) !important;
-      border-radius: 3px !important;
-      box-shadow: none !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       cursor: pointer !important;
       transition: all 0.2s ease !important;
-      backdrop-filter: none !important;
-      clip-path: none !important;
-      filter: none !important;
-      transform: none !important;
-      border-style: solid !important;
-      background-size: auto !important;
-      margin-bottom: 0 !important;
-      line-height: 1 !important;
       box-sizing: border-box !important;
     `;
-    
-    // Aplicar color del tema al icono
-    const plusIcon = plusButton.querySelector('i');
-    if (plusIcon) {
-      plusIcon.style.setProperty('color', 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))', 'important');
-    }
+
     plusButton.title = 'Nueva terminal local';
-    plusButton.addEventListener('mouseenter', () => {
-      plusButton.style.setProperty('background', 'rgba(255, 255, 255, 0.15)', 'important');
-      plusButton.style.setProperty('background-color', 'rgba(255, 255, 255, 0.15)', 'important');
-      plusButton.style.setProperty('border-color', 'rgba(255, 255, 255, 0.4)', 'important');
-      plusButton.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.4)', 'important');
-      plusButton.style.setProperty('color', 'rgba(255, 255, 255, 1)', 'important');
-      const icon = plusButton.querySelector('i');
-      if (icon) {
-        icon.style.setProperty('color', 'rgba(255, 255, 255, 1)', 'important');
-      }
-    });
-    plusButton.addEventListener('mouseleave', () => {
-      plusButton.style.setProperty('background', 'transparent', 'important');
-      plusButton.style.setProperty('background-color', 'transparent', 'important');
-      plusButton.style.setProperty('border-color', 'rgba(255, 255, 255, 0.2)', 'important');
-      plusButton.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.2)', 'important');
-      plusButton.style.setProperty('color', 'rgba(255, 255, 255, 0.7)', 'important');
-      const icon = plusButton.querySelector('i');
-      if (icon) {
-        icon.style.setProperty('color', 'rgba(255, 255, 255, 0.7)', 'important');
-      }
-    });
     plusButton.addEventListener('click', () => {
       // Usar la configuración guardada; si no existe, último tipo local; luego fallback por plataforma
       const storedDefault = localStorage.getItem('nodeterm_default_local_terminal');
@@ -668,7 +626,6 @@ const MainContentArea = ({
     dropdownButton.innerHTML = '<i class="pi pi-chevron-down"></i>';
     dropdownButton.className = 'p-button p-button-text p-button-sm tab-action-button';
     dropdownButton.style.cssText = `
-      color: var(--ui-tab-text, rgba(255, 255, 255, 0.7)) !important;
       padding: 0 !important;
       width: 18px !important;
       min-width: 18px !important;
@@ -677,56 +634,15 @@ const MainContentArea = ({
       min-height: 18px !important;
       max-height: 18px !important;
       font-size: 9px !important;
-      background: transparent !important;
-      background-color: transparent !important;
-      border: 1px solid rgba(255, 255, 255, 0.2) !important;
-      border-color: rgba(255, 255, 255, 0.2) !important;
-      border-radius: 3px !important;
-      box-shadow: none !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       cursor: pointer !important;
       transition: all 0.2s ease !important;
-      backdrop-filter: none !important;
-      clip-path: none !important;
-      filter: none !important;
-      transform: none !important;
-      border-style: solid !important;
-      background-size: auto !important;
-      margin-bottom: 0 !important;
-      line-height: 1 !important;
       box-sizing: border-box !important;
     `;
-    
-    // Aplicar color del tema al icono
-    const dropdownIcon = dropdownButton.querySelector('i');
-    if (dropdownIcon) {
-      dropdownIcon.style.setProperty('color', 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))', 'important');
-    }
+
     dropdownButton.title = 'Seleccionar tipo de terminal';
-    dropdownButton.addEventListener('mouseenter', () => {
-      dropdownButton.style.setProperty('background', 'rgba(255, 255, 255, 0.15)', 'important');
-      dropdownButton.style.setProperty('background-color', 'rgba(255, 255, 255, 0.15)', 'important');
-      dropdownButton.style.setProperty('border-color', 'rgba(255, 255, 255, 0.4)', 'important');
-      dropdownButton.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.4)', 'important');
-      dropdownButton.style.setProperty('color', 'rgba(255, 255, 255, 1)', 'important');
-      const icon = dropdownButton.querySelector('i');
-      if (icon) {
-        icon.style.setProperty('color', 'rgba(255, 255, 255, 1)', 'important');
-      }
-    });
-    dropdownButton.addEventListener('mouseleave', () => {
-      dropdownButton.style.setProperty('background', 'transparent', 'important');
-      dropdownButton.style.setProperty('background-color', 'transparent', 'important');
-      dropdownButton.style.setProperty('border-color', 'rgba(255, 255, 255, 0.2)', 'important');
-      dropdownButton.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.2)', 'important');
-      dropdownButton.style.setProperty('color', 'rgba(255, 255, 255, 0.7)', 'important');
-      const icon = dropdownButton.querySelector('i');
-      if (icon) {
-        icon.style.setProperty('color', 'rgba(255, 255, 255, 0.7)', 'important');
-      }
-    });
     dropdownButton.addEventListener('click', (e) => {
       terminalSelectorMenuRef.current?.show(e);
     });
