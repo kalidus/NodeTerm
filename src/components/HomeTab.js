@@ -517,13 +517,14 @@ const HomeTab = ({
       visibility: terminalState === 'maximized' ? 'hidden' : 'visible',
       transition: 'opacity 0.1s ease, visibility 0.1s ease'
     }}>
-      <div className="home-page-scroll" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div className="home-page-scroll" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* Layout principal sin QuickAccessSidebar */}
         <div style={{
           display: 'flex',
           flex: 1,
           minHeight: 0,
-          overflow: 'hidden'
+          overflow: 'hidden',
+          height: '100%'
         }}>
           {/* Mostrar Chat de IA o contenido normal */}
           {showAIChat ? (
@@ -561,7 +562,8 @@ const HomeTab = ({
             display: 'flex',
             flexDirection: 'column',
             minHeight: 0,
-            overflow: 'hidden'
+            overflow: 'hidden',
+            height: '100%'
           }}>
             {/* Cards de Estado de NodeTerm - Acciones/Terminales y Servicios/KPIs */}
             <div style={{
@@ -650,7 +652,8 @@ const HomeTab = ({
               alignItems: 'stretch',
               flex: 1,
               minHeight: 0,
-              overflow: 'hidden'
+              overflow: 'hidden',
+              height: '100%'
             }}>
               {/* Sección de Favoritos */}
               <div style={{
@@ -660,7 +663,8 @@ const HomeTab = ({
                 minWidth: 0,
                 position: 'relative',
                 overflow: 'hidden',
-                minHeight: 0
+                minHeight: 0,
+                height: '100%'
               }}>
                 <ConnectionHistory 
                   onConnectToHistory={handleConnectToHistory}
@@ -736,13 +740,15 @@ const HomeTab = ({
                 flex: '1 1 0',
                 minWidth: 0,
                 minHeight: 0,
-                overflow: 'hidden'
+                overflow: 'hidden',
+                height: '100%'
               }}>
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
-                  marginBottom: '0.5rem'
+                  marginBottom: '0.5rem',
+                  flexShrink: 0
                 }}>
                   {/* Icono con efecto visual mejorado */}
                   <div style={{
@@ -793,7 +799,8 @@ const HomeTab = ({
                   height: '1px',
                   background: 'linear-gradient(90deg, transparent, rgba(79, 195, 247, 0.3), transparent)',
                   borderRadius: '1px',
-                  marginBottom: '0.5rem'
+                  marginBottom: '0.5rem',
+                  flexShrink: 0
                 }} />
                 {/* Lista de conexiones recientes */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto', flex: 1 }}>
