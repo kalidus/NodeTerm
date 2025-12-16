@@ -277,6 +277,21 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	const endIndex = startIndex + itemsPerPage;
 	const paginatedFavorites = filteredFavorites.slice(startIndex, endIndex);
 
+	// Escalado visual cuando hay pocas cards y se estiran verticalmente.
+	// Calculamos un "scale" en función de la altura real por fila.
+	const favScale = React.useMemo(() => {
+		if (!paginatedFavorites.length) return 1;
+		const rows = Math.max(1, Math.ceil(paginatedFavorites.length / favoritesColumns));
+		const paginationHeight = totalPages > 1 ? 40 : 0;
+		const availableForGrid = Math.max(0, containerHeight - paginationHeight);
+		const rowHeight = availableForGrid / rows;
+		const scale = rowHeight / itemHeight; // itemHeight ~58px (tile compacta)
+		const clamped = Math.max(1, Math.min(1.6, scale));
+		return Number(clamped.toFixed(3));
+	}, [paginatedFavorites.length, favoritesColumns, totalPages, containerHeight]);
+
+	const isSparseFavoritesLayout = favScale > 1.15;
+
 	const ConnectionCard = ({ connection, showFavoriteAction = false, compact = false, micro = false, onEdit }) => {
 		const isActive = activeIds.has(`${connection.type}:${connection.host}:${connection.username}:${connection.port}`);
 		const typeColor = getConnectionTypeColor(connection.type);
@@ -472,6 +487,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 						{filteredFavorites.length > 0 ? (
 							<>
 								<div style={{ 
+									'--fav-scale': favScale,
 									display: 'grid', 
 									gridTemplateColumns: `repeat(${favoritesColumns}, 1fr)`, 
 									gap: 8,
@@ -481,11 +497,13 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 									height: '100%',
 									alignContent: 'stretch',
 									alignItems: 'stretch',
-									gridAutoRows: 'minmax(54px, 1fr)',
+									gridAutoRows: 'minmax(calc(54px * var(--fav-scale)), 1fr)',
 									paddingRight: '4px',
 									background: 'transparent !important',
 									backgroundColor: 'transparent !important'
-								}}>
+								}}
+								className={isSparseFavoritesLayout ? 'favorite-grid favorite-grid--sparse' : 'favorite-grid'}
+								>
 									{paginatedFavorites.map(connection => (
 										<ConnectionCard key={connection.id} connection={connection} showFavoriteAction={true} compact={false} micro={false} onEdit={onEdit} />
 									))}
