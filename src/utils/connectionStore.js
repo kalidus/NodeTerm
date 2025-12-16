@@ -6,7 +6,8 @@ const RECENTS_KEY = 'nodeterm_connection_history';
 const RECENT_PASSWORDS_KEY = 'nodeterm_recent_passwords';
 
 // Default max recents if caller does not specify
-const DEFAULT_RECENTS_LIMIT = 10;
+// Aumentado a 200 para permitir mostrar muchas más conexiones recientes
+const DEFAULT_RECENTS_LIMIT = 200;
 
 // Single event name for updates (favorites or recents)
 const UPDATED_EVENT = 'connections-updated';

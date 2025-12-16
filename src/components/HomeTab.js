@@ -84,12 +84,17 @@ const HomeTab = ({
 
   // Calcular número dinámico de recientes basado en la altura disponible
   const calculateRecentLimit = React.useCallback(() => {
-    if (recentContainerHeight < 200) return 8; // Mínimo
-    const headerHeight = 50; // Altura del header
-    const itemHeight = 28; // Altura aproximada de cada item (incluyendo gap)
+    if (recentContainerHeight < 100) return 5; // Mínimo muy bajo para espacios pequeños
+    // Altura del header: título (~30px) + línea decorativa (1px) + márgenes (0.5rem + 0.5rem = ~16px) = ~47px
+    // Redondeamos a 50px para dar un poco de margen
+    const headerHeight = 50; 
+    // Altura de cada item: padding vertical (0.2rem * 2 = ~6px) + contenido (~18px) + gap (0.25rem = ~4px) = ~28px
+    const itemHeight = 28; 
     const availableHeight = recentContainerHeight - headerHeight;
+    // Calcular cuántos items caben, permitiendo que crezca dinámicamente
     const itemsCount = Math.floor(availableHeight / itemHeight);
-    return Math.max(8, itemsCount); // Mínimo 8, luego dinámico
+    // Mínimo 5 items, pero permitir que crezca tanto como el espacio lo permita
+    return Math.max(5, itemsCount);
   }, [recentContainerHeight]);
 
   const loadRecentConnections = React.useCallback(() => {
@@ -777,15 +782,17 @@ const HomeTab = ({
               }} />
 
               {/* Sección de Conexiones Recientes */}
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                flex: '1 1 0',
-                minWidth: 0,
-                minHeight: 0,
-                overflow: 'hidden',
-                height: '100%'
-              }}>
+              <div 
+                ref={recentContainerRef}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  flex: '1 1 0',
+                  minWidth: 0,
+                  minHeight: 0,
+                  overflow: 'hidden',
+                  height: '100%'
+                }}>
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -847,8 +854,7 @@ const HomeTab = ({
                 }} />
                 {/* Lista de conexiones recientes */}
                 <div 
-                  ref={recentContainerRef}
-                  style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto', flex: 1, height: '100%' }}>
+                  style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto', flex: 1, height: '100%', minHeight: 0 }}>
                   {recentConnections.length > 0 ? (
                     recentConnections.map(recentConn => (
                       <div key={recentConn.id} style={{
