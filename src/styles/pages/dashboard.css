@@ -69,34 +69,30 @@
   transform: scale(1.02);
 }
 
-/* === FAVORITOS: tiles compactos estilo "dashboard" === */
+/* === FAVORITOS: Opción 2 - Icono badge izquierda + compacto === */
 .favorite-tile {
   --fav-accent: #4fc3f7;
   --fav-scale: 1;
+  --fav-icon-bg: rgba(79, 195, 247, 0.15);
+  --fav-icon-border: rgba(79, 195, 247, 0.35);
+  --fav-icon-color: #4fc3f7;
+  --fav-chip-bg: rgba(79, 195, 247, 0.18);
+  --fav-chip-border: rgba(79, 195, 247, 0.45);
+  --fav-chip-color: #4fc3f7;
   position: relative;
   display: flex;
-  align-items: stretch;
-  height: 100%;
-  padding: calc(8px * var(--fav-scale)) calc(10px * var(--fav-scale)) calc(8px * var(--fav-scale)) calc(12px * var(--fav-scale));
-  border-radius: 10px;
+  flex-direction: row;
+  align-items: center;
+  gap: calc(8px * var(--fav-scale));
+  padding: calc(7px * var(--fav-scale)) calc(8px * var(--fav-scale));
+  border-radius: 8px;
   border: 1px solid rgba(255,255,255,0.10);
   background: rgba(12, 14, 20, 0.55);
   box-shadow: 0 8px 22px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04);
   cursor: pointer;
   overflow: hidden;
-  min-height: calc(54px * var(--fav-scale));
+  min-height: calc(52px * var(--fav-scale));
   transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
-}
-
-.favorite-tile::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: calc(3px * var(--fav-scale));
-  background: var(--fav-accent);
-  box-shadow: 0 0 18px rgba(0,0,0,0.25);
 }
 
 .favorite-tile:hover {
@@ -111,97 +107,163 @@
   outline-offset: 2px;
 }
 
+/* Icono badge a la izquierda - más compacto */
+.favorite-tile__icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(36px * var(--fav-scale));
+  height: calc(36px * var(--fav-scale));
+  border-radius: 7px;
+  background: var(--fav-icon-bg);
+  border: 1px solid var(--fav-icon-border);
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.favorite-tile__icon-badge i {
+  font-size: calc(18px * var(--fav-scale));
+  color: var(--fav-icon-color);
+}
+
+/* Contenido central */
 .favorite-tile__content {
   display: flex;
   flex-direction: column;
-  gap: calc(6px * var(--fav-scale));
-  width: 100%;
-  height: 100%;
-  justify-content: space-between;
+  gap: calc(4px * var(--fav-scale));
+  flex: 1;
   min-width: 0;
-}
-
-.favorite-tile__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: calc(10px * var(--fav-scale));
-  min-width: 0;
+  padding-right: 0;
+  padding-bottom: calc(3px * var(--fav-scale));
+  align-items: flex-start;
 }
 
 .favorite-tile__name {
-  color: var(--text-color, rgba(255,255,255,0.92));
+  color: rgba(255,255,255,0.96);
   font-weight: 800;
   font-size: calc(11px * var(--fav-scale));
-  letter-spacing: 0.2px;
+  letter-spacing: 0.05px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  width: 100%;
   min-width: 0;
+  line-height: 1.25;
 }
 
-.favorite-tile__chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: calc(16px * var(--fav-scale));
-  padding: 0 calc(7px * var(--fav-scale));
-  border-radius: 999px;
-  font-size: calc(9px * var(--fav-scale));
-  font-weight: 800;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  flex-shrink: 0;
-  backdrop-filter: blur(8px);
-}
-
-.favorite-tile__bottom {
+.favorite-tile__host-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: calc(10px * var(--fav-scale));
+  gap: calc(6px * var(--fav-scale));
+  width: 100%;
   min-width: 0;
 }
 
 .favorite-tile__host {
-  display: inline-flex;
-  align-items: center;
-  gap: calc(7px * var(--fav-scale));
-  color: var(--text-color-secondary, rgba(255,255,255,0.62));
-  font-size: calc(11px * var(--fav-scale));
-  font-weight: 600;
-  min-width: 0;
+  color: rgba(255,255,255,0.72);
+  font-size: calc(10px * var(--fav-scale));
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
-.favorite-tile__host i {
-  font-size: calc(11px * var(--fav-scale));
-  opacity: 0.9;
-}
-
-.favorite-tile__dot {
-  width: calc(9px * var(--fav-scale));
-  height: calc(9px * var(--fav-scale));
-  border-radius: 50%;
+/* Chip protocolo en esquina superior derecha */
+.favorite-tile__chip {
+  position: absolute;
+  top: calc(6px * var(--fav-scale));
+  right: calc(6px * var(--fav-scale));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(14px * var(--fav-scale));
+  padding: 0 calc(5px * var(--fav-scale));
+  border-radius: 999px;
+  font-size: calc(7.5px * var(--fav-scale));
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
   flex-shrink: 0;
+  background: var(--fav-chip-bg);
+  border: 1px solid var(--fav-chip-border);
+  color: var(--fav-chip-color);
+  backdrop-filter: blur(8px);
+  z-index: 2;
 }
 
-/* Cuando hay pocas cards y se estiran (layout "sparse"), centramos el contenido
-   para que no quede demasiado aire en medio. */
+/* Botones de acción al final de la línea del host */
+.favorite-tile__actions {
+  display: flex;
+  align-items: center;
+  gap: calc(4px * var(--fav-scale));
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.favorite-tile__btn-favorite {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(16px * var(--fav-scale));
+  height: calc(16px * var(--fav-scale));
+  border-radius: 3px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 215, 0, 0.8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: calc(9px * var(--fav-scale));
+  padding: 0;
+  line-height: 1;
+}
+
+.favorite-tile__btn-favorite:hover {
+  background: rgba(255, 215, 0, 0.15);
+  color: #FFD700;
+  transform: scale(1.1);
+}
+
+.favorite-tile__btn-favorite .pi-star-fill,
+.favorite-tile__btn-favorite .pi-star {
+  font-size: inherit;
+  line-height: 1;
+  display: inline-block;
+}
+
+.favorite-tile__btn-menu {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(16px * var(--fav-scale));
+  height: calc(16px * var(--fav-scale));
+  border-radius: 3px;
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.65);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: calc(9px * var(--fav-scale));
+  padding: 0;
+  line-height: 1;
+}
+
+.favorite-tile__btn-menu:hover {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.9);
+  transform: scale(1.1);
+}
+
+.favorite-tile__btn-menu .pi-pencil {
+  font-size: inherit;
+  line-height: 1;
+  display: inline-block;
+}
+
+/* Cuando hay pocas cards y se estiran (layout "sparse"), centramos el contenido */
 .favorite-grid--sparse .favorite-tile__content {
   justify-content: center;
-}
-
-.favorite-tile__dot--ok {
-  background: #33d17a;
-  box-shadow: 0 0 0 2px rgba(51, 209, 122, 0.18), 0 0 10px rgba(51, 209, 122, 0.35);
-}
-
-.favorite-tile__dot--idle {
-  background: rgba(255,255,255,0.22);
-  box-shadow: 0 0 0 2px rgba(255,255,255,0.08);
 }
 
 /* Animaciones para las barras de progreso */

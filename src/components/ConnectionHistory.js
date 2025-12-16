@@ -19,7 +19,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	
 	// Calcular items por página dinámicamente basado en la altura disponible
 	// Cada tile compacto tiene aproximadamente ~52px de altura, más gaps
-	const itemHeight = 58; // Altura aproximada de cada tile (contenido + gap)
+	const itemHeight = 56; // Altura aproximada de cada tile (contenido + gap)
 	const itemsPerRow = favoritesColumns;
 	const calculateItemsPerPage = useCallback(() => {
 		if (containerHeight < 200) return 14; // Mínimo
@@ -321,8 +321,6 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 		const g = parseInt(typeColor.slice(3,5), 16);
 		const b = parseInt(typeColor.slice(5,7), 16);
 		
-		const isOnline = connection.status === 'success' || isActive;
-		
 		return (
 			<div
 				className="favorite-tile"
@@ -338,42 +336,58 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 				aria-label={`Conectar a ${connection.name}`}
 				style={{
 					'--fav-accent': typeColor,
+					'--fav-icon-bg': `rgba(${r}, ${g}, ${b}, 0.15)`,
+					'--fav-icon-border': `rgba(${r}, ${g}, ${b}, 0.35)`,
+					'--fav-icon-color': typeColor,
+					'--fav-chip-bg': `rgba(${r}, ${g}, ${b}, 0.18)`,
+					'--fav-chip-border': `rgba(${r}, ${g}, ${b}, 0.45)`,
+					'--fav-chip-color': typeColor,
 				}}
 			>
+				{/* Icono grande en badge a la izquierda */}
+				<div className="favorite-tile__icon-badge">
+					<i
+						className={getConnectionTypeIcon(connection.type)}
+						aria-hidden="true"
+					/>
+				</div>
+				
+				{/* Contenido central */}
 				<div className="favorite-tile__content">
-					<div className="favorite-tile__top">
-						<div
-							className="favorite-tile__name"
-							title={connection.name}
-						>
-							{connection.name}
-						</div>
-						<div
-							className="favorite-tile__chip"
-							style={{
-								background: `rgba(${r}, ${g}, ${b}, 0.18)`,
-								border: `1px solid rgba(${r}, ${g}, ${b}, 0.45)`,
-								color: typeColor,
-							}}
-						>
-							{protocolLabel}
+					<div className="favorite-tile__name" title={connection.name}>
+						{connection.name}
+					</div>
+					<div className="favorite-tile__host-row">
+						<span className="favorite-tile__host" title={hostLabel}>
+							{hostLabel}
+						</span>
+						{/* Botones de acción al final de la línea del host */}
+						<div className="favorite-tile__actions" onClick={(e) => e.stopPropagation()}>
+							<button
+								className="favorite-tile__btn-favorite"
+								title={connection.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+								onClick={() => { toggleFavorite(connection); loadConnectionHistory(); }}
+								aria-label={connection.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+							>
+								<i className={connection.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} />
+							</button>
+							{onEdit && (
+								<button
+									className="favorite-tile__btn-menu"
+									title="Editar"
+									onClick={() => onEdit(connection)}
+									aria-label="Editar conexión"
+								>
+									<i className="pi pi-pencil" />
+								</button>
+							)}
 						</div>
 					</div>
-					
-					<div className="favorite-tile__bottom">
-						<div className="favorite-tile__host" title={hostLabel}>
-							<i
-								className={getConnectionTypeIcon(connection.type)}
-								aria-hidden="true"
-								style={{ color: typeColor }}
-							/>
-							<span>{hostLabel}</span>
-						</div>
-						<span
-							className={`favorite-tile__dot ${isOnline ? 'favorite-tile__dot--ok' : 'favorite-tile__dot--idle'}`}
-							aria-hidden="true"
-						/>
-					</div>
+				</div>
+				
+				{/* Chip protocolo en esquina superior derecha */}
+				<div className="favorite-tile__chip">
+					{protocolLabel}
 				</div>
 			</div>
 		);

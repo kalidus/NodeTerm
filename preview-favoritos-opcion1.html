@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview - Favoritos Opción 1</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0c0e14;
+            color: #ffffff;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        h1 {
+            color: rgba(255,255,255,0.9);
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 1200px;
+        }
+
+        /* === OPCIÓN 1: Nombre protagonista + meta debajo === */
+        .favorite-tile-v1 {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.10);
+            background: rgba(12, 14, 20, 0.55);
+            box-shadow: 0 8px 22px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04);
+            cursor: pointer;
+            overflow: hidden;
+            min-height: 75px;
+            transition: all 140ms ease;
+        }
+
+        /* Barra lateral de color */
+        .favorite-tile-v1::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--tile-accent, #4fc3f7);
+        }
+
+        .favorite-tile-v1:hover {
+            transform: translateY(-1px);
+            border-color: rgba(255,255,255,0.16);
+            background: rgba(16, 20, 28, 0.70);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+
+        .tile-content {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            padding-left: 4px;
+        }
+
+        .tile-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .tile-name {
+            color: rgba(255,255,255,0.98);
+            font-weight: 800;
+            font-size: 14px;
+            letter-spacing: 0.1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+            min-width: 0;
+            line-height: 1.3;
+        }
+
+        .tile-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 18px;
+            padding: 0 7px;
+            border-radius: 999px;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            background: var(--chip-bg, rgba(79, 195, 247, 0.18));
+            border: 1px solid var(--chip-border, rgba(79, 195, 247, 0.45));
+            color: var(--chip-color, #4fc3f7);
+        }
+
+        .tile-bottom {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .tile-icon {
+            font-size: 18px;
+            color: var(--icon-color, #4fc3f7);
+            flex-shrink: 0;
+            opacity: 0.9;
+        }
+
+        .tile-host {
+            color: rgba(255,255,255,0.75);
+            font-size: 12px;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* Colores por tipo */
+        .tile-ssh {
+            --tile-accent: #4fc3f7;
+            --chip-bg: rgba(79, 195, 247, 0.18);
+            --chip-border: rgba(79, 195, 247, 0.45);
+            --chip-color: #4fc3f7;
+            --icon-color: #4fc3f7;
+        }
+
+        .tile-rdp {
+            --tile-accent: #ff6b35;
+            --chip-bg: rgba(255, 107, 53, 0.18);
+            --chip-border: rgba(255, 107, 53, 0.45);
+            --chip-color: #ff6b35;
+            --icon-color: #ff6b35;
+        }
+
+        .tile-vnc {
+            --tile-accent: #00ff00;
+            --chip-bg: rgba(0, 255, 0, 0.18);
+            --chip-border: rgba(0, 255, 0, 0.45);
+            --chip-color: #00ff00;
+            --icon-color: #00ff00;
+        }
+
+        .tile-sftp {
+            --tile-accent: #FFB300;
+            --chip-bg: rgba(255, 179, 0, 0.18);
+            --chip-border: rgba(255, 179, 0, 0.45);
+            --chip-color: #FFB300;
+            --icon-color: #FFB300;
+        }
+
+        .info-box {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            max-width: 1200px;
+        }
+
+        .info-box h2 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .info-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .info-box li {
+            font-size: 12px;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 6px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .info-box li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #4fc3f7;
+        }
+    </style>
+</head>
+<body>
+    <h1>Preview: Favoritos - Opción 1 (Nombre protagonista + meta debajo)</h1>
+    
+    <div class="preview-grid">
+        <!-- SSH -->
+        <div class="favorite-tile-v1 tile-ssh">
+            <div class="tile-content">
+                <div class="tile-top">
+                    <div class="tile-name">ESAH-DSNM-BS01P-B</div>
+                    <div class="tile-chip">SSH</div>
+                </div>
+                <div class="tile-bottom">
+                    <span class="tile-icon">🖥️</span>
+                    <span class="tile-host">bastion-dsn.sec.dsn.inet</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- RDP -->
+        <div class="favorite-tile-v1 tile-rdp">
+            <div class="tile-content">
+                <div class="tile-top">
+                    <div class="tile-name">BeeSer2</div>
+                    <div class="tile-chip">RDP</div>
+                </div>
+                <div class="tile-bottom">
+                    <span class="tile-icon">🖥️</span>
+                    <span class="tile-host">197.18.8.155</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- VNC -->
+        <div class="favorite-tile-v1 tile-vnc">
+            <div class="tile-content">
+                <div class="tile-top">
+                    <div class="tile-name">teST</div>
+                    <div class="tile-chip">VNC</div>
+                </div>
+                <div class="tile-bottom">
+                    <span class="tile-icon">🖥️</span>
+                    <span class="tile-host">187.18.0.130</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SFTP -->
+        <div class="favorite-tile-v1 tile-sftp">
+            <div class="tile-content">
+                <div class="tile-top">
+                    <div class="tile-name">Kepler_SFTP</div>
+                    <div class="tile-chip">SFTP</div>
+                </div>
+                <div class="tile-bottom">
+                    <span class="tile-icon">📁</span>
+                    <span class="tile-host">sftp.example.com</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SSH largo -->
+        <div class="favorite-tile-v1 tile-ssh">
+            <div class="tile-content">
+                <div class="tile-top">
+                    <div class="tile-name">ESJC-SGCM-WL01P</div>
+                    <div class="tile-chip">SSH</div>
+                </div>
+                <div class="tile-bottom">
+                    <span class="tile-icon">🖥️</span>
+                    <span class="tile-host">server.example.com</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- RDP -->
+        <div class="favorite-tile-v1 tile-rdp">
+            <div class="tile-content">
+                <div class="tile-top">
+                    <div class="tile-name">ESJC-SCCM-WL01P</div>
+                    <div class="tile-chip">RDP</div>
+                </div>
+                <div class="tile-bottom">
+                    <span class="tile-icon">🖥️</span>
+                    <span class="tile-host">192.168.1.100</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <h2>Características de esta opción:</h2>
+        <ul>
+            <li><strong>Barra lateral de color</strong> (3px) según protocolo</li>
+            <li><strong>Nombre muy visible</strong>: 14px, peso 800, color casi blanco (98% opacidad)</li>
+            <li><strong>Host/IP claro</strong>: 12px, color 75% blanco</li>
+            <li><strong>Icono grande</strong>: 18px con color del protocolo</li>
+            <li><strong>Sin punto verde</strong> (eliminado)</li>
+            <li><strong>Chip protocolo</strong> pequeño arriba-derecha</li>
+            <li><strong>Layout limpio</strong>: nombre+chip arriba, icono+host abajo</li>
+        </ul>
+    </div>
+</body>
+</html>
