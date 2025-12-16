@@ -16,8 +16,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	const favoritesContainerRef = useRef(null);
 	
 	// Calcular items por página dinámicamente basado en la altura disponible
-	// Cada item tiene aproximadamente 24px de altura, más gaps de 2px
-	const itemHeight = 26; // Altura aproximada de cada item (24px + 2px gap)
+	// Cada tile compacto tiene aproximadamente ~52px de altura, más gaps
+	const itemHeight = 58; // Altura aproximada de cada tile (contenido + gap)
 	const itemsPerRow = favoritesColumns;
 	const calculateItemsPerPage = useCallback(() => {
 		if (containerHeight < 200) return 14; // Mínimo
@@ -279,174 +279,76 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 
 	const ConnectionCard = ({ connection, showFavoriteAction = false, compact = false, micro = false, onEdit }) => {
 		const isActive = activeIds.has(`${connection.type}:${connection.host}:${connection.username}:${connection.port}`);
+		const typeColor = getConnectionTypeColor(connection.type);
+		
+		const protocolLabel =
+			connection.type === 'rdp-guacamole' || connection.type === 'rdp' ? 'RDP' :
+			connection.type === 'vnc-guacamole' || connection.type === 'vnc' ? 'VNC' :
+			connection.type === 'explorer' ? 'SFTP' :
+			connection.type === 'sftp' ? 'SFTP' :
+			connection.type === 'ftp' ? 'FTP' :
+			connection.type === 'scp' ? 'SCP' :
+			connection.type === 'group' ? 'GRUPO' : 'SSH';
+		
+		const hostLabel = connection.host || connection.hostname || '—';
+		
+		const r = parseInt(typeColor.slice(1,3), 16);
+		const g = parseInt(typeColor.slice(3,5), 16);
+		const b = parseInt(typeColor.slice(5,7), 16);
+		
+		const isOnline = connection.status === 'success' || isActive;
+		
 		return (
 			<div
-				className="connection-mini-row"
+				className="favorite-tile"
 				onClick={() => onConnectToHistory?.(connection)}
+				onKeyDown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						onConnectToHistory?.(connection);
+					}
+				}}
+				role="button"
+				tabIndex={0}
+				aria-label={`Conectar a ${connection.name}`}
 				style={{
-					display: 'grid',
-					gridTemplateColumns: 'auto 1fr auto 12px',
-					alignItems: 'center',
-					gap: micro ? '3px' : (compact ? '4px' : '12px'),
-					padding: micro ? '2px 5px' : (compact ? '3px 6px' : '10px 14px'),
-					border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.14)'}`,
-					borderRadius: micro ? '5px' : (compact ? '6px' : '14px'),
-					background: themeColors.itemBackground || 'rgba(16, 20, 28, 0.45)',
-					backdropFilter: 'blur(10px) saturate(140%)',
-					boxShadow: micro ? '0 2px 6px rgba(0,0,0,0.2)' : (compact ? '0 2px 10px rgba(0,0,0,0.22)' : '0 6px 24px rgba(0,0,0,0.25)'),
-					cursor: 'pointer',
-					transition: 'all 0.2s ease'
-				}}
-				onMouseEnter={(e) => {
-					const typeColor = getConnectionTypeColor(connection.type);
-					e.currentTarget.style.borderColor = typeColor;
-					e.currentTarget.style.boxShadow = micro ? `0 0 0 1px ${typeColor}66, 0 4px 12px rgba(0,0,0,0.28)` : (compact ? `0 0 0 1px ${typeColor}66, 0 6px 18px rgba(0,0,0,0.3)` : `0 0 0 1px ${typeColor}66, 0 10px 28px rgba(0,0,0,0.35)`);
-				}}
-				onMouseLeave={(e) => {
-					e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)';
-					e.currentTarget.style.boxShadow = micro ? '0 3px 12px rgba(0,0,0,0.2)' : (compact ? '0 4px 16px rgba(0,0,0,0.22)' : '0 6px 24px rgba(0,0,0,0.25)');
+					'--fav-accent': typeColor,
 				}}
 			>
-				<div style={{
-					display: 'flex',
-					alignItems: 'center',
-					justifyContent: 'center',
-					width: micro ? 20 : (compact ? 24 : 38),
-					height: micro ? 20 : (compact ? 24 : 38),
-					borderRadius: micro ? 5 : (compact ? 6 : 12),
-					background: `linear-gradient(135deg, ${getConnectionTypeColor(connection.type)}88, ${getConnectionTypeColor(connection.type)}44)`,
-					border: '1px solid rgba(255,255,255,0.18)',
-					boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)'
-				}}>
-					<i className={getConnectionTypeIcon(connection.type)} style={{ color: '#fff', fontSize: micro ? 9 : (compact ? 11 : 16) }} />
-				</div>
-
-				<div style={{ minWidth: 0 }}>
-					<div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-						<span style={{ color: themeColors.textPrimary || 'var(--text-color)', fontWeight: 700, fontSize: micro ? 9 : (compact ? 10 : 14), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{connection.name}</span>
-						<span style={{
-							display: 'inline-flex',
-							alignItems: 'center',
-							gap: 3,
-							padding: micro ? '1px 3px' : (compact ? '1px 5px' : '4px 10px'),
-							borderRadius: 999,
-							background: 'rgba(255,255,255,0.06)',
-							border: '1px solid rgba(255,255,255,0.16)',
-							color: getConnectionTypeColor(connection.type),
-							fontSize: micro ? 7 : (compact ? 8 : 11),
-							fontWeight: 700
-						}}>
-							{connection.type === 'rdp-guacamole' || connection.type === 'rdp' ? 'RDP' : 
-						 connection.type === 'vnc-guacamole' || connection.type === 'vnc' ? 'VNC' :
-							 connection.type === 'explorer' ? 'SFTP' : 
-							 connection.type === 'sftp' ? 'SFTP' :
-							 connection.type === 'ftp' ? 'FTP' :
-							 connection.type === 'scp' ? 'SCP' :
-							 connection.type === 'group' ? 'Grupo' : 'SSH'}
-						</span>
-						{connection.type === 'group' && connection.sessions && (
-							<span style={{
-								display: 'inline-flex',
-								alignItems: 'center',
-								gap: 4,
-								padding: micro ? '1px 4px' : (compact ? '2px 6px' : '3px 8px'),
-								borderRadius: 999,
-								background: 'rgba(255,255,255,0.08)',
-								border: '1px solid rgba(255,255,255,0.12)',
-								color: themeColors.textPrimary || 'var(--text-color)',
-								fontSize: micro ? 8 : (compact ? 9 : 10),
-								fontWeight: 600
-							}}>
-								{connection.sessions.length}
-							</span>
-						)}
-					</div>
-				</div>
-
-				<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }} onClick={(e) => e.stopPropagation()}>
-					<div style={{
-						display: 'inline-flex',
-						alignItems: 'center',
-						gap: 6,
-						padding: micro ? 1 : (compact ? 2 : 4),
-						borderRadius: 999,
-						background: 'rgba(255,255,255,0.06)',
-						border: '1px solid rgba(255,255,255,0.16)'
-					}}>
-						{showFavoriteAction && (
-							<span
-								title={connection.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-								style={{
-									width: micro ? 16 : (compact ? 20 : 28),
-									height: micro ? 16 : (compact ? 20 : 28),
-									borderRadius: '50%',
-									display: 'inline-flex',
-									alignItems: 'center',
-									justifyContent: 'center',
-									color: themeColors.textPrimary || 'var(--text-color)',
-									background: 'rgba(255,255,255,0.08)',
-									border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.16)'}`,
-									transition: 'all .15s ease',
-									cursor: 'pointer'
-								}}
-								onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.16)'; e.style.color = themeColors.textPrimary || '#fff'; }}
-								onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary || 'var(--text-color)'; }}
-								onClick={() => { toggleFavorite(connection); loadConnectionHistory(); }}
-							>
-								<i className={connection.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: micro ? 8 : (compact ? 10 : 14) }} />
-							</span>
-						)}
-						{onEdit && (
-							<span
-								title="Editar"
-								style={{
-									width: micro ? 16 : (compact ? 20 : 28),
-									height: micro ? 16 : (compact ? 20 : 28),
-									borderRadius: '50%',
-									display: 'inline-flex',
-									alignItems: 'center',
-									justifyContent: 'center',
-									color: themeColors.textPrimary || 'var(--text-color)',
-									background: 'rgba(255,255,255,0.08)',
-									border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.16)'}`,
-									transition: 'all .15s ease',
-									cursor: 'pointer'
-								}}
-								onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.16)'; e.style.color = themeColors.textPrimary || '#fff'; }}
-								onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary || 'var(--text-color)'; }}
-								onClick={() => onEdit(connection)}
-							>
-								<i className="pi pi-pencil" style={{ fontSize: micro ? 8 : (compact ? 10 : 14) }} />
-							</span>
-						)}
-						<span
-							title="Conectar"
-							style={{
-								width: micro ? 16 : (compact ? 20 : 28),
-								height: micro ? 16 : (compact ? 20 : 28),
-								borderRadius: '50%',
-								display: 'inline-flex',
-								alignItems: 'center',
-								justifyContent: 'center',
-								color: 'var(--text-color)',
-								background: 'rgba(255,255,255,0.08)',
-								border: '1px solid rgba(255,255,255,0.16)',
-								transition: 'all .15s ease',
-								cursor: 'pointer'
-							}}
-							onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,\
-255,255,0.16)'; e.style.color = '#fff'; }}
-							onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,\
-255,255,0.08)'; e.style.color = 'var(--text-color)'; }}
-							onClick={() => onConnectToHistory?.(connection)}
+				<div className="favorite-tile__content">
+					<div className="favorite-tile__top">
+						<div
+							className="favorite-tile__name"
+							title={connection.name}
 						>
-							<i className="pi pi-external-link" style={{ fontSize: micro ? 8 : (compact ? 10 : 14) }} />
-						</span>
+							{connection.name}
+						</div>
+						<div
+							className="favorite-tile__chip"
+							style={{
+								background: `rgba(${r}, ${g}, ${b}, 0.18)`,
+								border: `1px solid rgba(${r}, ${g}, ${b}, 0.45)`,
+								color: typeColor,
+							}}
+						>
+							{protocolLabel}
+						</div>
 					</div>
-				</div>
-
-				<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-						<span style={{ width: micro ? 5 : (compact ? 6 : 10), height: micro ? 5 : (compact ? 6 : 10), borderRadius: '50%', background: isActive ? '#22c55e' : '#9E9E9E', boxShadow: isActive ? '0 0 8px rgba(34,197,94,0.5)' : 'none' }} />
+					
+					<div className="favorite-tile__bottom">
+						<div className="favorite-tile__host" title={hostLabel}>
+							<i
+								className={getConnectionTypeIcon(connection.type)}
+								aria-hidden="true"
+								style={{ color: typeColor }}
+							/>
+							<span>{hostLabel}</span>
+						</div>
+						<span
+							className={`favorite-tile__dot ${isOnline ? 'favorite-tile__dot--ok' : 'favorite-tile__dot--idle'}`}
+							aria-hidden="true"
+						/>
+					</div>
 				</div>
 			</div>
 		);
@@ -572,14 +474,14 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 								<div style={{ 
 									display: 'grid', 
 									gridTemplateColumns: `repeat(${favoritesColumns}, 1fr)`, 
-									gap: 2,
+									gap: 8,
 									flex: '0 0 auto',
 									paddingRight: '4px',
 									background: 'transparent !important',
 									backgroundColor: 'transparent !important'
 								}}>
 									{paginatedFavorites.map(connection => (
-										<ConnectionCard key={connection.id} connection={connection} showFavoriteAction={true} compact={true} micro={true} onEdit={onEdit} />
+										<ConnectionCard key={connection.id} connection={connection} showFavoriteAction={true} compact={false} micro={false} onEdit={onEdit} />
 									))}
 								</div>
 								

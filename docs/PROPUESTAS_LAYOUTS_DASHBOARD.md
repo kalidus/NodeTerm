@@ -292,3 +292,4 @@ Este documento presenta diferentes propuestas de layouts alternativos para la p√
 5. Permitir personalizaci√≥n por usuario (guardar preferencia en localStorage)
 
 
+
