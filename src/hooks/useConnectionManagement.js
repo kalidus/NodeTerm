@@ -44,7 +44,7 @@ export const useConnectionManagement = ({
         bastionUser: fileNode.data?.bastionUser || '',
         targetServer: fileNode.data?.targetServer || '',
         remoteFolder: fileNode.data?.remoteFolder || ''
-      }, 10);
+      }, 200);
     } catch (e) { /* noop */ }
 
     // Buscar si ya existe un explorador para este host+usuario+protocolo
@@ -129,7 +129,7 @@ export const useConnectionManagement = ({
         protocol: protocol,
         remoteFolder: node.data?.remoteFolder || '',
         targetFolder: node.data?.targetFolder || ''
-      }, 10);
+      }, 200);
     } catch (e) { /* noop */ }
 
     // Abrir explorador de archivos
@@ -245,7 +245,7 @@ export const useConnectionManagement = ({
         bastionUser: isSidebarNode ? (nodeOrConn.data.bastionUser || '') : (nodeOrConn.bastionUser || matchedSidebarNode?.data?.bastionUser || ''),
         targetServer: isSidebarNode ? (nodeOrConn.data.targetServer || '') : (nodeOrConn.targetServer || matchedSidebarNode?.data?.targetServer || ''),
         remoteFolder: isSidebarNode ? (nodeOrConn.data.remoteFolder || '') : (nodeOrConn.remoteFolder || matchedSidebarNode?.data?.remoteFolder || '')
-      }, 10);
+      }, 200);
     } catch (e) { /* noop */ }
 
     if (activeGroupId !== null) {
@@ -481,7 +481,7 @@ export const useConnectionManagement = ({
         smartSizing: baseRdp.smartSizing !== false,
         span: baseRdp.span || false,
         admin: baseRdp.admin || false
-      }, 10);
+      }, 200);
     } catch (e) { /* noop */ }
     
     if (isGuacamoleRDP) {
@@ -784,7 +784,7 @@ export const useConnectionManagement = ({
         autoResize: baseVnc.autoResize !== false,
         redirectClipboard: baseVnc.redirectClipboard !== false,
         guacDpi: baseVnc.guacDpi || 96
-      }, 10);
+      }, 200);
     } catch (e) { /* noop */ }
     
     if (isGuacamoleVNC) {
