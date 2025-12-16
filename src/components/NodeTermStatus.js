@@ -352,6 +352,21 @@ const NodeTermStatus = ({
 		</div>
 	);
 
+	// Tamaños para la barra superior compacta (HomeTab)
+	const compactBar = {
+		containerPadding: '0.5rem 0.9rem',
+		containerGap: '1.0rem',
+		buttonSize: 40,
+		buttonRadius: 8,
+		buttonIconSize: '1.0rem',
+		labelFontSize: '0.48rem',
+		labelLineHeight: '1.05',
+		separatorHeight: 56,
+		serviceSize: 36,
+		serviceIconSize: '0.85rem',
+		labelMaxWidth: 52
+	};
+
 	// Layout horizontal compacto - LAYOUT 3: BARRA SUPERIOR CENTRADA
 	if (horizontal && compact) {
 		return (
@@ -387,14 +402,14 @@ const NodeTermStatus = ({
 					border: `1px solid ${themeColors.cardBorder || 'rgba(255,255,255,0.15)'}`,
 					borderRadius: '16px',
 					boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
-					padding: '0.75rem 1.25rem',
+					padding: compactBar.containerPadding,
 					display: 'flex',
 					alignItems: 'center',
 					justifyContent: 'center',
-					gap: '1.5rem',
+					gap: compactBar.containerGap,
 					width: 'fit-content',
 					maxWidth: '90%',
-					minWidth: '600px',
+					minWidth: '560px',
 					overflow: 'hidden'
 				}}>
 					{/* SECCIÓN 1: ACCIONES */}
@@ -435,10 +450,10 @@ const NodeTermStatus = ({
 									display: 'flex',
 									alignItems: 'center',
 									justifyContent: 'center',
-									width: '48px',
-									height: '48px',
+									width: `${compactBar.buttonSize}px`,
+									height: `${compactBar.buttonSize}px`,
 									padding: '0',
-									borderRadius: '8px',
+									borderRadius: `${compactBar.buttonRadius}px`,
 									background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(34, 197, 94, 0.15) 100%)',
 									border: '1px solid rgba(34, 197, 94, 0.35)',
 									boxShadow: '0 1px 4px rgba(34, 197, 94, 0.2)',
@@ -456,14 +471,14 @@ const NodeTermStatus = ({
 									e.currentTarget.style.boxShadow = '0 1px 4px rgba(34, 197, 94, 0.2)';
 								}}
 							>
-								<i className="pi pi-plus-circle" style={{ color: '#22c55e', fontSize: '1.1rem', fontWeight: 'bold' }} />
+								<i className="pi pi-plus-circle" style={{ color: '#22c55e', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
 							</button>
 							<span style={{
-								fontSize: '0.5rem',
+								fontSize: compactBar.labelFontSize,
 								fontWeight: '500',
 								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 								textAlign: 'center',
-								lineHeight: '1.1'
+								lineHeight: compactBar.labelLineHeight
 							}}>
 								Nueva
 							</span>
@@ -485,10 +500,10 @@ const NodeTermStatus = ({
 										display: 'flex',
 										alignItems: 'center',
 										justifyContent: 'center',
-										width: '48px',
-										height: '48px',
+										width: `${compactBar.buttonSize}px`,
+										height: `${compactBar.buttonSize}px`,
 										padding: '0',
-										borderRadius: '8px',
+										borderRadius: `${compactBar.buttonRadius}px`,
 										background: 'linear-gradient(135deg, rgba(0, 188, 212, 0.25) 0%, rgba(0, 188, 212, 0.15) 100%)',
 										border: '1px solid rgba(0, 188, 212, 0.35)',
 										boxShadow: '0 1px 4px rgba(0, 188, 212, 0.2)',
@@ -506,14 +521,14 @@ const NodeTermStatus = ({
 										e.currentTarget.style.boxShadow = '0 1px 4px rgba(0, 188, 212, 0.2)';
 									}}
 								>
-									<i className="pi pi-desktop" style={{ color: '#00BCD4', fontSize: '1.1rem', fontWeight: 'bold' }} />
+									<i className="pi pi-desktop" style={{ color: '#00BCD4', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
 								</button>
 								<span style={{
-									fontSize: '0.5rem',
+									fontSize: compactBar.labelFontSize,
 									fontWeight: '500',
 									color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 									textAlign: 'center',
-									lineHeight: '1.1'
+									lineHeight: compactBar.labelLineHeight
 								}}>
 									Terminal
 								</span>
@@ -540,10 +555,10 @@ const NodeTermStatus = ({
 									display: 'flex',
 									alignItems: 'center',
 									justifyContent: 'center',
-									width: '48px',
-									height: '48px',
+									width: `${compactBar.buttonSize}px`,
+									height: `${compactBar.buttonSize}px`,
 									padding: '0',
-									borderRadius: '8px',
+									borderRadius: `${compactBar.buttonRadius}px`,
 									background: 'linear-gradient(135deg, rgba(100, 200, 255, 0.25) 0%, rgba(100, 200, 255, 0.15) 100%)',
 									border: '1px solid rgba(100, 200, 255, 0.35)',
 									boxShadow: '0 1px 4px rgba(100, 200, 255, 0.2)',
@@ -561,14 +576,14 @@ const NodeTermStatus = ({
 									e.currentTarget.style.boxShadow = '0 1px 4px rgba(100, 200, 255, 0.2)';
 								}}
 							>
-								<i className="pi pi-list" style={{ color: '#64C8FF', fontSize: '1.1rem', fontWeight: 'bold' }} />
+								<i className="pi pi-list" style={{ color: '#64C8FF', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
 							</button>
 							<span style={{
-								fontSize: '0.5rem',
+								fontSize: compactBar.labelFontSize,
 								fontWeight: '500',
 								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 								textAlign: 'center',
-								lineHeight: '1.1'
+								lineHeight: compactBar.labelLineHeight
 							}}>
 								Historial
 							</span>
@@ -593,10 +608,10 @@ const NodeTermStatus = ({
 									display: 'flex',
 									alignItems: 'center',
 									justifyContent: 'center',
-									width: '48px',
-									height: '48px',
+									width: `${compactBar.buttonSize}px`,
+									height: `${compactBar.buttonSize}px`,
 									padding: '0',
-									borderRadius: '8px',
+									borderRadius: `${compactBar.buttonRadius}px`,
 									background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)',
 									border: '1px solid rgba(255, 193, 7, 0.35)',
 									boxShadow: '0 1px 4px rgba(255, 193, 7, 0.2)',
@@ -614,14 +629,14 @@ const NodeTermStatus = ({
 									e.currentTarget.style.boxShadow = '0 1px 4px rgba(255, 193, 7, 0.2)';
 								}}
 							>
-								<i className="pi pi-key" style={{ color: '#FFC107', fontSize: '1.1rem', fontWeight: 'bold' }} />
+								<i className="pi pi-key" style={{ color: '#FFC107', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
 							</button>
 							<span style={{
-								fontSize: '0.5rem',
+								fontSize: compactBar.labelFontSize,
 								fontWeight: '500',
 								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 								textAlign: 'center',
-								lineHeight: '1.1'
+								lineHeight: compactBar.labelLineHeight
 							}}>
 								Keys
 							</span>
@@ -643,10 +658,10 @@ const NodeTermStatus = ({
 										display: 'flex',
 										alignItems: 'center',
 										justifyContent: 'center',
-										width: '48px',
-										height: '48px',
+										width: `${compactBar.buttonSize}px`,
+										height: `${compactBar.buttonSize}px`,
 										padding: '0',
-										borderRadius: '8px',
+										borderRadius: `${compactBar.buttonRadius}px`,
 										background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.25) 0%, rgba(76, 175, 80, 0.15) 100%)',
 										border: '1px solid rgba(76, 175, 80, 0.35)',
 										boxShadow: '0 1px 4px rgba(76, 175, 80, 0.2)',
@@ -664,14 +679,14 @@ const NodeTermStatus = ({
 										e.currentTarget.style.boxShadow = '0 1px 4px rgba(76, 175, 80, 0.2)';
 									}}
 								>
-									<i className="pi pi-cog" style={{ color: '#4CAF50', fontSize: '1.1rem', fontWeight: 'bold' }} />
+									<i className="pi pi-cog" style={{ color: '#4CAF50', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
 								</button>
 								<span style={{
-									fontSize: '0.5rem',
+									fontSize: compactBar.labelFontSize,
 									fontWeight: '500',
 									color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 									textAlign: 'center',
-									lineHeight: '1.1'
+									lineHeight: compactBar.labelLineHeight
 								}}>
 									Config
 								</span>
@@ -694,10 +709,10 @@ const NodeTermStatus = ({
 										display: 'flex',
 										alignItems: 'center',
 										justifyContent: 'center',
-										width: '48px',
-										height: '48px',
+										width: `${compactBar.buttonSize}px`,
+										height: `${compactBar.buttonSize}px`,
 										padding: '0',
-										borderRadius: '8px',
+										borderRadius: `${compactBar.buttonRadius}px`,
 										background: statusBarVisible
 											? 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)'
 											: 'linear-gradient(135deg, rgba(79, 195, 247, 0.25) 0%, rgba(79, 195, 247, 0.15) 100%)',
@@ -721,15 +736,15 @@ const NodeTermStatus = ({
 								>
 									<i 
 										className={statusBarVisible ? 'pi pi-eye' : 'pi pi-eye-slash'} 
-										style={{ color: '#4fc3f7', fontSize: '1.1rem', fontWeight: 'bold' }} 
+										style={{ color: '#4fc3f7', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} 
 									/>
 								</button>
 								<span style={{
-									fontSize: '0.5rem',
+									fontSize: compactBar.labelFontSize,
 									fontWeight: '500',
 									color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 									textAlign: 'center',
-									lineHeight: '1.1'
+									lineHeight: compactBar.labelLineHeight
 								}}>
 									Status
 								</span>
@@ -777,10 +792,10 @@ const NodeTermStatus = ({
 									display: 'flex',
 									alignItems: 'center',
 									justifyContent: 'center',
-									width: '48px',
-									height: '48px',
+									width: `${compactBar.buttonSize}px`,
+									height: `${compactBar.buttonSize}px`,
 									padding: '0',
-									borderRadius: '8px',
+									borderRadius: `${compactBar.buttonRadius}px`,
 									background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)',
 									border: '1px solid rgba(168, 85, 247, 0.35)',
 									boxShadow: '0 1px 4px rgba(168, 85, 247, 0.2)',
@@ -798,14 +813,14 @@ const NodeTermStatus = ({
 									e.currentTarget.style.boxShadow = '0 1px 4px rgba(168, 85, 247, 0.2)';
 								}}
 							>
-								<i className="pi pi-video" style={{ color: '#a855f7', fontSize: '1.1rem', fontWeight: 'bold' }} />
+								<i className="pi pi-video" style={{ color: '#a855f7', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
 							</button>
 							<span style={{
-								fontSize: '0.5rem',
+								fontSize: compactBar.labelFontSize,
 								fontWeight: '500',
 								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 								textAlign: 'center',
-								lineHeight: '1.1'
+								lineHeight: compactBar.labelLineHeight
 							}}>
 								Audit
 							</span>
@@ -816,7 +831,7 @@ const NodeTermStatus = ({
 						{/* Separador vertical decorativo */}
 						<div style={{
 							width: '1px',
-							height: '70px',
+							height: `${compactBar.separatorHeight}px`,
 							background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
 							borderRadius: '1px',
 							flexShrink: 0,
@@ -860,10 +875,10 @@ const NodeTermStatus = ({
 												display: 'flex',
 												alignItems: 'center',
 												justifyContent: 'center',
-												width: '48px',
-												height: '48px',
+												width: `${compactBar.buttonSize}px`,
+												height: `${compactBar.buttonSize}px`,
 												padding: '0',
-												borderRadius: '8px',
+												borderRadius: `${compactBar.buttonRadius}px`,
 												background: `linear-gradient(135deg, ${terminal.color}25 0%, ${terminal.color}15 100%)`,
 												border: `1px solid ${terminal.color}35`,
 												boxShadow: `0 1px 4px ${terminal.color}20`,
@@ -881,15 +896,15 @@ const NodeTermStatus = ({
 												e.currentTarget.style.boxShadow = `0 1px 4px ${terminal.color}20`;
 											}}
 										>
-											<i className={terminal.icon} style={{ color: terminal.color, fontSize: '1.1rem', fontWeight: 'bold' }} />
+											<i className={terminal.icon} style={{ color: terminal.color, fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
 										</button>
 										<span style={{
-											fontSize: '0.5rem',
+											fontSize: compactBar.labelFontSize,
 											fontWeight: '500',
 											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 											textAlign: 'center',
-											lineHeight: '1.1',
-											maxWidth: '48px',
+											lineHeight: compactBar.labelLineHeight,
+											maxWidth: `${compactBar.labelMaxWidth}px`,
 											overflow: 'hidden',
 											textOverflow: 'ellipsis',
 											whiteSpace: 'nowrap'
@@ -915,10 +930,10 @@ const NodeTermStatus = ({
 												display: 'flex',
 												alignItems: 'center',
 												justifyContent: 'center',
-												width: '48px',
-												height: '48px',
+												width: `${compactBar.buttonSize}px`,
+												height: `${compactBar.buttonSize}px`,
 												padding: '0',
-												borderRadius: '8px',
+												borderRadius: `${compactBar.buttonRadius}px`,
 												background: 'linear-gradient(135deg, rgba(36, 150, 237, 0.25) 0%, rgba(36, 150, 237, 0.15) 100%)',
 												border: '1px solid rgba(36, 150, 237, 0.35)',
 												boxShadow: '0 1px 4px rgba(36, 150, 237, 0.2)',
@@ -938,7 +953,7 @@ const NodeTermStatus = ({
 											}}
 										>
 											<div style={{ position: 'relative' }}>
-												<i className="pi pi-box" style={{ color: '#2496ED', fontSize: '1.1rem', fontWeight: 'bold' }} />
+												<i className="pi pi-box" style={{ color: '#2496ED', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
 												{dockerContainers.length > 1 && (
 													<span style={{
 														position: 'absolute',
@@ -963,11 +978,11 @@ const NodeTermStatus = ({
 											</div>
 										</button>
 										<span style={{
-											fontSize: '0.5rem',
+											fontSize: compactBar.labelFontSize,
 											fontWeight: '500',
 											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 											textAlign: 'center',
-											lineHeight: '1.1'
+											lineHeight: compactBar.labelLineHeight
 										}}>
 											Docker
 										</span>
@@ -980,7 +995,7 @@ const NodeTermStatus = ({
 					{/* Separador vertical decorativo */}
 					<div style={{
 						width: '1px',
-						height: '60px',
+						height: `${compactBar.separatorHeight}px`,
 						background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
 						borderRadius: '1px',
 						flexShrink: 0,
@@ -1025,8 +1040,8 @@ const NodeTermStatus = ({
 											title={`Nextcloud: ${ncStatus}`}
 											style={{
 												position: 'relative',
-												width: '40px',
-												height: '40px',
+												width: `${compactBar.serviceSize}px`,
+												height: `${compactBar.serviceSize}px`,
 												borderRadius: '50%',
 												background: `linear-gradient(135deg, ${ncColor}25 0%, ${ncColor}15 100%)`,
 												border: `2px solid ${ncColor}50`,
@@ -1050,8 +1065,21 @@ const NodeTermStatus = ({
 												}
 											}}
 										>
-											<i className="pi pi-cloud" style={{ color: ncColor, fontSize: '0.9rem' }} />
+											<i className="pi pi-cloud" style={{ color: ncColor, fontSize: compactBar.serviceIconSize }} />
 										</div>
+										<span style={{
+											fontSize: compactBar.labelFontSize,
+											fontWeight: '500',
+											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+											textAlign: 'center',
+											lineHeight: compactBar.labelLineHeight,
+											maxWidth: `${compactBar.labelMaxWidth}px`,
+											overflow: 'hidden',
+											textOverflow: 'ellipsis',
+											whiteSpace: 'nowrap'
+										}}>
+											Nextcloud
+										</span>
 									</div>
 								);
 							})()}
@@ -1071,8 +1099,8 @@ const NodeTermStatus = ({
 											title={`Guacd: ${guacdStatus} (${guacdState.method})`}
 											style={{
 												position: 'relative',
-												width: '40px',
-												height: '40px',
+												width: `${compactBar.serviceSize}px`,
+												height: `${compactBar.serviceSize}px`,
 												borderRadius: '50%',
 												background: `linear-gradient(135deg, ${guacdColor}25 0%, ${guacdColor}15 100%)`,
 												border: `2px solid ${guacdColor}50`,
@@ -1082,8 +1110,21 @@ const NodeTermStatus = ({
 												boxShadow: `0 1px 4px ${guacdColor}20`
 											}}
 										>
-											<i className="pi pi-desktop" style={{ color: guacdColor, fontSize: '0.9rem' }} />
+											<i className="pi pi-desktop" style={{ color: guacdColor, fontSize: compactBar.serviceIconSize }} />
 										</div>
+										<span style={{
+											fontSize: compactBar.labelFontSize,
+											fontWeight: '500',
+											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+											textAlign: 'center',
+											lineHeight: compactBar.labelLineHeight,
+											maxWidth: `${compactBar.labelMaxWidth}px`,
+											overflow: 'hidden',
+											textOverflow: 'ellipsis',
+											whiteSpace: 'nowrap'
+										}}>
+											Guacd
+										</span>
 									</div>
 								);
 							})()}
@@ -1103,8 +1144,8 @@ const NodeTermStatus = ({
 											title={`Vault: ${vaultStatus}`}
 											style={{
 												position: 'relative',
-												width: '40px',
-												height: '40px',
+												width: `${compactBar.serviceSize}px`,
+												height: `${compactBar.serviceSize}px`,
 												borderRadius: '50%',
 												background: `linear-gradient(135deg, ${vaultColor}25 0%, ${vaultColor}15 100%)`,
 												border: `2px solid ${vaultColor}50`,
@@ -1114,8 +1155,21 @@ const NodeTermStatus = ({
 												boxShadow: `0 1px 4px ${vaultColor}20`
 											}}
 										>
-											<i className={vaultState.unlocked ? 'pi pi-unlock' : 'pi pi-lock'} style={{ color: vaultColor, fontSize: '0.9rem' }} />
+											<i className={vaultState.unlocked ? 'pi pi-unlock' : 'pi pi-lock'} style={{ color: vaultColor, fontSize: compactBar.serviceIconSize }} />
 										</div>
+										<span style={{
+											fontSize: compactBar.labelFontSize,
+											fontWeight: '500',
+											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+											textAlign: 'center',
+											lineHeight: compactBar.labelLineHeight,
+											maxWidth: `${compactBar.labelMaxWidth}px`,
+											overflow: 'hidden',
+											textOverflow: 'ellipsis',
+											whiteSpace: 'nowrap'
+										}}>
+											Vault
+										</span>
 									</div>
 								);
 							})()}
@@ -1135,8 +1189,8 @@ const NodeTermStatus = ({
 											title={`Ollama: ${ollamaStatus}${ollamaState.isRemote ? ' (Remoto)' : ''}`}
 											style={{
 												position: 'relative',
-												width: '40px',
-												height: '40px',
+												width: `${compactBar.serviceSize}px`,
+												height: `${compactBar.serviceSize}px`,
 												borderRadius: '50%',
 												background: `linear-gradient(135deg, ${ollamaColor}25 0%, ${ollamaColor}15 100%)`,
 												border: `2px solid ${ollamaColor}50`,
@@ -1146,8 +1200,21 @@ const NodeTermStatus = ({
 												boxShadow: `0 1px 4px ${ollamaColor}20`
 											}}
 										>
-											<i className="pi pi-brain" style={{ color: ollamaColor, fontSize: '0.9rem' }} />
+											<i className="pi pi-brain" style={{ color: ollamaColor, fontSize: compactBar.serviceIconSize }} />
 										</div>
+										<span style={{
+											fontSize: compactBar.labelFontSize,
+											fontWeight: '500',
+											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+											textAlign: 'center',
+											lineHeight: compactBar.labelLineHeight,
+											maxWidth: `${compactBar.labelMaxWidth}px`,
+											overflow: 'hidden',
+											textOverflow: 'ellipsis',
+											whiteSpace: 'nowrap'
+										}}>
+											Ollama
+										</span>
 									</div>
 								);
 							})()}
