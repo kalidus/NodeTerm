@@ -42,6 +42,8 @@ const HomeTab = ({
   const [showAIChat, setShowAIChat] = useState(false); // Estado para mostrar/ocultar chat de IA
   const [recentContainerHeight, setRecentContainerHeight] = useState(400); // Altura del contenedor de recientes
   const recentContainerRef = useRef(null);
+  const recentResizeRafRef = useRef(0);
+  const lastRecentMeasuredHeightRef = useRef(0);
   const [statusBarVisible, setStatusBarVisible] = useState(() => {
     // Cargar preferencia desde localStorage, por defecto visible
     try {
@@ -108,7 +110,14 @@ const HomeTab = ({
       for (let entry of entries) {
         const height = entry.contentRect.height;
         if (height > 0) {
-          setRecentContainerHeight(height);
+          // Throttle a 1 update por frame para evitar jank al mover el splitter
+          const rounded = Math.round(height);
+          if (Math.abs(rounded - (lastRecentMeasuredHeightRef.current || 0)) < 3) return;
+          lastRecentMeasuredHeightRef.current = rounded;
+          if (recentResizeRafRef.current) cancelAnimationFrame(recentResizeRafRef.current);
+          recentResizeRafRef.current = requestAnimationFrame(() => {
+            setRecentContainerHeight(rounded);
+          });
         }
       }
     });
@@ -116,6 +125,7 @@ const HomeTab = ({
     resizeObserver.observe(recentContainerRef.current);
     
     return () => {
+      if (recentResizeRafRef.current) cancelAnimationFrame(recentResizeRafRef.current);
       resizeObserver.disconnect();
     };
   }, []);

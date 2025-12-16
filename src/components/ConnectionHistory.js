@@ -14,6 +14,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	const [currentPage, setCurrentPage] = useState(1);
 	const [containerHeight, setContainerHeight] = useState(400); // Altura inicial estimada
 	const favoritesContainerRef = useRef(null);
+	const resizeRafRef = useRef(0);
+	const lastMeasuredHeightRef = useRef(0);
 	
 	// Calcular items por página dinámicamente basado en la altura disponible
 	// Cada tile compacto tiene aproximadamente ~52px de altura, más gaps
@@ -46,7 +48,14 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 			for (let entry of entries) {
 				const height = entry.contentRect.height;
 				if (height > 0) {
-					setContainerHeight(height);
+					// Throttle a 1 update por frame para que el redimensionado del splitter sea fluido
+					const rounded = Math.round(height);
+					if (Math.abs(rounded - (lastMeasuredHeightRef.current || 0)) < 3) return;
+					lastMeasuredHeightRef.current = rounded;
+					if (resizeRafRef.current) cancelAnimationFrame(resizeRafRef.current);
+					resizeRafRef.current = requestAnimationFrame(() => {
+						setContainerHeight(rounded);
+					});
 				}
 			}
 		});
@@ -54,6 +63,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 		resizeObserver.observe(favoritesContainerRef.current);
 		
 		return () => {
+			if (resizeRafRef.current) cancelAnimationFrame(resizeRafRef.current);
 			resizeObserver.disconnect();
 		};
 	}, []);
