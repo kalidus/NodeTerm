@@ -72,18 +72,19 @@
 /* === FAVORITOS: tiles compactos estilo "dashboard" === */
 .favorite-tile {
   --fav-accent: #4fc3f7;
+  --fav-scale: 1;
   position: relative;
   display: flex;
   align-items: stretch;
   height: 100%;
-  padding: 8px 10px 8px 12px;
+  padding: calc(8px * var(--fav-scale)) calc(10px * var(--fav-scale)) calc(8px * var(--fav-scale)) calc(12px * var(--fav-scale));
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.10);
   background: rgba(12, 14, 20, 0.55);
   box-shadow: 0 8px 22px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04);
   cursor: pointer;
   overflow: hidden;
-  min-height: 54px;
+  min-height: calc(54px * var(--fav-scale));
   transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
 }
 
@@ -93,7 +94,7 @@
   left: 0;
   top: 0;
   bottom: 0;
-  width: 3px;
+  width: calc(3px * var(--fav-scale));
   background: var(--fav-accent);
   box-shadow: 0 0 18px rgba(0,0,0,0.25);
 }
@@ -113,7 +114,7 @@
 .favorite-tile__content {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: calc(6px * var(--fav-scale));
   width: 100%;
   height: 100%;
   justify-content: space-between;
@@ -124,14 +125,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: calc(10px * var(--fav-scale));
   min-width: 0;
 }
 
 .favorite-tile__name {
   color: var(--text-color, rgba(255,255,255,0.92));
   font-weight: 800;
-  font-size: 11px;
+  font-size: calc(11px * var(--fav-scale));
   letter-spacing: 0.2px;
   white-space: nowrap;
   overflow: hidden;
@@ -143,10 +144,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 16px;
-  padding: 0 7px;
+  height: calc(16px * var(--fav-scale));
+  padding: 0 calc(7px * var(--fav-scale));
   border-radius: 999px;
-  font-size: 9px;
+  font-size: calc(9px * var(--fav-scale));
   font-weight: 800;
   letter-spacing: 0.6px;
   text-transform: uppercase;
@@ -158,16 +159,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: calc(10px * var(--fav-scale));
   min-width: 0;
 }
 
 .favorite-tile__host {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: calc(7px * var(--fav-scale));
   color: var(--text-color-secondary, rgba(255,255,255,0.62));
-  font-size: 11px;
+  font-size: calc(11px * var(--fav-scale));
   font-weight: 600;
   min-width: 0;
   overflow: hidden;
@@ -176,15 +177,21 @@
 }
 
 .favorite-tile__host i {
-  font-size: 11px;
+  font-size: calc(11px * var(--fav-scale));
   opacity: 0.9;
 }
 
 .favorite-tile__dot {
-  width: 9px;
-  height: 9px;
+  width: calc(9px * var(--fav-scale));
+  height: calc(9px * var(--fav-scale));
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+/* Cuando hay pocas cards y se estiran (layout "sparse"), centramos el contenido
+   para que no quede demasiado aire en medio. */
+.favorite-grid--sparse .favorite-tile__content {
+  justify-content: center;
 }
 
 .favorite-tile__dot--ok {
