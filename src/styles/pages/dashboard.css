@@ -126,6 +126,21 @@
   color: var(--fav-icon-color);
 }
 
+.favorite-tile__icon-badge svg {
+  width: calc(18px * var(--fav-scale));
+  height: calc(18px * var(--fav-scale));
+  flex-shrink: 0;
+}
+
+.favorite-tile__icon-badge svg path,
+.favorite-tile__icon-badge svg rect,
+.favorite-tile__icon-badge svg circle,
+.favorite-tile__icon-badge svg ellipse,
+.favorite-tile__icon-badge svg polyline {
+  stroke: var(--fav-icon-color) !important;
+  fill: var(--fav-icon-color) !important;
+}
+
 /* Contenido central */
 .favorite-tile__content {
   display: flex;

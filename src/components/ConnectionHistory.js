@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Badge } from 'primereact/badge';
 import { getFavorites, toggleFavorite, onUpdate } from '../utils/connectionStore';
+import { iconThemes } from '../themes/icon-themes';
 
 const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recentsLimit = 10, activeIds = new Set(), onEdit, templateColumns, favoritesColumns = 2, recentsColumns = 1, sshConnectionsCount = 0, foldersCount = 0, rdpConnectionsCount = 0, themeColors = {} }) => {
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
@@ -99,6 +100,26 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 				return 'pi pi-th-large';
 			default:
 				return 'pi pi-circle';
+		}
+	};
+
+	const getConnectionTypeIconSVG = (type) => {
+		const iconTheme = localStorage.getItem('nodeterm_icon_theme') || 'material';
+		const theme = iconThemes[iconTheme] || iconThemes['material'];
+		switch (type) {
+			case 'ssh':
+				return theme.icons.ssh;
+			case 'rdp':
+			case 'rdp-guacamole':
+				return theme.icons.rdp;
+			case 'vnc':
+			case 'vnc-guacamole':
+				return theme.icons.vnc;
+			case 'sftp':
+			case 'explorer':
+				return theme.icons.sftp;
+			default:
+				return null;
 		}
 	};
 
@@ -346,10 +367,17 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 			>
 				{/* Icono grande en badge a la izquierda */}
 				<div className="favorite-tile__icon-badge">
-					<i
-						className={getConnectionTypeIcon(connection.type)}
-						aria-hidden="true"
-					/>
+					{getConnectionTypeIconSVG(connection.type) ? (
+						React.cloneElement(getConnectionTypeIconSVG(connection.type), {
+							width: '18',
+							height: '18'
+						})
+					) : (
+						<i
+							className={getConnectionTypeIcon(connection.type)}
+							aria-hidden="true"
+						/>
+					)}
 				</div>
 				
 				{/* Contenido central */}
