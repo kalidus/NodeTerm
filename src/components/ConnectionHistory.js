@@ -483,6 +483,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 					{/* Contenedor con altura dinámica para los favoritos */}
 					<div 
 						ref={favoritesContainerRef}
+						className="home-hide-scrollbar"
 						style={{ 
 							flex: 1,
 							height: '100%',
