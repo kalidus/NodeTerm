@@ -516,13 +516,11 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 									display: 'grid', 
 									gridTemplateColumns: `repeat(${favoritesColumns}, 1fr)`, 
 									gap: 8,
-									// Si hay espacio vertical disponible, queremos que el grid lo ocupe
-									// y que sus filas se estiren para evitar "hueco" debajo.
 									flex: '1 1 auto',
-									height: '100%',
-									alignContent: 'stretch',
-									alignItems: 'stretch',
-									gridAutoRows: 'minmax(calc(54px * var(--fav-scale)), 1fr)',
+									height: 'fit-content',
+									alignContent: 'start',
+									alignItems: 'start',
+									gridAutoRows: 'min-content',
 									paddingRight: '4px',
 									background: 'transparent !important',
 									backgroundColor: 'transparent !important'

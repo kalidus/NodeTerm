@@ -261,10 +261,6 @@
   display: inline-block;
 }
 
-/* Cuando hay pocas cards y se estiran (layout "sparse"), centramos el contenido */
-.favorite-grid--sparse .favorite-tile__content {
-  justify-content: center;
-}
 
 /* Animaciones para las barras de progreso */
 .p-progressbar .p-progressbar-value {
