@@ -269,7 +269,8 @@ const SplitLayout = ({
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
-      transition: externalPaneSize !== null ? 'all 0.1s ease' : 'none'
+      // La transición se aplica SOLO cuando no se está arrastrando (ver estilos finales).
+      transition: 'none'
     };
 
     const secondaryPaneStyle = {
@@ -279,7 +280,8 @@ const SplitLayout = ({
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
-      transition: externalPaneSize !== null ? 'all 0.1s ease' : 'none',
+      // La transición se aplica SOLO cuando no se está arrastrando (ver estilos finales).
+      transition: 'none',
       background: theme?.background || undefined
     };
 
@@ -290,6 +292,8 @@ const SplitLayout = ({
     });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0, size: 0 });
+    const dragRafRef = useRef(0);
+    const latestDragSizeRef = useRef(internalPaneSize);
     
     // Durante el redimensionamiento, usar internalPaneSize, sino usar externalPaneSize si está disponible
     const finalPrimaryPaneSize = isDragging ? internalPaneSize : (externalPaneSize !== null ? externalPaneSize : internalPaneSize);
@@ -298,12 +302,15 @@ const SplitLayout = ({
     const finalPrimaryPaneStyle = {
       ...primaryPaneStyle,
       height: `${finalPrimaryPaneSize}px`,
-      position: 'relative'
+      position: 'relative',
+      // Desactivar transiciones durante el drag para evitar "lag" visual
+      transition: isDragging ? 'none' : (externalPaneSize !== null ? 'all 0.1s ease' : 'none')
     };
     
     const finalSecondaryPaneStyle = {
       ...secondaryPaneStyle,
-      height: `calc(100% - ${finalPrimaryPaneSize}px)`
+      height: `calc(100% - ${finalPrimaryPaneSize}px)`,
+      transition: isDragging ? 'none' : (externalPaneSize !== null ? 'all 0.1s ease' : 'none')
     };
 
     // Handlers de resize horizontal
@@ -315,6 +322,7 @@ const SplitLayout = ({
         y: e.clientY,
         size: finalPrimaryPaneSize
       });
+      latestDragSizeRef.current = finalPrimaryPaneSize;
       
       if (externalPaneSize !== null && onManualResize) {
         onManualResize();
@@ -331,19 +339,29 @@ const SplitLayout = ({
       const maxSize = window.innerHeight - 100;
       
       const clampedSize = Math.max(minSize, Math.min(maxSize, newSize));
-      setInternalPaneSize(clampedSize);
-      
-      // Notificar el cambio de tamaño al componente padre
-      if (onPaneSizeChange) {
-        onPaneSizeChange(clampedSize);
-      }
+      // Guardar y aplicar el tamaño a 1 update por frame (más suave)
+      latestDragSizeRef.current = clampedSize;
+      if (dragRafRef.current) return;
+      dragRafRef.current = requestAnimationFrame(() => {
+        dragRafRef.current = 0;
+        setInternalPaneSize(latestDragSizeRef.current);
+      });
     }, [isDragging, dragStart, onPaneSizeChange]);
 
     const handleMouseUp = useCallback(() => {
       if (isDragging) {
         setIsDragging(false);
+        // Cancelar RAF pendiente si lo hay
+        if (dragRafRef.current) {
+          cancelAnimationFrame(dragRafRef.current);
+          dragRafRef.current = 0;
+        }
+        // Notificar al padre SOLO al soltar, evitando rerenders pesados durante el drag
+        if (onPaneSizeChange) {
+          onPaneSizeChange(latestDragSizeRef.current);
+        }
       }
-    }, [isDragging]);
+    }, [isDragging, onPaneSizeChange]);
 
     // Event listeners para el drag horizontal
     React.useEffect(() => {
