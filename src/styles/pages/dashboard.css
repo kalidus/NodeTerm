@@ -636,6 +636,21 @@
   scrollbar-color: var(--ui-sidebar-border, #3e3e42) var(--ui-sidebar-bg, #1e1e1e);
 }
 
+/* === OCULTAR SCROLLBAR (sin desactivar el scroll) === */
+/* Útil para evitar que aparezca la barra al redimensionar */
+.home-hide-scrollbar {
+  /* Firefox */
+  scrollbar-width: none !important;
+  /* IE/Edge legacy */
+  -ms-overflow-style: none !important;
+}
+
+.home-hide-scrollbar::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
 /* === QUICK ACTIONS GLASS CARD === */
 /* Estilos específicos para la card de acciones rápidas con efecto glassmorphism */
 .quick-actions-glass-card {
