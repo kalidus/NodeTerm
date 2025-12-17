@@ -186,6 +186,9 @@ const PowerShellTerminal = forwardRef(({
     }));
 
     useEffect(() => {
+        // Leer scrollback desde configuración (configurable en Settings)
+        const scrollbackLines = parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10);
+
         // Initialize Terminal with PowerShell-optimized settings
         term.current = new Terminal({
             cursorBlink: true,
@@ -217,7 +220,7 @@ const PowerShellTerminal = forwardRef(({
             },
             // PowerShell optimized settings
             convertEol: true,
-            scrollback: 10000,
+            scrollback: scrollbackLines, // Configurable desde Settings (default: 1000)
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
             windowsMode: true, // Important for PowerShell on Windows

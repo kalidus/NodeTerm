@@ -115,13 +115,16 @@ const DockerTerminal = forwardRef(({
     useEffect(() => {
         if (!terminalRef.current) return;
 
+        // Leer scrollback desde configuración (configurable en Settings)
+        const scrollbackLines = parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10);
+
         // Crear terminal
         term.current = new Terminal({
             fontFamily: fontFamily,
             fontSize: fontSize,
             theme: theme,
             cursorBlink: true,
-            scrollback: 1000,
+            scrollback: scrollbackLines, // Configurable desde Settings (default: 1000)
             convertEol: true,
             allowProposedApi: true,
         });

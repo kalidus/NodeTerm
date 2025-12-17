@@ -157,6 +157,9 @@ const CygwinTerminal = forwardRef(({
     }));
 
     useEffect(() => {
+        // Leer scrollback desde configuración (configurable en Settings)
+        const scrollbackLines = parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10);
+
         // Initialize Terminal con tema moderno estilo MobaXterm
         term.current = new Terminal({
             cursorBlink: true,
@@ -191,7 +194,7 @@ const CygwinTerminal = forwardRef(({
                 ...theme
             },
             convertEol: true,
-            scrollback: 10000,
+            scrollback: scrollbackLines, // Configurable desde Settings (default: 1000)
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
             windowsMode: false,
