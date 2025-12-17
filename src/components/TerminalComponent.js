@@ -91,6 +91,9 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             defaultFontSize = parseInt(localStorage.getItem('basicapp_local_terminal_font_size') || '14', 10);
         }
 
+        // Leer scrollback desde configuración (configurable en Settings)
+        const scrollbackLines = parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10);
+
         // Initialize Terminal
         term.current = new Terminal({
             cursorBlink: true,
@@ -100,7 +103,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             theme: theme,
             // Configuraciones adicionales para compatibilidad con aplicaciones TUI
             convertEol: true,
-            scrollback: 10000,
+            scrollback: scrollbackLines, // Configurable desde Settings (default: 1000)
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
             windowsMode: false,
