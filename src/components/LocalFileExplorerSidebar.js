@@ -94,7 +94,7 @@ const LocalFileExplorerSidebar = ({
     };
     
     // Verificar cambios periódicamente
-    const interval = setInterval(handleStorageChange, 500);
+    const interval = setInterval(handleStorageChange, 2000); // Reducido de 500ms a 2000ms para ahorrar CPU/RAM
     
     // También escuchar eventos de storage
     window.addEventListener('storage', handleStorageChange);

@@ -163,5 +163,6 @@ module.exports = {
     'utf-8-validate': 'commonjs utf-8-validate',
     'bufferutil': 'commonjs bufferutil'
   },
-  devtool: 'source-map'
+  // Desactivar source maps en producción para reducir bundle size (~30-50% menos)
+  devtool: process.env.NODE_ENV === 'production' ? false : 'source-map'
 }; 

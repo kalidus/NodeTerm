@@ -74,7 +74,7 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {}, onExpandedChan
     };
 
     updateStats();
-    const interval = setInterval(updateStats, 5000);
+    const interval = setInterval(updateStats, 10000); // Reducido de 5000ms a 10000ms para ahorrar CPU/RAM
     return () => clearInterval(interval);
   }, [visible]);
 

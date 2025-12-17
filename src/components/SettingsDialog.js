@@ -666,7 +666,7 @@ const SettingsDialog = ({
       } catch {}
     };
     fetchStatus();
-    const t = setInterval(fetchStatus, 2000);
+    const t = setInterval(fetchStatus, 5000); // Reducido de 2000ms a 5000ms para ahorrar CPU/RAM
     return () => clearInterval(t);
   }, []);
 
