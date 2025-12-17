@@ -422,7 +422,7 @@ const NodeTermStatus = ({
 						minWidth: 0,
 						flex: '0 0 auto'
 					}}>
-					{/* Botones */}
+					{/* Botones principales */}
 						<div style={{
 							display: 'flex',
 							alignItems: 'flex-start',
@@ -484,58 +484,17 @@ const NodeTermStatus = ({
 							</span>
 						</div>
 
-						{/* Botón Terminal */}
-						{onToggleTerminalVisibility && (
-							<div style={{
-								display: 'flex',
-								flexDirection: 'column',
-								alignItems: 'center',
-								gap: '0.25rem'
-							}}>
-								<button
-									title="Mostrar/ocultar terminal local"
-									onClick={onToggleTerminalVisibility}
-									style={{
-										cursor: 'pointer',
-										display: 'flex',
-										alignItems: 'center',
-										justifyContent: 'center',
-										width: `${compactBar.buttonSize}px`,
-										height: `${compactBar.buttonSize}px`,
-										padding: '0',
-										borderRadius: `${compactBar.buttonRadius}px`,
-										background: 'linear-gradient(135deg, rgba(0, 188, 212, 0.25) 0%, rgba(0, 188, 212, 0.15) 100%)',
-										border: '1px solid rgba(0, 188, 212, 0.35)',
-										boxShadow: '0 1px 4px rgba(0, 188, 212, 0.2)',
-										transition: 'all 0.2s ease',
-										position: 'relative'
-									}}
-									onMouseEnter={(e) => {
-										e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 188, 212, 0.35) 0%, rgba(0, 188, 212, 0.25) 100%)';
-										e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-										e.currentTarget.style.boxShadow = '0 3px 8px rgba(0, 188, 212, 0.3)';
-									}}
-									onMouseLeave={(e) => {
-										e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 188, 212, 0.25) 0%, rgba(0, 188, 212, 0.15) 100%)';
-										e.currentTarget.style.transform = 'translateY(0) scale(1)';
-										e.currentTarget.style.boxShadow = '0 1px 4px rgba(0, 188, 212, 0.2)';
-									}}
-								>
-									<i className="pi pi-desktop" style={{ color: '#00BCD4', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
-								</button>
-								<span style={{
-									fontSize: compactBar.labelFontSize,
-									fontWeight: '500',
-									color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-									textAlign: 'center',
-									lineHeight: compactBar.labelLineHeight
-								}}>
-									Terminal
-								</span>
-							</div>
-						)}
+						{/* Separador vertical decorativo */}
+						<div style={{
+							width: '1px',
+							height: `${compactBar.separatorHeight}px`,
+							background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
+							borderRadius: '1px',
+							flexShrink: 0,
+							margin: '0 0.5rem'
+						}} />
 
-						{/* Botón Historial */}
+						{/* Botón Conexiones */}
 						<div style={{
 							display: 'flex',
 							flexDirection: 'column',
@@ -585,11 +544,11 @@ const NodeTermStatus = ({
 								textAlign: 'center',
 								lineHeight: compactBar.labelLineHeight
 							}}>
-								Historial
+								Conexiones
 							</span>
 						</div>
 
-						{/* Botón Passwords */}
+						{/* Botón Contraseñas */}
 						<div style={{
 							display: 'flex',
 							flexDirection: 'column',
@@ -638,118 +597,9 @@ const NodeTermStatus = ({
 								textAlign: 'center',
 								lineHeight: compactBar.labelLineHeight
 							}}>
-								Keys
+								Contraseñas
 							</span>
 						</div>
-
-						{/* Botón Configuración */}
-						{onOpenSettings && (
-							<div style={{
-								display: 'flex',
-								flexDirection: 'column',
-								alignItems: 'center',
-								gap: '0.25rem'
-							}}>
-								<button
-									title="Configuración"
-									onClick={onOpenSettings}
-									style={{
-										cursor: 'pointer',
-										display: 'flex',
-										alignItems: 'center',
-										justifyContent: 'center',
-										width: `${compactBar.buttonSize}px`,
-										height: `${compactBar.buttonSize}px`,
-										padding: '0',
-										borderRadius: `${compactBar.buttonRadius}px`,
-										background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.25) 0%, rgba(76, 175, 80, 0.15) 100%)',
-										border: '1px solid rgba(76, 175, 80, 0.35)',
-										boxShadow: '0 1px 4px rgba(76, 175, 80, 0.2)',
-										transition: 'all 0.2s ease',
-										position: 'relative'
-									}}
-									onMouseEnter={(e) => {
-										e.currentTarget.style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 0.35) 0%, rgba(76, 175, 80, 0.25) 100%)';
-										e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-										e.currentTarget.style.boxShadow = '0 3px 8px rgba(76, 175, 80, 0.3)';
-									}}
-									onMouseLeave={(e) => {
-										e.currentTarget.style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 0.25) 0%, rgba(76, 175, 80, 0.15) 100%)';
-										e.currentTarget.style.transform = 'translateY(0) scale(1)';
-										e.currentTarget.style.boxShadow = '0 1px 4px rgba(76, 175, 80, 0.2)';
-									}}
-								>
-									<i className="pi pi-cog" style={{ color: '#4CAF50', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
-								</button>
-								<span style={{
-									fontSize: compactBar.labelFontSize,
-									fontWeight: '500',
-									color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-									textAlign: 'center',
-									lineHeight: compactBar.labelLineHeight
-								}}>
-									Config
-								</span>
-							</div>
-						)}
-
-						{/* Botón Status Bar */}
-						{onToggleStatusBar && (
-							<div style={{
-								display: 'flex',
-								flexDirection: 'column',
-								alignItems: 'center',
-								gap: '0.25rem'
-							}}>
-								<button
-									title={statusBarVisible ? 'Ocultar status bar' : 'Mostrar status bar'}
-									onClick={onToggleStatusBar}
-									style={{
-										cursor: 'pointer',
-										display: 'flex',
-										alignItems: 'center',
-										justifyContent: 'center',
-										width: `${compactBar.buttonSize}px`,
-										height: `${compactBar.buttonSize}px`,
-										padding: '0',
-										borderRadius: `${compactBar.buttonRadius}px`,
-										background: statusBarVisible
-											? 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)'
-											: 'linear-gradient(135deg, rgba(79, 195, 247, 0.25) 0%, rgba(79, 195, 247, 0.15) 100%)',
-										border: '1px solid rgba(79, 195, 247, 0.35)',
-										boxShadow: '0 1px 4px rgba(79, 195, 247, 0.2)',
-										transition: 'all 0.2s ease',
-										position: 'relative'
-									}}
-									onMouseEnter={(e) => {
-										e.currentTarget.style.background = 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)';
-										e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-										e.currentTarget.style.boxShadow = '0 3px 8px rgba(79, 195, 247, 0.3)';
-									}}
-									onMouseLeave={(e) => {
-										e.currentTarget.style.background = statusBarVisible
-											? 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)'
-											: 'linear-gradient(135deg, rgba(79, 195, 247, 0.25) 0%, rgba(79, 195, 247, 0.15) 100%)';
-										e.currentTarget.style.transform = 'translateY(0) scale(1)';
-										e.currentTarget.style.boxShadow = '0 1px 4px rgba(79, 195, 247, 0.2)';
-									}}
-								>
-									<i 
-										className={statusBarVisible ? 'pi pi-eye' : 'pi pi-eye-slash'} 
-										style={{ color: '#4fc3f7', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} 
-									/>
-								</button>
-								<span style={{
-									fontSize: compactBar.labelFontSize,
-									fontWeight: '500',
-									color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-									textAlign: 'center',
-									lineHeight: compactBar.labelLineHeight
-								}}>
-									Status
-								</span>
-							</div>
-						)}
 
 						{/* Botón Grabaciones y Auditoría */}
 						<div style={{
@@ -827,6 +677,136 @@ const NodeTermStatus = ({
 						</div>
 					</div>
 				</div>
+
+						{/* Separador vertical decorativo */}
+						<div style={{
+							width: '1px',
+							height: `${compactBar.separatorHeight}px`,
+							background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
+							borderRadius: '1px',
+							flexShrink: 0,
+							margin: '0 0.5rem'
+						}} />
+
+						{/* SECCIÓN: Terminal y Status (compactos y en fila) */}
+						<div style={{
+							display: 'flex',
+							flexDirection: 'row',
+							gap: '0.5rem',
+							alignItems: 'center',
+							justifyContent: 'center',
+							minWidth: 0,
+							flex: '0 0 auto'
+						}}>
+							{/* Botón Terminal */}
+							{onToggleTerminalVisibility && (
+								<div style={{
+									display: 'flex',
+									flexDirection: 'column',
+									alignItems: 'center',
+									gap: '0.25rem'
+								}}>
+									<button
+										title="Mostrar/ocultar terminal local"
+										onClick={onToggleTerminalVisibility}
+										style={{
+											cursor: 'pointer',
+											display: 'flex',
+											alignItems: 'center',
+											justifyContent: 'center',
+											width: `${compactBar.buttonSize}px`,
+											height: `${compactBar.buttonSize}px`,
+											padding: '0',
+											borderRadius: `${compactBar.buttonRadius}px`,
+											background: 'linear-gradient(135deg, rgba(0, 188, 212, 0.25) 0%, rgba(0, 188, 212, 0.15) 100%)',
+											border: '1px solid rgba(0, 188, 212, 0.35)',
+											boxShadow: '0 1px 4px rgba(0, 188, 212, 0.2)',
+											transition: 'all 0.2s ease',
+											position: 'relative'
+										}}
+										onMouseEnter={(e) => {
+											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 188, 212, 0.35) 0%, rgba(0, 188, 212, 0.25) 100%)';
+											e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+											e.currentTarget.style.boxShadow = '0 3px 8px rgba(0, 188, 212, 0.3)';
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 188, 212, 0.25) 0%, rgba(0, 188, 212, 0.15) 100%)';
+											e.currentTarget.style.transform = 'translateY(0) scale(1)';
+											e.currentTarget.style.boxShadow = '0 1px 4px rgba(0, 188, 212, 0.2)';
+										}}
+									>
+										<i className="pi pi-desktop" style={{ color: '#00BCD4', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
+									</button>
+									<span style={{
+										fontSize: compactBar.labelFontSize,
+										fontWeight: '500',
+										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+										textAlign: 'center',
+										lineHeight: '1.0'
+									}}>
+										Terminal
+									</span>
+								</div>
+							)}
+
+							{/* Botón Status Bar */}
+							{onToggleStatusBar && (
+								<div style={{
+									display: 'flex',
+									flexDirection: 'column',
+									alignItems: 'center',
+									gap: '0.25rem'
+								}}>
+									<button
+										title={statusBarVisible ? 'Ocultar status bar' : 'Mostrar status bar'}
+										onClick={onToggleStatusBar}
+										style={{
+											cursor: 'pointer',
+											display: 'flex',
+											alignItems: 'center',
+											justifyContent: 'center',
+											width: `${compactBar.buttonSize}px`,
+											height: `${compactBar.buttonSize}px`,
+											padding: '0',
+											borderRadius: `${compactBar.buttonRadius}px`,
+											background: statusBarVisible
+												? 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)'
+												: 'linear-gradient(135deg, rgba(79, 195, 247, 0.25) 0%, rgba(79, 195, 247, 0.15) 100%)',
+											border: '1px solid rgba(79, 195, 247, 0.35)',
+											boxShadow: '0 1px 4px rgba(79, 195, 247, 0.2)',
+											transition: 'all 0.2s ease',
+											position: 'relative'
+										}}
+										onMouseEnter={(e) => {
+											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)';
+											e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+											e.currentTarget.style.boxShadow = '0 3px 8px rgba(79, 195, 247, 0.3)';
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.style.background = statusBarVisible
+												? 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)'
+												: 'linear-gradient(135deg, rgba(79, 195, 247, 0.25) 0%, rgba(79, 195, 247, 0.15) 100%)';
+											e.currentTarget.style.transform = 'translateY(0) scale(1)';
+											e.currentTarget.style.boxShadow = '0 1px 4px rgba(79, 195, 247, 0.2)';
+										}}
+									>
+										<i 
+											className={statusBarVisible ? 'pi pi-eye' : 'pi pi-eye-slash'} 
+											style={{ color: '#4fc3f7', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} 
+										/>
+									</button>
+									<span style={{
+										fontSize: compactBar.labelFontSize,
+										fontWeight: '500',
+										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+										textAlign: 'center',
+										lineHeight: '1.0'
+									}}>
+										Status
+									</span>
+								</div>
+							)}
+						</div>
 
 						{/* Separador vertical decorativo */}
 						<div style={{
