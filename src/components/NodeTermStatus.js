@@ -77,7 +77,7 @@ const NodeTermStatus = ({
 			} catch {}
 		};
 		fetchGuacd();
-		intervalId = setInterval(fetchGuacd, 5000);
+		intervalId = setInterval(fetchGuacd, 10000); // Reducido de 5000ms a 10000ms para ahorrar CPU/RAM
 
 		// Estado Ollama
 		const fetchOllama = async () => {
@@ -105,7 +105,7 @@ const NodeTermStatus = ({
 			}
 		};
 		fetchOllama();
-		const ollamaIntervalId = setInterval(fetchOllama, 5000);
+		const ollamaIntervalId = setInterval(fetchOllama, 10000); // Reducido de 5000ms a 10000ms para ahorrar CPU/RAM
 
 		return () => { 
 			if (intervalId) clearInterval(intervalId);
