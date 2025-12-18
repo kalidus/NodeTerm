@@ -82,21 +82,69 @@ class NetworkToolsService {
 
         // Parse output based on platform
         if (this.platform === 'win32') {
-          // Windows ping output parsing
-          const timeMatches = output.match(/tiempo[=<](\d+)ms/gi) || output.match(/time[=<](\d+)ms/gi);
-          if (timeMatches) {
-            results.times = timeMatches.map(m => parseInt(m.match(/\d+/)[0]));
+          // Windows ping output parsing - múltiples formatos posibles
+          // Formato 1: tiempo=XXms o time=XXms
+          // Formato 2: tiempo<XXms o time<XXms
+          const timePatterns = [
+            /tiempo[=<](\d+)\s*ms/gi,
+            /time[=<](\d+)\s*ms/gi,
+            /(\d+)\s*ms\s*TTL/gi,
+            /TTL[=\s]+(\d+).*?(\d+)\s*ms/gi
+          ];
+          
+          for (const pattern of timePatterns) {
+            const matches = output.match(pattern);
+            if (matches && matches.length > 0) {
+              results.times = matches.map(m => {
+                const numMatch = m.match(/\d+/);
+                return numMatch ? parseInt(numMatch[0]) : null;
+              }).filter(t => t !== null);
+              if (results.times.length > 0) {
+                results.received = results.times.length;
+                break;
+              }
+            }
+          }
+
+          // Estadísticas de Windows
+          // Buscar "Paquetes: enviados = X, recibidos = Y, perdidos = Z"
+          const statsPatterns = [
+            /Paquetes[:\s]+enviados\s*=\s*(\d+)[,\s]+recibidos\s*=\s*(\d+)[,\s]+perdidos\s*=\s*(\d+)/i,
+            /Packets[:\s]+Sent\s*=\s*(\d+)[,\s]+Received\s*=\s*(\d+)[,\s]+Lost\s*=\s*(\d+)/i,
+            /(\d+)\s*enviados[,\s]+(\d+)\s*recibidos/i,
+            /(\d+)\s*sent[,\s]+(\d+)\s*received/i
+          ];
+
+          for (const pattern of statsPatterns) {
+            const match = output.match(pattern);
+            if (match) {
+              results.sent = parseInt(match[1]) || results.sent;
+              results.received = parseInt(match[2]) || results.received;
+              if (match[3]) {
+                results.lost = parseInt(match[3]);
+              }
+              break;
+            }
+          }
+
+          // Tiempo promedio
+          const avgPatterns = [
+            /Media\s*=\s*(\d+)\s*ms/i,
+            /Average\s*=\s*(\d+)\s*ms/i,
+            /Tiempo\s+promedio[:\s]+(\d+)\s*ms/i
+          ];
+
+          for (const pattern of avgPatterns) {
+            const match = output.match(pattern);
+            if (match) {
+              results.avg = parseInt(match[1]);
+              break;
+            }
+          }
+
+          // Si no encontramos estadísticas, calcular desde los tiempos
+          if (results.times.length > 0 && results.received === 0) {
             results.received = results.times.length;
-          }
-
-          const statsMatch = output.match(/Perdidos\s*=\s*(\d+)/i) || output.match(/Lost\s*=\s*(\d+)/i);
-          if (statsMatch) {
-            results.lost = parseInt(statsMatch[1]);
-          }
-
-          const avgMatch = output.match(/Media\s*=\s*(\d+)ms/i) || output.match(/Average\s*=\s*(\d+)ms/i);
-          if (avgMatch) {
-            results.avg = parseInt(avgMatch[1]);
           }
         } else {
           // Linux/Mac ping output parsing
@@ -139,9 +187,23 @@ class NetworkToolsService {
       });
 
       child.on('error', (err) => {
-        results.error = err.message;
+        console.error('[NetworkToolsService] Error en ping:', err);
+        results.error = err.message || 'Error ejecutando ping';
+        results.success = false;
         resolve(results);
       });
+
+      // Timeout de seguridad
+      setTimeout(() => {
+        if (child && !child.killed) {
+          child.kill();
+          if (!results.rawOutput) {
+            results.error = 'Timeout: El comando ping excedió el tiempo máximo';
+            results.success = false;
+            resolve(results);
+          }
+        }
+      }, (timeout * count + 10) * 1000);
     });
   }
 
