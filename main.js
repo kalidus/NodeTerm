@@ -789,7 +789,8 @@ function createWindow() {
       cleanupOrphanedConnections,
       isAppQuitting,
       getGuacamoleServer: () => guacamoleServer,
-      getGuacamoleServerReadyAt: () => guacamoleServerReadyAt
+      getGuacamoleServerReadyAt: () => guacamoleServerReadyAt,
+      getOrCreateGuacamoleSecretKey: getOrCreateGuacamoleSecretKey
     });
     
     // Handlers registrados exitosamente

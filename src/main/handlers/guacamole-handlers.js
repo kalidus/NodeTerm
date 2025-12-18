@@ -28,7 +28,8 @@ function registerGuacamoleHandlers({
   disconnectAllGuacamoleConnections,
   guacdInactivityTimeoutMs,
   getGuacamoleServer,
-  getGuacamoleServerReadyAt
+  getGuacamoleServerReadyAt,
+  getOrCreateGuacamoleSecretKey
 }) {
   // IPC para configurar el watchdog de guacd desde la UI
   ipcMain.handle('guacamole:set-guacd-timeout-ms', async (event, timeoutMs) => {
@@ -216,9 +217,17 @@ function registerGuacamoleHandlers({
 
       const crypto = require('crypto');
       const CIPHER = 'AES-256-CBC';
-      // La clave debe ser exactamente 32 bytes para AES-256-CBC
-      const SECRET_KEY_RAW = 'NodeTermGuacamoleSecretKey2024!';
-      const SECRET_KEY = crypto.createHash('sha256').update(SECRET_KEY_RAW).digest(); // 32 bytes exactos
+      // ✅ CRÍTICO: Usar la misma clave que el servidor Guacamole
+      // Si no se proporciona la función, usar fallback (solo para compatibilidad)
+      let SECRET_KEY;
+      if (getOrCreateGuacamoleSecretKey && typeof getOrCreateGuacamoleSecretKey === 'function') {
+        SECRET_KEY = await getOrCreateGuacamoleSecretKey(); // 32 bytes exactos para AES-256-CBC
+      } else {
+        // Fallback: usar clave hardcodeada (solo para compatibilidad con versiones antiguas)
+        console.warn('⚠️ [MAIN] Usando clave hardcodeada como fallback. Esto puede causar errores de validación.');
+        const SECRET_KEY_RAW = 'NodeTermGuacamoleSecretKey2024!';
+        SECRET_KEY = crypto.createHash('sha256').update(SECRET_KEY_RAW).digest(); // 32 bytes exactos
+      }
 
       // Preparar campos de drive si el usuario lo activó (solo para RDP)
       let driveSettings = {};
