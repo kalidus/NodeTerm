@@ -239,7 +239,16 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
     try {
       if (window?.electron?.ipcRenderer) {
         const result = await window.electron.ipcRenderer.invoke('network-tools:get-interfaces');
-        if (result.success) {
+        
+        // Validar que result existe y es un objeto
+        if (!result || typeof result !== 'object') {
+          console.warn('No se pudieron cargar las interfaces de red: Respuesta inválida del servidor');
+          setNetworkInterfaces([]);
+          return;
+        }
+        
+        // Si hay interfaces (incluso si success es false), usarlas
+        if (Array.isArray(result.interfaces)) {
           setNetworkInterfaces(result.interfaces);
           // Auto-fill subnet for network scan based on first interface
           if (result.interfaces.length > 0) {
@@ -248,10 +257,21 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
               setNetworkScanSubnet(firstInterface.cidr);
             }
           }
+        } else {
+          setNetworkInterfaces([]);
         }
+        
+        // Log warning si hay error pero no bloquear la funcionalidad
+        if (result.success === false && result.error) {
+          console.warn('Advertencia al cargar interfaces de red:', result.error);
+        }
+      } else {
+        console.warn('IPC no disponible para cargar interfaces de red');
+        setNetworkInterfaces([]);
       }
     } catch (err) {
       console.error('Error loading network interfaces:', err);
+      setNetworkInterfaces([]);
     }
   };
 
@@ -361,18 +381,18 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
       }
 
       // Verificar que la respuesta existe y tiene la estructura esperada
-      if (!response) {
-        throw new Error('No se recibió respuesta del servidor');
+      if (!response || typeof response !== 'object') {
+        throw new Error('No se recibió respuesta válida del servidor');
       }
 
-      if (response && response.success !== false) {
+      // Verificar si hay un error explícito
+      if (response.success === false || response.error) {
+        setError(response.error || 'Error desconocido');
+        setResult(null);
+      } else {
         // Si success es true o undefined (algunas herramientas pueden no tener success)
         setResult(response);
         setError(null);
-      } else {
-        // Si success es false explícitamente
-        setError(response?.error || 'Error desconocido');
-        setResult(null);
       }
     } catch (err) {
       console.error('Error ejecutando herramienta:', err);
@@ -815,7 +835,10 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
           <div style={resultBoxStyle}>
             <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <strong style={{ fontSize: '1rem' }}>Traceroute a {result.host}</strong>
-              <Badge value={`${result.hops?.length || 0} saltos`} severity="info" />
+              <Badge value={`${result.hops?.length || 0} saltos`} severity={result.success ? "info" : "warning"} />
+              {!result.success && result.error && (
+                <Badge value="Error" severity="danger" />
+              )}
             </div>
             {result.hops && result.hops.length > 0 ? (
               <div style={{ overflowX: 'auto' }}>
@@ -874,16 +897,11 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
               </div>
             ) : (
               <div>
-                <Message severity="warn" text="No se pudieron obtener saltos" style={{ marginBottom: '1rem' }} />
-                {result.error && (
-                  <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '6px', color: '#ef4444' }}>
-                    <strong>Error:</strong> {result.error}
-                  </div>
-                )}
-                {result.rawOutput && (
-                  <details style={{ marginTop: '1rem' }}>
-                    <summary style={{ cursor: 'pointer', color: 'var(--text-color-secondary)', fontSize: '0.85rem' }}>
-                      Ver salida completa
+                <Message severity="warn" text={result.error || "No se pudieron obtener saltos"} style={{ marginBottom: '1rem' }} />
+                {result.rawOutput && result.rawOutput.trim().length > 0 && (
+                  <details style={{ marginTop: '1rem' }} open={!result.success}>
+                    <summary style={{ cursor: 'pointer', color: 'var(--text-color-secondary)', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                      {result.success ? 'Ver salida completa' : 'Ver salida del comando (útil para depuración)'}
                     </summary>
                     <pre style={{ 
                       marginTop: '0.5rem', 
@@ -894,12 +912,18 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                       padding: '0.5rem',
                       borderRadius: '4px',
                       overflow: 'auto',
-                      maxHeight: '200px'
+                      maxHeight: '400px',
+                      fontFamily: 'monospace'
                     }}>
                       {result.rawOutput}
                     </pre>
                   </details>
                 )}
+                {!result.rawOutput || result.rawOutput.trim().length === 0 ? (
+                  <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '6px', color: '#ef4444', marginTop: '1rem' }}>
+                    <strong>Nota:</strong> El comando no produjo ninguna salida. Verifica que el comando traceroute/tracert esté instalado y disponible en tu sistema.
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
