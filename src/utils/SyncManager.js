@@ -47,8 +47,11 @@ class SyncManager {
         this.autoSyncIntervalMinutes = parsed.autoSyncIntervalMinutes || 5; // Cargar intervalo configurado
       }
       
-      // Cargar configuración de Nextcloud
-      this.nextcloudService.loadConfig();
+      // Cargar configuración de Nextcloud (async)
+      // Nota: loadConfig ahora es async, pero no esperamos aquí para no bloquear la inicialización
+      this.nextcloudService.loadConfig().catch(err => {
+        console.error('Error cargando configuración Nextcloud:', err);
+      });
     } catch (error) {
       console.error('Error cargando configuración de sincronización:', error);
     }
