@@ -98,6 +98,8 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [networkInterfaces, setNetworkInterfaces] = useState([]);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1200);
 
   // Estados de inputs para cada herramienta
   const [pingHost, setPingHost] = useState('');
@@ -133,6 +135,104 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
     if (visible) {
       loadNetworkInterfaces();
     }
+  }, [visible]);
+
+  // Detectar cambios en el tamaño de la ventana y del diálogo para layout responsive
+  useEffect(() => {
+    if (!visible) return;
+
+    // Función para actualizar el estado según el ancho del diálogo
+    const updateLayout = () => {
+      const dialogElement = document.querySelector('.network-tools-dialog .p-dialog');
+      if (dialogElement) {
+        const width = dialogElement.clientWidth || dialogElement.offsetWidth;
+        if (width > 0) {
+          setWindowWidth(width);
+          setIsMobile(width < 1200);
+        }
+      }
+    };
+
+    // Observar el diálogo cuando esté visible
+    let resizeObserver = null;
+    let checkInterval = null;
+    let mouseMoveHandler = null;
+    let mouseUpHandler = null;
+
+    const setupObserver = () => {
+      const dialogElement = document.querySelector('.network-tools-dialog .p-dialog');
+      if (dialogElement && !resizeObserver) {
+        resizeObserver = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            const width = entry.contentRect.width || entry.target.clientWidth;
+            if (width > 0) {
+              setWindowWidth(width);
+              setIsMobile(width < 1200);
+            }
+          }
+        });
+        resizeObserver.observe(dialogElement);
+
+        // Añadir listeners de mouse para detectar redimensionamiento manual
+        mouseMoveHandler = () => {
+          updateLayout();
+        };
+        mouseUpHandler = () => {
+          updateLayout();
+        };
+
+        // Escuchar eventos de mouse en los handles de redimensionamiento
+        const handles = dialogElement.querySelectorAll('.p-resizable-handle');
+        handles.forEach(handle => {
+          handle.addEventListener('mousemove', mouseMoveHandler);
+          handle.addEventListener('mouseup', mouseUpHandler);
+        });
+
+        // También escuchar en el diálogo completo durante redimensionamiento
+        dialogElement.addEventListener('mousemove', mouseMoveHandler);
+        dialogElement.addEventListener('mouseup', mouseUpHandler);
+      }
+    };
+
+    // Intentar configurar el observer inmediatamente
+    setTimeout(setupObserver, 100);
+
+    // También intentar periódicamente por si el diálogo se monta después
+    checkInterval = setInterval(() => {
+      if (!resizeObserver) {
+        setupObserver();
+      }
+    }, 200);
+
+    // Listener para redimensionamiento de ventana
+    const handleWindowResize = () => {
+      updateLayout();
+    };
+
+    window.addEventListener('resize', handleWindowResize);
+    updateLayout(); // Llamar una vez al montar
+
+    return () => {
+      window.removeEventListener('resize', handleWindowResize);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+      if (checkInterval) {
+        clearInterval(checkInterval);
+      }
+      if (mouseMoveHandler) {
+        const dialogElement = document.querySelector('.network-tools-dialog .p-dialog');
+        if (dialogElement) {
+          const handles = dialogElement.querySelectorAll('.p-resizable-handle');
+          handles.forEach(handle => {
+            handle.removeEventListener('mousemove', mouseMoveHandler);
+            handle.removeEventListener('mouseup', mouseUpHandler);
+          });
+          dialogElement.removeEventListener('mousemove', mouseMoveHandler);
+          dialogElement.removeEventListener('mouseup', mouseUpHandler);
+        }
+      }
+    };
   }, [visible]);
 
   const loadNetworkInterfaces = async () => {
@@ -260,13 +360,24 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
           throw new Error('Herramienta no reconocida');
       }
 
-      if (response.success) {
+      // Verificar que la respuesta existe y tiene la estructura esperada
+      if (!response) {
+        throw new Error('No se recibió respuesta del servidor');
+      }
+
+      if (response && response.success !== false) {
+        // Si success es true o undefined (algunas herramientas pueden no tener success)
         setResult(response);
+        setError(null);
       } else {
-        setError(response.error || 'Error desconocido');
+        // Si success es false explícitamente
+        setError(response?.error || 'Error desconocido');
+        setResult(null);
       }
     } catch (err) {
-      setError(err.message);
+      console.error('Error ejecutando herramienta:', err);
+      setError(err.message || 'Error desconocido al ejecutar la herramienta');
+      setResult(null);
     } finally {
       setLoading(false);
     }
@@ -585,54 +696,85 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
     const resultBoxStyle = {
       background: 'rgba(0,0,0,0.2)',
       borderRadius: '8px',
-      padding: '1rem',
+      padding: isMobile ? '0.75rem' : '1rem',
       fontFamily: 'monospace',
-      fontSize: '0.85rem',
+      fontSize: isMobile ? '0.75rem' : '0.85rem',
       lineHeight: '1.6',
       color: 'var(--text-color)',
-      maxHeight: '400px',
-      overflow: 'auto'
+      maxHeight: isMobile ? '300px' : '400px',
+      overflow: 'auto',
+      wordBreak: 'break-word',
+      overflowWrap: 'break-word'
     };
 
     const statItemStyle = {
       display: 'flex',
-      justifyContent: 'space-between',
+      flexDirection: isMobile ? 'column' : 'row',
+      justifyContent: isMobile ? 'flex-start' : 'space-between',
+      alignItems: isMobile ? 'flex-start' : 'center',
       padding: '0.5rem 0',
-      borderBottom: '1px solid rgba(255,255,255,0.1)'
+      borderBottom: '1px solid rgba(255,255,255,0.1)',
+      gap: isMobile ? '0.25rem' : '0'
     };
 
     switch (selectedTool) {
       case 'ping':
         return (
           <div style={resultBoxStyle}>
-            <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <i className={`pi ${result.success ? 'pi-check-circle' : 'pi-times-circle'}`} 
-                 style={{ color: result.success ? '#22c55e' : '#ef4444' }} />
-              <strong>{result.host}</strong>
+                 style={{ color: result.success ? '#22c55e' : '#ef4444', fontSize: '1.2rem' }} />
+              <strong style={{ fontSize: '1rem' }}>{result.host}</strong>
               <Badge value={result.success ? 'Activo' : 'Inactivo'} 
                      severity={result.success ? 'success' : 'danger'} />
+              {result.duration && (
+                <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.8rem' }}>
+                  ({(result.duration / 1000).toFixed(2)}s)
+                </span>
+              )}
             </div>
             <div style={statItemStyle}>
               <span>Paquetes enviados:</span>
-              <strong>{result.sent}</strong>
+              <strong>{result.sent || 0}</strong>
             </div>
             <div style={statItemStyle}>
               <span>Paquetes recibidos:</span>
-              <strong style={{ color: '#22c55e' }}>{result.received}</strong>
+              <strong style={{ color: '#22c55e' }}>{result.received || 0}</strong>
             </div>
             <div style={statItemStyle}>
               <span>Paquetes perdidos:</span>
-              <strong style={{ color: result.lost > 0 ? '#ef4444' : '#22c55e' }}>{result.lost} ({result.lossPercent}%)</strong>
+              <strong style={{ color: (result.lost || 0) > 0 ? '#ef4444' : '#22c55e' }}>
+                {result.lost || 0} ({result.lossPercent || 0}%)
+              </strong>
             </div>
-            {result.avg && (
+            {result.times && result.times.length > 0 && (
+              <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                Tiempos de respuesta:
+              </div>
+            )}
+            {result.times && result.times.length > 0 && (
+              <div style={{ marginBottom: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                {result.times.map((time, idx) => (
+                  <Badge 
+                    key={idx}
+                    value={`${time.toFixed ? time.toFixed(2) : time}ms`}
+                    severity="info"
+                  />
+                ))}
+              </div>
+            )}
+            {(result.min !== null && result.min !== undefined) && (
               <>
+                <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                  Estadísticas:
+                </div>
                 <div style={statItemStyle}>
                   <span>Tiempo mínimo:</span>
                   <strong>{result.min?.toFixed(2)} ms</strong>
                 </div>
                 <div style={statItemStyle}>
                   <span>Tiempo promedio:</span>
-                  <strong style={{ color: '#3b82f6' }}>{result.avg?.toFixed(2)} ms</strong>
+                  <strong style={{ color: '#3b82f6', fontSize: '1.05rem' }}>{result.avg?.toFixed(2)} ms</strong>
                 </div>
                 <div style={statItemStyle}>
                   <span>Tiempo máximo:</span>
@@ -640,30 +782,125 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                 </div>
               </>
             )}
+            {result.error && (
+              <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '6px', color: '#ef4444' }}>
+                <strong>Error:</strong> {result.error}
+              </div>
+            )}
+            {result.rawOutput && (
+              <details style={{ marginTop: '1rem' }}>
+                <summary style={{ cursor: 'pointer', color: 'var(--text-color-secondary)', fontSize: '0.85rem' }}>
+                  Ver salida completa
+                </summary>
+                <pre style={{ 
+                  marginTop: '0.5rem', 
+                  whiteSpace: 'pre-wrap', 
+                  fontSize: '0.7rem',
+                  color: 'var(--text-color-secondary)',
+                  background: 'rgba(0,0,0,0.2)',
+                  padding: '0.5rem',
+                  borderRadius: '4px',
+                  overflow: 'auto',
+                  maxHeight: '200px'
+                }}>
+                  {result.rawOutput}
+                </pre>
+              </details>
+            )}
           </div>
         );
 
       case 'traceroute':
         return (
           <div style={resultBoxStyle}>
-            <div style={{ marginBottom: '1rem' }}>
-              <strong>Traceroute a {result.host}</strong>
-              <span style={{ marginLeft: '1rem', color: 'var(--text-color-secondary)' }}>
-                ({result.hops?.length || 0} saltos)
-              </span>
+            <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <strong style={{ fontSize: '1rem' }}>Traceroute a {result.host}</strong>
+              <Badge value={`${result.hops?.length || 0} saltos`} severity="info" />
             </div>
             {result.hops && result.hops.length > 0 ? (
-              <DataTable value={result.hops} size="small" stripedRows 
-                         style={{ fontSize: '0.8rem' }}
-                         emptyMessage="Sin datos">
-                <Column field="hop" header="#" style={{ width: '50px' }} />
-                <Column field="host" header="Host" body={(row) => row.host || '*'} />
-                <Column field="avgTime" header="Tiempo" 
-                        body={(row) => row.avgTime ? `${row.avgTime.toFixed(2)} ms` : '*'} 
-                        style={{ width: '100px' }} />
-              </DataTable>
+              <div style={{ overflowX: 'auto' }}>
+                <DataTable 
+                  value={result.hops} 
+                  size="small" 
+                  stripedRows 
+                  style={{ fontSize: '0.8rem', minWidth: '400px' }}
+                  emptyMessage="Sin datos"
+                  scrollable
+                  scrollHeight="400px"
+                >
+                  <Column field="hop" header="#" style={{ width: '50px', textAlign: 'center' }} />
+                  <Column 
+                    field="host" 
+                    header="Host / IP" 
+                    body={(row) => (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <span>{row.host || '*'}</span>
+                        {row.ip && row.ip !== row.host && (
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)' }}>{row.ip}</span>
+                        )}
+                      </div>
+                    )}
+                    style={{ minWidth: '200px' }}
+                  />
+                  <Column 
+                    field="times" 
+                    header="Tiempos" 
+                    body={(row) => {
+                      if (row.timeout) return <span style={{ color: '#ef4444' }}>* * *</span>;
+                      if (row.times && row.times.length > 0) {
+                        return (
+                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {row.times.map((t, i) => (
+                              <Badge key={i} value={`${t.toFixed(2)}ms`} severity="info" />
+                            ))}
+                          </div>
+                        );
+                      }
+                      return <span>*</span>;
+                    }}
+                    style={{ minWidth: '150px' }}
+                  />
+                  <Column 
+                    field="avgTime" 
+                    header="Promedio" 
+                    body={(row) => row.avgTime ? (
+                      <strong style={{ color: '#3b82f6' }}>{row.avgTime.toFixed(2)} ms</strong>
+                    ) : (
+                      <span style={{ color: '#ef4444' }}>*</span>
+                    )} 
+                    style={{ width: '100px', textAlign: 'right' }} 
+                  />
+                </DataTable>
+              </div>
             ) : (
-              <Message severity="warn" text="No se pudieron obtener saltos" />
+              <div>
+                <Message severity="warn" text="No se pudieron obtener saltos" style={{ marginBottom: '1rem' }} />
+                {result.error && (
+                  <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '6px', color: '#ef4444' }}>
+                    <strong>Error:</strong> {result.error}
+                  </div>
+                )}
+                {result.rawOutput && (
+                  <details style={{ marginTop: '1rem' }}>
+                    <summary style={{ cursor: 'pointer', color: 'var(--text-color-secondary)', fontSize: '0.85rem' }}>
+                      Ver salida completa
+                    </summary>
+                    <pre style={{ 
+                      marginTop: '0.5rem', 
+                      whiteSpace: 'pre-wrap', 
+                      fontSize: '0.7rem',
+                      color: 'var(--text-color-secondary)',
+                      background: 'rgba(0,0,0,0.2)',
+                      padding: '0.5rem',
+                      borderRadius: '4px',
+                      overflow: 'auto',
+                      maxHeight: '200px'
+                    }}>
+                      {result.rawOutput}
+                    </pre>
+                  </details>
+                )}
+              </div>
             )}
           </div>
         );
@@ -1021,37 +1258,183 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
   );
 
   return (
+    <>
+      <style key={isMobile ? 'mobile' : 'desktop'}>{`
+        .network-tools-dialog .p-dialog {
+          position: fixed !important;
+        }
+        .network-tools-dialog .p-dialog-content {
+          display: flex !important;
+          flex-direction: column !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+        }
+        .network-tools-dialog-content {
+          display: flex;
+          flex-direction: ${isMobile ? 'column' : 'row'};
+          flex: 1;
+          min-height: 0;
+          overflow: hidden;
+          width: 100%;
+        }
+        .network-tools-sidebar {
+          width: ${isMobile ? '100%' : '240px'};
+          min-width: ${isMobile ? 'auto' : '200px'};
+          max-width: ${isMobile ? '100%' : '280px'};
+          flex-shrink: 0;
+          overflow-y: auto;
+          overflow-x: hidden;
+          max-height: ${isMobile ? '200px' : 'none'};
+        }
+        .network-tools-main {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+          overflow: hidden;
+        }
+        .network-tools-form-results {
+          flex: 1;
+          display: flex;
+          flex-direction: ${isMobile ? 'column' : 'row'};
+          min-height: 0;
+          overflow: hidden;
+        }
+        .network-tools-form {
+          width: ${isMobile ? '100%' : '320px'};
+          min-width: ${isMobile ? 'auto' : '280px'};
+          max-width: ${isMobile ? '100%' : '400px'};
+          flex-shrink: 0;
+          overflow-y: auto;
+          overflow-x: hidden;
+          max-height: ${isMobile ? '300px' : 'none'};
+        }
+        .network-tools-results {
+          flex: 1;
+          min-width: 0;
+          overflow-y: auto;
+          overflow-x: hidden;
+          min-height: ${isMobile ? '300px' : 0};
+        }
+        .network-tools-dialog .p-dialog-header {
+          cursor: move !important;
+          user-select: none !important;
+        }
+        .network-tools-dialog .p-dialog-header:active {
+          cursor: grabbing !important;
+        }
+        .network-tools-dialog .p-resizable-handle {
+          background: transparent !important;
+          border: 2px solid rgba(6, 182, 212, 0.3) !important;
+          border-radius: 4px !important;
+          transition: all 0.2s ease !important;
+          z-index: 1000 !important;
+        }
+        .network-tools-dialog .p-resizable-handle:hover {
+          background: rgba(6, 182, 212, 0.2) !important;
+          border-color: rgba(6, 182, 212, 0.6) !important;
+        }
+        .network-tools-dialog .p-resizable-handle-se {
+          width: 20px !important;
+          height: 20px !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          cursor: nwse-resize !important;
+        }
+        .network-tools-dialog .p-resizable-handle-e {
+          width: 8px !important;
+          right: 0 !important;
+          cursor: ew-resize !important;
+        }
+        .network-tools-dialog .p-resizable-handle-w {
+          width: 8px !important;
+          left: 0 !important;
+          cursor: ew-resize !important;
+        }
+        .network-tools-dialog .p-resizable-handle-s {
+          height: 8px !important;
+          bottom: 0 !important;
+          cursor: ns-resize !important;
+        }
+        .network-tools-dialog .p-resizable-handle-n {
+          height: 8px !important;
+          top: 0 !important;
+          cursor: ns-resize !important;
+        }
+        .network-tools-dialog .p-resizable-handle-ne {
+          width: 20px !important;
+          height: 20px !important;
+          top: 0 !important;
+          right: 0 !important;
+          cursor: nesw-resize !important;
+        }
+        .network-tools-dialog .p-resizable-handle-nw {
+          width: 20px !important;
+          height: 20px !important;
+          top: 0 !important;
+          left: 0 !important;
+          cursor: nwse-resize !important;
+        }
+        .network-tools-dialog .p-resizable-handle-sw {
+          width: 20px !important;
+          height: 20px !important;
+          bottom: 0 !important;
+          left: 0 !important;
+          cursor: nesw-resize !important;
+        }
+      `}</style>
     <Dialog
       visible={visible}
       onHide={onHide}
       header={dialogHeader}
-      style={{ width: '900px', maxWidth: '95vw' }}
+      className="network-tools-dialog"
+      style={{ 
+        width: '95vw',
+        maxWidth: '1600px',
+        minWidth: '800px'
+      }}
       contentStyle={{ 
         padding: 0,
         background: 'var(--surface-ground)',
-        borderRadius: '0 0 12px 12px'
+        borderRadius: '0 0 12px 12px',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '80vh',
+        minHeight: '600px',
+        maxHeight: '90vh'
       }}
       headerStyle={{
         background: 'var(--surface-card)',
         borderBottom: '1px solid var(--surface-border)',
-        padding: '1rem 1.5rem'
+        padding: '1rem 1.5rem',
+        flexShrink: 0,
+        cursor: 'move'
       }}
       modal
       dismissableMask
-      draggable={false}
+      draggable={true}
+      resizable={true}
+      onResizeEnd={(e) => {
+        // Actualizar el estado cuando termina el redimensionamiento
+        setTimeout(() => {
+          const dialogElement = document.querySelector('.network-tools-dialog .p-dialog');
+          if (dialogElement) {
+            const width = dialogElement.clientWidth || dialogElement.offsetWidth;
+            if (width > 0) {
+              setIsMobile(width < 1200);
+              setWindowWidth(width);
+            }
+          }
+        }, 50);
+      }}
     >
-      <div style={{ 
-        display: 'flex', 
-        height: '600px',
-        maxHeight: '75vh'
-      }}>
+      <div className="network-tools-dialog-content">
         {/* Sidebar de categorías */}
-        <div style={{
-          width: '200px',
+        <div className="network-tools-sidebar" style={{
           background: 'rgba(0,0,0,0.2)',
-          borderRight: '1px solid rgba(255,255,255,0.1)',
-          overflowY: 'auto',
-          flexShrink: 0
+          borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.1)',
+          borderBottom: isMobile ? '1px solid rgba(255,255,255,0.1)' : 'none'
         }}>
           {TOOL_CATEGORIES.map(category => (
             <div key={category.id}>
@@ -1109,23 +1492,21 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
         </div>
 
         {/* Panel principal */}
-        <div style={{ 
-          flex: 1, 
-          display: 'flex', 
-          flexDirection: 'column',
-          overflow: 'hidden'
-        }}>
+        <div className="network-tools-main">
           {/* Header de herramienta seleccionada */}
           {currentTool && (
             <div style={{
-              padding: '1rem 1.5rem',
+              padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem',
               borderBottom: '1px solid rgba(255,255,255,0.1)',
               display: 'flex',
-              alignItems: 'center',
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: isMobile ? 'flex-start' : 'center',
               justifyContent: 'space-between',
-              background: 'rgba(0,0,0,0.1)'
+              gap: isMobile ? '0.75rem' : '0',
+              background: 'rgba(0,0,0,0.1)',
+              flexShrink: 0
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
                 <div style={{
                   width: '32px',
                   height: '32px',
@@ -1134,53 +1515,47 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                   border: `1px solid ${currentTool.categoryColor}50`,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  flexShrink: 0
                 }}>
                   <i className={currentTool.icon} style={{ color: currentTool.categoryColor, fontSize: '0.9rem' }} />
                 </div>
-                <div>
-                  <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600' }}>{currentTool.label}</h4>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentTool.label}</h4>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)', display: isMobile ? 'none' : 'block' }}>
                     {currentTool.description}
                   </span>
                 </div>
               </div>
               <Button
-                label="Ejecutar"
+                label={isMobile ? undefined : "Ejecutar"}
                 icon="pi pi-play"
                 onClick={executeTool}
                 disabled={loading}
                 style={{
                   background: `linear-gradient(135deg, ${currentTool.categoryColor} 0%, ${currentTool.categoryColor}cc 100%)`,
                   border: 'none',
-                  borderRadius: '8px'
+                  borderRadius: '8px',
+                  flexShrink: 0
                 }}
               />
             </div>
           )}
 
           {/* Contenido: formulario y resultados */}
-          <div style={{ 
-            flex: 1, 
-            display: 'flex', 
-            overflow: 'hidden'
-          }}>
+          <div className="network-tools-form-results">
             {/* Panel de formulario */}
-            <div style={{
-              width: '280px',
-              padding: '1.25rem',
-              borderRight: '1px solid rgba(255,255,255,0.1)',
-              overflowY: 'auto',
-              flexShrink: 0
+            <div className="network-tools-form" style={{
+              padding: '1rem',
+              borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.1)',
+              borderBottom: isMobile ? '1px solid rgba(255,255,255,0.1)' : 'none'
             }}>
               {renderToolForm()}
             </div>
 
             {/* Panel de resultados */}
-            <div style={{
-              flex: 1,
-              padding: '1.25rem',
-              overflowY: 'auto',
+            <div className="network-tools-results" style={{
+              padding: '1rem',
               background: 'rgba(0,0,0,0.1)'
             }}>
               <div style={{ 
@@ -1199,6 +1574,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
         </div>
       </div>
     </Dialog>
+    </>
   );
 };
 

@@ -33,10 +33,15 @@ function registerNetworkToolsHandlers() {
         return { success: false, error: 'Host es requerido' };
       }
       const service = getService();
-      return await service.ping(host, count, timeout);
+      const result = await service.ping(host, count, timeout);
+      // Asegurar que siempre devolvemos un objeto válido
+      if (!result || typeof result !== 'object') {
+        return { success: false, error: 'Respuesta inválida del servicio' };
+      }
+      return result;
     } catch (err) {
       console.error('[network-tools:ping] Error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: err?.message || 'Error desconocido al ejecutar ping' };
     }
   });
 
@@ -117,10 +122,15 @@ function registerNetworkToolsHandlers() {
         return { success: false, error: 'Host es requerido' };
       }
       const service = getService();
-      return await service.traceroute(host, maxHops);
+      const result = await service.traceroute(host, maxHops);
+      // Asegurar que siempre devolvemos un objeto válido
+      if (!result || typeof result !== 'object') {
+        return { success: false, error: 'Respuesta inválida del servicio' };
+      }
+      return result;
     } catch (err) {
       console.error('[network-tools:traceroute] Error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: err?.message || 'Error desconocido al ejecutar traceroute' };
     }
   });
 
