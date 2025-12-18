@@ -9,6 +9,7 @@ import { InputNumber } from 'primereact/inputnumber';
 
 import SettingsDialog from './SettingsDialog';
 import SyncSettingsDialog from './SyncSettingsDialog';
+import NetworkToolsDialog from './NetworkToolsDialog';
 import { SSHDialog, FolderDialog, GroupDialog, EditSSHConnectionDialog, EditRDPConnectionDialog, EditVNCConnectionDialog, FileConnectionDialog, ProtocolSelectionDialog, NewSSHConnectionDialog, NewRDPConnectionDialog, NewVNCConnectionDialog } from './Dialogs';
 
 /**
@@ -43,6 +44,8 @@ const DialogsManager = ({
   setShowFileConnectionDialog,
   showProtocolSelectionDialog,
   setShowProtocolSelectionDialog,
+  showNetworkToolsDialog,
+  setShowNetworkToolsDialog,
 
   // Estados de formularios SSH
   sshName,
@@ -663,6 +666,12 @@ const DialogsManager = ({
         onHide={() => setShowProtocolSelectionDialog(false)}
         onSelectProtocol={handleProtocolSelect}
         initialCategory={protocolSelectionInitialCategory}
+      />
+
+      {/* Diálogo de herramientas de red */}
+      <NetworkToolsDialog
+        visible={showNetworkToolsDialog}
+        onHide={() => setShowNetworkToolsDialog(false)}
       />
     </>
   );
