@@ -675,6 +675,57 @@ const NodeTermStatus = ({
 								Audit
 							</span>
 						</div>
+
+						{/* Botón Herramientas de Red */}
+						<div style={{
+							display: 'flex',
+							flexDirection: 'column',
+							alignItems: 'center',
+							gap: '0.25rem'
+						}}>
+							<button
+								title="Herramientas de Red y Seguridad"
+								onClick={() => {
+									window.dispatchEvent(new CustomEvent('open-network-tools-dialog'));
+								}}
+								style={{
+									cursor: 'pointer',
+									display: 'flex',
+									alignItems: 'center',
+									justifyContent: 'center',
+									width: `${compactBar.buttonSize}px`,
+									height: `${compactBar.buttonSize}px`,
+									padding: '0',
+									borderRadius: `${compactBar.buttonRadius}px`,
+									background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(6, 182, 212, 0.15) 100%)',
+									border: '1px solid rgba(6, 182, 212, 0.35)',
+									boxShadow: '0 1px 4px rgba(6, 182, 212, 0.2)',
+									transition: 'all 0.2s ease',
+									position: 'relative'
+								}}
+								onMouseEnter={(e) => {
+									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.35) 0%, rgba(6, 182, 212, 0.25) 100%)';
+									e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+									e.currentTarget.style.boxShadow = '0 3px 8px rgba(6, 182, 212, 0.3)';
+								}}
+								onMouseLeave={(e) => {
+									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(6, 182, 212, 0.15) 100%)';
+									e.currentTarget.style.transform = 'translateY(0) scale(1)';
+									e.currentTarget.style.boxShadow = '0 1px 4px rgba(6, 182, 212, 0.2)';
+								}}
+							>
+								<i className="pi pi-wifi" style={{ color: '#06b6d4', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
+							</button>
+							<span style={{
+								fontSize: compactBar.labelFontSize,
+								fontWeight: '500',
+								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+								textAlign: 'center',
+								lineHeight: compactBar.labelLineHeight
+							}}>
+								NetTools
+							</span>
+						</div>
 					</div>
 				</div>
 

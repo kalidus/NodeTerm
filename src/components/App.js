@@ -1053,6 +1053,7 @@ const App = () => {
     showUnifiedConnectionDialog, setShowUnifiedConnectionDialog,
     showFileConnectionDialog, setShowFileConnectionDialog,
     showProtocolSelectionDialog, setShowProtocolSelectionDialog,
+    showNetworkToolsDialog, setShowNetworkToolsDialog,
     // Estados de formularios SSH
     sshName, setSSHName,
     sshHost, setSSHHost,
@@ -1839,6 +1840,18 @@ const App = () => {
     };
   }, [openNewUnifiedConnectionDialog, setShowUnifiedConnectionDialog]);
 
+  // Event listener para abrir el diálogo de herramientas de red
+  useEffect(() => {
+    const handleOpenNetworkTools = () => {
+      setShowNetworkToolsDialog(true);
+    };
+
+    window.addEventListener('open-network-tools-dialog', handleOpenNetworkTools);
+    return () => {
+      window.removeEventListener('open-network-tools-dialog', handleOpenNetworkTools);
+    };
+  }, [setShowNetworkToolsDialog]);
+
   // Desactivar reactivación automática al cambiar rdpTabs si hay activación forzada u orden explícito
   useEffect(() => {
     if (activatingNowRef.current || onCreateActivateTabKey || lastOpenedTabKey) return;
@@ -2422,6 +2435,8 @@ const App = () => {
         setShowFileConnectionDialog={setShowFileConnectionDialog}
         showProtocolSelectionDialog={showProtocolSelectionDialog}
         setShowProtocolSelectionDialog={setShowProtocolSelectionDialog}
+        showNetworkToolsDialog={showNetworkToolsDialog}
+        setShowNetworkToolsDialog={setShowNetworkToolsDialog}
 
         // Estados de formularios SSH
         sshName={sshName}
