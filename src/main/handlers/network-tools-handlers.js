@@ -52,10 +52,14 @@ function registerNetworkToolsHandlers() {
         return { success: false, error: 'Host es requerido' };
       }
       const service = getService();
-      return await service.portScan(host, ports, timeout);
+      const result = await service.portScan(host, ports, timeout);
+      if (!result || typeof result !== 'object') {
+        return { success: false, error: 'Respuesta inválida del servicio' };
+      }
+      return result;
     } catch (err) {
       console.error('[network-tools:port-scan] Error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: err?.message || 'Error desconocido' };
     }
   });
 
@@ -66,10 +70,14 @@ function registerNetworkToolsHandlers() {
         return { success: false, error: 'Dominio es requerido' };
       }
       const service = getService();
-      return await service.dnsLookup(domain, type);
+      const result = await service.dnsLookup(domain, type);
+      if (!result || typeof result !== 'object') {
+        return { success: false, error: 'Respuesta inválida del servicio' };
+      }
+      return result;
     } catch (err) {
       console.error('[network-tools:dns-lookup] Error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: err?.message || 'Error desconocido' };
     }
   });
 
@@ -80,10 +88,14 @@ function registerNetworkToolsHandlers() {
         return { success: false, error: 'IP es requerida' };
       }
       const service = getService();
-      return await service.reverseDns(ip);
+      const result = await service.reverseDns(ip);
+      if (!result || typeof result !== 'object') {
+        return { success: false, error: 'Respuesta inválida del servicio' };
+      }
+      return result;
     } catch (err) {
       console.error('[network-tools:reverse-dns] Error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: err?.message || 'Error desconocido' };
     }
   });
 
@@ -94,10 +106,14 @@ function registerNetworkToolsHandlers() {
         return { success: false, error: 'Host es requerido' };
       }
       const service = getService();
-      return await service.sslCheck(host, port);
+      const result = await service.sslCheck(host, port);
+      if (!result || typeof result !== 'object') {
+        return { success: false, error: 'Respuesta inválida del servicio' };
+      }
+      return result;
     } catch (err) {
       console.error('[network-tools:ssl-check] Error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: err?.message || 'Error desconocido' };
     }
   });
 
@@ -108,10 +124,14 @@ function registerNetworkToolsHandlers() {
         return { success: false, error: 'Dominio es requerido' };
       }
       const service = getService();
-      return await service.whois(domain);
+      const result = await service.whois(domain);
+      if (!result || typeof result !== 'object') {
+        return { success: false, error: 'Respuesta inválida del servicio' };
+      }
+      return result;
     } catch (err) {
       console.error('[network-tools:whois] Error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: err?.message || 'Error desconocido' };
     }
   });
 
@@ -141,10 +161,14 @@ function registerNetworkToolsHandlers() {
         return { success: false, error: 'URL es requerida' };
       }
       const service = getService();
-      return await service.httpHeaders(url);
+      const result = await service.httpHeaders(url);
+      if (!result || typeof result !== 'object') {
+        return { success: false, error: 'Respuesta inválida del servicio' };
+      }
+      return result;
     } catch (err) {
       console.error('[network-tools:http-headers] Error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: err?.message || 'Error desconocido' };
     }
   });
 
@@ -155,10 +179,14 @@ function registerNetworkToolsHandlers() {
         return { success: false, error: 'CIDR es requerido' };
       }
       const service = getService();
-      return service.subnetCalc(cidr);
+      const result = service.subnetCalc(cidr);
+      if (!result || typeof result !== 'object') {
+        return { success: false, error: 'Respuesta inválida del servicio' };
+      }
+      return result;
     } catch (err) {
       console.error('[network-tools:subnet-calc] Error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: err?.message || 'Error desconocido' };
     }
   });
 
@@ -169,10 +197,14 @@ function registerNetworkToolsHandlers() {
         return { success: false, error: 'Dirección MAC es requerida' };
       }
       const service = getService();
-      return await service.wakeOnLan(mac, broadcast, port);
+      const result = await service.wakeOnLan(mac, broadcast, port);
+      if (!result || typeof result !== 'object') {
+        return { success: false, error: 'Respuesta inválida del servicio' };
+      }
+      return result;
     } catch (err) {
       console.error('[network-tools:wake-on-lan] Error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: err?.message || 'Error desconocido' };
     }
   });
 
@@ -183,10 +215,14 @@ function registerNetworkToolsHandlers() {
         return { success: false, error: 'Subred es requerida' };
       }
       const service = getService();
-      return await service.networkScan(subnet, timeout);
+      const result = await service.networkScan(subnet, timeout);
+      if (!result || typeof result !== 'object') {
+        return { success: false, error: 'Respuesta inválida del servicio' };
+      }
+      return result;
     } catch (err) {
       console.error('[network-tools:network-scan] Error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: err?.message || 'Error desconocido' };
     }
   });
 
@@ -194,10 +230,32 @@ function registerNetworkToolsHandlers() {
   ipcMain.handle('network-tools:get-interfaces', async () => {
     try {
       const service = getService();
-      return service.getNetworkInterfaces();
+      const result = service.getNetworkInterfaces();
+      
+      // Asegurar que siempre devolvemos un objeto válido
+      if (!result || typeof result !== 'object') {
+        console.error('[network-tools:get-interfaces] Respuesta inválida del servicio:', result);
+        return { success: false, error: 'Respuesta inválida del servicio', interfaces: [] };
+      }
+      
+      // Asegurar que interfaces es un array
+      if (!Array.isArray(result.interfaces)) {
+        console.warn('[network-tools:get-interfaces] interfaces no es un array, convirtiendo...');
+        result.interfaces = [];
+      }
+      
+      // Si el servicio devolvió un error, devolverlo tal cual
+      if (result.success === false) {
+        return result;
+      }
+      
+      // Asegurar que success es true si llegamos aquí
+      result.success = true;
+      
+      return result;
     } catch (err) {
       console.error('[network-tools:get-interfaces] Error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: err?.message || 'Error desconocido', interfaces: [] };
     }
   });
 

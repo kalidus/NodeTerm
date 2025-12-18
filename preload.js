@@ -132,7 +132,8 @@ contextBridge.exposeInMainWorld('electron', {
         'create-temp-file',
         'cleanup-temp-file',
         /^recording:.*$/,
-        /^mcp:.*$/
+        /^mcp:.*$/,
+        /^network-tools:.*$/
       ];
       if (validChannels.some(regex => {
         if (typeof regex === 'string') {

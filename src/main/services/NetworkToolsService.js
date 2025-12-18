@@ -17,10 +17,77 @@ const https = require('https');
 const http = require('http');
 const dgram = require('dgram');
 const os = require('os');
+const { promisify } = require('util');
+
+const execAsync = promisify(exec);
 
 class NetworkToolsService {
   constructor() {
     this.platform = process.platform;
+    this.commandCache = new Map(); // Cache para comandos disponibles
+  }
+
+  /**
+   * Verifica si un comando está disponible en el sistema
+   * @private
+   */
+  async _isCommandAvailable(command) {
+    if (this.commandCache.has(command)) {
+      return this.commandCache.get(command);
+    }
+
+    try {
+      if (this.platform === 'win32') {
+        // En Windows, usar 'where' para verificar comandos
+        // where es un comando interno de cmd.exe
+        const { stdout } = await execAsync(`where ${command}`, {
+          timeout: 2000,
+          shell: true
+        });
+        const isAvailable = stdout && stdout.trim().length > 0 && !stdout.includes('INFO:');
+        this.commandCache.set(command, isAvailable);
+        return isAvailable;
+      } else {
+        // En Unix/Linux/macOS, usar 'command -v' (más portable que 'which')
+        const { stdout } = await execAsync(`command -v ${command}`, {
+          timeout: 2000,
+          shell: true
+        });
+        const isAvailable = stdout && stdout.trim().length > 0;
+        this.commandCache.set(command, isAvailable);
+        return isAvailable;
+      }
+    } catch (error) {
+      // Si hay error, el comando no está disponible
+      this.commandCache.set(command, false);
+      return false;
+    }
+  }
+
+  /**
+   * Obtiene el comando correcto según la plataforma
+   * @private
+   */
+  _getCommand(commandName) {
+    const commands = {
+      ping: {
+        win32: 'ping',
+        darwin: 'ping',
+        linux: 'ping'
+      },
+      traceroute: {
+        win32: 'tracert',
+        darwin: 'traceroute',
+        linux: 'traceroute'
+      },
+      whois: {
+        win32: 'whois',
+        darwin: 'whois',
+        linux: 'whois'
+      }
+    };
+
+    return commands[commandName]?.[this.platform] || commandName;
   }
 
   /**
@@ -31,7 +98,7 @@ class NetworkToolsService {
    * @returns {Promise<Object>} Ping results
    */
   async ping(host, count = 4, timeout = 5) {
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
       if (!host || typeof host !== 'string') {
         return resolve({ success: false, error: 'Host inválido' });
       }
@@ -40,10 +107,26 @@ class NetworkToolsService {
       let command;
       let args;
 
+      // Verificar disponibilidad del comando ping
+      const pingCmd = this._getCommand('ping');
+      const isAvailable = await this._isCommandAvailable(pingCmd);
+      
+      if (!isAvailable) {
+        return resolve({ 
+          success: false, 
+          error: `El comando 'ping' no está disponible en esta plataforma (${this.platform}). Por favor, instálalo o usa una alternativa.` 
+        });
+      }
+
       if (this.platform === 'win32') {
         command = 'ping';
         args = ['-n', count.toString(), '-w', (timeout * 1000).toString(), sanitizedHost];
+      } else if (this.platform === 'darwin') {
+        // macOS
+        command = 'ping';
+        args = ['-c', count.toString(), '-W', (timeout * 1000).toString(), sanitizedHost];
       } else {
+        // Linux y otros Unix
         command = 'ping';
         args = ['-c', count.toString(), '-W', timeout.toString(), sanitizedHost];
       }
@@ -147,24 +230,59 @@ class NetworkToolsService {
             results.received = results.times.length;
           }
         } else {
-          // Linux/Mac ping output parsing
-          const timeMatches = output.match(/time=(\d+\.?\d*)\s*ms/gi);
-          if (timeMatches) {
-            results.times = timeMatches.map(m => parseFloat(m.match(/[\d.]+/)[0]));
-            results.received = results.times.length;
+          // Linux/macOS ping output parsing
+          // macOS puede usar formato diferente: "time=XX.XXX ms" o "time<XX ms"
+          const timePatterns = [
+            /time[=<](\d+\.?\d*)\s*ms/gi,
+            /time=(\d+\.?\d*)\s*ms/gi,
+            /(\d+\.?\d*)\s*ms/gi
+          ];
+          
+          for (const pattern of timePatterns) {
+            const matches = output.match(pattern);
+            if (matches && matches.length > 0) {
+              results.times = matches.map(m => {
+                const numMatch = m.match(/[\d.]+/);
+                return numMatch ? parseFloat(numMatch[0]) : null;
+              }).filter(t => t !== null);
+              if (results.times.length > 0) {
+                results.received = results.times.length;
+                break;
+              }
+            }
           }
 
-          const statsMatch = output.match(/(\d+)\s*packets?\s*transmitted,\s*(\d+)\s*(?:packets?\s*)?received/i);
-          if (statsMatch) {
-            results.sent = parseInt(statsMatch[1]);
-            results.received = parseInt(statsMatch[2]);
+          // Estadísticas de paquetes
+          const statsPatterns = [
+            /(\d+)\s*packets?\s*transmitted[,\s]+(\d+)\s*(?:packets?\s*)?received/i,
+            /(\d+)\s*packets?\s*transmitted[,\s]+(\d+)\s*received/i,
+            /(\d+)\s*transmitted[,\s]+(\d+)\s*received/i
+          ];
+
+          for (const pattern of statsPatterns) {
+            const match = output.match(pattern);
+            if (match) {
+              results.sent = parseInt(match[1]);
+              results.received = parseInt(match[2]);
+              break;
+            }
           }
 
-          const rttMatch = output.match(/rtt\s+min\/avg\/max\/\w+\s*=\s*([\d.]+)\/([\d.]+)\/([\d.]+)/i);
-          if (rttMatch) {
-            results.min = parseFloat(rttMatch[1]);
-            results.avg = parseFloat(rttMatch[2]);
-            results.max = parseFloat(rttMatch[3]);
+          // RTT statistics (Linux y algunos macOS)
+          const rttPatterns = [
+            /rtt\s+min\/avg\/max\/\w+\s*=\s*([\d.]+)\/([\d.]+)\/([\d.]+)/i,
+            /round-trip\s+min\/avg\/max\s*=\s*([\d.]+)\/([\d.]+)\/([\d.]+)/i,
+            /min\/avg\/max\s*=\s*([\d.]+)\/([\d.]+)\/([\d.]+)/i
+          ];
+
+          for (const pattern of rttPatterns) {
+            const rttMatch = output.match(pattern);
+            if (rttMatch) {
+              results.min = parseFloat(rttMatch[1]);
+              results.avg = parseFloat(rttMatch[2]);
+              results.max = parseFloat(rttMatch[3]);
+              break;
+            }
           }
         }
 
@@ -188,7 +306,11 @@ class NetworkToolsService {
 
       child.on('error', (err) => {
         console.error('[NetworkToolsService] Error en ping:', err);
-        results.error = err.message || 'Error ejecutando ping';
+        if (err.code === 'ENOENT') {
+          results.error = `El comando 'ping' no se encontró. Por favor, asegúrate de que está instalado y disponible en tu PATH.`;
+        } else {
+          results.error = err.message || 'Error ejecutando ping';
+        }
         results.success = false;
         resolve(results);
       });
@@ -614,7 +736,7 @@ class NetworkToolsService {
 
     const sanitizedDomain = domain.trim().toLowerCase().replace(/[;&|`$]/g, '');
 
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
       const results = {
         success: false,
         domain: sanitizedDomain,
@@ -623,7 +745,21 @@ class NetworkToolsService {
         error: null
       };
 
-      const command = this.platform === 'win32' ? 'whois' : 'whois';
+      // Verificar disponibilidad del comando whois
+      const whoisCmd = this._getCommand('whois');
+      const isAvailable = await this._isCommandAvailable(whoisCmd);
+      
+      if (!isAvailable) {
+        return resolve({ 
+          success: false, 
+          error: `El comando 'whois' no está disponible en esta plataforma (${this.platform}). Por favor, instálalo:\n\n` +
+                 `- Windows: Descarga desde https://docs.microsoft.com/en-us/sysinternals/downloads/whois\n` +
+                 `- macOS: brew install whois\n` +
+                 `- Linux: sudo apt-get install whois (Debian/Ubuntu) o sudo yum install whois (RHEL/CentOS)`
+        });
+      }
+
+      const command = whoisCmd;
       const args = [sanitizedDomain];
 
       const child = spawn(command, args, { timeout: 30000 });
@@ -657,9 +793,12 @@ class NetworkToolsService {
       child.on('error', (err) => {
         // WHOIS might not be installed
         if (err.code === 'ENOENT') {
-          results.error = 'El comando whois no está disponible en este sistema';
+          results.error = `El comando 'whois' no se encontró. Por favor, instálalo:\n\n` +
+                         `- Windows: Descarga desde https://docs.microsoft.com/en-us/sysinternals/downloads/whois\n` +
+                         `- macOS: brew install whois\n` +
+                         `- Linux: sudo apt-get install whois (Debian/Ubuntu) o sudo yum install whois (RHEL/CentOS)`;
         } else {
-          results.error = err.message;
+          results.error = err.message || 'Error ejecutando whois';
         }
         resolve(results);
       });
@@ -726,7 +865,7 @@ class NetworkToolsService {
 
     const sanitizedHost = host.trim().replace(/[;&|`$]/g, '');
 
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
       const results = {
         success: false,
         host: sanitizedHost,
@@ -737,10 +876,26 @@ class NetworkToolsService {
 
       let command, args;
 
+      // Verificar disponibilidad del comando traceroute/tracert
+      const tracerouteCmd = this._getCommand('traceroute');
+      const isAvailable = await this._isCommandAvailable(tracerouteCmd);
+      
+      if (!isAvailable) {
+        return resolve({ 
+          success: false, 
+          error: `El comando '${tracerouteCmd}' no está disponible en esta plataforma (${this.platform}). Por favor, instálalo o usa una alternativa.` 
+        });
+      }
+
       if (this.platform === 'win32') {
         command = 'tracert';
         args = ['-h', maxHops.toString(), '-w', '3000', sanitizedHost];
+      } else if (this.platform === 'darwin') {
+        // macOS
+        command = 'traceroute';
+        args = ['-m', maxHops.toString(), '-w', '3', sanitizedHost];
       } else {
+        // Linux y otros Unix
         command = 'traceroute';
         args = ['-m', maxHops.toString(), '-w', '3', sanitizedHost];
       }
@@ -759,15 +914,35 @@ class NetworkToolsService {
       child.on('close', (code) => {
         results.rawOutput = output;
 
+        // Si no hay salida, marcar como error
+        if (!output || output.trim().length === 0) {
+          results.error = 'El comando no produjo ninguna salida. Verifica que el comando esté instalado y funcionando.';
+          results.success = false;
+          return resolve(results);
+        }
+
         // Parse traceroute output
         const lines = output.split('\n');
         let hopNumber = 0;
 
         for (const line of lines) {
+          const trimmedLine = line.trim();
+          if (!trimmedLine || trimmedLine.length === 0) continue;
+          
           // Windows format: "  1    <1 ms    <1 ms    <1 ms  192.168.1.1"
+          // También puede ser: "  1    1 ms    2 ms    3 ms  192.168.1.1"
+          // O: "  1    *        *        *     Tiempo de espera agotado."
+          const winMatch = trimmedLine.match(/^\s*(\d+)\s+(?:(\*|<?\d+)\s*ms\s+)?(?:(\*|<?\d+)\s*ms\s+)?(?:(\*|<?\d+)\s*ms\s+)?(.+)?$/);
+          
           // Linux format: " 1  192.168.1.1 (192.168.1.1)  0.123 ms  0.456 ms  0.789 ms"
-          const winMatch = line.match(/^\s*(\d+)\s+(?:(\*|<?\d+)\s*ms\s+)?(?:(\*|<?\d+)\s*ms\s+)?(?:(\*|<?\d+)\s*ms\s+)?(.+)?$/);
-          const linuxMatch = line.match(/^\s*(\d+)\s+(.+?)\s+\(?([\d.]+)\)?\s+([\d.]+)\s*ms/);
+          // O: " 1  * * *"
+          const unixMatch = trimmedLine.match(/^\s*(\d+)\s+(.+?)\s+\(?([\d.]+)\)?\s+([\d.]+)\s*ms/);
+          
+          // macOS puede tener formato: " 1  hostname (IP)  X.XXX ms  Y.YYY ms  Z.ZZZ ms"
+          const macMatch = trimmedLine.match(/^\s*(\d+)\s+(.+?)\s+\(?([\d.]+)\)?\s+([\d.]+)\s*ms\s+([\d.]+)\s*ms\s+([\d.]+)\s*ms/);
+          
+          // Linux alternativo: " 1  * * *" o " 1  hostname  0.123 ms * *"
+          const unixAltMatch = trimmedLine.match(/^\s*(\d+)\s+(.+?)\s+([\d.]+\s*ms|\*)/);
 
           if (winMatch && winMatch[1]) {
             hopNumber = parseInt(winMatch[1]);
@@ -777,34 +952,80 @@ class NetworkToolsService {
               .map(t => parseFloat(t) || 0);
 
             const hostInfo = winMatch[5] ? winMatch[5].trim() : '*';
+            // Limpiar hostInfo de texto adicional
+            const cleanHost = hostInfo.replace(/Tiempo de espera agotado\.?/i, '').replace(/Request timed out\.?/i, '').trim();
 
             results.hops.push({
               hop: hopNumber,
-              host: hostInfo !== '*' ? hostInfo : null,
+              host: cleanHost !== '*' && cleanHost.length > 0 ? cleanHost : null,
               times: times,
               avgTime: times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : null,
-              timeout: hostInfo === '*' || times.length === 0
+              timeout: cleanHost === '*' || times.length === 0 || hostInfo.includes('Tiempo de espera') || hostInfo.includes('timed out')
             });
-          } else if (linuxMatch) {
-            hopNumber = parseInt(linuxMatch[1]);
-            const hostName = linuxMatch[2].trim();
-            const ip = linuxMatch[3];
-            const time = parseFloat(linuxMatch[4]);
+          } else if (macMatch) {
+            // macOS con 3 tiempos
+            hopNumber = parseInt(macMatch[1]);
+            const hostName = macMatch[2].trim();
+            const ip = macMatch[3];
+            const times = [parseFloat(macMatch[4]), parseFloat(macMatch[5]), parseFloat(macMatch[6])];
 
             results.hops.push({
               hop: hopNumber,
               host: hostName,
               ip: ip,
+              times: times,
+              avgTime: times.reduce((a, b) => a + b, 0) / times.length,
+              timeout: false
+            });
+          } else if (unixMatch) {
+            // Linux y otros Unix
+            hopNumber = parseInt(unixMatch[1]);
+            const hostName = unixMatch[2].trim();
+            const ip = unixMatch[3];
+            const time = parseFloat(unixMatch[4]);
+
+            results.hops.push({
+              hop: hopNumber,
+              host: hostName !== '*' ? hostName : null,
+              ip: ip,
               times: [time],
               avgTime: time,
-              timeout: false
+              timeout: hostName === '*'
+            });
+          } else if (unixAltMatch) {
+            // Formato alternativo de Linux
+            hopNumber = parseInt(unixAltMatch[1]);
+            const hostInfo = unixAltMatch[2].trim();
+            const timeInfo = unixAltMatch[3];
+            
+            const times = [];
+            if (timeInfo !== '*') {
+              const timeMatch = timeInfo.match(/([\d.]+)\s*ms/);
+              if (timeMatch) {
+                times.push(parseFloat(timeMatch[1]));
+              }
+            }
+
+            results.hops.push({
+              hop: hopNumber,
+              host: hostInfo !== '*' ? hostInfo : null,
+              times: times,
+              avgTime: times.length > 0 ? times[0] : null,
+              timeout: hostInfo === '*' || times.length === 0
             });
           }
         }
 
+        // Si no se encontraron hops pero hay salida, considerar éxito parcial
         results.success = results.hops.length > 0;
-        if (!results.success && !results.error) {
-          results.error = 'No se pudieron obtener resultados del traceroute';
+        
+        if (!results.success) {
+          // Si hay salida pero no se pudo parsear, incluir la salida en el error
+          if (output && output.trim().length > 0) {
+            results.error = `No se pudieron parsear los resultados del traceroute. Salida del comando:\n\n${output.substring(0, 500)}${output.length > 500 ? '...' : ''}`;
+          } else {
+            results.error = 'No se pudieron obtener resultados del traceroute';
+          }
         }
 
         resolve(results);
@@ -812,12 +1033,29 @@ class NetworkToolsService {
 
       child.on('error', (err) => {
         if (err.code === 'ENOENT') {
-          results.error = 'El comando traceroute/tracert no está disponible';
+          const cmdName = this.platform === 'win32' ? 'tracert' : 'traceroute';
+          results.error = `El comando '${cmdName}' no se encontró. Por favor, instálalo:\n\n` +
+                         `- Windows: Ya incluido en Windows\n` +
+                         `- macOS: Ya incluido en macOS\n` +
+                         `- Linux: sudo apt-get install traceroute (Debian/Ubuntu) o sudo yum install traceroute (RHEL/CentOS)`;
         } else {
-          results.error = err.message;
+          results.error = err.message || 'Error ejecutando traceroute';
         }
+        results.rawOutput = output || ''; // Incluir cualquier salida capturada antes del error
         resolve(results);
       });
+      
+      // Timeout de seguridad adicional
+      setTimeout(() => {
+        if (child && !child.killed) {
+          child.kill();
+          if (results.hops.length === 0 && !results.error) {
+            results.error = `Timeout: El comando traceroute excedió el tiempo máximo (120s). Salida parcial:\n\n${output.substring(0, 500)}${output.length > 500 ? '...' : ''}`;
+            results.rawOutput = output || '';
+            resolve(results);
+          }
+        }
+      }, 125000); // 125 segundos (5 segundos más que el timeout del proceso)
     });
   }
 
@@ -1191,30 +1429,49 @@ class NetworkToolsService {
    * @returns {Object} Network interfaces information
    */
   getNetworkInterfaces() {
-    const interfaces = os.networkInterfaces();
-    const result = [];
+    try {
+      const interfaces = os.networkInterfaces();
+      const result = [];
 
-    for (const [name, addrs] of Object.entries(interfaces)) {
-      if (!addrs) continue;
-
-      for (const addr of addrs) {
-        if (addr.internal) continue; // Skip loopback
-
-        result.push({
-          name: name,
-          address: addr.address,
-          netmask: addr.netmask,
-          family: addr.family,
-          mac: addr.mac,
-          cidr: addr.cidr
-        });
+      // Validar que interfaces es un objeto válido
+      if (!interfaces || typeof interfaces !== 'object') {
+        console.warn('[NetworkToolsService] os.networkInterfaces() devolvió un valor inválido');
+        return {
+          success: true,
+          interfaces: []
+        };
       }
-    }
 
-    return {
-      success: true,
-      interfaces: result
-    };
+      for (const [name, addrs] of Object.entries(interfaces)) {
+        if (!addrs || !Array.isArray(addrs)) continue;
+
+        for (const addr of addrs) {
+          if (!addr || typeof addr !== 'object') continue;
+          if (addr.internal) continue; // Skip loopback
+
+          result.push({
+            name: name || 'unknown',
+            address: addr.address || '',
+            netmask: addr.netmask || '',
+            family: addr.family || 'IPv4',
+            mac: addr.mac || '',
+            cidr: addr.cidr || null
+          });
+        }
+      }
+
+      return {
+        success: true,
+        interfaces: result
+      };
+    } catch (err) {
+      console.error('[NetworkToolsService] Error obteniendo interfaces de red:', err);
+      return {
+        success: false,
+        error: err?.message || 'Error desconocido al obtener interfaces de red',
+        interfaces: []
+      };
+    }
   }
 }
 
