@@ -53,18 +53,22 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
     updateSyncStatus();
   }, []);
 
-  const loadConfiguration = () => {
-    // Cargar configuración de Nextcloud si existe
-    syncManager.nextcloudService.loadConfig();
-    
-    if (syncManager.nextcloudService.isConfigured) {
-      setNextcloudConfig({
-        baseUrl: syncManager.nextcloudService.baseUrl || '',
-        username: syncManager.nextcloudService.username || '',
-        password: '••••••••', // Mostrar asteriscos por seguridad
-        ignoreSSLErrors: syncManager.nextcloudService.ignoreSSLErrors || false
-      });
-      setIsConfigured(true);
+  const loadConfiguration = async () => {
+    // Cargar configuración de Nextcloud si existe (ahora es async)
+    try {
+      const loaded = await syncManager.nextcloudService.loadConfig();
+      
+      if (loaded && syncManager.nextcloudService.isConfigured) {
+        setNextcloudConfig({
+          baseUrl: syncManager.nextcloudService.baseUrl || '',
+          username: syncManager.nextcloudService.username || '',
+          password: '••••••••', // Mostrar asteriscos por seguridad
+          ignoreSSLErrors: syncManager.nextcloudService.ignoreSSLErrors || false
+        });
+        setIsConfigured(true);
+      }
+    } catch (error) {
+      console.error('Error cargando configuración Nextcloud:', error);
     }
   };
 
@@ -100,12 +104,12 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
     setMessage(null);
 
     try {
-      // Configurar temporalmente para hacer la prueba
+      // Configurar temporalmente para hacer la prueba (ahora es async)
       const tempPassword = nextcloudConfig.password === '••••••••' 
         ? syncManager.nextcloudService.password 
         : nextcloudConfig.password;
         
-      syncManager.nextcloudService.configure(
+      await syncManager.nextcloudService.configure(
         nextcloudConfig.baseUrl,
         nextcloudConfig.username,
         tempPassword,
@@ -127,7 +131,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
     }
   };
 
-  const saveConfiguration = () => {
+  const saveConfiguration = async () => {
     if (!isConfigured) {
       setMessage({ severity: 'warn', summary: 'Advertencia', detail: 'Pruebe la conexión primero' });
       return;
@@ -138,7 +142,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
         ? syncManager.nextcloudService.password 
         : nextcloudConfig.password;
         
-      syncManager.nextcloudService.configure(
+      await syncManager.nextcloudService.configure(
         nextcloudConfig.baseUrl,
         nextcloudConfig.username,
         tempPassword,

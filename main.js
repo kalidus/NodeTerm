@@ -343,6 +343,44 @@ setInterval(() => {
 // Funciones de parsing movidas a main/utils/parsing-utils.js
 
 /**
+ * Obtiene o crea una clave secreta única para Guacamole
+ * La clave se genera una vez por instalación y se guarda de forma segura
+ */
+async function getOrCreateGuacamoleSecretKey() {
+  const crypto = require('crypto');
+  const fs = require('fs').promises;
+  const keyPath = path.join(app.getPath('userData'), 'guacamole-secret.key');
+  
+  try {
+    // Intentar cargar clave existente
+    const existingKey = await fs.readFile(keyPath);
+    if (existingKey.length === 32) {
+      console.log('🔐 [Guacamole] Clave secreta cargada desde archivo');
+      return existingKey;
+    } else {
+      console.warn('⚠️ [Guacamole] Clave existente tiene tamaño incorrecto, generando nueva');
+    }
+  } catch (error) {
+    // Archivo no existe o error al leerlo, generar nueva clave
+    console.log('🔐 [Guacamole] Generando nueva clave secreta única...');
+  }
+  
+  // Generar nueva clave aleatoria de 32 bytes (256 bits) para AES-256-CBC
+  const newKey = crypto.randomBytes(32);
+  
+  try {
+    // Guardar clave con permisos restrictivos (solo lectura para el usuario)
+    await fs.writeFile(keyPath, newKey, { mode: 0o600 });
+    console.log('✅ [Guacamole] Clave secreta única generada y guardada de forma segura');
+  } catch (writeError) {
+    console.error('❌ [Guacamole] Error guardando clave secreta:', writeError);
+    // Continuar con la clave en memoria aunque no se haya guardado
+  }
+  
+  return newKey;
+}
+
+/**
  * Inicializa servicios de Guacamole de forma asíncrona
  */
 async function initializeGuacamoleServices() {
@@ -380,10 +418,10 @@ async function initializeGuacamoleServices() {
 
     const guacdOptions = guacdService.getGuacdOptions();
     
-    // Generar clave de 32 bytes para AES-256-CBC
+    // ✅ SEGURIDAD: Obtener o crear clave secreta única por instalación
+    // En lugar de usar una clave hardcodeada, generamos una única por instalación
     const crypto = require('crypto');
-    const SECRET_KEY_RAW = 'NodeTermGuacamoleSecretKey2024!';
-    const SECRET_KEY = crypto.createHash('sha256').update(SECRET_KEY_RAW).digest(); // 32 bytes exactos
+    const SECRET_KEY = await getOrCreateGuacamoleSecretKey(); // 32 bytes exactos para AES-256-CBC
     
     // Desactivar watchdogs de inactividad para evitar cierres falsos
     // 1) Watchdog de WebSocket (lado cliente en guacamole-lite): maxInactivityTime=0 → desactivado
