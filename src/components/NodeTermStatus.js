@@ -25,6 +25,11 @@ const NodeTermStatus = ({
 	const [guacdState, setGuacdState] = useState({ isRunning: false, method: 'unknown', host: '127.0.0.1', port: 4822 });
 	const [vaultState, setVaultState] = useState({ configured: false, unlocked: false });
 	const [ollamaState, setOllamaState] = useState({ isRunning: false, url: 'http://localhost:11434', isRemote: false });
+	const [aiClientsState, setAiClientsState] = useState({
+		nodeterm: false,
+		anythingllm: { enabled: false, running: false },
+		openwebui: { enabled: false, running: false }
+	});
 	const [wslDistributions, setWSLDistributions] = useState([]);
 	const [cygwinAvailable, setCygwinAvailable] = useState(false);
 	const [dockerContainers, setDockerContainers] = useState([]);
@@ -109,9 +114,132 @@ const NodeTermStatus = ({
 		fetchOllama();
 		const ollamaIntervalId = setInterval(fetchOllama, 10000); // Reducido de 5000ms a 10000ms para ahorrar CPU/RAM
 
+		// Verificar estado de servicios Docker de IA
+		const checkAIDockerServices = async () => {
+			try {
+				if (window?.electron?.ipcRenderer) {
+					// Obtener configuración actual desde localStorage
+					const saved = localStorage.getItem('ai_clients_enabled');
+					let config = { anythingllm: false, openwebui: false };
+					if (saved) {
+						try {
+							config = JSON.parse(saved);
+						} catch (e) {}
+					}
+
+					// Verificar AnythingLLM
+					if (config.anythingllm) {
+						try {
+							const anythingllmResult = await window.electron.ipcRenderer.invoke('anythingllm:get-status');
+							const isRunning = anythingllmResult?.success && anythingllmResult?.status?.isRunning || false;
+							console.log('[NodeTermStatus] AnythingLLM estado:', { enabled: true, running: isRunning, result: anythingllmResult });
+							setAiClientsState(prev => ({
+								...prev,
+								anythingllm: {
+									enabled: true,
+									running: isRunning
+								}
+							}));
+						} catch (e) {
+							console.warn('[NodeTermStatus] Error verificando AnythingLLM:', e);
+							setAiClientsState(prev => ({
+								...prev,
+								anythingllm: { enabled: true, running: false }
+							}));
+						}
+					} else {
+						setAiClientsState(prev => ({
+							...prev,
+							anythingllm: { enabled: false, running: false }
+						}));
+					}
+
+					// Verificar OpenWebUI
+					if (config.openwebui) {
+						try {
+							const openwebuiResult = await window.electron.ipcRenderer.invoke('openwebui:get-status');
+							setAiClientsState(prev => ({
+								...prev,
+								openwebui: {
+									...prev.openwebui,
+									enabled: true,
+									running: openwebuiResult?.success && openwebuiResult?.status?.isRunning || false
+								}
+							}));
+						} catch (e) {
+							setAiClientsState(prev => ({
+								...prev,
+								openwebui: { ...prev.openwebui, enabled: true, running: false }
+							}));
+						}
+					} else {
+						setAiClientsState(prev => ({
+							...prev,
+							openwebui: { enabled: false, running: false }
+						}));
+					}
+				}
+			} catch (error) {
+				console.warn('[NodeTermStatus] Error verificando servicios Docker de IA:', error);
+			}
+		};
+
+		// Cargar configuración de clientes de IA
+		const loadAIClientsConfig = () => {
+			try {
+				const saved = localStorage.getItem('ai_clients_enabled');
+				if (saved) {
+					const parsed = JSON.parse(saved);
+					setAiClientsState({
+						nodeterm: parsed.nodeterm || false,
+						anythingllm: { enabled: parsed.anythingllm || false, running: false },
+						openwebui: { enabled: parsed.openwebui || false, running: false }
+					});
+					// Si hay clientes habilitados, verificar su estado inmediatamente
+					if (parsed.anythingllm || parsed.openwebui) {
+						setTimeout(checkAIDockerServices, 500);
+					}
+				}
+			} catch (error) {
+				console.warn('[NodeTermStatus] Error cargando configuración de clientes de IA:', error);
+			}
+		};
+		loadAIClientsConfig();
+		checkAIDockerServices();
+		const aiServicesIntervalId = setInterval(checkAIDockerServices, 10000);
+
+		// Escuchar cambios en la configuración de clientes de IA
+		const handleAIClientsConfigChange = (e) => {
+			if (e.detail?.config) {
+				const config = e.detail.config;
+				setAiClientsState(prev => ({
+					nodeterm: config.nodeterm || false,
+					anythingllm: { enabled: config.anythingllm || false, running: prev.anythingllm.running },
+					openwebui: { enabled: config.openwebui || false, running: prev.openwebui.running }
+				}));
+				// Verificar estado de servicios después de actualizar configuración
+				setTimeout(checkAIDockerServices, 500);
+			} else {
+				// Si no hay detail, recargar desde localStorage
+				loadAIClientsConfig();
+				setTimeout(checkAIDockerServices, 500);
+			}
+		};
+		window.addEventListener('ai-clients-config-changed', handleAIClientsConfigChange);
+		const handleStorageChange = (e) => {
+			if (e.key === 'ai_clients_enabled') {
+				loadAIClientsConfig();
+				setTimeout(checkAIDockerServices, 500);
+			}
+		};
+		window.addEventListener('storage', handleStorageChange);
+
 		return () => { 
 			if (intervalId) clearInterval(intervalId);
 			if (ollamaIntervalId) clearInterval(ollamaIntervalId);
+			if (aiServicesIntervalId) clearInterval(aiServicesIntervalId);
+			window.removeEventListener('ai-clients-config-changed', handleAIClientsConfigChange);
+			window.removeEventListener('storage', handleStorageChange);
 		};
 	}, []);
 
@@ -964,6 +1092,267 @@ const NodeTermStatus = ({
 							</div>
 						</div>
 					)}
+
+					{/* Separador vertical decorativo */}
+					{(() => {
+						const hasActiveAIClients = aiClientsState.nodeterm || 
+							aiClientsState.anythingllm.enabled ||
+							aiClientsState.openwebui.enabled;
+						
+						if (!hasActiveAIClients) return null;
+						
+						return (
+							<div style={{
+								width: '1px',
+								height: `${compactBar.separatorHeight}px`,
+								background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
+								borderRadius: '1px',
+								flexShrink: 0,
+								margin: '0 0.5rem',
+								minWidth: '1px'
+							}} />
+						);
+					})()}
+
+					{/* SECCIÓN 4: CLIENTES DE IA */}
+					{(() => {
+						const hasActiveAIClients = aiClientsState.nodeterm || 
+							aiClientsState.anythingllm.enabled ||
+							aiClientsState.openwebui.enabled;
+						
+						if (!hasActiveAIClients) return null;
+
+						return (
+							<div style={{
+								display: 'flex',
+								flexDirection: 'column',
+								gap: '0.4rem',
+								alignItems: 'center',
+								justifyContent: 'center',
+								minWidth: 0,
+								flexShrink: 0
+							}}>
+								{/* Badges de clientes de IA */}
+								<div style={{
+									display: 'flex',
+									alignItems: 'flex-start',
+									justifyContent: 'flex-start',
+									gap: '0.5rem',
+									flexWrap: 'nowrap',
+									maxWidth: '100%',
+									overflow: 'visible',
+									width: 'auto'
+								}}>
+									{/* NodeTerm AI */}
+									{aiClientsState.nodeterm && (
+										<div style={{
+											display: 'flex',
+											flexDirection: 'column',
+											alignItems: 'center',
+											gap: '0.25rem',
+											flexShrink: 0
+										}}>
+											<div 
+												title="NodeTerm AI: Activo"
+												onClick={() => {
+													const tabId = `ai-chat-${Date.now()}`;
+													const newAITab = {
+														key: tabId,
+														label: 'Chat IA',
+														type: 'ai-chat',
+														createdAt: Date.now(),
+														groupId: null
+													};
+													window.dispatchEvent(new CustomEvent('create-ai-chat-tab', {
+														detail: { tab: newAITab }
+													}));
+												}}
+												style={{
+													position: 'relative',
+													width: `${compactBar.serviceSize}px`,
+													height: `${compactBar.serviceSize}px`,
+													borderRadius: '50%',
+													background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(139, 92, 246, 0.15) 100%)',
+													border: '2px solid rgba(139, 92, 246, 0.50)',
+													display: 'flex',
+													alignItems: 'center',
+													justifyContent: 'center',
+													boxShadow: '0 1px 4px rgba(139, 92, 246, 0.20)',
+													cursor: 'pointer',
+													transition: 'all 0.2s ease'
+												}}
+												onMouseEnter={(e) => {
+													e.currentTarget.style.transform = 'translateY(-1px) scale(1.1)';
+													e.currentTarget.style.boxShadow = '0 3px 8px rgba(139, 92, 246, 0.30)';
+												}}
+												onMouseLeave={(e) => {
+													e.currentTarget.style.transform = 'translateY(0) scale(1)';
+													e.currentTarget.style.boxShadow = '0 1px 4px rgba(139, 92, 246, 0.20)';
+												}}
+											>
+												<i className="pi pi-sparkles" style={{ color: '#8b5cf6', fontSize: compactBar.serviceIconSize }} />
+											</div>
+											<span style={{
+												fontSize: compactBar.labelFontSize,
+												fontWeight: '500',
+												color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+												textAlign: 'center',
+												lineHeight: compactBar.labelLineHeight,
+												maxWidth: `${compactBar.labelMaxWidth}px`,
+												overflow: 'hidden',
+												textOverflow: 'ellipsis',
+												whiteSpace: 'nowrap'
+											}}>
+												NodeTerm
+											</span>
+										</div>
+									)}
+
+									{/* AnythingLLM */}
+									{aiClientsState.anythingllm.enabled && (
+										<div style={{
+											display: 'flex',
+											flexDirection: 'column',
+											alignItems: 'center',
+											gap: '0.25rem',
+											flexShrink: 0
+										}}>
+											{(() => {
+												const isRunning = aiClientsState.anythingllm.running;
+												const anythingllmColor = isRunning ? '#22c55e' : '#f59e0b';
+												const anythingllmStatus = isRunning ? 'En ejecución' : 'Detenido';
+												return (
+													<div 
+														title={`AnythingLLM: ${anythingllmStatus}`}
+														onClick={() => {
+															const newTab = {
+																key: `anythingllm-${Date.now()}`,
+																label: 'AnythingLLM',
+																type: 'anything-llm',
+																createdAt: Date.now(),
+																groupId: null
+															};
+															window.dispatchEvent(new CustomEvent('create-anythingllm-tab', {
+																detail: { tab: newTab }
+															}));
+														}}
+														style={{
+															position: 'relative',
+															width: `${compactBar.serviceSize}px`,
+															height: `${compactBar.serviceSize}px`,
+															borderRadius: '50%',
+															background: `linear-gradient(135deg, ${anythingllmColor}25 0%, ${anythingllmColor}15 100%)`,
+															border: `2px solid ${anythingllmColor}50`,
+															display: 'flex',
+															alignItems: 'center',
+															justifyContent: 'center',
+															boxShadow: `0 1px 4px ${anythingllmColor}20`,
+															cursor: 'pointer',
+															transition: 'all 0.2s ease'
+														}}
+														onMouseEnter={(e) => {
+															e.currentTarget.style.transform = 'translateY(-1px) scale(1.1)';
+															e.currentTarget.style.boxShadow = `0 3px 8px ${anythingllmColor}30`;
+														}}
+														onMouseLeave={(e) => {
+															e.currentTarget.style.transform = 'translateY(0) scale(1)';
+															e.currentTarget.style.boxShadow = `0 1px 4px ${anythingllmColor}20`;
+														}}
+													>
+														<i className="pi pi-comments" style={{ color: anythingllmColor, fontSize: compactBar.serviceIconSize }} />
+													</div>
+												);
+											})()}
+											<span style={{
+												fontSize: compactBar.labelFontSize,
+												fontWeight: '500',
+												color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+												textAlign: 'center',
+												lineHeight: compactBar.labelLineHeight,
+												maxWidth: `${compactBar.labelMaxWidth}px`,
+												overflow: 'hidden',
+												textOverflow: 'ellipsis',
+												whiteSpace: 'nowrap'
+											}}>
+												AnythingLLM
+											</span>
+										</div>
+									)}
+
+									{/* OpenWebUI */}
+									{aiClientsState.openwebui.enabled && (
+										<div style={{
+											display: 'flex',
+											flexDirection: 'column',
+											alignItems: 'center',
+											gap: '0.25rem',
+											flexShrink: 0
+										}}>
+											{(() => {
+												const isRunning = aiClientsState.openwebui.running;
+												const openwebuiColor = isRunning ? '#3b82f6' : '#f59e0b';
+												const openwebuiStatus = isRunning ? 'En ejecución' : 'Detenido';
+												return (
+													<div 
+														title={`OpenWebUI: ${openwebuiStatus}`}
+														onClick={() => {
+															const newTab = {
+																key: `openwebui-${Date.now()}`,
+																label: 'OpenWebUI',
+																type: 'openwebui',
+																createdAt: Date.now(),
+																groupId: null
+															};
+															window.dispatchEvent(new CustomEvent('create-openwebui-tab', {
+																detail: { tab: newTab }
+															}));
+														}}
+														style={{
+															position: 'relative',
+															width: `${compactBar.serviceSize}px`,
+															height: `${compactBar.serviceSize}px`,
+															borderRadius: '50%',
+															background: `linear-gradient(135deg, ${openwebuiColor}25 0%, ${openwebuiColor}15 100%)`,
+															border: `2px solid ${openwebuiColor}50`,
+															display: 'flex',
+															alignItems: 'center',
+															justifyContent: 'center',
+															boxShadow: `0 1px 4px ${openwebuiColor}20`,
+															cursor: 'pointer',
+															transition: 'all 0.2s ease'
+														}}
+														onMouseEnter={(e) => {
+															e.currentTarget.style.transform = 'translateY(-1px) scale(1.1)';
+															e.currentTarget.style.boxShadow = `0 3px 8px ${openwebuiColor}30`;
+														}}
+														onMouseLeave={(e) => {
+															e.currentTarget.style.transform = 'translateY(0) scale(1)';
+															e.currentTarget.style.boxShadow = `0 1px 4px ${openwebuiColor}20`;
+														}}
+													>
+														<i className="pi pi-globe" style={{ color: openwebuiColor, fontSize: compactBar.serviceIconSize }} />
+													</div>
+												);
+											})()}
+											<span style={{
+												fontSize: compactBar.labelFontSize,
+												fontWeight: '500',
+												color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+												textAlign: 'center',
+												lineHeight: compactBar.labelLineHeight,
+												maxWidth: `${compactBar.labelMaxWidth}px`,
+												overflow: 'hidden',
+												textOverflow: 'ellipsis',
+												whiteSpace: 'nowrap'
+											}}>
+												OpenWebUI
+											</span>
+										</div>
+									)}
+								</div>
+							</div>
+						);
+					})()}
 
 					{/* Separador vertical decorativo */}
 					<div style={{
