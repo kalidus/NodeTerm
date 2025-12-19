@@ -363,6 +363,17 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 					'--fav-chip-bg': `rgba(${r}, ${g}, ${b}, 0.18)`,
 					'--fav-chip-border': `rgba(${r}, ${g}, ${b}, 0.45)`,
 					'--fav-chip-color': typeColor,
+					'--fav-bg': themeColors.itemBackground || 'rgba(12, 14, 20, 0.55)',
+					'--fav-bg-hover': themeColors.hoverBackground || 'rgba(16, 20, 28, 0.70)',
+					'--fav-border': themeColors.borderColor || 'rgba(255,255,255,0.10)',
+				}}
+				onMouseEnter={(e) => {
+					e.currentTarget.style.setProperty('--fav-bg', themeColors.hoverBackground || 'rgba(16, 20, 28, 0.70)');
+					e.currentTarget.style.setProperty('--fav-border', themeColors.borderColor || 'rgba(255,255,255,0.16)');
+				}}
+				onMouseLeave={(e) => {
+					e.currentTarget.style.setProperty('--fav-bg', themeColors.itemBackground || 'rgba(12, 14, 20, 0.55)');
+					e.currentTarget.style.setProperty('--fav-border', themeColors.borderColor || 'rgba(255,255,255,0.10)');
 				}}
 			>
 				{/* Icono grande en badge a la izquierda */}
