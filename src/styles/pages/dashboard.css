@@ -79,6 +79,9 @@
   --fav-chip-bg: rgba(79, 195, 247, 0.18);
   --fav-chip-border: rgba(79, 195, 247, 0.45);
   --fav-chip-color: #4fc3f7;
+  --fav-bg: rgba(12, 14, 20, 0.55); /* Valor por defecto, será sobrescrito por estilos inline */
+  --fav-bg-hover: rgba(16, 20, 28, 0.70); /* Valor por defecto, será sobrescrito por estilos inline */
+  --fav-border: rgba(255,255,255,0.10); /* Valor por defecto, será sobrescrito por estilos inline */
   position: relative;
   display: flex;
   flex-direction: row;
@@ -86,8 +89,8 @@
   gap: calc(8px * var(--fav-scale));
   padding: calc(7px * var(--fav-scale)) calc(8px * var(--fav-scale));
   border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(12, 14, 20, 0.55);
+  border: 1px solid var(--fav-border);
+  background: var(--fav-bg);
   box-shadow: 0 8px 22px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04);
   cursor: pointer;
   overflow: hidden;
@@ -97,8 +100,8 @@
 
 .favorite-tile:hover {
   transform: translateY(-1px);
-  border-color: rgba(255,255,255,0.16);
-  background: rgba(16, 20, 28, 0.70);
+  border-color: var(--fav-border);
+  background: var(--fav-bg-hover);
   box-shadow: 0 12px 30px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.06);
 }
 
