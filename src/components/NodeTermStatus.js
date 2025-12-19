@@ -31,6 +31,8 @@ const NodeTermStatus = ({
 	const [availableTerminals, setAvailableTerminals] = useState([]);
 	const syncManagerRef = useRef(null);
 	const secureStorageRef = useRef(null);
+	const [scaleFactor, setScaleFactor] = useState(1); // Factor de escala para reducir iconos
+	const barContainerRef = useRef(null);
 
 	useEffect(() => {
 		// Inicializar managers
@@ -352,20 +354,78 @@ const NodeTermStatus = ({
 		</div>
 	);
 
-	// Tamaños para la barra superior compacta (HomeTab)
+	// Tamaños para la barra superior compacta (HomeTab) - se ajustan dinámicamente
 	const compactBar = {
 		containerPadding: '0.5rem 0.9rem',
-		containerGap: '1.0rem',
-		buttonSize: 40,
-		buttonRadius: 8,
-		buttonIconSize: '1.0rem',
-		labelFontSize: '0.48rem',
+		containerGap: `${1.0 * scaleFactor}rem`,
+		buttonSize: 40 * scaleFactor,
+		buttonRadius: 8 * scaleFactor,
+		buttonIconSize: `${1.0 * scaleFactor}rem`,
+		labelFontSize: `${0.48 * scaleFactor}rem`,
 		labelLineHeight: '1.05',
-		separatorHeight: 56,
-		serviceSize: 36,
-		serviceIconSize: '0.85rem',
-		labelMaxWidth: 52
+		separatorHeight: 56 * scaleFactor,
+		serviceSize: 36 * scaleFactor,
+		serviceIconSize: `${0.85 * scaleFactor}rem`,
+		labelMaxWidth: 52 * scaleFactor
 	};
+
+	// Efecto para ajustar el tamaño dinámicamente según el espacio disponible
+	useEffect(() => {
+		if (!horizontal || !compact) return;
+
+		let rafId = null;
+		let timeoutId = null;
+		
+		const adjustScale = () => {
+			if (rafId) cancelAnimationFrame(rafId);
+			if (timeoutId) clearTimeout(timeoutId);
+			
+			rafId = requestAnimationFrame(() => {
+				timeoutId = setTimeout(() => {
+					const container = barContainerRef.current;
+					if (!container) return;
+
+					const containerWidth = container.scrollWidth || container.offsetWidth;
+					const parentWidth = container.parentElement?.offsetWidth || window.innerWidth;
+					const availableWidth = parentWidth * 0.95; // 95% del ancho disponible
+					
+					setScaleFactor(prev => {
+						// Si el contenedor es más ancho que el espacio disponible, reducir escala
+						if (containerWidth > availableWidth && prev > 0.65) {
+							return Math.max(0.65, prev - 0.05);
+						} else if (containerWidth < availableWidth * 0.8 && prev < 1) {
+							// Si hay mucho espacio, aumentar gradualmente
+							return Math.min(1, prev + 0.05);
+						}
+						return prev;
+					});
+				}, 100);
+			});
+		};
+
+		// Ajustar al montar y al redimensionar
+		const resizeObserver = new ResizeObserver(() => {
+			adjustScale();
+		});
+
+		if (barContainerRef.current) {
+			resizeObserver.observe(barContainerRef.current);
+			if (barContainerRef.current.parentElement) {
+				resizeObserver.observe(barContainerRef.current.parentElement);
+			}
+		}
+
+		window.addEventListener('resize', adjustScale);
+		// Ajustar después de que se renderice
+		setTimeout(adjustScale, 300);
+
+		return () => {
+			if (rafId) cancelAnimationFrame(rafId);
+			if (timeoutId) clearTimeout(timeoutId);
+			resizeObserver.disconnect();
+			window.removeEventListener('resize', adjustScale);
+		};
+	}, [horizontal, compact, availableTerminals.length, dockerContainers.length]);
 
 	// Layout horizontal compacto - LAYOUT 3: BARRA SUPERIOR CENTRADA
 	if (horizontal && compact) {
@@ -375,7 +435,7 @@ const NodeTermStatus = ({
 				display: 'flex',
 				justifyContent: 'center',
 				alignItems: 'center',
-				padding: '0 2rem',
+				padding: '0.5rem',
 				boxSizing: 'border-box'
 			}}>
 				{/* Estilos globales para animaciones */}
@@ -393,25 +453,28 @@ const NodeTermStatus = ({
 				`}</style>
 
 				{/* BARRA SUPERIOR CENTRADA: ACCIONES Y TERMINALES */}
-				<div style={{ 
-					background: `linear-gradient(135deg,
-						rgba(16, 20, 28, 0.7) 0%,
-						rgba(16, 20, 28, 0.5) 100%)`,
-					backdropFilter: 'blur(12px) saturate(140%)',
-					WebkitBackdropFilter: 'blur(12px) saturate(140%)',
-					border: `1px solid ${themeColors.cardBorder || 'rgba(255,255,255,0.15)'}`,
-					borderRadius: '16px',
-					boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
-					padding: compactBar.containerPadding,
-					display: 'flex',
-					alignItems: 'center',
-					justifyContent: 'center',
-					gap: compactBar.containerGap,
-					width: 'fit-content',
-					maxWidth: '90%',
-					minWidth: '560px',
-					overflow: 'hidden'
-				}}>
+				<div 
+					ref={barContainerRef}
+					style={{ 
+						background: `linear-gradient(135deg,
+							rgba(16, 20, 28, 0.7) 0%,
+							rgba(16, 20, 28, 0.5) 100%)`,
+						backdropFilter: 'blur(12px) saturate(140%)',
+						WebkitBackdropFilter: 'blur(12px) saturate(140%)',
+						border: `1px solid ${themeColors.cardBorder || 'rgba(255,255,255,0.15)'}`,
+						borderRadius: '16px',
+						boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
+						padding: compactBar.containerPadding,
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						gap: compactBar.containerGap,
+						width: 'fit-content',
+						maxWidth: '95%',
+						minWidth: 'min-content',
+						overflow: 'hidden',
+						transition: 'all 0.3s ease'
+					}}>
 					{/* SECCIÓN 1: ACCIONES */}
 					<div style={{
 						display: 'flex',
@@ -420,25 +483,26 @@ const NodeTermStatus = ({
 						alignItems: 'center',
 						justifyContent: 'center',
 						minWidth: 0,
-						flex: '0 0 auto'
+						flexShrink: 0
 					}}>
 					{/* Botones principales */}
 						<div style={{
 							display: 'flex',
 							alignItems: 'flex-start',
-							justifyContent: 'center',
+							justifyContent: 'flex-start',
 							gap: '0.5rem',
-							flexWrap: 'wrap',
+							flexWrap: 'nowrap',
 							maxWidth: '100%',
-							overflow: 'hidden',
-							width: '100%'
+							overflow: 'visible',
+							width: 'auto'
 						}}>
 						{/* Botón Nueva Conexión */}
 						<div style={{
 							display: 'flex',
 							flexDirection: 'column',
 							alignItems: 'center',
-							gap: '0.25rem'
+							gap: '0.25rem',
+							flexShrink: 0
 						}}>
 							<button
 								title="Nueva conexión SSH/RDP/VNC"
@@ -491,7 +555,8 @@ const NodeTermStatus = ({
 							background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
 							borderRadius: '1px',
 							flexShrink: 0,
-							margin: '0 0.5rem'
+							margin: '0 0.5rem',
+							minWidth: '1px'
 						}} />
 
 						{/* Botón Conexiones */}
@@ -499,7 +564,8 @@ const NodeTermStatus = ({
 							display: 'flex',
 							flexDirection: 'column',
 							alignItems: 'center',
-							gap: '0.25rem'
+							gap: '0.25rem',
+							flexShrink: 0
 						}}>
 							<button
 								title="Ver historial de conexiones"
@@ -553,7 +619,8 @@ const NodeTermStatus = ({
 							display: 'flex',
 							flexDirection: 'column',
 							alignItems: 'center',
-							gap: '0.25rem'
+							gap: '0.25rem',
+							flexShrink: 0
 						}}>
 							<button
 								title="Gestor de contraseñas"
@@ -606,7 +673,8 @@ const NodeTermStatus = ({
 							display: 'flex',
 							flexDirection: 'column',
 							alignItems: 'center',
-							gap: '0.25rem'
+							gap: '0.25rem',
+							flexShrink: 0
 						}}>
 							<button
 								title="Ver grabaciones y auditoría"
@@ -681,7 +749,8 @@ const NodeTermStatus = ({
 							display: 'flex',
 							flexDirection: 'column',
 							alignItems: 'center',
-							gap: '0.25rem'
+							gap: '0.25rem',
+							flexShrink: 0
 						}}>
 							<button
 								title="Herramientas de Red y Seguridad"
@@ -736,7 +805,8 @@ const NodeTermStatus = ({
 							background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
 							borderRadius: '1px',
 							flexShrink: 0,
-							margin: '0 0.5rem'
+							margin: '0 0.5rem',
+							minWidth: '1px'
 						}} />
 
 						{/* SECCIÓN: Terminal y Status (compactos y en fila) */}
@@ -745,9 +815,9 @@ const NodeTermStatus = ({
 							flexDirection: 'row',
 							gap: '0.5rem',
 							alignItems: 'center',
-							justifyContent: 'center',
+							justifyContent: 'flex-start',
 							minWidth: 0,
-							flex: '0 0 auto'
+							flexShrink: 0
 						}}>
 							{/* Botón Terminal */}
 							{onToggleTerminalVisibility && (
@@ -755,7 +825,8 @@ const NodeTermStatus = ({
 									display: 'flex',
 									flexDirection: 'column',
 									alignItems: 'center',
-									gap: '0.25rem'
+									gap: '0.25rem',
+									flexShrink: 0
 								}}>
 									<button
 										title="Mostrar/ocultar terminal local"
@@ -806,7 +877,8 @@ const NodeTermStatus = ({
 									display: 'flex',
 									flexDirection: 'column',
 									alignItems: 'center',
-									gap: '0.25rem'
+									gap: '0.25rem',
+									flexShrink: 0
 								}}>
 									<button
 										title={statusBarVisible ? 'Ocultar status bar' : 'Mostrar status bar'}
@@ -866,7 +938,8 @@ const NodeTermStatus = ({
 							background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
 							borderRadius: '1px',
 							flexShrink: 0,
-							margin: '0 0.5rem'
+							margin: '0 0.5rem',
+							minWidth: '1px'
 						}} />
 
 						{/* SECCIÓN 2: TERMINALES */}
@@ -878,25 +951,26 @@ const NodeTermStatus = ({
 								alignItems: 'center',
 								justifyContent: 'center',
 								minWidth: 0,
-								flex: '0 0 auto'
+								flexShrink: 0
 							}}>
 				{/* Botones */}
 								<div style={{
 									display: 'flex',
 									alignItems: 'flex-start',
-									justifyContent: 'center',
+									justifyContent: 'flex-start',
 									gap: '0.5rem',
-									flexWrap: 'wrap',
+									flexWrap: 'nowrap',
 									maxWidth: '100%',
-									overflow: 'hidden',
-									width: '100%'
+									overflow: 'visible',
+									width: 'auto'
 								}}>
 								{availableTerminals.map((terminal, index) => (
 									<div key={index} style={{
 										display: 'flex',
 										flexDirection: 'column',
 										alignItems: 'center',
-										gap: '0.25rem'
+										gap: '0.25rem',
+										flexShrink: 0
 									}}>
 										<button
 											title={terminal.label}
@@ -951,7 +1025,8 @@ const NodeTermStatus = ({
 										display: 'flex',
 										flexDirection: 'column',
 										alignItems: 'center',
-										gap: '0.25rem'
+										gap: '0.25rem',
+										flexShrink: 0
 									}}>
 										<button
 											title={`Docker (${dockerContainers.length})`}
@@ -1041,18 +1116,18 @@ const NodeTermStatus = ({
 						alignItems: 'center',
 						justifyContent: 'center',
 						minWidth: 0,
-						flex: '0 0 auto'
+						flexShrink: 0
 					}}>
 			{/* Badges de servicios */}
 						<div style={{
 							display: 'flex',
 							alignItems: 'flex-start',
-							justifyContent: 'center',
+							justifyContent: 'flex-start',
 							gap: '0.5rem',
-							flexWrap: 'wrap',
+							flexWrap: 'nowrap',
 							maxWidth: '100%',
-							overflow: 'hidden',
-							width: '100%'
+							overflow: 'visible',
+							width: 'auto'
 						}}>
 							{/* Nextcloud */}
 							{(() => {
@@ -1064,7 +1139,8 @@ const NodeTermStatus = ({
 										display: 'flex',
 										flexDirection: 'column',
 										alignItems: 'center',
-										gap: '0.25rem'
+										gap: '0.25rem',
+										flexShrink: 0
 									}}>
 										<div 
 											onClick={onOpenSettings}
@@ -1124,7 +1200,8 @@ const NodeTermStatus = ({
 										display: 'flex',
 										flexDirection: 'column',
 										alignItems: 'center',
-										gap: '0.25rem'
+										gap: '0.25rem',
+										flexShrink: 0
 									}}>
 										<div 
 											title={`Guacd: ${guacdStatus} (${guacdState.method})`}
@@ -1169,7 +1246,8 @@ const NodeTermStatus = ({
 										display: 'flex',
 										flexDirection: 'column',
 										alignItems: 'center',
-										gap: '0.25rem'
+										gap: '0.25rem',
+										flexShrink: 0
 									}}>
 										<div 
 											title={`Vault: ${vaultStatus}`}
@@ -1214,7 +1292,8 @@ const NodeTermStatus = ({
 										display: 'flex',
 										flexDirection: 'column',
 										alignItems: 'center',
-										gap: '0.25rem'
+										gap: '0.25rem',
+										flexShrink: 0
 									}}>
 										<div 
 											title={`Ollama: ${ollamaStatus}${ollamaState.isRemote ? ' (Remoto)' : ''}`}
