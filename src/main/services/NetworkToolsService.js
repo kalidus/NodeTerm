@@ -95,9 +95,10 @@ class NetworkToolsService {
    * @param {string} host - Host or IP to ping
    * @param {number} count - Number of pings (default: 4)
    * @param {number} timeout - Timeout in seconds (default: 5)
+   * @param {Function} onProgress - Callback para actualizaciones en tiempo real (data: string)
    * @returns {Promise<Object>} Ping results
    */
-  async ping(host, count = 4, timeout = 5) {
+  async ping(host, count = 4, timeout = 5, onProgress = null) {
     return new Promise(async (resolve) => {
       if (!host || typeof host !== 'string') {
         return resolve({ success: false, error: 'Host inválido' });
@@ -152,11 +153,21 @@ class NetworkToolsService {
       let errorOutput = '';
 
       child.stdout.on('data', (data) => {
-        output += data.toString();
+        const dataStr = data.toString();
+        output += dataStr;
+        // Enviar actualización en tiempo real si hay callback
+        if (onProgress && typeof onProgress === 'function') {
+          onProgress(dataStr);
+        }
       });
 
       child.stderr.on('data', (data) => {
-        errorOutput += data.toString();
+        const dataStr = data.toString();
+        errorOutput += dataStr;
+        // Enviar actualización en tiempo real si hay callback
+        if (onProgress && typeof onProgress === 'function') {
+          onProgress(dataStr);
+        }
       });
 
       child.on('close', (code) => {
@@ -336,7 +347,7 @@ class NetworkToolsService {
    * @param {number} timeout - Timeout per port in ms (default: 2000)
    * @returns {Promise<Object>} Scan results
    */
-  async portScan(host, ports = '1-1024', timeout = 2000) {
+  async portScan(host, ports = '1-1024', timeout = 2000, onProgress = null) {
     if (!host || typeof host !== 'string') {
       return { success: false, error: 'Host inválido' };
     }
@@ -364,6 +375,7 @@ class NetworkToolsService {
 
     const startTime = Date.now();
     const concurrency = 100; // Scan 100 ports at a time
+    let scannedCount = 0;
 
     // Split ports into chunks for concurrent scanning
     for (let i = 0; i < portList.length; i += concurrency) {
@@ -374,6 +386,18 @@ class NetworkToolsService {
 
       chunkResults.forEach((result, index) => {
         const port = chunk[index];
+        scannedCount++;
+        
+        // Enviar actualización de progreso
+        if (onProgress && typeof onProgress === 'function') {
+          const progressMsg = `Escaneando puerto ${port}/${portList.length} (${scannedCount}/${portList.length})...\n`;
+          onProgress(progressMsg);
+          
+          if (result.status === 'open') {
+            onProgress(`✓ Puerto ${port} (${this._getServiceName(port)}) - ABIERTO\n`);
+          }
+        }
+        
         if (result.status === 'open') {
           results.openPorts.push({ port, service: this._getServiceName(port) });
         } else if (result.status === 'closed') {
@@ -385,6 +409,12 @@ class NetworkToolsService {
     }
 
     results.scanTime = Date.now() - startTime;
+    
+    // Mensaje final
+    if (onProgress && typeof onProgress === 'function') {
+      onProgress(`\nEscaneo completado: ${results.openPorts.length} puertos abiertos de ${portList.length} escaneados (${results.scanTime}ms)\n`);
+    }
+    
     return results;
   }
 
@@ -727,9 +757,10 @@ class NetworkToolsService {
   /**
    * WHOIS lookup
    * @param {string} domain - Domain to lookup
+   * @param {Function} onProgress - Callback para actualizaciones en tiempo real (data: string)
    * @returns {Promise<Object>} WHOIS results
    */
-  async whois(domain) {
+  async whois(domain, onProgress = null) {
     if (!domain || typeof domain !== 'string') {
       return { success: false, error: 'Dominio inválido' };
     }
@@ -767,11 +798,21 @@ class NetworkToolsService {
       let errorOutput = '';
 
       child.stdout.on('data', (data) => {
-        output += data.toString();
+        const dataStr = data.toString();
+        output += dataStr;
+        // Enviar actualización en tiempo real si hay callback
+        if (onProgress && typeof onProgress === 'function') {
+          onProgress(dataStr);
+        }
       });
 
       child.stderr.on('data', (data) => {
-        errorOutput += data.toString();
+        const dataStr = data.toString();
+        errorOutput += dataStr;
+        // Enviar actualización en tiempo real si hay callback
+        if (onProgress && typeof onProgress === 'function') {
+          onProgress(dataStr);
+        }
       });
 
       child.on('close', (code) => {
@@ -856,9 +897,10 @@ class NetworkToolsService {
    * Traceroute to a host
    * @param {string} host - Destination host
    * @param {number} maxHops - Maximum hops (default: 30)
+   * @param {Function} onProgress - Callback para actualizaciones en tiempo real (data: string)
    * @returns {Promise<Object>} Traceroute results
    */
-  async traceroute(host, maxHops = 30) {
+  async traceroute(host, maxHops = 30, onProgress = null) {
     if (!host || typeof host !== 'string') {
       return { success: false, error: 'Host inválido' };
     }
@@ -904,11 +946,21 @@ class NetworkToolsService {
       let output = '';
 
       child.stdout.on('data', (data) => {
-        output += data.toString();
+        const dataStr = data.toString();
+        output += dataStr;
+        // Enviar actualización en tiempo real si hay callback
+        if (onProgress && typeof onProgress === 'function') {
+          onProgress(dataStr);
+        }
       });
 
       child.stderr.on('data', (data) => {
-        output += data.toString();
+        const dataStr = data.toString();
+        output += dataStr;
+        // Enviar actualización en tiempo real si hay callback
+        if (onProgress && typeof onProgress === 'function') {
+          onProgress(dataStr);
+        }
       });
 
       child.on('close', (code) => {
@@ -1316,9 +1368,10 @@ class NetworkToolsService {
    * Network scan - Discover hosts in a subnet
    * @param {string} subnet - Subnet in CIDR notation (e.g., "192.168.1.0/24")
    * @param {number} timeout - Timeout per host in ms (default: 1000)
+   * @param {Function} onProgress - Callback para actualizaciones en tiempo real (data: string)
    * @returns {Promise<Object>} Discovered hosts
    */
-  async networkScan(subnet, timeout = 1000) {
+  async networkScan(subnet, timeout = 1000, onProgress = null) {
     const subnetInfo = this.subnetCalc(subnet);
     if (!subnetInfo.success) {
       return subnetInfo;
@@ -1351,6 +1404,12 @@ class NetworkToolsService {
       ipList.push(this._intToIp(ip));
     }
 
+    if (onProgress && typeof onProgress === 'function') {
+      onProgress(`Iniciando escaneo de red: ${subnet}\n`);
+      onProgress(`Rango: ${subnetInfo.firstHost} - ${subnetInfo.lastHost} (${ipList.length} hosts)\n`);
+      onProgress(`Escaneando en lotes de ${concurrency}...\n\n`);
+    }
+
     // Scan in batches
     for (let i = 0; i < ipList.length; i += concurrency) {
       const batch = ipList.slice(i, i + concurrency);
@@ -1360,9 +1419,22 @@ class NetworkToolsService {
 
       batchResults.forEach((result, index) => {
         results.scannedCount++;
+        const currentIp = batch[index];
+        const progress = ((results.scannedCount / ipList.length) * 100).toFixed(1);
+        
+        // Enviar actualización de progreso
+        if (onProgress && typeof onProgress === 'function') {
+          if (result.alive) {
+            onProgress(`✓ ${currentIp} - ACTIVO (${result.time}ms) [${results.scannedCount}/${ipList.length}] ${progress}%\n`);
+          } else if (results.scannedCount % 10 === 0 || results.scannedCount === ipList.length) {
+            // Mostrar progreso cada 10 hosts o al final
+            onProgress(`Escaneando... [${results.scannedCount}/${ipList.length}] ${progress}%\n`);
+          }
+        }
+        
         if (result.alive) {
           results.hosts.push({
-            ip: batch[index],
+            ip: currentIp,
             responseTime: result.time,
             hostname: null // Could add reverse DNS lookup here
           });
@@ -1372,16 +1444,29 @@ class NetworkToolsService {
 
     results.scanTime = Date.now() - startTime;
 
+    if (onProgress && typeof onProgress === 'function') {
+      onProgress(`\nEscaneo de red completado: ${results.hosts.length} hosts activos encontrados de ${ipList.length} escaneados (${(results.scanTime / 1000).toFixed(2)}s)\n`);
+      onProgress(`Obteniendo nombres de host...\n`);
+    }
+
     // Try to get hostnames for discovered hosts (optional, async)
-    for (const host of results.hosts) {
+    for (let i = 0; i < results.hosts.length; i++) {
+      const host = results.hosts[i];
       try {
         const reverseDns = await this.reverseDns(host.ip);
         if (reverseDns.success && reverseDns.hostnames.length > 0) {
           host.hostname = reverseDns.hostnames[0];
+          if (onProgress && typeof onProgress === 'function') {
+            onProgress(`  ${host.ip} -> ${host.hostname}\n`);
+          }
         }
       } catch {
         // Ignore reverse DNS errors
       }
+    }
+
+    if (onProgress && typeof onProgress === 'function') {
+      onProgress(`\nEscaneo finalizado.\n`);
     }
 
     return results;
