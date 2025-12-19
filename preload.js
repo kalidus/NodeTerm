@@ -162,7 +162,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^rdp:.*$/,
         /^guacamole:.*$/,
         /^anythingllm:.*$/,
-        /^updater-event$/
+        /^updater-event$/,
+        /^network-tools:.*$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         // Deliberately strip event as it includes `sender`
@@ -190,7 +191,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^cygwin:.*$/,
         /^docker:.*$/,
         /^rdp:.*$/,
-        /^updater-event$/
+        /^updater-event$/,
+        /^network-tools:.*$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         ipcRenderer.off(channel, func);

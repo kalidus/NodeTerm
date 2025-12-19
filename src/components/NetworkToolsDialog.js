@@ -100,6 +100,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
   const [networkInterfaces, setNetworkInterfaces] = useState([]);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1200);
+  const [liveOutput, setLiveOutput] = useState(''); // Salida en tiempo real
 
   // Estados de inputs para cada herramienta
   const [pingHost, setPingHost] = useState('');
@@ -136,6 +137,32 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
       loadNetworkInterfaces();
     }
   }, [visible]);
+
+  // Escuchar eventos de progreso en tiempo real
+  useEffect(() => {
+    if (!visible) return;
+
+    const handleProgress = (data) => {
+      const { tool, data: outputData } = data;
+      // Solo actualizar si es la herramienta actual
+      if (tool === selectedTool) {
+        setLiveOutput(prev => prev + outputData);
+      }
+    };
+
+    const ipc = window?.electron?.ipcRenderer;
+    if (ipc && ipc.on) {
+      const unsubscribe = ipc.on('network-tools:progress', handleProgress);
+      
+      return () => {
+        if (unsubscribe && typeof unsubscribe === 'function') {
+          unsubscribe();
+        } else if (ipc.off) {
+          ipc.off('network-tools:progress', handleProgress);
+        }
+      };
+    }
+  }, [visible, selectedTool]);
 
   // Detectar cambios en el tamaño de la ventana y del diálogo para layout responsive
   useEffect(() => {
@@ -280,6 +307,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
     setLoading(true);
     setError(null);
     setResult(null);
+    setLiveOutput(''); // Limpiar salida anterior
 
     try {
       let response;
@@ -391,7 +419,15 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
         setResult(null);
       } else {
         // Si success es true o undefined (algunas herramientas pueden no tener success)
-        setResult(response);
+        // Asegurar que la salida en tiempo real esté incluida si no está en rawOutput
+        const finalResult = { ...response };
+        if (liveOutput && (!finalResult.rawOutput || finalResult.rawOutput.trim().length === 0)) {
+          finalResult.rawOutput = liveOutput;
+        } else if (liveOutput && finalResult.rawOutput) {
+          // Si hay ambas, usar la más completa
+          finalResult.rawOutput = liveOutput.length > finalResult.rawOutput.length ? liveOutput : finalResult.rawOutput;
+        }
+        setResult(finalResult);
         setError(null);
       }
     } catch (err) {
@@ -400,11 +436,15 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
       setResult(null);
     } finally {
       setLoading(false);
+      // Si hay salida en tiempo real, asegurarse de que esté en el resultado
+      if (liveOutput && result && !result.rawOutput) {
+        setResult(prev => prev ? { ...prev, rawOutput: liveOutput } : prev);
+      }
     }
   }, [selectedTool, pingHost, pingCount, tracerouteHost, tracerouteMaxHops, 
       portScanHost, portScanPorts, networkScanSubnet, dnsLookupDomain, dnsLookupType,
       reverseDnsIp, sslCheckHost, sslCheckPort, httpHeadersUrl, whoisDomain,
-      subnetCalcCidr, wolMac, wolBroadcast]);
+      subnetCalcCidr, wolMac, wolBroadcast, liveOutput]);
 
   // Cambiar herramienta seleccionada
   const handleToolSelect = (categoryId, toolId) => {
@@ -412,6 +452,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
     setSelectedTool(toolId);
     setResult(null);
     setError(null);
+    setLiveOutput(''); // Limpiar salida en tiempo real al cambiar de herramienta
   };
 
   // Renderizar el formulario de la herramienta seleccionada
@@ -681,11 +722,63 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
 
   // Renderizar resultados según la herramienta
   const renderResults = () => {
+    // Mostrar salida en tiempo real mientras se ejecuta
     if (loading) {
+      const liveOutputStyle = {
+        background: 'rgba(0,0,0,0.3)',
+        borderRadius: '8px',
+        padding: '1rem',
+        fontFamily: 'monospace',
+        fontSize: isMobile ? '0.75rem' : '0.85rem',
+        lineHeight: '1.6',
+        color: 'var(--text-color)',
+        maxHeight: isMobile ? '400px' : '500px',
+        overflow: 'auto',
+        wordBreak: 'break-word',
+        overflowWrap: 'break-word',
+        whiteSpace: 'pre-wrap',
+        border: '1px solid rgba(6, 182, 212, 0.3)'
+      };
+
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-          <ProgressSpinner style={{ width: '40px', height: '40px' }} />
-          <span style={{ marginTop: '1rem', color: 'var(--text-color-secondary)' }}>Ejecutando...</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem' }}>
+            <ProgressSpinner style={{ width: '24px', height: '24px' }} />
+            <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>
+              Ejecutando... {liveOutput.length > 0 && <span style={{ color: '#06b6d4' }}>(Mostrando salida en tiempo real)</span>}
+            </span>
+          </div>
+          {liveOutput && (
+            <div style={liveOutputStyle}>
+              <div style={{ 
+                marginBottom: '0.5rem', 
+                fontSize: '0.75rem', 
+                color: 'var(--text-color-secondary)',
+                fontWeight: 'bold',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                Salida en tiempo real:
+              </div>
+              <div style={{ 
+                fontFamily: 'monospace',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word'
+              }}>
+                {liveOutput || <span style={{ color: 'var(--text-color-secondary)', fontStyle: 'italic' }}>Esperando salida...</span>}
+              </div>
+            </div>
+          )}
+          {!liveOutput && (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '2rem',
+              color: 'var(--text-color-secondary)',
+              fontStyle: 'italic'
+            }}>
+              Iniciando ejecución...
+            </div>
+          )}
         </div>
       );
     }

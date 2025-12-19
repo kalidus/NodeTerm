@@ -33,7 +33,15 @@ function registerNetworkToolsHandlers() {
         return { success: false, error: 'Host es requerido' };
       }
       const service = getService();
-      const result = await service.ping(host, count, timeout);
+      
+      // Callback para enviar actualizaciones en tiempo real
+      const onProgress = (data) => {
+        if (event.sender && !event.sender.isDestroyed()) {
+          event.sender.send('network-tools:progress', { tool: 'ping', data });
+        }
+      };
+      
+      const result = await service.ping(host, count, timeout, onProgress);
       // Asegurar que siempre devolvemos un objeto válido
       if (!result || typeof result !== 'object') {
         return { success: false, error: 'Respuesta inválida del servicio' };
@@ -52,7 +60,15 @@ function registerNetworkToolsHandlers() {
         return { success: false, error: 'Host es requerido' };
       }
       const service = getService();
-      const result = await service.portScan(host, ports, timeout);
+      
+      // Callback para enviar actualizaciones en tiempo real
+      const onProgress = (data) => {
+        if (event.sender && !event.sender.isDestroyed()) {
+          event.sender.send('network-tools:progress', { tool: 'port-scan', data });
+        }
+      };
+      
+      const result = await service.portScan(host, ports, timeout, onProgress);
       if (!result || typeof result !== 'object') {
         return { success: false, error: 'Respuesta inválida del servicio' };
       }
@@ -124,7 +140,15 @@ function registerNetworkToolsHandlers() {
         return { success: false, error: 'Dominio es requerido' };
       }
       const service = getService();
-      const result = await service.whois(domain);
+      
+      // Callback para enviar actualizaciones en tiempo real
+      const onProgress = (data) => {
+        if (event.sender && !event.sender.isDestroyed()) {
+          event.sender.send('network-tools:progress', { tool: 'whois', data });
+        }
+      };
+      
+      const result = await service.whois(domain, onProgress);
       if (!result || typeof result !== 'object') {
         return { success: false, error: 'Respuesta inválida del servicio' };
       }
@@ -142,7 +166,15 @@ function registerNetworkToolsHandlers() {
         return { success: false, error: 'Host es requerido' };
       }
       const service = getService();
-      const result = await service.traceroute(host, maxHops);
+      
+      // Callback para enviar actualizaciones en tiempo real
+      const onProgress = (data) => {
+        if (event.sender && !event.sender.isDestroyed()) {
+          event.sender.send('network-tools:progress', { tool: 'traceroute', data });
+        }
+      };
+      
+      const result = await service.traceroute(host, maxHops, onProgress);
       // Asegurar que siempre devolvemos un objeto válido
       if (!result || typeof result !== 'object') {
         return { success: false, error: 'Respuesta inválida del servicio' };
@@ -215,7 +247,15 @@ function registerNetworkToolsHandlers() {
         return { success: false, error: 'Subred es requerida' };
       }
       const service = getService();
-      const result = await service.networkScan(subnet, timeout);
+      
+      // Callback para enviar actualizaciones en tiempo real
+      const onProgress = (data) => {
+        if (event.sender && !event.sender.isDestroyed()) {
+          event.sender.send('network-tools:progress', { tool: 'network-scan', data });
+        }
+      };
+      
+      const result = await service.networkScan(subnet, timeout, onProgress);
       if (!result || typeof result !== 'object') {
         return { success: false, error: 'Respuesta inválida del servicio' };
       }
