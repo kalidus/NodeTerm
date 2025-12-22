@@ -495,3 +495,5 @@ return () => clearInterval(interval); // ✅ Tiene cleanup
 
 **Nota:** Este análisis es estático. Se recomienda usar herramientas de profiling (Chrome DevTools Memory Profiler, Node.js `--inspect`) para confirmar estos leaks en tiempo de ejecución.
 
+
+

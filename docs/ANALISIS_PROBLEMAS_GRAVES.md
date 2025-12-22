@@ -395,3 +395,5 @@ Además de los mencionados en el punto 3, hay múltiples `setTimeout` y `setInte
 
 **Nota:** Este análisis se basa en una revisión estática del código. Se recomienda realizar pruebas de penetración y auditoría de seguridad profesional para validar estos hallazgos.
 
+
+
