@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { getVersionInfo } from '../version-info';
 import SyncManager from '../utils/SyncManager';
 import SecureStorage from '../services/SecureStorage';
@@ -36,10 +37,13 @@ const NodeTermStatus = ({
 	const [cygwinAvailable, setCygwinAvailable] = useState(false);
 	const [dockerContainers, setDockerContainers] = useState([]);
 	const [availableTerminals, setAvailableTerminals] = useState([]);
+	const [dockerMenuOpen, setDockerMenuOpen] = useState(false);
+	const [dockerMenuPosition, setDockerMenuPosition] = useState({ top: 0, left: 0 });
 	const syncManagerRef = useRef(null);
 	const secureStorageRef = useRef(null);
 	const [scaleFactor, setScaleFactor] = useState(1); // Factor de escala para reducir iconos
 	const barContainerRef = useRef(null);
+	const dockerButtonRef = useRef(null);
 
 	useEffect(() => {
 		// Inicializar managers
@@ -313,6 +317,33 @@ const NodeTermStatus = ({
 		detectDocker();
 		return () => { mounted = false; };
 	}, [horizontal, compact]);
+
+	// Cerrar menú Docker al hacer clic fuera
+	useEffect(() => {
+		if (!dockerMenuOpen) return;
+		
+		const handleClickOutside = (event) => {
+			const target = event.target;
+			// Verificar si el clic fue fuera del menú y del botón
+			const dockerMenu = target.closest('[data-docker-menu]');
+			const dockerButton = target.closest('[data-docker-button]');
+			
+			if (!dockerMenu && !dockerButton) {
+				console.log('[Docker] Clic fuera, cerrando menú');
+				setDockerMenuOpen(false);
+			}
+		};
+		
+		// Agregar listener después de un pequeño delay para evitar que se cierre inmediatamente
+		const timeoutId = setTimeout(() => {
+			window.addEventListener('click', handleClickOutside, true);
+		}, 100);
+		
+		return () => {
+			clearTimeout(timeoutId);
+			window.removeEventListener('click', handleClickOutside, true);
+		};
+	}, [dockerMenuOpen]);
 
 	// Función para obtener colores según la categoría
 	const getColorForCategory = (category) => {
@@ -1159,16 +1190,47 @@ const NodeTermStatus = ({
 
 								{/* Botón Docker si hay contenedores */}
 								{dockerContainers.length > 0 && (
-									<div style={{
-										display: 'flex',
-										flexDirection: 'column',
-										alignItems: 'center',
-										gap: '0.25rem',
-										flexShrink: 0
-									}}>
+									<div 
+										data-docker-button
+										style={{
+											display: 'flex',
+											flexDirection: 'column',
+											alignItems: 'center',
+											gap: '0.25rem',
+											flexShrink: 0,
+											position: 'relative',
+											zIndex: dockerMenuOpen ? 10000 : 'auto'
+										}}
+									>
 										<button
-											title={`Docker (${dockerContainers.length})`}
-											onClick={() => handleOpenTerminal(`docker-${dockerContainers[0].name}`, { dockerContainer: dockerContainers[0] })}
+											ref={dockerButtonRef}
+											data-docker-button
+											type="button"
+											title={`Docker (${dockerContainers.length} contenedor${dockerContainers.length > 1 ? 'es' : ''})`}
+											onClick={(e) => {
+												e.preventDefault();
+												e.stopPropagation();
+												console.log('[Docker] Click detectado, contenedores:', dockerContainers.length);
+												if (dockerContainers.length === 1) {
+													// Si solo hay un contenedor, abrirlo directamente
+													console.log('[Docker] Abriendo contenedor único:', dockerContainers[0].name);
+													handleOpenTerminal(`docker-${dockerContainers[0].name}`, { dockerContainer: dockerContainers[0] });
+												} else {
+													// Si hay múltiples, calcular posición y abrir/cerrar el menú
+													if (dockerButtonRef.current) {
+														const rect = dockerButtonRef.current.getBoundingClientRect();
+														const newPosition = {
+															top: rect.bottom + 8,
+															left: rect.left + (rect.width / 2)
+														};
+														console.log('[Docker] Posición calculada:', newPosition, 'Rect:', rect);
+														setDockerMenuPosition(newPosition);
+													}
+													const newState = !dockerMenuOpen;
+													console.log('[Docker] Toggle menú, estado actual:', dockerMenuOpen, '-> nuevo estado:', newState);
+													setDockerMenuOpen(newState);
+												}
+											}}
 											style={{
 												cursor: 'pointer',
 												display: 'flex',
@@ -1178,26 +1240,45 @@ const NodeTermStatus = ({
 												height: `${compactBar.buttonSize}px`,
 												padding: '0',
 												borderRadius: `${compactBar.buttonRadius}px`,
-												background: 'linear-gradient(135deg, rgba(36, 150, 237, 0.25) 0%, rgba(36, 150, 237, 0.15) 100%)',
+												background: dockerMenuOpen 
+													? 'linear-gradient(135deg, rgba(36, 150, 237, 0.45) 0%, rgba(36, 150, 237, 0.35) 100%)'
+													: 'linear-gradient(135deg, rgba(36, 150, 237, 0.25) 0%, rgba(36, 150, 237, 0.15) 100%)',
 												border: '1px solid rgba(36, 150, 237, 0.35)',
-												boxShadow: '0 1px 4px rgba(36, 150, 237, 0.2)',
+												boxShadow: dockerMenuOpen 
+													? '0 3px 8px rgba(36, 150, 237, 0.4)'
+													: '0 1px 4px rgba(36, 150, 237, 0.2)',
 												transition: 'all 0.2s ease',
 												position: 'relative',
 												overflow: 'visible'
 											}}
 											onMouseEnter={(e) => {
-												e.currentTarget.style.background = 'linear-gradient(135deg, rgba(36, 150, 237, 0.35) 0%, rgba(36, 150, 237, 0.25) 100%)';
-												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-												e.currentTarget.style.boxShadow = '0 3px 8px rgba(36, 150, 237, 0.3)';
+												if (!dockerMenuOpen) {
+													e.currentTarget.style.background = 'linear-gradient(135deg, rgba(36, 150, 237, 0.35) 0%, rgba(36, 150, 237, 0.25) 100%)';
+													e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+													e.currentTarget.style.boxShadow = '0 3px 8px rgba(36, 150, 237, 0.3)';
+												}
 											}}
 											onMouseLeave={(e) => {
-												e.currentTarget.style.background = 'linear-gradient(135deg, rgba(36, 150, 237, 0.25) 0%, rgba(36, 150, 237, 0.15) 100%)';
-												e.currentTarget.style.transform = 'translateY(0) scale(1)';
-												e.currentTarget.style.boxShadow = '0 1px 4px rgba(36, 150, 237, 0.2)';
+												if (!dockerMenuOpen) {
+													e.currentTarget.style.background = 'linear-gradient(135deg, rgba(36, 150, 237, 0.25) 0%, rgba(36, 150, 237, 0.15) 100%)';
+													e.currentTarget.style.transform = 'translateY(0) scale(1)';
+													e.currentTarget.style.boxShadow = '0 1px 4px rgba(36, 150, 237, 0.2)';
+												}
 											}}
 										>
-											<div style={{ position: 'relative' }}>
-												<i className="pi pi-box" style={{ color: '#2496ED', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
+											<div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+												<SiDocker style={{ 
+													color: '#2496ED',
+													fontSize: (() => {
+														const iconSizeStr = compactBar.buttonIconSize;
+														if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+															const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+															return `${(remValue * 1.3).toFixed(2)}rem`;
+														}
+														return '1.3rem';
+													})(),
+													display: 'block'
+												}} />
 												{dockerContainers.length > 1 && (
 													<span style={{
 														position: 'absolute',
@@ -1230,6 +1311,117 @@ const NodeTermStatus = ({
 										}}>
 											Docker
 										</span>
+										
+										{/* Menú desplegable de contenedores Docker - Renderizado con Portal */}
+										{dockerMenuOpen && dockerContainers.length > 1 && typeof document !== 'undefined' && document.body && (() => {
+											console.log('[Docker] Creando portal, posición:', dockerMenuPosition);
+											return createPortal(
+												<>
+													{/* Overlay para cerrar al hacer clic fuera */}
+													<div 
+														style={{
+															position: 'fixed',
+															top: 0,
+															left: 0,
+															right: 0,
+															bottom: 0,
+															zIndex: 9998,
+															background: 'rgba(0,0,0,0.1)'
+														}}
+														onClick={() => {
+															console.log('[Docker] Overlay click, cerrando menú');
+															setDockerMenuOpen(false);
+														}}
+													/>
+													<div 
+														data-docker-menu
+														style={{
+															position: 'fixed',
+															top: `${dockerMenuPosition.top}px`,
+															left: `${dockerMenuPosition.left}px`,
+															transform: 'translateX(-50%)',
+															background: `linear-gradient(135deg,
+																rgba(16, 20, 28, 1) 0%,
+																rgba(16, 20, 28, 0.98) 100%)`,
+															backdropFilter: 'blur(12px) saturate(140%)',
+															WebkitBackdropFilter: 'blur(12px) saturate(140%)',
+															border: `3px solid rgba(36, 150, 237, 0.9)`,
+															borderRadius: '12px',
+															boxShadow: '0 8px 32px rgba(0,0,0,0.8), 0 0 20px rgba(36, 150, 237, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
+															padding: '0.75rem',
+															minWidth: '200px',
+															zIndex: 10000,
+															display: 'flex',
+															flexDirection: 'column',
+															gap: '0.5rem',
+															maxHeight: '400px',
+															overflowY: 'auto',
+															pointerEvents: 'auto',
+															visibility: 'visible',
+															opacity: 1
+														}}
+														onClick={(e) => {
+															e.stopPropagation();
+															e.preventDefault();
+														}}
+														onMouseDown={(e) => e.stopPropagation()}
+													>
+												<div style={{
+													padding: '0.5rem',
+													fontSize: '0.7rem',
+													fontWeight: '600',
+													color: themeColors.textPrimary || '#fff',
+													borderBottom: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+													marginBottom: '0.25rem'
+												}}>
+													Contenedores Docker ({dockerContainers.length})
+												</div>
+												{dockerContainers.map((container, idx) => (
+													<button
+														key={idx}
+														onClick={() => {
+															handleOpenTerminal(`docker-${container.name}`, { dockerContainer: container });
+															setDockerMenuOpen(false);
+														}}
+														style={{
+															padding: '0.5rem 0.75rem',
+															borderRadius: '6px',
+															background: 'rgba(255,255,255,0.05)',
+															border: '1px solid transparent',
+															color: themeColors.textPrimary || '#fff',
+															fontSize: '0.65rem',
+															textAlign: 'left',
+															cursor: 'pointer',
+															transition: 'all 0.2s ease',
+															display: 'flex',
+															alignItems: 'center',
+															gap: '0.5rem'
+														}}
+														onMouseEnter={(e) => {
+															e.currentTarget.style.background = 'rgba(36, 150, 237, 0.2)';
+															e.currentTarget.style.border = '1px solid rgba(36, 150, 237, 0.4)';
+														}}
+														onMouseLeave={(e) => {
+															e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+															e.currentTarget.style.border = '1px solid transparent';
+														}}
+													>
+														<SiDocker style={{ color: '#2496ED', fontSize: '0.9rem', flexShrink: 0 }} />
+														<span style={{ 
+															flex: 1, 
+															overflow: 'hidden', 
+															textOverflow: 'ellipsis', 
+															whiteSpace: 'nowrap' 
+														}}>
+															{container.name || `Contenedor ${idx + 1}`}
+														</span>
+													</button>
+												))}
+												</div>
+											</>,
+											document.body
+											);
+										})()}
 									</div>
 								)}
 							</div>
