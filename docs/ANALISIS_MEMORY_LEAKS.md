@@ -497,3 +497,4 @@ return () => clearInterval(interval); // ✅ Tiene cleanup
 
 
 
+
