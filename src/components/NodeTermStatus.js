@@ -776,39 +776,56 @@ const NodeTermStatus = ({
 		if (!horizontal || !compact) return;
 
 		let rafId = null;
-		let timeoutId = null;
+		let pendingRaf = false;
 		
 		const adjustScale = () => {
+			// Evitar múltiples llamadas simultáneas
+			if (pendingRaf) return;
+			pendingRaf = true;
+			
 			if (rafId) cancelAnimationFrame(rafId);
-			if (timeoutId) clearTimeout(timeoutId);
 			
 			rafId = requestAnimationFrame(() => {
-				timeoutId = setTimeout(() => {
-					const container = barContainerRef.current;
-					if (!container) return;
+				pendingRaf = false;
+				const container = barContainerRef.current;
+				if (!container) return;
 
-					const containerWidth = container.scrollWidth || container.offsetWidth;
-					const parentWidth = container.parentElement?.offsetWidth || window.innerWidth;
-					const availableWidth = parentWidth * 0.95; // 95% del ancho disponible
+				const containerWidth = container.scrollWidth || container.offsetWidth;
+				const parentWidth = container.parentElement?.offsetWidth || window.innerWidth;
+				const availableWidth = parentWidth * 0.95; // 95% del ancho disponible
+				
+				setScaleFactor(prev => {
+					// Calcular el factor de escala ideal directamente
+					let newScale = prev;
 					
-					setScaleFactor(prev => {
-						// Si el contenedor es más ancho que el espacio disponible, reducir escala
-						if (containerWidth > availableWidth && prev > 0.65) {
-							return Math.max(0.65, prev - 0.05);
-						} else if (containerWidth < availableWidth * 0.8 && prev < 1) {
-							// Si hay mucho espacio, aumentar gradualmente
-							return Math.min(1, prev + 0.05);
-						}
-						return prev;
-					});
-				}, 100);
+					if (containerWidth > availableWidth && prev > 0.65) {
+						// Calcular reducción más precisa basada en la diferencia
+						const overflowRatio = availableWidth / containerWidth;
+						newScale = Math.max(0.65, prev * overflowRatio * 0.98);
+					} else if (containerWidth < availableWidth * 0.8 && prev < 1) {
+						// Calcular aumento más preciso basado en el espacio disponible
+						const spaceRatio = availableWidth / containerWidth;
+						newScale = Math.min(1, prev * Math.min(spaceRatio * 0.98, 1.05));
+					}
+					
+					// Redondear a 2 decimales para evitar cambios microscópicos
+					return Math.round(newScale * 100) / 100;
+				});
+			});
+		};
+
+		// Throttle para ResizeObserver - solo ejecutar cada frame
+		let resizeRafId = null;
+		const throttledAdjustScale = () => {
+			if (resizeRafId) return;
+			resizeRafId = requestAnimationFrame(() => {
+				resizeRafId = null;
+				adjustScale();
 			});
 		};
 
 		// Ajustar al montar y al redimensionar
-		const resizeObserver = new ResizeObserver(() => {
-			adjustScale();
-		});
+		const resizeObserver = new ResizeObserver(throttledAdjustScale);
 
 		if (barContainerRef.current) {
 			resizeObserver.observe(barContainerRef.current);
@@ -817,15 +834,16 @@ const NodeTermStatus = ({
 			}
 		}
 
-		window.addEventListener('resize', adjustScale);
-		// Ajustar después de que se renderice
-		setTimeout(adjustScale, 300);
+		window.addEventListener('resize', throttledAdjustScale, { passive: true });
+		// Ajustar después de que se renderice (con delay mínimo)
+		const initialTimeout = setTimeout(adjustScale, 50);
 
 		return () => {
 			if (rafId) cancelAnimationFrame(rafId);
-			if (timeoutId) clearTimeout(timeoutId);
+			if (resizeRafId) cancelAnimationFrame(resizeRafId);
+			clearTimeout(initialTimeout);
 			resizeObserver.disconnect();
-			window.removeEventListener('resize', adjustScale);
+			window.removeEventListener('resize', throttledAdjustScale);
 		};
 	}, [horizontal, compact, availableTerminals.length, dockerContainers.length]);
 
@@ -863,11 +881,27 @@ const NodeTermStatus = ({
 					.terminal-button-hover {
 						animation: terminalGlow 1.5s ease-in-out infinite;
 					}
+					/* Transiciones suaves para todos los elementos del menú que cambian de tamaño */
+					[data-compact-menu-container] button,
+					[data-compact-menu-container] span,
+					[data-compact-menu-container] div[style*="width"],
+					[data-compact-menu-container] div[style*="height"],
+					[data-compact-menu-container] div[style*="fontSize"],
+					[data-compact-menu-container] i,
+					[data-compact-menu-container] svg {
+						transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+						            height 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+						            font-size 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+						            padding 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+						            gap 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+						            border-radius 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+					}
 				`}</style>
 
 				{/* BARRA SUPERIOR CENTRADA: ACCIONES Y TERMINALES */}
 				<div 
 					ref={barContainerRef}
+					data-compact-menu-container
 					style={{ 
 						padding: compactBar.containerPadding,
 						display: 'flex',
@@ -878,7 +912,8 @@ const NodeTermStatus = ({
 						maxWidth: '95%',
 						minWidth: 'min-content',
 						overflow: 'hidden',
-						transition: 'all 0.3s ease'
+						transition: 'padding 0.2s cubic-bezier(0.4, 0, 0.2, 1), gap 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+						willChange: 'padding, gap'
 					}}>
 					{/* SECCIÓN 1: ACCIONES */}
 					<div style={{
