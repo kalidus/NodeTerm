@@ -218,6 +218,107 @@ export const sessionActionIconThemes = {
                 fill="none"
                 filter="url(#modernExpandShadow)"/>
         </svg>
+      ),
+      // Icono de menú
+      menu: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="modernMenuGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#94a3b8" />
+              <stop offset="100%" stopColor="#64748b" />
+            </linearGradient>
+            <filter id="modernMenuShadow">
+              <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
+              <feOffset dx="0" dy="2" result="offsetblur"/>
+              <feComponentTransfer>
+                <feFuncA type="linear" slope="0.3"/>
+              </feComponentTransfer>
+              <feMerge>
+                <feMergeNode/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <line x1="3" y1="6" x2="21" y2="6" stroke="url(#modernMenuGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#modernMenuShadow)"/>
+          <line x1="3" y1="12" x2="21" y2="12" stroke="url(#modernMenuGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#modernMenuShadow)"/>
+          <line x1="3" y1="18" x2="21" y2="18" stroke="url(#modernMenuGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#modernMenuShadow)"/>
+        </svg>
+      ),
+      // Icono de expandir todo
+      expandAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="modernExpandAllGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#94a3b8" />
+              <stop offset="100%" stopColor="#64748b" />
+            </linearGradient>
+            <filter id="modernExpandAllShadow">
+              <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
+              <feOffset dx="0" dy="2" result="offsetblur"/>
+              <feComponentTransfer>
+                <feFuncA type="linear" slope="0.3"/>
+              </feComponentTransfer>
+              <feMerge>
+                <feMergeNode/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <path d="M7 13l5 5 5-5" stroke="url(#modernExpandAllGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" filter="url(#modernExpandAllShadow)"/>
+          <path d="M7 6l5 5 5-5" stroke="url(#modernExpandAllGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" filter="url(#modernExpandAllShadow)"/>
+        </svg>
+      ),
+      // Icono de colapsar todo
+      collapseAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="modernCollapseAllGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#94a3b8" />
+              <stop offset="100%" stopColor="#64748b" />
+            </linearGradient>
+            <filter id="modernCollapseAllShadow">
+              <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
+              <feOffset dx="0" dy="2" result="offsetblur"/>
+              <feComponentTransfer>
+                <feFuncA type="linear" slope="0.3"/>
+              </feComponentTransfer>
+              <feMerge>
+                <feMergeNode/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <path d="M17 11l-5-5-5 5" stroke="url(#modernCollapseAllGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" filter="url(#modernCollapseAllShadow)"/>
+          <path d="M17 18l-5-5-5 5" stroke="url(#modernCollapseAllGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" filter="url(#modernCollapseAllShadow)"/>
+        </svg>
+      ),
+      // Icono de configuración
+      settings: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="modernSettingsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#94a3b8" />
+              <stop offset="100%" stopColor="#64748b" />
+            </linearGradient>
+            <filter id="modernSettingsShadow">
+              <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
+              <feOffset dx="0" dy="2" result="offsetblur"/>
+              <feComponentTransfer>
+                <feFuncA type="linear" slope="0.3"/>
+              </feComponentTransfer>
+              <feMerge>
+                <feMergeNode/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <circle cx="12" cy="12" r="3" stroke="url(#modernSettingsGrad)" strokeWidth="2" fill="none" filter="url(#modernSettingsShadow)"/>
+          <path d="M12 1v6m0 6v6M23 12h-6m-6 0H1M19.07 4.93l-4.24 4.24m0 2.83l4.24 4.24M4.93 19.07l4.24-4.24m0-2.83L4.93 4.93" 
+                stroke="url(#modernSettingsGrad)" 
+                strokeWidth="1.5" 
+                strokeLinecap="round"
+                filter="url(#modernSettingsShadow)"/>
+        </svg>
       )
     }
   },
@@ -744,6 +845,542 @@ export const sessionActionIconThemes = {
                 stroke="currentColor" 
                 strokeWidth="1.5" 
                 strokeLinecap="round"/>
+        </svg>
+      )
+    }
+  },
+
+  bold: {
+    name: 'Audaz',
+    description: 'Iconos gruesos y audaces con líneas pesadas',
+    icons: {
+      newConnection: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" fill="currentColor" opacity="0.2"/>
+          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" fill="none"/>
+          <line x1="12" y1="6" x2="12" y2="18" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+          <line x1="6" y1="12" x2="18" y2="12" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+        </svg>
+      ),
+      newFolder: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 5a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" 
+                fill="currentColor" 
+                opacity="0.3"/>
+          <path d="M2 5a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" 
+                stroke="currentColor" 
+                strokeWidth="3" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                fill="none"/>
+        </svg>
+      ),
+      newGroup: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="3" width="7" height="7" rx="1" fill="currentColor" opacity="0.3" stroke="currentColor" strokeWidth="3"/>
+          <rect x="14" y="3" width="7" height="7" rx="1" fill="currentColor" opacity="0.3" stroke="currentColor" strokeWidth="3"/>
+          <rect x="3" y="14" width="7" height="7" rx="1" fill="currentColor" opacity="0.3" stroke="currentColor" strokeWidth="3"/>
+          <rect x="14" y="14" width="7" height="7" rx="1" fill="currentColor" opacity="0.3" stroke="currentColor" strokeWidth="3"/>
+        </svg>
+      ),
+      passwordManager: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="8" cy="12" r="4" fill="currentColor" opacity="0.3" stroke="currentColor" strokeWidth="3"/>
+          <rect x="8" y="9" width="9" height="6" rx="3" fill="currentColor" opacity="0.3" stroke="currentColor" strokeWidth="3"/>
+          <rect x="11" y="6" width="2.5" height="3" rx="1" fill="currentColor"/>
+          <rect x="13.5" y="8" width="2.5" height="3" rx="1" fill="currentColor"/>
+          <rect x="15.5" y="15" width="2.5" height="3" rx="1" fill="currentColor"/>
+        </svg>
+      ),
+      collapseLeft: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 19L7 12L16 5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+      expandRight: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 19l9-7-9-7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+      menu: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+          <line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+          <line x1="2" y1="18" x2="22" y2="18" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+        </svg>
+      ),
+      expandAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 14l6 6 6-6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+          <path d="M6 6l6 6 6-6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+      collapseAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 10l-6-6-6 6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+          <path d="M18 18l-6-6-6 6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+      settings: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="4" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="3"/>
+          <path d="M12 0v8m0 8v8M24 12h-8m-8 0H0M20.93 3.07l-5.66 5.66m0 3.54l5.66 5.66M3.07 20.93l5.66-5.66m0-3.54L3.07 3.07" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round"/>
+        </svg>
+      )
+    }
+  },
+
+  rounded: {
+    name: 'Redondeado',
+    description: 'Iconos con bordes muy redondeados y suaves',
+    icons: {
+      newConnection: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="8" rx="8" ry="8" fill="currentColor" opacity="0.15"/>
+          <circle cx="12" cy="12" r="8" rx="8" ry="8" stroke="currentColor" strokeWidth="2"/>
+          <circle cx="12" cy="12" r="3" fill="currentColor"/>
+          <line x1="12" y1="4" x2="12" y2="8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="12" y1="16" x2="12" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="4" y1="12" x2="8" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="16" y1="12" x2="20" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      ),
+      newFolder: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 6a3 3 0 0 1 3-3h4l2 2h7a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6z" 
+                fill="currentColor" 
+                opacity="0.15"
+                rx="3" ry="3"/>
+          <path d="M3 6a3 3 0 0 1 3-3h4l2 2h7a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6z" 
+                stroke="currentColor" 
+                strokeWidth="2"
+                rx="3" ry="3"/>
+          <path d="M3 6l3-2h4l2 2" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"/>
+        </svg>
+      ),
+      newGroup: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="4" width="6" height="6" rx="2" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2"/>
+          <rect x="14" y="4" width="6" height="6" rx="2" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2"/>
+          <rect x="4" y="14" width="6" height="6" rx="2" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2"/>
+          <rect x="14" y="14" width="6" height="6" rx="2" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2"/>
+          <circle cx="7" cy="7" r="1.5" fill="currentColor"/>
+          <circle cx="17" cy="7" r="1.5" fill="currentColor"/>
+          <circle cx="7" cy="17" r="1.5" fill="currentColor"/>
+          <circle cx="17" cy="17" r="1.5" fill="currentColor"/>
+        </svg>
+      ),
+      passwordManager: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="9" cy="12" r="4" fill="currentColor" opacity="0.15" stroke="currentColor" strokeWidth="2"/>
+          <rect x="9" y="9" width="9" height="6" rx="3" fill="currentColor" opacity="0.15" stroke="currentColor" strokeWidth="2"/>
+          <rect x="12" y="7" width="2" height="3" rx="1" fill="currentColor"/>
+          <rect x="14" y="9" width="2" height="3" rx="1" fill="currentColor"/>
+          <rect x="16" y="15" width="2" height="3" rx="1" fill="currentColor"/>
+          <circle cx="9" cy="12" r="2" fill="currentColor" opacity="0.4"/>
+        </svg>
+      ),
+      collapseLeft: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+      expandRight: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+      menu: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="5" width="18" height="2" rx="1" fill="currentColor"/>
+          <rect x="3" y="11" width="18" height="2" rx="1" fill="currentColor"/>
+          <rect x="3" y="17" width="18" height="2" rx="1" fill="currentColor"/>
+        </svg>
+      ),
+      expandAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7 13l5 5 5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+          <path d="M7 6l5 5 5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+      collapseAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17 11l-5-5-5 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+          <path d="M17 18l-5-5-5 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+      settings: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="3.5" fill="currentColor" opacity="0.15" stroke="currentColor" strokeWidth="2"/>
+          <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+          <path d="M12 0v6m0 6v6M24 12h-6m-6 0H0M20.78 3.22l-4.24 4.24m0 3.54l4.24 4.24M3.22 20.78l4.24-4.24m0-3.54L3.22 3.22" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round"/>
+        </svg>
+      )
+    }
+  },
+
+  geometric: {
+    name: 'Geométrico',
+    description: 'Iconos abstractos con formas geométricas puras',
+    icons: {
+      newConnection: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="12,2 22,7 22,17 12,22 2,17 2,7" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2"/>
+          <circle cx="12" cy="12" r="3" fill="currentColor"/>
+          <line x1="12" y1="5" x2="12" y2="9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="12" y1="15" x2="12" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="5" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="15" y1="12" x2="19" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      ),
+      newFolder: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 6h18l-2 14H5L3 6z" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2"/>
+          <polygon points="3,6 7,6 9,2 21,2 21,8 3,8" fill="currentColor" opacity="0.15" stroke="currentColor" strokeWidth="2"/>
+        </svg>
+      ),
+      newGroup: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="12,2 22,8 18,20 6,20 2,8" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2"/>
+          <polygon points="12,6 18,10 16,18 8,18 6,10" fill="currentColor" opacity="0.1" stroke="currentColor" strokeWidth="1.5"/>
+          <circle cx="12" cy="12" r="2" fill="currentColor"/>
+        </svg>
+      ),
+      passwordManager: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="9,8 9,16 17,16 17,8" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2"/>
+          <circle cx="7" cy="12" r="3" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2"/>
+          <rect x="11" y="6" width="2" height="2" rx="0.5" fill="currentColor"/>
+          <rect x="13" y="8" width="2" height="2" rx="0.5" fill="currentColor"/>
+          <rect x="15" y="16" width="2" height="2" rx="0.5" fill="currentColor"/>
+        </svg>
+      ),
+      collapseLeft: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="15,18 7,12 15,6" fill="currentColor" opacity="0.3" stroke="currentColor" strokeWidth="2"/>
+        </svg>
+      ),
+      expandRight: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="9,18 17,12 9,6" fill="currentColor" opacity="0.3" stroke="currentColor" strokeWidth="2"/>
+        </svg>
+      ),
+      menu: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="5" width="18" height="3" rx="1" fill="currentColor"/>
+          <rect x="3" y="10.5" width="18" height="3" rx="1" fill="currentColor"/>
+          <rect x="3" y="16" width="18" height="3" rx="1" fill="currentColor"/>
+        </svg>
+      ),
+      expandAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="7,13 12,18 17,13" fill="currentColor" opacity="0.5" stroke="currentColor" strokeWidth="2"/>
+          <polygon points="7,6 12,11 17,6" fill="currentColor" opacity="0.5" stroke="currentColor" strokeWidth="2"/>
+        </svg>
+      ),
+      collapseAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="17,11 12,6 7,11" fill="currentColor" opacity="0.5" stroke="currentColor" strokeWidth="2"/>
+          <polygon points="17,18 12,13 7,18" fill="currentColor" opacity="0.5" stroke="currentColor" strokeWidth="2"/>
+        </svg>
+      ),
+      settings: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="12,1 15,9 23,9 17,14 19,22 12,18 5,22 7,14 1,9 9,9" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2"/>
+          <circle cx="12" cy="12" r="2.5" fill="currentColor"/>
+        </svg>
+      )
+    }
+  },
+
+  filled: {
+    name: 'Relleno',
+    description: 'Iconos completamente rellenos con formas sólidas',
+    icons: {
+      newConnection: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" fill="currentColor"/>
+          <circle cx="12" cy="12" r="4" fill="white"/>
+          <rect x="11" y="2" width="2" height="6" fill="white"/>
+          <rect x="11" y="16" width="2" height="6" fill="white"/>
+          <rect x="2" y="11" width="6" height="2" fill="white"/>
+          <rect x="16" y="11" width="6" height="2" fill="white"/>
+        </svg>
+      ),
+      newFolder: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 5a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" fill="currentColor"/>
+          <path d="M2 5l2-2h5l2 2" fill="currentColor" opacity="0.7"/>
+        </svg>
+      ),
+      newGroup: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="3" width="7" height="7" fill="currentColor"/>
+          <rect x="14" y="3" width="7" height="7" fill="currentColor"/>
+          <rect x="3" y="14" width="7" height="7" fill="currentColor"/>
+          <rect x="14" y="14" width="7" height="7" fill="currentColor"/>
+          <circle cx="6.5" cy="6.5" r="1.5" fill="white" opacity="0.8"/>
+          <circle cx="17.5" cy="6.5" r="1.5" fill="white" opacity="0.8"/>
+          <circle cx="6.5" cy="17.5" r="1.5" fill="white" opacity="0.8"/>
+          <circle cx="17.5" cy="17.5" r="1.5" fill="white" opacity="0.8"/>
+        </svg>
+      ),
+      passwordManager: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="8" cy="12" r="4.5" fill="currentColor"/>
+          <rect x="8" y="8" width="10" height="8" rx="3" fill="currentColor"/>
+          <rect x="11" y="6" width="2.5" height="3" rx="1" fill="white"/>
+          <rect x="13.5" y="8" width="2.5" height="3" rx="1" fill="white"/>
+          <rect x="15.5" y="16" width="2.5" height="3" rx="1" fill="white"/>
+        </svg>
+      ),
+      collapseLeft: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="16,19 7,12 16,5" fill="currentColor"/>
+        </svg>
+      ),
+      expandRight: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="8,19 17,12 8,5" fill="currentColor"/>
+        </svg>
+      ),
+      menu: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="5" width="20" height="3" rx="1.5" fill="currentColor"/>
+          <rect x="2" y="10.5" width="20" height="3" rx="1.5" fill="currentColor"/>
+          <rect x="2" y="16" width="20" height="3" rx="1.5" fill="currentColor"/>
+        </svg>
+      ),
+      expandAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="6,14 12,20 18,14" fill="currentColor"/>
+          <polygon points="6,6 12,12 18,6" fill="currentColor"/>
+        </svg>
+      ),
+      collapseAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="18,10 12,4 6,10" fill="currentColor"/>
+          <polygon points="18,18 12,12 6,18" fill="currentColor"/>
+        </svg>
+      ),
+      settings: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="4" fill="currentColor"/>
+          <circle cx="12" cy="12" r="1.5" fill="white"/>
+          <path d="M12 0v6m0 6v6M24 12h-6m-6 0H0M20.78 3.22l-4.24 4.24m0 3.54l4.24 4.24M3.22 20.78l4.24-4.24m0-3.54L3.22 3.22" 
+                stroke="currentColor" 
+                strokeWidth="2.5" 
+                strokeLinecap="round"/>
+        </svg>
+      )
+    }
+  },
+
+  duotone: {
+    name: 'Duotono',
+    description: 'Iconos con dos tonos de color superpuestos',
+    icons: {
+      newConnection: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="9" fill="currentColor" opacity="0.4"/>
+          <circle cx="12" cy="12" r="6" fill="currentColor" opacity="0.6"/>
+          <circle cx="12" cy="12" r="3" fill="currentColor"/>
+          <line x1="12" y1="3" x2="12" y2="9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.8"/>
+          <line x1="12" y1="15" x2="12" y2="21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.8"/>
+          <line x1="3" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.8"/>
+          <line x1="15" y1="12" x2="21" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.8"/>
+        </svg>
+      ),
+      newFolder: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 5a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" fill="currentColor" opacity="0.3"/>
+          <path d="M2 5a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" fill="currentColor" opacity="0.5"/>
+          <path d="M2 5l2-2h5l2 2" fill="currentColor" opacity="0.7"/>
+        </svg>
+      ),
+      newGroup: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="3" width="7" height="7" fill="currentColor" opacity="0.3"/>
+          <rect x="14" y="3" width="7" height="7" fill="currentColor" opacity="0.3"/>
+          <rect x="3" y="14" width="7" height="7" fill="currentColor" opacity="0.3"/>
+          <rect x="14" y="14" width="7" height="7" fill="currentColor" opacity="0.3"/>
+          <rect x="4" y="4" width="5" height="5" fill="currentColor" opacity="0.6"/>
+          <rect x="15" y="4" width="5" height="5" fill="currentColor" opacity="0.6"/>
+          <rect x="4" y="15" width="5" height="5" fill="currentColor" opacity="0.6"/>
+          <rect x="15" y="15" width="5" height="5" fill="currentColor" opacity="0.6"/>
+        </svg>
+      ),
+      passwordManager: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="8" cy="12" r="4.5" fill="currentColor" opacity="0.3"/>
+          <circle cx="8" cy="12" r="3" fill="currentColor" opacity="0.6"/>
+          <rect x="8" y="8" width="10" height="8" rx="3" fill="currentColor" opacity="0.3"/>
+          <rect x="9" y="9" width="8" height="6" rx="2" fill="currentColor" opacity="0.6"/>
+          <rect x="11" y="6" width="2" height="3" rx="1" fill="currentColor"/>
+          <rect x="13" y="8" width="2" height="3" rx="1" fill="currentColor"/>
+          <rect x="15" y="16" width="2" height="3" rx="1" fill="currentColor"/>
+        </svg>
+      ),
+      collapseLeft: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 19L7 12L16 5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.6"/>
+          <path d="M16 19L7 12L16 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.9"/>
+        </svg>
+      ),
+      expandRight: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 19l9-7-9-7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.6"/>
+          <path d="M8 19l9-7-9-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.9"/>
+        </svg>
+      ),
+      menu: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="5" width="20" height="3" rx="1.5" fill="currentColor" opacity="0.4"/>
+          <rect x="2" y="5" width="20" height="3" rx="1.5" fill="currentColor" opacity="0.7"/>
+          <rect x="2" y="10.5" width="20" height="3" rx="1.5" fill="currentColor" opacity="0.4"/>
+          <rect x="2" y="10.5" width="20" height="3" rx="1.5" fill="currentColor" opacity="0.7"/>
+          <rect x="2" y="16" width="20" height="3" rx="1.5" fill="currentColor" opacity="0.4"/>
+          <rect x="2" y="16" width="20" height="3" rx="1.5" fill="currentColor" opacity="0.7"/>
+        </svg>
+      ),
+      expandAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="6,14 12,20 18,14" fill="currentColor" opacity="0.4"/>
+          <polygon points="6,14 12,20 18,14" fill="currentColor" opacity="0.7"/>
+          <polygon points="6,6 12,12 18,6" fill="currentColor" opacity="0.4"/>
+          <polygon points="6,6 12,12 18,6" fill="currentColor" opacity="0.7"/>
+        </svg>
+      ),
+      collapseAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="18,10 12,4 6,10" fill="currentColor" opacity="0.4"/>
+          <polygon points="18,10 12,4 6,10" fill="currentColor" opacity="0.7"/>
+          <polygon points="18,18 12,12 6,18" fill="currentColor" opacity="0.4"/>
+          <polygon points="18,18 12,12 6,18" fill="currentColor" opacity="0.7"/>
+        </svg>
+      ),
+      settings: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="4" fill="currentColor" opacity="0.3"/>
+          <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.6"/>
+          <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+          <path d="M12 0v6m0 6v6M24 12h-6m-6 0H0M20.78 3.22l-4.24 4.24m0 3.54l4.24 4.24M3.22 20.78l4.24-4.24m0-3.54L3.22 3.22" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round"
+                opacity="0.6"/>
+        </svg>
+      )
+    }
+  },
+
+  pixel: {
+    name: 'Pixel',
+    description: 'Iconos estilo pixel art con bordes definidos',
+    icons: {
+      newConnection: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="2" width="20" height="20" fill="currentColor" opacity="0.1"/>
+          <rect x="2" y="2" width="20" height="20" stroke="currentColor" strokeWidth="2"/>
+          <rect x="9" y="9" width="6" height="6" fill="currentColor"/>
+          <rect x="10" y="2" width="4" height="7" fill="currentColor"/>
+          <rect x="10" y="15" width="4" height="7" fill="currentColor"/>
+          <rect x="2" y="10" width="7" height="4" fill="currentColor"/>
+          <rect x="15" y="10" width="7" height="4" fill="currentColor"/>
+        </svg>
+      ),
+      newFolder: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="6" width="20" height="16" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2"/>
+          <rect x="2" y="6" width="20" height="16" stroke="currentColor" strokeWidth="2"/>
+          <rect x="2" y="2" width="12" height="6" fill="currentColor" opacity="0.3" stroke="currentColor" strokeWidth="2"/>
+          <rect x="2" y="2" width="12" height="6" stroke="currentColor" strokeWidth="2"/>
+        </svg>
+      ),
+      newGroup: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="2" width="8" height="8" fill="currentColor" opacity="0.3" stroke="currentColor" strokeWidth="2"/>
+          <rect x="14" y="2" width="8" height="8" fill="currentColor" opacity="0.3" stroke="currentColor" strokeWidth="2"/>
+          <rect x="2" y="14" width="8" height="8" fill="currentColor" opacity="0.3" stroke="currentColor" strokeWidth="2"/>
+          <rect x="14" y="14" width="8" height="8" fill="currentColor" opacity="0.3" stroke="currentColor" strokeWidth="2"/>
+          <rect x="4" y="4" width="4" height="4" fill="currentColor"/>
+          <rect x="16" y="4" width="4" height="4" fill="currentColor"/>
+          <rect x="4" y="16" width="4" height="4" fill="currentColor"/>
+          <rect x="16" y="16" width="4" height="4" fill="currentColor"/>
+        </svg>
+      ),
+      passwordManager: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="8" width="12" height="8" rx="2" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2"/>
+          <circle cx="7" cy="12" r="3" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2"/>
+          <rect x="10" y="6" width="3" height="3" fill="currentColor"/>
+          <rect x="13" y="8" width="3" height="3" fill="currentColor"/>
+          <rect x="15" y="16" width="3" height="3" fill="currentColor"/>
+        </svg>
+      ),
+      collapseLeft: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="16" y="5" width="3" height="3" fill="currentColor"/>
+          <rect x="13" y="8" width="3" height="3" fill="currentColor"/>
+          <rect x="10" y="11" width="3" height="3" fill="currentColor"/>
+          <rect x="13" y="14" width="3" height="3" fill="currentColor"/>
+          <rect x="16" y="17" width="3" height="3" fill="currentColor"/>
+        </svg>
+      ),
+      expandRight: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="5" y="5" width="3" height="3" fill="currentColor"/>
+          <rect x="8" y="8" width="3" height="3" fill="currentColor"/>
+          <rect x="11" y="11" width="3" height="3" fill="currentColor"/>
+          <rect x="8" y="14" width="3" height="3" fill="currentColor"/>
+          <rect x="5" y="17" width="3" height="3" fill="currentColor"/>
+        </svg>
+      ),
+      menu: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="4" width="20" height="4" fill="currentColor"/>
+          <rect x="2" y="10" width="20" height="4" fill="currentColor"/>
+          <rect x="2" y="16" width="20" height="4" fill="currentColor"/>
+        </svg>
+      ),
+      expandAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6" y="13" width="3" height="3" fill="currentColor"/>
+          <rect x="9" y="16" width="3" height="3" fill="currentColor"/>
+          <rect x="12" y="19" width="3" height="3" fill="currentColor"/>
+          <rect x="6" y="6" width="3" height="3" fill="currentColor"/>
+          <rect x="9" y="9" width="3" height="3" fill="currentColor"/>
+          <rect x="12" y="12" width="3" height="3" fill="currentColor"/>
+        </svg>
+      ),
+      collapseAll: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="15" y="10" width="3" height="3" fill="currentColor"/>
+          <rect x="12" y="7" width="3" height="3" fill="currentColor"/>
+          <rect x="9" y="4" width="3" height="3" fill="currentColor"/>
+          <rect x="15" y="18" width="3" height="3" fill="currentColor"/>
+          <rect x="12" y="15" width="3" height="3" fill="currentColor"/>
+          <rect x="9" y="12" width="3" height="3" fill="currentColor"/>
+        </svg>
+      ),
+      settings: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="9" y="9" width="6" height="6" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2"/>
+          <rect x="10" y="10" width="4" height="4" fill="currentColor"/>
+          <rect x="10" y="1" width="4" height="6" fill="currentColor"/>
+          <rect x="10" y="17" width="4" height="6" fill="currentColor"/>
+          <rect x="1" y="10" width="6" height="4" fill="currentColor"/>
+          <rect x="17" y="10" width="6" height="4" fill="currentColor"/>
         </svg>
       )
     }
