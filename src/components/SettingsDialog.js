@@ -3145,7 +3145,7 @@ const SettingsDialog = ({
                               gap: '0.5rem',
                               minWidth: '60px'
                             }}>
-                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Fuente</span>
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>{t('appearance.homePage.font')}</span>
                             </div>
                             <Dropdown
                               id="sidebar-font"
@@ -3172,7 +3172,7 @@ const SettingsDialog = ({
                               gap: '0.5rem',
                               minWidth: '60px'
                             }}>
-                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Tamaño</span>
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>{t('appearance.homePage.fontSize')}</span>
                             </div>
                             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <Slider
@@ -3897,7 +3897,7 @@ const SettingsDialog = ({
                               gap: '0.5rem',
                               minWidth: '60px'
                             }}>
-                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Fuente</span>
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>{t('appearance.homePage.font')}</span>
                             </div>
                             <Dropdown
                               id="explorer-font"
@@ -3924,7 +3924,7 @@ const SettingsDialog = ({
                               gap: '0.5rem',
                               minWidth: '60px'
                             }}>
-                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Tamaño</span>
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>{t('appearance.homePage.fontSize')}</span>
                             </div>
                             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <Slider
@@ -3965,8 +3965,8 @@ const SettingsDialog = ({
                         <i className="pi pi-home"></i>
                       </span>
                       <div className="general-header-text">
-                        <h3 className="general-header">Página de Inicio</h3>
-                        <p className="general-description">Personaliza la tipografía del menú de la página de inicio</p>
+                        <h3 className="general-header">{t('sidebar.homePage')}</h3>
+                        <p className="general-description">{t('appearance.homePage.description')}</p>
                       </div>
                     </div>
                   </div>
@@ -3984,7 +3984,7 @@ const SettingsDialog = ({
                       }}>
                         <i className="pi pi-pencil"></i>
                       </div>
-                      <h4 className="general-section-title">Tipografía del Menú</h4>
+                      <h4 className="general-section-title">{t('appearance.homePage.menuTypography')}</h4>
                     </div>
                     
                     <div className="general-settings-options" style={{ padding: '1rem 1.25rem' }}>
@@ -4007,7 +4007,7 @@ const SettingsDialog = ({
                             fontSize: '0.875rem',
                             fontWeight: 600,
                             color: 'var(--ui-dialog-text)'
-                          }}>Tipografía</span>
+                          }}>{t('appearance.homePage.typography')}</span>
                         </div>
                         
                         <div style={{
@@ -4027,14 +4027,14 @@ const SettingsDialog = ({
                               gap: '0.5rem',
                               minWidth: '60px'
                             }}>
-                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Fuente</span>
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>{t('appearance.homePage.font')}</span>
                             </div>
                             <Dropdown
                               id="homeTab-font"
                               value={homeTabFont}
                               options={explorerFonts.map(f => ({ label: f, value: f }))}
                               onChange={e => setHomeTabFont(e.value)}
-                              placeholder="Seleccionar fuente"
+                              placeholder={t('appearance.sessionExplorer.selectFont')}
                               style={{ flex: 1 }}
                               itemTemplate={option => (
                                 <span style={{ fontFamily: option.value }}>{option.label}</span>
@@ -4054,7 +4054,7 @@ const SettingsDialog = ({
                               gap: '0.5rem',
                               minWidth: '60px'
                             }}>
-                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Tamaño</span>
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>{t('appearance.homePage.fontSize')}</span>
                             </div>
                             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <Slider
@@ -4095,7 +4095,7 @@ const SettingsDialog = ({
                             fontSize: '0.875rem',
                             fontWeight: 600,
                             color: 'var(--ui-dialog-text)'
-                          }}>Vista Previa</span>
+                          }}>{t('appearance.homePage.preview')}</span>
                         </div>
                         <div style={{
                           background: 'rgba(0, 0, 0, 0.15)',

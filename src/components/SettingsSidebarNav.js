@@ -41,7 +41,7 @@ const SettingsSidebarNav = ({
       subitems: [
         { id: 'interfaz', label: t('sidebar.interface'), icon: 'pi pi-eye' },
         { id: 'pestanas', label: t('sidebar.tabs'), icon: 'pi pi-palette' },
-        { id: 'pagina-inicio', label: 'Página de Inicio', icon: 'pi pi-home' },
+        { id: 'pagina-inicio', label: t('sidebar.homePage'), icon: 'pi pi-home' },
         { id: 'terminal', label: t('sidebar.terminal'), icon: 'pi pi-desktop' },
         { id: 'status-bar', label: t('sidebar.statusBar'), icon: 'pi pi-sliders-h' },
         { id: 'explorador-sesiones', label: t('sidebar.sessionExplorer'), icon: 'pi pi-sitemap' },

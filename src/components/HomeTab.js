@@ -53,6 +53,24 @@ const HomeTab = ({
       return true;
     }
   }); // Estado para mostrar/ocultar status bar
+  
+  // Configuración de tipografía de HomeTab
+  const [homeTabFont, setHomeTabFont] = useState(() => {
+    try {
+      return localStorage.getItem('homeTabFont') || localStorage.getItem('sidebarFont') || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+    } catch {
+      return '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+    }
+  });
+  const [homeTabFontSize, setHomeTabFontSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('homeTabFontSize');
+      return saved ? parseInt(saved, 10) : null;
+    } catch {
+      return null;
+    }
+  });
+  
   const versionInfo = getVersionInfo();
   const tabbedTerminalRef = useRef();
 
@@ -836,7 +854,8 @@ const HomeTab = ({
                   <h3 style={{ 
                     margin: 0, 
                     color: themeColors.textPrimary, 
-                    fontSize: '0.9rem',
+                    fontSize: homeTabFontSize ? `${homeTabFontSize * 0.9}px` : '0.9rem',
+                    fontFamily: homeTabFont,
                     fontWeight: '700',
                     letterSpacing: '0.1px',
                     textShadow: '0 1px 2px rgba(0,0,0,0.1)'
@@ -862,7 +881,8 @@ const HomeTab = ({
                         alignItems: 'center',
                         gap: '0.25rem',
                         color: themeColors.textSecondary,
-                        fontSize: '0.65rem',
+                        fontSize: homeTabFontSize ? `${homeTabFontSize * 0.65}px` : '0.65rem',
+                        fontFamily: homeTabFont,
                         background: themeColors.itemBackground,
                         padding: '0.2rem 0.35rem',
                         borderRadius: '5px',
@@ -975,7 +995,8 @@ const HomeTab = ({
                       justifyContent: 'center',
                       padding: '0.75rem',
                       color: themeColors.textSecondary,
-                      fontSize: '0.75rem',
+                      fontSize: homeTabFontSize ? `${homeTabFontSize * 0.75}px` : '0.75rem',
+                      fontFamily: homeTabFont,
                       fontStyle: 'italic'
                     }}>
                       No hay conexiones recientes

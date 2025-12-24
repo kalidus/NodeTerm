@@ -22,6 +22,7 @@
     "appearance": "Appearance",
     "interface": "Interface",
     "tabs": "Tabs",
+    "homePage": "Home Page",
     "terminal": "Terminal",
     "statusBar": "Status Bar",
     "sessionExplorer": "Session Explorer",
@@ -221,6 +222,14 @@
       "selectTheme": "Select a theme",
       "selectFont": "Select a font",
       "restoreColor": "Restore default color"
+    },
+    "homePage": {
+      "description": "Customize the typography of the home page menu",
+      "menuTypography": "Menu Typography",
+      "typography": "Typography",
+      "font": "Font",
+      "fontSize": "Size",
+      "preview": "Preview"
     }
   },
   "rdp": {
