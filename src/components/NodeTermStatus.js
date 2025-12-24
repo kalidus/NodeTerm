@@ -366,9 +366,26 @@ const NodeTermStatus = ({
 		const label = (terminal.label || '').toLowerCase();
 		const value = (terminal.value || '').toLowerCase();
 		
-		// Detectar WSL genérico (usar pingüino de Linux) - debe ser exactamente 'wsl' sin distribuciones específicas
+		// Convertir el tamaño del icono a píxeles si es rem para cálculos
+		let baseIconSizePx = 20;
+		const iconSizeStr = compactBar.buttonIconSize;
+		if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+			const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+			baseIconSizePx = Math.max(remValue * 16, 20);
+		} else if (typeof iconSizeStr === 'number') {
+			baseIconSizePx = Math.max(iconSizeStr, 20);
+		}
+		
+		// Detectar PowerShell - aumentar tamaño
+		if (value === 'powershell') {
+			const powershellIconSize = Math.round(baseIconSizePx * 1.3);
+			return <i className={terminal.icon} style={{ color: terminal.color, fontSize: `${powershellIconSize}px`, fontWeight: 'bold' }} />;
+		}
+		
+		// Detectar WSL genérico (usar pingüino de Linux) - debe ser exactamente 'wsl' sin distribuciones específicas - aumentar tamaño
 		if (value === 'wsl' && !value.includes('ubuntu') && !value.includes('debian') && !value.includes('kali')) {
-			return <FaLinux style={{ color: terminal.color, fontSize: compactBar.buttonIconSize }} />;
+			const wslIconSize = Math.round(baseIconSizePx * 1.3);
+			return <FaLinux style={{ color: terminal.color, fontSize: `${wslIconSize}px` }} />;
 		}
 		
 		// Detectar Ubuntu (por categoría o por nombre)
@@ -456,9 +473,16 @@ const NodeTermStatus = ({
 			return <FaRedhat style={{ color: terminal.color, fontSize: compactBar.buttonIconSize }} />;
 		}
 		
-		// Detectar Docker
+		// Detectar Cygwin - aumentar tamaño
+		if (value === 'cygwin' || label.includes('cygwin')) {
+			const cygwinIconSize = Math.round(baseIconSizePx * 1.3);
+			return <i className={terminal.icon} style={{ color: terminal.color, fontSize: `${cygwinIconSize}px`, fontWeight: 'bold' }} />;
+		}
+		
+		// Detectar Docker - aumentar tamaño
 		if (value.includes('docker') || label.includes('docker')) {
-			return <SiDocker style={{ color: terminal.color, fontSize: compactBar.buttonIconSize }} />;
+			const dockerIconSize = Math.round(baseIconSizePx * 1.3);
+			return <SiDocker style={{ color: terminal.color, fontSize: `${dockerIconSize}px` }} />;
 		}
 		
 		// Fallback: usar icono genérico de PrimeIcons si no hay match
@@ -748,7 +772,7 @@ const NodeTermStatus = ({
 				display: 'flex',
 				justifyContent: 'center',
 				alignItems: 'center',
-				padding: '0.5rem',
+				padding: '0.25rem 0.5rem',
 				boxSizing: 'border-box'
 			}}>
 				{/* Estilos globales para animaciones */}
@@ -769,14 +793,6 @@ const NodeTermStatus = ({
 				<div 
 					ref={barContainerRef}
 					style={{ 
-						background: `linear-gradient(135deg,
-							rgba(16, 20, 28, 0.7) 0%,
-							rgba(16, 20, 28, 0.5) 100%)`,
-						backdropFilter: 'blur(12px) saturate(140%)',
-						WebkitBackdropFilter: 'blur(12px) saturate(140%)',
-						border: `1px solid ${themeColors.cardBorder || 'rgba(255,255,255,0.15)'}`,
-						borderRadius: '16px',
-						boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
 						padding: compactBar.containerPadding,
 						display: 'flex',
 						alignItems: 'center',
@@ -1216,21 +1232,17 @@ const NodeTermStatus = ({
 												height: `${compactBar.buttonSize}px`,
 												padding: '0',
 												borderRadius: `${compactBar.buttonRadius}px`,
-												background: `linear-gradient(135deg, ${terminal.color}25 0%, ${terminal.color}15 100%)`,
-												border: `1px solid ${terminal.color}35`,
-												boxShadow: `0 1px 4px ${terminal.color}20`,
+												background: 'transparent',
+												border: 'none',
+												boxShadow: 'none',
 												transition: 'all 0.2s ease',
 												position: 'relative'
 											}}
 											onMouseEnter={(e) => {
-												e.currentTarget.style.background = `linear-gradient(135deg, ${terminal.color}35 0%, ${terminal.color}25 100%)`;
 												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-												e.currentTarget.style.boxShadow = `0 3px 8px ${terminal.color}30`;
 											}}
 											onMouseLeave={(e) => {
-												e.currentTarget.style.background = `linear-gradient(135deg, ${terminal.color}25 0%, ${terminal.color}15 100%)`;
 												e.currentTarget.style.transform = 'translateY(0) scale(1)';
-												e.currentTarget.style.boxShadow = `0 1px 4px ${terminal.color}20`;
 											}}
 										>
 											{getDistroIcon(terminal)}
@@ -1303,29 +1315,21 @@ const NodeTermStatus = ({
 												height: `${compactBar.buttonSize}px`,
 												padding: '0',
 												borderRadius: `${compactBar.buttonRadius}px`,
-												background: dockerMenuOpen 
-													? 'linear-gradient(135deg, rgba(36, 150, 237, 0.45) 0%, rgba(36, 150, 237, 0.35) 100%)'
-													: 'linear-gradient(135deg, rgba(36, 150, 237, 0.25) 0%, rgba(36, 150, 237, 0.15) 100%)',
-												border: '1px solid rgba(36, 150, 237, 0.35)',
-												boxShadow: dockerMenuOpen 
-													? '0 3px 8px rgba(36, 150, 237, 0.4)'
-													: '0 1px 4px rgba(36, 150, 237, 0.2)',
+												background: 'transparent',
+												border: 'none',
+												boxShadow: 'none',
 												transition: 'all 0.2s ease',
 												position: 'relative',
 												overflow: 'visible'
 											}}
 											onMouseEnter={(e) => {
 												if (!dockerMenuOpen) {
-													e.currentTarget.style.background = 'linear-gradient(135deg, rgba(36, 150, 237, 0.35) 0%, rgba(36, 150, 237, 0.25) 100%)';
 													e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-													e.currentTarget.style.boxShadow = '0 3px 8px rgba(36, 150, 237, 0.3)';
 												}
 											}}
 											onMouseLeave={(e) => {
 												if (!dockerMenuOpen) {
-													e.currentTarget.style.background = 'linear-gradient(135deg, rgba(36, 150, 237, 0.25) 0%, rgba(36, 150, 237, 0.15) 100%)';
 													e.currentTarget.style.transform = 'translateY(0) scale(1)';
-													e.currentTarget.style.boxShadow = '0 1px 4px rgba(36, 150, 237, 0.2)';
 												}
 											}}
 										>
@@ -1333,12 +1337,16 @@ const NodeTermStatus = ({
 												<SiDocker style={{ 
 													color: '#2496ED',
 													fontSize: (() => {
+														let baseIconSizePx = 20;
 														const iconSizeStr = compactBar.buttonIconSize;
 														if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
 															const remValue = parseFloat(iconSizeStr.replace('rem', ''));
-															return `${(remValue * 1.3).toFixed(2)}rem`;
+															baseIconSizePx = Math.max(remValue * 16, 20);
+														} else if (typeof iconSizeStr === 'number') {
+															baseIconSizePx = Math.max(iconSizeStr, 20);
 														}
-														return '1.3rem';
+														const dockerIconSize = Math.round(baseIconSizePx * 1.3);
+														return `${dockerIconSize}px`;
 													})(),
 													display: 'block'
 												}} />
