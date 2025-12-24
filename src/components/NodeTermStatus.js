@@ -787,6 +787,17 @@ const NodeTermStatus = ({
 							box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
 						}
 					}
+					@keyframes terminalGlow {
+						0%, 100% {
+							filter: drop-shadow(0 0 4px currentColor);
+						}
+						50% {
+							filter: drop-shadow(0 0 12px currentColor) drop-shadow(0 0 8px currentColor);
+						}
+					}
+					.terminal-button-hover {
+						animation: terminalGlow 1.5s ease-in-out infinite;
+					}
 				`}</style>
 
 				{/* BARRA SUPERIOR CENTRADA: ACCIONES Y TERMINALES */}
@@ -1235,14 +1246,28 @@ const NodeTermStatus = ({
 												background: 'transparent',
 												border: 'none',
 												boxShadow: 'none',
-												transition: 'all 0.2s ease',
-												position: 'relative'
+												transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+												position: 'relative',
+												overflow: 'visible'
 											}}
 											onMouseEnter={(e) => {
-												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+												e.currentTarget.classList.add('terminal-button-hover');
+												e.currentTarget.style.transform = 'scale(1.1)';
+												// Agregar efecto de brillo al icono
+												const icon = e.currentTarget.querySelector('i, svg');
+												if (icon) {
+													icon.style.transition = 'all 0.3s ease';
+													icon.style.filter = `drop-shadow(0 0 8px ${terminal.color}) drop-shadow(0 0 4px ${terminal.color})`;
+												}
 											}}
 											onMouseLeave={(e) => {
-												e.currentTarget.style.transform = 'translateY(0) scale(1)';
+												e.currentTarget.classList.remove('terminal-button-hover');
+												e.currentTarget.style.transform = 'scale(1)';
+												// Quitar efecto de brillo del icono
+												const icon = e.currentTarget.querySelector('i, svg');
+												if (icon) {
+													icon.style.filter = 'none';
+												}
 											}}
 										>
 											{getDistroIcon(terminal)}
@@ -1318,18 +1343,31 @@ const NodeTermStatus = ({
 												background: 'transparent',
 												border: 'none',
 												boxShadow: 'none',
-												transition: 'all 0.2s ease',
+												transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
 												position: 'relative',
 												overflow: 'visible'
 											}}
 											onMouseEnter={(e) => {
 												if (!dockerMenuOpen) {
-													e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+													e.currentTarget.classList.add('terminal-button-hover');
+													e.currentTarget.style.transform = 'scale(1.1)';
+													// Agregar efecto de brillo al icono de Docker
+													const dockerIcon = e.currentTarget.querySelector('svg');
+													if (dockerIcon) {
+														dockerIcon.style.transition = 'all 0.3s ease';
+														dockerIcon.style.filter = 'drop-shadow(0 0 8px #2496ED) drop-shadow(0 0 4px #2496ED)';
+													}
 												}
 											}}
 											onMouseLeave={(e) => {
 												if (!dockerMenuOpen) {
-													e.currentTarget.style.transform = 'translateY(0) scale(1)';
+													e.currentTarget.classList.remove('terminal-button-hover');
+													e.currentTarget.style.transform = 'scale(1)';
+													// Quitar efecto de brillo del icono de Docker
+													const dockerIcon = e.currentTarget.querySelector('svg');
+													if (dockerIcon) {
+														dockerIcon.style.filter = 'none';
+													}
 												}
 											}}
 										>
