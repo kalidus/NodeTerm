@@ -159,7 +159,8 @@
 .favorite-tile__name {
   color: rgba(255,255,255,0.96);
   font-weight: 800;
-  font-size: calc(11px * var(--fav-scale));
+  font-size: var(--fav-name-font-size, calc(11px * var(--fav-scale)));
+  font-family: var(--fav-font-family, inherit);
   letter-spacing: 0.05px;
   white-space: nowrap;
   overflow: hidden;
@@ -179,7 +180,8 @@
 
 .favorite-tile__host {
   color: rgba(255,255,255,0.72);
-  font-size: calc(10px * var(--fav-scale));
+  font-size: var(--fav-host-font-size, calc(10px * var(--fav-scale)));
+  font-family: var(--fav-font-family, inherit);
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -199,7 +201,8 @@
   height: calc(14px * var(--fav-scale));
   padding: 0 calc(5px * var(--fav-scale));
   border-radius: 999px;
-  font-size: calc(7.5px * var(--fav-scale));
+  font-size: var(--fav-chip-font-size, calc(7.5px * var(--fav-scale)));
+  font-family: var(--fav-font-family, inherit);
   font-weight: 800;
   letter-spacing: 0.3px;
   text-transform: uppercase;

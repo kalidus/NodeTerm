@@ -22,6 +22,7 @@
     "appearance": "Apariencia",
     "interface": "Interfaz",
     "tabs": "Pestañas",
+    "homePage": "Página de Inicio",
     "terminal": "Terminal",
     "statusBar": "Status Bar",
     "sessionExplorer": "Expl. Sesiones",
@@ -78,6 +79,14 @@
       "selectTheme": "Selecciona un tema",
       "selectFont": "Selecciona una fuente",
       "restoreColor": "Restaurar color por defecto"
+    },
+    "homePage": {
+      "description": "Personaliza la tipografía del menú de la página de inicio",
+      "menuTypography": "Tipografía del Menú",
+      "typography": "Tipografía",
+      "font": "Fuente",
+      "fontSize": "Tamaño",
+      "preview": "Vista Previa"
     }
   },
   "rdp": {

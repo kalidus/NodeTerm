@@ -18,6 +18,23 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	const resizeRafRef = useRef(0);
 	const lastMeasuredHeightRef = useRef(0);
 	
+	// Configuración de tipografía de HomeTab
+	const [homeTabFont, setHomeTabFont] = useState(() => {
+		try {
+			return localStorage.getItem('homeTabFont') || localStorage.getItem('sidebarFont') || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+		} catch {
+			return '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+		}
+	});
+	const [homeTabFontSize, setHomeTabFontSize] = useState(() => {
+		try {
+			const saved = localStorage.getItem('homeTabFontSize');
+			return saved ? parseInt(saved, 10) : null;
+		} catch {
+			return null;
+		}
+	});
+	
 	// Calcular items por página dinámicamente basado en la altura disponible
 	// Cada tile compacto tiene aproximadamente ~52px de altura, más gaps
 	const itemHeight = 56; // Altura aproximada de cada tile (contenido + gap)
@@ -40,6 +57,26 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 		const off = onUpdate(() => loadConnectionHistory());
 		return () => off && off();
 	}, [recentsLimit]);
+
+	// Escuchar cambios en la tipografía de HomeTab
+	useEffect(() => {
+		const handleHomeTabFontChange = () => {
+			try {
+				const newFont = localStorage.getItem('homeTabFont') || localStorage.getItem('sidebarFont') || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+				const newSize = localStorage.getItem('homeTabFontSize');
+				const parsedSize = newSize ? parseInt(newSize, 10) : null;
+				setHomeTabFont(newFont);
+				setHomeTabFontSize(parsedSize);
+			} catch {}
+		};
+		handleHomeTabFontChange();
+		window.addEventListener('home-tab-font-changed', handleHomeTabFontChange);
+		window.addEventListener('sidebar-font-changed', handleHomeTabFontChange);
+		return () => {
+			window.removeEventListener('home-tab-font-changed', handleHomeTabFontChange);
+			window.removeEventListener('sidebar-font-changed', handleHomeTabFontChange);
+		};
+	}, []);
 
 	// Observar cambios en el tamaño del contenedor de favoritos
 	useEffect(() => {
@@ -366,6 +403,10 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 					'--fav-bg': themeColors.itemBackground || 'rgba(12, 14, 20, 0.55)',
 					'--fav-bg-hover': themeColors.hoverBackground || 'rgba(16, 20, 28, 0.70)',
 					'--fav-border': themeColors.borderColor || 'rgba(255,255,255,0.10)',
+					'--fav-font-family': homeTabFont || 'inherit',
+					'--fav-name-font-size': homeTabFontSize ? `${homeTabFontSize * 0.85}px` : 'calc(11px * var(--fav-scale))',
+					'--fav-host-font-size': homeTabFontSize ? `${homeTabFontSize * 0.7}px` : 'calc(10px * var(--fav-scale))',
+					'--fav-chip-font-size': homeTabFontSize ? `${homeTabFontSize * 0.65}px` : 'calc(7.5px * var(--fav-scale))',
 				}}
 				onMouseEnter={(e) => {
 					e.currentTarget.style.setProperty('--fav-bg', themeColors.hoverBackground || 'rgba(16, 20, 28, 0.70)');
@@ -393,11 +434,17 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 				
 				{/* Contenido central */}
 				<div className="favorite-tile__content">
-					<div className="favorite-tile__name" title={connection.name}>
+					<div 
+						className="favorite-tile__name" 
+						title={connection.name}
+					>
 						{connection.name}
 					</div>
 					<div className="favorite-tile__host-row">
-						<span className="favorite-tile__host" title={hostLabel}>
+						<span 
+							className="favorite-tile__host" 
+							title={hostLabel}
+						>
 							{hostLabel}
 						</span>
 						{/* Botones de acción al final de la línea del host */}
@@ -490,7 +537,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 							<h3 style={{ 
 								margin: 0, 
 								color: themeColors.textPrimary || 'var(--text-color)', 
-								fontSize: '0.9rem',
+								fontSize: homeTabFontSize ? `${homeTabFontSize * 0.9}px` : '0.9rem',
+								fontFamily: homeTabFont,
 								fontWeight: '700',
 								letterSpacing: '0.1px',
 								textShadow: '0 1px 2px rgba(0,0,0,0.1)'
@@ -708,7 +756,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 								<h3 style={{ 
 									color: themeColors.textPrimary || 'var(--text-color)', 
 									margin: '0 0 0.5rem 0',
-									fontSize: '1.2rem',
+									fontSize: homeTabFontSize ? `${homeTabFontSize * 1.2}px` : '1.2rem',
+									fontFamily: homeTabFont,
 									fontWeight: '600',
 									textAlign: 'center'
 								}}>
@@ -719,7 +768,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 								<p style={{ 
 									color: themeColors.textSecondary || 'var(--text-color-secondary)', 
 									margin: '0 0 1.5rem 0',
-									fontSize: '0.9rem',
+									fontSize: homeTabFontSize ? `${homeTabFontSize * 0.9}px` : '0.9rem',
+									fontFamily: homeTabFont,
 									textAlign: 'center',
 									lineHeight: '1.4',
 									maxWidth: '280px'
