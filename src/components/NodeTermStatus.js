@@ -28,6 +28,21 @@ const NodeTermStatus = ({
 	const [guacdState, setGuacdState] = useState({ isRunning: false, method: 'unknown', host: '127.0.0.1', port: 4822 });
 	const [vaultState, setVaultState] = useState({ configured: false, unlocked: false });
 	const [ollamaState, setOllamaState] = useState({ isRunning: false, url: 'http://localhost:11434', isRemote: false });
+	const [homeTabFont, setHomeTabFont] = useState(() => {
+		try {
+			return localStorage.getItem('homeTabFont') || localStorage.getItem('sidebarFont') || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+		} catch {
+			return '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+		}
+	});
+	const [homeTabFontSize, setHomeTabFontSize] = useState(() => {
+		try {
+			const saved = localStorage.getItem('homeTabFontSize');
+			return saved ? parseInt(saved, 10) : null;
+		} catch {
+			return null;
+		}
+	});
 	const [aiClientsState, setAiClientsState] = useState({
 		nodeterm: false,
 		anythingllm: { enabled: false, running: false },
@@ -240,12 +255,56 @@ const NodeTermStatus = ({
 		};
 		window.addEventListener('storage', handleStorageChange);
 
+		// Escuchar cambios en la fuente y tamaño de HomeTab
+		const handleHomeTabFontChange = () => {
+			try {
+				const newFont = localStorage.getItem('homeTabFont') || localStorage.getItem('sidebarFont') || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+				const newSize = localStorage.getItem('homeTabFontSize');
+				const parsedSize = newSize ? parseInt(newSize, 10) : null;
+				setHomeTabFont(newFont);
+				setHomeTabFontSize(parsedSize);
+			} catch {}
+		};
+		handleHomeTabFontChange();
+		
+		// Escuchar cambios en localStorage para la fuente (entre pestañas)
+		const handleHomeTabFontStorageChange = (e) => {
+			if (e.key === 'homeTabFont' || e.key === 'homeTabFontSize' || e.key === 'sidebarFont') {
+				handleHomeTabFontChange();
+			}
+		};
+		window.addEventListener('storage', handleHomeTabFontStorageChange);
+		
+		// Escuchar eventos personalizados cuando se cambia la fuente desde la configuración
+		const handleFontConfigChange = () => {
+			handleHomeTabFontChange();
+		};
+		window.addEventListener('home-tab-font-changed', handleFontConfigChange);
+		window.addEventListener('sidebar-font-changed', handleFontConfigChange);
+		
+		// Polling periódico para detectar cambios (por si el evento no se dispara)
+		const fontCheckInterval = setInterval(() => {
+			try {
+				const currentFont = localStorage.getItem('homeTabFont') || localStorage.getItem('sidebarFont') || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+				const currentSize = localStorage.getItem('homeTabFontSize');
+				const parsedSize = currentSize ? parseInt(currentSize, 10) : null;
+				if (currentFont !== homeTabFont || parsedSize !== homeTabFontSize) {
+					setHomeTabFont(currentFont);
+					setHomeTabFontSize(parsedSize);
+				}
+			} catch {}
+		}, 1000);
+
 		return () => { 
 			if (intervalId) clearInterval(intervalId);
 			if (ollamaIntervalId) clearInterval(ollamaIntervalId);
 			if (aiServicesIntervalId) clearInterval(aiServicesIntervalId);
+			if (fontCheckInterval) clearInterval(fontCheckInterval);
 			window.removeEventListener('ai-clients-config-changed', handleAIClientsConfigChange);
 			window.removeEventListener('storage', handleStorageChange);
+			window.removeEventListener('storage', handleHomeTabFontStorageChange);
+			window.removeEventListener('home-tab-font-changed', handleFontConfigChange);
+			window.removeEventListener('sidebar-font-changed', handleFontConfigChange);
 		};
 	}, []);
 
@@ -692,19 +751,25 @@ const NodeTermStatus = ({
 	);
 
 	// Tamaños para la barra superior compacta (HomeTab) - se ajustan dinámicamente
-	const compactBar = {
-		containerPadding: '0.5rem 0.9rem',
-		containerGap: `${1.0 * scaleFactor}rem`,
-		buttonSize: 40 * scaleFactor,
-		buttonRadius: 8 * scaleFactor,
-		buttonIconSize: `${1.0 * scaleFactor}rem`,
-		labelFontSize: `${0.48 * scaleFactor}rem`,
-		labelLineHeight: '1.05',
-		separatorHeight: 56 * scaleFactor,
-		serviceSize: 36 * scaleFactor,
-		serviceIconSize: `${0.85 * scaleFactor}rem`,
-		labelMaxWidth: 52 * scaleFactor
-	};
+	// Calcular tamaño de fuente: usar homeTabFontSize si está configurado, sino usar el cálculo basado en scaleFactor
+	// Usar useMemo para recalcular cuando cambien homeTabFont, homeTabFontSize o scaleFactor
+	const compactBar = React.useMemo(() => {
+		const labelFontSizeValue = homeTabFontSize ? `${homeTabFontSize * 0.65}px` : `${0.65 * scaleFactor}rem`;
+		return {
+			containerPadding: '0.5rem 0.9rem',
+			containerGap: `${1.0 * scaleFactor}rem`,
+			buttonSize: 40 * scaleFactor,
+			buttonRadius: 8 * scaleFactor,
+			buttonIconSize: `${1.0 * scaleFactor}rem`,
+			labelFontSize: labelFontSizeValue,
+			labelLineHeight: '1.05',
+			labelFontFamily: homeTabFont || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif',
+			separatorHeight: 56 * scaleFactor,
+			serviceSize: 36 * scaleFactor,
+			serviceIconSize: `${0.85 * scaleFactor}rem`,
+			labelMaxWidth: 52 * scaleFactor
+		};
+	}, [scaleFactor, homeTabFont, homeTabFontSize]);
 
 	// Efecto para ajustar el tamaño dinámicamente según el espacio disponible
 	useEffect(() => {
@@ -879,6 +944,7 @@ const NodeTermStatus = ({
 							</button>
 							<span style={{
 								fontSize: compactBar.labelFontSize,
+								fontFamily: compactBar.labelFontFamily,
 								fontWeight: '500',
 								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 								textAlign: 'center',
@@ -931,6 +997,7 @@ const NodeTermStatus = ({
 							</button>
 							<span style={{
 								fontSize: compactBar.labelFontSize,
+								fontFamily: compactBar.labelFontFamily,
 								fontWeight: '500',
 								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 								textAlign: 'center',
@@ -952,241 +1019,349 @@ const NodeTermStatus = ({
 						}} />
 
 						{/* Botón Conexiones */}
-						<div style={{
-							display: 'flex',
-							flexDirection: 'column',
-							alignItems: 'center',
-							gap: '0.25rem',
-							flexShrink: 0
-						}}>
-							<button
-								title="Ver historial de conexiones"
-								onClick={() => {
-									const expandSidebarEvent = new CustomEvent('expand-sidebar');
-									window.dispatchEvent(expandSidebarEvent);
-									const switchToConnectionsEvent = new CustomEvent('switch-to-connections');
-									window.dispatchEvent(switchToConnectionsEvent);
-								}}
-								style={{
-									cursor: 'pointer',
+						{(() => {
+							const conexionesColor = '#64C8FF';
+							// Usar el mismo tamaño que las terminales (1.3x del tamaño base)
+							let baseIconSizePx = 20;
+							const iconSizeStr = compactBar.buttonIconSize;
+							if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+								const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+								baseIconSizePx = Math.max(remValue * 16, 20);
+							} else if (typeof iconSizeStr === 'number') {
+								baseIconSizePx = Math.max(iconSizeStr, 20);
+							}
+							const conexionesIconSize = Math.round(baseIconSizePx * 1.3);
+							
+							return (
+								<div style={{
 									display: 'flex',
+									flexDirection: 'column',
 									alignItems: 'center',
-									justifyContent: 'center',
-									width: `${compactBar.buttonSize}px`,
-									height: `${compactBar.buttonSize}px`,
-									padding: '0',
-									borderRadius: `${compactBar.buttonRadius}px`,
-									background: 'linear-gradient(135deg, rgba(100, 200, 255, 0.25) 0%, rgba(100, 200, 255, 0.15) 100%)',
-									border: '1px solid rgba(100, 200, 255, 0.35)',
-									boxShadow: '0 1px 4px rgba(100, 200, 255, 0.2)',
-									transition: 'all 0.2s ease',
-									position: 'relative'
-								}}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(100, 200, 255, 0.35) 0%, rgba(100, 200, 255, 0.25) 100%)';
-									e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-									e.currentTarget.style.boxShadow = '0 3px 8px rgba(100, 200, 255, 0.3)';
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(100, 200, 255, 0.25) 0%, rgba(100, 200, 255, 0.15) 100%)';
-									e.currentTarget.style.transform = 'translateY(0) scale(1)';
-									e.currentTarget.style.boxShadow = '0 1px 4px rgba(100, 200, 255, 0.2)';
-								}}
-							>
-								<i className="pi pi-list" style={{ color: '#64C8FF', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
-							</button>
-							<span style={{
-								fontSize: compactBar.labelFontSize,
-								fontWeight: '500',
-								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-								textAlign: 'center',
-								lineHeight: compactBar.labelLineHeight
-							}}>
-								Conexiones
-							</span>
-						</div>
+									gap: '0.25rem',
+									flexShrink: 0
+								}}>
+									<button
+										title="Ver historial de conexiones"
+										onClick={() => {
+											const expandSidebarEvent = new CustomEvent('expand-sidebar');
+											window.dispatchEvent(expandSidebarEvent);
+											const switchToConnectionsEvent = new CustomEvent('switch-to-connections');
+											window.dispatchEvent(switchToConnectionsEvent);
+										}}
+										style={{
+											cursor: 'pointer',
+											display: 'flex',
+											alignItems: 'center',
+											justifyContent: 'center',
+											width: `${compactBar.buttonSize}px`,
+											height: `${compactBar.buttonSize}px`,
+											padding: '0',
+											borderRadius: `${compactBar.buttonRadius}px`,
+											background: 'transparent',
+											border: 'none',
+											boxShadow: 'none',
+											transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+											position: 'relative',
+											overflow: 'visible'
+										}}
+										onMouseEnter={(e) => {
+											e.currentTarget.classList.add('terminal-button-hover');
+											e.currentTarget.style.transform = 'scale(1.1)';
+											// Agregar efecto de brillo al icono
+											const icon = e.currentTarget.querySelector('i');
+											if (icon) {
+												icon.style.transition = 'all 0.3s ease';
+												icon.style.filter = `drop-shadow(0 0 8px ${conexionesColor}) drop-shadow(0 0 4px ${conexionesColor})`;
+											}
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.classList.remove('terminal-button-hover');
+											e.currentTarget.style.transform = 'scale(1)';
+											// Quitar efecto de brillo del icono
+											const icon = e.currentTarget.querySelector('i');
+											if (icon) {
+												icon.style.filter = 'none';
+											}
+										}}
+									>
+										<i className="pi pi-list" style={{ color: conexionesColor, fontSize: `${conexionesIconSize}px` }} />
+									</button>
+									<span style={{
+										fontSize: compactBar.labelFontSize,
+										fontFamily: compactBar.labelFontFamily,
+										fontWeight: '500',
+										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+										textAlign: 'center',
+										lineHeight: compactBar.labelLineHeight
+									}}>
+										Conexiones
+									</span>
+								</div>
+							);
+						})()}
 
 						{/* Botón Contraseñas */}
-						<div style={{
-							display: 'flex',
-							flexDirection: 'column',
-							alignItems: 'center',
-							gap: '0.25rem',
-							flexShrink: 0
-						}}>
-							<button
-								title="Gestor de contraseñas"
-								onClick={() => {
-									const expandSidebarEvent = new CustomEvent('expand-sidebar');
-									window.dispatchEvent(expandSidebarEvent);
-									window.dispatchEvent(new CustomEvent('open-password-manager'));
-								}}
-								style={{
-									cursor: 'pointer',
+						{(() => {
+							const passwordsColor = '#FFC107';
+							// Usar el mismo tamaño que las terminales (1.3x del tamaño base)
+							let baseIconSizePx = 20;
+							const iconSizeStr = compactBar.buttonIconSize;
+							if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+								const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+								baseIconSizePx = Math.max(remValue * 16, 20);
+							} else if (typeof iconSizeStr === 'number') {
+								baseIconSizePx = Math.max(iconSizeStr, 20);
+							}
+							const passwordsIconSize = Math.round(baseIconSizePx * 1.3);
+							
+							return (
+								<div style={{
 									display: 'flex',
+									flexDirection: 'column',
 									alignItems: 'center',
-									justifyContent: 'center',
-									width: `${compactBar.buttonSize}px`,
-									height: `${compactBar.buttonSize}px`,
-									padding: '0',
-									borderRadius: `${compactBar.buttonRadius}px`,
-									background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)',
-									border: '1px solid rgba(255, 193, 7, 0.35)',
-									boxShadow: '0 1px 4px rgba(255, 193, 7, 0.2)',
-									transition: 'all 0.2s ease',
-									position: 'relative'
-								}}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 193, 7, 0.35) 0%, rgba(255, 193, 7, 0.25) 100%)';
-									e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-									e.currentTarget.style.boxShadow = '0 3px 8px rgba(255, 193, 7, 0.3)';
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)';
-									e.currentTarget.style.transform = 'translateY(0) scale(1)';
-									e.currentTarget.style.boxShadow = '0 1px 4px rgba(255, 193, 7, 0.2)';
-								}}
-							>
-								<i className="pi pi-key" style={{ color: '#FFC107', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
-							</button>
-							<span style={{
-								fontSize: compactBar.labelFontSize,
-								fontWeight: '500',
-								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-								textAlign: 'center',
-								lineHeight: compactBar.labelLineHeight
-							}}>
-								Contraseñas
-							</span>
-						</div>
+									gap: '0.25rem',
+									flexShrink: 0
+								}}>
+									<button
+										title="Gestor de contraseñas"
+										onClick={() => {
+											const expandSidebarEvent = new CustomEvent('expand-sidebar');
+											window.dispatchEvent(expandSidebarEvent);
+											window.dispatchEvent(new CustomEvent('open-password-manager'));
+										}}
+										style={{
+											cursor: 'pointer',
+											display: 'flex',
+											alignItems: 'center',
+											justifyContent: 'center',
+											width: `${compactBar.buttonSize}px`,
+											height: `${compactBar.buttonSize}px`,
+											padding: '0',
+											borderRadius: `${compactBar.buttonRadius}px`,
+											background: 'transparent',
+											border: 'none',
+											boxShadow: 'none',
+											transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+											position: 'relative',
+											overflow: 'visible'
+										}}
+										onMouseEnter={(e) => {
+											e.currentTarget.classList.add('terminal-button-hover');
+											e.currentTarget.style.transform = 'scale(1.1)';
+											// Agregar efecto de brillo al icono
+											const icon = e.currentTarget.querySelector('i');
+											if (icon) {
+												icon.style.transition = 'all 0.3s ease';
+												icon.style.filter = `drop-shadow(0 0 8px ${passwordsColor}) drop-shadow(0 0 4px ${passwordsColor})`;
+											}
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.classList.remove('terminal-button-hover');
+											e.currentTarget.style.transform = 'scale(1)';
+											// Quitar efecto de brillo del icono
+											const icon = e.currentTarget.querySelector('i');
+											if (icon) {
+												icon.style.filter = 'none';
+											}
+										}}
+									>
+										<i className="pi pi-key" style={{ color: passwordsColor, fontSize: `${passwordsIconSize}px` }} />
+									</button>
+									<span style={{
+										fontSize: compactBar.labelFontSize,
+										fontFamily: compactBar.labelFontFamily,
+										fontWeight: '500',
+										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+										textAlign: 'center',
+										lineHeight: compactBar.labelLineHeight
+									}}>
+										Contraseñas
+									</span>
+								</div>
+							);
+						})()}
 
 						{/* Botón Grabaciones y Auditoría */}
-						<div style={{
-							display: 'flex',
-							flexDirection: 'column',
-							alignItems: 'center',
-							gap: '0.25rem',
-							flexShrink: 0
-						}}>
-							<button
-								title="Ver grabaciones y auditoría"
-								onClick={async () => {
-									try {
-										if (window?.electron?.ipcRenderer) {
-											const result = await window.electron.ipcRenderer.invoke('recording:list', {});
-											if (result && result.success && Array.isArray(result.recordings) && result.recordings.length > 0) {
-												const auditTabId = `audit_global_${Date.now()}`;
-												window.dispatchEvent(new CustomEvent('create-audit-tab', {
-													detail: {
-														tabId: auditTabId,
-														title: 'Auditoría Global',
-														recordings: result.recordings
+						{(() => {
+							const auditColor = '#a855f7';
+							// Usar el mismo tamaño que las terminales (1.3x del tamaño base)
+							let baseIconSizePx = 20;
+							const iconSizeStr = compactBar.buttonIconSize;
+							if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+								const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+								baseIconSizePx = Math.max(remValue * 16, 20);
+							} else if (typeof iconSizeStr === 'number') {
+								baseIconSizePx = Math.max(iconSizeStr, 20);
+							}
+							const auditIconSize = Math.round(baseIconSizePx * 1.3);
+							
+							return (
+								<div style={{
+									display: 'flex',
+									flexDirection: 'column',
+									alignItems: 'center',
+									gap: '0.25rem',
+									flexShrink: 0
+								}}>
+									<button
+										title="Ver grabaciones y auditoría"
+										onClick={async () => {
+											try {
+												if (window?.electron?.ipcRenderer) {
+													const result = await window.electron.ipcRenderer.invoke('recording:list', {});
+													if (result && result.success && Array.isArray(result.recordings) && result.recordings.length > 0) {
+														const auditTabId = `audit_global_${Date.now()}`;
+														window.dispatchEvent(new CustomEvent('create-audit-tab', {
+															detail: {
+																tabId: auditTabId,
+																title: 'Auditoría Global',
+																recordings: result.recordings
+															}
+														}));
+													} else {
+														// Si no hay grabaciones, mostrar mensaje
+														if (window.showToast) {
+															window.showToast('info', 'Sin grabaciones', 'No hay grabaciones disponibles para mostrar');
+														}
 													}
-												}));
-											} else {
-												// Si no hay grabaciones, mostrar mensaje
+												}
+											} catch (e) {
+												console.warn('[NodeTermStatus] Error abriendo auditoría global:', e?.message || e);
 												if (window.showToast) {
-													window.showToast('info', 'Sin grabaciones', 'No hay grabaciones disponibles para mostrar');
+													window.showToast('error', 'Error', 'Error al cargar las grabaciones');
 												}
 											}
-										}
-									} catch (e) {
-										console.warn('[NodeTermStatus] Error abriendo auditoría global:', e?.message || e);
-										if (window.showToast) {
-											window.showToast('error', 'Error', 'Error al cargar las grabaciones');
-										}
-									}
-								}}
-								style={{
-									cursor: 'pointer',
-									display: 'flex',
-									alignItems: 'center',
-									justifyContent: 'center',
-									width: `${compactBar.buttonSize}px`,
-									height: `${compactBar.buttonSize}px`,
-									padding: '0',
-									borderRadius: `${compactBar.buttonRadius}px`,
-									background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)',
-									border: '1px solid rgba(168, 85, 247, 0.35)',
-									boxShadow: '0 1px 4px rgba(168, 85, 247, 0.2)',
-									transition: 'all 0.2s ease',
-									position: 'relative'
-								}}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.35) 0%, rgba(168, 85, 247, 0.25) 100%)';
-									e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-									e.currentTarget.style.boxShadow = '0 3px 8px rgba(168, 85, 247, 0.3)';
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)';
-									e.currentTarget.style.transform = 'translateY(0) scale(1)';
-									e.currentTarget.style.boxShadow = '0 1px 4px rgba(168, 85, 247, 0.2)';
-								}}
-							>
-								<i className="pi pi-video" style={{ color: '#a855f7', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
-							</button>
-							<span style={{
-								fontSize: compactBar.labelFontSize,
-								fontWeight: '500',
-								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-								textAlign: 'center',
-								lineHeight: compactBar.labelLineHeight
-							}}>
-								Audit
-							</span>
-						</div>
+										}}
+										style={{
+											cursor: 'pointer',
+											display: 'flex',
+											alignItems: 'center',
+											justifyContent: 'center',
+											width: `${compactBar.buttonSize}px`,
+											height: `${compactBar.buttonSize}px`,
+											padding: '0',
+											borderRadius: `${compactBar.buttonRadius}px`,
+											background: 'transparent',
+											border: 'none',
+											boxShadow: 'none',
+											transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+											position: 'relative',
+											overflow: 'visible'
+										}}
+										onMouseEnter={(e) => {
+											e.currentTarget.classList.add('terminal-button-hover');
+											e.currentTarget.style.transform = 'scale(1.1)';
+											// Agregar efecto de brillo al icono
+											const icon = e.currentTarget.querySelector('i');
+											if (icon) {
+												icon.style.transition = 'all 0.3s ease';
+												icon.style.filter = `drop-shadow(0 0 8px ${auditColor}) drop-shadow(0 0 4px ${auditColor})`;
+											}
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.classList.remove('terminal-button-hover');
+											e.currentTarget.style.transform = 'scale(1)';
+											// Quitar efecto de brillo del icono
+											const icon = e.currentTarget.querySelector('i');
+											if (icon) {
+												icon.style.filter = 'none';
+											}
+										}}
+									>
+										<i className="pi pi-video" style={{ color: auditColor, fontSize: `${auditIconSize}px` }} />
+									</button>
+									<span style={{
+										fontSize: compactBar.labelFontSize,
+										fontFamily: compactBar.labelFontFamily,
+										fontWeight: '500',
+										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+										textAlign: 'center',
+										lineHeight: compactBar.labelLineHeight
+									}}>
+										Audit
+									</span>
+								</div>
+							);
+						})()}
 
 						{/* Botón Herramientas de Red */}
-						<div style={{
-							display: 'flex',
-							flexDirection: 'column',
-							alignItems: 'center',
-							gap: '0.25rem',
-							flexShrink: 0
-						}}>
-							<button
-								title="Herramientas de Red y Seguridad"
-								onClick={() => {
-									window.dispatchEvent(new CustomEvent('open-network-tools-dialog'));
-								}}
-								style={{
-									cursor: 'pointer',
+						{(() => {
+							const netToolsColor = '#06b6d4';
+							// Usar el mismo tamaño que las terminales (1.3x del tamaño base)
+							let baseIconSizePx = 20;
+							const iconSizeStr = compactBar.buttonIconSize;
+							if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+								const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+								baseIconSizePx = Math.max(remValue * 16, 20);
+							} else if (typeof iconSizeStr === 'number') {
+								baseIconSizePx = Math.max(iconSizeStr, 20);
+							}
+							const netToolsIconSize = Math.round(baseIconSizePx * 1.3);
+							
+							return (
+								<div style={{
 									display: 'flex',
+									flexDirection: 'column',
 									alignItems: 'center',
-									justifyContent: 'center',
-									width: `${compactBar.buttonSize}px`,
-									height: `${compactBar.buttonSize}px`,
-									padding: '0',
-									borderRadius: `${compactBar.buttonRadius}px`,
-									background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(6, 182, 212, 0.15) 100%)',
-									border: '1px solid rgba(6, 182, 212, 0.35)',
-									boxShadow: '0 1px 4px rgba(6, 182, 212, 0.2)',
-									transition: 'all 0.2s ease',
-									position: 'relative'
-								}}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.35) 0%, rgba(6, 182, 212, 0.25) 100%)';
-									e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-									e.currentTarget.style.boxShadow = '0 3px 8px rgba(6, 182, 212, 0.3)';
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(6, 182, 212, 0.15) 100%)';
-									e.currentTarget.style.transform = 'translateY(0) scale(1)';
-									e.currentTarget.style.boxShadow = '0 1px 4px rgba(6, 182, 212, 0.2)';
-								}}
-							>
-								<i className="pi pi-wifi" style={{ color: '#06b6d4', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
-							</button>
-							<span style={{
-								fontSize: compactBar.labelFontSize,
-								fontWeight: '500',
-								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-								textAlign: 'center',
-								lineHeight: compactBar.labelLineHeight
-							}}>
-								NetTools
-							</span>
-						</div>
+									gap: '0.25rem',
+									flexShrink: 0
+								}}>
+									<button
+										title="Herramientas de Red y Seguridad"
+										onClick={() => {
+											window.dispatchEvent(new CustomEvent('open-network-tools-dialog'));
+										}}
+										style={{
+											cursor: 'pointer',
+											display: 'flex',
+											alignItems: 'center',
+											justifyContent: 'center',
+											width: `${compactBar.buttonSize}px`,
+											height: `${compactBar.buttonSize}px`,
+											padding: '0',
+											borderRadius: `${compactBar.buttonRadius}px`,
+											background: 'transparent',
+											border: 'none',
+											boxShadow: 'none',
+											transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+											position: 'relative',
+											overflow: 'visible'
+										}}
+										onMouseEnter={(e) => {
+											e.currentTarget.classList.add('terminal-button-hover');
+											e.currentTarget.style.transform = 'scale(1.1)';
+											// Agregar efecto de brillo al icono
+											const icon = e.currentTarget.querySelector('i');
+											if (icon) {
+												icon.style.transition = 'all 0.3s ease';
+												icon.style.filter = `drop-shadow(0 0 8px ${netToolsColor}) drop-shadow(0 0 4px ${netToolsColor})`;
+											}
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.classList.remove('terminal-button-hover');
+											e.currentTarget.style.transform = 'scale(1)';
+											// Quitar efecto de brillo del icono
+											const icon = e.currentTarget.querySelector('i');
+											if (icon) {
+												icon.style.filter = 'none';
+											}
+										}}
+									>
+										<i className="pi pi-wifi" style={{ color: netToolsColor, fontSize: `${netToolsIconSize}px` }} />
+									</button>
+									<span style={{
+										fontSize: compactBar.labelFontSize,
+										fontFamily: compactBar.labelFontFamily,
+										fontWeight: '500',
+										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+										textAlign: 'center',
+										lineHeight: compactBar.labelLineHeight
+									}}>
+										NetTools
+									</span>
+								</div>
+							);
+						})()}
 					</div>
 				</div>
 
@@ -1274,6 +1449,7 @@ const NodeTermStatus = ({
 										</button>
 										<span style={{
 											fontSize: compactBar.labelFontSize,
+											fontFamily: compactBar.labelFontFamily,
 											fontWeight: '500',
 											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 											textAlign: 'center',
@@ -1885,6 +2061,7 @@ const NodeTermStatus = ({
 									</button>
 									<span style={{
 										fontSize: compactBar.labelFontSize,
+										fontFamily: compactBar.labelFontFamily,
 										fontWeight: '500',
 										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 										textAlign: 'center',
@@ -1976,6 +2153,7 @@ const NodeTermStatus = ({
 									</button>
 									<span style={{
 										fontSize: compactBar.labelFontSize,
+										fontFamily: compactBar.labelFontFamily,
 										fontWeight: '500',
 										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 										textAlign: 'center',
@@ -2086,6 +2264,7 @@ const NodeTermStatus = ({
 									</button>
 									<span style={{
 										fontSize: compactBar.labelFontSize,
+										fontFamily: compactBar.labelFontFamily,
 										fontWeight: '500',
 										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 										textAlign: 'center',
@@ -2176,6 +2355,7 @@ const NodeTermStatus = ({
 										</div>
 										<span style={{
 											fontSize: compactBar.labelFontSize,
+											fontFamily: compactBar.labelFontFamily,
 											fontWeight: '500',
 											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 											textAlign: 'center',
@@ -2222,6 +2402,7 @@ const NodeTermStatus = ({
 										</div>
 										<span style={{
 											fontSize: compactBar.labelFontSize,
+											fontFamily: compactBar.labelFontFamily,
 											fontWeight: '500',
 											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 											textAlign: 'center',
@@ -2268,6 +2449,7 @@ const NodeTermStatus = ({
 										</div>
 										<span style={{
 											fontSize: compactBar.labelFontSize,
+											fontFamily: compactBar.labelFontFamily,
 											fontWeight: '500',
 											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 											textAlign: 'center',
@@ -2314,6 +2496,7 @@ const NodeTermStatus = ({
 										</div>
 										<span style={{
 											fontSize: compactBar.labelFontSize,
+											fontFamily: compactBar.labelFontFamily,
 											fontWeight: '500',
 											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
 											textAlign: 'center',

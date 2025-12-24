@@ -188,10 +188,11 @@ const SettingsDialog = ({
       // Dentro de Apariencia (índice 2)
       'interfaz': { parent: 'apariencia', index: 0 },
       'pestanas': { parent: 'apariencia', index: 1 },
-      'terminal': { parent: 'apariencia', index: 2 },
-      'status-bar': { parent: 'apariencia', index: 3 },
-      'explorador-sesiones': { parent: 'apariencia', index: 4 },
-      'explorador-archivos': { parent: 'apariencia', index: 5 }
+      'pagina-inicio': { parent: 'apariencia', index: 2 },
+      'terminal': { parent: 'apariencia', index: 3 },
+      'status-bar': { parent: 'apariencia', index: 4 },
+      'explorador-sesiones': { parent: 'apariencia', index: 5 },
+      'explorador-archivos': { parent: 'apariencia', index: 6 }
     };
     return subTabMap[subTab];
   };
@@ -247,6 +248,24 @@ const SettingsDialog = ({
 
   const [selectedGroupIcon, setSelectedGroupIcon] = useState(() => {
     return localStorage.getItem('group_tab_icon') || 'groupGrid';
+  });
+
+  // Configuración de tipografía de HomeTab
+  const [homeTabFont, setHomeTabFont] = useState(() => {
+    try {
+      return localStorage.getItem('homeTabFont') || explorerFonts[0];
+    } catch {
+      return explorerFonts[0];
+    }
+  });
+
+  const [homeTabFontSize, setHomeTabFontSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('homeTabFontSize');
+      return saved ? parseInt(saved, 10) : 15;
+    } catch {
+      return 15;
+    }
   });
 
   // RDP settings (persisted in localStorage)
@@ -1023,6 +1042,21 @@ const SettingsDialog = ({
   useEffect(() => {
     localStorage.setItem('audit_cleanup_frequency', cleanupFrequency);
   }, [cleanupFrequency]);
+
+  // Persistir configuración de tipografía de HomeTab
+  useEffect(() => {
+    try {
+      localStorage.setItem('homeTabFont', homeTabFont);
+      window.dispatchEvent(new CustomEvent('home-tab-font-changed'));
+    } catch {}
+  }, [homeTabFont]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('homeTabFontSize', String(homeTabFontSize));
+      window.dispatchEvent(new CustomEvent('home-tab-font-changed'));
+    } catch {}
+  }, [homeTabFontSize]);
 
   // Cargar ruta de grabaciones
   useEffect(() => {
@@ -3918,6 +3952,198 @@ const SettingsDialog = ({
             )}
             {activeSubTab === 'pestanas' && (
                 <TabThemeSelector />
+            )}
+            {activeSubTab === 'pagina-inicio' && (
+                <div className="general-settings-container" style={{ maxWidth: '100%', margin: '0 auto' }}>
+                  {/* Header */}
+                  <div className="general-settings-header-wrapper">
+                    <div className="general-header-content">
+                      <span className="general-header-icon protocol-dialog-header-icon" style={{
+                        background: 'linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%)',
+                        boxShadow: '0 2px 8px rgba(79, 195, 247, 0.25)'
+                      }}>
+                        <i className="pi pi-home"></i>
+                      </span>
+                      <div className="general-header-text">
+                        <h3 className="general-header">Página de Inicio</h3>
+                        <p className="general-description">Personaliza la tipografía del menú de la página de inicio</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sección de Tipografía */}
+                  <div className="general-settings-section" style={{ 
+                    marginBottom: 0, 
+                    maxWidth: '100%',
+                    width: '100%'
+                  }}>
+                    <div className="general-section-header">
+                      <div className="general-section-icon" style={{ 
+                        background: 'linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%)',
+                        boxShadow: '0 2px 8px rgba(79, 195, 247, 0.3)'
+                      }}>
+                        <i className="pi pi-pencil"></i>
+                      </div>
+                      <h4 className="general-section-title">Tipografía del Menú</h4>
+                    </div>
+                    
+                    <div className="general-settings-options" style={{ padding: '1rem 1.25rem' }}>
+                      {/* Tipografía */}
+                      <div style={{
+                        background: 'rgba(0, 0, 0, 0.08)',
+                        borderRadius: '10px',
+                        padding: '0.875rem 1rem',
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        marginBottom: '1rem'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          marginBottom: '0.75rem'
+                        }}>
+                          <i className="pi pi-pencil" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
+                          <span style={{
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                            color: 'var(--ui-dialog-text)'
+                          }}>Tipografía</span>
+                        </div>
+                        
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '1rem'
+                        }}>
+                          {/* Fuente */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              minWidth: '60px'
+                            }}>
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Fuente</span>
+                            </div>
+                            <Dropdown
+                              id="homeTab-font"
+                              value={homeTabFont}
+                              options={explorerFonts.map(f => ({ label: f, value: f }))}
+                              onChange={e => setHomeTabFont(e.value)}
+                              placeholder="Seleccionar fuente"
+                              style={{ flex: 1 }}
+                              itemTemplate={option => (
+                                <span style={{ fontFamily: option.value }}>{option.label}</span>
+                              )}
+                            />
+                          </div>
+
+                          {/* Tamaño de Fuente con Slider */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              minWidth: '60px'
+                            }}>
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Tamaño</span>
+                            </div>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <Slider
+                                value={homeTabFontSize}
+                                onChange={(e) => setHomeTabFontSize(e.value)}
+                                min={8}
+                                max={32}
+                                style={{ flex: 1 }}
+                              />
+                              <span style={{ 
+                                fontSize: '0.75rem', 
+                                color: 'var(--ui-button-primary)',
+                                fontWeight: 600,
+                                minWidth: '40px',
+                                textAlign: 'right'
+                              }}>{homeTabFontSize} px</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Vista Previa */}
+                      <div style={{
+                        background: 'rgba(0, 0, 0, 0.08)',
+                        borderRadius: '10px',
+                        padding: '0.875rem 1rem',
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        marginTop: '1rem'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          marginBottom: '0.75rem'
+                        }}>
+                          <i className="pi pi-eye" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
+                          <span style={{
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                            color: 'var(--ui-dialog-text)'
+                          }}>Vista Previa</span>
+                        </div>
+                        <div style={{
+                          background: 'rgba(0, 0, 0, 0.15)',
+                          borderRadius: '8px',
+                          padding: '1rem',
+                          border: '1px solid rgba(255, 255, 255, 0.05)'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            gap: '1rem',
+                            flexWrap: 'wrap'
+                          }}>
+                            {['Nuevo', 'Grupo', 'Conexiones', 'Contraseñas', 'Audit', 'NetTools', 'Config', 'Terminal', 'StatusBar'].map((label, idx) => (
+                              <div key={idx} style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                padding: '0.5rem',
+                                borderRadius: '6px',
+                                background: 'rgba(255, 255, 255, 0.03)'
+                              }}>
+                                <div style={{
+                                  width: '40px',
+                                  height: '40px',
+                                  borderRadius: '8px',
+                                  background: 'rgba(79, 195, 247, 0.1)',
+                                  border: '1px solid rgba(79, 195, 247, 0.2)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}>
+                                  <i className="pi pi-circle" style={{ fontSize: '20px', color: '#4fc3f7' }}></i>
+                                </div>
+                                <span style={{
+                                  fontSize: `${homeTabFontSize * 0.65}px`,
+                                  fontFamily: homeTabFont,
+                                  color: 'var(--text-color-secondary)',
+                                  textAlign: 'center'
+                                }}>{label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
             )}
           </div>
         </TabPanel>
