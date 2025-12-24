@@ -1820,167 +1820,282 @@ const NodeTermStatus = ({
 						flexShrink: 0
 					}}>
 						{/* Botón Configuración */}
-						{onOpenSettings && (
-							<div style={{
-								display: 'flex',
-								flexDirection: 'column',
-								alignItems: 'center',
-								gap: '0.25rem',
-								flexShrink: 0
-							}}>
-								<button
-									title="Abrir configuración de la aplicación"
-									onClick={onOpenSettings}
-									style={{
-										cursor: 'pointer',
-										display: 'flex',
-										alignItems: 'center',
-										justifyContent: 'center',
-										width: `${compactBar.buttonSize}px`,
-										height: `${compactBar.buttonSize}px`,
-										padding: '0',
-										borderRadius: `${compactBar.buttonRadius}px`,
-										background: 'linear-gradient(135deg, rgba(156, 39, 176, 0.25) 0%, rgba(156, 39, 176, 0.15) 100%)',
-										border: '1px solid rgba(156, 39, 176, 0.35)',
-										boxShadow: '0 1px 4px rgba(156, 39, 176, 0.2)',
-										transition: 'all 0.2s ease',
-										position: 'relative'
-									}}
-									onMouseEnter={(e) => {
-										e.currentTarget.style.background = 'linear-gradient(135deg, rgba(156, 39, 176, 0.35) 0%, rgba(156, 39, 176, 0.25) 100%)';
-										e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-										e.currentTarget.style.boxShadow = '0 3px 8px rgba(156, 39, 176, 0.3)';
-									}}
-									onMouseLeave={(e) => {
-										e.currentTarget.style.background = 'linear-gradient(135deg, rgba(156, 39, 176, 0.25) 0%, rgba(156, 39, 176, 0.15) 100%)';
-										e.currentTarget.style.transform = 'translateY(0) scale(1)';
-										e.currentTarget.style.boxShadow = '0 1px 4px rgba(156, 39, 176, 0.2)';
-									}}
-								>
-									<i className="pi pi-cog" style={{ color: '#9c27b0', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
-								</button>
-								<span style={{
-									fontSize: compactBar.labelFontSize,
-									fontWeight: '500',
-									color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-									textAlign: 'center',
-									lineHeight: '1.0'
+						{onOpenSettings && (() => {
+							// Obtener color del tema o usar un color por defecto
+							const configColor = themeColors.primary || themeColors.accent || themeColors.textPrimary || '#4fc3f7';
+							// Usar el mismo tamaño que las terminales (1.3x del tamaño base)
+							let baseIconSizePx = 20;
+							const iconSizeStr = compactBar.buttonIconSize;
+							if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+								const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+								baseIconSizePx = Math.max(remValue * 16, 20);
+							} else if (typeof iconSizeStr === 'number') {
+								baseIconSizePx = Math.max(iconSizeStr, 20);
+							}
+							const configIconSize = Math.round(baseIconSizePx * 1.1);
+							
+							return (
+								<div style={{
+									display: 'flex',
+									flexDirection: 'column',
+									alignItems: 'center',
+									gap: '0.25rem',
+									flexShrink: 0
 								}}>
-									Config
-								</span>
-							</div>
-						)}
+									<button
+										title="Abrir configuración de la aplicación"
+										onClick={onOpenSettings}
+										style={{
+											cursor: 'pointer',
+											display: 'flex',
+											alignItems: 'center',
+											justifyContent: 'center',
+											width: `${compactBar.buttonSize}px`,
+											height: `${compactBar.buttonSize}px`,
+											padding: '0',
+											borderRadius: `${compactBar.buttonRadius}px`,
+											background: 'transparent',
+											border: 'none',
+											boxShadow: 'none',
+											transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+											position: 'relative',
+											overflow: 'visible'
+										}}
+										onMouseEnter={(e) => {
+											e.currentTarget.classList.add('terminal-button-hover');
+											e.currentTarget.style.transform = 'scale(1.1)';
+											// Agregar efecto de brillo al icono
+											const icon = e.currentTarget.querySelector('i');
+											if (icon) {
+												icon.style.transition = 'all 0.3s ease';
+												icon.style.filter = `drop-shadow(0 0 8px ${configColor}) drop-shadow(0 0 4px ${configColor})`;
+											}
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.classList.remove('terminal-button-hover');
+											e.currentTarget.style.transform = 'scale(1)';
+											// Quitar efecto de brillo del icono
+											const icon = e.currentTarget.querySelector('i');
+											if (icon) {
+												icon.style.filter = 'none';
+											}
+										}}
+									>
+										<i className="pi pi-sliders-h" style={{ color: configColor, fontSize: `${configIconSize}px`, fontWeight: '300' }} />
+									</button>
+									<span style={{
+										fontSize: compactBar.labelFontSize,
+										fontWeight: '500',
+										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+										textAlign: 'center',
+										lineHeight: '1.0'
+									}}>
+										Config
+									</span>
+								</div>
+							);
+						})()}
 
 						{/* Botón Terminal */}
-						{onToggleTerminalVisibility && (
-							<div style={{
-								display: 'flex',
-								flexDirection: 'column',
-								alignItems: 'center',
-								gap: '0.25rem',
-								flexShrink: 0
-							}}>
-								<button
-									title="Mostrar/ocultar terminal local"
-									onClick={onToggleTerminalVisibility}
-									style={{
-										cursor: 'pointer',
-										display: 'flex',
-										alignItems: 'center',
-										justifyContent: 'center',
-										width: `${compactBar.buttonSize}px`,
-										height: `${compactBar.buttonSize}px`,
-										padding: '0',
-										borderRadius: `${compactBar.buttonRadius}px`,
-										background: 'linear-gradient(135deg, rgba(0, 188, 212, 0.25) 0%, rgba(0, 188, 212, 0.15) 100%)',
-										border: '1px solid rgba(0, 188, 212, 0.35)',
-										boxShadow: '0 1px 4px rgba(0, 188, 212, 0.2)',
-										transition: 'all 0.2s ease',
-										position: 'relative'
-									}}
-									onMouseEnter={(e) => {
-										e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 188, 212, 0.35) 0%, rgba(0, 188, 212, 0.25) 100%)';
-										e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-										e.currentTarget.style.boxShadow = '0 3px 8px rgba(0, 188, 212, 0.3)';
-									}}
-									onMouseLeave={(e) => {
-										e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 188, 212, 0.25) 0%, rgba(0, 188, 212, 0.15) 100%)';
-										e.currentTarget.style.transform = 'translateY(0) scale(1)';
-										e.currentTarget.style.boxShadow = '0 1px 4px rgba(0, 188, 212, 0.2)';
-									}}
-								>
-									<i className="pi pi-desktop" style={{ color: '#00BCD4', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
-								</button>
-								<span style={{
-									fontSize: compactBar.labelFontSize,
-									fontWeight: '500',
-									color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-									textAlign: 'center',
-									lineHeight: '1.0'
+						{onToggleTerminalVisibility && (() => {
+							// Obtener color del tema o usar un color por defecto
+							const terminalColor = themeColors.primary || themeColors.accent || themeColors.textPrimary || '#00BCD4';
+							// Usar el mismo tamaño que las terminales (1.3x del tamaño base)
+							let baseIconSizePx = 20;
+							const iconSizeStr = compactBar.buttonIconSize;
+							if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+								const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+								baseIconSizePx = Math.max(remValue * 16, 20);
+							} else if (typeof iconSizeStr === 'number') {
+								baseIconSizePx = Math.max(iconSizeStr, 20);
+							}
+							const terminalIconSize = Math.round(baseIconSizePx * 1.3);
+							const terminalIconUrl = 'https://icons.iconarchive.com/icons/alecive/flatwoken/256/Apps-Terminal-Pc-104-icon.png';
+							
+							return (
+								<div style={{
+									display: 'flex',
+									flexDirection: 'column',
+									alignItems: 'center',
+									gap: '0.25rem',
+									flexShrink: 0
 								}}>
-									Terminal
-								</span>
-							</div>
-						)}
+									<button
+										title="Mostrar/ocultar terminal local"
+										onClick={onToggleTerminalVisibility}
+										style={{
+											cursor: 'pointer',
+											display: 'flex',
+											alignItems: 'center',
+											justifyContent: 'center',
+											width: `${compactBar.buttonSize}px`,
+											height: `${compactBar.buttonSize}px`,
+											padding: '0',
+											borderRadius: `${compactBar.buttonRadius}px`,
+											background: 'transparent',
+											border: 'none',
+											boxShadow: 'none',
+											transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+											position: 'relative',
+											overflow: 'visible'
+										}}
+										onMouseEnter={(e) => {
+											e.currentTarget.classList.add('terminal-button-hover');
+											e.currentTarget.style.transform = 'scale(1.1)';
+											// Agregar efecto de brillo al icono
+											const icon = e.currentTarget.querySelector('svg, i');
+											if (icon) {
+												icon.style.transition = 'all 0.3s ease';
+												icon.style.filter = `drop-shadow(0 0 8px ${terminalColor}) drop-shadow(0 0 4px ${terminalColor})`;
+											}
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.classList.remove('terminal-button-hover');
+											e.currentTarget.style.transform = 'scale(1)';
+											// Quitar efecto de brillo del icono
+											const icon = e.currentTarget.querySelector('svg, i');
+											if (icon) {
+												icon.style.filter = 'none';
+											}
+										}}
+									>
+										<svg
+											width={terminalIconSize}
+											height={terminalIconSize}
+											viewBox="0 0 24 24"
+											fill="none"
+											style={{
+												transition: 'all 0.3s ease'
+											}}
+										>
+											{/* Icono de terminal moderno */}
+											<rect x="3" y="5" width="18" height="14" rx="2" stroke={terminalColor} strokeWidth="1.5" fill="none"/>
+											<path d="M8 10 L11 12 L8 14 Z" fill={terminalColor}/>
+											<line x1="14" y1="12" x2="18" y2="12" stroke={terminalColor} strokeWidth="1.5" strokeLinecap="round"/>
+										</svg>
+									</button>
+									<span style={{
+										fontSize: compactBar.labelFontSize,
+										fontWeight: '500',
+										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+										textAlign: 'center',
+										lineHeight: '1.0'
+									}}>
+										Terminal
+									</span>
+								</div>
+							);
+						})()}
 
 						{/* Botón Status Bar */}
-						{onToggleStatusBar && (
-							<div style={{
-								display: 'flex',
-								flexDirection: 'column',
-								alignItems: 'center',
-								gap: '0.25rem',
-								flexShrink: 0
-							}}>
-								<button
-									title={statusBarVisible ? 'Ocultar status bar' : 'Mostrar status bar'}
-									onClick={onToggleStatusBar}
-									style={{
-										cursor: 'pointer',
-										display: 'flex',
-										alignItems: 'center',
-										justifyContent: 'center',
-										width: `${compactBar.buttonSize}px`,
-										height: `${compactBar.buttonSize}px`,
-										padding: '0',
-										borderRadius: `${compactBar.buttonRadius}px`,
-										background: statusBarVisible
-											? 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)'
-											: 'linear-gradient(135deg, rgba(79, 195, 247, 0.25) 0%, rgba(79, 195, 247, 0.15) 100%)',
-										border: '1px solid rgba(79, 195, 247, 0.35)',
-										boxShadow: '0 1px 4px rgba(79, 195, 247, 0.2)',
-										transition: 'all 0.2s ease',
-										position: 'relative'
-									}}
-									onMouseEnter={(e) => {
-										e.currentTarget.style.background = 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)';
-										e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-										e.currentTarget.style.boxShadow = '0 3px 8px rgba(79, 195, 247, 0.3)';
-									}}
-									onMouseLeave={(e) => {
-										e.currentTarget.style.background = statusBarVisible
-											? 'linear-gradient(135deg, rgba(79, 195, 247, 0.35) 0%, rgba(79, 195, 247, 0.25) 100%)'
-											: 'linear-gradient(135deg, rgba(79, 195, 247, 0.25) 0%, rgba(79, 195, 247, 0.15) 100%)';
-										e.currentTarget.style.transform = 'translateY(0) scale(1)';
-										e.currentTarget.style.boxShadow = '0 1px 4px rgba(79, 195, 247, 0.2)';
-									}}
-								>
-									<i 
-										className={statusBarVisible ? 'pi pi-eye' : 'pi pi-eye-slash'} 
-										style={{ color: '#4fc3f7', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} 
-									/>
-								</button>
-								<span style={{
-									fontSize: compactBar.labelFontSize,
-									fontWeight: '500',
-									color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-									textAlign: 'center',
-									lineHeight: '1.0'
+						{onToggleStatusBar && (() => {
+							// Obtener color del tema o usar un color por defecto
+							const statusColor = themeColors.primary || themeColors.accent || themeColors.textPrimary || '#4fc3f7';
+							// Usar el mismo tamaño que las terminales (1.3x del tamaño base)
+							let baseIconSizePx = 20;
+							const iconSizeStr = compactBar.buttonIconSize;
+							if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+								const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+								baseIconSizePx = Math.max(remValue * 16, 20);
+							} else if (typeof iconSizeStr === 'number') {
+								baseIconSizePx = Math.max(iconSizeStr, 20);
+							}
+							const statusIconSize = Math.round(baseIconSizePx * 1.6);
+							
+							return (
+								<div style={{
+									display: 'flex',
+									flexDirection: 'column',
+									alignItems: 'center',
+									gap: '0.25rem',
+									flexShrink: 0
 								}}>
-									Status
-								</span>
-							</div>
-						)}
+									<button
+										title={statusBarVisible ? 'Ocultar status bar' : 'Mostrar status bar'}
+										onClick={onToggleStatusBar}
+										style={{
+											cursor: 'pointer',
+											display: 'flex',
+											alignItems: 'center',
+											justifyContent: 'center',
+											width: `${compactBar.buttonSize}px`,
+											height: `${compactBar.buttonSize}px`,
+											padding: '0',
+											borderRadius: `${compactBar.buttonRadius}px`,
+											background: 'transparent',
+											border: 'none',
+											boxShadow: 'none',
+											transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+											position: 'relative',
+											overflow: 'visible'
+										}}
+										onMouseEnter={(e) => {
+											e.currentTarget.classList.add('terminal-button-hover');
+											e.currentTarget.style.transform = 'scale(1.1)';
+											// Agregar efecto de brillo al icono
+											const icon = e.currentTarget.querySelector('svg, i');
+											if (icon) {
+												icon.style.transition = 'all 0.3s ease';
+												icon.style.filter = `drop-shadow(0 0 8px ${statusColor}) drop-shadow(0 0 4px ${statusColor})`;
+											}
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.classList.remove('terminal-button-hover');
+											e.currentTarget.style.transform = 'scale(1)';
+											// Quitar efecto de brillo del icono
+											const icon = e.currentTarget.querySelector('svg, i');
+											if (icon) {
+												icon.style.filter = 'none';
+											}
+										}}
+									>
+										<svg
+											width={statusIconSize}
+											height={statusIconSize}
+											viewBox="0 0 32 20"
+											fill="none"
+											style={{
+												transition: 'all 0.3s ease'
+											}}
+										>
+											{/* Fondo de la status bar con bordes redondeados */}
+											<rect x="1" y="1" width="30" height="18" rx="2" fill={statusColor} opacity={statusBarVisible ? "0.12" : "0.06"} stroke={statusColor} strokeWidth="0.5" strokeOpacity={statusBarVisible ? "0.3" : "0.15"}/>
+											
+											{/* Icono CPU - círculo con punto */}
+											<circle cx="4" cy="6" r="1.5" fill={statusColor} opacity={statusBarVisible ? "1" : "0.6"}/>
+											<circle cx="4" cy="6" r="0.6" fill={statusColor} opacity={statusBarVisible ? "0.3" : "0.2"}/>
+											<text x="6.5" y="7.5" fontSize="3" fill={statusColor} opacity={statusBarVisible ? "0.9" : "0.5"} fontFamily="monospace" fontWeight="500">0 dB</text>
+											
+											{/* Sparkline - barras verticales de diferentes alturas */}
+											<g opacity={statusBarVisible ? "0.9" : "0.5"}>
+												<rect x="13" y="9" width="1.2" height="2" fill={statusColor}/>
+												<rect x="14.8" y="7.5" width="1.2" height="3.5" fill={statusColor}/>
+												<rect x="16.6" y="5" width="1.2" height="6" fill={statusColor}/>
+												<rect x="18.4" y="7" width="1.2" height="4" fill={statusColor}/>
+												<rect x="20.2" y="8.5" width="1.2" height="2.5" fill={statusColor}/>
+												<rect x="22" y="9.5" width="1.2" height="1.5" fill={statusColor}/>
+											</g>
+											
+											{/* Icono de altavoz/memoria */}
+											<path d="M 24 5 L 24 11 M 24 5 L 26 7 L 26 9 L 24 11" stroke={statusColor} strokeWidth="1.2" fill="none" opacity={statusBarVisible ? "0.9" : "0.5"} strokeLinecap="round" strokeLinejoin="round"/>
+											<text x="27.5" y="8.5" fontSize="3" fill={statusColor} opacity={statusBarVisible ? "0.9" : "0.5"} fontFamily="monospace" fontWeight="500">34/12</text>
+											
+											{/* Barra horizontal inferior */}
+											<rect x="2" y="16" width="28" height="1.5" rx="0.5" fill={statusColor} opacity={statusBarVisible ? "0.7" : "0.35"}/>
+										</svg>
+									</button>
+									<span style={{
+										fontSize: compactBar.labelFontSize,
+										fontWeight: '500',
+										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+										textAlign: 'center',
+										lineHeight: '1.0'
+									}}>
+										StatusBar
+									</span>
+								</div>
+							);
+						})()}
 					</div>
 
 					{/* Separador vertical decorativo */}
