@@ -373,7 +373,23 @@ const NodeTermStatus = ({
 		
 		// Detectar Ubuntu (por categoría o por nombre)
 		if (category === 'ubuntu' || label.includes('ubuntu') || value.includes('ubuntu')) {
-			return <FaUbuntu style={{ color: terminal.color, fontSize: compactBar.buttonIconSize }} />;
+			// Convertir el tamaño del icono a píxeles si es rem
+			let iconSizePx = 20;
+			const iconSizeStr = compactBar.buttonIconSize;
+			if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+				const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+				iconSizePx = Math.max(remValue * 16, 20);
+			} else if (typeof iconSizeStr === 'number') {
+				iconSizePx = Math.max(iconSizeStr, 20);
+			}
+			// Aumentar tamaño para que sea más visible (1.4x para Ubuntu)
+			iconSizePx = Math.round(iconSizePx * 1.4);
+			
+			// Si es Ubuntu básico (sin versión específica), usar color blanco
+			const isBasicUbuntu = !label.includes('24.04') && !label.includes('22.04') && !label.includes('20.04');
+			const ubuntuColor = isBasicUbuntu ? '#FFFFFF' : (terminal.color || '#E95420');
+			
+			return <FaUbuntu style={{ color: ubuntuColor, fontSize: `${iconSizePx}px` }} />;
 		}
 		
 		// Detectar Debian
@@ -491,19 +507,38 @@ const NodeTermStatus = ({
 					action: () => handleOpenTerminal('cygwin')
 				});
 			}
-			wslDistributions.forEach(distro => {
-				const isBasicUbuntu = distro.name === 'ubuntu' && !distro.label.includes('24.04');
+			// Separar distribuciones: primero Ubuntu básico, luego el resto
+			const basicUbuntu = wslDistributions.find(distro => 
+				distro.name === 'ubuntu' && !distro.label.includes('24.04') && !distro.label.includes('22.04') && !distro.label.includes('20.04')
+			);
+			const otherDistros = wslDistributions.filter(distro => {
+				const isBasicUbuntu = distro.name === 'ubuntu' && !distro.label.includes('24.04') && !distro.label.includes('22.04') && !distro.label.includes('20.04');
 				const isBasicDebian = distro.name === 'debian';
-				if (!isBasicUbuntu && !isBasicDebian) {
-					terminals.push({
-						label: distro.label,
-						value: `wsl-${distro.name}`,
-						icon: distro.icon,
-						color: getColorForCategory(distro.category),
-						action: () => handleOpenTerminal(`wsl-${distro.name}`, distro),
-						distroInfo: distro
-					});
-				}
+				return !isBasicUbuntu && !isBasicDebian;
+			});
+			
+			// Primero agregar Ubuntu básico (sin versión específica)
+			if (basicUbuntu) {
+				terminals.push({
+					label: basicUbuntu.label,
+					value: `wsl-${basicUbuntu.name}`,
+					icon: basicUbuntu.icon,
+					color: getColorForCategory(basicUbuntu.category),
+					action: () => handleOpenTerminal(`wsl-${basicUbuntu.name}`, basicUbuntu),
+					distroInfo: basicUbuntu
+				});
+			}
+			
+			// Luego agregar el resto de distribuciones (incluyendo Ubuntu con versión)
+			otherDistros.forEach(distro => {
+				terminals.push({
+					label: distro.label,
+					value: `wsl-${distro.name}`,
+					icon: distro.icon,
+					color: getColorForCategory(distro.category),
+					action: () => handleOpenTerminal(`wsl-${distro.name}`, distro),
+					distroInfo: distro
+				});
 			});
 		} else if (platform === 'linux' || platform === 'darwin') {
 			terminals.push({
