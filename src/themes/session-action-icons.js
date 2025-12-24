@@ -222,26 +222,9 @@ export const sessionActionIconThemes = {
       // Icono de menú
       menu: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="modernMenuGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#94a3b8" />
-              <stop offset="100%" stopColor="#64748b" />
-            </linearGradient>
-            <filter id="modernMenuShadow">
-              <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
-              <feOffset dx="0" dy="2" result="offsetblur"/>
-              <feComponentTransfer>
-                <feFuncA type="linear" slope="0.3"/>
-              </feComponentTransfer>
-              <feMerge>
-                <feMergeNode/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-          </defs>
-          <line x1="3" y1="6" x2="21" y2="6" stroke="url(#modernMenuGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#modernMenuShadow)"/>
-          <line x1="3" y1="12" x2="21" y2="12" stroke="url(#modernMenuGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#modernMenuShadow)"/>
-          <line x1="3" y1="18" x2="21" y2="18" stroke="url(#modernMenuGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#modernMenuShadow)"/>
+          <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+          <line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+          <line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
         </svg>
       ),
       // Icono de expandir todo
@@ -472,9 +455,9 @@ export const sessionActionIconThemes = {
       ),
       menu: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          <line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          <line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+          <line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+          <line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
         </svg>
       ),
       expandAll: (
@@ -640,22 +623,9 @@ export const sessionActionIconThemes = {
       ),
       menu: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="neonMenuGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#00ffff" />
-              <stop offset="100%" stopColor="#0080ff" />
-            </linearGradient>
-            <filter id="neonMenuGlow">
-              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-              <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-          </defs>
-          <line x1="3" y1="6" x2="21" y2="6" stroke="url(#neonMenuGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#neonMenuGlow)"/>
-          <line x1="3" y1="12" x2="21" y2="12" stroke="url(#neonMenuGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#neonMenuGlow)"/>
-          <line x1="3" y1="18" x2="21" y2="18" stroke="url(#neonMenuGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#neonMenuGlow)"/>
+          <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+          <line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+          <line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
         </svg>
       ),
       expandAll: (
