@@ -507,20 +507,36 @@ const NodeTermStatus = ({
 					action: () => handleOpenTerminal('cygwin')
 				});
 			}
-			// Separar distribuciones: primero Ubuntu básico, luego el resto
-			const basicUbuntu = wslDistributions.find(distro => 
-				distro.name === 'ubuntu' && !distro.label.includes('24.04') && !distro.label.includes('22.04') && !distro.label.includes('20.04')
-			);
-			const otherDistros = wslDistributions.filter(distro => {
-				const isBasicUbuntu = distro.name === 'ubuntu' && !distro.label.includes('24.04') && !distro.label.includes('22.04') && !distro.label.includes('20.04');
-				const isBasicDebian = distro.name === 'debian';
-				return !isBasicUbuntu && !isBasicDebian;
+			
+			// Separar distribuciones para ordenarlas correctamente
+			console.log('[NodeTermStatus] Distribuciones WSL detectadas:', wslDistributions.map(d => ({ name: d.name, label: d.label })));
+			
+			const basicUbuntu = wslDistributions.find(distro => {
+				const isUbuntu = distro.name && distro.name.toLowerCase().includes('ubuntu');
+				const hasVersion = distro.label && (distro.label.includes('24.04') || distro.label.includes('22.04') || distro.label.includes('20.04'));
+				return isUbuntu && !hasVersion;
 			});
 			
-			// Primero agregar Ubuntu básico (sin versión específica)
+			const ubuntuWithVersion = wslDistributions.filter(distro => {
+				const isUbuntu = distro.name && distro.name.toLowerCase().includes('ubuntu');
+				const hasVersion = distro.label && (distro.label.includes('24.04') || distro.label.includes('22.04') || distro.label.includes('20.04'));
+				return isUbuntu && hasVersion;
+			});
+			
+			const otherDistros = wslDistributions.filter(distro => {
+				const isUbuntu = distro.name && distro.name.toLowerCase().includes('ubuntu');
+				const isBasicDebian = distro.name && distro.name.toLowerCase().includes('debian');
+				return !isUbuntu && !isBasicDebian;
+			});
+			
+			console.log('[NodeTermStatus] Ubuntu básico:', basicUbuntu);
+			console.log('[NodeTermStatus] Ubuntu con versión:', ubuntuWithVersion);
+			console.log('[NodeTermStatus] Otras distribuciones:', otherDistros);
+			
+			// 1. Agregar Ubuntu básico (sin versión específica) - justo después de Cygwin
 			if (basicUbuntu) {
 				terminals.push({
-					label: basicUbuntu.label,
+					label: basicUbuntu.label || 'Ubuntu',
 					value: `wsl-${basicUbuntu.name}`,
 					icon: basicUbuntu.icon,
 					color: getColorForCategory(basicUbuntu.category),
@@ -529,7 +545,19 @@ const NodeTermStatus = ({
 				});
 			}
 			
-			// Luego agregar el resto de distribuciones (incluyendo Ubuntu con versión)
+			// 2. Agregar Ubuntu con versión (24.04, 22.04, etc.)
+			ubuntuWithVersion.forEach(distro => {
+				terminals.push({
+					label: distro.label,
+					value: `wsl-${distro.name}`,
+					icon: distro.icon,
+					color: getColorForCategory(distro.category),
+					action: () => handleOpenTerminal(`wsl-${distro.name}`, distro),
+					distroInfo: distro
+				});
+			});
+			
+			// 3. Agregar el resto de distribuciones (Kali Linux, etc.)
 			otherDistros.forEach(distro => {
 				terminals.push({
 					label: distro.label,
