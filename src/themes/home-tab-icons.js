@@ -2970,11 +2970,11 @@ export const homeTabIcons = {
   modernHouseWindow: {
     name: 'Casa Moderna con Ventana',
     icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M60 34V62H20V34" stroke="#C2CCDE" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M46 50V38H34V50H46Z" stroke="#C2CCDE" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M67.5 40L40 18L12.5 40" stroke="#C2CCDE" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M55 30V20C55 19.4477 54.5523 19 54 19H50C49.4477 19 49 19.4477 49 20V25.2" stroke="#C2CCDE" strokeLinecap="round" strokeLinejoin="round" />
+      <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: 'inherit' }}>
+        <path d="M60 34V62H20V34" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+        <path d="M46 50V38H34V50H46Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+        <path d="M67.5 40L40 18L12.5 40" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+        <path d="M55 30V20C55 19.4477 54.5523 19 54 19H50C49.4477 19 49 19.4477 49 20V25.2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
       </svg>
     )
   },
@@ -2982,10 +2982,10 @@ export const homeTabIcons = {
   modernHouseWindowFilled: {
     name: 'Casa Moderna con Ventana (Relleno)',
     icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path fillRule="evenodd" clipRule="evenodd" d="M40 18L60 34V62H20V34L40 18ZM46 50V38H34V50H46Z" fill="#C2CCDE" fillOpacity="0.25" />
-        <path d="M55 30V19H49V25.2L55 30Z" fill="#C2CCDE" fillOpacity="0.25" />
-        <path d="M40 18L60 34V62H20V34L40 18ZM40 18L12.5 40M40 18L67.5 40M46 38V50H34V38H46ZM55 19V30L49 25.2V19H55Z" stroke="#C2CCDE" strokeLinecap="round" strokeLinejoin="round" />
+      <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: 'inherit' }}>
+        <path fillRule="evenodd" clipRule="evenodd" d="M40 18L60 34V62H20V34L40 18ZM46 50V38H34V50H46Z" fill="currentColor" fillOpacity="0.25" />
+        <path d="M55 30V19H49V25.2L55 30Z" fill="currentColor" fillOpacity="0.25" />
+        <path d="M40 18L60 34V62H20V34L40 18ZM40 18L12.5 40M40 18L67.5 40M46 38V50H34V38H46ZM55 19V30L49 25.2V19H55Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
       </svg>
     )
   },
@@ -2993,12 +2993,12 @@ export const homeTabIcons = {
   modernHouseChimney: {
     name: 'Casa Moderna con Chimenea',
     icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path fillRule="evenodd" clipRule="evenodd" d="M68 34L40 16L12 34V64H22V40H58V64H68V34ZM43.8471 30.25C44.3887 28.5833 43.7954 26.7575 42.3777 25.7275C40.9599 24.6974 39.0401 24.6974 37.6224 25.7275C36.2046 26.7575 35.6114 28.5833 36.1529 30.25C36.6945 31.9167 38.2476 33.0451 40 33.0451C41.7525 33.0451 43.3056 31.9167 43.8471 30.25Z" fill="#C2CCDE" fillOpacity="0.25" />
-        <path d="M22 40H58V48H22V40Z" fill="#C2CCDE" fillOpacity="0.25" />
-        <path d="M22 48H58V56H22V48Z" fill="#C2CCDE" fillOpacity="0.25" />
-        <path d="M22 56H58V64H22V56Z" fill="#C2CCDE" fillOpacity="0.25" />
-        <path d="M40 16L68 34V64H58M40 16L12 34V64H22M40 16L72.1788 36.6863M40 16L7.82129 36.6863M22 64V40M22 64H58M22 64V56M22 40H58M22 40V48M58 40V64M58 40V48M58 64V56M71 64L9.00003 64M58 48H22M58 48V56M22 48V56M58 56H22M42.3777 25.7275C43.7954 26.7575 44.3887 28.5833 43.8471 30.25C43.3056 31.9167 41.7525 33.0451 40 33.0451C38.2476 33.0451 36.6945 31.9167 36.1529 30.25C35.6114 28.5833 36.2046 26.7575 37.6224 25.7275C39.0401 24.6974 40.9599 24.6974 42.3777 25.7275Z" stroke="#C2CCDE" strokeLinecap="round" strokeLinejoin="round" />
+      <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: 'inherit' }}>
+        <path fillRule="evenodd" clipRule="evenodd" d="M68 34L40 16L12 34V64H22V40H58V64H68V34ZM43.8471 30.25C44.3887 28.5833 43.7954 26.7575 42.3777 25.7275C40.9599 24.6974 39.0401 24.6974 37.6224 25.7275C36.2046 26.7575 35.6114 28.5833 36.1529 30.25C36.6945 31.9167 38.2476 33.0451 40 33.0451C41.7525 33.0451 43.3056 31.9167 43.8471 30.25Z" fill="currentColor" fillOpacity="0.25" />
+        <path d="M22 40H58V48H22V40Z" fill="currentColor" fillOpacity="0.25" />
+        <path d="M22 48H58V56H22V48Z" fill="currentColor" fillOpacity="0.25" />
+        <path d="M22 56H58V64H22V56Z" fill="currentColor" fillOpacity="0.25" />
+        <path d="M40 16L68 34V64H58M40 16L12 34V64H22M40 16L72.1788 36.6863M40 16L7.82129 36.6863M22 64V40M22 64H58M22 64V56M22 40H58M22 40V48M58 40V64M58 40V48M58 64V56M71 64L9.00003 64M58 48H22M58 48V56M22 48V56M58 56H22M42.3777 25.7275C43.7954 26.7575 44.3887 28.5833 43.8471 30.25C43.3056 31.9167 41.7525 33.0451 40 33.0451C38.2476 33.0451 36.6945 31.9167 36.1529 30.25C35.6114 28.5833 36.2046 26.7575 37.6224 25.7275C39.0401 24.6974 40.9599 24.6974 42.3777 25.7275Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
       </svg>
     )
   },
