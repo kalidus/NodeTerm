@@ -379,7 +379,8 @@ const HomeTab = ({
       hoverBackground: isNordTheme ? '#4c566a' : (currentTheme.colors?.sidebarHover || 'rgba(255,255,255,0.1)'),
       itemBackground: currentTheme.colors?.tabBackground || 'rgba(255,255,255,0.05)',
       cardBorder: currentTheme.colors?.dialogBorder || currentTheme.colors?.contentBorder || 'rgba(255,255,255,0.1)',
-      cardBackground: currentTheme.colors?.dialogBackground || 'rgba(16, 20, 28, 0.6)'
+      cardBackground: currentTheme.colors?.dialogBackground || 'rgba(16, 20, 28, 0.6)',
+      primaryColor: currentTheme.colors?.buttonPrimary || currentTheme.colors?.primaryColor || '#2196f3'
     };
   }, [currentTheme]);
   

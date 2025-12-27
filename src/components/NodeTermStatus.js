@@ -444,7 +444,9 @@ const NodeTermStatus = ({
 		// Detectar WSL genérico (usar pingüino de Linux) - debe ser exactamente 'wsl' sin distribuciones específicas - aumentar tamaño
 		if (value === 'wsl' && !value.includes('ubuntu') && !value.includes('debian') && !value.includes('kali')) {
 			const wslIconSize = Math.round(baseIconSizePx * 1.3);
-			return <FaLinux style={{ color: terminal.color, fontSize: `${wslIconSize}px` }} />;
+			// Usar el color primario del tema si está disponible, sino el color del terminal
+			const wslColor = themeColors?.primaryColor || terminal.color || '#4fc3f7';
+			return <FaLinux style={{ color: wslColor, fontSize: `${wslIconSize}px` }} />;
 		}
 		
 		// Detectar Ubuntu (por categoría o por nombre)
@@ -574,11 +576,13 @@ const NodeTermStatus = ({
 				color: '#0078D4',
 				action: () => handleOpenTerminal('powershell')
 			});
+			// Usar el color primario del tema para WSL genérico
+			const wslColor = themeColors?.primaryColor || '#4fc3f7';
 			terminals.push({
 				label: 'WSL',
 				value: 'wsl',
 				icon: 'pi pi-server',
-				color: '#4fc3f7',
+				color: wslColor,
 				action: () => handleOpenTerminal('wsl')
 			});
 			if (cygwinAvailable) {
