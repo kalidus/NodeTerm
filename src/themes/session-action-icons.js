@@ -1384,13 +1384,14 @@ export const sessionActionIconThemes = {
                 fill="none"/>
         </svg>
       ),
-      // Icono de nuevo grupo - cuadrícula 2x2 con bordes redondeados
+      // Icono de nuevo grupo - desde Glyphs.fyi (adaptado a viewBox 24x24)
       newGroup: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-          <rect x="13" y="3" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-          <rect x="3" y="13" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-          <rect x="13" y="13" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M3.6 4.8C3.6 4.1373 4.1373 3.6 4.8 3.6H9.6C10.2627 3.6 10.8 4.1373 10.8 4.8V9.6C10.8 10.2627 10.2627 10.8 9.6 10.8H4.8C4.1373 10.8 3.6 10.2627 3.6 9.6V4.8Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M13.2 4.8C13.2 4.1373 13.7373 3.6 14.4 3.6H19.2C19.8627 3.6 20.4 4.1373 20.4 4.8V9.6C20.4 10.2627 19.8627 10.8 19.2 10.8H14.4C13.7373 10.8 13.2 10.2627 13.2 9.6V4.8Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M3.6 14.4C3.6 13.7373 4.1373 13.2 4.8 13.2H9.6C10.2627 13.2 10.8 13.7373 10.8 14.4V19.2C10.8 19.8627 10.2627 20.4 9.6 20.4H4.8C4.1373 20.4 3.6 19.8627 3.6 19.2V14.4Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M20.3613 16.8H13.1613" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M16.7613 20.4L16.7613 13.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ),
       // Icono de gestor de contraseñas - llave moderna
