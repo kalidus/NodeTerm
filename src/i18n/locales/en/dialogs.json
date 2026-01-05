@@ -319,7 +319,7 @@
     "categories": {
       "remoteAccess": "Remote Access",
       "fileTransfer": "File Transfer",
-      "passwordManagement": "Password Management"
+      "secretsManagement": "Secrets Management"
     },
     "protocols": {
       "ssh": {
@@ -374,11 +374,35 @@
         ]
       },
       "password": {
-        "name": "New Password",
-        "description": "Store and manage passwords securely. AES-256-GCM encryption with optional master password.",
+        "name": "Password",
+        "description": "Store passwords securely. AES-256-GCM encryption with optional master password.",
         "advantages": [
           "Secure AES-256-GCM encryption",
           "Organization in folders and groups"
+        ]
+      },
+      "crypto_wallet": {
+        "name": "Crypto Wallet",
+        "description": "Store seed phrases, private keys and cryptocurrency addresses. BIP-39 validation included.",
+        "advantages": [
+          "Support for 12+ networks (Bitcoin, Ethereum, Solana...)",
+          "BIP-39 seed phrase validation"
+        ]
+      },
+      "api_key": {
+        "name": "API Key",
+        "description": "Store API keys, access tokens and external service credentials securely.",
+        "advantages": [
+          "Organization by service",
+          "Fields for key, secret and endpoint"
+        ]
+      },
+      "secure_note": {
+        "name": "Secure Note",
+        "description": "Store notes, documents and confidential text with full encryption.",
+        "advantages": [
+          "Rich text",
+          "No length limit"
         ]
       }
     },
