@@ -319,7 +319,7 @@
     "categories": {
       "remoteAccess": "Acceso Remoto",
       "fileTransfer": "Transferencia de Archivos",
-      "passwordManagement": "Gestión de Contraseñas"
+      "secretsManagement": "Gestión de Secretos"
     },
     "protocols": {
       "ssh": {
@@ -374,11 +374,35 @@
         ]
       },
       "password": {
-        "name": "Nueva Contraseña",
-        "description": "Almacena y gestiona contraseñas de forma segura. Encriptación AES-256-GCM con master password opcional.",
+        "name": "Contraseña",
+        "description": "Almacena contraseñas de forma segura. Encriptación AES-256-GCM con master password opcional.",
         "advantages": [
           "Encriptación segura AES-256-GCM",
           "Organización en carpetas y grupos"
+        ]
+      },
+      "crypto_wallet": {
+        "name": "Billetera Crypto",
+        "description": "Guarda seed phrases, claves privadas y direcciones de criptomonedas. Validación BIP-39 incluida.",
+        "advantages": [
+          "Soporte para 12+ redes (Bitcoin, Ethereum, Solana...)",
+          "Validación de seed phrases BIP-39"
+        ]
+      },
+      "api_key": {
+        "name": "Clave de API",
+        "description": "Almacena claves de API, tokens de acceso y credenciales de servicios externos de forma segura.",
+        "advantages": [
+          "Organización por servicio",
+          "Campos para key, secret y endpoint"
+        ]
+      },
+      "secure_note": {
+        "name": "Nota Segura",
+        "description": "Almacena notas, documentos y textos confidenciales con encriptación completa.",
+        "advantages": [
+          "Texto enriquecido",
+          "Sin límite de longitud"
         ]
       }
     },

@@ -3191,8 +3191,8 @@ export function ProtocolSelectionDialog({
       ]
     },
     {
-      id: t('protocolSelection.categories.passwordManagement'),
-      title: t('protocolSelection.categories.passwordManagement'),
+      id: t('protocolSelection.categories.secretsManagement'),
+      title: t('protocolSelection.categories.secretsManagement'),
       protocols: [
         {
           id: 'password',
@@ -3203,18 +3203,53 @@ export function ProtocolSelectionDialog({
           iconColor: '#E91E63',
           advantages: t('protocolSelection.protocols.password.advantages'),
           badges: [t('protocolSelection.badges.secure')]
+        },
+        {
+          id: 'crypto_wallet',
+          name: t('protocolSelection.protocols.crypto_wallet.name'),
+          fullName: t('protocolSelection.protocols.crypto_wallet.name'),
+          description: t('protocolSelection.protocols.crypto_wallet.description'),
+          icon: 'pi pi-wallet',
+          iconColor: '#F7931A',
+          advantages: t('protocolSelection.protocols.crypto_wallet.advantages'),
+          badges: [t('protocolSelection.badges.secure')]
+        },
+        {
+          id: 'api_key',
+          name: t('protocolSelection.protocols.api_key.name'),
+          fullName: t('protocolSelection.protocols.api_key.name'),
+          description: t('protocolSelection.protocols.api_key.description'),
+          icon: 'pi pi-key',
+          iconColor: '#00BCD4',
+          advantages: t('protocolSelection.protocols.api_key.advantages'),
+          badges: [t('protocolSelection.badges.secure')]
+        },
+        {
+          id: 'secure_note',
+          name: t('protocolSelection.protocols.secure_note.name'),
+          fullName: t('protocolSelection.protocols.secure_note.name'),
+          description: t('protocolSelection.protocols.secure_note.description'),
+          icon: 'pi pi-file-edit',
+          iconColor: '#9C27B0',
+          advantages: t('protocolSelection.protocols.secure_note.advantages'),
+          badges: [t('protocolSelection.badges.secure')]
         }
       ]
     }
   ];
 
   const handleProtocolSelect = (protocolId) => {
-    if (protocolId === 'password') {
-      // Cambiar a la vista de passwords y abrir el diálogo de nueva contraseña
+    // Tipos de secretos: abrir el gestor de secretos y luego el diálogo correspondiente
+    const secretTypes = ['password', 'crypto_wallet', 'api_key', 'secure_note'];
+    
+    if (secretTypes.includes(protocolId)) {
+      // Cambiar a la vista de secretos
       window.dispatchEvent(new CustomEvent('open-password-manager'));
       // Pequeño delay para asegurar que la vista cambie antes de abrir el diálogo
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('open-new-password-dialog'));
+        window.dispatchEvent(new CustomEvent('open-new-secret-dialog', { 
+          detail: { secretType: protocolId } 
+        }));
       }, 100);
       onHide();
       return;
