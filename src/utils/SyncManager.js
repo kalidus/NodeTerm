@@ -246,6 +246,48 @@ class SyncManager {
   }
 
   /**
+   * Cuenta recursivamente todos los secretos en el árbol de passwords
+   * @param {Array} nodes - Array de nodos del árbol
+   * @returns {Object} - Objeto con conteos por tipo de secreto
+   */
+  countAllSecretsRecursively(nodes) {
+    if (!Array.isArray(nodes)) return { total: 0, byType: {} };
+    
+    let total = 0;
+    const byType = {
+      password: 0,
+      crypto_wallet: 0,
+      api_key: 0,
+      secure_note: 0
+    };
+    
+    const countRecursive = (nodeList) => {
+      if (!Array.isArray(nodeList)) return;
+      
+      nodeList.forEach(node => {
+        // Verificar si es un secreto (no una carpeta)
+        const secretType = node.data?.type;
+        const isSecret = secretType && ['password', 'crypto_wallet', 'api_key', 'secure_note'].includes(secretType);
+        
+        if (isSecret) {
+          total++;
+          if (byType[secretType] !== undefined) {
+            byType[secretType]++;
+          }
+        }
+        
+        // Recursivamente contar en hijos
+        if (node.children && Array.isArray(node.children) && node.children.length > 0) {
+          countRecursive(node.children);
+        }
+      });
+    };
+    
+    countRecursive(nodes);
+    return { total, byType };
+  }
+
+  /**
    * Sincroniza datos locales a la nube
    */
   async syncToCloud(treeJson) {
@@ -330,21 +372,39 @@ class SyncManager {
               // Subir passwords ya encriptados
               await this.nextcloudService.uploadFile('nodeterm-passwords.enc', encryptedPasswordsData);
               
-              // Contar passwords
+              // Contar passwords recursivamente
               try {
                 const encryptedObj = JSON.parse(encryptedPasswordsData);
                 const decryptedPasswords = await this.secureStorage.decryptData(encryptedObj, masterKey);
-                const passwordCount = Array.isArray(decryptedPasswords) ? decryptedPasswords.length : 0;
                 
-                passwordsResult = {
-                  success: true,
-                  count: passwordCount
-                };
+                if (Array.isArray(decryptedPasswords)) {
+                  const counts = this.countAllSecretsRecursively(decryptedPasswords);
+                  
+                  console.log('[SYNC] Secretos subidos a Nextcloud:', {
+                    total: counts.total,
+                    porTipo: counts.byType,
+                    estructura: 'Árbol completo con carpetas y secretos'
+                  });
+                  
+                  passwordsResult = {
+                    success: true,
+                    count: counts.total,
+                    byType: counts.byType,
+                    message: `Subidos ${counts.total} secreto(s) a Nextcloud`
+                  };
+                } else {
+                  passwordsResult = {
+                    success: true,
+                    count: 0,
+                    message: 'Estructura de datos inválida'
+                  };
+                }
               } catch (countError) {
                 console.warn('Error contando passwords:', countError);
                 passwordsResult = {
                   success: true,
-                  count: 'unknown'
+                  count: 'unknown',
+                  message: 'Subidos correctamente (error al contar)'
                 };
               }
             } else {
@@ -353,12 +413,24 @@ class SyncManager {
               if (plainPasswords) {
                 // Encriptar y subir
                 const passwordNodes = JSON.parse(plainPasswords);
+                
+                // Contar antes de encriptar
+                const counts = this.countAllSecretsRecursively(passwordNodes);
+                
+                console.log('[SYNC] Secretos a subir a Nextcloud:', {
+                  total: counts.total,
+                  porTipo: counts.byType,
+                  estructura: 'Árbol completo con carpetas y secretos'
+                });
+                
                 const encrypted = await this.secureStorage.encryptData(passwordNodes, masterKey);
                 await this.nextcloudService.uploadFile('nodeterm-passwords.enc', JSON.stringify(encrypted, null, 2));
                 
                 passwordsResult = {
                   success: true,
-                  count: passwordNodes.length
+                  count: counts.total,
+                  byType: counts.byType,
+                  message: `Subidos ${counts.total} secreto(s) a Nextcloud`
                 };
               } else {
                 passwordsResult = {
@@ -483,28 +555,46 @@ class SyncManager {
               // Eliminar passwords sin encriptar si existen
               localStorage.removeItem('passwordManagerNodes');
               
-              // Contar passwords importados
+              // Contar passwords importados recursivamente
               try {
                 const encryptedObj = JSON.parse(passwordsData);
                 const decryptedPasswords = await this.secureStorage.decryptData(encryptedObj, masterKey);
-                const passwordCount = Array.isArray(decryptedPasswords) ? decryptedPasswords.length : 0;
                 
-                passwordsResult = {
-                  success: true,
-                  passwordsImported: passwordCount
-                };
-                
-                // Disparar evento para recargar passwords en el sidebar
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new CustomEvent('passwords-synced-from-cloud', {
-                    detail: { count: passwordCount }
-                  }));
+                if (Array.isArray(decryptedPasswords)) {
+                  const counts = this.countAllSecretsRecursively(decryptedPasswords);
+                  
+                  console.log('[SYNC] Secretos descargados desde Nextcloud:', {
+                    total: counts.total,
+                    porTipo: counts.byType,
+                    estructura: 'Árbol completo con carpetas y secretos'
+                  });
+                  
+                  passwordsResult = {
+                    success: true,
+                    passwordsImported: counts.total,
+                    byType: counts.byType,
+                    message: `Descargados ${counts.total} secreto(s) desde Nextcloud`
+                  };
+                  
+                  // Disparar evento para recargar passwords en el sidebar
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('passwords-synced-from-cloud', {
+                      detail: { count: counts.total }
+                    }));
+                  }
+                } else {
+                  passwordsResult = {
+                    success: true,
+                    passwordsImported: 0,
+                    message: 'Estructura de datos inválida'
+                  };
                 }
               } catch (countError) {
                 console.warn('Error contando passwords importados:', countError);
                 passwordsResult = {
                   success: true,
-                  passwordsImported: 'unknown'
+                  passwordsImported: 'unknown',
+                  message: 'Descargados correctamente (error al contar)'
                 };
               }
             } else {
