@@ -243,7 +243,7 @@ const SettingsDialog = ({
 
   // Configuración del icono de la pestaña de inicio
   const [selectedHomeIcon, setSelectedHomeIcon] = useState(() => {
-    return localStorage.getItem(STORAGE_KEYS.HOME_TAB_ICON) || 'wifiHeartHome';
+    return localStorage.getItem(STORAGE_KEYS.HOME_TAB_ICON) || 'modernHouseWindowFilled';
   });
 
   const [selectedGroupIcon, setSelectedGroupIcon] = useState(() => {
