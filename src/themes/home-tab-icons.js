@@ -3009,8 +3009,8 @@ export const homeTabIcons = {
  * Obtiene el icono de inicio desde localStorage o devuelve el predeterminado
  */
 export function getHomeTabIcon(size = 22) {
-  const savedIcon = localStorage.getItem('home_tab_icon') || 'wifiHeartHome';
-  const iconData = homeTabIcons[savedIcon] || homeTabIcons.wifiHeartHome;
+  const savedIcon = localStorage.getItem('home_tab_icon') || 'modernHouseWindowFilled';
+  const iconData = homeTabIcons[savedIcon] || homeTabIcons.modernHouseWindowFilled;
   
   return iconData.icon(size);
 }
