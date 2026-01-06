@@ -1239,6 +1239,88 @@ const PasswordManagerSidebar = ({
     }
   };
 
+  // Menú contextual para el área vacía del árbol
+  const onTreeAreaContextMenu = (event) => {
+    const targetElement = event.target;
+    const isNodeClick = targetElement.closest('.p-treenode-content') || 
+                       targetElement.closest('.p-treenode') ||
+                       targetElement.closest('.p-tree-toggler');
+    
+    if (!isNodeClick) {
+      event.preventDefault();
+      event.stopPropagation();
+      setSelectedNodeKey(null);
+      setCurrentContextNode(null);
+      
+      const menuItems = [
+        {
+          label: 'Nuevo Secreto',
+          icon: 'pi pi-plus',
+          items: [
+            {
+              label: 'Nueva Contraseña',
+              icon: 'pi pi-lock',
+              command: () => {
+                resetForm();
+                setSelectedSecretType('password');
+                setParentNodeKey(null);
+                setShowPasswordDialog(true);
+              }
+            },
+            {
+              label: 'Nueva Billetera Crypto',
+              icon: 'pi pi-wallet',
+              command: () => {
+                resetForm();
+                setSelectedSecretType('crypto_wallet');
+                setParentNodeKey(null);
+                setShowPasswordDialog(true);
+              }
+            },
+            {
+              label: 'Nueva API Key',
+              icon: 'pi pi-key',
+              command: () => {
+                resetForm();
+                setSelectedSecretType('api_key');
+                setParentNodeKey(null);
+                setShowPasswordDialog(true);
+              }
+            },
+            {
+              label: 'Nueva Nota Segura',
+              icon: 'pi pi-file-edit',
+              command: () => {
+                resetForm();
+                setSelectedSecretType('secure_note');
+                setParentNodeKey(null);
+                setShowPasswordDialog(true);
+              }
+            }
+          ]
+        },
+        {
+          label: 'Nueva Carpeta',
+          icon: 'pi pi-folder-plus',
+          command: () => {
+            setFolderName('');
+            setFolderColor(getThemeDefaultColor(iconTheme));
+            setFolderIcon(null);
+            setParentNodeKey(null);
+            setShowFolderDialog(true);
+          }
+        }
+      ];
+      
+      setContextMenuItems(menuItems);
+      
+      // Mostrar el menú contextual nativo
+      if (contextMenuRef.current) {
+        contextMenuRef.current.show(event);
+      }
+    }
+  };
+
   // Menú contextual para passwords usando ContextMenu nativo
   const onNodeContextMenu = (event, node) => {
     event.preventDefault();
@@ -1386,12 +1468,50 @@ const PasswordManagerSidebar = ({
     } else if (isFolder) {
       const menuItems = [
         {
-          label: 'Nuevo Password',
+          label: 'Nuevo Secreto',
           icon: 'pi pi-plus',
-          command: () => {
-            setParentNodeKey(node.key);
-            setShowPasswordDialog(true);
-          }
+          items: [
+            {
+              label: 'Nueva Contraseña',
+              icon: 'pi pi-lock',
+              command: () => {
+                resetForm();
+                setSelectedSecretType('password');
+                setParentNodeKey(node.key);
+                setShowPasswordDialog(true);
+              }
+            },
+            {
+              label: 'Nueva Billetera Crypto',
+              icon: 'pi pi-wallet',
+              command: () => {
+                resetForm();
+                setSelectedSecretType('crypto_wallet');
+                setParentNodeKey(node.key);
+                setShowPasswordDialog(true);
+              }
+            },
+            {
+              label: 'Nueva API Key',
+              icon: 'pi pi-key',
+              command: () => {
+                resetForm();
+                setSelectedSecretType('api_key');
+                setParentNodeKey(node.key);
+                setShowPasswordDialog(true);
+              }
+            },
+            {
+              label: 'Nueva Nota Segura',
+              icon: 'pi pi-file-edit',
+              command: () => {
+                resetForm();
+                setSelectedSecretType('secure_note');
+                setParentNodeKey(node.key);
+                setShowPasswordDialog(true);
+              }
+            }
+          ]
         },
         {
           label: 'Nueva Carpeta',
@@ -1608,7 +1728,9 @@ const PasswordManagerSidebar = ({
           overflowX: 'auto',
           position: 'relative',
           fontSize: `${explorerFontSize}px`
-        }}>
+        }}
+        onContextMenu={onTreeAreaContextMenu}
+      >
         {filteredPasswordNodes.length === 0 ? (
           <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
             No hay passwords guardados.<br/>Usa el botón "+" para crear uno.
