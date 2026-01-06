@@ -87,6 +87,8 @@ const PasswordManagerSidebar = ({
   
   // Estados del formulario
   const [selectedSecretType, setSelectedSecretType] = useState('password');
+  const [seedWordsCount, setSeedWordsCount] = useState(12); // 12 o 24 palabras
+  const [seedWords, setSeedWords] = useState(Array(12).fill('')); // Array de palabras individuales
   const [formData, setFormData] = useState({
     // Campos comunes
     title: '',
@@ -342,9 +344,21 @@ const PasswordManagerSidebar = ({
       // Campos para secure_note
       noteContent: ''
     });
+    setSeedWordsCount(12);
+    setSeedWords(Array(12).fill(''));
     setEditingPassword(null);
     setSelectedSecretType('password');
   };
+
+  // Sincronizar formData.seedPhrase cuando cambian seedWords
+  useEffect(() => {
+    if (selectedSecretType === 'crypto_wallet') {
+      const phrase = seedWords.filter(w => w.trim().length > 0).join(' ');
+      if (phrase !== formData.seedPhrase) {
+        setFormData(prev => ({ ...prev, seedPhrase: phrase }));
+      }
+    }
+  }, [seedWords, selectedSecretType]);
 
   const handleNewPassword = () => {
     resetForm();
@@ -464,6 +478,25 @@ const PasswordManagerSidebar = ({
     const secretType = secret.data?.type || 'password';
     setSelectedSecretType(secretType);
     
+    const seedPhrase = secret.data?.seedPhrase || '';
+    const words = seedPhrase.trim().split(/\s+/).filter(w => w.length > 0);
+    const wordCount = words.length === 12 ? 12 : words.length === 24 ? 24 : 12;
+    
+    // Inicializar seedWords
+    if (secretType === 'crypto_wallet' && words.length > 0) {
+      const newWords = Array(wordCount).fill('');
+      words.forEach((word, index) => {
+        if (index < wordCount) {
+          newWords[index] = word;
+        }
+      });
+      setSeedWords(newWords);
+      setSeedWordsCount(wordCount);
+    } else {
+      setSeedWords(Array(12).fill(''));
+      setSeedWordsCount(12);
+    }
+    
     setFormData({
       // Campos comunes
       title: secret.label || secret.title || '',
@@ -475,8 +508,8 @@ const PasswordManagerSidebar = ({
       group: secret.data?.group || secret.group || '',
       // Campos para crypto_wallet
       network: secret.data?.network || 'bitcoin',
-      seedPhrase: secret.data?.seedPhrase || '',
-      seedWordsCount: secret.data?.seedWordsCount || 24,
+      seedPhrase: seedPhrase,
+      seedWordsCount: wordCount,
       privateKey: secret.data?.privateKey || '',
       address: secret.data?.address || '',
       passphrase: secret.data?.passphrase || '',
@@ -513,7 +546,7 @@ const PasswordManagerSidebar = ({
           ...baseData,
           network: formData.network,
           seedPhrase: formData.seedPhrase,
-          seedWordsCount: formData.seedWordsCount,
+          seedWordsCount: seedWordsCount,
           privateKey: formData.privateKey,
           address: formData.address,
           passphrase: formData.passphrase
@@ -1787,23 +1820,199 @@ const PasswordManagerSidebar = ({
                 />
               </div>
               <div className="field">
-                <label htmlFor="seedPhrase">
-                  Seed Phrase (12 o 24 palabras)
-                  {formData.seedPhrase && (
-                    <span style={{ marginLeft: '8px', fontSize: '0.85em', color: 'var(--text-color-secondary)' }}>
-                      ({countWords(formData.seedPhrase)} palabras)
-                    </span>
-                  )}
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <label htmlFor="seedPhrase">
+                    Seed Phrase
+                    {formData.seedPhrase && (
+                      <span style={{ marginLeft: '8px', fontSize: '0.85em', color: 'var(--text-color-secondary)' }}>
+                        ({countWords(formData.seedPhrase)} palabras)
+                      </span>
+                    )}
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <Button
+                      label="12"
+                      className={seedWordsCount === 12 ? 'p-button-primary' : 'p-button-secondary'}
+                      size="small"
+                      onClick={() => {
+                        if (seedWordsCount !== 12) {
+                          const newWords = Array(12).fill('');
+                          seedWords.slice(0, 12).forEach((word, index) => {
+                            newWords[index] = word;
+                          });
+                          setSeedWords(newWords);
+                          setSeedWordsCount(12);
+                        }
+                      }}
+                    />
+                    <Button
+                      label="24"
+                      className={seedWordsCount === 24 ? 'p-button-primary' : 'p-button-secondary'}
+                      size="small"
+                      onClick={() => {
+                        if (seedWordsCount !== 24) {
+                          const newWords = Array(24).fill('');
+                          seedWords.forEach((word, index) => {
+                            if (index < 24) {
+                              newWords[index] = word;
+                            }
+                          });
+                          setSeedWords(newWords);
+                          setSeedWordsCount(24);
+                        }
+                      }}
+                    />
+                    <Button
+                      icon="pi pi-copy"
+                      className="p-button-text p-button-sm"
+                      style={{ padding: '2px 6px', fontSize: '0.75rem' }}
+                      onClick={async () => {
+                        if (formData.seedPhrase) {
+                          try {
+                            if (window.electron?.clipboard?.writeText) {
+                              await window.electron.clipboard.writeText(formData.seedPhrase);
+                            } else {
+                              await navigator.clipboard.writeText(formData.seedPhrase);
+                            }
+                            showToast && showToast({
+                              severity: 'success',
+                              summary: 'Copiado',
+                              detail: 'Seed phrase copiada al portapapeles',
+                              life: 2000
+                            });
+                          } catch (err) {
+                            console.error('Error copiando:', err);
+                          }
+                        }
+                      }}
+                      tooltip="Copiar seed phrase completa"
+                      tooltipOptions={{ position: 'top' }}
+                      disabled={!formData.seedPhrase}
+                    />
+                  </div>
+                </div>
+                
+                {/* Campo para pegar seed phrase completa */}
                 <InputTextarea
-                  id="seedPhrase"
-                  value={formData.seedPhrase}
-                  onChange={(e) => setFormData({ ...formData, seedPhrase: e.target.value })}
-                  placeholder="palabra1 palabra2 palabra3 ..."
-                  rows={3}
+                  placeholder="Pega aquí tu seed phrase completa para llenar automáticamente los campos..."
+                  rows={2}
                   className="w-full"
-                  style={{ fontFamily: 'monospace' }}
+                  style={{ fontFamily: 'monospace', marginBottom: '12px' }}
+                  onPaste={(e) => {
+                    const pastedText = e.clipboardData.getData('text');
+                    const words = pastedText.trim().split(/\s+/).filter(w => w.length > 0);
+                    if (words.length > 0) {
+                      const newWords = Array(seedWordsCount).fill('');
+                      words.forEach((word, index) => {
+                        if (index < seedWordsCount) {
+                          newWords[index] = word;
+                        }
+                      });
+                      setSeedWords(newWords);
+                      if (words.length === 12 || words.length === 24) {
+                        setSeedWordsCount(words.length);
+                      }
+                    }
+                  }}
                 />
+                
+                {/* Grid de campos individuales para cada palabra */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '8px',
+                  marginTop: '12px',
+                  marginBottom: '12px'
+                }}>
+                  {Array(seedWordsCount).fill(null).map((_, index) => (
+                    <div key={index} style={{ position: 'relative' }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        marginBottom: '4px'
+                      }}>
+                        <span style={{
+                          color: 'var(--ui-button-primary)',
+                          fontWeight: '600',
+                          fontSize: '12px',
+                          minWidth: '24px'
+                        }}>
+                          {index + 1}.
+                        </span>
+                        <Button
+                          icon="pi pi-copy"
+                          className="p-button-text p-button-sm"
+                          style={{ 
+                            padding: '2px 4px', 
+                            fontSize: '0.7rem',
+                            minWidth: 'auto',
+                            height: '20px'
+                          }}
+                          onClick={async () => {
+                            const word = seedWords[index];
+                            if (word) {
+                              try {
+                                if (window.electron?.clipboard?.writeText) {
+                                  await window.electron.clipboard.writeText(word);
+                                } else {
+                                  await navigator.clipboard.writeText(word);
+                                }
+                                showToast && showToast({
+                                  severity: 'success',
+                                  summary: 'Copiado',
+                                  detail: `Palabra ${index + 1} copiada`,
+                                  life: 1500
+                                });
+                              } catch (err) {
+                                console.error('Error copiando:', err);
+                              }
+                            }
+                          }}
+                          tooltip={`Copiar palabra ${index + 1}`}
+                          tooltipOptions={{ position: 'top' }}
+                          disabled={!seedWords[index]}
+                        />
+                      </div>
+                      <InputText
+                        value={seedWords[index] || ''}
+                        onChange={(e) => {
+                          const newWords = [...seedWords];
+                          newWords[index] = e.target.value;
+                          setSeedWords(newWords);
+                        }}
+                        placeholder={`Palabra ${index + 1}`}
+                        className="w-full"
+                        style={{
+                          fontFamily: 'monospace',
+                          fontSize: '13px',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--ui-content-border)',
+                          background: 'var(--ui-dialog-bg)'
+                        }}
+                        onKeyDown={(e) => {
+                          // Navegar al siguiente campo con Enter o Tab
+                          if (e.key === 'Enter' || e.key === 'Tab') {
+                            if (index < seedWordsCount - 1) {
+                              e.preventDefault();
+                              const nextInput = document.querySelector(`input[placeholder="Palabra ${index + 2}"]`);
+                              if (nextInput) nextInput.focus();
+                            }
+                          }
+                          // Navegar al campo anterior con Shift+Tab
+                          if (e.key === 'Tab' && e.shiftKey && index > 0) {
+                            e.preventDefault();
+                            const prevInput = document.querySelector(`input[placeholder="Palabra ${index}"]`);
+                            if (prevInput) prevInput.focus();
+                          }
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Validación */}
                 {formData.seedPhrase && (() => {
                   const validation = validateSeedPhrase(formData.seedPhrase);
                   if (!validation.valid) {
