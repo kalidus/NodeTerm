@@ -1577,39 +1577,72 @@ const App = () => {
     return () => window.removeEventListener('open-password-tab-in-dialog', handler);
   }, []);
 
-  // Crear y activar pestaña de info de password desde doble clic
+  // Crear y activar pestaña de info de secreto (password, crypto_wallet, api_key, secure_note)
   useEffect(() => {
     const handler = (e) => {
       const info = e.detail || {};
       const tabId = `${info.key}_${Date.now()}`;
+      const secretType = info.type || info.data?.type || 'password';
+      
+      // Construir passwordData con todos los campos según el tipo
       const passwordData = {
-        title: info.label,
-        username: info.data?.username || '',
-        password: info.data?.password || '',
-        url: info.data?.url || '',
-        group: info.data?.group || '',
-        notes: info.data?.notes || ''
+        id: info.key,
+        title: info.label || info.title,
+        type: secretType,
+        // Campos comunes
+        notes: info.notes || info.data?.notes || '',
+        // Campos para password
+        username: info.username || info.data?.username || '',
+        password: info.password || info.data?.password || '',
+        url: info.url || info.data?.url || '',
+        group: info.group || info.data?.group || '',
+        // Campos para crypto_wallet
+        network: info.network || info.data?.network || '',
+        address: info.address || info.data?.address || '',
+        seedPhrase: info.seedPhrase || info.data?.seedPhrase || '',
+        seedWordsCount: info.seedWordsCount || info.data?.seedWordsCount || 24,
+        privateKey: info.privateKey || info.data?.privateKey || '',
+        passphrase: info.passphrase || info.data?.passphrase || '',
+        // Campos para api_key
+        apiKey: info.apiKey || info.data?.apiKey || '',
+        apiSecret: info.apiSecret || info.data?.apiSecret || '',
+        endpoint: info.endpoint || info.data?.endpoint || '',
+        serviceName: info.serviceName || info.data?.serviceName || '',
+        // Campos para secure_note
+        noteContent: info.noteContent || info.data?.noteContent || ''
       };
       
-      // Registrar como password reciente cuando se abre la pestaña
-      try {
-        recordRecentPassword({
-          id: info.key,
-          name: info.label,
-          username: info.data?.username || '',
-          password: info.data?.password || '',
-          url: info.data?.url || '',
-          group: info.data?.group || '',
-          notes: info.data?.notes || '',
-          type: info.data?.type || 'web',
-          icon: info.data?.icon || 'pi-globe'
-        }, 5);
-      } catch (e) {
-        console.warn('Error registrando password reciente:', e);
+      // Registrar como password reciente solo si es tipo password
+      if (secretType === 'password') {
+        try {
+          recordRecentPassword({
+            id: info.key,
+            name: info.label,
+            username: passwordData.username,
+            password: passwordData.password,
+            url: passwordData.url,
+            group: passwordData.group,
+            notes: passwordData.notes,
+            type: secretType,
+            icon: info.data?.icon || 'pi-globe'
+          }, 5);
+        } catch (e) {
+          console.warn('Error registrando password reciente:', e);
+        }
       }
       
+      // Determinar icono según tipo para la etiqueta de la pestaña
+      const getTabIcon = () => {
+        switch (secretType) {
+          case 'crypto_wallet': return '💰';
+          case 'api_key': return '🔑';
+          case 'secure_note': return '📝';
+          default: return '🔐';
+        }
+      };
+      
       // Usar TAB_TYPES.PASSWORD para que coincida con el renderer
-      const newTab = { key: tabId, label: `🔑 ${info.label}`, type: TAB_TYPES.PASSWORD, passwordData, createdAt: Date.now() };
+      const newTab = { key: tabId, label: `${getTabIcon()} ${info.label}`, type: TAB_TYPES.PASSWORD, passwordData, createdAt: Date.now() };
       setSshTabs(prev => [newTab, ...prev]);
       // Activar la nueva pestaña usando la misma lógica que otras pestañas
       setTimeout(() => {
