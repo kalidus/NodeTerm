@@ -217,8 +217,8 @@ const SettingsDialog = ({
       }
     }
     
-    // Log para debug
-    console.log(`[SettingsDialog] Tab seleccionado: mainTab=${activeMainTab}, subTab=${activeSubTab}, mainIndex=${mainIndex}`);
+    // Log para debug (deshabilitado)
+    // console.log(`[SettingsDialog] Tab seleccionado: mainTab=${activeMainTab}, subTab=${activeSubTab}, mainIndex=${mainIndex}`);
   }, [activeMainTab, activeSubTab]);
   
   const [versionInfo, setVersionInfo] = useState({ appVersion: '' });

@@ -92,7 +92,7 @@ class NextcloudService {
               if (masterKey) {
                 this.password = await secureStorage.decryptData(parsed.password, masterKey);
                 this.isConfigured = true;
-                console.log('✅ [Nextcloud] Contraseña descifrada correctamente');
+                // console.log('✅ [Nextcloud] Contraseña descifrada correctamente');
                 return true;
               } else {
                 console.warn('⚠️ [Nextcloud] No hay master key disponible para descifrar la contraseña');

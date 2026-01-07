@@ -596,7 +596,7 @@ const NodeTermStatus = ({
 			}
 			
 			// Separar distribuciones para ordenarlas correctamente
-			console.log('[NodeTermStatus] Distribuciones WSL detectadas:', wslDistributions.map(d => ({ name: d.name, label: d.label })));
+			// console.log('[NodeTermStatus] Distribuciones WSL detectadas:', wslDistributions.map(d => ({ name: d.name, label: d.label })));
 			
 			const basicUbuntu = wslDistributions.find(distro => {
 				const isUbuntu = distro.name && distro.name.toLowerCase().includes('ubuntu');
@@ -616,9 +616,9 @@ const NodeTermStatus = ({
 				return !isUbuntu && !isBasicDebian;
 			});
 			
-			console.log('[NodeTermStatus] Ubuntu básico:', basicUbuntu);
-			console.log('[NodeTermStatus] Ubuntu con versión:', ubuntuWithVersion);
-			console.log('[NodeTermStatus] Otras distribuciones:', otherDistros);
+			// console.log('[NodeTermStatus] Ubuntu básico:', basicUbuntu);
+			// console.log('[NodeTermStatus] Ubuntu con versión:', ubuntuWithVersion);
+			// console.log('[NodeTermStatus] Otras distribuciones:', otherDistros);
 			
 			// 1. Agregar Ubuntu básico (sin versión específica) - justo después de Cygwin
 			if (basicUbuntu) {
