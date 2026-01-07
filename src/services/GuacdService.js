@@ -888,10 +888,12 @@ class GuacdService {
 
         // NO crear directorio en WSL - se usará la carpeta del host convertida con toWslPath()
 
-        // Lanzar guacd en background dentro de WSL (bind a 127.0.0.1 y log a archivo)
-        // Escuchar en todas las interfaces dentro de WSL para permitir acceso desde Windows
-        const bindIp = '0.0.0.0';
-        const startCmd = `/usr/sbin/guacd -b ${bindIp} -p ${this.port} -f >/var/log/guacd-wsl.log 2>&1 & echo $!`;
+        // Lanzar guacd en background dentro de WSL
+        // Por seguridad, escuchar solo en la IP de WSL si está disponible (más restrictivo que 0.0.0.0)
+        // Fallback a 0.0.0.0 solo si no se pudo detectar la IP de WSL
+        const bindIp = wslIp || '0.0.0.0';
+        console.log(`🔒 [WSL] guacd bind IP: ${bindIp} (wslIp detectada: ${wslIp || 'ninguna'})`);
+        const startCmd = `/usr/sbin/guacd -b ${bindIp} -l ${this.port} -f >/var/log/guacd-wsl.log 2>&1 & echo $!`;
         wslExec(['sh', '-lc', startCmd], async (startErr, startOut) => {
           if (startErr) {
             console.log('❌ No se pudo iniciar guacd en WSL:', startErr.message);
