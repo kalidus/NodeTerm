@@ -858,15 +858,25 @@ ipcMain.on('app:save-passwords-for-mcp', async (event, passwords) => {
   }
 });
 
+// Cache para evitar logs repetidos de WSL
+let wslDetectionLogged = false;
+let wslDetectionResultLogged = false;
+
 // IPC handler para detectar todas las distribuciones WSL
 ipcMain.handle('detect-wsl-distributions', async () => {
-  console.log('🚀 [MAIN] Detectando distribuciones WSL...');
+  if (!wslDetectionLogged) {
+    console.log('🚀 [MAIN] Detectando distribuciones WSL...');
+    wslDetectionLogged = true;
+  }
   
   try {
     const distributions = await WSL.detectAllWSLDistributions();
-    console.log('✅ [MAIN] Detección completada:', distributions.length, 'distribuciones encontradas');
-    if (distributions.length > 0) {
-      distributions.forEach(distro => console.log(`  - ${distro.name} (${distro.label}, ${distro.category})`));
+    if (!wslDetectionResultLogged) {
+      console.log('✅ [MAIN] Detección completada:', distributions.length, 'distribuciones encontradas');
+      if (distributions.length > 0) {
+        distributions.forEach(distro => console.log(`  - ${distro.name} (${distro.label}, ${distro.category})`));
+      }
+      wslDetectionResultLogged = true;
     }
     return distributions;
   } catch (error) {

@@ -65,6 +65,9 @@ function registerGuacamoleHandlers({
   });
 
   // IPC handlers for Guacamole RDP connections
+  // Cache para evitar logs repetidos
+  let guacamoleStatusWarningLogged = false;
+  
   ipcMain.handle('guacamole:get-status', async (event) => {
     try {
       const guacdStatus = guacdService ? guacdService.getStatus() : { isRunning: false, method: 'unknown' };
@@ -73,9 +76,13 @@ function registerGuacamoleHandlers({
       const currentServer = getGuacamoleServer ? getGuacamoleServer() : guacamoleServer;
       const currentReadyAt = getGuacamoleServerReadyAt ? getGuacamoleServerReadyAt() : guacamoleServerReadyAt;
       
-      // Logging para diagnóstico
-      if (!currentServer) {
-        console.log('⚠️ [guacamole:get-status] guacamoleServer es null. guacdStatus:', guacdStatus);
+      // Logging solo cuando hay un problema real y no se ha logueado antes
+      if (!currentServer && !guacamoleStatusWarningLogged) {
+        console.warn('⚠️ [guacamole:get-status] guacamoleServer es null. guacdStatus:', guacdStatus);
+        guacamoleStatusWarningLogged = true;
+      } else if (currentServer) {
+        // Resetear el flag si el servidor está disponible
+        guacamoleStatusWarningLogged = false;
       }
       
       const result = {

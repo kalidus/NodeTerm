@@ -15,6 +15,9 @@ let dockerProcesses = {};
 // Referencia a la ventana principal
 let mainWindow = null;
 
+// Flag para evitar logs repetidos de errores Docker
+let dockerErrorLogged = false;
+
 /**
  * Establece la referencia a la ventana principal
  */
@@ -147,12 +150,18 @@ function getRunningContainers() {
         }
       }
     } catch (basicError) {
-      console.error('❌ Error detectando contenedores Docker:', basicError.message);
+      if (!dockerErrorLogged) {
+        console.error('❌ Error detectando contenedores Docker:', basicError.message);
+        dockerErrorLogged = true;
+      }
     }
 
     return [];
   } catch (error) {
-    console.error('❌ Error obteniendo contenedores Docker:', error.message);
+    if (!dockerErrorLogged) {
+      console.error('❌ Error obteniendo contenedores Docker:', error.message);
+      dockerErrorLogged = true;
+    }
     return [];
   }
 }
