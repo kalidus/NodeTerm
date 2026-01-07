@@ -446,6 +446,9 @@ class GuacdService {
     this.preferredMethod = (process.env.NODETERM_GUACD_METHOD || process.env.GUACD_METHOD || 'docker').toLowerCase();
     this.detectedMethod = null;
     this.wslDistro = null;
+    // Si detectamos guacd en WSL escuchando solo en 127.0.0.1, Windows no podrá acceder via localhost-forwarding.
+    // Usamos este flag para forzar un reinicio con bind 0.0.0.0.
+    this.wslNeedsRebind = false;
     this.driveHostDir = ensureDriveHostDir();
   }
 
@@ -469,22 +472,23 @@ class GuacdService {
         // Intentar detectar el método automáticamente
         await this.detectRunningMethod();
 
+        // Caso especial: WSL detectado pero mal configurado (solo 127.0.0.1 dentro de WSL)
+        if (this.detectedMethod === 'wsl' && this.wslNeedsRebind) {
+          console.log('⚠️ guacd en WSL está escuchando solo en 127.0.0.1. Reiniciando para bind 0.0.0.0...');
+          try {
+            await this.stop(); // stop() en WSL hace pkill dentro de WSL (por defecto)
+          } catch {}
+          this.wslNeedsRebind = false;
+          // Continuar con el inicio normal más abajo
+        }
+
         // Si no se detectó método o está mal configurado, matar procesos existentes y reiniciar
         if (!this.detectedMethod) {
           console.log('⚠️ Proceso guacd detectado pero no está bien configurado, limpiando procesos existentes...');
-          try {
-            await this.stop();
-          } catch (e) {
-            // Intentar matar procesos guacd en WSL directamente usando la distribución detectada
-            if (process.platform === 'win32' && this.wslDistro) {
-              const distro = this.wslDistro;
-              console.log(`🧹 Matando procesos guacd en WSL (${distro})...`);
-              execFile('wsl.exe', ['-d', distro, '-u', 'root', '--', 'sh', '-lc', 'pkill -9 guacd || true'], () => {});
-            } else if (process.platform === 'win32') {
-              // Si no tenemos distro específica, intentar en todas las distribuciones comunes
-              console.log('🧹 Matando procesos guacd en todas las distribuciones WSL...');
-              execFile('wsl.exe', ['--', 'sh', '-lc', 'pkill -9 guacd || true'], () => {});
-            }
+          // Intentar matar procesos guacd en WSL por defecto SIEMPRE (sin depender de isRunning)
+          if (process.platform === 'win32') {
+            console.log('🧹 Matando procesos guacd en WSL por defecto...');
+            execFile('wsl.exe', ['-u', 'root', '--', 'sh', '-lc', 'pkill -9 guacd || true'], () => {});
           }
           // Continuar con el inicio normal más abajo
         } else {
@@ -885,19 +889,11 @@ class GuacdService {
         }
         const raw = Buffer.isBuffer(stdoutBuf) ? stdoutBuf.toString('utf16le') : String(stdoutBuf || '');
         const normalized = raw.replace(/\u0000/g, '').replace(/[\r\n]+/g, '\n');
-        const distros = normalized.split('\n').map(s => s.trim()).filter(Boolean);
-        if (distros.length === 0) {
-          console.log('❌ No hay distribuciones WSL registradas');
-          resolve(false);
-          return;
-        }
-        const preferred = ['Ubuntu-24.04', 'Ubuntu', 'Debian', 'kali-linux'];
-        let selected = null;
-        for (const name of preferred) { if (distros.includes(name)) { selected = name; break; } }
-        if (!selected) selected = distros[0];
-        this.wslDistro = selected;
+        // Usar la distribución WSL por defecto del sistema (sin especificar -d)
+        // Esto usa la distribución que Windows tiene configurada como predeterminada
+        this.wslDistro = null; // null = usar distribución por defecto
 
-        const wslExec = (args, cb) => execFile('wsl.exe', ['-d', selected, '-u', 'root', '--', ...args], { encoding: 'utf8' }, cb);
+        const wslExec = (args, cb) => execFile('wsl.exe', ['-u', 'root', '--', ...args], { encoding: 'utf8' }, cb);
 
         // Determinar IP de WSL (robusto: hostname -I o ip -o -4 ... scope global)
         let wslIp = null;
@@ -944,15 +940,22 @@ class GuacdService {
         this.host = '127.0.0.1';
         
         console.log(`🔧 [WSL] guacd bind: ${bindIp}:${this.port} → Windows accede via ${this.host}:${this.port}`);
-        const startCmd = `/usr/sbin/guacd -b ${bindIp} -l ${this.port} -f >/var/log/guacd-wsl.log 2>&1 & echo $!`;
+        // IMPORTANTE (WSL): no usar `-f` (foreground) + `&` desde `sh -lc`, porque el proceso puede morir al cerrar el shell.
+        // Dejamos que guacd demonice normalmente para que permanezca vivo.
+        const startCmd = `/usr/sbin/guacd -b ${bindIp} -l ${this.port} >/var/log/guacd-wsl.log 2>&1 || echo "__GUACD_START_FAILED__"`;
         wslExec(['sh', '-lc', startCmd], async (startErr, startOut) => {
           if (startErr) {
             console.log('❌ No se pudo iniciar guacd en WSL:', startErr.message);
             resolve(false);
             return;
           }
-          const pidStr = (startOut || '').toString().trim();
-          console.log(`🚀 [WSL] guacd iniciado con PID: ${pidStr || 'desconocido'}`);
+          const outStr = (startOut || '').toString();
+          if (outStr.includes('__GUACD_START_FAILED__')) {
+            console.log('❌ No se pudo iniciar guacd en WSL (ver /var/log/guacd-wsl.log)');
+            resolve(false);
+            return;
+          }
+          console.log('🚀 [WSL] guacd iniciado (daemon)');
 
           // Esperar a que el puerto esté escuchando dentro de WSL
           const waitReadyCmd = `for i in $(seq 1 50); do ss -tln 2>/dev/null | grep -E ":${this.port}\\b" && echo READY && break; sleep 0.2; done`;
@@ -1058,7 +1061,8 @@ class GuacdService {
    * Detiene el servicio guacd
    */
   async stop() {
-    if (!this.isRunning) {
+    // Intentar detener aunque isRunning sea false (p.ej. proceso externo/preexistente).
+    if (!this.isRunning && !this.detectedMethod && !this.guacdProcess) {
       return;
     }
 
@@ -1103,6 +1107,7 @@ class GuacdService {
     this.guacdProcess = null;
     this.isRunning = false;
     this.detectedMethod = null;
+    this.wslNeedsRebind = false;
   }
 
   /**
@@ -1175,71 +1180,65 @@ class GuacdService {
       return;
     }
     
-    execFile('wsl.exe', ['-l', '-q'], { encoding: 'buffer' }, (listErr, stdoutBuf) => {
-      const tryWSL = async () => {
-        try {
-          const raw = Buffer.isBuffer(stdoutBuf) ? stdoutBuf.toString('utf16le') : '';
-          const distros = (raw.replace(/\u0000/g, '').replace(/[\r\n]+/g, '\n').split('\n').map(s => s.trim()).filter(Boolean));
-          for (const d of distros) {
-            // ¿Está el puerto escuchando y en qué IP?
-            await new Promise((r) => execFile('wsl.exe', ['-d', d, '--', 'sh', '-lc', `ss -tln 2>/dev/null | grep -E ":${this.port}\\b" || true`], { encoding: 'utf8' }, (e, o) => {
-              const out = String(o || '');
-              if (out.includes(`${this.port}`)) {
-                // Establecer la distribución WSL detectada
-                this.wslDistro = d;
-                
-                // Verificar si está escuchando en 0.0.0.0 (correcto) o solo en 127.0.0.1 (incorrecto)
-                const isListeningOnAll = out.includes('0.0.0.0') || out.includes('::');
-                const isListeningOnLocalhost = out.includes('127.0.0.1');
-                
-                if (isListeningOnAll) {
-                  // Está bien configurado, accesible desde Windows
-                  this.host = '127.0.0.1'; // Windows accede via localhost
-                  this.detectedMethod = 'wsl';
-                  console.log(`🐧 Detectado: guacd escuchando en WSL (${d}, correctamente configurado en 0.0.0.0)`);
-                  r('done');
-                } else if (isListeningOnLocalhost) {
-                  // Está mal configurado, solo escuchando en 127.0.0.1 dentro de WSL
-                  console.warn(`⚠️ Detectado: guacd en WSL (${d}) escuchando solo en 127.0.0.1 (no accesible desde Windows), se reiniciará`);
-                  // No establecer detectedMethod, para que se reinicie
-                  r('done');
-                } else {
-                  // Escuchando en otra IP, verificar si es accesible
-                  const match = out.match(/LISTEN\s+(\d+)\s+(\d+)\s+(\S+):\d+/);
-                  if (match) {
-                    const bindIp = match[3];
-                    if (bindIp && bindIp !== '127.0.0.1' && bindIp !== '::1') {
-                      // Obtener IP de WSL
-                      execFile('wsl.exe', ['-d', d, '--', 'sh', '-lc', "ip -4 addr show eth0 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1 | head -n1"], { encoding: 'utf8' }, (_e2, ipOut) => {
-                        const ip = String(ipOut || '').trim();
-                        if (ip && /^(\d+\.){3}\d+$/.test(ip)) {
-                          this.host = ip;
-                        }
-                        this.detectedMethod = 'wsl';
-                        console.log(`🐧 Detectado: guacd escuchando en WSL (${d}, IP: ${bindIp})`);
-                        r('done');
-                      });
-                      return;
+    // Usar la distribución WSL por defecto (sin especificar -d)
+    const tryWSL = async () => {
+      try {
+        // Verificar si el puerto está escuchando en la distribución WSL por defecto
+        await new Promise((r) => execFile('wsl.exe', ['--', 'sh', '-lc', `ss -tln 2>/dev/null | grep -E ":${this.port}\\b" || true`], { encoding: 'utf8' }, (e, o) => {
+          const out = String(o || '');
+          if (out.includes(`${this.port}`)) {
+            // No establecer distribución específica (usar por defecto)
+            this.wslDistro = null;
+            
+            // Verificar si está escuchando en 0.0.0.0 (correcto) o solo en 127.0.0.1 (incorrecto)
+            const isListeningOnAll = out.includes('0.0.0.0') || out.includes('::');
+            const isListeningOnLocalhost = out.includes('127.0.0.1');
+            
+            if (isListeningOnAll) {
+              // Está bien configurado, accesible desde Windows
+              this.host = '127.0.0.1'; // Windows accede via localhost
+              this.detectedMethod = 'wsl';
+              this.wslNeedsRebind = false;
+              console.log('🐧 Detectado: guacd escuchando en WSL por defecto (correctamente configurado en 0.0.0.0)');
+              r('done');
+            } else if (isListeningOnLocalhost) {
+              // Está mal configurado, solo escuchando en 127.0.0.1 dentro de WSL
+              console.warn('⚠️ Detectado: guacd en WSL escuchando solo en 127.0.0.1 (no accesible desde Windows), se reiniciará');
+              // Marcamos WSL como método detectado, pero forzamos reinicio para rebind 0.0.0.0
+              this.detectedMethod = 'wsl';
+              this.wslNeedsRebind = true;
+              r('done');
+            } else {
+              // Escuchando en otra IP, verificar si es accesible
+              const match = out.match(/LISTEN\s+(\d+)\s+(\d+)\s+(\S+):\d+/);
+              if (match) {
+                const bindIp = match[3];
+                if (bindIp && bindIp !== '127.0.0.1' && bindIp !== '::1') {
+                  // Obtener IP de WSL
+                  execFile('wsl.exe', ['--', 'sh', '-lc', "ip -4 addr show eth0 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1 | head -n1"], { encoding: 'utf8' }, (_e2, ipOut) => {
+                    const ip = String(ipOut || '').trim();
+                    if (ip && /^(\d+\.){3}\d+$/.test(ip)) {
+                      this.host = ip;
                     }
-                  }
-                  r();
+                    this.detectedMethod = 'wsl';
+                    this.wslNeedsRebind = false;
+                    console.log(`🐧 Detectado: guacd escuchando en WSL por defecto (IP: ${bindIp})`);
+                    r('done');
+                  });
+                  return;
                 }
-              } else { r(); }
-            }));
-            if (this.detectedMethod === 'wsl') { resolve(); return; }
-          }
-        } catch {}
-        // En Windows, no hay guacd nativo, solo Docker o WSL
-        this.detectedMethod = 'unknown';
-        resolve();
-      };
+              }
+              r();
+            }
+          } else { r(); }
+        }));
+      } catch {}
+      // En Windows, no hay guacd nativo, solo Docker o WSL
+      this.detectedMethod = 'unknown';
+      resolve();
+    };
 
-      if (listErr) {
-        tryWSL();
-      } else {
-        tryWSL();
-      }
-    });
+    tryWSL();
   }
 
   /**
