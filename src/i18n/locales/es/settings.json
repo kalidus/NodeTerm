@@ -110,7 +110,8 @@
     "guacdInactivityHint": "0 para desactivar. Cierre por inactividad entre guacamole-lite y guacd",
     "guacdInactivitySynced": "Se sincroniza automáticamente con el umbral de actividad de sesión",
     "backendTitle": "Backend Guacamole",
-    "restartGuacd": "Reiniciar Guacd"
+    "restartGuacd": "Reiniciar Guacd",
+    "resetDefaults": "Restaurar"
   },
   "sync": {
     "title": "Sincronización",
