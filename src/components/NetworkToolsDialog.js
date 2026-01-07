@@ -654,29 +654,8 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
         );
 
       case 'ssl-check':
-        return (
-          <>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Host</label>
-              <InputText
-                value={sslCheckHost}
-                onChange={(e) => setSslCheckHost(e.target.value)}
-                placeholder="ejemplo.com"
-                style={commonInputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Puerto</label>
-              <InputNumber
-                value={sslCheckPort}
-                onValueChange={(e) => setSslCheckPort(e.value)}
-                min={1}
-                max={65535}
-                style={commonInputStyle}
-              />
-            </div>
-          </>
-        );
+        // Layout especial para SSL Checker: inputs horizontales arriba
+        return null; // El formulario se renderiza en el header de la herramienta
 
       case 'http-headers':
         return (
@@ -1141,248 +1120,596 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
         );
 
       case 'ssl-check':
+        // Calcular métricas para el dashboard
+        const certValid = result.certificate?.isValid || false;
+        const daysUntilExpiry = result.certificate?.daysUntilExpiry || 0;
+        const supportedCount = result.supportedProtocols?.length || 0;
+        const deprecatedCount = result.supportedProtocols?.filter(p => p.deprecated)?.length || 0;
+        const secureProtocols = result.supportedProtocols?.filter(p => !p.deprecated)?.length || 0;
+        
+        // Calcular score de seguridad (0-100)
+        let securityScore = 0;
+        if (certValid) securityScore += 40;
+        if (daysUntilExpiry > 90) securityScore += 20;
+        else if (daysUntilExpiry > 30) securityScore += 10;
+        if (secureProtocols > 0) securityScore += 20;
+        if (deprecatedCount === 0) securityScore += 20;
+        
+        // Determinar nivel de riesgo
+        let riskLevel = 'BAJO';
+        let riskColor = '#22c55e';
+        if (!certValid || daysUntilExpiry < 0) {
+          riskLevel = 'CRÍTICO';
+          riskColor = '#dc2626';
+        } else if (deprecatedCount > 2 || daysUntilExpiry < 30) {
+          riskLevel = 'ALTO';
+          riskColor = '#ef4444';
+        } else if (deprecatedCount > 0 || daysUntilExpiry < 90) {
+          riskLevel = 'MEDIO';
+          riskColor = '#f59e0b';
+        }
+
         return (
           <div style={resultBoxStyle}>
-            <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <i className={`pi ${result.certificate?.isValid ? 'pi-lock' : 'pi-lock-open'}`} 
-                 style={{ color: result.certificate?.isValid ? '#22c55e' : '#ef4444', fontSize: '1.2rem' }} />
-              <strong style={{ fontSize: '1rem' }}>{result.host}:{result.port}</strong>
-              <Badge 
-                value={result.certificate?.isValid ? 'Válido' : 'Inválido'} 
-                severity={result.certificate?.isValid ? 'success' : 'danger'} 
-              />
-              {result.success && (
-                <Badge 
-                  value={`${result.supportedProtocols?.length || 0} protocolos`} 
-                  severity="info" 
-                />
-              )}
+            {/* RESUMEN EJECUTIVO - COMPACTO */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(6, 182, 212, 0.05) 100%)',
+              border: '1px solid rgba(6, 182, 212, 0.3)',
+              borderRadius: '8px',
+              padding: '0.75rem 1rem',
+              marginBottom: '1rem'
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+                marginBottom: '0.75rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <i className={`pi ${certValid ? 'pi-lock' : 'pi-lock-open'}`} 
+                     style={{ 
+                       color: certValid ? '#22c55e' : '#ef4444', 
+                       fontSize: '1.5rem'
+                     }} 
+                  />
+                  <div>
+                    <div style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.15rem' }}>
+                      {result.host}:{result.port}
+                    </div>
+                    <Badge 
+                      value={certValid ? '✓ VÁLIDO' : '✗ INVÁLIDO'} 
+                      severity={certValid ? 'success' : 'danger'}
+                      style={{ 
+                        fontSize: '0.7rem', 
+                        padding: '0.25rem 0.5rem',
+                        fontWeight: '600'
+                      }}
+                    />
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)', marginBottom: '0.15rem' }}>
+                    Score
+                  </div>
+                  <div style={{ 
+                    fontSize: '1.5rem', 
+                    fontWeight: '700',
+                    color: securityScore >= 80 ? '#22c55e' : securityScore >= 60 ? '#f59e0b' : '#ef4444',
+                    lineHeight: 1
+                  }}>
+                    {securityScore}
+                    <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>/100</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Métricas clave - COMPACTAS */}
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+                gap: '0.5rem',
+                marginTop: '0.75rem'
+              }}>
+                {/* Días hasta expiración */}
+                <div style={{
+                  background: 'rgba(0,0,0,0.2)',
+                  borderRadius: '6px',
+                  padding: '0.5rem 0.75rem'
+                }}>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)', marginBottom: '0.25rem' }}>
+                    Expira en
+                  </div>
+                  <div style={{ 
+                    fontSize: '1.1rem', 
+                    fontWeight: '700',
+                    color: daysUntilExpiry < 30 ? '#ef4444' : daysUntilExpiry < 90 ? '#f59e0b' : '#22c55e',
+                    marginBottom: '0.25rem'
+                  }}>
+                    {daysUntilExpiry} días
+                  </div>
+                  <div style={{ 
+                    background: 'rgba(255,255,255,0.1)',
+                    borderRadius: '3px',
+                    height: '4px',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      background: daysUntilExpiry < 30 ? '#ef4444' : daysUntilExpiry < 90 ? '#f59e0b' : '#22c55e',
+                      height: '100%',
+                      width: `${Math.min(100, (daysUntilExpiry / 365) * 100)}%`,
+                      transition: 'width 0.3s ease'
+                    }} />
+                  </div>
+                </div>
+
+                {/* Protocolos */}
+                <div style={{
+                  background: 'rgba(0,0,0,0.2)',
+                  borderRadius: '6px',
+                  padding: '0.5rem 0.75rem'
+                }}>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)', marginBottom: '0.25rem' }}>
+                    Protocolos
+                  </div>
+                  <div style={{ 
+                    fontSize: '1.1rem', 
+                    fontWeight: '700',
+                    marginBottom: '0.15rem'
+                  }}>
+                    {supportedCount}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)' }}>
+                    {secureProtocols} seg / {deprecatedCount} obs
+                  </div>
+                </div>
+
+                {/* Nivel de riesgo */}
+                <div style={{
+                  background: 'rgba(0,0,0,0.2)',
+                  borderRadius: '6px',
+                  padding: '0.5rem 0.75rem'
+                }}>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)', marginBottom: '0.25rem' }}>
+                    Riesgo
+                  </div>
+                  <div style={{ 
+                    fontSize: '1rem', 
+                    fontWeight: '700',
+                    color: riskColor,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem'
+                  }}>
+                    <i className="pi pi-exclamation-triangle" style={{ fontSize: '0.9rem' }} />
+                    {riskLevel}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Protocolos soportados */}
+            {/* Protocolos soportados - COMPACTO */}
             {result.supportedProtocols && result.supportedProtocols.length > 0 && (
               <>
-                <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem', color: '#3b82f6' }}>
-                  Protocolos Soportados:
+                <div style={{ 
+                  marginTop: '1rem', 
+                  marginBottom: '0.75rem', 
+                  fontWeight: '600', 
+                  fontSize: '0.9rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  color: '#3b82f6'
+                }}>
+                  <i className="pi pi-shield" style={{ fontSize: '0.9rem' }} />
+                  Protocolos Soportados
                 </div>
-                <div style={{ marginBottom: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {result.supportedProtocols.map((proto, idx) => (
-                    <Badge 
-                      key={idx}
-                      value={`${proto.name}${proto.cipher ? ` (${proto.cipher.name})` : ''}`}
-                      severity={proto.deprecated ? 'warning' : 'success'}
-                    />
-                  ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+                  {result.supportedProtocols.map((proto, idx) => {
+                    // Determinar color según seguridad del protocolo
+                    let bgColor, borderColor, iconColor, statusIcon, statusText;
+                    
+                    if (proto.name === 'TLSv1.3' || proto.name === 'TLSv1.2') {
+                      bgColor = 'rgba(34, 197, 94, 0.1)';
+                      borderColor = '#22c55e';
+                      iconColor = '#22c55e';
+                      statusIcon = '🟢';
+                      statusText = 'SEGURO';
+                    } else if (proto.name === 'TLSv1.1' || proto.name === 'TLSv1.0') {
+                      bgColor = 'rgba(245, 158, 11, 0.1)';
+                      borderColor = '#f59e0b';
+                      iconColor = '#f59e0b';
+                      statusIcon = '🟠';
+                      statusText = 'OBSOLETO';
+                    } else {
+                      bgColor = 'rgba(239, 68, 68, 0.1)';
+                      borderColor = '#ef4444';
+                      iconColor = '#ef4444';
+                      statusIcon = '🔴';
+                      statusText = 'INSEGURO';
+                    }
+
+                    return (
+                      <div key={idx} style={{
+                        background: bgColor,
+                        border: `1.5px solid ${borderColor}`,
+                        borderRadius: '6px',
+                        padding: '0.5rem 0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '0.5rem'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '150px' }}>
+                          <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>
+                            {statusIcon}
+                          </span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ 
+                              fontSize: '0.85rem', 
+                              fontWeight: '600',
+                              marginBottom: '0.15rem',
+                              color: iconColor
+                            }}>
+                              {proto.name}
+                            </div>
+                            {proto.cipher && (
+                              <div style={{ 
+                                fontSize: '0.7rem', 
+                                color: 'var(--text-color-secondary)',
+                                fontFamily: 'monospace'
+                              }}>
+                                {proto.cipher.name}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <Badge 
+                          value={statusText}
+                          severity={proto.deprecated ? 'warning' : 'success'}
+                          style={{ 
+                            fontSize: '0.65rem', 
+                            padding: '0.2rem 0.5rem',
+                            fontWeight: '600',
+                            background: borderColor,
+                            border: 'none'
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </>
             )}
 
-            {/* Todos los protocolos probados */}
+            {/* Todos los protocolos probados - Colapsable COMPACTO */}
             {result.testedProtocols && result.testedProtocols.length > 0 && (
-              <>
-                <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                  Todos los Protocolos Probados:
-                </div>
-                <div style={{ marginBottom: '1rem' }}>
-                {result.testedProtocols.map((proto, idx) => (
-                  <div key={idx} style={{ 
-                    ...statItemStyle, 
-                    padding: '0.4rem 0',
-                    background: proto.supported ? (proto.deprecated ? 'rgba(245, 158, 11, 0.1)' : 'rgba(34, 197, 94, 0.1)') : 'rgba(0,0,0,0.1)'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <span>{proto.name}:</span>
-                      <Badge 
-                        value={proto.supported ? 'Soportado' : (proto.protocolUnavailable ? 'No disponible en Node.js' : 'No soportado')} 
-                        severity={proto.supported ? (proto.deprecated ? 'warning' : 'success') : (proto.protocolUnavailable ? 'info' : 'secondary')} 
-                      />
-                      {proto.deprecated && proto.supported && (
-                        <Badge value="Obsoleto" severity="warning" />
-                      )}
-                    </div>
-                    {proto.supported && proto.cipher && (
-                      <div style={{ marginTop: '0.25rem', fontSize: '0.85rem', color: 'var(--text-color-secondary)' }}>
-                        Cipher: <strong>{proto.cipher.name}</strong> {proto.cipher.version && `(${proto.cipher.version})`}
-                      </div>
-                    )}
-                    {!proto.supported && proto.error && (
-                      <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-color-secondary)', fontStyle: 'italic' }}>
-                        {proto.error}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                </div>
-              </>
-            )}
+              <details style={{ marginTop: '1rem', marginBottom: '0.75rem' }}>
+                <summary style={{ 
+                  cursor: 'pointer', 
+                  fontWeight: '600', 
+                  fontSize: '0.85rem',
+                  padding: '0.5rem 0.75rem',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  borderRadius: '6px',
+                  marginBottom: '0.5rem',
+                  userSelect: 'none',
+                  listStyle: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}>
+                  <i className="pi pi-chevron-right" style={{ 
+                    fontSize: '0.7rem', 
+                    transition: 'transform 0.2s',
+                    display: 'inline-block'
+                  }} />
+                  <span>Todos los Protocolos Probados ({result.testedProtocols.length})</span>
+                </summary>
+                <div style={{ 
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                  gap: '0.5rem',
+                  marginTop: '0.5rem'
+                }}>
+                {result.testedProtocols.map((proto, idx) => {
+                  let statusIcon = '⚫';
+                  let bgColor = 'rgba(0,0,0,0.1)';
+                  
+                  if (proto.supported) {
+                    if (proto.deprecated) {
+                      statusIcon = '🟠';
+                      bgColor = 'rgba(245, 158, 11, 0.1)';
+                    } else {
+                      statusIcon = '🟢';
+                      bgColor = 'rgba(34, 197, 94, 0.1)';
+                    }
+                  } else if (proto.protocolUnavailable) {
+                    statusIcon = '⚪';
+                    bgColor = 'rgba(100, 116, 139, 0.1)';
+                  } else {
+                    statusIcon = '🔴';
+                    bgColor = 'rgba(239, 68, 68, 0.1)';
+                  }
 
-            {/* Ciphers únicos */}
-            {result.ciphers && result.ciphers.length > 0 && (
-              <>
-                <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                  Ciphers Detectados:
-                </div>
-                <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  {result.ciphers.map((cipher, idx) => (
+                  return (
                     <div key={idx} style={{ 
-                      padding: '0.5rem', 
-                      background: 'rgba(59, 130, 246, 0.1)', 
-                      borderRadius: '4px',
+                      padding: '0.75rem',
+                      background: bgColor,
+                      borderRadius: '6px',
                       fontSize: '0.85rem'
                     }}>
-                      <strong>{cipher.name}</strong>
-                      {cipher.version && <span style={{ color: 'var(--text-color-secondary)', marginLeft: '0.5rem' }}>({cipher.version})</span>}
-                      <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-color-secondary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                        <span style={{ fontSize: '1rem' }}>{statusIcon}</span>
+                        <strong>{proto.name}</strong>
+                      </div>
+                      {proto.supported && proto.cipher && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-color-secondary)', marginLeft: '1.5rem' }}>
+                          {proto.cipher.name}
+                        </div>
+                      )}
+                      {!proto.supported && proto.error && (
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)', fontStyle: 'italic', marginLeft: '1.5rem' }}>
+                          {proto.error}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                </div>
+              </details>
+            )}
+
+            {/* Ciphers únicos - Colapsable COMPACTO */}
+            {result.ciphers && result.ciphers.length > 0 && (
+              <details style={{ marginTop: '0.75rem', marginBottom: '0.75rem' }}>
+                <summary style={{ 
+                  cursor: 'pointer', 
+                  fontWeight: '600', 
+                  fontSize: '0.85rem',
+                  padding: '0.5rem 0.75rem',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  borderRadius: '6px',
+                  marginBottom: '0.5rem',
+                  userSelect: 'none',
+                  listStyle: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}>
+                  <i className="pi pi-chevron-right" style={{ 
+                    fontSize: '0.7rem', 
+                    transition: 'transform 0.2s',
+                    display: 'inline-block'
+                  }} />
+                  <span>Ciphers Detectados ({result.ciphers.length})</span>
+                </summary>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  {result.ciphers.map((cipher, idx) => (
+                    <div key={idx} style={{ 
+                      padding: '0.75rem', 
+                      background: 'rgba(59, 130, 246, 0.1)', 
+                      borderRadius: '6px',
+                      borderLeft: '3px solid #3b82f6',
+                      fontSize: '0.85rem'
+                    }}>
+                      <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
+                        {cipher.name}
+                        {cipher.version && <span style={{ color: 'var(--text-color-secondary)', marginLeft: '0.5rem', fontWeight: '400' }}>({cipher.version})</span>}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-color-secondary)' }}>
                         Protocolos: {cipher.protocols.join(', ')}
                       </div>
                     </div>
                   ))}
                 </div>
-              </>
+              </details>
             )}
 
-            {/* Información del certificado */}
+            {/* Información del certificado - Desplegable COMPACTO */}
             {result.certificate && (
-              <>
-                <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                  Información del Certificado:
-                </div>
-                <div style={statItemStyle}>
-                  <span>Sujeto:</span>
-                  <strong>{result.certificate.subject?.CN || result.certificate.subject?.O || 'N/A'}</strong>
-                </div>
-                {result.certificate.subject?.O && result.certificate.subject?.O !== result.certificate.subject?.CN && (
+              <details style={{ marginTop: '0.75rem', marginBottom: '0.75rem' }}>
+                <summary style={{ 
+                  cursor: 'pointer', 
+                  fontWeight: '600', 
+                  fontSize: '0.85rem',
+                  padding: '0.5rem 0.75rem',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  borderRadius: '6px',
+                  marginBottom: '0.5rem',
+                  userSelect: 'none',
+                  listStyle: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}>
+                  <i className="pi pi-chevron-right" style={{ 
+                    fontSize: '0.7rem', 
+                    transition: 'transform 0.2s',
+                    display: 'inline-block'
+                  }} />
+                  <span>Información del Certificado</span>
+                </summary>
+                <div style={{ marginTop: '0.5rem', paddingLeft: '0.5rem' }}>
                   <div style={statItemStyle}>
-                    <span>Organización:</span>
-                    <strong>{result.certificate.subject.O}</strong>
+                    <span>Sujeto:</span>
+                    <strong>{result.certificate.subject?.CN || result.certificate.subject?.O || 'N/A'}</strong>
                   </div>
-                )}
-                <div style={statItemStyle}>
-                  <span>Emisor:</span>
-                  <strong>{result.certificate.issuer?.O || result.certificate.issuer?.CN || 'N/A'}</strong>
-                </div>
-                {result.certificate.serialNumber && (
-                  <div style={statItemStyle}>
-                    <span>Número de serie:</span>
-                    <strong style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>{result.certificate.serialNumber}</strong>
-                  </div>
-                )}
-                {result.certificate.signatureAlgorithm && (
-                  <div style={statItemStyle}>
-                    <span>Algoritmo de firma:</span>
-                    <strong>{result.certificate.signatureAlgorithm}</strong>
-                  </div>
-                )}
-                {result.certificate.publicKey && (
-                  <div style={statItemStyle}>
-                    <span>Clave pública:</span>
-                    <strong>{result.certificate.publicKey.type || 'N/A'} {result.certificate.publicKey.bits ? `(${result.certificate.publicKey.bits} bits)` : ''}</strong>
-                  </div>
-                )}
-                <div style={statItemStyle}>
-                  <span>Válido desde:</span>
-                  <strong>{result.certificate.validFrom}</strong>
-                </div>
-                <div style={statItemStyle}>
-                  <span>Válido hasta:</span>
-                  <strong>{result.certificate.validTo}</strong>
-                </div>
-                <div style={statItemStyle}>
-                  <span>Días hasta expiración:</span>
-                  <strong style={{ 
-                    color: result.certificate.daysUntilExpiry < 30 ? '#ef4444' : 
-                           result.certificate.daysUntilExpiry < 90 ? '#f59e0b' : '#22c55e' 
-                  }}>
-                    {result.certificate.daysUntilExpiry} días
-                  </strong>
-                </div>
-                {result.certificate.fingerprint && (
-                  <div style={statItemStyle}>
-                    <span>Fingerprint (SHA1):</span>
-                    <strong style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>{result.certificate.fingerprint}</strong>
-                  </div>
-                )}
-                {result.certificate.fingerprint256 && (
-                  <div style={statItemStyle}>
-                    <span>Fingerprint (SHA256):</span>
-                    <strong style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>{result.certificate.fingerprint256}</strong>
-                  </div>
-                )}
-                {result.certificate.subjectAltNames && result.certificate.subjectAltNames.length > 0 && (
-                  <div style={statItemStyle}>
-                    <span>Nombres alternativos (SAN):</span>
-                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                      {result.certificate.subjectAltNames.map((san, idx) => (
-                        <strong key={idx} style={{ fontSize: '0.85rem' }}>{san}</strong>
-                      ))}
+                  {result.certificate.subject?.O && result.certificate.subject?.O !== result.certificate.subject?.CN && (
+                    <div style={statItemStyle}>
+                      <span>Organización:</span>
+                      <strong>{result.certificate.subject.O}</strong>
                     </div>
+                  )}
+                  <div style={statItemStyle}>
+                    <span>Emisor:</span>
+                    <strong>{result.certificate.issuer?.O || result.certificate.issuer?.CN || 'N/A'}</strong>
                   </div>
-                )}
-              </>
+                  {result.certificate.serialNumber && (
+                    <div style={statItemStyle}>
+                      <span>Número de serie:</span>
+                      <strong style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>{result.certificate.serialNumber}</strong>
+                    </div>
+                  )}
+                  {result.certificate.signatureAlgorithm && (
+                    <div style={statItemStyle}>
+                      <span>Algoritmo de firma:</span>
+                      <strong>{result.certificate.signatureAlgorithm}</strong>
+                    </div>
+                  )}
+                  {result.certificate.publicKey && (
+                    <div style={statItemStyle}>
+                      <span>Clave pública:</span>
+                      <strong>{result.certificate.publicKey.type || 'N/A'} {result.certificate.publicKey.bits ? `(${result.certificate.publicKey.bits} bits)` : ''}</strong>
+                    </div>
+                  )}
+                  <div style={statItemStyle}>
+                    <span>Válido desde:</span>
+                    <strong>{result.certificate.validFrom}</strong>
+                  </div>
+                  <div style={statItemStyle}>
+                    <span>Válido hasta:</span>
+                    <strong>{result.certificate.validTo}</strong>
+                  </div>
+                  <div style={statItemStyle}>
+                    <span>Días hasta expiración:</span>
+                    <strong style={{ 
+                      color: result.certificate.daysUntilExpiry < 30 ? '#ef4444' : 
+                             result.certificate.daysUntilExpiry < 90 ? '#f59e0b' : '#22c55e' 
+                    }}>
+                      {result.certificate.daysUntilExpiry} días
+                    </strong>
+                  </div>
+                  {result.certificate.fingerprint && (
+                    <div style={statItemStyle}>
+                      <span>Fingerprint (SHA1):</span>
+                      <strong style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>{result.certificate.fingerprint}</strong>
+                    </div>
+                  )}
+                  {result.certificate.fingerprint256 && (
+                    <div style={statItemStyle}>
+                      <span>Fingerprint (SHA256):</span>
+                      <strong style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>{result.certificate.fingerprint256}</strong>
+                    </div>
+                  )}
+                  {result.certificate.subjectAltNames && result.certificate.subjectAltNames.length > 0 && (
+                    <div style={statItemStyle}>
+                      <span>Nombres alternativos (SAN):</span>
+                      <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        {result.certificate.subjectAltNames.map((san, idx) => (
+                          <strong key={idx} style={{ fontSize: '0.85rem' }}>{san}</strong>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </details>
             )}
 
-            {/* Cadena de certificados */}
+            {/* Cadena de certificados - Colapsable COMPACTO */}
             {result.chain && result.chain.length > 0 && (
-              <>
-                <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                  Cadena de Certificados ({result.chain.length}):
-                </div>
-                {result.chain.map((chainCert, idx) => (
-                  <div key={idx} style={{ 
-                    marginBottom: '0.5rem', 
-                    padding: '0.5rem', 
-                    background: 'rgba(0,0,0,0.2)', 
-                    borderRadius: '4px',
-                    fontSize: '0.85rem'
-                  }}>
-                    <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>Certificado {idx + 1}:</div>
-                    <div style={statItemStyle}>
-                      <span>Sujeto:</span>
-                      <strong>{chainCert.subject?.CN || chainCert.subject?.O || 'N/A'}</strong>
-                    </div>
-                    <div style={statItemStyle}>
-                      <span>Emisor:</span>
-                      <strong>{chainCert.issuer?.O || chainCert.issuer?.CN || 'N/A'}</strong>
-                    </div>
-                    {chainCert.validFrom && (
-                      <div style={statItemStyle}>
-                        <span>Válido desde:</span>
-                        <strong>{chainCert.validFrom}</strong>
-                      </div>
-                    )}
-                    {chainCert.validTo && (
-                      <div style={statItemStyle}>
-                        <span>Válido hasta:</span>
-                        <strong>{chainCert.validTo}</strong>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </>
-            )}
-
-            {/* Recomendaciones de seguridad */}
-            {result.security && result.security.recommendations && result.security.recommendations.length > 0 && (
-              <>
-                <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem', color: '#f59e0b' }}>
-                  Recomendaciones de Seguridad:
-                </div>
-                <div style={{ marginBottom: '1rem' }}>
-                  {result.security.recommendations.map((rec, idx) => (
+              <details style={{ marginTop: '0.75rem', marginBottom: '0.75rem' }}>
+                <summary style={{ 
+                  cursor: 'pointer', 
+                  fontWeight: '600', 
+                  fontSize: '0.85rem',
+                  padding: '0.5rem 0.75rem',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  borderRadius: '6px',
+                  marginBottom: '0.5rem',
+                  userSelect: 'none',
+                  listStyle: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}>
+                  <i className="pi pi-chevron-right" style={{ 
+                    fontSize: '0.7rem', 
+                    transition: 'transform 0.2s',
+                    display: 'inline-block'
+                  }} />
+                  <span>Cadena de Certificados ({result.chain.length})</span>
+                </summary>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  {result.chain.map((chainCert, idx) => (
                     <div key={idx} style={{ 
-                      padding: '0.5rem', 
-                      marginBottom: '0.5rem',
-                      background: 'rgba(245, 158, 11, 0.1)', 
-                      borderLeft: '3px solid #f59e0b',
-                      borderRadius: '4px',
+                      padding: '1rem', 
+                      background: 'rgba(0,0,0,0.2)', 
+                      borderRadius: '8px',
+                      borderLeft: '3px solid #3b82f6',
                       fontSize: '0.85rem'
                     }}>
-                      <i className="pi pi-exclamation-triangle" style={{ marginRight: '0.5rem', color: '#f59e0b' }} />
-                      {rec}
+                      <div style={{ fontWeight: '700', marginBottom: '0.75rem', fontSize: '0.95rem', color: '#3b82f6' }}>
+                        Certificado {idx + 1} {idx === 0 ? '(Servidor)' : idx === result.chain.length - 1 ? '(Root CA)' : '(Intermediate CA)'}
+                      </div>
+                      <div style={statItemStyle}>
+                        <span>Sujeto:</span>
+                        <strong>{chainCert.subject?.CN || chainCert.subject?.O || 'N/A'}</strong>
+                      </div>
+                      <div style={statItemStyle}>
+                        <span>Emisor:</span>
+                        <strong>{chainCert.issuer?.O || chainCert.issuer?.CN || 'N/A'}</strong>
+                      </div>
+                      {chainCert.validFrom && (
+                        <div style={statItemStyle}>
+                          <span>Válido desde:</span>
+                          <strong>{chainCert.validFrom}</strong>
+                        </div>
+                      )}
+                      {chainCert.validTo && (
+                        <div style={statItemStyle}>
+                          <span>Válido hasta:</span>
+                          <strong>{chainCert.validTo}</strong>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
-              </>
+              </details>
+            )}
+
+            {/* Recomendaciones de seguridad - COMPACTO */}
+            {result.security && result.security.recommendations && result.security.recommendations.length > 0 && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%)',
+                border: '1.5px solid #f59e0b',
+                borderRadius: '8px',
+                padding: '0.75rem',
+                marginBottom: '1rem',
+                marginTop: '1rem'
+              }}>
+                <div style={{ 
+                  fontWeight: '600', 
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginBottom: '0.75rem',
+                  color: '#f59e0b'
+                }}>
+                  <i className="pi pi-exclamation-triangle" style={{ fontSize: '1rem' }} />
+                  Recomendaciones de Seguridad
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {result.security.recommendations.map((rec, idx) => (
+                    <div key={idx} style={{ 
+                      padding: '0.6rem 0.75rem', 
+                      background: 'rgba(0, 0, 0, 0.2)', 
+                      borderLeft: '3px solid #f59e0b',
+                      borderRadius: '4px',
+                      fontSize: '0.8rem',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '0.5rem'
+                    }}>
+                      <i className="pi pi-info-circle" style={{ color: '#f59e0b', fontSize: '0.85rem', marginTop: '0.1rem', flexShrink: 0 }} />
+                      <span style={{ flex: 1 }}>{rec}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* Protocolo y cipher por defecto (compatibilidad) */}
@@ -1671,6 +1998,22 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
           scrollbar-width: thin !important;
           scrollbar-color: ${themeColors.borderColor} ${themeColors.background} !important;
         }
+        /* Estilos para details/summary desplegable */
+        .network-tools-results details summary {
+          list-style: none !important;
+        }
+        .network-tools-results details summary::-webkit-details-marker {
+          display: none !important;
+        }
+        .network-tools-results details summary .pi-chevron-right {
+          transition: transform 0.2s ease !important;
+        }
+        .network-tools-results details[open] summary .pi-chevron-right {
+          transform: rotate(90deg) !important;
+        }
+        .network-tools-results details summary:hover {
+          background: rgba(59, 130, 246, 0.15) !important;
+        }
         .network-tools-dialog .p-dialog-content {
           display: flex !important;
           flex-direction: column !important;
@@ -1915,77 +2258,160 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
               padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem',
               borderBottom: '1px solid rgba(255,255,255,0.1)',
               display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
-              alignItems: isMobile ? 'flex-start' : 'center',
-              justifyContent: 'space-between',
-              gap: isMobile ? '0.75rem' : '0',
+              flexDirection: 'column',
+              gap: '1rem',
               background: 'rgba(0,0,0,0.1)',
               flexShrink: 0
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  background: `linear-gradient(135deg, ${currentTool.categoryColor}30 0%, ${currentTool.categoryColor}15 100%)`,
-                  border: `1px solid ${currentTool.categoryColor}50`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  <i className={currentTool.icon} style={{ color: currentTool.categoryColor, fontSize: '0.9rem' }} />
+              {/* Primera fila: Título y botón ejecutar */}
+              <div style={{
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                alignItems: isMobile ? 'flex-start' : 'center',
+                justifyContent: 'space-between',
+                gap: isMobile ? '0.75rem' : '0'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: `linear-gradient(135deg, ${currentTool.categoryColor}30 0%, ${currentTool.categoryColor}15 100%)`,
+                    border: `1px solid ${currentTool.categoryColor}50`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <i className={currentTool.icon} style={{ color: currentTool.categoryColor, fontSize: '0.9rem' }} />
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentTool.label}</h4>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)', display: isMobile ? 'none' : 'block' }}>
+                      {currentTool.description}
+                    </span>
+                  </div>
                 </div>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentTool.label}</h4>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)', display: isMobile ? 'none' : 'block' }}>
-                    {currentTool.description}
-                  </span>
-                </div>
+                <Button
+                  label={isMobile ? undefined : "Ejecutar"}
+                  icon="pi pi-play"
+                  onClick={executeTool}
+                  disabled={loading}
+                  style={{
+                    background: `linear-gradient(135deg, ${currentTool.categoryColor} 0%, ${currentTool.categoryColor}cc 100%)`,
+                    border: 'none',
+                    borderRadius: '8px',
+                    flexShrink: 0
+                  }}
+                />
               </div>
-              <Button
-                label={isMobile ? undefined : "Ejecutar"}
-                icon="pi pi-play"
-                onClick={executeTool}
-                disabled={loading}
-                style={{
-                  background: `linear-gradient(135deg, ${currentTool.categoryColor} 0%, ${currentTool.categoryColor}cc 100%)`,
-                  border: 'none',
+
+              {/* Inputs compactos para SSL Checker */}
+              {selectedTool === 'ssl-check' && (
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(6, 182, 212, 0.05) 100%)',
+                  padding: '0.4rem 0.8rem',
                   borderRadius: '8px',
-                  flexShrink: 0
-                }}
-              />
+                  border: '2px solid rgba(6, 182, 212, 0.4)',
+                  width: '100%',
+                  maxWidth: '650px',
+                  boxShadow: '0 2px 8px rgba(6, 182, 212, 0.2)'
+                }}>
+                  <span style={{ 
+                    color: '#06b6d4', 
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    Host:
+                  </span>
+                  <InputText
+                    value={sslCheckHost}
+                    onChange={(e) => setSslCheckHost(e.target.value)}
+                    placeholder="ejemplo.com"
+                    style={{
+                      flex: 1,
+                      minWidth: '150px',
+                      maxWidth: '300px',
+                      background: 'rgba(255,255,255,0.1)',
+                      border: '1px solid rgba(6, 182, 212, 0.4)',
+                      borderRadius: '4px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '28px'
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && executeTool()}
+                  />
+                  <span style={{ 
+                    color: '#06b6d4', 
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    marginLeft: '0.5rem',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    Puerto:
+                  </span>
+                  <InputNumber
+                    value={sslCheckPort}
+                    onValueChange={(e) => setSslCheckPort(e.value)}
+                    min={1}
+                    max={65535}
+                    placeholder="443"
+                    style={{
+                      width: '65px',
+                      background: 'rgba(255,255,255,0.1)',
+                      border: '1px solid rgba(6, 182, 212, 0.4)',
+                      borderRadius: '4px'
+                    }}
+                    inputStyle={{
+                      padding: '0.25rem 0.3rem',
+                      height: '26px',
+                      fontSize: '0.75rem',
+                      textAlign: 'center'
+                    }}
+                  />
+                </div>
+              )}
             </div>
           )}
 
           {/* Contenido: formulario y resultados */}
           <div className="network-tools-form-results">
-            {/* Panel de formulario */}
-            <div className="network-tools-form" style={{
-              padding: '1rem',
-              paddingBottom: '2rem',
-              borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.1)',
-              borderBottom: isMobile ? '1px solid rgba(255,255,255,0.1)' : 'none'
-            }}>
-              {renderToolForm()}
-            </div>
+            {/* Panel de formulario - Solo si NO es SSL Checker */}
+            {selectedTool !== 'ssl-check' && (
+              <div className="network-tools-form" style={{
+                padding: '1rem',
+                paddingBottom: '2rem',
+                borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                borderBottom: isMobile ? '1px solid rgba(255,255,255,0.1)' : 'none'
+              }}>
+                {renderToolForm()}
+              </div>
+            )}
 
-            {/* Panel de resultados */}
+            {/* Panel de resultados - Full width para SSL Checker */}
             <div className="network-tools-results" style={{
               padding: '1rem',
               paddingBottom: '2rem',
-              background: 'rgba(0,0,0,0.1)'
+              background: 'rgba(0,0,0,0.1)',
+              width: selectedTool === 'ssl-check' ? '100%' : undefined
             }}>
-              <div style={{ 
-                marginBottom: '0.75rem', 
-                fontSize: '0.85rem', 
-                fontWeight: '600',
-                color: 'var(--text-color-secondary)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                Resultados
-              </div>
+              {selectedTool !== 'ssl-check' && (
+                <div style={{ 
+                  marginBottom: '0.75rem', 
+                  fontSize: '0.85rem', 
+                  fontWeight: '600',
+                  color: 'var(--text-color-secondary)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Resultados
+                </div>
+              )}
               {renderResults()}
             </div>
           </div>
