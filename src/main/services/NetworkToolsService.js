@@ -665,7 +665,7 @@ class NetworkToolsService {
   }
 
   /**
-   * Check SSL/TLS certificate
+   * Check SSL/TLS certificate with comprehensive protocol and cipher testing
    * @param {string} host - Host to check
    * @param {number} port - Port (default: 443)
    * @returns {Promise<Object>} SSL certificate info
@@ -682,12 +682,123 @@ class NetworkToolsService {
       port: port,
       certificate: null,
       chain: [],
-      protocols: [],
+      supportedProtocols: [],
+      testedProtocols: [],
+      ciphers: [],
+      security: {
+        hasWeakProtocols: false,
+        hasWeakCiphers: false,
+        recommendations: []
+      },
       error: null
     };
 
-    return new Promise((resolve) => {
-      const options = {
+    // Protocolos a probar (de más antiguo a más moderno)
+    // Nota: SSLv3 no está disponible en Node.js moderno. TLSv1.0 y TLSv1.1 pueden estar deshabilitados.
+    // Los valores válidos para minVersion/maxVersion en Node.js son: 'TLSv1', 'TLSv1.1', 'TLSv1.2', 'TLSv1.3'
+    const protocolsToTest = [
+      { name: 'SSLv3', minVersion: null, maxVersion: null, deprecated: true, mayNotBeAvailable: true, skipTest: true },
+      { name: 'TLSv1.0', minVersion: 'TLSv1', maxVersion: 'TLSv1', deprecated: true, mayNotBeAvailable: true },
+      { name: 'TLSv1.1', minVersion: 'TLSv1.1', maxVersion: 'TLSv1.1', deprecated: true, mayNotBeAvailable: true },
+      { name: 'TLSv1.2', minVersion: 'TLSv1.2', maxVersion: 'TLSv1.2', deprecated: false, mayNotBeAvailable: false },
+      { name: 'TLSv1.3', minVersion: 'TLSv1.3', maxVersion: 'TLSv1.3', deprecated: false, mayNotBeAvailable: false }
+    ];
+
+    // Función para probar un protocolo específico
+    const testProtocol = (protocolInfo) => {
+      return new Promise((resolve) => {
+        // Si el protocolo debe ser omitido (como SSLv3), retornar inmediatamente
+        if (protocolInfo.skipTest) {
+          return resolve({
+            supported: false,
+            protocol: protocolInfo.name,
+            cipher: null,
+            authorized: false,
+            error: 'Protocolo no disponible en Node.js (SSLv3 fue removido por seguridad)',
+            protocolUnavailable: true
+          });
+        }
+
+        const options = {
+          host: sanitizedHost,
+          port: port,
+          servername: sanitizedHost,
+          rejectUnauthorized: false,
+          timeout: 5000
+        };
+
+        // Solo agregar minVersion/maxVersion si están definidos
+        if (protocolInfo.minVersion) {
+          options.minVersion = protocolInfo.minVersion;
+        }
+        if (protocolInfo.maxVersion) {
+          options.maxVersion = protocolInfo.maxVersion;
+        }
+
+        const socket = tls.connect(options, () => {
+          try {
+            const cert = socket.getPeerCertificate(true);
+            const protocol = socket.getProtocol();
+            const cipher = socket.getCipher();
+            const cipherInfo = socket.getCipher();
+
+            resolve({
+              supported: true,
+              protocol: protocol,
+              cipher: cipher ? {
+                name: cipher.name,
+                version: cipher.version,
+                standardName: cipherInfo ? cipherInfo.standardName : null
+              } : null,
+              authorized: socket.authorized,
+              error: null
+            });
+          } catch (err) {
+            resolve({
+              supported: true,
+              protocol: socket.getProtocol(),
+              cipher: null,
+              authorized: false,
+              error: err.message
+            });
+          } finally {
+            socket.end();
+          }
+        });
+
+        socket.on('error', (err) => {
+          // Error puede significar que el protocolo no está soportado por el servidor,
+          // o que Node.js no soporta ese protocolo (especialmente SSLv3, TLSv1.0, TLSv1.1)
+          const errorMsg = err.message || 'Error desconocido';
+          const isProtocolUnavailable = protocolInfo.mayNotBeAvailable && 
+            (errorMsg.includes('SSL') || errorMsg.includes('protocol') || errorMsg.includes('version'));
+          
+          resolve({
+            supported: false,
+            protocol: protocolInfo.name,
+            cipher: null,
+            authorized: false,
+            error: isProtocolUnavailable ? 'Protocolo no disponible en Node.js/OpenSSL' : errorMsg,
+            protocolUnavailable: isProtocolUnavailable
+          });
+        });
+
+        socket.on('timeout', () => {
+          socket.destroy();
+          resolve({
+            supported: false,
+            protocol: protocolInfo.name,
+            cipher: null,
+            authorized: false,
+            error: 'Timeout'
+          });
+        });
+      });
+    };
+
+    // Primero, hacer una conexión estándar para obtener información del certificado
+    return new Promise(async (resolve) => {
+      const defaultOptions = {
         host: sanitizedHost,
         port: port,
         servername: sanitizedHost,
@@ -695,14 +806,16 @@ class NetworkToolsService {
         timeout: 10000
       };
 
-      const socket = tls.connect(options, () => {
+      const defaultSocket = tls.connect(defaultOptions, async () => {
         try {
-          const cert = socket.getPeerCertificate(true);
-          const protocol = socket.getProtocol();
-          const cipher = socket.getCipher();
+          const cert = defaultSocket.getPeerCertificate(true);
+          const protocol = defaultSocket.getProtocol();
+          const cipher = defaultSocket.getCipher();
 
           if (cert && cert.subject) {
             results.success = true;
+            
+            // Información completa del certificado
             results.certificate = {
               subject: cert.subject,
               issuer: cert.issuer,
@@ -712,43 +825,162 @@ class NetworkToolsService {
               fingerprint: cert.fingerprint,
               fingerprint256: cert.fingerprint256,
               subjectAltNames: cert.subjectaltname ? cert.subjectaltname.split(', ') : [],
-              isValid: socket.authorized,
-              daysUntilExpiry: Math.floor((new Date(cert.valid_to) - new Date()) / (1000 * 60 * 60 * 24))
+              isValid: defaultSocket.authorized,
+              daysUntilExpiry: Math.floor((new Date(cert.valid_to) - new Date()) / (1000 * 60 * 60 * 24)),
+              // Información adicional
+              signatureAlgorithm: cert.signatureAlgorithm || null,
+              publicKey: cert.pubkey ? {
+                type: cert.pubkey.type || null,
+                bits: cert.pubkey.bits || null
+              } : null,
+              modulus: cert.modulus || null,
+              exponent: cert.exponent || null
             };
 
-            results.protocols = {
-              version: protocol,
-              cipher: cipher ? cipher.name : null,
-              cipherVersion: cipher ? cipher.version : null
-            };
-
-            // Get certificate chain
+            // Obtener cadena de certificados completa
             let currentCert = cert;
             while (currentCert && currentCert.issuerCertificate && 
                    currentCert.issuerCertificate !== currentCert) {
               results.chain.push({
                 subject: currentCert.issuerCertificate.subject,
-                issuer: currentCert.issuerCertificate.issuer
+                issuer: currentCert.issuerCertificate.issuer,
+                validFrom: currentCert.issuerCertificate.valid_from,
+                validTo: currentCert.issuerCertificate.valid_to,
+                serialNumber: currentCert.issuerCertificate.serialNumber
               });
               currentCert = currentCert.issuerCertificate;
             }
+
+            // Guardar protocolo y cipher por defecto
+            results.protocols = {
+              version: protocol,
+              cipher: cipher ? cipher.name : null,
+              cipherVersion: cipher ? cipher.version : null
+            };
           }
+
+          defaultSocket.end();
+
+          // Ahora probar todos los protocolos
+          const protocolTests = [];
+          for (const protocolInfo of protocolsToTest) {
+            protocolTests.push(testProtocol(protocolInfo));
+          }
+
+          const protocolResults = await Promise.all(protocolTests);
+
+          // Procesar resultados de protocolos
+          for (let i = 0; i < protocolResults.length; i++) {
+            const testResult = protocolResults[i];
+            const protocolInfo = protocolsToTest[i];
+
+            results.testedProtocols.push({
+              name: protocolInfo.name,
+              supported: testResult.supported,
+              deprecated: protocolInfo.deprecated,
+              cipher: testResult.cipher,
+              authorized: testResult.authorized,
+              error: testResult.error,
+              protocolUnavailable: testResult.protocolUnavailable || false
+            });
+
+            if (testResult.supported) {
+              results.supportedProtocols.push({
+                name: protocolInfo.name,
+                deprecated: protocolInfo.deprecated,
+                cipher: testResult.cipher,
+                authorized: testResult.authorized
+              });
+
+              // Agregar cipher a la lista si no está duplicado
+              if (testResult.cipher && testResult.cipher.name) {
+                const existingCipher = results.ciphers.find(c => c.name === testResult.cipher.name);
+                if (!existingCipher) {
+                  results.ciphers.push({
+                    name: testResult.cipher.name,
+                    version: testResult.cipher.version,
+                    protocols: [protocolInfo.name]
+                  });
+                } else {
+                  existingCipher.protocols.push(protocolInfo.name);
+                }
+              }
+
+              // Detectar protocolos débiles
+              if (protocolInfo.deprecated) {
+                results.security.hasWeakProtocols = true;
+              }
+            }
+          }
+
+          // Análisis de seguridad
+          if (results.security.hasWeakProtocols) {
+            results.security.recommendations.push('Se detectaron protocolos obsoletos (SSLv3, TLSv1.0, TLSv1.1). Se recomienda deshabilitarlos.');
+          }
+
+          if (results.supportedProtocols.length === 0) {
+            results.security.recommendations.push('No se pudo establecer conexión con ningún protocolo SSL/TLS.');
+          } else if (!results.supportedProtocols.some(p => !p.deprecated)) {
+            results.security.recommendations.push('Solo se soportan protocolos obsoletos. Se recomienda habilitar TLSv1.2 o superior.');
+          }
+
+          if (!results.certificate.isValid) {
+            results.security.recommendations.push('El certificado no es válido. Verifica la cadena de certificados.');
+          }
+
+          if (results.certificate.daysUntilExpiry < 30) {
+            results.security.recommendations.push(`El certificado expira en ${results.certificate.daysUntilExpiry} días. Se recomienda renovarlo.`);
+          }
+
+          resolve(results);
         } catch (err) {
           results.error = err.message;
+          defaultSocket.end();
+          resolve(results);
+        }
+      });
+
+      defaultSocket.on('error', async (err) => {
+        // Si falla la conexión por defecto, intentar al menos probar protocolos
+        results.error = err.message;
+
+        // Probar protocolos de todos modos
+        const protocolTests = [];
+        for (const protocolInfo of protocolsToTest) {
+          protocolTests.push(testProtocol(protocolInfo));
         }
 
-        socket.end();
+        const protocolResults = await Promise.all(protocolTests);
+        for (let i = 0; i < protocolResults.length; i++) {
+          const testResult = protocolResults[i];
+          const protocolInfo = protocolsToTest[i];
+
+          results.testedProtocols.push({
+            name: protocolInfo.name,
+            supported: testResult.supported,
+            deprecated: protocolInfo.deprecated,
+            cipher: testResult.cipher,
+            authorized: testResult.authorized,
+            error: testResult.error
+          });
+
+          if (testResult.supported) {
+            results.supportedProtocols.push({
+              name: protocolInfo.name,
+              deprecated: protocolInfo.deprecated,
+              cipher: testResult.cipher,
+              authorized: testResult.authorized
+            });
+            results.success = true; // Al menos un protocolo funciona
+          }
+        }
+
         resolve(results);
       });
 
-      socket.on('error', (err) => {
-        results.error = err.message;
-        resolve(results);
-      });
-
-      socket.on('timeout', () => {
+      defaultSocket.on('timeout', () => {
         results.error = 'Timeout de conexión';
-        socket.destroy();
+        defaultSocket.destroy();
         resolve(results);
       });
     });
