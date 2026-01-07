@@ -42,7 +42,6 @@ function hashFileSync(path) {
  * Registra todos los handlers del sistema
  */
 function registerSystemHandlers() {
-  console.log('📋 [registerSystemHandlers] Iniciando registro de handlers del sistema...');
   
   // === CLIPBOARD HANDLERS ===
   
@@ -218,7 +217,7 @@ function registerSystemHandlers() {
     });
     return defaultPath;
   });
-  console.log('✅ [registerSystemHandlers] Handler get-user-home registrado');
+
 
   // Handler para listar archivos locales
   ipcMain.handle('local:list-files', async (event, dirPath) => {
@@ -304,7 +303,7 @@ function registerSystemHandlers() {
       return { success: false, error: error.message || 'Error desconocido al listar archivos' };
     }
   });
-  console.log('✅ [registerSystemHandlers] Handler local:list-files registrado');
+
 
   // Handler para encontrar el archivo XML más reciente en descargas
   ipcMain.handle('import:find-latest-xml-download', async (event, { sinceMs } = {}) => {
@@ -670,8 +669,6 @@ function registerSystemHandlers() {
       };
     }
   });
-  
-  console.log('✅ [registerSystemHandlers] Todos los handlers del sistema registrados correctamente');
 }
 
 module.exports = {
