@@ -9,7 +9,7 @@
  * - WHOIS, Subnet Calculator, Wake on LAN
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
@@ -22,6 +22,8 @@ import { Column } from 'primereact/column';
 import { ScrollPanel } from 'primereact/scrollpanel';
 import { Badge } from 'primereact/badge';
 import { Tooltip } from 'primereact/tooltip';
+import { themeManager } from '../utils/themeManager';
+import { uiThemes } from '../themes/ui-themes';
 
 // Categorías de herramientas
 const TOOL_CATEGORIES = [
@@ -130,6 +132,33 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
   
   const [wolMac, setWolMac] = useState('');
   const [wolBroadcast, setWolBroadcast] = useState('255.255.255.255');
+  const [themeVersion, setThemeVersion] = useState(0);
+
+  // Escuchar cambios en el tema
+  useEffect(() => {
+    const onThemeChanged = () => {
+      setThemeVersion(v => v + 1);
+    };
+    window.addEventListener('theme-changed', onThemeChanged);
+    return () => window.removeEventListener('theme-changed', onThemeChanged);
+  }, []);
+
+  // Obtener el tema actual
+  const currentTheme = useMemo(() => {
+    return themeManager.getCurrentTheme() || uiThemes['Light'];
+  }, [themeVersion]);
+
+  const themeColors = useMemo(() => {
+    return {
+      background: currentTheme.colors?.contentBackground || '#fafafa',
+      cardBackground: currentTheme.colors?.dialogBackground || 'rgba(16, 20, 28, 0.6)',
+      textPrimary: currentTheme.colors?.sidebarText || currentTheme.colors?.tabText || '#ffffff',
+      textSecondary: currentTheme.colors?.sidebarText || '#9E9E9E',
+      borderColor: currentTheme.colors?.sidebarBorder || currentTheme.colors?.contentBorder || 'rgba(255,255,255,0.1)',
+      primaryColor: currentTheme.colors?.buttonPrimary || currentTheme.colors?.primaryColor || '#2196f3',
+      hoverBackground: currentTheme.colors?.sidebarHover || 'rgba(255,255,255,0.1)',
+    };
+  }, [currentTheme]);
 
   // Cargar interfaces de red al abrir
   useEffect(() => {
@@ -814,10 +843,10 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
       fontSize: isMobile ? '0.75rem' : '0.85rem',
       lineHeight: '1.6',
       color: 'var(--text-color)',
-      maxHeight: isMobile ? '300px' : '400px',
-      overflow: 'auto',
+      overflow: 'visible',
       wordBreak: 'break-word',
-      overflowWrap: 'break-word'
+      overflowWrap: 'break-word',
+      width: '100%'
     };
 
     const statItemStyle = {
@@ -1114,25 +1143,142 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
       case 'ssl-check':
         return (
           <div style={resultBoxStyle}>
-            <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <i className={`pi ${result.certificate?.isValid ? 'pi-lock' : 'pi-lock-open'}`} 
-                 style={{ color: result.certificate?.isValid ? '#22c55e' : '#ef4444' }} />
-              <strong>{result.host}:{result.port}</strong>
+                 style={{ color: result.certificate?.isValid ? '#22c55e' : '#ef4444', fontSize: '1.2rem' }} />
+              <strong style={{ fontSize: '1rem' }}>{result.host}:{result.port}</strong>
               <Badge 
                 value={result.certificate?.isValid ? 'Válido' : 'Inválido'} 
                 severity={result.certificate?.isValid ? 'success' : 'danger'} 
               />
+              {result.success && (
+                <Badge 
+                  value={`${result.supportedProtocols?.length || 0} protocolos`} 
+                  severity="info" 
+                />
+              )}
             </div>
+
+            {/* Protocolos soportados */}
+            {result.supportedProtocols && result.supportedProtocols.length > 0 && (
+              <>
+                <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem', color: '#3b82f6' }}>
+                  Protocolos Soportados:
+                </div>
+                <div style={{ marginBottom: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {result.supportedProtocols.map((proto, idx) => (
+                    <Badge 
+                      key={idx}
+                      value={`${proto.name}${proto.cipher ? ` (${proto.cipher.name})` : ''}`}
+                      severity={proto.deprecated ? 'warning' : 'success'}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Todos los protocolos probados */}
+            {result.testedProtocols && result.testedProtocols.length > 0 && (
+              <>
+                <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                  Todos los Protocolos Probados:
+                </div>
+                <div style={{ marginBottom: '1rem' }}>
+                {result.testedProtocols.map((proto, idx) => (
+                  <div key={idx} style={{ 
+                    ...statItemStyle, 
+                    padding: '0.4rem 0',
+                    background: proto.supported ? (proto.deprecated ? 'rgba(245, 158, 11, 0.1)' : 'rgba(34, 197, 94, 0.1)') : 'rgba(0,0,0,0.1)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <span>{proto.name}:</span>
+                      <Badge 
+                        value={proto.supported ? 'Soportado' : (proto.protocolUnavailable ? 'No disponible en Node.js' : 'No soportado')} 
+                        severity={proto.supported ? (proto.deprecated ? 'warning' : 'success') : (proto.protocolUnavailable ? 'info' : 'secondary')} 
+                      />
+                      {proto.deprecated && proto.supported && (
+                        <Badge value="Obsoleto" severity="warning" />
+                      )}
+                    </div>
+                    {proto.supported && proto.cipher && (
+                      <div style={{ marginTop: '0.25rem', fontSize: '0.85rem', color: 'var(--text-color-secondary)' }}>
+                        Cipher: <strong>{proto.cipher.name}</strong> {proto.cipher.version && `(${proto.cipher.version})`}
+                      </div>
+                    )}
+                    {!proto.supported && proto.error && (
+                      <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-color-secondary)', fontStyle: 'italic' }}>
+                        {proto.error}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                </div>
+              </>
+            )}
+
+            {/* Ciphers únicos */}
+            {result.ciphers && result.ciphers.length > 0 && (
+              <>
+                <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                  Ciphers Detectados:
+                </div>
+                <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  {result.ciphers.map((cipher, idx) => (
+                    <div key={idx} style={{ 
+                      padding: '0.5rem', 
+                      background: 'rgba(59, 130, 246, 0.1)', 
+                      borderRadius: '4px',
+                      fontSize: '0.85rem'
+                    }}>
+                      <strong>{cipher.name}</strong>
+                      {cipher.version && <span style={{ color: 'var(--text-color-secondary)', marginLeft: '0.5rem' }}>({cipher.version})</span>}
+                      <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-color-secondary)' }}>
+                        Protocolos: {cipher.protocols.join(', ')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Información del certificado */}
             {result.certificate && (
               <>
+                <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                  Información del Certificado:
+                </div>
                 <div style={statItemStyle}>
                   <span>Sujeto:</span>
-                  <strong>{result.certificate.subject?.CN || 'N/A'}</strong>
+                  <strong>{result.certificate.subject?.CN || result.certificate.subject?.O || 'N/A'}</strong>
                 </div>
+                {result.certificate.subject?.O && result.certificate.subject?.O !== result.certificate.subject?.CN && (
+                  <div style={statItemStyle}>
+                    <span>Organización:</span>
+                    <strong>{result.certificate.subject.O}</strong>
+                  </div>
+                )}
                 <div style={statItemStyle}>
                   <span>Emisor:</span>
                   <strong>{result.certificate.issuer?.O || result.certificate.issuer?.CN || 'N/A'}</strong>
                 </div>
+                {result.certificate.serialNumber && (
+                  <div style={statItemStyle}>
+                    <span>Número de serie:</span>
+                    <strong style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>{result.certificate.serialNumber}</strong>
+                  </div>
+                )}
+                {result.certificate.signatureAlgorithm && (
+                  <div style={statItemStyle}>
+                    <span>Algoritmo de firma:</span>
+                    <strong>{result.certificate.signatureAlgorithm}</strong>
+                  </div>
+                )}
+                {result.certificate.publicKey && (
+                  <div style={statItemStyle}>
+                    <span>Clave pública:</span>
+                    <strong>{result.certificate.publicKey.type || 'N/A'} {result.certificate.publicKey.bits ? `(${result.certificate.publicKey.bits} bits)` : ''}</strong>
+                  </div>
+                )}
                 <div style={statItemStyle}>
                   <span>Válido desde:</span>
                   <strong>{result.certificate.validFrom}</strong>
@@ -1150,15 +1296,116 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                     {result.certificate.daysUntilExpiry} días
                   </strong>
                 </div>
+                {result.certificate.fingerprint && (
+                  <div style={statItemStyle}>
+                    <span>Fingerprint (SHA1):</span>
+                    <strong style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>{result.certificate.fingerprint}</strong>
+                  </div>
+                )}
+                {result.certificate.fingerprint256 && (
+                  <div style={statItemStyle}>
+                    <span>Fingerprint (SHA256):</span>
+                    <strong style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>{result.certificate.fingerprint256}</strong>
+                  </div>
+                )}
+                {result.certificate.subjectAltNames && result.certificate.subjectAltNames.length > 0 && (
+                  <div style={statItemStyle}>
+                    <span>Nombres alternativos (SAN):</span>
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      {result.certificate.subjectAltNames.map((san, idx) => (
+                        <strong key={idx} style={{ fontSize: '0.85rem' }}>{san}</strong>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Cadena de certificados */}
+            {result.chain && result.chain.length > 0 && (
+              <>
+                <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                  Cadena de Certificados ({result.chain.length}):
+                </div>
+                {result.chain.map((chainCert, idx) => (
+                  <div key={idx} style={{ 
+                    marginBottom: '0.5rem', 
+                    padding: '0.5rem', 
+                    background: 'rgba(0,0,0,0.2)', 
+                    borderRadius: '4px',
+                    fontSize: '0.85rem'
+                  }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>Certificado {idx + 1}:</div>
+                    <div style={statItemStyle}>
+                      <span>Sujeto:</span>
+                      <strong>{chainCert.subject?.CN || chainCert.subject?.O || 'N/A'}</strong>
+                    </div>
+                    <div style={statItemStyle}>
+                      <span>Emisor:</span>
+                      <strong>{chainCert.issuer?.O || chainCert.issuer?.CN || 'N/A'}</strong>
+                    </div>
+                    {chainCert.validFrom && (
+                      <div style={statItemStyle}>
+                        <span>Válido desde:</span>
+                        <strong>{chainCert.validFrom}</strong>
+                      </div>
+                    )}
+                    {chainCert.validTo && (
+                      <div style={statItemStyle}>
+                        <span>Válido hasta:</span>
+                        <strong>{chainCert.validTo}</strong>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* Recomendaciones de seguridad */}
+            {result.security && result.security.recommendations && result.security.recommendations.length > 0 && (
+              <>
+                <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem', color: '#f59e0b' }}>
+                  Recomendaciones de Seguridad:
+                </div>
+                <div style={{ marginBottom: '1rem' }}>
+                  {result.security.recommendations.map((rec, idx) => (
+                    <div key={idx} style={{ 
+                      padding: '0.5rem', 
+                      marginBottom: '0.5rem',
+                      background: 'rgba(245, 158, 11, 0.1)', 
+                      borderLeft: '3px solid #f59e0b',
+                      borderRadius: '4px',
+                      fontSize: '0.85rem'
+                    }}>
+                      <i className="pi pi-exclamation-triangle" style={{ marginRight: '0.5rem', color: '#f59e0b' }} />
+                      {rec}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Protocolo y cipher por defecto (compatibilidad) */}
+            {result.protocols && (
+              <>
+                <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                  Conexión por Defecto:
+                </div>
                 <div style={statItemStyle}>
                   <span>Protocolo:</span>
-                  <strong>{result.protocols?.version || 'N/A'}</strong>
+                  <strong>{result.protocols.version || 'N/A'}</strong>
                 </div>
                 <div style={statItemStyle}>
                   <span>Cifrado:</span>
-                  <strong>{result.protocols?.cipher || 'N/A'}</strong>
+                  <strong>{result.protocols.cipher || 'N/A'}</strong>
                 </div>
               </>
+            )}
+
+            {result.error && (
+              <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '6px', color: '#ef4444' }}>
+                <strong>Error:</strong> {result.error}
+              </div>
             )}
           </div>
         );
@@ -1379,6 +1626,50 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
       <style key={isMobile ? 'mobile' : 'desktop'}>{`
         .network-tools-dialog .p-dialog {
           position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 100vw !important;
+          height: 100vh !important;
+          max-width: 100vw !important;
+          max-height: 100vh !important;
+          margin: 0 !important;
+          border-radius: 0 !important;
+        }
+        .network-tools-dialog .p-dialog-mask {
+          background-color: rgba(0, 0, 0, 0.9) !important;
+        }
+        /* Scrollbar personalizado con tema */
+        .network-tools-sidebar::-webkit-scrollbar,
+        .network-tools-form::-webkit-scrollbar,
+        .network-tools-results::-webkit-scrollbar {
+          width: 8px !important;
+          height: 8px !important;
+        }
+        .network-tools-sidebar::-webkit-scrollbar-track,
+        .network-tools-form::-webkit-scrollbar-track,
+        .network-tools-results::-webkit-scrollbar-track {
+          background: ${themeColors.background} !important;
+          border-radius: 4px !important;
+        }
+        .network-tools-sidebar::-webkit-scrollbar-thumb,
+        .network-tools-form::-webkit-scrollbar-thumb,
+        .network-tools-results::-webkit-scrollbar-thumb {
+          background: ${themeColors.borderColor} !important;
+          border-radius: 4px !important;
+          opacity: 0.6 !important;
+        }
+        .network-tools-sidebar::-webkit-scrollbar-thumb:hover,
+        .network-tools-form::-webkit-scrollbar-thumb:hover,
+        .network-tools-results::-webkit-scrollbar-thumb:hover {
+          background: ${themeColors.textSecondary} !important;
+          opacity: 0.8 !important;
+        }
+        /* Firefox scrollbar */
+        .network-tools-sidebar,
+        .network-tools-form,
+        .network-tools-results {
+          scrollbar-width: thin !important;
+          scrollbar-color: ${themeColors.borderColor} ${themeColors.background} !important;
         }
         .network-tools-dialog .p-dialog-content {
           display: flex !important;
@@ -1432,6 +1723,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
           overflow-y: auto;
           overflow-x: hidden;
           min-height: ${isMobile ? '300px' : 0};
+          max-height: 100%;
         }
         .network-tools-dialog .p-dialog-header {
           cursor: move !important;
@@ -1506,20 +1798,26 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
       header={dialogHeader}
       className="network-tools-dialog"
       style={{ 
-        width: '95vw',
-        maxWidth: '1600px',
-        minWidth: '800px'
+        width: '100vw',
+        maxWidth: '100vw',
+        minWidth: '100vw',
+        height: '100vh',
+        maxHeight: '100vh',
+        margin: 0,
+        top: 0,
+        left: 0
       }}
       contentStyle={{ 
         padding: 0,
+        paddingBottom: '1rem',
         background: 'var(--surface-ground)',
-        borderRadius: '0 0 12px 12px',
+        borderRadius: '0',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        height: '80vh',
-        minHeight: '600px',
-        maxHeight: '90vh'
+        height: 'calc(100vh - 60px)',
+        minHeight: 'calc(100vh - 60px)',
+        maxHeight: 'calc(100vh - 60px)'
       }}
       headerStyle={{
         background: 'var(--surface-card)',
@@ -1550,6 +1848,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
         {/* Sidebar de categorías */}
         <div className="network-tools-sidebar" style={{
           background: 'rgba(0,0,0,0.2)',
+          paddingBottom: '1rem',
           borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.1)',
           borderBottom: isMobile ? '1px solid rgba(255,255,255,0.1)' : 'none'
         }}>
@@ -1664,6 +1963,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
             {/* Panel de formulario */}
             <div className="network-tools-form" style={{
               padding: '1rem',
+              paddingBottom: '2rem',
               borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.1)',
               borderBottom: isMobile ? '1px solid rgba(255,255,255,0.1)' : 'none'
             }}>
@@ -1673,6 +1973,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
             {/* Panel de resultados */}
             <div className="network-tools-results" style={{
               padding: '1rem',
+              paddingBottom: '2rem',
               background: 'rgba(0,0,0,0.1)'
             }}>
               <div style={{ 
