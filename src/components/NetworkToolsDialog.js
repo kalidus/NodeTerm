@@ -2277,15 +2277,56 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
               background: 'rgba(0,0,0,0.1)',
               flexShrink: 0
             }}>
-              {/* Primera fila: Título y botón ejecutar */}
-              <div style={{
-                display: 'flex',
-                flexDirection: isMobile ? 'column' : 'row',
-                alignItems: isMobile ? 'flex-start' : 'center',
-                justifyContent: 'space-between',
-                gap: isMobile ? '0.75rem' : '0'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+              {/* Primera fila: Solo título para SSL Checker, título + botón para otros */}
+              {selectedTool !== 'ssl-check' ? (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  alignItems: isMobile ? 'flex-start' : 'center',
+                  justifyContent: 'space-between',
+                  gap: isMobile ? '0.75rem' : '0'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '8px',
+                      background: `linear-gradient(135deg, ${currentTool.categoryColor}30 0%, ${currentTool.categoryColor}15 100%)`,
+                      border: `1px solid ${currentTool.categoryColor}50`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <i className={currentTool.icon} style={{ color: currentTool.categoryColor, fontSize: '0.9rem' }} />
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentTool.label}</h4>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)', display: isMobile ? 'none' : 'block' }}>
+                        {currentTool.description}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    label={isMobile ? undefined : "Ejecutar"}
+                    icon="pi pi-play"
+                    onClick={executeTool}
+                    disabled={loading}
+                    style={{
+                      background: `linear-gradient(135deg, ${currentTool.categoryColor} 0%, ${currentTool.categoryColor}cc 100%)`,
+                      border: 'none',
+                      borderRadius: '8px',
+                      flexShrink: 0
+                    }}
+                  />
+                </div>
+              ) : (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  marginBottom: '0.5rem'
+                }}>
                   <div style={{
                     width: '32px',
                     height: '32px',
@@ -2300,40 +2341,29 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                     <i className={currentTool.icon} style={{ color: currentTool.categoryColor, fontSize: '0.9rem' }} />
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentTool.label}</h4>
+                    <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600' }}>{currentTool.label}</h4>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)', display: isMobile ? 'none' : 'block' }}>
                       {currentTool.description}
                     </span>
                   </div>
                 </div>
-                <Button
-                  label={isMobile ? undefined : "Ejecutar"}
-                  icon="pi pi-play"
-                  onClick={executeTool}
-                  disabled={loading}
-                  style={{
-                    background: `linear-gradient(135deg, ${currentTool.categoryColor} 0%, ${currentTool.categoryColor}cc 100%)`,
-                    border: 'none',
-                    borderRadius: '8px',
-                    flexShrink: 0
-                  }}
-                />
-              </div>
+              )}
 
-              {/* Inputs compactos para SSL Checker */}
+              {/* Card refinada y compacta para SSL Checker */}
               {selectedTool === 'ssl-check' && (
                 <div style={{
-                  display: 'inline-flex',
+                  display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
-                  background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(6, 182, 212, 0.05) 100%)',
-                  padding: '0.4rem 0.8rem',
+                  background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.12) 0%, rgba(6, 182, 212, 0.04) 100%)',
+                  padding: '0.5rem 0.75rem',
                   borderRadius: '8px',
-                  border: '2px solid rgba(6, 182, 212, 0.4)',
-                  width: '100%',
+                  border: '1.5px solid rgba(6, 182, 212, 0.35)',
+                  width: 'fit-content',
                   maxWidth: '650px',
-                  boxShadow: '0 2px 8px rgba(6, 182, 212, 0.2)'
+                  boxShadow: '0 2px 12px rgba(6, 182, 212, 0.15)'
                 }}>
+                  {/* Host */}
                   <span style={{ 
                     color: '#06b6d4', 
                     fontSize: '0.75rem',
@@ -2347,25 +2377,27 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                     onChange={(e) => setSslCheckHost(e.target.value)}
                     placeholder="ejemplo.com"
                     style={{
-                      flex: 1,
-                      minWidth: '150px',
-                      maxWidth: '300px',
-                      background: 'rgba(255,255,255,0.1)',
-                      border: '1px solid rgba(6, 182, 212, 0.4)',
-                      borderRadius: '4px',
+                      width: '180px',
+                      minWidth: '180px',
+                      maxWidth: '250px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(6, 182, 212, 0.3)',
+                      borderRadius: '6px',
                       color: 'var(--text-color)',
                       padding: '0.35rem 0.5rem',
                       fontSize: '0.8rem',
-                      height: '28px'
+                      height: '30px'
                     }}
                     onKeyPress={(e) => e.key === 'Enter' && executeTool()}
                   />
+                  
+                  {/* Puerto */}
                   <span style={{ 
                     color: '#06b6d4', 
                     fontSize: '0.75rem',
                     fontWeight: '600',
-                    marginLeft: '0.5rem',
-                    whiteSpace: 'nowrap'
+                    whiteSpace: 'nowrap',
+                    marginLeft: '0.25rem'
                   }}>
                     Puerto:
                   </span>
@@ -2375,18 +2407,45 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                     min={1}
                     max={65535}
                     placeholder="443"
+                    showButtons={false}
                     style={{
-                      width: '65px',
-                      background: 'rgba(255,255,255,0.1)',
-                      border: '1px solid rgba(6, 182, 212, 0.4)',
-                      borderRadius: '4px'
+                      width: '60px',
+                      minWidth: '60px',
+                      maxWidth: '60px'
                     }}
                     inputStyle={{
-                      padding: '0.25rem 0.3rem',
-                      height: '26px',
-                      fontSize: '0.75rem',
-                      textAlign: 'center'
+                      padding: '0.35rem 0.4rem',
+                      height: '30px',
+                      fontSize: '0.8rem',
+                      textAlign: 'center',
+                      width: '100%',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(6, 182, 212, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)'
                     }}
+                  />
+                  
+                  {/* Botón Ejecutar compacto - sin gap extra */}
+                  <Button
+                    label="Ejecutar"
+                    icon="pi pi-play"
+                    onClick={executeTool}
+                    disabled={loading}
+                    style={{
+                      background: `linear-gradient(135deg, ${currentTool.categoryColor} 0%, ${currentTool.categoryColor}cc 100%)`,
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
+                      transition: 'all 0.2s ease',
+                      minWidth: 'auto',
+                      marginLeft: '0.25rem'
+                    }}
+                    iconPos="left"
                   />
                 </div>
               )}
