@@ -272,6 +272,8 @@ let guacdInactivityTimeoutMs = 3600000;
 // Flag para evitar inicialización múltiple
 let guacamoleInitializing = false;
 let guacamoleInitialized = false;
+// Logs detallados (debug) para Guacamole/guacd
+const DEBUG_GUACAMOLE = process.env.NODETERM_DEBUG_GUACAMOLE === '1';
 
 // Sistema de throttling para conexiones SSH
 const connectionThrottle = {
@@ -413,7 +415,9 @@ async function initializeGuacamoleServices() {
 
     // Esperar a que guacd esté realmente accesible antes de continuar
     // Esto evita race conditions donde Guacamole-lite se inicializa antes de que guacd esté listo
-    console.log('⏳ [initializeGuacamoleServices] Esperando a que guacd esté accesible...');
+    if (DEBUG_GUACAMOLE) {
+      console.log('⏳ [initializeGuacamoleServices] Esperando a que guacd esté accesible...');
+    }
     const guacdStatus = guacdService.getStatus();
     const maxWaitTime = 10000; // 10 segundos máximo
     const checkInterval = 200; // Verificar cada 200ms
@@ -425,8 +429,10 @@ async function initializeGuacamoleServices() {
         const isAvailable = await guacdService.isPortAvailable(guacdStatus.port);
         if (!isAvailable) {
           // Puerto ocupado = guacd está escuchando y accesible
-          isReady = true;
-          console.log(`✅ [initializeGuacamoleServices] guacd accesible en ${guacdStatus.host}:${guacdStatus.port}`);
+                isReady = true;
+                if (DEBUG_GUACAMOLE) {
+                  console.log(`✅ [initializeGuacamoleServices] guacd accesible en ${guacdStatus.host}:${guacdStatus.port}`);
+                }
           break;
         }
       } catch (error) {
@@ -436,6 +442,7 @@ async function initializeGuacamoleServices() {
     }
     
     if (!isReady) {
+      // Mantener warning (alto nivel)
       console.warn('⚠️ [initializeGuacamoleServices] guacd no está accesible después de esperar, continuando de todas formas...');
     }
 
@@ -480,9 +487,13 @@ async function initializeGuacamoleServices() {
     // Crear servidor Guacamole-lite
     try {
       guacamoleServer = new GuacamoleLite(websocketOptions, guacdOptions, clientOptions);
-      console.log('🌐 [initializeGuacamoleServices] Servidor Guacamole-lite creado:', !!guacamoleServer);
+      if (DEBUG_GUACAMOLE) {
+        console.log('🌐 [initializeGuacamoleServices] Servidor Guacamole-lite creado:', !!guacamoleServer);
+      }
       if (guacamoleServer) {
-        console.log('🌐 [initializeGuacamoleServices] Servidor tiene port:', guacamoleServer.port || 'no definido');
+        if (DEBUG_GUACAMOLE) {
+          console.log('🌐 [initializeGuacamoleServices] Servidor tiene port:', guacamoleServer.port || 'no definido');
+        }
       }
     } catch (serverError) {
       console.error('❌ [initializeGuacamoleServices] Error creando servidor Guacamole-lite:', serverError);
@@ -547,7 +558,9 @@ async function initializeGuacamoleServices() {
     console.log('✅ Servicios Guacamole inicializados correctamente');
     console.log(`🌐 Servidor WebSocket: localhost:${websocketOptions.port}`);
     console.log(`🔧 GuacD: ${guacdOptions.host}:${guacdOptions.port}`);
-    console.log(`📊 [initializeGuacamoleServices] guacamoleServer asignado:`, !!guacamoleServer);
+    if (DEBUG_GUACAMOLE) {
+      console.log(`📊 [initializeGuacamoleServices] guacamoleServer asignado:`, !!guacamoleServer);
+    }
     
   } catch (error) {
     console.error('❌ Error inicializando servicios Guacamole:', error);
