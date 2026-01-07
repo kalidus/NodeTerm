@@ -1205,10 +1205,10 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                 </div>
               </div>
 
-              {/* Métricas clave - COMPACTAS */}
+              {/* Métricas clave - COMPACTAS (sin Protocolos) */}
               <div style={{ 
                 display: 'grid', 
-                gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
                 gap: '0.5rem',
                 marginTop: '0.75rem'
               }}>
@@ -1241,27 +1241,6 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                       width: `${Math.min(100, (daysUntilExpiry / 365) * 100)}%`,
                       transition: 'width 0.3s ease'
                     }} />
-                  </div>
-                </div>
-
-                {/* Protocolos */}
-                <div style={{
-                  background: 'rgba(0,0,0,0.2)',
-                  borderRadius: '6px',
-                  padding: '0.5rem 0.75rem'
-                }}>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)', marginBottom: '0.25rem' }}>
-                    Protocolos
-                  </div>
-                  <div style={{ 
-                    fontSize: '1.1rem', 
-                    fontWeight: '700',
-                    marginBottom: '0.15rem'
-                  }}>
-                    {supportedCount}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)' }}>
-                    {secureProtocols} seg / {deprecatedCount} obs
                   </div>
                 </div>
 
