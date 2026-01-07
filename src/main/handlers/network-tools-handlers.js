@@ -266,6 +266,58 @@ function registerNetworkToolsHandlers() {
     }
   });
 
+  // === HOST VULNERABILITY SCAN ===
+  ipcMain.handle('network-tools:host-vuln-scan', async (event, { host, ports, timeout = 5000, useOnline = true }) => {
+    try {
+      if (!host) {
+        return { success: false, error: 'Host es requerido' };
+      }
+      const service = getService();
+      
+      // Callback para enviar actualizaciones en tiempo real
+      const onProgress = (data) => {
+        if (event.sender && !event.sender.isDestroyed()) {
+          event.sender.send('network-tools:progress', { tool: 'host-vuln-scan', data });
+        }
+      };
+      
+      const result = await service.hostVulnScan(host, ports, timeout, useOnline, onProgress);
+      if (!result || typeof result !== 'object') {
+        return { success: false, error: 'Respuesta inválida del servicio' };
+      }
+      return result;
+    } catch (err) {
+      console.error('[network-tools:host-vuln-scan] Error:', err);
+      return { success: false, error: err?.message || 'Error desconocido al ejecutar el escaneo de vulnerabilidades' };
+    }
+  });
+
+  // === WEB SECURITY SCAN ===
+  ipcMain.handle('network-tools:web-security-scan', async (event, { url, timeout = 10000 }) => {
+    try {
+      if (!url) {
+        return { success: false, error: 'URL es requerida' };
+      }
+      const service = getService();
+      
+      // Callback para enviar actualizaciones en tiempo real
+      const onProgress = (data) => {
+        if (event.sender && !event.sender.isDestroyed()) {
+          event.sender.send('network-tools:progress', { tool: 'web-security-scan', data });
+        }
+      };
+      
+      const result = await service.webSecurityScan(url, timeout, onProgress);
+      if (!result || typeof result !== 'object') {
+        return { success: false, error: 'Respuesta inválida del servicio' };
+      }
+      return result;
+    } catch (err) {
+      console.error('[network-tools:web-security-scan] Error:', err);
+      return { success: false, error: err?.message || 'Error desconocido al ejecutar el análisis de seguridad web' };
+    }
+  });
+
   // === GET NETWORK INTERFACES ===
   ipcMain.handle('network-tools:get-interfaces', async () => {
     try {

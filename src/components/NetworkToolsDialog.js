@@ -64,7 +64,9 @@ const TOOL_CATEGORIES = [
     color: '#ef4444',
     tools: [
       { id: 'ssl-check', label: 'SSL Checker', icon: 'pi pi-lock', description: 'Verificación de certificados SSL/TLS' },
-      { id: 'http-headers', label: 'HTTP Headers', icon: 'pi pi-file', description: 'Análisis de cabeceras HTTP' }
+      { id: 'http-headers', label: 'HTTP Headers', icon: 'pi pi-file', description: 'Análisis de cabeceras HTTP' },
+      { id: 'host-vuln-scan', label: 'Host Vuln Scanner', icon: 'pi pi-exclamation-triangle', description: 'Detecta vulnerabilidades y CVEs en servicios' },
+      { id: 'web-security-scan', label: 'Web Security', icon: 'pi pi-globe', description: 'Analiza seguridad web, headers y cookies' }
     ]
   },
   {
@@ -132,6 +134,18 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
   
   const [wolMac, setWolMac] = useState('');
   const [wolBroadcast, setWolBroadcast] = useState('255.255.255.255');
+  
+  // Host Vulnerability Scanner
+  const [hostVulnHost, setHostVulnHost] = useState('');
+  const [hostVulnPorts, setHostVulnPorts] = useState('21,22,23,25,53,80,110,143,443,445,993,995,1433,1521,3306,3389,5432,5900,6379,8080,8443,27017');
+  const [hostVulnUseOnline, setHostVulnUseOnline] = useState(true);
+  
+  // Web Security Scanner
+  const [webSecurityUrl, setWebSecurityUrl] = useState('');
+  
+  // Estados para secciones expandibles en resultados
+  const [expandedSections, setExpandedSections] = useState({});
+  
   const [themeVersion, setThemeVersion] = useState(0);
 
   // Escuchar cambios en el tema
@@ -411,6 +425,24 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
           });
           break;
 
+        case 'host-vuln-scan':
+          if (!hostVulnHost.trim()) throw new Error('Host es requerido');
+          response = await ipc.invoke('network-tools:host-vuln-scan', { 
+            host: hostVulnHost.trim(),
+            ports: hostVulnPorts.trim(),
+            timeout: 5000,
+            useOnline: hostVulnUseOnline
+          });
+          break;
+
+        case 'web-security-scan':
+          if (!webSecurityUrl.trim()) throw new Error('URL es requerida');
+          response = await ipc.invoke('network-tools:web-security-scan', { 
+            url: webSecurityUrl.trim(),
+            timeout: 15000
+          });
+          break;
+
         case 'whois':
           if (!whoisDomain.trim()) throw new Error('Dominio es requerido');
           response = await ipc.invoke('network-tools:whois', { 
@@ -473,7 +505,8 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
   }, [selectedTool, pingHost, pingCount, tracerouteHost, tracerouteMaxHops, 
       portScanHost, portScanPorts, networkScanSubnet, dnsLookupDomain, dnsLookupType,
       reverseDnsIp, sslCheckHost, sslCheckPort, httpHeadersUrl, whoisDomain,
-      subnetCalcCidr, wolMac, wolBroadcast, liveOutput]);
+      subnetCalcCidr, wolMac, wolBroadcast, liveOutput,
+      hostVulnHost, hostVulnPorts, hostVulnUseOnline, webSecurityUrl]);
 
   // Cambiar herramienta seleccionada
   const handleToolSelect = (categoryId, toolId) => {
@@ -670,6 +703,14 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
             />
           </div>
         );
+
+      case 'host-vuln-scan':
+        // Layout especial: formulario en el header
+        return null;
+
+      case 'web-security-scan':
+        // Layout especial: formulario en el header
+        return null;
 
       case 'whois':
         return (
@@ -1775,6 +1816,513 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
           </div>
         );
 
+      case 'host-vuln-scan':
+        // Dashboard de vulnerabilidades del host
+        const vulnSummary = result.summary || {};
+        const vulnIssues = vulnSummary.vulnerabilities || {};
+        const riskColors = {
+          0: '#22c55e',   // Verde - bajo riesgo
+          25: '#84cc16',  // Lima
+          50: '#f59e0b',  // Naranja
+          75: '#ef4444',  // Rojo
+          100: '#991b1b'  // Rojo oscuro - crítico
+        };
+        const getRiskColor = (score) => {
+          if (score <= 25) return riskColors[0];
+          if (score <= 50) return riskColors[25];
+          if (score <= 75) return riskColors[50];
+          return riskColors[75];
+        };
+
+        return (
+          <div style={{ ...resultBoxStyle, padding: 0, background: 'transparent' }}>
+            {/* Dashboard Summary */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+              gap: '0.75rem',
+              marginBottom: '1rem'
+            }}>
+              {/* Score de Riesgo */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%)',
+                borderRadius: '12px',
+                padding: '1rem',
+                textAlign: 'center',
+                border: `2px solid ${getRiskColor(vulnSummary.riskScore || 0)}40`
+              }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)', marginBottom: '0.25rem' }}>RISK SCORE</div>
+                <div style={{ 
+                  fontSize: '2rem', 
+                  fontWeight: 'bold', 
+                  color: getRiskColor(vulnSummary.riskScore || 0),
+                  lineHeight: 1
+                }}>
+                  {vulnSummary.riskScore || 0}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)' }}>/100</div>
+              </div>
+
+              {/* Puertos Abiertos */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%)',
+                borderRadius: '12px',
+                padding: '1rem',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '0.7rem', color: '#3b82f6', marginBottom: '0.25rem' }}>PUERTOS</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#3b82f6', lineHeight: 1 }}>
+                  {vulnSummary.openPorts || 0}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)' }}>abiertos</div>
+              </div>
+
+              {/* Vulnerabilidades Críticas */}
+              <div style={{
+                background: `linear-gradient(135deg, rgba(239, 68, 68, ${vulnIssues.critical > 0 ? '0.2' : '0.05'}) 0%, rgba(239, 68, 68, 0.02) 100%)`,
+                borderRadius: '12px',
+                padding: '1rem',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '0.7rem', color: '#ef4444', marginBottom: '0.25rem' }}>CRÍTICAS</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: vulnIssues.critical > 0 ? '#ef4444' : 'var(--text-color-secondary)', lineHeight: 1 }}>
+                  {vulnIssues.critical || 0}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)' }}>🔴</div>
+              </div>
+
+              {/* Vulnerabilidades Altas */}
+              <div style={{
+                background: `linear-gradient(135deg, rgba(249, 115, 22, ${vulnIssues.high > 0 ? '0.15' : '0.05'}) 0%, rgba(249, 115, 22, 0.02) 100%)`,
+                borderRadius: '12px',
+                padding: '1rem',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '0.7rem', color: '#f97316', marginBottom: '0.25rem' }}>ALTAS</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: vulnIssues.high > 0 ? '#f97316' : 'var(--text-color-secondary)', lineHeight: 1 }}>
+                  {vulnIssues.high || 0}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)' }}>🟠</div>
+              </div>
+
+              {/* Vulnerabilidades Medias */}
+              <div style={{
+                background: `linear-gradient(135deg, rgba(234, 179, 8, ${vulnIssues.medium > 0 ? '0.15' : '0.05'}) 0%, rgba(234, 179, 8, 0.02) 100%)`,
+                borderRadius: '12px',
+                padding: '1rem',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '0.7rem', color: '#eab308', marginBottom: '0.25rem' }}>MEDIAS</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: vulnIssues.medium > 0 ? '#eab308' : 'var(--text-color-secondary)', lineHeight: 1 }}>
+                  {vulnIssues.medium || 0}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)' }}>🟡</div>
+              </div>
+
+              {/* Vulnerabilidades Bajas */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.02) 100%)',
+                borderRadius: '12px',
+                padding: '1rem',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '0.7rem', color: '#22c55e', marginBottom: '0.25rem' }}>BAJAS</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: vulnIssues.low > 0 ? '#22c55e' : 'var(--text-color-secondary)', lineHeight: 1 }}>
+                  {vulnIssues.low || 0}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)' }}>🟢</div>
+              </div>
+            </div>
+
+            {/* Recomendaciones */}
+            {result.recommendations && result.recommendations.length > 0 && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(251, 191, 36, 0.02) 100%)',
+                borderRadius: '8px',
+                padding: '0.75rem',
+                marginBottom: '1rem',
+                border: '1px solid rgba(251, 191, 36, 0.3)'
+              }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#fbbf24', marginBottom: '0.5rem' }}>
+                  ⚡ Recomendaciones Prioritarias
+                </div>
+                {result.recommendations.slice(0, 3).map((rec, idx) => (
+                  <div key={idx} style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--text-color)',
+                    padding: '0.4rem',
+                    background: 'rgba(0,0,0,0.2)',
+                    borderRadius: '4px',
+                    marginBottom: '0.3rem',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.5rem'
+                  }}>
+                    <Badge 
+                      value={rec.priority} 
+                      severity={rec.priority === 'CRITICAL' ? 'danger' : rec.priority === 'HIGH' ? 'warning' : 'info'}
+                      style={{ fontSize: '0.6rem', padding: '0.15rem 0.4rem' }}
+                    />
+                    <span>{rec.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Lista de Puertos y Vulnerabilidades */}
+            {result.ports && result.ports.length > 0 && (
+              <div style={{
+                background: 'rgba(0,0,0,0.2)',
+                borderRadius: '8px',
+                padding: '0.75rem'
+              }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  📡 Servicios Detectados ({result.ports.length})
+                </div>
+                {result.ports.map((port, idx) => (
+                  <details key={idx} style={{ marginBottom: '0.5rem' }}>
+                    <summary style={{
+                      cursor: 'pointer',
+                      padding: '0.5rem',
+                      background: 'rgba(255,255,255,0.05)',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontSize: '0.8rem'
+                    }}>
+                      <Badge value={port.port} severity="info" style={{ minWidth: '50px' }} />
+                      <span style={{ fontWeight: '600' }}>{port.service}</span>
+                      {port.version && <span style={{ color: 'var(--text-color-secondary)' }}>v{port.version}</span>}
+                      {port.vulnerabilities && port.vulnerabilities.length > 0 && (
+                        <Badge 
+                          value={`${port.vulnerabilities.length} CVE${port.vulnerabilities.length > 1 ? 's' : ''}`}
+                          severity="danger"
+                          style={{ marginLeft: 'auto' }}
+                        />
+                      )}
+                    </summary>
+                    <div style={{ padding: '0.5rem', paddingLeft: '1rem' }}>
+                      {port.banner && (
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)', marginBottom: '0.5rem' }}>
+                          <strong>Banner:</strong> {port.banner.substring(0, 150)}...
+                        </div>
+                      )}
+                      {port.vulnerabilities && port.vulnerabilities.length > 0 ? (
+                        port.vulnerabilities.map((vuln, vidx) => (
+                          <div key={vidx} style={{
+                            padding: '0.4rem',
+                            background: vuln.severity === 'CRITICAL' ? 'rgba(239, 68, 68, 0.15)' : 
+                                       vuln.severity === 'HIGH' ? 'rgba(249, 115, 22, 0.15)' :
+                                       vuln.severity === 'MEDIUM' ? 'rgba(234, 179, 8, 0.15)' : 'rgba(34, 197, 94, 0.1)',
+                            borderRadius: '4px',
+                            marginBottom: '0.3rem',
+                            fontSize: '0.7rem'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                              <Badge 
+                                value={vuln.severity} 
+                                severity={vuln.severity === 'CRITICAL' ? 'danger' : vuln.severity === 'HIGH' ? 'warning' : 'info'}
+                                style={{ fontSize: '0.6rem' }}
+                              />
+                              <strong style={{ color: '#3b82f6' }}>{vuln.cve}</strong>
+                              {vuln.score && <span style={{ color: 'var(--text-color-secondary)' }}>Score: {vuln.score}</span>}
+                              <Badge value={vuln.source} style={{ fontSize: '0.55rem', marginLeft: 'auto' }} />
+                            </div>
+                            <div style={{ color: 'var(--text-color-secondary)' }}>{vuln.description}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ fontSize: '0.7rem', color: '#22c55e' }}>✓ Sin vulnerabilidades conocidas detectadas</div>
+                      )}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            )}
+
+            {/* Info del escaneo */}
+            <div style={{ 
+              marginTop: '1rem', 
+              fontSize: '0.7rem', 
+              color: 'var(--text-color-secondary)',
+              textAlign: 'right'
+            }}>
+              Host: {result.host} | Tiempo: {((result.scanTime || 0) / 1000).toFixed(2)}s
+            </div>
+          </div>
+        );
+
+      case 'web-security-scan':
+        // Dashboard de seguridad web
+        const webSummary = result.summary || {};
+        const gradeColors = {
+          'A': '#22c55e',
+          'B': '#84cc16',
+          'C': '#eab308',
+          'D': '#f97316',
+          'E': '#ef4444',
+          'F': '#991b1b'
+        };
+
+        return (
+          <div style={{ ...resultBoxStyle, padding: 0, background: 'transparent' }}>
+            {/* Score y Grado */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+              gap: '0.75rem',
+              marginBottom: '1rem'
+            }}>
+              {/* Grado */}
+              <div style={{
+                background: `linear-gradient(135deg, ${gradeColors[webSummary.grade] || '#666'}25 0%, ${gradeColors[webSummary.grade] || '#666'}10 100%)`,
+                borderRadius: '12px',
+                padding: '1rem',
+                textAlign: 'center',
+                border: `2px solid ${gradeColors[webSummary.grade] || '#666'}40`
+              }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)', marginBottom: '0.25rem' }}>GRADO</div>
+                <div style={{ 
+                  fontSize: '2.5rem', 
+                  fontWeight: 'bold', 
+                  color: gradeColors[webSummary.grade] || '#666',
+                  lineHeight: 1
+                }}>
+                  {webSummary.grade || 'F'}
+                </div>
+              </div>
+
+              {/* Score */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%)',
+                borderRadius: '12px',
+                padding: '1rem',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '0.7rem', color: '#3b82f6', marginBottom: '0.25rem' }}>SCORE</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#3b82f6', lineHeight: 1 }}>
+                  {webSummary.score || 0}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)' }}>/100</div>
+              </div>
+
+              {/* Checks Pasados */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.05) 100%)',
+                borderRadius: '12px',
+                padding: '1rem',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '0.7rem', color: '#22c55e', marginBottom: '0.25rem' }}>PASADOS</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#22c55e', lineHeight: 1 }}>
+                  {webSummary.passed || 0}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)' }}>checks</div>
+              </div>
+
+              {/* Checks Fallidos */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%)',
+                borderRadius: '12px',
+                padding: '1rem',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '0.7rem', color: '#ef4444', marginBottom: '0.25rem' }}>FALLIDOS</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#ef4444', lineHeight: 1 }}>
+                  {webSummary.failed || 0}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)' }}>checks</div>
+              </div>
+
+              {/* Issues por severidad */}
+              {['critical', 'high', 'medium', 'low'].map((sev) => (
+                <div key={sev} style={{
+                  background: sev === 'critical' ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%)' :
+                             sev === 'high' ? 'linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(249, 115, 22, 0.05) 100%)' :
+                             sev === 'medium' ? 'linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0.05) 100%)' :
+                             'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.02) 100%)',
+                  borderRadius: '12px',
+                  padding: '0.75rem',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ 
+                    fontSize: '0.65rem', 
+                    color: sev === 'critical' ? '#ef4444' : sev === 'high' ? '#f97316' : sev === 'medium' ? '#eab308' : '#22c55e',
+                    textTransform: 'uppercase'
+                  }}>
+                    {sev === 'critical' ? '🔴' : sev === 'high' ? '🟠' : sev === 'medium' ? '🟡' : '🟢'} {sev}
+                  </div>
+                  <div style={{ 
+                    fontSize: '1.2rem', 
+                    fontWeight: 'bold', 
+                    color: (webSummary.issues?.[sev] || 0) > 0 ? 
+                           (sev === 'critical' ? '#ef4444' : sev === 'high' ? '#f97316' : sev === 'medium' ? '#eab308' : '#22c55e') : 
+                           'var(--text-color-secondary)'
+                  }}>
+                    {webSummary.issues?.[sev] || 0}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Recomendaciones */}
+            {result.recommendations && result.recommendations.length > 0 && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(251, 191, 36, 0.02) 100%)',
+                borderRadius: '8px',
+                padding: '0.75rem',
+                marginBottom: '1rem',
+                border: '1px solid rgba(251, 191, 36, 0.3)'
+              }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#fbbf24', marginBottom: '0.5rem' }}>
+                  ⚡ Recomendaciones
+                </div>
+                {result.recommendations.map((rec, idx) => (
+                  <div key={idx} style={{
+                    fontSize: '0.75rem',
+                    padding: '0.4rem',
+                    background: 'rgba(0,0,0,0.2)',
+                    borderRadius: '4px',
+                    marginBottom: '0.3rem'
+                  }}>
+                    <Badge 
+                      value={rec.priority} 
+                      severity={rec.priority === 'CRITICAL' ? 'danger' : 'warning'}
+                      style={{ fontSize: '0.6rem', marginRight: '0.5rem' }}
+                    />
+                    <strong>{rec.check}:</strong> {rec.text}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Checks Detallados por Categoría */}
+            {result.checks && result.checks.length > 0 && (
+              <div style={{ marginBottom: '1rem' }}>
+                {['SSL/TLS', 'Headers', 'Cookies', 'CORS', 'Information Disclosure'].map((category) => {
+                  const categoryChecks = result.checks.filter(c => c.category === category);
+                  if (categoryChecks.length === 0) return null;
+                  
+                  return (
+                    <details key={category} style={{ marginBottom: '0.5rem' }} open={category === 'SSL/TLS' || category === 'Headers'}>
+                      <summary style={{
+                        cursor: 'pointer',
+                        padding: '0.5rem',
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: '6px',
+                        fontWeight: '600',
+                        fontSize: '0.8rem'
+                      }}>
+                        {category} ({categoryChecks.filter(c => c.status === 'PASS').length}/{categoryChecks.length} ✓)
+                      </summary>
+                      <div style={{ padding: '0.5rem' }}>
+                        {categoryChecks.map((check, idx) => (
+                          <div key={idx} style={{
+                            padding: '0.4rem',
+                            background: check.status === 'PASS' ? 'rgba(34, 197, 94, 0.1)' : 
+                                       check.status === 'FAIL' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+                            borderRadius: '4px',
+                            marginBottom: '0.3rem',
+                            fontSize: '0.75rem'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span>{check.status === 'PASS' ? '✅' : check.status === 'FAIL' ? '❌' : '⚠️'}</span>
+                              <strong>{check.check}</strong>
+                              <Badge 
+                                value={check.severity.toUpperCase()} 
+                                severity={check.severity === 'critical' ? 'danger' : check.severity === 'high' ? 'warning' : 'info'}
+                                style={{ fontSize: '0.55rem', marginLeft: 'auto' }}
+                              />
+                            </div>
+                            <div style={{ color: 'var(--text-color-secondary)', marginLeft: '1.5rem', fontSize: '0.7rem' }}>
+                              {check.details}
+                            </div>
+                            {check.recommendation && check.status !== 'PASS' && (
+                              <div style={{ 
+                                marginLeft: '1.5rem', 
+                                marginTop: '0.25rem', 
+                                fontSize: '0.65rem', 
+                                color: '#fbbf24',
+                                fontStyle: 'italic'
+                              }}>
+                                💡 {check.recommendation}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Tecnologías Detectadas */}
+            {result.technologies && result.technologies.length > 0 && (
+              <div style={{
+                background: 'rgba(0,0,0,0.2)',
+                borderRadius: '8px',
+                padding: '0.75rem',
+                marginBottom: '1rem'
+              }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  🔧 Tecnologías Detectadas
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {result.technologies.map((tech, idx) => (
+                    <Badge key={idx} value={`${tech.type}: ${tech.value}`} severity="info" />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Cookies */}
+            {result.cookies && result.cookies.length > 0 && (
+              <details style={{ marginBottom: '0.5rem' }}>
+                <summary style={{
+                  cursor: 'pointer',
+                  padding: '0.5rem',
+                  background: 'rgba(255,255,255,0.05)',
+                  borderRadius: '6px',
+                  fontWeight: '600',
+                  fontSize: '0.8rem'
+                }}>
+                  🍪 Cookies Detectadas ({result.cookies.length})
+                </summary>
+                <div style={{ padding: '0.5rem' }}>
+                  {result.cookies.map((cookie, idx) => (
+                    <div key={idx} style={{
+                      padding: '0.4rem',
+                      background: cookie.issues?.length > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                      borderRadius: '4px',
+                      marginBottom: '0.3rem',
+                      fontSize: '0.7rem'
+                    }}>
+                      <strong>{cookie.name}</strong>
+                      <div style={{ display: 'flex', gap: '0.3rem', marginTop: '0.2rem' }}>
+                        <Badge value={cookie.flags?.httpOnly ? 'HttpOnly ✓' : 'HttpOnly ✗'} severity={cookie.flags?.httpOnly ? 'success' : 'danger'} style={{ fontSize: '0.55rem' }} />
+                        <Badge value={cookie.flags?.secure ? 'Secure ✓' : 'Secure ✗'} severity={cookie.flags?.secure ? 'success' : 'danger'} style={{ fontSize: '0.55rem' }} />
+                        <Badge value={cookie.flags?.sameSite ? `SameSite=${cookie.flags.sameSite}` : 'SameSite ✗'} severity={cookie.flags?.sameSite ? 'info' : 'warning'} style={{ fontSize: '0.55rem' }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+
+            {/* Info del escaneo */}
+            <div style={{ 
+              marginTop: '1rem', 
+              fontSize: '0.7rem', 
+              color: 'var(--text-color-secondary)',
+              textAlign: 'right'
+            }}>
+              URL: {result.url} | Tiempo: {((result.scanTime || 0) / 1000).toFixed(2)}s
+            </div>
+          </div>
+        );
+
       case 'whois':
         return (
           <div style={resultBoxStyle}>
@@ -2432,13 +2980,159 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                   />
                 </div>
               )}
+
+              {/* Card para Host Vulnerability Scanner */}
+              {selectedTool === 'host-vuln-scan' && (
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.04) 100%)',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid rgba(239, 68, 68, 0.35)',
+                  width: '100%',
+                  maxWidth: '900px',
+                  boxShadow: '0 2px 12px rgba(239, 68, 68, 0.15)'
+                }}>
+                  {/* Host */}
+                  <span style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    Host:
+                  </span>
+                  <InputText
+                    value={hostVulnHost}
+                    onChange={(e) => setHostVulnHost(e.target.value)}
+                    placeholder="192.168.1.1 o ejemplo.com"
+                    style={{
+                      width: '180px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '30px'
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && executeTool()}
+                  />
+                  
+                  {/* Puertos */}
+                  <span style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    Puertos:
+                  </span>
+                  <InputText
+                    value={hostVulnPorts}
+                    onChange={(e) => setHostVulnPorts(e.target.value)}
+                    placeholder="22,80,443..."
+                    style={{
+                      width: '200px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '30px'
+                    }}
+                  />
+                  
+                  {/* Checkbox Online */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={hostVulnUseOnline}
+                      onChange={(e) => setHostVulnUseOnline(e.target.checked)}
+                      style={{ width: '14px', height: '14px', accentColor: '#ef4444' }}
+                    />
+                    <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.7rem' }}>
+                      NVD Online
+                    </span>
+                  </div>
+                  
+                  {/* Botón Escanear */}
+                  <Button
+                    label="Escanear"
+                    icon="pi pi-search"
+                    onClick={executeTool}
+                    disabled={loading}
+                    style={{
+                      background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
+                      marginLeft: 'auto'
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Card para Web Security Scanner */}
+              {selectedTool === 'web-security-scan' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(34, 197, 94, 0.04) 100%)',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid rgba(34, 197, 94, 0.35)',
+                  width: 'fit-content',
+                  maxWidth: '700px',
+                  boxShadow: '0 2px 12px rgba(34, 197, 94, 0.15)'
+                }}>
+                  {/* URL */}
+                  <span style={{ color: '#22c55e', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    URL:
+                  </span>
+                  <InputText
+                    value={webSecurityUrl}
+                    onChange={(e) => setWebSecurityUrl(e.target.value)}
+                    placeholder="https://ejemplo.com"
+                    style={{
+                      width: '300px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '30px'
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && executeTool()}
+                  />
+                  
+                  {/* Botón Analizar */}
+                  <Button
+                    label="Analizar"
+                    icon="pi pi-shield"
+                    onClick={executeTool}
+                    disabled={loading}
+                    style={{
+                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
+                      marginLeft: '0.25rem'
+                    }}
+                  />
+                </div>
+              )}
             </div>
           )}
 
           {/* Contenido: formulario y resultados */}
           <div className="network-tools-form-results">
-            {/* Panel de formulario - Solo si NO es SSL Checker */}
-            {selectedTool !== 'ssl-check' && (
+            {/* Panel de formulario - Solo si NO es tool con header especial */}
+            {!['ssl-check', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) && (
               <div className="network-tools-form" style={{
                 padding: '1rem',
                 paddingBottom: '2rem',
@@ -2449,14 +3143,14 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
               </div>
             )}
 
-            {/* Panel de resultados - Full width para SSL Checker */}
+            {/* Panel de resultados - Full width para tools con header especial */}
             <div className="network-tools-results" style={{
               padding: '1rem',
               paddingBottom: '2rem',
               background: 'rgba(0,0,0,0.1)',
-              width: selectedTool === 'ssl-check' ? '100%' : undefined
+              width: ['ssl-check', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) ? '100%' : undefined
             }}>
-              {selectedTool !== 'ssl-check' && (
+              {!['ssl-check', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) && (
                 <div style={{ 
                   marginBottom: '0.75rem', 
                   fontSize: '0.85rem', 
