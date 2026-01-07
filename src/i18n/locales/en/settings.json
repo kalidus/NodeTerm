@@ -253,7 +253,8 @@
     "guacdInactivityHint": "0 to disable. Inactivity shutdown between guacamole-lite and guacd",
     "guacdInactivitySynced": "Automatically synced with session activity threshold",
     "backendTitle": "Guacamole Backend",
-    "restartGuacd": "Restart Guacd"
+    "restartGuacd": "Restart Guacd",
+    "resetDefaults": "Reset"
   },
   "sync": {
     "title": "Sync",

@@ -962,6 +962,23 @@ const SettingsDialog = ({
     } catch {}
   };
 
+  // Función para restaurar valores por defecto de RDP
+  const handleResetRdpDefaults = async () => {
+    // Valores por defecto
+    const defaultIdleMinutes = 1; // 60000 ms = 1 minuto
+    const defaultSessionActivityMinutes = 120; // 7200000 ms = 2 horas
+    const defaultResizeDebounceMs = 300;
+    const defaultResizeAckTimeoutMs = 1500;
+
+    // Restaurar estados
+    setRdpIdleMinutes(defaultIdleMinutes);
+    setRdpSessionActivityMinutes(defaultSessionActivityMinutes);
+    setRdpResizeDebounceMs(defaultResizeDebounceMs);
+    setRdpResizeAckTimeoutMs(defaultResizeAckTimeoutMs);
+
+    // Los useEffect se encargarán de guardar en localStorage y sincronizar guacd
+  };
+
   // Funciones para gestión de clave maestra
   const validateMasterPassword = () => {
     return masterPassword.length >= 6 && masterPassword === confirmPassword;
@@ -4305,11 +4322,43 @@ const SettingsDialog = ({
 
                 {/* Sección: RDP Settings (todas juntas) */}
                 <div className="general-settings-section">
-                  <div className="general-section-header">
-                    <div className="general-section-icon">
-                      <i className="pi pi-cog"></i>
+                  <div className="general-section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div className="general-section-icon">
+                        <i className="pi pi-cog"></i>
+                      </div>
+                      <h4 className="general-section-title">RDP Settings</h4>
                     </div>
-                    <h4 className="general-section-title">RDP Settings</h4>
+                    <button
+                      onClick={handleResetRdpDefaults}
+                      title={t('rdp.resetDefaults') || 'Restaurar valores por defecto'}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: 4,
+                        padding: '0.35rem 0.75rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.75rem',
+                        color: 'var(--text-color-secondary)',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                        e.currentTarget.style.color = 'var(--text-color)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                        e.currentTarget.style.color = 'var(--text-color-secondary)';
+                      }}
+                    >
+                      <i className="pi pi-refresh" style={{ fontSize: '0.7rem' }}></i>
+                      <span>{t('rdp.resetDefaults') || 'Restaurar'}</span>
+                    </button>
                   </div>
                   
                   <div className="general-settings-options" style={{ padding: '0.5rem 1.25rem', gap: '0.5rem' }}>
