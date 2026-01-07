@@ -922,6 +922,15 @@ const SettingsDialog = ({
   useEffect(() => {
     const ms = Math.max(60000, (rdpSessionActivityMinutes || 0) * 60000);
     localStorage.setItem('rdp_freeze_timeout_ms', String(ms));
+    
+    // Sincronizar automáticamente el watchdog de guacd con el umbral de sesión
+    // para evitar que guacd cierre la conexión antes de que el vigilante pueda reconectar
+    setRdpGuacdInactivityMs(ms);
+    try {
+      if (window?.electron?.ipcRenderer) {
+        window.electron.ipcRenderer.invoke('guacamole:set-guacd-timeout-ms', ms).catch(() => {});
+      }
+    } catch {}
   }, [rdpSessionActivityMinutes]);
   useEffect(() => {
     localStorage.setItem('rdp_resize_debounce_ms', String(Math.max(100, Math.min(2000, rdpResizeDebounceMs || 300))));
@@ -4385,25 +4394,6 @@ const SettingsDialog = ({
                       />
                     </div>
 
-                    <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                      <label htmlFor="rdp-guacd-inactivity-min" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                        {t('rdp.guacdInactivity')}
-                      </label>
-                      <small style={{ display: 'block', marginBottom: 4, color: 'var(--text-color-secondary)', fontSize: '0.7rem' }}>
-                        {t('rdp.guacdInactivityHint')}
-                      </small>
-                      <InputNumber
-                        id="rdp-guacd-inactivity-min"
-                        value={Math.floor((rdpGuacdInactivityMs || 0) / 60000)}
-                        onValueChange={e => handleGuacdInactivityChange(Math.max(0, Math.min(1440, Number(e.value || 0))) * 60000)}
-                        min={0}
-                        max={1440}
-                        showButtons
-                        buttonLayout="horizontal"
-                        style={{ width: '100%', fontSize: '0.85rem' }}
-                        inputStyle={{ fontSize: '0.85rem', padding: '0.35rem 0.5rem' }}
-                      />
-                    </div>
                   </div>
                 </div>
               </div>

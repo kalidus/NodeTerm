@@ -108,6 +108,7 @@
     "resizeAckTimeoutHint": "Tiempo máximo esperando respuesta del display antes de permitir otro resize",
     "guacdInactivity": "Watchdog de inactividad de Guacd (min)",
     "guacdInactivityHint": "0 para desactivar. Cierre por inactividad entre guacamole-lite y guacd",
+    "guacdInactivitySynced": "Se sincroniza automáticamente con el umbral de actividad de sesión",
     "backendTitle": "Backend Guacamole",
     "restartGuacd": "Reiniciar Guacd"
   },
