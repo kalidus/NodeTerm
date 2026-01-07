@@ -665,6 +665,32 @@ const SettingsDialog = ({
     return allowed.includes(saved) ? saved : allowed[0];
   });
   const [guacdStatus, setGuacdStatus] = useState({ isRunning: false, method: 'unknown', port: 4822, host: '127.0.0.1' });
+  const [guacdRestarting, setGuacdRestarting] = useState(false);
+
+  // Función para reiniciar guacd manualmente
+  const handleRestartGuacd = async () => {
+    if (guacdRestarting) return;
+    setGuacdRestarting(true);
+    try {
+      if (window?.electron?.ipcRenderer) {
+        const result = await window.electron.ipcRenderer.invoke('guacamole:restart-guacd');
+        if (result?.success) {
+          // Actualizar el estado inmediatamente si viene en la respuesta
+          if (result.status) {
+            setGuacdStatus(result.status);
+          } else {
+            // Si no, refrescar el estado
+            const st = await window.electron.ipcRenderer.invoke('guacamole:get-status');
+            if (st && st.guacd) setGuacdStatus(st.guacd);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error reiniciando guacd:', err);
+    } finally {
+      setGuacdRestarting(false);
+    }
+  };
 
   useEffect(() => {
     try {
@@ -4221,9 +4247,48 @@ const SettingsDialog = ({
                           {guacdStatus.isRunning ? '● Activo' : '● Inactivo'}
                         </span>
                       </div>
-                      <div style={{ color: 'var(--text-color-secondary)', fontSize: '0.7rem', textAlign: 'right' }}>
-                        <div style={{ textTransform: 'uppercase', fontWeight: 500, fontSize: '0.65rem' }}>{guacdStatus.method || '—'}</div>
-                        <div style={{ fontFamily: 'monospace', fontSize: '0.6rem' }}>{guacdStatus.host}:{guacdStatus.port}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ color: 'var(--text-color-secondary)', fontSize: '0.7rem', textAlign: 'right' }}>
+                          <div style={{ textTransform: 'uppercase', fontWeight: 500, fontSize: '0.65rem' }}>{guacdStatus.method || '—'}</div>
+                          <div style={{ fontFamily: 'monospace', fontSize: '0.6rem' }}>{guacdStatus.host}:{guacdStatus.port}</div>
+                        </div>
+                        <button
+                          onClick={handleRestartGuacd}
+                          disabled={guacdRestarting}
+                          title={t('rdp.restartGuacd') || 'Reiniciar Guacd'}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderRadius: 4,
+                            padding: '0.25rem 0.5rem',
+                            cursor: guacdRestarting ? 'wait' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: 28,
+                            height: 28,
+                            transition: 'all 0.2s ease',
+                            opacity: guacdRestarting ? 0.7 : 1
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!guacdRestarting) {
+                              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                          }}
+                        >
+                          <i 
+                            className={guacdRestarting ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'}
+                            style={{ 
+                              fontSize: '0.75rem', 
+                              color: 'var(--text-color-secondary)'
+                            }}
+                          ></i>
+                        </button>
                       </div>
                     </div>
                   </div>

@@ -150,6 +150,30 @@ function registerGuacamoleHandlers({
     }
   });
 
+  // Handler para reiniciar guacd manualmente
+  ipcMain.handle('guacamole:restart-guacd', async () => {
+    try {
+      if (guacdService && typeof guacdService.restart === 'function') {
+        console.log('🔄 Reiniciando GuacdService desde la UI...');
+        const restartSuccess = await guacdService.restart();
+        
+        if (restartSuccess) {
+          const status = guacdService.getStatus ? guacdService.getStatus() : { isRunning: true };
+          console.log('✅ GuacdService reiniciado exitosamente');
+          return { success: true, status };
+        } else {
+          console.warn('⚠️ GuacdService no se pudo reiniciar');
+          return { success: false, error: 'Failed to restart GuacdService' };
+        }
+      } else {
+        return { success: false, error: 'GuacdService not available' };
+      }
+    } catch (error) {
+      console.error('Error restarting guacd:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('guacamole:disconnect-all', async () => {
     await disconnectAllGuacamoleConnections();
     return { success: true };
