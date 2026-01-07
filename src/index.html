@@ -44,35 +44,18 @@
       })();
     </script>
     <script>
-      // Aplicar tema básico INMEDIATAMENTE para evitar flash blanco
+      // Aplicar fondo básico INMEDIATAMENTE para evitar flash blanco
+      // NO establecer variables CSS del tema aquí - el ThemeManager se encargará de eso
       (function() {
         try {
           // Temas claros conocidos
           const lightThemes = ['Light', 'Solarized Light', 'Atom One Light', 'Paper', 'Silver', 'Soft Gray', 'Minimal Gray'];
           
-          // Colores del tema oscuro por defecto (Nord - tema más común)
-          const darkTheme = {
-            sidebarBackground: '#2e3440',
-            contentBackground: '#2e3440',
-            menuBarBackground: '#3b4252',
-            statusBarBackground: '#5e81ac',
-            dialogBackground: '#2e3440'
-          };
-          
-          // Colores del tema claro
-          const lightTheme = {
-            sidebarBackground: '#ffffff',
-            contentBackground: '#ffffff',
-            menuBarBackground: '#ffffff',
-            statusBarBackground: '#f8f9fa',
-            dialogBackground: '#ffffff'
-          };
-          
           // Leer tema guardado del localStorage
           const savedTheme = localStorage.getItem('ui_theme');
           const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
           
-          // Determinar si es tema claro u oscuro
+          // Determinar si es tema claro u oscuro solo para el fondo básico
           let isLight = false;
           if (savedTheme) {
             isLight = lightThemes.includes(savedTheme);
@@ -81,27 +64,38 @@
             isLight = !prefersDark;
           }
           
-          const theme = isLight ? lightTheme : darkTheme;
+          // Solo establecer el fondo básico - NO variables CSS del tema
+          // El ThemeManager aplicará el tema completo después
+          const basicBg = isLight ? '#ffffff' : '#0e1116';
           
-          // Aplicar fondo inmediatamente al body y html
-          document.documentElement.style.backgroundColor = theme.contentBackground;
-          document.body.style.backgroundColor = theme.contentBackground;
+          // Aplicar fondo inmediatamente al html (siempre existe)
+          document.documentElement.style.backgroundColor = basicBg;
           
-          // Aplicar variables CSS básicas del tema
-          const root = document.documentElement;
-          root.style.setProperty('--ui-sidebar-bg', theme.sidebarBackground);
-          root.style.setProperty('--ui-content-bg', theme.contentBackground);
-          root.style.setProperty('--ui-menubar-bg', theme.menuBarBackground);
-          root.style.setProperty('--ui-dialog-bg', theme.dialogBackground);
-          root.style.setProperty('--ui-statusbar-bg', theme.statusBarBackground);
+          // Aplicar fondo al body solo si ya existe (puede no existir si el script corre en <head>)
+          if (document.body) {
+            document.body.style.backgroundColor = basicBg;
+          }
           
-          // Marcar que el tema básico está aplicado
+          // Si el body no existe aún, aplicar el fondo cuando esté disponible
+          if (!document.body) {
+            const observer = new MutationObserver((mutations, obs) => {
+              if (document.body) {
+                document.body.style.backgroundColor = basicBg;
+                obs.disconnect();
+              }
+            });
+            observer.observe(document.documentElement, { childList: true, subtree: true });
+          }
+          
+          // Marcar que el fondo básico está aplicado
           window.__earlyThemeApplied = true;
         } catch (e) {
-          console.error('[EARLY THEME] Error aplicando tema temprano:', e);
+          console.error('[EARLY THEME] Error aplicando fondo temprano:', e);
           // Fallback: aplicar fondo oscuro por defecto
           document.documentElement.style.backgroundColor = '#0e1116';
-          document.body.style.backgroundColor = '#0e1116';
+          if (document.body) {
+            document.body.style.backgroundColor = '#0e1116';
+          }
         }
       })();
     </script>
