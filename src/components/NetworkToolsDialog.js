@@ -821,7 +821,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
       fontFamily: 'monospace',
       fontSize: isMobile ? '0.75rem' : '0.85rem',
       lineHeight: '1.6',
-      color: 'var(--text-color)',
+      color: 'rgba(255,255,255,0.95)',
       overflow: 'visible',
       wordBreak: 'break-word',
       overflowWrap: 'break-word',
@@ -1175,7 +1175,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                      }} 
                   />
                   <div>
-                    <div style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.15rem' }}>
+                    <div style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.15rem', color: '#ffffff' }}>
                       {result.host}:{result.port}
                     </div>
                     <Badge 
@@ -1190,7 +1190,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)', marginBottom: '0.15rem' }}>
+                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.8)', marginBottom: '0.15rem' }}>
                     Score
                   </div>
                   <div style={{ 
@@ -1218,7 +1218,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                   borderRadius: '6px',
                   padding: '0.5rem 0.75rem'
                 }}>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)', marginBottom: '0.25rem' }}>
+                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.8)', marginBottom: '0.25rem' }}>
                     Expira en
                   </div>
                   <div style={{ 
@@ -1251,20 +1251,20 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                     borderRadius: '6px',
                     padding: '0.5rem 0.75rem'
                   }}>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)', marginBottom: '0.25rem' }}>
+                    <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.8)', marginBottom: '0.25rem' }}>
                       Conexión
                     </div>
                     <div style={{ 
                       fontSize: '0.85rem', 
                       fontWeight: '600',
                       marginBottom: '0.15rem',
-                      color: '#3b82f6'
+                      color: '#60a5fa'
                     }}>
                       {result.protocols.version || 'N/A'}
                     </div>
                     <div style={{ 
                       fontSize: '0.65rem', 
-                      color: 'var(--text-color-secondary)',
+                      color: 'rgba(255,255,255,0.7)',
                       fontFamily: 'monospace',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -1281,7 +1281,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                   borderRadius: '6px',
                   padding: '0.5rem 0.75rem'
                 }}>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)', marginBottom: '0.25rem' }}>
+                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.8)', marginBottom: '0.25rem' }}>
                     Riesgo
                   </div>
                   <div style={{ 
@@ -1310,7 +1310,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.4rem',
-                  color: '#3b82f6'
+                  color: '#60a5fa'
                 }}>
                   <i className="pi pi-shield" style={{ fontSize: '0.9rem' }} />
                   Protocolos Soportados
@@ -1368,7 +1368,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                             {proto.cipher && (
                               <div style={{ 
                                 fontSize: '0.7rem', 
-                                color: 'var(--text-color-secondary)',
+                                color: 'rgba(255,255,255,0.7)',
                                 fontFamily: 'monospace'
                               }}>
                                 {proto.cipher.name}
@@ -1409,7 +1409,8 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                   listStyle: 'none',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem'
+                  gap: '0.4rem',
+                  color: 'rgba(255,255,255,0.9)'
                 }}>
                   <i className="pi pi-chevron-right" style={{ 
                     fontSize: '0.7rem', 
@@ -1453,15 +1454,15 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                         <span style={{ fontSize: '1rem' }}>{statusIcon}</span>
-                        <strong>{proto.name}</strong>
+                        <strong style={{ color: '#ffffff' }}>{proto.name}</strong>
                       </div>
                       {proto.supported && proto.cipher && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-color-secondary)', marginLeft: '1.5rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', marginLeft: '1.5rem' }}>
                           {proto.cipher.name}
                         </div>
                       )}
                       {!proto.supported && proto.error && (
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)', fontStyle: 'italic', marginLeft: '1.5rem' }}>
+                        <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', marginLeft: '1.5rem' }}>
                           {proto.error}
                         </div>
                       )}
@@ -1487,7 +1488,8 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                   listStyle: 'none',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem'
+                  gap: '0.4rem',
+                  color: 'rgba(255,255,255,0.9)'
                 }}>
                   <i className="pi pi-chevron-right" style={{ 
                     fontSize: '0.7rem', 
@@ -1505,11 +1507,11 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                       borderLeft: '3px solid #3b82f6',
                       fontSize: '0.85rem'
                     }}>
-                      <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '0.25rem', color: '#ffffff' }}>
                         {cipher.name}
-                        {cipher.version && <span style={{ color: 'var(--text-color-secondary)', marginLeft: '0.5rem', fontWeight: '400' }}>({cipher.version})</span>}
+                        {cipher.version && <span style={{ color: 'rgba(255,255,255,0.7)', marginLeft: '0.5rem', fontWeight: '400' }}>({cipher.version})</span>}
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-color-secondary)' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
                         Protocolos: {cipher.protocols.join(', ')}
                       </div>
                     </div>
@@ -1533,7 +1535,8 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                   listStyle: 'none',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem'
+                  gap: '0.4rem',
+                  color: 'rgba(255,255,255,0.9)'
                 }}>
                   <i className="pi pi-chevron-right" style={{ 
                     fontSize: '0.7rem', 
@@ -1543,48 +1546,48 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                   <span>Información del Certificado</span>
                 </summary>
                 <div style={{ marginTop: '0.5rem', paddingLeft: '0.5rem' }}>
-                  <div style={statItemStyle}>
-                    <span>Sujeto:</span>
-                    <strong>{result.certificate.subject?.CN || result.certificate.subject?.O || 'N/A'}</strong>
+                  <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
+                    <span style={{ color: 'rgba(255,255,255,0.8)' }}>Sujeto:</span>
+                    <strong style={{ color: '#ffffff' }}>{result.certificate.subject?.CN || result.certificate.subject?.O || 'N/A'}</strong>
                   </div>
                   {result.certificate.subject?.O && result.certificate.subject?.O !== result.certificate.subject?.CN && (
-                    <div style={statItemStyle}>
-                      <span>Organización:</span>
-                      <strong>{result.certificate.subject.O}</strong>
+                    <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
+                      <span style={{ color: 'rgba(255,255,255,0.8)' }}>Organización:</span>
+                      <strong style={{ color: '#ffffff' }}>{result.certificate.subject.O}</strong>
                     </div>
                   )}
-                  <div style={statItemStyle}>
-                    <span>Emisor:</span>
-                    <strong>{result.certificate.issuer?.O || result.certificate.issuer?.CN || 'N/A'}</strong>
+                  <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
+                    <span style={{ color: 'rgba(255,255,255,0.8)' }}>Emisor:</span>
+                    <strong style={{ color: '#ffffff' }}>{result.certificate.issuer?.O || result.certificate.issuer?.CN || 'N/A'}</strong>
                   </div>
                   {result.certificate.serialNumber && (
-                    <div style={statItemStyle}>
-                      <span>Número de serie:</span>
-                      <strong style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>{result.certificate.serialNumber}</strong>
+                    <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
+                      <span style={{ color: 'rgba(255,255,255,0.8)' }}>Número de serie:</span>
+                      <strong style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: '#ffffff' }}>{result.certificate.serialNumber}</strong>
                     </div>
                   )}
                   {result.certificate.signatureAlgorithm && (
-                    <div style={statItemStyle}>
-                      <span>Algoritmo de firma:</span>
-                      <strong>{result.certificate.signatureAlgorithm}</strong>
+                    <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
+                      <span style={{ color: 'rgba(255,255,255,0.8)' }}>Algoritmo de firma:</span>
+                      <strong style={{ color: '#ffffff' }}>{result.certificate.signatureAlgorithm}</strong>
                     </div>
                   )}
                   {result.certificate.publicKey && (
-                    <div style={statItemStyle}>
-                      <span>Clave pública:</span>
-                      <strong>{result.certificate.publicKey.type || 'N/A'} {result.certificate.publicKey.bits ? `(${result.certificate.publicKey.bits} bits)` : ''}</strong>
+                    <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
+                      <span style={{ color: 'rgba(255,255,255,0.8)' }}>Clave pública:</span>
+                      <strong style={{ color: '#ffffff' }}>{result.certificate.publicKey.type || 'N/A'} {result.certificate.publicKey.bits ? `(${result.certificate.publicKey.bits} bits)` : ''}</strong>
                     </div>
                   )}
-                  <div style={statItemStyle}>
-                    <span>Válido desde:</span>
-                    <strong>{result.certificate.validFrom}</strong>
+                  <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
+                    <span style={{ color: 'rgba(255,255,255,0.8)' }}>Válido desde:</span>
+                    <strong style={{ color: '#ffffff' }}>{result.certificate.validFrom}</strong>
                   </div>
-                  <div style={statItemStyle}>
-                    <span>Válido hasta:</span>
-                    <strong>{result.certificate.validTo}</strong>
+                  <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
+                    <span style={{ color: 'rgba(255,255,255,0.8)' }}>Válido hasta:</span>
+                    <strong style={{ color: '#ffffff' }}>{result.certificate.validTo}</strong>
                   </div>
-                  <div style={statItemStyle}>
-                    <span>Días hasta expiración:</span>
+                  <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
+                    <span style={{ color: 'rgba(255,255,255,0.8)' }}>Días hasta expiración:</span>
                     <strong style={{ 
                       color: result.certificate.daysUntilExpiry < 30 ? '#ef4444' : 
                              result.certificate.daysUntilExpiry < 90 ? '#f59e0b' : '#22c55e' 
@@ -1593,23 +1596,23 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                     </strong>
                   </div>
                   {result.certificate.fingerprint && (
-                    <div style={statItemStyle}>
-                      <span>Fingerprint (SHA1):</span>
-                      <strong style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>{result.certificate.fingerprint}</strong>
+                    <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
+                      <span style={{ color: 'rgba(255,255,255,0.8)' }}>Fingerprint (SHA1):</span>
+                      <strong style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#ffffff' }}>{result.certificate.fingerprint}</strong>
                     </div>
                   )}
                   {result.certificate.fingerprint256 && (
-                    <div style={statItemStyle}>
-                      <span>Fingerprint (SHA256):</span>
-                      <strong style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>{result.certificate.fingerprint256}</strong>
+                    <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
+                      <span style={{ color: 'rgba(255,255,255,0.8)' }}>Fingerprint (SHA256):</span>
+                      <strong style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#ffffff' }}>{result.certificate.fingerprint256}</strong>
                     </div>
                   )}
                   {result.certificate.subjectAltNames && result.certificate.subjectAltNames.length > 0 && (
-                    <div style={statItemStyle}>
-                      <span>Nombres alternativos (SAN):</span>
+                    <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
+                      <span style={{ color: 'rgba(255,255,255,0.8)' }}>Nombres alternativos (SAN):</span>
                       <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                         {result.certificate.subjectAltNames.map((san, idx) => (
-                          <strong key={idx} style={{ fontSize: '0.85rem' }}>{san}</strong>
+                          <strong key={idx} style={{ fontSize: '0.85rem', color: '#ffffff' }}>{san}</strong>
                         ))}
                       </div>
                     </div>
@@ -1633,7 +1636,8 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                   listStyle: 'none',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem'
+                  gap: '0.4rem',
+                  color: 'rgba(255,255,255,0.9)'
                 }}>
                   <i className="pi pi-chevron-right" style={{ 
                     fontSize: '0.7rem', 
@@ -1651,27 +1655,27 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                       borderLeft: '3px solid #3b82f6',
                       fontSize: '0.85rem'
                     }}>
-                      <div style={{ fontWeight: '700', marginBottom: '0.75rem', fontSize: '0.95rem', color: '#3b82f6' }}>
+                      <div style={{ fontWeight: '700', marginBottom: '0.75rem', fontSize: '0.95rem', color: '#60a5fa' }}>
                         Certificado {idx + 1} {idx === 0 ? '(Servidor)' : idx === result.chain.length - 1 ? '(Root CA)' : '(Intermediate CA)'}
                       </div>
-                      <div style={statItemStyle}>
-                        <span>Sujeto:</span>
-                        <strong>{chainCert.subject?.CN || chainCert.subject?.O || 'N/A'}</strong>
+                      <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
+                        <span style={{ color: 'rgba(255,255,255,0.8)' }}>Sujeto:</span>
+                        <strong style={{ color: '#ffffff' }}>{chainCert.subject?.CN || chainCert.subject?.O || 'N/A'}</strong>
                       </div>
-                      <div style={statItemStyle}>
-                        <span>Emisor:</span>
-                        <strong>{chainCert.issuer?.O || chainCert.issuer?.CN || 'N/A'}</strong>
+                      <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
+                        <span style={{ color: 'rgba(255,255,255,0.8)' }}>Emisor:</span>
+                        <strong style={{ color: '#ffffff' }}>{chainCert.issuer?.O || chainCert.issuer?.CN || 'N/A'}</strong>
                       </div>
                       {chainCert.validFrom && (
-                        <div style={statItemStyle}>
-                          <span>Válido desde:</span>
-                          <strong>{chainCert.validFrom}</strong>
+                        <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
+                          <span style={{ color: 'rgba(255,255,255,0.8)' }}>Válido desde:</span>
+                          <strong style={{ color: '#ffffff' }}>{chainCert.validFrom}</strong>
                         </div>
                       )}
                       {chainCert.validTo && (
-                        <div style={statItemStyle}>
-                          <span>Válido hasta:</span>
-                          <strong>{chainCert.validTo}</strong>
+                        <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
+                          <span style={{ color: 'rgba(255,255,255,0.8)' }}>Válido hasta:</span>
+                          <strong style={{ color: '#ffffff' }}>{chainCert.validTo}</strong>
                         </div>
                       )}
                     </div>
@@ -1715,7 +1719,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                       gap: '0.5rem'
                     }}>
                       <i className="pi pi-info-circle" style={{ color: '#f59e0b', fontSize: '0.85rem', marginTop: '0.1rem', flexShrink: 0 }} />
-                      <span style={{ flex: 1 }}>{rec}</span>
+                      <span style={{ flex: 1, color: 'rgba(255,255,255,0.9)' }}>{rec}</span>
                     </div>
                   ))}
                 </div>
