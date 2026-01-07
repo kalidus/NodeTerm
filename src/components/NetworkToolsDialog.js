@@ -1208,7 +1208,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
               {/* Métricas clave - COMPACTAS */}
               <div style={{ 
                 display: 'grid', 
-                gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
                 gap: '0.5rem',
                 marginTop: '0.75rem'
               }}>
@@ -1264,6 +1264,37 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                     {secureProtocols} seg / {deprecatedCount} obs
                   </div>
                 </div>
+
+                {/* Conexión por Defecto */}
+                {result.protocols && (
+                  <div style={{
+                    background: 'rgba(0,0,0,0.2)',
+                    borderRadius: '6px',
+                    padding: '0.5rem 0.75rem'
+                  }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-color-secondary)', marginBottom: '0.25rem' }}>
+                      Conexión
+                    </div>
+                    <div style={{ 
+                      fontSize: '0.85rem', 
+                      fontWeight: '600',
+                      marginBottom: '0.15rem',
+                      color: '#3b82f6'
+                    }}>
+                      {result.protocols.version || 'N/A'}
+                    </div>
+                    <div style={{ 
+                      fontSize: '0.65rem', 
+                      color: 'var(--text-color-secondary)',
+                      fontFamily: 'monospace',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {result.protocols.cipher || 'N/A'}
+                    </div>
+                  </div>
+                )}
 
                 {/* Nivel de riesgo */}
                 <div style={{
@@ -1710,23 +1741,6 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                   ))}
                 </div>
               </div>
-            )}
-
-            {/* Protocolo y cipher por defecto (compatibilidad) */}
-            {result.protocols && (
-              <>
-                <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                  Conexión por Defecto:
-                </div>
-                <div style={statItemStyle}>
-                  <span>Protocolo:</span>
-                  <strong>{result.protocols.version || 'N/A'}</strong>
-                </div>
-                <div style={statItemStyle}>
-                  <span>Cifrado:</span>
-                  <strong>{result.protocols.cipher || 'N/A'}</strong>
-                </div>
-              </>
             )}
 
             {result.error && (
