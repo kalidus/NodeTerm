@@ -411,6 +411,34 @@ async function initializeGuacamoleServices() {
       return;
     }
 
+    // Esperar a que guacd esté realmente accesible antes de continuar
+    // Esto evita race conditions donde Guacamole-lite se inicializa antes de que guacd esté listo
+    console.log('⏳ [initializeGuacamoleServices] Esperando a que guacd esté accesible...');
+    const guacdStatus = guacdService.getStatus();
+    const maxWaitTime = 10000; // 10 segundos máximo
+    const checkInterval = 200; // Verificar cada 200ms
+    const startTime = Date.now();
+    let isReady = false;
+    
+    while (!isReady && (Date.now() - startTime) < maxWaitTime) {
+      try {
+        const isAvailable = await guacdService.isPortAvailable(guacdStatus.port);
+        if (!isAvailable) {
+          // Puerto ocupado = guacd está escuchando y accesible
+          isReady = true;
+          console.log(`✅ [initializeGuacamoleServices] guacd accesible en ${guacdStatus.host}:${guacdStatus.port}`);
+          break;
+        }
+      } catch (error) {
+        // Continuar esperando
+      }
+      await new Promise(resolve => setTimeout(resolve, checkInterval));
+    }
+    
+    if (!isReady) {
+      console.warn('⚠️ [initializeGuacamoleServices] guacd no está accesible después de esperar, continuando de todas formas...');
+    }
+
     // Configurar servidor Guacamole-lite
     const websocketOptions = {
       port: 8081 // Puerto para WebSocket de Guacamole
@@ -790,7 +818,9 @@ function createWindow() {
       isAppQuitting,
       getGuacamoleServer: () => guacamoleServer,
       getGuacamoleServerReadyAt: () => guacamoleServerReadyAt,
-      getOrCreateGuacamoleSecretKey: getOrCreateGuacamoleSecretKey
+      getOrCreateGuacamoleSecretKey: getOrCreateGuacamoleSecretKey,
+      isGuacamoleInitializing: () => guacamoleInitializing,
+      isGuacamoleInitialized: () => guacamoleInitialized
     });
     
     // Handlers registrados exitosamente

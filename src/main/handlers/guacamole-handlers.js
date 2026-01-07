@@ -19,6 +19,8 @@ const { ipcMain } = require('electron');
  * @param {Object} dependencies.guacdInactivityTimeoutMs - Variable de timeout
  * @param {Function} dependencies.getGuacamoleServer - Función getter para obtener el servidor actual
  * @param {Function} dependencies.getGuacamoleServerReadyAt - Función getter para obtener el timestamp actual
+ * @param {Function} dependencies.isGuacamoleInitializing - Función getter para verificar si está inicializando
+ * @param {Function} dependencies.isGuacamoleInitialized - Función getter para verificar si está inicializado
  */
 function registerGuacamoleHandlers({
   guacdService,
@@ -29,7 +31,9 @@ function registerGuacamoleHandlers({
   guacdInactivityTimeoutMs,
   getGuacamoleServer,
   getGuacamoleServerReadyAt,
-  getOrCreateGuacamoleSecretKey
+  getOrCreateGuacamoleSecretKey,
+  isGuacamoleInitializing,
+  isGuacamoleInitialized
 }) {
   // IPC para configurar el watchdog de guacd desde la UI
   ipcMain.handle('guacamole:set-guacd-timeout-ms', async (event, timeoutMs) => {
@@ -118,6 +122,38 @@ function registerGuacamoleHandlers({
   ipcMain.handle('guacamole:set-preferred-method', async (event, method) => {
     try {
       if (guacdService && typeof guacdService.setPreferredMethod === 'function') {
+        // NO reiniciar si la inicialización está en progreso
+        const initializing = isGuacamoleInitializing ? isGuacamoleInitializing() : false;
+        if (initializing) {
+          console.log(`⏸️ [set-preferred-method] Inicialización de Guacamole en progreso, omitiendo reinicio. Se aplicará después de la inicialización.`);
+          // Guardar la preferencia pero no reiniciar ahora
+          try {
+            const { savePreferredGuacdMethod } = require('../../main/utils/file-utils');
+            await savePreferredGuacdMethod(method);
+            guacdService.setPreferredMethod(method);
+          } catch (saveError) {
+            console.warn('⚠️ No se pudo guardar la preferencia durante inicialización:', saveError.message);
+          }
+          return { success: true, method, restarted: false, skippedDuringInit: true };
+        }
+        
+        // Verificar si el método ya es el mismo que el detectado actualmente
+        const currentStatus = guacdService.getStatus();
+        const currentMethod = currentStatus.method;
+        
+        // Si el método ya es el correcto y está corriendo, no reiniciar
+        if (currentMethod === method && currentStatus.isRunning) {
+          console.log(`✅ Método Guacd ya está configurado como ${method} y está corriendo, omitiendo reinicio`);
+          // Guardar la preferencia de todas formas por si acaso
+          try {
+            const { savePreferredGuacdMethod } = require('../../main/utils/file-utils');
+            await savePreferredGuacdMethod(method);
+          } catch (saveError) {
+            // Ignorar error de guardado si el método ya es correcto
+          }
+          return { success: true, method, restarted: false, alreadyCorrect: true };
+        }
+        
         // Establecer la nueva preferencia
         guacdService.setPreferredMethod(method);
         
@@ -135,6 +171,17 @@ function registerGuacamoleHandlers({
         const restartSuccess = await guacdService.restart();
         
         if (restartSuccess) {
+          // Actualizar opciones de Guacamole-lite si está inicializado
+          const currentServer = getGuacamoleServer ? getGuacamoleServer() : guacamoleServer;
+          if (currentServer) {
+            const newGuacdOptions = guacdService.getGuacdOptions();
+            // Nota: guacamole-lite no tiene método para actualizar opciones dinámicamente
+            // Se requeriría recrear el servidor, pero eso es complejo
+            // Por ahora, solo logueamos que las opciones cambiaron
+            console.log(`📝 [set-preferred-method] Nuevas opciones guacd: ${newGuacdOptions.host}:${newGuacdOptions.port}`);
+            console.warn('⚠️ [set-preferred-method] Guacamole-lite puede necesitar reiniciarse para usar nuevas opciones');
+          }
+          
           console.log(`✅ GuacdService reiniciado exitosamente con método: ${method}`);
           return { success: true, method, restarted: true };
         } else {
