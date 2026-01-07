@@ -57,8 +57,6 @@ function registerAllHandlers(dependencies) {
   
   // Registrar handlers de herramientas de red
   registerNetworkToolsHandlers();
-  
-  console.log('✅ Sistema: Handlers registrados');
 }
 
 module.exports = {

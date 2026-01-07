@@ -24,7 +24,6 @@ function getService() {
  * Registra todos los handlers de herramientas de red
  */
 function registerNetworkToolsHandlers() {
-  console.log('🌐 [registerNetworkToolsHandlers] Registrando handlers de herramientas de red...');
 
   // === PING ===
   ipcMain.handle('network-tools:ping', async (event, { host, count = 4, timeout = 5 }) => {
@@ -350,8 +349,6 @@ function registerNetworkToolsHandlers() {
       return { success: false, error: err?.message || 'Error desconocido', interfaces: [] };
     }
   });
-
-  console.log('✅ [registerNetworkToolsHandlers] Handlers de herramientas de red registrados correctamente');
 }
 
 module.exports = {
