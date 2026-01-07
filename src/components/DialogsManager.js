@@ -236,21 +236,21 @@ const DialogsManager = ({
   // Encriptación
   onMasterPasswordConfigured
 }) => {
-  // Debug: verificar que el prop se recibe correctamente
-  useEffect(() => {
-    console.log('DialogsManager - Montado - handleSaveFileConnectionToSidebar:', typeof handleSaveFileConnectionToSidebar, !!handleSaveFileConnectionToSidebar);
-  }, [handleSaveFileConnectionToSidebar]);
+  // Debug: verificar que el prop se recibe correctamente (deshabilitado)
+  // useEffect(() => {
+  //   console.log('DialogsManager - Montado - handleSaveFileConnectionToSidebar:', typeof handleSaveFileConnectionToSidebar, !!handleSaveFileConnectionToSidebar);
+  // }, [handleSaveFileConnectionToSidebar]);
   
-  // Debug: verificar props de folder
-  useEffect(() => {
-    console.log('🔍 DialogsManager - Folder props:', {
-      setFolderIcon: typeof setFolderIcon,
-      setFolderIconValue: setFolderIcon,
-      setFolderColor: typeof setFolderColor,
-      folderIcon,
-      folderColor
-    });
-  }, [setFolderIcon, setFolderColor, folderIcon, folderColor]);
+  // Debug: verificar props de folder (deshabilitado)
+  // useEffect(() => {
+  //   console.log('🔍 DialogsManager - Folder props:', {
+  //     setFolderIcon: typeof setFolderIcon,
+  //     setFolderIconValue: setFolderIcon,
+  //     setFolderColor: typeof setFolderColor,
+  //     folderIcon,
+  //     folderColor
+  //   });
+  // }, [setFolderIcon, setFolderColor, folderIcon, folderColor]);
   
   // Crear handler estable con useCallback para que no cambie entre renders
   const stableFileConnectionHandler = useCallback((fileData) => {

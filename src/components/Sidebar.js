@@ -208,7 +208,7 @@ const Sidebar = React.memo(({
     
     const sshConnections = extractSSHNodes(nodes);
     window.sshConnectionsFromSidebar = sshConnections;
-    console.log(`🔗 [Sidebar] Sincronizadas ${sshConnections.length} conexiones SSH a window`);
+    // console.log(`🔗 [Sidebar] Sincronizadas ${sshConnections.length} conexiones SSH a window`);
     
     // Disparar evento para que AIChatPanel se resincronice
     window.dispatchEvent(new CustomEvent('sidebar-ssh-connections-updated', {

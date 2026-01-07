@@ -27,13 +27,13 @@ const allTranslations = {
   }
 };
 
-// Debug: Verificar que las traducciones se cargaron
-console.log('[i18n] Traducciones cargadas:', {
-  es: Object.keys(allTranslations.es),
-  en: Object.keys(allTranslations.en),
-  esDialogsKeys: Object.keys(allTranslations.es.dialogs || {}),
-  esCommonKeys: Object.keys(allTranslations.es.common || {})
-});
+// Debug: Verificar que las traducciones se cargaron (deshabilitado para reducir logs)
+// console.log('[i18n] Traducciones cargadas:', {
+//   es: Object.keys(allTranslations.es),
+//   en: Object.keys(allTranslations.en),
+//   esDialogsKeys: Object.keys(allTranslations.es.dialogs || {}),
+//   esCommonKeys: Object.keys(allTranslations.es.common || {})
+// });
 
 class I18nService {
   constructor() {
@@ -50,7 +50,7 @@ class I18nService {
     this.listeners = new Set();
     this.isInitialized = false;
     
-    console.log(`[i18n] Constructor - Idioma inicial: ${this.currentLocale}`, Object.keys(this.translations));
+    // console.log(`[i18n] Constructor - Idioma inicial: ${this.currentLocale}`, Object.keys(this.translations));
   }
 
   /**
@@ -61,7 +61,7 @@ class I18nService {
     
     // Ya está inicializado en el constructor, solo marcar como inicializado
     this.isInitialized = true;
-    console.log(`[i18n] Inicializado con idioma: ${this.currentLocale}`);
+    // console.log(`[i18n] Inicializado con idioma: ${this.currentLocale}`);
   }
 
   /**
@@ -101,7 +101,7 @@ class I18nService {
     // Notificar a todos los suscriptores
     this.notifyListeners();
     
-    console.log(`[i18n] Idioma cambiado a: ${locale}`, Object.keys(this.translations));
+    // console.log(`[i18n] Idioma cambiado a: ${locale}`, Object.keys(this.translations));
   }
 
   /**
@@ -146,9 +146,9 @@ class I18nService {
 
       // Si no se encontró, devolver la clave
       if (value === undefined || value === null) {
-        // Solo mostrar warning en desarrollo
-        console.warn(`[i18n] Traducción faltante: ${key} (${this.currentLocale})`);
-        console.warn(`[i18n] Namespace: ${namespace}, Path: ${path.join('.')}, Traducciones disponibles:`, Object.keys(this.translations[namespace] || {}));
+        // Solo mostrar warning en desarrollo (reducido para evitar spam)
+        // console.warn(`[i18n] Traducción faltante: ${key} (${this.currentLocale})`);
+        // console.warn(`[i18n] Namespace: ${namespace}, Path: ${path.join('.')}, Traducciones disponibles:`, Object.keys(this.translations[namespace] || {}));
         return key;
       }
 
@@ -181,7 +181,7 @@ class I18nService {
    * Notifica a todos los suscriptores de un cambio
    */
   notifyListeners() {
-    console.log(`[i18n] Notificando a ${this.listeners.size} listeners`);
+    // console.log(`[i18n] Notificando a ${this.listeners.size} listeners`);
     this.listeners.forEach(callback => {
       try {
         callback(this.currentLocale);

@@ -97,5 +97,5 @@ const debugConversations = {
 
 // Exportar para usar en consola
 window.debugConversations = debugConversations;
-console.log('✅ debugConversations cargado. Usa: debugConversations.inspect()');
+// console.log('✅ debugConversations cargado. Usa: debugConversations.inspect()');
 
