@@ -913,9 +913,15 @@ class GuacdService {
 
         // Verificar si guacd está disponible, e instalarlo automáticamente si no existe
         let guacdAvailable = false;
-        await new Promise((r) => wslExec(['sh', '-lc', 'command -v guacd >/dev/null 2>&1 && echo YES || echo NO'], (e, out) => {
+        let guacdPath = null;
+        await new Promise((r) => wslExec(['sh', '-lc', 'command -v guacd'], (e, out) => {
           const result = String(out || '').trim();
-          guacdAvailable = result === 'YES';
+          if (result && !e) {
+            guacdAvailable = true;
+            guacdPath = result;
+          } else {
+            guacdAvailable = false;
+          }
           r();
         }));
         
@@ -947,6 +953,34 @@ class GuacdService {
 
         // NO crear directorio en WSL - se usará la carpeta del host convertida con toWslPath()
 
+        // Verificar si el puerto está ocupado dentro de WSL antes de intentar iniciar
+        let portInUse = false;
+        await new Promise((r) => wslExec(['sh', '-lc', `ss -tln 2>/dev/null | grep -E ":${this.port}\\b" >/dev/null && echo YES || echo NO`], (e, out) => {
+          const result = String(out || '').trim();
+          portInUse = result === 'YES';
+          r();
+        }));
+        
+        if (portInUse) {
+          console.log(`⚠️ El puerto ${this.port} está ocupado en WSL. Intentando detener procesos guacd existentes...`);
+          // Intentar detener procesos guacd existentes
+          await new Promise((r) => wslExec(['sh', '-lc', 'pkill -9 guacd || true'], () => r()));
+          // Esperar un momento para que el puerto se libere
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Verificar nuevamente
+          await new Promise((r) => wslExec(['sh', '-lc', `ss -tln 2>/dev/null | grep -E ":${this.port}\\b" >/dev/null && echo YES || echo NO`], (e, out) => {
+            const result = String(out || '').trim();
+            portInUse = result === 'YES';
+            r();
+          }));
+          if (portInUse) {
+            console.error(`❌ El puerto ${this.port} sigue ocupado en WSL después de intentar detener guacd.`);
+            console.error('   Por favor, verifica manualmente con: wsl -- ss -tln | grep 4822');
+            resolve(false);
+            return;
+          }
+        }
+
         // WSL2 usa red virtualizada con NAT. Para que funcione localhost forwarding:
         // - guacd debe escuchar en 0.0.0.0 dentro de WSL (todas las interfaces)
         // - Windows conecta via localhost:4822 (WSL2 reenvía automáticamente)
@@ -958,8 +992,10 @@ class GuacdService {
         
         console.log(`🔧 [WSL] guacd bind: ${bindIp}:${this.port} → Windows accede via ${this.host}:${this.port}`);
         // IMPORTANTE (WSL): no usar `-f` (foreground) + `&` desde `sh -lc`, porque el proceso puede morir al cerrar el shell.
-        // Dejamos que guacd demonice normalmente para que permanezca vivo.
-        const startCmd = `/usr/sbin/guacd -b ${bindIp} -l ${this.port} >/var/log/guacd-wsl.log 2>&1 || echo "__GUACD_START_FAILED__"`;
+        // Dejamos que guacd demonize normalmente para que permanezca vivo.
+        // Asegurar que el directorio de logs existe y usar la ruta correcta de guacd
+        const guacdCmd = guacdPath || '/usr/sbin/guacd';
+        const startCmd = `mkdir -p /var/log && ${guacdCmd} -b ${bindIp} -l ${this.port} >/var/log/guacd-wsl.log 2>&1 || echo "__GUACD_START_FAILED__"`;
         wslExec(['sh', '-lc', startCmd], async (startErr, startOut) => {
           if (startErr) {
             console.log('❌ No se pudo iniciar guacd en WSL:', startErr.message);
@@ -968,7 +1004,21 @@ class GuacdService {
           }
           const outStr = (startOut || '').toString();
           if (outStr.includes('__GUACD_START_FAILED__')) {
-            console.log('❌ No se pudo iniciar guacd en WSL (ver /var/log/guacd-wsl.log)');
+            console.log('❌ No se pudo iniciar guacd en WSL. Leyendo log de errores...');
+            // Leer el log para mostrar el error real
+            await new Promise((r) => wslExec(['sh', '-lc', 'cat /var/log/guacd-wsl.log 2>/dev/null || echo "No se pudo leer el log"'], (logErr, logOut) => {
+              const logContent = String(logOut || '').trim();
+              if (logContent && logContent !== 'No se pudo leer el log') {
+                console.error('📋 Error de guacd en WSL:');
+                console.error(logContent);
+              } else {
+                console.error('❌ No se pudo leer el log de errores. Posibles causas:');
+                console.error('   - guacd no está instalado correctamente');
+                console.error('   - Permisos insuficientes');
+                console.error('   - El puerto 4822 está ocupado');
+              }
+              r();
+            }));
             resolve(false);
             return;
           }
