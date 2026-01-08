@@ -454,10 +454,108 @@ class GuacdService {
     // Mutex: evitar inicializaciones concurrentes
     this._initializePromise = null;
     this.driveHostDir = ensureDriveHostDir();
+    // Health check interval para WSL (cada 30 segundos)
+    this._healthCheckInterval = null;
+    this._lastHealthCheck = Date.now();
+    this._healthCheckFailures = 0;
   }
 
   _debug(...args) {
     if (this.debug) console.log(...args);
+  }
+
+  /**
+   * Inicia el health check periódico para WSL
+   * Verifica que guacd sigue vivo y accesible
+   */
+  _startHealthCheck() {
+    // Solo para WSL
+    if (this.detectedMethod !== 'wsl') return;
+    
+    // Limpiar intervalo anterior si existe
+    if (this._healthCheckInterval) {
+      clearInterval(this._healthCheckInterval);
+    }
+    
+    console.log('🏥 [GuacdService] Health check para WSL iniciado (cada 30s)');
+    
+    this._healthCheckInterval = setInterval(async () => {
+      try {
+        // Verificar si el puerto sigue accesible
+        const isAvailable = await this.isPortAvailable(this.port);
+        
+        if (isAvailable) {
+          // Puerto disponible = guacd no está escuchando
+          this._healthCheckFailures++;
+          console.warn(`⚠️ [GuacdService] Health check fallido (${this._healthCheckFailures}/3): guacd no responde en puerto ${this.port}`);
+          
+          if (this._healthCheckFailures >= 3) {
+            console.error('🚨 [GuacdService] guacd en WSL dejó de responder. Reiniciando...');
+            this._healthCheckFailures = 0;
+            
+            // Intentar reiniciar guacd en WSL
+            try {
+              await this._restartGuacdInWSL();
+            } catch (e) {
+              console.error('❌ [GuacdService] Error reiniciando guacd:', e?.message);
+            }
+          }
+        } else {
+          // Puerto ocupado = guacd está escuchando
+          if (this._healthCheckFailures > 0) {
+            console.log('✅ [GuacdService] Health check OK: guacd respondiendo');
+          }
+          this._healthCheckFailures = 0;
+          this._lastHealthCheck = Date.now();
+        }
+      } catch (e) {
+        console.warn('⚠️ [GuacdService] Error en health check:', e?.message);
+      }
+    }, 30000); // Cada 30 segundos
+  }
+  
+  /**
+   * Detiene el health check periódico
+   */
+  _stopHealthCheck() {
+    if (this._healthCheckInterval) {
+      clearInterval(this._healthCheckInterval);
+      this._healthCheckInterval = null;
+      console.log('🏥 [GuacdService] Health check detenido');
+    }
+  }
+  
+  /**
+   * Reinicia guacd en WSL si dejó de responder
+   */
+  async _restartGuacdInWSL() {
+    if (this.detectedMethod !== 'wsl') return;
+    
+    const wslExec = (args, cb) => execFile('wsl.exe', ['-u', 'root', '--', ...args], { encoding: 'utf8' }, cb);
+    
+    // Matar procesos guacd existentes
+    await new Promise((r) => wslExec(['sh', '-lc', 'pkill -9 guacd || true'], () => r()));
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Reiniciar guacd
+    const bindIp = '0.0.0.0';
+    const guacdCmd = '/usr/sbin/guacd';
+    const startCmd = `${guacdCmd} -b ${bindIp} -l ${this.port} >/var/log/guacd-wsl.log 2>&1`;
+    
+    await new Promise((r) => wslExec(['sh', '-lc', startCmd], () => r()));
+    
+    // Esperar a que el puerto esté escuchando
+    const waitReadyCmd = `for i in $(seq 1 30); do ss -tln 2>/dev/null | grep -E ":${this.port}\\b" && echo READY && break; sleep 0.2; done`;
+    await new Promise((r) => wslExec(['sh', '-lc', waitReadyCmd], () => r()));
+    
+    // Verificar que esté accesible
+    const isAvailable = await this.isPortAvailable(this.port);
+    if (!isAvailable) {
+      console.log('✅ [GuacdService] guacd reiniciado correctamente en WSL');
+      this.isRunning = true;
+    } else {
+      console.error('❌ [GuacdService] No se pudo reiniciar guacd en WSL');
+    }
   }
 
   /**
@@ -523,6 +621,12 @@ class GuacdService {
             const finalCheck = await this.isPortAvailable(this.port);
             if (!finalCheck) {
               console.log(`🔌 Conectado con ${methodLabel} (preexistente)`);
+              
+              // Iniciar health check para WSL preexistente
+              if (this.detectedMethod === 'wsl') {
+                this._startHealthCheck();
+              }
+              
               return true;
             } else {
               console.log('⚠️ El proceso parece haberse detenido, continuando con inicio normal...');
@@ -1087,6 +1191,10 @@ class GuacdService {
             this.detectedMethod = 'wsl';
             this.guacdProcess = null;
             console.log(`✅ [WSL] guacd accesible desde Windows via ${this.host}:${this.port}`);
+            
+            // Iniciar health check periódico para WSL
+            this._startHealthCheck();
+            
             resolve(true);
           } else {
             console.log('❌ [WSL] guacd no accesible desde Windows después de esperar');
@@ -1147,6 +1255,9 @@ class GuacdService {
    * Detiene el servicio guacd
    */
   async stop() {
+    // Detener health check si está activo
+    this._stopHealthCheck();
+    
     // Intentar detener aunque isRunning sea false (p.ej. proceso externo/preexistente).
     if (!this.isRunning && !this.detectedMethod && !this.guacdProcess) {
       return;

@@ -123,7 +123,7 @@ try {
   });
 } catch (_) {}
 
-const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor } = require('electron');
 const path = require('path');
 const url = require('url');
 
@@ -1135,6 +1135,73 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
   if (mainWindow === null) {
     createWindow();
+  }
+});
+
+// ============================================================================
+// POWER MONITOR: Detectar suspensión/reanudación del sistema
+// Cuando Windows apaga las pantallas o entra en suspensión, WSL puede suspenderse
+// Al reanudar, notificamos al frontend para que verifique/reconecte sesiones RDP
+// ============================================================================
+let systemSuspendedAt = null;
+
+powerMonitor.on('suspend', () => {
+  console.log('💤 [PowerMonitor] Sistema entrando en suspensión...');
+  systemSuspendedAt = Date.now();
+  
+  // Notificar al renderer que el sistema se va a suspender
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('system:suspend');
+  }
+});
+
+powerMonitor.on('resume', async () => {
+  const suspendDuration = systemSuspendedAt ? Math.round((Date.now() - systemSuspendedAt) / 1000) : 0;
+  console.log(`☀️ [PowerMonitor] Sistema reanudado después de ${suspendDuration}s de suspensión`);
+  systemSuspendedAt = null;
+  
+  // Si WSL está en uso, puede necesitar tiempo para despertar
+  // Esperar un poco antes de notificar al frontend
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
+  // Verificar si guacd (WSL) sigue accesible
+  if (guacdService && guacdService.getStatus) {
+    const status = guacdService.getStatus();
+    if (status.method === 'wsl') {
+      console.log('🔄 [PowerMonitor] Verificando que guacd en WSL siga accesible...');
+      try {
+        const isAvailable = await guacdService.isPortAvailable(status.port);
+        if (isAvailable) {
+          // Puerto disponible = guacd no está escuchando, puede haberse suspendido
+          console.warn('⚠️ [PowerMonitor] guacd en WSL parece suspendido, intentando reiniciar...');
+          await guacdService.restart();
+        } else {
+          console.log('✅ [PowerMonitor] guacd en WSL sigue accesible');
+        }
+      } catch (e) {
+        console.warn('⚠️ [PowerMonitor] Error verificando guacd:', e?.message);
+      }
+    }
+  }
+  
+  // Notificar al renderer que el sistema se ha reanudado
+  // El frontend debería verificar las conexiones RDP activas
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('system:resume', { suspendDuration });
+  }
+});
+
+powerMonitor.on('lock-screen', () => {
+  console.log('🔒 [PowerMonitor] Pantalla bloqueada');
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('system:lock-screen');
+  }
+});
+
+powerMonitor.on('unlock-screen', () => {
+  console.log('🔓 [PowerMonitor] Pantalla desbloqueada');
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('system:unlock-screen');
   }
 });
 
