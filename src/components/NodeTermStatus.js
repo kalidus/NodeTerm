@@ -766,17 +766,17 @@ const NodeTermStatus = ({
 	const compactBar = React.useMemo(() => {
 		const labelFontSizeValue = homeTabFontSize ? `${homeTabFontSize * 0.65}px` : `${0.65 * scaleFactor}rem`;
 		return {
-			containerPadding: '0.5rem 0.9rem',
+			containerPadding: '0.2rem 0.9rem',
 			containerGap: `${1.0 * scaleFactor}rem`,
-			buttonSize: 40 * scaleFactor,
-			buttonRadius: 8 * scaleFactor,
-			buttonIconSize: `${1.0 * scaleFactor}rem`,
+			buttonSize: 34 * scaleFactor,
+			buttonRadius: 7 * scaleFactor,
+			buttonIconSize: `${0.85 * scaleFactor}rem`,
 			labelFontSize: labelFontSizeValue,
 			labelLineHeight: '1.05',
 			labelFontFamily: homeTabFont || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif',
-			separatorHeight: 56 * scaleFactor,
-			serviceSize: 36 * scaleFactor,
-			serviceIconSize: `${0.85 * scaleFactor}rem`,
+			separatorHeight: 48 * scaleFactor,
+			serviceSize: 30 * scaleFactor,
+			serviceIconSize: `${0.72 * scaleFactor}rem`,
 			labelMaxWidth: 52 * scaleFactor
 		};
 	}, [scaleFactor, homeTabFont, homeTabFontSize]);
@@ -865,7 +865,7 @@ const NodeTermStatus = ({
 				display: 'flex',
 				justifyContent: 'center',
 				alignItems: 'center',
-				padding: '0.25rem 0.5rem',
+				padding: '0.1rem 0.5rem',
 				boxSizing: 'border-box'
 			}}>
 				{/* Estilos globales para animaciones */}
