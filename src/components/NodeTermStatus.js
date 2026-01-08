@@ -1609,7 +1609,7 @@ const NodeTermStatus = ({
 										>
 											<div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
 												<FaUbuntu style={{
-													color: '#E95420',
+													color: '#FFFFFF',
 													fontSize: (() => {
 														let baseIconSizePx = 20;
 														const iconSizeStr = compactBar.buttonIconSize;
