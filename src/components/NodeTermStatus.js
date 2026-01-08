@@ -54,11 +54,15 @@ const NodeTermStatus = ({
 	const [availableTerminals, setAvailableTerminals] = useState([]);
 	const [dockerMenuOpen, setDockerMenuOpen] = useState(false);
 	const [dockerMenuPosition, setDockerMenuPosition] = useState({ top: 0, left: 0 });
+	const [ubuntuMenuOpen, setUbuntuMenuOpen] = useState(false);
+	const [ubuntuMenuPosition, setUbuntuMenuPosition] = useState({ top: 0, left: 0 });
+	const [ubuntuDistributions, setUbuntuDistributions] = useState([]);
 	const syncManagerRef = useRef(null);
 	const secureStorageRef = useRef(null);
 	const [scaleFactor, setScaleFactor] = useState(1); // Factor de escala para reducir iconos
 	const barContainerRef = useRef(null);
 	const dockerButtonRef = useRef(null);
+	const ubuntuButtonRef = useRef(null);
 
 	useEffect(() => {
 		// Inicializar managers
@@ -404,6 +408,32 @@ const NodeTermStatus = ({
 		};
 	}, [dockerMenuOpen]);
 
+	// Cerrar menú Ubuntu al hacer clic fuera
+	useEffect(() => {
+		if (!ubuntuMenuOpen) return;
+		
+		const handleClickOutside = (event) => {
+			const target = event.target;
+			// Verificar si el clic fue fuera del menú y del botón
+			const ubuntuMenu = target.closest('[data-ubuntu-menu]');
+			const ubuntuButton = target.closest('[data-ubuntu-button]');
+			
+			if (!ubuntuMenu && !ubuntuButton) {
+				setUbuntuMenuOpen(false);
+			}
+		};
+		
+		// Agregar listener después de un pequeño delay para evitar que se cierre inmediatamente
+		const timeoutId = setTimeout(() => {
+			window.addEventListener('click', handleClickOutside, true);
+		}, 100);
+		
+		return () => {
+			clearTimeout(timeoutId);
+			window.removeEventListener('click', handleClickOutside, true);
+		};
+	}, [ubuntuMenuOpen]);
+
 	// Función para obtener colores según la categoría
 	const getColorForCategory = (category) => {
 		const colorMap = {
@@ -598,17 +628,21 @@ const NodeTermStatus = ({
 			// Separar distribuciones para ordenarlas correctamente
 			// console.log('[NodeTermStatus] Distribuciones WSL detectadas:', wslDistributions.map(d => ({ name: d.name, label: d.label })));
 			
-			const basicUbuntu = wslDistributions.find(distro => {
+			// Recopilar todas las distribuciones Ubuntu (básico y con versión)
+			const allUbuntuDistros = wslDistributions.filter(distro => {
 				const isUbuntu = distro.name && distro.name.toLowerCase().includes('ubuntu');
-				const hasVersion = distro.label && (distro.label.includes('24.04') || distro.label.includes('22.04') || distro.label.includes('20.04'));
-				return isUbuntu && !hasVersion;
-			});
+				return isUbuntu;
+			}).map(distro => ({
+				label: distro.label,
+				value: `wsl-${distro.name}`,
+				icon: distro.icon,
+				color: getColorForCategory(distro.category),
+				action: () => handleOpenTerminal(`wsl-${distro.name}`, distro),
+				distroInfo: distro
+			}));
 			
-			const ubuntuWithVersion = wslDistributions.filter(distro => {
-				const isUbuntu = distro.name && distro.name.toLowerCase().includes('ubuntu');
-				const hasVersion = distro.label && (distro.label.includes('24.04') || distro.label.includes('22.04') || distro.label.includes('20.04'));
-				return isUbuntu && hasVersion;
-			});
+			// Guardar distribuciones Ubuntu en estado separado para el menú agrupado
+			setUbuntuDistributions(allUbuntuDistros);
 			
 			const otherDistros = wslDistributions.filter(distro => {
 				const isUbuntu = distro.name && distro.name.toLowerCase().includes('ubuntu');
@@ -616,35 +650,7 @@ const NodeTermStatus = ({
 				return !isUbuntu && !isBasicDebian;
 			});
 			
-			// console.log('[NodeTermStatus] Ubuntu básico:', basicUbuntu);
-			// console.log('[NodeTermStatus] Ubuntu con versión:', ubuntuWithVersion);
-			// console.log('[NodeTermStatus] Otras distribuciones:', otherDistros);
-			
-			// 1. Agregar Ubuntu básico (sin versión específica) - justo después de Cygwin
-			if (basicUbuntu) {
-				terminals.push({
-					label: basicUbuntu.label || 'Ubuntu',
-					value: `wsl-${basicUbuntu.name}`,
-					icon: basicUbuntu.icon,
-					color: getColorForCategory(basicUbuntu.category),
-					action: () => handleOpenTerminal(`wsl-${basicUbuntu.name}`, basicUbuntu),
-					distroInfo: basicUbuntu
-				});
-			}
-			
-			// 2. Agregar Ubuntu con versión (24.04, 22.04, etc.)
-			ubuntuWithVersion.forEach(distro => {
-				terminals.push({
-					label: distro.label,
-					value: `wsl-${distro.name}`,
-					icon: distro.icon,
-					color: getColorForCategory(distro.category),
-					action: () => handleOpenTerminal(`wsl-${distro.name}`, distro),
-					distroInfo: distro
-				});
-			});
-			
-			// 3. Agregar el resto de distribuciones (Kali Linux, etc.)
+			// Agregar el resto de distribuciones (Kali Linux, etc.) - Ubuntu se maneja por separado
 			otherDistros.forEach(distro => {
 				terminals.push({
 					label: distro.label,
@@ -849,7 +855,7 @@ const NodeTermStatus = ({
 			resizeObserver.disconnect();
 			window.removeEventListener('resize', throttledAdjustScale);
 		};
-	}, [horizontal, compact, availableTerminals.length, dockerContainers.length]);
+	}, [horizontal, compact, availableTerminals.length, dockerContainers.length, ubuntuDistributions.length]);
 
 	// Layout horizontal compacto - LAYOUT 3: BARRA SUPERIOR CENTRADA
 	if (horizontal && compact) {
@@ -1524,6 +1530,243 @@ const NodeTermStatus = ({
 										</span>
 									</div>
 								))}
+
+								{/* Botón Ubuntu si hay distribuciones */}
+								{ubuntuDistributions.length > 0 && (
+									<div 
+										data-ubuntu-button
+										style={{
+											display: 'flex',
+											flexDirection: 'column',
+											alignItems: 'center',
+											gap: '0.25rem',
+											flexShrink: 0,
+											position: 'relative',
+											zIndex: ubuntuMenuOpen ? 10000 : 'auto'
+										}}
+									>
+										<button
+											ref={ubuntuButtonRef}
+											data-ubuntu-button
+											type="button"
+											title={`Ubuntu (${ubuntuDistributions.length} distribución${ubuntuDistributions.length > 1 ? 'es' : ''})`}
+											onClick={(e) => {
+												e.preventDefault();
+												e.stopPropagation();
+												if (ubuntuDistributions.length === 1) {
+													// Si solo hay una distribución, abrirla directamente
+													ubuntuDistributions[0].action();
+												} else {
+													// Si hay múltiples, calcular posición y abrir/cerrar el menú
+													if (ubuntuButtonRef.current) {
+														const rect = ubuntuButtonRef.current.getBoundingClientRect();
+														const newPosition = {
+															top: rect.bottom + 8,
+															left: rect.left + (rect.width / 2)
+														};
+														setUbuntuMenuPosition(newPosition);
+													}
+													setUbuntuMenuOpen(!ubuntuMenuOpen);
+												}
+											}}
+											style={{
+												cursor: 'pointer',
+												display: 'flex',
+												alignItems: 'center',
+												justifyContent: 'center',
+												width: `${compactBar.buttonSize}px`,
+												height: `${compactBar.buttonSize}px`,
+												padding: '0',
+												borderRadius: `${compactBar.buttonRadius}px`,
+												background: 'transparent',
+												border: 'none',
+												boxShadow: 'none',
+												transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+												position: 'relative',
+												overflow: 'visible'
+											}}
+											onMouseEnter={(e) => {
+												if (!ubuntuMenuOpen) {
+													e.currentTarget.classList.add('terminal-button-hover');
+													e.currentTarget.style.transform = 'scale(1.1)';
+													const ubuntuIcon = e.currentTarget.querySelector('svg');
+													if (ubuntuIcon) {
+														ubuntuIcon.style.transition = 'all 0.3s ease';
+														ubuntuIcon.style.filter = 'drop-shadow(0 0 8px #E95420) drop-shadow(0 0 4px #E95420)';
+													}
+												}
+											}}
+											onMouseLeave={(e) => {
+												if (!ubuntuMenuOpen) {
+													e.currentTarget.classList.remove('terminal-button-hover');
+													e.currentTarget.style.transform = 'scale(1)';
+													const ubuntuIcon = e.currentTarget.querySelector('svg');
+													if (ubuntuIcon) {
+														ubuntuIcon.style.filter = 'none';
+													}
+												}
+											}}
+										>
+											<div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+												<FaUbuntu style={{
+													color: '#E95420',
+													fontSize: (() => {
+														let baseIconSizePx = 20;
+														const iconSizeStr = compactBar.buttonIconSize;
+														if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+															const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+															baseIconSizePx = Math.max(remValue * 16, 20);
+														} else if (typeof iconSizeStr === 'number') {
+															baseIconSizePx = Math.max(iconSizeStr, 20);
+														}
+														return `${Math.round(baseIconSizePx * 1.4)}px`;
+													})()
+												}} />
+												{/* Badge con número de distribuciones */}
+												{ubuntuDistributions.length > 1 && (
+													<span style={{
+														position: 'absolute',
+														top: '-4px',
+														right: '-6px',
+														background: 'linear-gradient(135deg, #E95420 0%, #c4451a 100%)',
+														color: '#ffffff',
+														fontSize: '0.55rem',
+														fontWeight: '700',
+														borderRadius: '50%',
+														minWidth: '14px',
+														height: '14px',
+														display: 'flex',
+														alignItems: 'center',
+														justifyContent: 'center',
+														border: '1.5px solid rgba(255,255,255,0.3)',
+														boxShadow: '0 2px 4px rgba(0,0,0,0.3), 0 0 6px rgba(233, 84, 32, 0.4)',
+														zIndex: 1
+													}}>
+														{ubuntuDistributions.length}
+													</span>
+												)}
+											</div>
+										</button>
+										<span style={{
+											fontSize: compactBar.labelFontSize,
+											fontWeight: '500',
+											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+											textAlign: 'center',
+											lineHeight: compactBar.labelLineHeight
+										}}>
+											Ubuntu
+										</span>
+										
+										{/* Menú desplegable de distribuciones Ubuntu - Renderizado con Portal */}
+										{ubuntuMenuOpen && ubuntuDistributions.length > 1 && typeof document !== 'undefined' && document.body && (() => {
+											return createPortal(
+												<>
+													{/* Overlay para cerrar al hacer clic fuera */}
+													<div 
+														style={{
+															position: 'fixed',
+															top: 0,
+															left: 0,
+															right: 0,
+															bottom: 0,
+															zIndex: 9998,
+															background: 'rgba(0,0,0,0.1)'
+														}}
+														onClick={() => {
+															setUbuntuMenuOpen(false);
+														}}
+													/>
+													<div 
+														data-ubuntu-menu
+														style={{
+															position: 'fixed',
+															top: `${ubuntuMenuPosition.top}px`,
+															left: `${ubuntuMenuPosition.left}px`,
+															transform: 'translateX(-50%)',
+															background: `linear-gradient(135deg,
+																rgba(16, 20, 28, 1) 0%,
+																rgba(16, 20, 28, 0.98) 100%)`,
+															backdropFilter: 'blur(12px) saturate(140%)',
+															WebkitBackdropFilter: 'blur(12px) saturate(140%)',
+															border: `3px solid rgba(233, 84, 32, 0.9)`,
+															borderRadius: '12px',
+															boxShadow: '0 8px 32px rgba(0,0,0,0.8), 0 0 20px rgba(233, 84, 32, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
+															padding: '0.75rem',
+															minWidth: '200px',
+															zIndex: 10000,
+															display: 'flex',
+															flexDirection: 'column',
+															gap: '0.5rem',
+															maxHeight: '400px',
+															overflowY: 'auto',
+															pointerEvents: 'auto',
+															visibility: 'visible',
+															opacity: 1
+														}}
+														onClick={(e) => {
+															e.stopPropagation();
+															e.preventDefault();
+														}}
+														onMouseDown={(e) => e.stopPropagation()}
+													>
+												<div style={{
+													padding: '0.5rem',
+													fontSize: '0.7rem',
+													fontWeight: '600',
+													color: themeColors.textPrimary || '#fff',
+													borderBottom: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+													marginBottom: '0.25rem'
+												}}>
+													Distribuciones Ubuntu ({ubuntuDistributions.length})
+												</div>
+												{ubuntuDistributions.map((distro, idx) => (
+													<button
+														key={idx}
+														onClick={() => {
+															distro.action();
+															setUbuntuMenuOpen(false);
+														}}
+														style={{
+															padding: '0.5rem 0.75rem',
+															borderRadius: '6px',
+															background: 'rgba(255,255,255,0.05)',
+															border: '1px solid transparent',
+															color: themeColors.textPrimary || '#fff',
+															fontSize: '0.65rem',
+															textAlign: 'left',
+															cursor: 'pointer',
+															transition: 'all 0.2s ease',
+															display: 'flex',
+															alignItems: 'center',
+															gap: '0.5rem'
+														}}
+														onMouseEnter={(e) => {
+															e.currentTarget.style.background = 'rgba(233, 84, 32, 0.2)';
+															e.currentTarget.style.border = '1px solid rgba(233, 84, 32, 0.4)';
+														}}
+														onMouseLeave={(e) => {
+															e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+															e.currentTarget.style.border = '1px solid transparent';
+														}}
+													>
+														<FaUbuntu style={{ color: '#E95420', fontSize: '0.9rem', flexShrink: 0 }} />
+														<span style={{ 
+															flex: 1, 
+															overflow: 'hidden', 
+															textOverflow: 'ellipsis', 
+															whiteSpace: 'nowrap' 
+														}}>
+															{distro.label || `Ubuntu ${idx + 1}`}
+														</span>
+													</button>
+												))}
+												</div>
+											</>,
+											document.body
+											);
+										})()}
+									</div>
+								)}
 
 								{/* Botón Docker si hay contenedores */}
 								{dockerContainers.length > 0 && (
