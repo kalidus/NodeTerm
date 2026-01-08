@@ -939,15 +939,23 @@ const SettingsDialog = ({
     localStorage.setItem('rdp_resize_ack_timeout_ms', String(Math.max(600, Math.min(5000, rdpResizeAckTimeoutMs || 1500))));
   }, [rdpResizeAckTimeoutMs]);
 
-  // Sincronizar watchdog de guacd con el proceso principal vía IPC
+  // Sincronizar watchdog de guacd con el proceso principal vía IPC al montar
+  // Envía el valor de localStorage al backend para asegurar sincronización
   useEffect(() => {
     try {
       if (window?.electron?.ipcRenderer) {
-        window.electron.ipcRenderer.invoke('guacamole:get-guacd-timeout-ms').then((res) => {
-          if (res && res.success && typeof res.value === 'number') {
-            setRdpGuacdInactivityMs(res.value);
-          }
-        }).catch(() => {});
+        // Leer valor actual de localStorage (Umbral de actividad de sesión)
+        const localStorageMs = parseInt(localStorage.getItem('rdp_freeze_timeout_ms') || '7200000', 10);
+        const validMs = Math.max(60000, localStorageMs);
+        
+        // Enviar al backend para sincronizar
+        window.electron.ipcRenderer.invoke('guacamole:set-guacd-timeout-ms', validMs)
+          .then((res) => {
+            if (res && res.success) {
+              setRdpGuacdInactivityMs(validMs);
+            }
+          })
+          .catch(() => {});
       }
     } catch {}
   }, []);

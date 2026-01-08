@@ -7,6 +7,7 @@
  */
 
 const { ipcMain } = require('electron');
+const { saveGuacdInactivityTimeout } = require('../utils/file-utils');
 
 /**
  * Registra todos los handlers IPC de Guacamole
@@ -45,6 +46,15 @@ function registerGuacamoleHandlers({
       
       // Actualizar la variable global
       guacdInactivityTimeoutMs = parsed;
+      
+      // Persistir el valor para que se cargue al reiniciar la app
+      try {
+        await saveGuacdInactivityTimeout(parsed);
+        const timeoutMinutes = Math.round(parsed / 60000);
+        console.log(`💾 [Guacamole] Timeout de inactividad guardado: ${timeoutMinutes} minutos`);
+      } catch (saveError) {
+        console.warn('⚠️ No se pudo persistir el timeout de guacd:', saveError?.message);
+      }
       
       // Si el servicio guacd está activo, actualizar su configuración
       if (guacdService && typeof guacdService.setInactivityTimeout === 'function') {

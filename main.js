@@ -306,8 +306,9 @@ let guacamoleServer = null;
 let guacamoleServerReadyAt = 0; // timestamp when guacamole-lite websocket server became ready
 // Track active guacamole client connections
 const activeGuacamoleConnections = new Set();
-// Watchdog configurable para inactividad de guacd (ms). 0 = desactivado. Por defecto 1h
-let guacdInactivityTimeoutMs = 3600000;
+// Watchdog configurable para inactividad de guacd (ms). 0 = desactivado.
+// Por defecto 2h (120 min) = sincronizado con el Umbral de actividad de sesión del frontend
+let guacdInactivityTimeoutMs = 7200000;
 // Flag para evitar inicialización múltiple
 let guacamoleInitializing = false;
 let guacamoleInitialized = false;
@@ -514,13 +515,27 @@ async function initializeGuacamoleServices() {
     };
 
     // Configurar watchdog de inactividad para guacd (lado backend) de forma configurable
-    // GUACD_INACTIVITY_TIMEOUT_MS: 0 para desactivar, valor en ms para activar (por defecto 1h)
+    // Prioridad: 1) Variable de entorno, 2) Valor persistido, 3) Valor por defecto (120 min)
     const envTimeoutRaw = process.env.GUACD_INACTIVITY_TIMEOUT_MS;
-    // 1 hora por defecto si no se ha cambiado por IPC
     if (typeof envTimeoutRaw === 'string' && envTimeoutRaw.trim() !== '') {
+      // Usar variable de entorno si está definida
       const parsed = parseInt(envTimeoutRaw, 10);
       if (!Number.isNaN(parsed) && parsed >= 0) {
         guacdInactivityTimeoutMs = parsed;
+        console.log(`🕐 [Guacamole] Timeout de inactividad desde env: ${Math.round(guacdInactivityTimeoutMs / 60000)} minutos`);
+      }
+    } else {
+      // Cargar valor persistido (sincronizado con Umbral de actividad de sesión del frontend)
+      try {
+        const savedTimeout = await loadGuacdInactivityTimeout();
+        if (savedTimeout !== null && savedTimeout >= 0) {
+          guacdInactivityTimeoutMs = savedTimeout;
+          console.log(`🕐 [Guacamole] Timeout de inactividad cargado: ${Math.round(guacdInactivityTimeoutMs / 60000)} minutos`);
+        } else {
+          console.log(`🕐 [Guacamole] Timeout de inactividad por defecto: ${Math.round(guacdInactivityTimeoutMs / 60000)} minutos`);
+        }
+      } catch (e) {
+        console.log(`🕐 [Guacamole] Timeout de inactividad por defecto: ${Math.round(guacdInactivityTimeoutMs / 60000)} minutos`);
       }
     }
     // Crear servidor Guacamole-lite
@@ -635,7 +650,12 @@ async function initializeGuacamoleServices() {
 
 // === Preferencias Guacd (persistencia en userData) ===
 // Funciones movidas a src/main/utils/file-utils.js
-const { loadPreferredGuacdMethod, savePreferredGuacdMethod } = require('./src/main/utils/file-utils');
+const { 
+  loadPreferredGuacdMethod, 
+  savePreferredGuacdMethod,
+  loadGuacdInactivityTimeout,
+  saveGuacdInactivityTimeout
+} = require('./src/main/utils/file-utils');
 
 // Handlers de Guacamole movidos a src/main/handlers/guacamole-handlers.js
 
