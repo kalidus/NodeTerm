@@ -166,6 +166,45 @@ const GuacdService = require('./src/services/GuacdService');
 const AnythingLLMService = require('./src/services/AnythingLLMService');
 const OpenWebUIService = require('./src/services/OpenWebUIService');
 const GuacamoleLite = require('guacamole-lite');
+
+// ============================================================================
+// PARCHE CRÍTICO: Desactivar watchdog de 10s de guacamole-lite y hacer
+// lastActivity bidireccional (se actualiza tanto al enviar como al recibir)
+// Esto evita que las sesiones RDP se congelen prematuramente
+// ============================================================================
+(() => {
+  try {
+    const GuacdClient = require('guacamole-lite/lib/GuacdClient.js');
+    const originalConstructor = GuacdClient.prototype.constructor;
+    
+    // Guardar el método send original
+    const originalSend = GuacdClient.prototype.send;
+    
+    // Parchar el método send para actualizar lastActivity al ENVIAR datos
+    GuacdClient.prototype.send = function(data, afterOpened = false) {
+      // Actualizar lastActivity cuando el cliente ENVÍA datos (bidireccional)
+      this.lastActivity = Date.now();
+      return originalSend.call(this, data, afterOpened);
+    };
+    
+    // Parchar el constructor para desactivar el watchdog de 10s inmediatamente
+    const originalProcessConnectionOpen = GuacdClient.prototype.processConnectionOpen;
+    GuacdClient.prototype.processConnectionOpen = function() {
+      // Desactivar el watchdog de 10s INMEDIATAMENTE al abrir la conexión
+      if (this.activityCheckInterval) {
+        clearInterval(this.activityCheckInterval);
+        this.activityCheckInterval = null;
+      }
+      // Llamar al método original
+      return originalProcessConnectionOpen.call(this);
+    };
+    
+    console.log('✅ [GuacdClient] Parche de watchdog bidireccional aplicado correctamente');
+  } catch (e) {
+    console.error('❌ [GuacdClient] Error aplicando parche de watchdog:', e?.message || e);
+  }
+})();
+
 const { getUpdateService } = require('./src/main/services/UpdateService');
 const { registerRecordingHandlers, setSessionRecorder } = require('./src/main/handlers/recording-handlers');
 
@@ -506,27 +545,53 @@ async function initializeGuacamoleServices() {
         // Nueva conexión Guacamole abierta
         activeGuacamoleConnections.add(clientConnection);
 
-        // Parche en runtime del watchdog de guacd (reemplaza el de 10s por uno configurable o lo desactiva)
+        // Parche en runtime del watchdog de guacd (backup del parche global)
+        // Reemplaza el de 10s por uno configurable o lo desactiva completamente
         try {
           const guacdClient = clientConnection && clientConnection.guacdClient ? clientConnection.guacdClient : null;
           if (guacdClient) {
+            // PASO 1: Desactivar SIEMPRE el watchdog original de 10s
             if (guacdClient.activityCheckInterval) {
               clearInterval(guacdClient.activityCheckInterval);
+              guacdClient.activityCheckInterval = null;
+              if (DEBUG_GUACAMOLE) {
+                console.log('🔧 [Guacamole] Watchdog original de 10s desactivado');
+              }
             }
 
+            // PASO 2: Aplicar watchdog personalizado solo si está configurado (>0)
             if (guacdInactivityTimeoutMs > 0) {
+              const timeoutMinutes = Math.round(guacdInactivityTimeoutMs / 60000);
+              console.log(`🕐 [Guacamole] Watchdog de inactividad configurado: ${timeoutMinutes} minutos`);
+              
               guacdClient.activityCheckInterval = setInterval(() => {
                 try {
-                  if (Date.now() > (guacdClient.lastActivity + guacdInactivityTimeoutMs)) {
-                    guacdClient.close(new Error('guacd was inactive for too long'));
+                  const inactiveMs = Date.now() - guacdClient.lastActivity;
+                  if (inactiveMs > guacdInactivityTimeoutMs) {
+                    const inactiveMinutes = Math.round(inactiveMs / 60000);
+                    console.warn(`⏰ [Guacamole] Cerrando conexión por inactividad: ${inactiveMinutes} minutos sin actividad`);
+                    guacdClient.close(new Error(`guacd inactivo por ${inactiveMinutes} minutos`));
                   }
                 } catch (e) {
                   // Si ocurre un error al cerrar, evitar que detenga el loop
                 }
-              }, 1000);
-              // Watchdog guacd aplicado
+              }, 30000); // Verificar cada 30 segundos en lugar de cada 1 segundo
             } else {
-              // Watchdog guacd desactivado
+              console.log('🔓 [Guacamole] Watchdog de inactividad DESACTIVADO (timeout = 0)');
+            }
+
+            // PASO 3: Interceptar método send para actualizar lastActivity bidireccionalmente
+            // (backup del parche global en caso de que no se aplicara)
+            if (!guacdClient._sendPatched) {
+              const originalSend = guacdClient.send.bind(guacdClient);
+              guacdClient.send = function(data, afterOpened = false) {
+                this.lastActivity = Date.now();
+                return originalSend(data, afterOpened);
+              };
+              guacdClient._sendPatched = true;
+              if (DEBUG_GUACAMOLE) {
+                console.log('🔧 [Guacamole] Parche bidireccional de lastActivity aplicado');
+              }
             }
           } else {
             console.warn('⚠️  No se encontró guacdClient para aplicar watchdog');
