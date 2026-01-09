@@ -57,7 +57,7 @@ const SystemStats = () => {
     window.addEventListener('split-move-stop', resumeStats);
 
     updateStats();
-    interval = setInterval(maybeUpdateStats, 5000);
+    interval = setInterval(maybeUpdateStats, 10000); // Aumentado de 5000ms a 10000ms para reducir carga
     return () => {
       stopped = true;
       clearInterval(interval);

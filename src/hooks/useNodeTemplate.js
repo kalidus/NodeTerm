@@ -1,4 +1,5 @@
 import React, { useCallback, useRef, useEffect } from 'react';
+import { FolderIconRenderer, FolderIconPresets } from '../components/FolderIconSelector';
 
 export const useNodeTemplate = ({
   // Estados
@@ -13,12 +14,16 @@ export const useNodeTemplate = ({
   setOnCreateActivateTabKey,
   homeTabs,
   onOpenRdpConnection,
+  onOpenVncConnection,
   iconThemes,
   iconThemeSidebar,
   sidebarFont,
+  folderIconSize,
   // Estados de diálogos
   setEditFolderNode,
   setEditFolderName,
+  setEditFolderColor,
+  setEditFolderIcon,
   setShowEditFolderDialog,
   // Funciones
   onNodeContextMenu,
@@ -43,8 +48,10 @@ export const useNodeTemplate = ({
   const openEditFolderDialog = useCallback((node) => {
     setEditFolderNode(node);
     setEditFolderName(node.label);
+    setEditFolderColor(node.color || '');
+    setEditFolderIcon(node.folderIcon || null);
     setShowEditFolderDialog(true);
-  }, [setEditFolderNode, setEditFolderName, setShowEditFolderDialog]);
+  }, [setEditFolderNode, setEditFolderName, setEditFolderColor, setEditFolderIcon, setShowEditFolderDialog]);
 
   // Node template simplificado - acciones movidas al menú contextual
   const nodeTemplate = useCallback((node, options) => {
@@ -52,6 +59,7 @@ export const useNodeTemplate = ({
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && node.data.type === 'rdp';
+    const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
     const isPassword = node.data && node.data.type === 'password';
     
     // Debug log para verificar tipo de nodo
@@ -65,6 +73,36 @@ export const useNodeTemplate = ({
       icon = iconThemes[iconThemeSidebar]?.icons?.ssh || <span className="pi pi-desktop" />;
     } else if (isRDP) {
       icon = iconThemes[iconThemeSidebar]?.icons?.rdp || <span className="pi pi-desktop" style={{ color: '#007ad9' }} />;
+    } else if (isSFTP || isFTP || isSCP) {
+      // Determinar el tipo de protocolo
+      let protocolType = 'sftp';
+      if (isSCP) protocolType = 'scp';
+      else if (isFTP) protocolType = 'ftp';
+
+      // Obtener icono del tema actual, con fallback al tema material
+      icon = iconThemes[iconThemeSidebar]?.icons?.[protocolType] ||
+             iconThemes['material']?.icons?.[protocolType];
+
+      // Si aún no hay icono, usar fallback genérico
+      if (!icon) {
+        const fallbackColors = {
+          sftp: '#ff9800',
+          ftp: '#2196f3',
+          scp: '#4caf50'
+        };
+        icon = <span className="pi pi-folder" style={{ color: fallbackColors[protocolType] || '#ff9800', fontSize: `${iconSize}px` }} />;
+      } else {
+        // Si tenemos un icono SVG del tema, clonarlo con el tamaño correcto
+        icon = React.cloneElement(icon, {
+          width: iconSize,
+          height: iconSize,
+          style: {
+            ...icon.props.style,
+            width: `${iconSize}px`,
+            height: `${iconSize}px`
+          }
+        });
+      }
     } else if (isPassword) {
       icon = <span className="pi pi-key" style={{ color: '#ffc107' }} />;
     } else if (isFolder) {
@@ -106,55 +144,47 @@ export const useNodeTemplate = ({
       
       const folderColor = node.color || getThemeDefaultColor(iconThemeSidebar);
       
-      // DEBUG: Log para entender qué está pasando
-      console.log('🔍 Folder Icon Debug:', {
-        nodeKey: node.key,
-        nodeLabel: node.label,
-        folderColor,
-        iconThemeSidebar,
-        themeIcon: iconThemes[iconThemeSidebar]?.icons?.folder,
-        expanded: options.expanded
-      });
-      
-      // Usar el icono del tema si existe, pero forzar el color
-      const themeIcon = options.expanded 
-        ? iconThemes[iconThemeSidebar]?.icons?.folderOpen 
-        : iconThemes[iconThemeSidebar]?.icons?.folder;
-      
-      if (themeIcon) {
-        console.log('🎨 Using theme icon:', themeIcon);
-        // Si hay un icono del tema, clonarlo y aplicar el color
-        icon = React.cloneElement(themeIcon, {
-          style: { 
-            ...themeIcon.props.style, 
-            color: folderColor,
-            '--icon-color': folderColor
-          },
-          'data-folder-color': folderColor,
-          'data-debug': 'theme-icon'
-        });
+      // Verificar si tiene icono personalizado (ignorar 'general' como si fuera null)
+      if (node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()]) {
+        const preset = FolderIconPresets[node.folderIcon.toUpperCase()];
+        // Usar el icono personalizado con FolderIconRenderer
+        icon = <FolderIconRenderer preset={preset} pixelSize={folderIconSize} />;
       } else {
-        console.log('🎨 Using fallback icon');
-        // Fallback a iconos PrimeReact con color forzado
-        icon = options.expanded
-          ? <span 
-              className="pi pi-folder-open" 
-              style={{ 
-                color: folderColor,
-                '--icon-color': folderColor
-              }} 
-              data-folder-color={folderColor}
-              data-debug="fallback-open"
-            />
-          : <span 
-              className="pi pi-folder" 
-              style={{ 
-                color: folderColor,
-                '--icon-color': folderColor
-              }} 
-              data-folder-color={folderColor}
-              data-debug="fallback-closed"
-            />;
+        // Usar el icono del tema si no hay icono personalizado
+        const themeIcon = options.expanded 
+          ? iconThemes[iconThemeSidebar]?.icons?.folderOpen 
+          : iconThemes[iconThemeSidebar]?.icons?.folder;
+        
+        if (themeIcon) {
+          // Si hay un icono del tema, clonarlo y aplicar el color
+          icon = React.cloneElement(themeIcon, {
+            style: { 
+              ...themeIcon.props.style, 
+              color: folderColor,
+              '--icon-color': folderColor
+            },
+            'data-folder-color': folderColor
+          });
+        } else {
+          // Fallback a iconos PrimeReact con color forzado
+          icon = options.expanded
+            ? <span 
+                className="pi pi-folder-open" 
+                style={{ 
+                  color: folderColor,
+                  '--icon-color': folderColor
+                }} 
+                data-folder-color={folderColor}
+              />
+            : <span 
+                className="pi pi-folder" 
+                style={{ 
+                  color: folderColor,
+                  '--icon-color': folderColor
+                }} 
+                data-folder-color={folderColor}
+              />;
+        }
       }
     }
 
@@ -173,6 +203,9 @@ export const useNodeTemplate = ({
           return <span className="connection-indicator disconnected" title="Desconectado">●</span>;
       }
     };
+
+    // Detectar si tiene icono personalizado (para ajustar alineación del texto)
+    const hasCustomFolderIcon = isFolder && node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()];
 
     return (
       <div className="flex align-items-center gap-1"
@@ -219,6 +252,8 @@ export const useNodeTemplate = ({
             });
           } else if (isRDP) {
             onOpenRdpConnection(node);
+          } else if (isVNC && onOpenVncConnection) {
+            onOpenVncConnection(node);
           } else if (isPassword) {
             // Delegar a App para crear/activar la pestaña
             console.log('🔑 Password double-click detected:', node);
@@ -238,11 +273,30 @@ export const useNodeTemplate = ({
           }
         } : undefined}
         onClick={isSSH ? (e) => {} : undefined}
-        style={{ cursor: 'pointer', fontFamily: sidebarFont }}
+        style={{ 
+          cursor: 'pointer', 
+          fontFamily: sidebarFont,
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: '6px'
+        }}
         title="Click derecho para más opciones"
       >
-        <span style={{ minWidth: 16 }}>{icon}</span>
-        <span className="node-label">{node.label}</span>
+        <span style={{ 
+          minWidth: 16,
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+          height: '20px'
+        }}>{icon}</span>
+        <span className="node-label" style={{
+          lineHeight: '20px',
+          height: '20px',
+          display: 'block',
+          margin: 0,
+          padding: 0,
+          ...(hasCustomFolderIcon ? { transform: 'translateY(3px)' } : {})
+        }}>{node.label}</span>
         {getConnectionIndicator()}
       </div>
     );
@@ -256,6 +310,7 @@ export const useNodeTemplate = ({
     setSshTabs,
     homeTabs,
     onOpenRdpConnection,
+    onOpenVncConnection,
     iconThemes,
     iconThemeSidebar,
     sidebarFont

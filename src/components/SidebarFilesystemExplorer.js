@@ -9,6 +9,8 @@ import { InputText } from 'primereact/inputtext';
 import { uiThemes } from '../themes/ui-themes';
 import mcpClient from '../services/MCPClientService';
 import SidebarFooter from './SidebarFooter';
+import { useTranslation } from '../i18n/hooks/useTranslation';
+import { sessionActionIconThemes } from '../themes/session-action-icons';
 
 const DEFAULT_MOVE_PARAMS = { source: 'source', destination: 'destination' };
 const DEFAULT_CREATE_PARAM = 'path';
@@ -23,8 +25,14 @@ const SidebarFilesystemExplorer = ({
   explorerFont,
   explorerFontSize,
   uiTheme = 'Light',
-  showToast
+  showToast,
+  sessionActionIconTheme = 'modern',
+  initialPath = null,
+  onPathNavigated = null
 }) => {
+  // Hook de internacionalización
+  const { t } = useTranslation('common');
+  
   const detail = status || {};
   const allowedPaths = Array.isArray(detail.allowedPaths) ? detail.allowedPaths : [];
   const server = detail.server || {};
@@ -281,6 +289,75 @@ const SidebarFilesystemExplorer = ({
     }, {});
     setExpandedKeys(defaultExpanded);
   }, [allowedPaths, basename, makeKey]);
+
+  // Navegar automáticamente al path inicial si se proporciona
+  useEffect(() => {
+    if (!initialPath || !loadDirectory) return;
+    
+    const navigateToInitialPath = async () => {
+      try {
+        // Normalizar el path (convertir Windows \ a / si es necesario)
+        let normalizedPath = initialPath.replace(/\\/g, '/');
+        
+        // Si el path no está en allowedPaths, intentar añadirlo temporalmente
+        // o al menos intentar navegar directamente
+        const pathExists = allowedPaths.some(allowed => {
+          const normalizedAllowed = allowed.replace(/\\/g, '/');
+          return normalizedPath.startsWith(normalizedAllowed) || normalizedAllowed.startsWith(normalizedPath);
+        });
+        
+        if (!pathExists && allowedPaths.length > 0) {
+          // Si no está en allowedPaths pero hay rutas permitidas, usar la primera como base
+          // y navegar desde ahí
+          const basePath = allowedPaths[0];
+          notify('info', 'Navegando', `Navegando a ${normalizedPath}`);
+        }
+        
+        // Expandir y cargar el directorio
+        await loadDirectory(normalizedPath, { keepExpanded: true });
+        
+        // Seleccionar el nodo
+        const pathKey = makeKey(normalizedPath);
+        setSelectedKey(pathKey);
+        
+        // Expandir todos los directorios padre
+        const pathParts = normalizedPath.split('/').filter(p => p);
+        let currentPath = '';
+        const keysToExpand = {};
+        
+        for (const part of pathParts) {
+          currentPath = currentPath ? `${currentPath}/${part}` : `/${part}`;
+          const key = makeKey(currentPath);
+          keysToExpand[key] = true;
+          
+          // Cargar cada directorio padre si no está cargado
+          if (currentPath !== normalizedPath) {
+            await loadDirectory(currentPath, { keepExpanded: true });
+          }
+        }
+        
+        setExpandedKeys(prev => ({ ...prev, ...keysToExpand }));
+        
+        // Limpiar el path inicial después de navegar
+        if (onPathNavigated) {
+          onPathNavigated();
+        }
+      } catch (error) {
+        console.error('Error navegando al path inicial:', error);
+        notify('error', 'Error', `No se pudo navegar a ${initialPath}: ${error.message}`);
+        if (onPathNavigated) {
+          onPathNavigated();
+        }
+      }
+    };
+    
+    // Esperar un poco para asegurar que los nodos iniciales estén cargados
+    const timeoutId = setTimeout(() => {
+      navigateToInitialPath();
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [initialPath, loadDirectory, makeKey, notify, onPathNavigated, allowedPaths]);
 
   const setLoadingForPath = useCallback((path, value) => {
     setLoadingPaths(prev => {
@@ -688,8 +765,7 @@ const SidebarFilesystemExplorer = ({
         overflow: 'visible'
       }}>
         <Button 
-          icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
-          className="p-button-rounded p-button-text sidebar-action-button" 
+          className="p-button-rounded p-button-text sidebar-action-button glass-button" 
           onClick={() => setSidebarCollapsed(v => !v)} 
           tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
           tooltipOptions={{ position: 'bottom' }} 
@@ -699,10 +775,27 @@ const SidebarFilesystemExplorer = ({
             width: '40px',
             height: '40px',
             minWidth: '40px',
+            padding: 0,
             minHeight: '40px',
-            fontSize: '18px'
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }} 
-        />
+        >
+          <span style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: '20px',
+            height: '20px',
+            color: 'var(--ui-sidebar-text)'
+          }}>
+            {sidebarCollapsed 
+              ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
+              : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft
+            }
+          </span>
+        </Button>
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
@@ -715,7 +808,7 @@ const SidebarFilesystemExplorer = ({
             icon="pi pi-comments" 
             className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={openChatTab} 
-            tooltip="Chat de IA" 
+            tooltip={t('tooltips.aiChat')} 
             tooltipOptions={{ position: 'bottom' }}
             style={{ flexShrink: 0 }}
           />
@@ -723,7 +816,7 @@ const SidebarFilesystemExplorer = ({
             icon="pi pi-folder" 
             className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={openCreateFolderDialog} 
-            tooltip="Nueva carpeta" 
+            tooltip={t('tooltips.newFolder')} 
             tooltipOptions={{ position: 'bottom' }}
             disabled={globalLoading || allowedPaths.length === 0}
             style={{ flexShrink: 0 }}
@@ -732,7 +825,7 @@ const SidebarFilesystemExplorer = ({
             icon="pi pi-th-large" 
             className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={openCreateGroupDialog} 
-            tooltip="Crear grupo de pestañas" 
+            tooltip={t('tooltips.createGroup')} 
             tooltipOptions={{ position: 'bottom' }}
             style={{ flexShrink: 0 }}
           />
@@ -740,7 +833,7 @@ const SidebarFilesystemExplorer = ({
             icon="pi pi-refresh" 
             className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={() => handleRefreshNode()} 
-            tooltip="Recargar carpeta" 
+            tooltip={t('tooltips.reloadFolder')} 
             tooltipOptions={{ position: 'bottom' }}
             disabled={globalLoading}
             style={{ flexShrink: 0 }}
@@ -805,6 +898,7 @@ const SidebarFilesystemExplorer = ({
         toggleExpandAll={handleToggleExpandAllGlobal}
         collapsed={sidebarCollapsed}
         onShowImportDialog={() => {}}
+        sessionActionIconTheme={sessionActionIconTheme}
       />
       <Dialog
         header="Nueva carpeta"

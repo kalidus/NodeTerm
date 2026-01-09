@@ -1,14 +1,17 @@
 {
   "name": "NodeTerm",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "webpack --mode production",
+    "download-fonts": "node scripts/download-fonts.js",
+    "build": "npm run download-fonts && webpack --mode production",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation concurrently \"webpack --watch --mode development\" \"electron .\"",
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && npm prune --omit=optional --no-audit --no-fund && electron-builder",
     "dist:linux": "npm run build && electron-builder --linux",
+    "scan:virustotal": "node scripts/virustotal-scan.js",
+    "dist:scan": "npm run dist && npm run scan:virustotal",
     "version:patch": "npm version patch --no-git-tag-version",
     "version:minor": "npm version minor --no-git-tag-version",
     "version:major": "npm version major --no-git-tag-version",
@@ -17,15 +20,20 @@
   "build": {
     "appId": "com.electron.nodeterm",
     "productName": "NodeTerm",
+    "copyright": "Copyright © 2024",
+    "compression": "normal",
     "files": [
       "dist/",
       "binaries/**",
-      "src/**",
       "node_modules/",
       "main.js",
       "preload.js",
       "system-stats-worker.js",
-      "package.json"
+      "package.json",
+      "src/main/**",
+      "src/services/**",
+      "src/utils/**",
+      "src/components/bastion-ssh.js"
     ],
     "extraResources": [
       {
@@ -44,11 +52,21 @@
     "win": {
       "target": "nsis",
       "icon": "src/assets/app-icon.png",
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "verifyUpdateCodeSignature": false,
+      "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
       "oneClick": true,
-      "perMachine": false
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NodeTerm",
+      "include": "build/installer.nsh",
+      "deleteAppDataOnUninstall": false,
+      "differentialPackage": false,
+      "warningsAsErrors": false
     },
     "linux": {
       "target": "AppImage",
@@ -100,6 +118,7 @@
     "@xterm/addon-webgl": "^0.18.0",
     "@xterm/xterm": "^5.5.0",
     "assert": "^2.1.0",
+    "basic-ftp": "^5.0.5",
     "browserify-zlib": "^0.2.0",
     "dommatrix": "^0.1.1",
     "dompurify": "^3.3.0",
@@ -139,6 +158,7 @@
     "@babel/preset-env": "^7.23.6",
     "@babel/preset-react": "^7.23.3",
     "babel-loader": "^9.1.3",
+    "baseline-browser-mapping": "^2.9.11",
     "buffer": "^6.0.3",
     "concurrently": "^8.2.2",
     "copy-webpack-plugin": "^13.0.0",

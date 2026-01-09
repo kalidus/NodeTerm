@@ -1,0 +1,79 @@
+/* ===== SOBRESCRIBIR COLORES DE PRIMEREACT PARA USAR COLOR DEL TEMA ===== */
+/* Este archivo sobrescribe específicamente los colores indigo/lila del tema lara-light-indigo */
+/* Usar máxima especificidad para sobrescribir el tema de PrimeReact */
+
+/* Sobrescribir colores indigo/lila específicos de PrimeReact */
+.p-checkbox .p-checkbox-box.p-highlight[style*="6366f1"],
+.p-checkbox .p-checkbox-box.p-highlight[style*="9333ea"],
+.p-checkbox .p-checkbox-box.p-highlight[style*="a855f7"],
+.p-checkbox .p-checkbox-box.p-highlight[style*="8b5cf6"],
+.p-checkbox .p-checkbox-box.p-checkbox-checked[style*="6366f1"],
+.p-checkbox .p-checkbox-box.p-checkbox-checked[style*="9333ea"],
+.p-checkbox .p-checkbox-box.p-checkbox-checked[style*="a855f7"],
+.p-checkbox .p-checkbox-box.p-checkbox-checked[style*="8b5cf6"] {
+  background: var(--primary-color, var(--ui-button-primary)) !important;
+  background-color: var(--primary-color, var(--ui-button-primary)) !important;
+  border-color: var(--primary-color, var(--ui-button-primary)) !important;
+}
+
+/* Checkboxes - Sobrescribir color indigo con color del tema - MÁXIMA ESPECIFICIDAD */
+body .p-checkbox .p-checkbox-box.p-highlight,
+body .p-checkbox .p-checkbox-box.p-checkbox-checked,
+body .p-checkbox.p-checkbox-checked .p-checkbox-box,
+body .p-checkbox.p-highlight .p-checkbox-box,
+body .p-checkbox[aria-checked="true"] .p-checkbox-box,
+body .p-checkbox input[type="checkbox"]:checked + .p-checkbox-box,
+body .p-checkbox input[type="checkbox"]:checked ~ .p-checkbox-box,
+html body .p-checkbox .p-checkbox-box.p-highlight,
+html body .p-checkbox .p-checkbox-box.p-checkbox-checked {
+  background: var(--primary-color, var(--ui-button-primary)) !important;
+  background-color: var(--primary-color, var(--ui-button-primary)) !important;
+  border-color: var(--primary-color, var(--ui-button-primary)) !important;
+}
+
+/* Checkboxes específicos de general-settings */
+body .general-setting-control .p-checkbox .p-checkbox-box.p-highlight,
+body .general-setting-control .p-checkbox .p-checkbox-box.p-checkbox-checked,
+body .general-setting-control .p-checkbox.p-checkbox-checked .p-checkbox-box {
+  background: var(--primary-color, var(--ui-button-primary)) !important;
+  background-color: var(--primary-color, var(--ui-button-primary)) !important;
+  border-color: var(--primary-color, var(--ui-button-primary)) !important;
+}
+
+/* Checkboxes específicos de security-settings */
+body .security-checkbox-wrapper .p-checkbox .p-checkbox-box.p-highlight,
+body .security-checkbox-wrapper .p-checkbox .p-checkbox-box.p-checkbox-checked,
+body .security-checkbox-wrapper .p-checkbox.p-checkbox-checked .p-checkbox-box {
+  background: var(--primary-color, var(--ui-button-primary)) !important;
+  background-color: var(--primary-color, var(--ui-button-primary)) !important;
+  border-color: var(--primary-color, var(--ui-button-primary)) !important;
+}
+
+/* Iconos de checkboxes */
+body .p-checkbox .p-checkbox-box.p-highlight .p-checkbox-icon,
+body .p-checkbox .p-checkbox-box.p-checkbox-checked .p-checkbox-icon,
+body .p-checkbox .p-checkbox-box.p-highlight .pi,
+body .p-checkbox .p-checkbox-box.p-checkbox-checked .pi {
+  color: var(--primary-color-text, var(--ui-button-primary-text)) !important;
+}
+
+/* Hover de checkboxes */
+body .p-checkbox .p-checkbox-box:hover {
+  border-color: var(--primary-color, var(--ui-button-primary)) !important;
+}
+
+/* Focus de checkboxes */
+body .p-checkbox .p-checkbox-box:focus,
+body .p-checkbox .p-checkbox-box:focus-visible {
+  outline-color: var(--primary-color, var(--ui-button-primary)) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color, var(--ui-button-primary)) 20%, transparent) !important;
+}
+
+/* Sobrescribir cualquier estilo inline o del tema */
+body .p-checkbox .p-checkbox-box[style*="background"] {
+  background: var(--primary-color, var(--ui-button-primary)) !important;
+  background-color: var(--primary-color, var(--ui-button-primary)) !important;
+}
+
+/* ===== FIN DE SOBRESCRITURA DE PRIMEREACT ===== */
+

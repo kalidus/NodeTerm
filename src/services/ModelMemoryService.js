@@ -447,17 +447,27 @@ class ModelMemoryService extends EventEmitter {
           const gpuStats = await window.electron.system.getGPUStats();
           
           if (gpuStats && gpuStats.ok && gpuStats.type) {
-            return {
+            // Construir objeto con toda la información disponible
+            const gpuInfo = {
               available: true,
-              gpus: [{
-                name: `${gpuStats.type.toUpperCase()} GPU`,
+              type: gpuStats.type,
+              name: gpuStats.name || `${gpuStats.type.toUpperCase()} GPU`,
+              temperature: gpuStats.temperature,
+              gpuUtilization: gpuStats.gpuUtilization,
+              note: gpuStats.note,
+              gpus: gpuStats.totalMB && gpuStats.usedMB !== null ? [{
+                name: gpuStats.name || `${gpuStats.type.toUpperCase()} GPU`,
                 totalGB: (gpuStats.totalMB / 1024).toFixed(2),
                 usedGB: (gpuStats.usedMB / 1024).toFixed(2),
                 freeGB: (gpuStats.freeMB / 1024).toFixed(2),
                 usagePercent: gpuStats.usagePercent || 0,
-                status: '✅ Activa'
-              }]
+                status: '✅ Activa',
+                temperature: gpuStats.temperature,
+                gpuUtilization: gpuStats.gpuUtilization
+              }] : []
             };
+            
+            return gpuInfo;
           }
         } catch (error) {
           console.warn('[ModelMemory] IPC GPU error:', error.message);

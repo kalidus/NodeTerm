@@ -365,20 +365,7 @@ const AIClientsTab = ({ themeColors }) => {
   };
 
   return (
-    <div className="ai-clients-tab">
-      <div className="ai-clients-header">
-        <div className="ai-clients-title">
-          <i className="pi pi-comments" style={{ fontSize: '1.5rem', marginRight: '0.75rem', color: themeColors?.primary || '#00BCD4' }} />
-          <div>
-            <h2>Gestión de Clientes de IA</h2>
-            <p className="ai-clients-subtitle">
-              Activa o desactiva los clientes de IA disponibles en NodeTerm. 
-              Los servicios Docker solo se iniciarán si están activados aquí.
-            </p>
-          </div>
-        </div>
-      </div>
-
+    <div className="ai-clients-tab" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
       <div className="ai-clients-grid">
         {clientsDefinition.map(client => renderClientCard(client))}
       </div>

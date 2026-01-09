@@ -157,6 +157,9 @@ const CygwinTerminal = forwardRef(({
     }));
 
     useEffect(() => {
+        // Leer scrollback desde configuración (configurable en Settings)
+        const scrollbackLines = parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10);
+
         // Initialize Terminal con tema moderno estilo MobaXterm
         term.current = new Terminal({
             cursorBlink: true,
@@ -191,7 +194,7 @@ const CygwinTerminal = forwardRef(({
                 ...theme
             },
             convertEol: true,
-            scrollback: 10000,
+            scrollback: scrollbackLines, // Configurable desde Settings (default: 1000)
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
             windowsMode: false,
@@ -268,16 +271,16 @@ const CygwinTerminal = forwardRef(({
             
             const delay = tabId === 'tab-1' ? 300 : 0;
             setTimeout(() => {
-                console.log(`🚀 CygwinTerminal [${tabId}] enviando cygwin:start`, {
-                    cols: term.current?.cols,
-                    rows: term.current?.rows,
-                    delay
-                });
+                // console.log(`🚀 CygwinTerminal [${tabId}] enviando cygwin:start`, {
+                //     cols: term.current?.cols,
+                //     rows: term.current?.rows,
+                //     delay
+                // });
                 window.electron.ipcRenderer.send(`cygwin:start:${tabId}`, {
                     cols: term.current.cols,
                     rows: term.current.rows
                 });
-                console.log(`✅ CygwinTerminal [${tabId}] comando start enviado`);
+                // console.log(`✅ CygwinTerminal [${tabId}] comando start enviado`);
             }, delay);
 
             // Copy/Paste handlers
@@ -316,20 +319,20 @@ const CygwinTerminal = forwardRef(({
             });
 
             const dataListener = (data) => {
-                console.log(`📥 CygwinTerminal [${tabId}] recibió datos:`, { 
-                    length: data?.length, 
-                    preview: data?.substring(0, 50),
-                    hasTerminal: !!term.current 
-                });
+                // console.log(`📥 CygwinTerminal [${tabId}] recibió datos:`, { 
+                //     length: data?.length, 
+                //     preview: data?.substring(0, 50),
+                //     hasTerminal: !!term.current 
+                // });
                 if (term.current) {
                     term.current.write(data);
                 } else {
                     console.error(`🔴 Cygwin ${tabId}: Terminal no disponible`);
                 }
             };
-            console.log(`👂 CygwinTerminal [${tabId}] registrando listener en canal: cygwin:data:${tabId}`);
+            // console.log(`👂 CygwinTerminal [${tabId}] registrando listener en canal: cygwin:data:${tabId}`);
             const onDataUnsubscribe = window.electron.ipcRenderer.on(`cygwin:data:${tabId}`, dataListener);
-            console.log(`✅ CygwinTerminal [${tabId}] listener registrado`);
+            // console.log(`✅ CygwinTerminal [${tabId}] listener registrado`);
 
             const errorListener = (error) => {
                 term.current?.writeln(`\x1b[31mCygwin Error: ${error}\x1b[0m`);

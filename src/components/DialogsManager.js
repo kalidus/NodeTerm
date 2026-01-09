@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Toast } from 'primereact/toast';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
@@ -9,7 +9,8 @@ import { InputNumber } from 'primereact/inputnumber';
 
 import SettingsDialog from './SettingsDialog';
 import SyncSettingsDialog from './SyncSettingsDialog';
-import { SSHDialog, FolderDialog, GroupDialog, UnifiedConnectionDialog } from './Dialogs';
+import NetworkToolsDialog from './NetworkToolsDialog';
+import { SSHDialog, FolderDialog, GroupDialog, EditSSHConnectionDialog, EditRDPConnectionDialog, EditVNCConnectionDialog, FileConnectionDialog, ProtocolSelectionDialog, NewSSHConnectionDialog, NewRDPConnectionDialog, NewVNCConnectionDialog } from './Dialogs';
 
 /**
  * DialogsManager - Componente que centraliza la gestión de todos los diálogos
@@ -39,7 +40,13 @@ const DialogsManager = ({
   setShowCreateGroupDialog,
   showUnifiedConnectionDialog,
   setShowUnifiedConnectionDialog,
-  
+  showFileConnectionDialog,
+  setShowFileConnectionDialog,
+  showProtocolSelectionDialog,
+  setShowProtocolSelectionDialog,
+  showNetworkToolsDialog,
+  setShowNetworkToolsDialog,
+
   // Estados de formularios SSH
   sshName,
   setSSHName,
@@ -57,6 +64,8 @@ const DialogsManager = ({
   setSSHTargetFolder,
   sshAutoCopyPassword,
   setSSHAutoCopyPassword,
+  sshDescription,
+  setSSHDescription,
   
   // Estados de formularios Edit SSH
   editSSHName,
@@ -73,6 +82,8 @@ const DialogsManager = ({
   setEditSSHPort,
   editSSHAutoCopyPassword,
   setEditSSHAutoCopyPassword,
+  editSSHDescription,
+  setEditSSHDescription,
   
   // Estados de formularios RDP
   rdpName,
@@ -94,18 +105,50 @@ const DialogsManager = ({
   setRdpNodeData,
   editingRdpNode,
   setEditingRdpNode,
+  vncNodeData,
+  setVncNodeData,
+  editingVncNode,
+  setEditingVncNode,
   
   // Estados para modo edición
   editSSHNode,
   setEditSSHNode,
   
+  // Estados de formularios Archivos (SFTP/FTP/SCP)
+  fileConnectionName,
+  setFileConnectionName,
+  fileConnectionHost,
+  setFileConnectionHost,
+  fileConnectionUser,
+  setFileConnectionUser,
+  fileConnectionPassword,
+  setFileConnectionPassword,
+  fileConnectionPort,
+  setFileConnectionPort,
+  fileConnectionProtocol,
+  setFileConnectionProtocol,
+  fileConnectionRemoteFolder,
+  setFileConnectionRemoteFolder,
+  fileConnectionTargetFolder,
+  setFileConnectionTargetFolder,
+  editingFileConnectionNode,
+  setEditingFileConnectionNode,
+  
   // Estados de formularios Folder
   folderName,
   setFolderName,
+  folderColor,
+  setFolderColor,
+  folderIcon,
+  setFolderIcon,
   parentNodeKey,
   editFolderNode,
   editFolderName,
   setEditFolderName,
+  editFolderColor,
+  setEditFolderColor,
+  editFolderIcon,
+  setEditFolderIcon,
   
   // Estados de formularios Group
   newGroupName,
@@ -122,7 +165,10 @@ const DialogsManager = ({
   saveEditFolder,
   createNewGroup,
   handleSaveRdpToSidebar,
+  handleSaveVncToSidebar,
+  handleSaveFileConnectionToSidebar,
   closeRdpDialog,
+  openNewVncDialog,
   getAllFolders,
   nodes,
   
@@ -167,6 +213,12 @@ const DialogsManager = ({
   setSidebarFont,
   sidebarFontSize,
   setSidebarFontSize,
+  sidebarFontColor,
+  setSidebarFontColor,
+  treeTheme,
+  setTreeTheme,
+  sessionActionIconTheme,
+  setSessionActionIconTheme,
   statusBarIconTheme,
   setStatusBarIconTheme,
   statusBarPollingInterval,
@@ -184,6 +236,131 @@ const DialogsManager = ({
   // Encriptación
   onMasterPasswordConfigured
 }) => {
+  // Debug: verificar que el prop se recibe correctamente (deshabilitado)
+  // useEffect(() => {
+  //   console.log('DialogsManager - Montado - handleSaveFileConnectionToSidebar:', typeof handleSaveFileConnectionToSidebar, !!handleSaveFileConnectionToSidebar);
+  // }, [handleSaveFileConnectionToSidebar]);
+  
+  // Debug: verificar props de folder (deshabilitado)
+  // useEffect(() => {
+  //   console.log('🔍 DialogsManager - Folder props:', {
+  //     setFolderIcon: typeof setFolderIcon,
+  //     setFolderIconValue: setFolderIcon,
+  //     setFolderColor: typeof setFolderColor,
+  //     folderIcon,
+  //     folderColor
+  //   });
+  // }, [setFolderIcon, setFolderColor, folderIcon, folderColor]);
+  
+  // Crear handler estable con useCallback para que no cambie entre renders
+  const stableFileConnectionHandler = useCallback((fileData) => {
+    if (!fileData || !fileData.name || !fileData.host || !fileData.username) {
+      console.error('❌ DialogsManager - Datos inválidos:', fileData);
+      return;
+    }
+
+    if (handleSaveFileConnectionToSidebar && typeof handleSaveFileConnectionToSidebar === 'function') {
+      const isEditing = !!editingFileConnectionNode;
+      try {
+        handleSaveFileConnectionToSidebar(fileData, isEditing, editingFileConnectionNode);
+        // Limpiar el nodo de edición después de guardar
+        if (isEditing && setEditingFileConnectionNode) {
+          setEditingFileConnectionNode(null);
+        }
+      } catch (error) {
+        console.error('❌ DialogsManager - Error al guardar conexión:', error);
+      }
+    } else {
+      console.error('❌ DialogsManager - handleSaveFileConnectionToSidebar no está definido o no es una función!');
+    }
+  }, [handleSaveFileConnectionToSidebar, editingFileConnectionNode, setEditingFileConnectionNode]);
+  
+  // Estados para los nuevos diálogos de creación
+  const [showNewSSHDialog, setShowNewSSHDialog] = useState(false);
+  const [showNewRDPDialog, setShowNewRDPDialog] = useState(false);
+  const [showNewVNCDialog, setShowNewVNCDialog] = useState(false);
+  
+  // Estado para la categoría inicial del diálogo de selección de protocolo
+  const [protocolSelectionInitialCategory, setProtocolSelectionInitialCategory] = useState(null);
+
+  // Handler para cuando se selecciona un protocolo
+  const handleProtocolSelect = useCallback((protocolId) => {
+    setShowProtocolSelectionDialog(false);
+    
+    // Abrir el diálogo correspondiente según el protocolo seleccionado
+    switch (protocolId) {
+      case 'ssh':
+        // Abrir nuevo diálogo SSH
+        setShowNewSSHDialog(true);
+        break;
+      case 'rdp':
+        // Abrir nuevo diálogo RDP
+        setShowNewRDPDialog(true);
+        break;
+      case 'vnc':
+        // Abrir nuevo diálogo VNC
+        setShowNewVNCDialog(true);
+        break;
+      case 'sftp':
+      case 'ftp':
+      case 'scp':
+        // Abrir FileConnectionDialog con el protocolo seleccionado
+        if (setFileConnectionProtocol) {
+          setFileConnectionProtocol(protocolId);
+        }
+        setShowFileConnectionDialog(true);
+        break;
+      default:
+        console.warn('Protocolo no reconocido:', protocolId);
+    }
+  }, [setShowFileConnectionDialog, setFileConnectionProtocol]);
+
+  // Escuchar evento para abrir diálogo de selección de protocolo con categoría inicial
+  useEffect(() => {
+    const handleOpenProtocolSelection = (e) => {
+      const initialCategory = e?.detail?.initialCategory;
+      if (initialCategory) {
+        setProtocolSelectionInitialCategory(initialCategory);
+      } else {
+        setProtocolSelectionInitialCategory(null);
+      }
+      setShowProtocolSelectionDialog(true);
+    };
+
+    window.addEventListener('open-new-unified-connection-dialog', handleOpenProtocolSelection);
+    return () => {
+      window.removeEventListener('open-new-unified-connection-dialog', handleOpenProtocolSelection);
+    };
+  }, []);
+
+  // Limpiar categoría inicial cuando se cierra el diálogo
+  useEffect(() => {
+    if (!showProtocolSelectionDialog) {
+      setProtocolSelectionInitialCategory(null);
+    }
+  }, [showProtocolSelectionDialog]);
+
+  // Handler para volver al diálogo de selección de protocolo
+  const handleGoBackToProtocolSelection = useCallback(() => {
+    // Cerrar el diálogo actual
+    setShowNewSSHDialog(false);
+    setShowNewRDPDialog(false);
+    setShowNewVNCDialog(false);
+    setShowFileConnectionDialog(false);
+    // Abrir el diálogo de selección de protocolo
+    setShowProtocolSelectionDialog(true);
+  }, []);
+
+  // Wrapper para createNewSSH que también cierra el diálogo NewSSHConnectionDialog
+  const handleCreateNewSSH = useCallback(() => {
+    // Llamar a la función original
+    if (createNewSSH && typeof createNewSSH === 'function') {
+      createNewSSH();
+    }
+    // Cerrar el diálogo NewSSHConnectionDialog
+    setShowNewSSHDialog(false);
+  }, [createNewSSH]);
+  
   return (
     <>
       {/* Toast para notificaciones */}
@@ -235,6 +412,12 @@ const DialogsManager = ({
         setSidebarFont={setSidebarFont}
         sidebarFontSize={sidebarFontSize}
         setSidebarFontSize={setSidebarFontSize}
+        sidebarFontColor={sidebarFontColor}
+        setSidebarFontColor={setSidebarFontColor}
+        treeTheme={treeTheme}
+        setTreeTheme={setTreeTheme}
+        sessionActionIconTheme={sessionActionIconTheme}
+        setSessionActionIconTheme={setSessionActionIconTheme}
         statusBarIconTheme={statusBarIconTheme}
         setStatusBarIconTheme={setStatusBarIconTheme}
         statusBarPollingInterval={statusBarPollingInterval}
@@ -281,8 +464,13 @@ const DialogsManager = ({
       <FolderDialog
         visible={showFolderDialog}
         onHide={() => setShowFolderDialog(false)}
+        mode="new"
         folderName={folderName}
         setFolderName={setFolderName}
+        folderColor={folderColor}
+        setFolderColor={setFolderColor}
+        folderIcon={folderIcon}
+        setFolderIcon={setFolderIcon || (() => console.warn('setFolderIcon no disponible'))}
         onConfirm={createNewFolder}
         iconTheme={iconTheme}
       />
@@ -291,8 +479,13 @@ const DialogsManager = ({
       <FolderDialog
         visible={showEditFolderDialog}
         onHide={() => setShowEditFolderDialog(false)}
+        mode="edit"
         folderName={editFolderName}
         setFolderName={setEditFolderName}
+        folderColor={editFolderColor}
+        setFolderColor={setEditFolderColor}
+        folderIcon={editFolderIcon}
+        setFolderIcon={setEditFolderIcon}
         onConfirm={saveEditFolder}
         iconTheme={iconTheme}
       />
@@ -329,135 +522,50 @@ const DialogsManager = ({
         onConfirm={createNewGroup}
       />
 
-      {/* Diálogo: Nueva conexión RDP */}
-      <Dialog
-        visible={showRdpDialog}
-        onHide={closeRdpDialog}
-        header="Nueva Conexión RDP"
-        style={{ width: '450px' }}
-        footer={
-          <div>
-            <Button label="Cancelar" icon="pi pi-times" onClick={closeRdpDialog} className="p-button-text" />
-            <Button label="Crear" icon="pi pi-check" onClick={createNewRdp} autoFocus />
-          </div>
-        }
-      >
-        <div className="p-fluid">
-          <div className="field">
-            <label htmlFor="rdpName">Nombre de la conexión:</label>
-            <InputText
-              id="rdpName"
-              value={rdpName}
-              onChange={(e) => setRdpName(e.target.value)}
-              placeholder="Ej: Servidor de Producción"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="rdpServer">Servidor:</label>
-            <InputText
-              id="rdpServer"
-              value={rdpServer}
-              onChange={(e) => setRdpServer(e.target.value)}
-              placeholder="Ej: 192.168.1.100"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="rdpUsername">Usuario:</label>
-            <InputText
-              id="rdpUsername"
-              value={rdpUsername}
-              onChange={(e) => setRdpUsername(e.target.value)}
-              placeholder="Ej: administrador"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="rdpPassword">Contraseña:</label>
-            <Password
-              id="rdpPassword"
-              value={rdpPassword}
-              onChange={(e) => setRdpPassword(e.target.value)}
-              placeholder="Contraseña"
-              feedback={false}
-              toggleMask
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="rdpPort">Puerto:</label>
-            <InputNumber
-              id="rdpPort"
-              value={rdpPort}
-              onValueChange={(e) => setRdpPort(e.value)}
-              min={1}
-              max={65535}
-            />
-          </div>
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
-            <div className="field" style={{ flex: '1', minWidth: '200px' }}>
-              <label htmlFor="rdpClientType">Cliente RDP:</label>
-              <Dropdown
-                id="rdpClientType"
-                value={rdpClientType}
-                options={[
-                  { label: 'Windows MSTSC', value: 'mstsc' },
-                  { label: 'FreeRDP', value: 'freerdp' },
-                  { label: 'Apache Guacamole', value: 'guacamole' }
-                ]}
-                onChange={(e) => setRdpClientType(e.value)}
-                placeholder="Selecciona el cliente RDP"
-              />
-            </div>
-            
-            {/* Protocolo de seguridad (solo para Guacamole) */}
-            {rdpClientType === 'guacamole' && (
-              <div className="field" style={{ flex: '1', minWidth: '200px' }}>
-                <label htmlFor="rdpGuacSecurity">🔒 Protocolo de seguridad:</label>
-                <Dropdown
-                  id="rdpGuacSecurity"
-                  value={rdpGuacSecurity || 'any'}
-                  options={[
-                    { label: '🛡️ Cualquiera (Recomendado)', value: 'any' },
-                    { label: '🔐 RDP Estándar', value: 'rdp' },
-                    { label: '🔒 TLS', value: 'tls' },
-                    { label: '🛡️ Network Level Authentication', value: 'nla' }
-                  ]}
-                  onChange={(e) => setRdpGuacSecurity(e.value)}
-                  placeholder="Seleccionar protocolo"
-                />
-                <small style={{ color: 'var(--text-color-secondary)', fontSize: '10px', display: 'block', marginTop: '2px' }}>
-                  Nivel de seguridad para la conexión RDP
-                </small>
-              </div>
-            )}
-          </div>
-          <div className="field">
-            <label htmlFor="rdpTargetFolder">Carpeta de destino:</label>
-            <Dropdown
-              id="rdpTargetFolder"
-              value={rdpTargetFolder}
-              options={getAllFolders(nodes)}
-              onChange={(e) => setRdpTargetFolder(e.value)}
-              placeholder="Seleccionar carpeta (opcional)"
-              showClear
-            />
-          </div>
-        </div>
-      </Dialog>
-      
-      {/* Diálogo: Conexión Unificada (SSH/RDP) */}
-      <UnifiedConnectionDialog
-        visible={showUnifiedConnectionDialog}
+      {/* Diálogo: Nueva Conexión SSH */}
+      <NewSSHConnectionDialog
+        visible={showNewSSHDialog}
+        onHide={() => setShowNewSSHDialog(false)}
+        onGoBack={handleGoBackToProtocolSelection}
+        sshName={sshName}
+        setSSHName={setSSHName}
+        sshHost={sshHost}
+        setSSHHost={setSSHHost}
+        sshUser={sshUser}
+        setSSHUser={setSSHUser}
+        sshPassword={sshPassword}
+        setSSHPassword={setSSHPassword}
+        sshPort={sshPort}
+        setSSHPort={setSSHPort}
+        sshRemoteFolder={sshRemoteFolder}
+        setSSHRemoteFolder={setSSHRemoteFolder}
+        sshTargetFolder={sshTargetFolder}
+        setSSHTargetFolder={setSSHTargetFolder}
+        sshAutoCopyPassword={sshAutoCopyPassword}
+        setSSHAutoCopyPassword={setSSHAutoCopyPassword}
+        foldersOptions={getAllFolders(nodes)}
+        onSSHConfirm={handleCreateNewSSH}
+        sshLoading={false}
+      />
+
+      {/* Diálogo: Nueva Conexión RDP */}
+      <NewRDPConnectionDialog
+        visible={showNewRDPDialog}
+        onHide={() => setShowNewRDPDialog(false)}
+        onGoBack={handleGoBackToProtocolSelection}
+        onSaveToSidebar={handleSaveRdpToSidebar}
+      />
+
+      {/* Diálogo: Editar Conexión SSH */}
+      <EditSSHConnectionDialog
+        visible={showUnifiedConnectionDialog && !!editSSHNode}
         onHide={() => {
           setShowUnifiedConnectionDialog(false);
-          // Limpiar estados de edición
           if (editSSHNode) {
             setEditSSHNode(null);
           }
-          if (editingRdpNode) {
-            setEditingRdpNode(null);
-            setRdpNodeData(null);
-          }
         }}
-        // Props SSH
+        editNodeData={editSSHNode}
         sshName={editSSHNode ? editSSHName : sshName}
         setSSHName={editSSHNode ? setEditSSHName : setSSHName}
         sshHost={editSSHNode ? editSSHHost : sshHost}
@@ -474,20 +582,101 @@ const DialogsManager = ({
         setSSHTargetFolder={setSSHTargetFolder}
         sshAutoCopyPassword={editSSHNode ? editSSHAutoCopyPassword : sshAutoCopyPassword}
         setSSHAutoCopyPassword={editSSHNode ? setEditSSHAutoCopyPassword : setSSHAutoCopyPassword}
+        sshDescription={editSSHNode ? editSSHDescription : sshDescription}
+        setSSHDescription={editSSHNode ? setEditSSHDescription : setSSHDescription}
         foldersOptions={getAllFolders(nodes)}
         onSSHConfirm={editSSHNode ? saveEditSSH : createNewSSH}
         sshLoading={false}
-        // Props RDP
-        rdpNodeData={rdpNodeData}
+      />
+
+      {/* Diálogo: Editar Conexión RDP */}
+      <EditRDPConnectionDialog
+        visible={showUnifiedConnectionDialog && !!editingRdpNode}
+        onHide={() => {
+          setShowUnifiedConnectionDialog(false);
+          if (editingRdpNode) {
+            setEditingRdpNode(null);
+            setRdpNodeData(null);
+          }
+        }}
+        editNodeData={editingRdpNode}
         onSaveToSidebar={handleSaveRdpToSidebar}
-        editingNode={editingRdpNode}
-        // Props para modo edición
-        isEditMode={!!(editSSHNode || editingRdpNode)}
-        editConnectionType={editSSHNode ? 'ssh' : (editingRdpNode ? 'rdp' : null)}
-        editNodeData={editSSHNode || editingRdpNode}
+      />
+
+      {/* Diálogo independiente para conexiones de archivos */}
+      <FileConnectionDialog
+        visible={showFileConnectionDialog}
+        onHide={() => {
+          setShowFileConnectionDialog(false);
+          // Limpiar estado de edición de archivos
+          if (editingFileConnectionNode && setEditingFileConnectionNode) {
+            setEditingFileConnectionNode(null);
+          }
+        }}
+        onGoBack={!editingFileConnectionNode ? handleGoBackToProtocolSelection : undefined}
+        isEditMode={!!editingFileConnectionNode}
+        editNodeData={editingFileConnectionNode}
+        fileConnectionName={fileConnectionName ?? ''}
+        setFileConnectionName={setFileConnectionName ?? (() => console.warn('setFileConnectionName not provided'))}
+        fileConnectionHost={fileConnectionHost ?? ''}
+        setFileConnectionHost={setFileConnectionHost ?? (() => console.warn('setFileConnectionHost not provided'))}
+        fileConnectionUser={fileConnectionUser ?? ''}
+        setFileConnectionUser={setFileConnectionUser ?? (() => console.warn('setFileConnectionUser not provided'))}
+        fileConnectionPassword={fileConnectionPassword ?? ''}
+        setFileConnectionPassword={setFileConnectionPassword ?? (() => console.warn('setFileConnectionPassword not provided'))}
+        fileConnectionPort={fileConnectionPort ?? 22}
+        setFileConnectionPort={setFileConnectionPort ?? (() => console.warn('setFileConnectionPort not provided'))}
+        fileConnectionProtocol={fileConnectionProtocol ?? 'sftp'}
+        setFileConnectionProtocol={setFileConnectionProtocol ?? (() => console.warn('setFileConnectionProtocol not provided'))}
+        fileConnectionRemoteFolder={fileConnectionRemoteFolder ?? ''}
+        setFileConnectionRemoteFolder={setFileConnectionRemoteFolder ?? (() => console.warn('setFileConnectionRemoteFolder not provided'))}
+        fileConnectionTargetFolder={fileConnectionTargetFolder ?? ''}
+        setFileConnectionTargetFolder={setFileConnectionTargetFolder ?? (() => console.warn('setFileConnectionTargetFolder not provided'))}
+        onFileConnectionConfirm={stableFileConnectionHandler}
+        fileConnectionLoading={false}
+      />
+
+      {/* Diálogo: Nueva Conexión VNC */}
+      <NewVNCConnectionDialog
+        visible={showNewVNCDialog}
+        onHide={() => setShowNewVNCDialog(false)}
+        onGoBack={handleGoBackToProtocolSelection}
+        onSaveToSidebar={handleSaveVncToSidebar}
+      />
+
+      {/* Diálogo: Editar Conexión VNC */}
+      <EditVNCConnectionDialog
+        visible={showUnifiedConnectionDialog && !!editingVncNode}
+        onHide={() => {
+          setShowUnifiedConnectionDialog(false);
+          if (editingVncNode && setEditingVncNode) {
+            setEditingVncNode(null);
+          }
+          if (setVncNodeData) {
+            setVncNodeData(null);
+          }
+        }}
+        editNodeData={editingVncNode}
+        onSaveToSidebar={handleSaveVncToSidebar}
+      />
+
+      {/* Diálogo de selección de protocolo */}
+      <ProtocolSelectionDialog
+        visible={showProtocolSelectionDialog}
+        onHide={() => setShowProtocolSelectionDialog(false)}
+        onSelectProtocol={handleProtocolSelect}
+        initialCategory={protocolSelectionInitialCategory}
+      />
+
+      {/* Diálogo de herramientas de red */}
+      <NetworkToolsDialog
+        visible={showNetworkToolsDialog}
+        onHide={() => setShowNetworkToolsDialog(false)}
       />
     </>
   );
 };
+
+DialogsManager.displayName = 'DialogsManager';
 
 export default DialogsManager;

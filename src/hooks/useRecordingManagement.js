@@ -4,6 +4,11 @@
 import { useState, useCallback, useRef } from 'react';
 
 export const useRecordingManagement = (toast) => {
+  // Validar que toast existe
+  if (!toast) {
+    console.warn('useRecordingManagement: toast es undefined');
+  }
+  
   // Estado para trackear qué tabs están grabando
   const [recordingTabs, setRecordingTabs] = useState(new Set());
   const recordingInfoRef = useRef({});

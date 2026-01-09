@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from 'primereact/button';
 import { ProgressSpinner } from 'primereact/progressspinner';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/open-webui.css';
 
 const INITIAL_STATUS = {
@@ -10,6 +11,8 @@ const INITIAL_STATUS = {
 };
 
 const OpenWebUITab = () => {
+  const { t } = useTranslation('common');
+  
   const [status, setStatus] = useState(INITIAL_STATUS);
   const [error, setError] = useState(null);
   const [url, setUrl] = useState(null);
@@ -276,7 +279,7 @@ const OpenWebUITab = () => {
             size="small"
             className="openwebui-action-btn"
             onClick={startService}
-            tooltip="Reintentar"
+            tooltip={t('tooltips.retry')}
             tooltipOptions={{ position: 'top' }}
           />
           <Button
@@ -285,7 +288,7 @@ const OpenWebUITab = () => {
             className="openwebui-action-btn"
             disabled={!isReady}
             onClick={handleReloadWebView}
-            tooltip="Recargar UI"
+            tooltip={t('tooltips.reloadUI')}
             tooltipOptions={{ position: 'top' }}
           />
         </div>

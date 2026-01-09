@@ -1,0 +1,792 @@
+/* ========================================
+   STATUS BAR SETTINGS TAB - PREMIUM DESIGN
+   Matching terminal-settings style
+   ======================================== */
+
+/* ========================================
+   CONTENEDOR PRINCIPAL
+   ======================================== */
+
+.statusbar-settings-container {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* ========================================
+   SECCIONES CON GLASSMORPHISM
+   ======================================== */
+
+.statusbar-settings-section {
+  background: var(--ui-content-bg);
+  opacity: 0.95;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--ui-content-border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.statusbar-settings-section:hover {
+  border-color: color-mix(in srgb, var(--ui-button-primary) 35%, transparent);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Header de sección */
+.statusbar-section-header {
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.statusbar-section-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--ui-button-primary);
+  flex-shrink: 0;
+  box-shadow: 
+    0 3px 10px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.statusbar-section-icon i {
+  color: var(--ui-button-primary-text);
+  font-size: 0.9rem;
+}
+
+.statusbar-section-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.statusbar-section-title {
+  margin: 0;
+  color: var(--ui-dialog-text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Contenido de sección */
+.statusbar-section-content {
+  padding: 1.25rem 1.5rem;
+}
+
+/* ========================================
+   CONFIGURACIÓN GLOBAL (COMPACTA)
+   ======================================== */
+
+.statusbar-global-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+@media (max-width: 1200px) {
+  .statusbar-global-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .statusbar-global-row {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+.statusbar-setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.statusbar-mini-label {
+  font-size: 0.6875rem;
+  color: var(--text-color-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 0.125rem;
+}
+
+.statusbar-label-normal {
+  text-transform: none;
+  letter-spacing: 0.2px;
+}
+
+/* Height control */
+.statusbar-height-control {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+}
+
+.statusbar-height-slider {
+  flex: 1;
+  min-width: 0;
+}
+
+.statusbar-height-slider .p-slider {
+  width: 100%;
+}
+
+.statusbar-height-value {
+  font-size: 0.8125rem;
+  color: var(--ui-dialog-text);
+  font-weight: 600;
+  min-width: 42px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Update dropdown control */
+.statusbar-update-control {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.statusbar-update-dropdown {
+  width: 100% !important;
+}
+
+.statusbar-update-dropdown .p-dropdown {
+  width: 100%;
+  height: 32px;
+  border: 1px solid var(--ui-content-border);
+  border-radius: 8px;
+  background: var(--ui-content-bg);
+  transition: all 0.2s ease;
+}
+
+.statusbar-update-dropdown .p-dropdown:hover {
+  border-color: var(--ui-button-primary);
+}
+
+.statusbar-update-dropdown .p-dropdown.p-focus {
+  border-color: var(--ui-button-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ui-button-primary) 20%, transparent);
+}
+
+.statusbar-update-dropdown .p-dropdown-label {
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
+  color: var(--ui-dialog-text);
+  font-weight: 500;
+}
+
+.statusbar-update-dropdown .p-dropdown-trigger {
+  width: 1.75rem;
+  background: var(--ui-button-primary);
+  border-radius: 0 8px 8px 0;
+  color: var(--ui-button-primary-text);
+  transition: all 0.2s ease;
+}
+
+.statusbar-update-dropdown .p-dropdown-trigger:hover {
+  background: color-mix(in srgb, var(--ui-button-primary) 90%, black);
+}
+
+.statusbar-update-dropdown .p-dropdown-trigger-icon {
+  font-size: 0.6875rem;
+}
+
+.statusbar-setting-description {
+  font-size: 0.6875rem;
+  color: var(--text-color-secondary);
+  line-height: 1.3;
+  margin-top: 0.125rem;
+  opacity: 0.8;
+}
+
+/* Network disks control */
+.statusbar-network-disks-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* ========================================
+   TOGGLE SWITCH PERSONALIZADO
+   ======================================== */
+
+.statusbar-toggle-switch {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 13px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.15),
+    0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.statusbar-toggle-switch:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.statusbar-toggle-switch.active {
+  background: var(--ui-button-primary);
+  border-color: var(--ui-button-primary);
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.15),
+    0 0 0 3px color-mix(in srgb, var(--ui-button-primary) 20%, transparent),
+    0 2px 6px color-mix(in srgb, var(--ui-button-primary) 30%, transparent);
+}
+
+.statusbar-toggle-switch.active:hover {
+  background: color-mix(in srgb, var(--ui-button-primary) 95%, white);
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.15),
+    0 0 0 4px color-mix(in srgb, var(--ui-button-primary) 25%, transparent),
+    0 3px 8px color-mix(in srgb, var(--ui-button-primary) 35%, transparent);
+}
+
+.statusbar-toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f5f5f5 100%);
+  border-radius: 50%;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 2px 6px rgba(0, 0, 0, 0.25),
+    0 1px 3px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.statusbar-toggle-switch.active::after {
+  transform: translateX(22px);
+  box-shadow: 
+    0 2px 6px rgba(0, 0, 0, 0.25),
+    0 1px 3px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* ========================================
+   GRID DE TEMAS POR TIPO - COMPACTO
+   ======================================== */
+
+.statusbar-themes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.625rem;
+}
+
+.statusbar-theme-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(0, 0, 0, 0.12) 100%
+  );
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: visible;
+}
+
+.statusbar-theme-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 3px;
+  opacity: 0.7;
+}
+
+.statusbar-theme-card.ssh::before {
+  background: linear-gradient(180deg, #22c55e, #16a34a);
+}
+
+.statusbar-theme-card.powershell::before {
+  background: linear-gradient(180deg, #0078d4, #106ebe);
+}
+
+.statusbar-theme-card.linux::before {
+  background: linear-gradient(180deg, #f97316, #ea580c);
+}
+
+.statusbar-theme-card.docker::before {
+  background: linear-gradient(180deg, #2496ed, #1d7dc2);
+}
+
+.statusbar-theme-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(0, 0, 0, 0.18) 100%
+  );
+}
+
+.statusbar-theme-card:hover::before {
+  opacity: 1;
+}
+
+/* Header de la card */
+.statusbar-theme-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.statusbar-theme-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.statusbar-theme-icon.ssh {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+}
+
+.statusbar-theme-icon.powershell {
+  background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+  color: white;
+}
+
+.statusbar-theme-icon.linux {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: white;
+}
+
+.statusbar-theme-icon.docker {
+  background: linear-gradient(135deg, #2496ed 0%, #1d7dc2 100%);
+  color: white;
+}
+
+.statusbar-theme-name {
+  color: var(--ui-dialog-text);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: -0.01em;
+}
+
+/* Controles de la card */
+.statusbar-theme-controls {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.statusbar-theme-controls-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+}
+
+.statusbar-theme-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.statusbar-theme-selector .statusbar-selector-label {
+  font-size: 0.6rem;
+  color: var(--text-color-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.7;
+  padding-left: 2px;
+  white-space: nowrap;
+}
+
+.statusbar-theme-selector .p-dropdown {
+  width: 100%;
+  height: 30px;
+  font-size: 0.7rem;
+  border-radius: 6px;
+}
+
+.statusbar-theme-selector .p-dropdown .p-dropdown-label {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.7rem;
+}
+
+.statusbar-theme-selector .p-dropdown .p-dropdown-trigger {
+  width: 1.5rem;
+}
+
+.statusbar-theme-selector.color-selector {
+  flex: 1.2;
+}
+
+.statusbar-theme-selector.icon-selector {
+  flex: 1;
+}
+
+/* Mini palette preview */
+.statusbar-palette-mini {
+  display: flex;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.statusbar-palette-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Mini icons preview */
+.statusbar-icons-mini {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 0.75rem;
+}
+
+/* ========================================
+   VISTA PREVIA
+   ======================================== */
+
+.statusbar-preview-section {
+  flex: 1;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+}
+
+.statusbar-preview-section .statusbar-section-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.statusbar-preview-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem 0.875rem;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.statusbar-preview-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--text-color-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.statusbar-preview-tab:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ui-dialog-text);
+}
+
+.statusbar-preview-tab.active {
+  background: var(--ui-button-primary);
+  color: var(--ui-button-primary-text);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--ui-button-primary) 50%, transparent);
+}
+
+.statusbar-preview-tab i {
+  font-size: 0.8rem;
+}
+
+/* Contenedor de preview */
+.statusbar-preview-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #0d1117;
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+  min-height: 100px;
+}
+
+/* Status bar preview */
+.statusbar-preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 0 12px;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 11px;
+  border: 1px solid;
+  border-radius: 6px;
+  margin: 1rem;
+  transition: all 0.3s ease;
+}
+
+.statusbar-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.statusbar-preview-gauge {
+  width: 20px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Info bar */
+.statusbar-preview-info {
+  padding: 0.625rem 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.7rem;
+  color: var(--text-color-secondary);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+.statusbar-preview-info-left {
+  display: flex;
+  gap: 1rem;
+}
+
+.statusbar-preview-info-left span {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.statusbar-preview-info-left i {
+  font-size: 0.65rem;
+  opacity: 0.7;
+}
+
+/* Palette preview */
+.statusbar-preview-palette {
+  display: flex;
+  gap: 4px;
+}
+
+.statusbar-palette-item {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: help;
+  transition: transform 0.2s ease;
+}
+
+.statusbar-palette-item:hover {
+  transform: scale(1.2);
+}
+
+/* ========================================
+   DROPDOWNS Y INPUTS COMPACTOS
+   ======================================== */
+
+.statusbar-settings-container .p-dropdown {
+  height: 30px;
+  font-size: 0.7rem;
+  border-radius: 6px;
+}
+
+.statusbar-settings-container .p-dropdown .p-dropdown-label {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.7rem;
+}
+
+.statusbar-settings-container .p-dropdown .p-dropdown-trigger {
+  width: 1.5rem;
+}
+
+.statusbar-settings-container .p-inputnumber {
+  height: 30px;
+}
+
+.statusbar-settings-container .p-inputnumber input {
+  font-size: 0.7rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+}
+
+.statusbar-settings-container .p-inputnumber-button {
+  width: 1.25rem;
+}
+
+.statusbar-settings-container .p-slider {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.statusbar-settings-container .p-slider .p-slider-range {
+  background: var(--ui-button-primary);
+  border-radius: 3px;
+  box-shadow: 0 0 4px color-mix(in srgb, var(--ui-button-primary) 40%, transparent);
+}
+
+.statusbar-settings-container .p-slider .p-slider-handle {
+  width: 18px;
+  height: 18px;
+  margin-top: -9px;
+  margin-left: -9px;
+  background: white;
+  border: 2px solid var(--ui-button-primary);
+  box-shadow: 
+    0 2px 6px rgba(0, 0, 0, 0.2),
+    0 0 0 2px color-mix(in srgb, var(--ui-button-primary) 20%, transparent);
+  transition: all 0.2s ease;
+}
+
+.statusbar-settings-container .p-slider .p-slider-handle:hover {
+  transform: scale(1.15);
+  box-shadow: 
+    0 3px 8px rgba(0, 0, 0, 0.25),
+    0 0 0 3px color-mix(in srgb, var(--ui-button-primary) 25%, transparent);
+}
+
+.statusbar-settings-container .p-slider .p-slider-handle:focus {
+  outline: none;
+  box-shadow: 
+    0 3px 8px rgba(0, 0, 0, 0.25),
+    0 0 0 3px color-mix(in srgb, var(--ui-button-primary) 30%, transparent);
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+
+@media (max-width: 1100px) {
+  .statusbar-themes-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .statusbar-settings-container {
+    padding: 0.875rem;
+    gap: 0.75rem;
+  }
+  
+  .statusbar-global-row {
+    gap: 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .statusbar-theme-controls-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .statusbar-theme-selector.color-selector,
+  .statusbar-theme-selector.icon-selector {
+    flex: none;
+    width: 100%;
+  }
+  
+  .statusbar-preview-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.375rem 0.625rem;
+  }
+  
+  .statusbar-preview-tab {
+    flex-shrink: 0;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+  }
+  
+  .statusbar-preview-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 500px) {
+  .statusbar-settings-container {
+    padding: 0.625rem;
+  }
+  
+  .statusbar-section-header {
+    padding: 0.625rem 0.875rem;
+  }
+  
+  .statusbar-section-content {
+    padding: 0.75rem 0.875rem;
+  }
+  
+  .statusbar-preview-bar {
+    margin: 0.75rem;
+    font-size: 9px;
+  }
+  
+  .statusbar-preview-info {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+}
+

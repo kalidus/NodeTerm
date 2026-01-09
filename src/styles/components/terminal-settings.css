@@ -1,0 +1,820 @@
+/* ========================================
+   TERMINAL SETTINGS TAB - PREMIUM DESIGN
+   Full-height responsive layout
+   ======================================== */
+
+/* ========================================
+   CONTENEDOR PRINCIPAL - FLEX FILL
+   ======================================== */
+
+.terminal-settings-container {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* ========================================
+   SECCIONES CON GLASSMORPHISM
+   ======================================== */
+
+.terminal-settings-section {
+  background: var(--ui-content-bg);
+  opacity: 0.95;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--ui-content-border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.terminal-settings-section:hover {
+  border-color: color-mix(in srgb, var(--ui-button-primary) 35%, transparent);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Header de sección */
+.terminal-section-header {
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.terminal-section-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--ui-button-primary);
+  flex-shrink: 0;
+  box-shadow: 
+    0 3px 10px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.terminal-section-icon i {
+  color: var(--ui-button-primary-text);
+  font-size: 0.9rem;
+}
+
+.terminal-section-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.terminal-section-title {
+  margin: 0;
+  color: var(--ui-dialog-text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Contenido de sección */
+.terminal-section-content {
+  padding: 0.875rem 1rem;
+}
+
+/* ========================================
+   CONFIGURACIÓN GLOBAL (COMPACTA)
+   ======================================== */
+
+.terminal-global-row {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.terminal-cursor-group,
+.terminal-blink-group,
+.terminal-scrollback-group,
+.terminal-default-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.terminal-mini-label {
+  font-size: 0.7rem;
+  color: var(--text-color-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.75px;
+}
+
+/* ========================================
+   SELECTOR DE ESTILO DE CURSOR
+   ======================================== */
+
+.terminal-cursor-selector {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.terminal-cursor-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 32px;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.terminal-cursor-option:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.35);
+  transform: translateY(-1px);
+}
+
+.terminal-cursor-option.active {
+  border-color: var(--ui-button-primary);
+  background: color-mix(in srgb, var(--ui-button-primary) 20%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--ui-button-primary) 40%, transparent);
+}
+
+.terminal-cursor-preview {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.terminal-cursor-preview .cursor-bar {
+  width: 2px;
+  height: 14px;
+  background: var(--ui-button-primary);
+  border-radius: 1px;
+}
+
+.terminal-cursor-preview .cursor-block {
+  width: 10px;
+  height: 14px;
+  background: var(--ui-button-primary);
+  opacity: 0.85;
+  border-radius: 2px;
+}
+
+.terminal-cursor-preview .cursor-underline {
+  width: 10px;
+  height: 3px;
+  background: var(--ui-button-primary);
+  margin-top: 11px;
+  border-radius: 1px;
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ========================================
+   TOGGLE SWITCH PERSONALIZADO
+   ======================================== */
+
+.terminal-toggle-switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 11px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.terminal-toggle-switch.active {
+  background: var(--ui-button-primary);
+  border-color: var(--ui-button-primary);
+}
+
+.terminal-toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.terminal-toggle-switch.active::after {
+  transform: translateX(18px);
+}
+
+/* ========================================
+   GRID DE CONFIGURACIÓN POR TIPO - COMPACTO
+   ======================================== */
+
+.terminal-themes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.625rem;
+}
+
+.terminal-theme-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(0, 0, 0, 0.12) 100%
+  );
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: visible;
+}
+
+.terminal-theme-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 3px;
+  opacity: 0.7;
+}
+
+.terminal-theme-card.ssh::before {
+  background: linear-gradient(180deg, #22c55e, #16a34a);
+}
+
+.terminal-theme-card.powershell::before {
+  background: linear-gradient(180deg, #0078d4, #106ebe);
+}
+
+.terminal-theme-card.linux::before {
+  background: linear-gradient(180deg, #f97316, #ea580c);
+}
+
+.terminal-theme-card.docker::before {
+  background: linear-gradient(180deg, #2496ed, #1d7dc2);
+}
+
+.terminal-theme-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(0, 0, 0, 0.18) 100%
+  );
+}
+
+.terminal-theme-card:hover::before {
+  opacity: 1;
+}
+
+/* Header de la card - compacto */
+.terminal-theme-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  min-width: 100px;
+}
+
+.terminal-theme-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.terminal-theme-icon.ssh {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+}
+
+.terminal-theme-icon.powershell {
+  background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+  color: white;
+}
+
+.terminal-theme-icon.linux {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: white;
+}
+
+.terminal-theme-icon.docker {
+  background: linear-gradient(135deg, #2496ed 0%, #1d7dc2 100%);
+  color: white;
+}
+
+.terminal-theme-name {
+  color: var(--ui-dialog-text);
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+/* Controles de la card - Layout horizontal compacto */
+.terminal-theme-controls {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.terminal-theme-controls-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.terminal-theme-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.terminal-theme-selector .terminal-selector-label {
+  font-size: 0.6rem;
+  color: var(--text-color-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.7;
+  padding-left: 2px;
+  margin-bottom: 0.125rem;
+  white-space: nowrap;
+}
+
+.terminal-theme-selector .p-dropdown,
+.terminal-theme-selector .p-inputnumber {
+  width: 100%;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.terminal-theme-selector .p-dropdown {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.terminal-theme-selector.font-selector {
+  flex: 1.5;
+  min-width: 130px;
+  max-width: 200px;
+}
+
+.terminal-theme-selector.size-selector {
+  flex: 0 0 90px;
+  min-width: 90px;
+  max-width: 90px;
+}
+
+.terminal-theme-selector.theme-selector {
+  flex: 1.3;
+  min-width: 140px;
+  max-width: 220px;
+}
+
+/* ========================================
+   VISTA PREVIA - GRANDE Y FLEXIBLE
+   ======================================== */
+
+.terminal-preview-section {
+  flex: 2;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+}
+
+.terminal-preview-section .terminal-section-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.terminal-preview-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem 0.875rem;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.terminal-preview-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--text-color-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.terminal-preview-tab:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ui-dialog-text);
+}
+
+.terminal-preview-tab.active {
+  background: var(--ui-button-primary);
+  color: var(--ui-button-primary-text);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--ui-button-primary) 50%, transparent);
+}
+
+.terminal-preview-tab i {
+  font-size: 0.8rem;
+}
+
+/* Contenedor de preview - ocupa todo el espacio disponible */
+.terminal-preview-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #0d1117;
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+  min-height: 220px;
+}
+
+/* Ventana de terminal grande */
+.terminal-preview-window {
+  flex: 1;
+  padding: 1.25rem 1.5rem;
+  font-family: 'JetBrains Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.7;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.terminal-preview-line {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  white-space: pre;
+  min-height: 1.6em;
+}
+
+.terminal-preview-cursor {
+  display: inline-block;
+  background: #e2e8f0;
+  animation: cursor-blink 1s step-end infinite;
+  vertical-align: middle;
+  margin-left: 4px;
+  border-radius: 1px;
+}
+
+/* Barra de información inferior - más visible */
+.terminal-preview-info {
+  padding: 0.625rem 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.terminal-preview-info span {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.terminal-preview-info i {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+.terminal-preview-info .terminal-font-info {
+  font-family: 'JetBrains Mono', monospace;
+  opacity: 0.85;
+}
+
+/* ========================================
+   DROPDOWNS Y INPUTS COMPACTOS
+   ======================================== */
+
+.terminal-settings-container .p-dropdown {
+  height: 32px;
+  font-size: 0.75rem;
+  border-radius: 6px;
+}
+
+.terminal-settings-container .p-dropdown .p-dropdown-label {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.terminal-settings-container .p-dropdown .p-dropdown-trigger {
+  width: 1.75rem;
+}
+
+.terminal-settings-container .p-inputnumber {
+  height: 32px;
+  width: 100%;
+  max-width: 100%;
+}
+
+.terminal-settings-container .p-inputnumber input {
+  font-size: 0.75rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 6px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.terminal-settings-container .p-inputnumber-button {
+  width: 1.5rem;
+  flex-shrink: 0;
+}
+
+/* Asegurar que el InputNumber en el selector de tamaño no se expanda */
+.terminal-theme-selector.size-selector .p-inputnumber {
+  width: 100% !important;
+  max-width: 90px !important;
+  min-width: 90px !important;
+}
+
+.terminal-theme-selector.size-selector .p-inputnumber .p-inputnumber-input {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* ========================================
+   RESPONSIVE - ADAPTA A TODOS LOS TAMAÑOS
+   ======================================== */
+
+@media (max-width: 1100px) {
+  .terminal-themes-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .terminal-theme-card {
+    flex-direction: row;
+    align-items: center;
+  }
+  
+  .terminal-theme-card-header {
+    min-width: 110px;
+  }
+}
+
+@media (max-width: 768px) {
+  .terminal-settings-container {
+    padding: 0.875rem;
+    gap: 0.75rem;
+  }
+  
+  .terminal-global-row {
+    gap: 1rem;
+  }
+  
+  .terminal-theme-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.75rem;
+    gap: 0.625rem;
+  }
+  
+  .terminal-theme-card-header {
+    min-width: auto;
+  }
+  
+  .terminal-theme-controls {
+    width: 100%;
+  }
+  
+  .terminal-theme-controls-row {
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+  
+  .terminal-theme-selector.font-selector,
+  .terminal-theme-selector.theme-selector {
+    flex: 1 1 45%;
+    min-width: 100px;
+  }
+  
+  .terminal-theme-selector.size-selector {
+    flex: 0 0 65px;
+  }
+  
+  .terminal-preview-section {
+    min-height: 200px;
+  }
+  
+  .terminal-preview-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.375rem 0.625rem;
+  }
+  
+  .terminal-preview-tab {
+    flex-shrink: 0;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+  }
+  
+  .terminal-preview-window {
+    padding: 1rem;
+    font-size: 13px;
+  }
+  
+  .terminal-preview-content {
+    min-height: 160px;
+  }
+}
+
+@media (max-width: 500px) {
+  .terminal-settings-container {
+    padding: 0.625rem;
+  }
+  
+  .terminal-section-header {
+    padding: 0.625rem 0.875rem;
+  }
+  
+  .terminal-section-content {
+    padding: 0.75rem 0.875rem;
+  }
+  
+  .terminal-theme-controls-row {
+    flex-direction: column;
+  }
+  
+  .terminal-theme-selector.font-selector,
+  .terminal-theme-selector.theme-selector,
+  .terminal-theme-selector.size-selector {
+    flex: none;
+    width: 100%;
+  }
+  
+  .terminal-preview-window {
+    padding: 0.75rem;
+    font-size: 12px;
+  }
+}
+
+/* ========================================
+   OVERLAY PANEL - TEMA DEL TERMINAL
+   ======================================== */
+
+.font-size-overlay .p-overlaypanel-content {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+/* Dropdown con tema del terminal */
+.font-size-overlay .p-dropdown {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: inherit !important;
+}
+
+.font-size-overlay .p-dropdown:not(.p-disabled):hover {
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.font-size-overlay .p-dropdown:not(.p-disabled).p-focus {
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.font-size-overlay .p-dropdown-label {
+  color: inherit !important;
+  padding: 0.5rem 0.75rem !important;
+}
+
+.font-size-overlay .p-dropdown-trigger {
+  color: inherit !important;
+  opacity: 0.8;
+}
+
+.font-size-overlay .p-dropdown-trigger:hover {
+  opacity: 1;
+}
+
+.font-size-overlay .p-dropdown-panel {
+  background: rgba(20, 20, 20, 0.98) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Scrollbar para el overlay panel */
+.font-size-overlay::-webkit-scrollbar {
+  width: 8px !important;
+}
+
+.font-size-overlay::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.font-size-overlay::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 4px !important;
+}
+
+.font-size-overlay::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+.font-size-overlay .p-dropdown-item {
+  color: rgba(255, 255, 255, 0.9) !important;
+  padding: 0.625rem 0.875rem !important;
+}
+
+.font-size-overlay .p-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 1) !important;
+}
+
+.font-size-overlay .p-dropdown-item.p-highlight {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: rgba(255, 255, 255, 1) !important;
+}
+
+/* Slider con tema del terminal */
+.font-size-overlay .p-slider {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-radius: 4px !important;
+  height: 6px !important;
+}
+
+.font-size-overlay .p-slider .p-slider-handle {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 2px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  width: 18px !important;
+  height: 18px !important;
+  margin-top: -6px !important;
+}
+
+.font-size-overlay .p-slider .p-slider-handle:hover {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  transform: scale(1.1);
+}
+
+.font-size-overlay .p-slider .p-slider-handle:focus {
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25) !important;
+  outline: none !important;
+}
+
+.font-size-overlay .p-slider .p-slider-range {
+  background: rgba(255, 255, 255, 0.5) !important;
+  border-radius: 4px !important;
+}

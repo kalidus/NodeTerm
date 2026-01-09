@@ -3,14 +3,39 @@
  * Se usa tanto en Sidebar como en SidebarFooter
  */
 
-export const createAppMenu = (onShowImportDialog) => {
+export const createAppMenu = (onShowImportDialog, t) => {
+  // Si no se pasa t, usar valores por defecto en español (fallback)
+  const getText = (key) => {
+    if (t) return t(key);
+    // Fallback en español si no hay traducción
+    const fallbacks = {
+      'appMenu.file': 'Archivo',
+      'appMenu.import': 'Importar',
+      'appMenu.view': 'Ver',
+      'appMenu.reload': 'Recargar',
+      'appMenu.forceReload': 'Forzar recarga',
+      'appMenu.devTools': 'Herramientas de desarrollo',
+      'appMenu.zoomIn': 'Acercar',
+      'appMenu.zoomOut': 'Alejar',
+      'appMenu.actualSize': 'Tamaño real',
+      'appMenu.fullscreen': 'Pantalla completa',
+      'appMenu.unblockForms': '🔧 Desbloquear Formularios',
+      'appMenu.about': 'Acerca de NodeTerm',
+      'appMenu.version': 'Versión',
+      'appMenu.close': 'Cerrar',
+      'appMenu.exit': 'Salir',
+      'appMenu.exitConfirm': '¿Estás seguro de que quieres salir de NodeTerm?'
+    };
+    return fallbacks[key] || key;
+  };
+
   const menuStructure = [
     {
-      label: 'Archivo',
+      label: getText('appMenu.file'),
       icon: 'pi pi-file',
       submenu: [
         {
-          label: 'Importar',
+          label: getText('appMenu.import'),
           icon: 'pi pi-file-excel',
           command: () => {
             onShowImportDialog && onShowImportDialog(true);
@@ -20,57 +45,57 @@ export const createAppMenu = (onShowImportDialog) => {
     },
     { separator: true },
     {
-      label: 'Ver',
+      label: getText('appMenu.view'),
       icon: 'pi pi-eye',
       submenu: [
         {
-          label: 'Recargar',
+          label: getText('appMenu.reload'),
           icon: 'pi pi-refresh',
           shortcut: 'Ctrl+R',
           command: () => window.electronAPI?.reload && window.electronAPI.reload()
         },
         {
-          label: 'Forzar recarga',
+          label: getText('appMenu.forceReload'),
           icon: 'pi pi-replay',
           shortcut: 'Ctrl+Shift+R',
           command: () => window.electronAPI?.forceReload && window.electronAPI.forceReload()
         },
         { separator: true },
         {
-          label: 'Herramientas de desarrollo',
+          label: getText('appMenu.devTools'),
           icon: 'pi pi-wrench',
           shortcut: 'F12',
           command: () => window.electronAPI?.toggleDevTools && window.electronAPI.toggleDevTools()
         },
         { separator: true },
         {
-          label: 'Acercar',
+          label: getText('appMenu.zoomIn'),
           icon: 'pi pi-search-plus',
           shortcut: 'Ctrl++',
           command: () => window.electronAPI?.zoomIn && window.electronAPI.zoomIn()
         },
         {
-          label: 'Alejar',
+          label: getText('appMenu.zoomOut'),
           icon: 'pi pi-search-minus',
           shortcut: 'Ctrl+-',
           command: () => window.electronAPI?.zoomOut && window.electronAPI.zoomOut()
         },
         {
-          label: 'Tamaño real',
+          label: getText('appMenu.actualSize'),
           icon: 'pi pi-expand',
           shortcut: 'Ctrl+0',
           command: () => window.electronAPI?.actualSize && window.electronAPI.actualSize()
         },
         { separator: true },
         {
-          label: 'Pantalla completa',
+          label: getText('appMenu.fullscreen'),
           icon: 'pi pi-window-maximize',
           shortcut: 'F11',
           command: () => window.electronAPI?.toggleFullscreen && window.electronAPI.toggleFullscreen()
         },
         { separator: true },
         {
-          label: '🔧 Desbloquear Formularios',
+          label: getText('appMenu.unblockForms'),
           icon: 'pi pi-wrench',
           command: () => {
             // Llamar a la función global para desbloquear formularios
@@ -83,7 +108,7 @@ export const createAppMenu = (onShowImportDialog) => {
     },
     { separator: true },
     {
-      label: 'Acerca de NodeTerm',
+      label: getText('appMenu.about'),
       icon: 'pi pi-info-circle',
       command: () => {
         window.electronAPI?.getVersionInfo && window.electronAPI.getVersionInfo().then(versionInfo => {
@@ -118,7 +143,7 @@ export const createAppMenu = (onShowImportDialog) => {
           aboutDialog.innerHTML = `
             <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; text-align: center;">${versionInfo.appName || 'NodeTerm'}</h3>
             <div style="margin: 16px 0;">
-              <p style="margin: 8px 0; font-size: 14px;"><strong>Versión:</strong> ${versionInfo.appVersion || '1.3.1'}</p>
+              <p style="margin: 8px 0; font-size: 14px;"><strong>${getText('appMenu.version')}:</strong> ${versionInfo.appVersion || '1.3.1'}</p>
               <p style="margin: 8px 0; font-size: 14px;"><strong>Electron:</strong> ${versionInfo.electronVersion || 'N/A'}</p>
               <p style="margin: 8px 0; font-size: 14px;"><strong>Node.js:</strong> ${versionInfo.nodeVersion || 'N/A'}</p>
               <p style="margin: 8px 0; font-size: 14px;"><strong>Chrome:</strong> ${versionInfo.chromeVersion || 'N/A'}</p>
@@ -133,7 +158,7 @@ export const createAppMenu = (onShowImportDialog) => {
                 cursor: pointer;
                 font-size: 14px;
                 min-width: 80px;
-              ">Cerrar</button>
+              ">${getText('appMenu.close')}</button>
             </div>
           `;
           
@@ -175,11 +200,11 @@ export const createAppMenu = (onShowImportDialog) => {
     },
     { separator: true },
     {
-      label: 'Salir',
+      label: getText('appMenu.exit'),
       icon: 'pi pi-sign-out',
       shortcut: 'Ctrl+Q',
       command: () => {
-        if (window.confirm('¿Estás seguro de que quieres salir de NodeTerm?')) {
+        if (window.confirm(getText('appMenu.exitConfirm'))) {
           window.electronAPI?.quitApp && window.electronAPI.quitApp();
         }
       }

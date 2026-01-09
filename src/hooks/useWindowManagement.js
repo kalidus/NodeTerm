@@ -10,10 +10,10 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.SIDEBAR_START_COLLAPSED);
-      return saved ? JSON.parse(saved) : true; // Por defecto true (colapsada)
+      return saved ? JSON.parse(saved) : false; // Por defecto false (desplegada)
     } catch (error) {
       console.error('Error loading sidebar collapsed state from localStorage:', error);
-      return true; // Por defecto colapsada
+      return false; // Por defecto desplegada
     }
   });
   const [allExpanded, setAllExpanded] = useState(false);

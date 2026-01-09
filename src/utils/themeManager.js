@@ -39,7 +39,20 @@ class ThemeManager {
   constructor() {
     this.currentTheme = null;
     this.styleElement = null;
+    this.checkboxObserver = null;
+    this.checkboxChangeListener = null;
+    this.checkboxTimeout = null;
     this.createStyleElement();
+    // Aplicar estilos de checkboxes cuando el DOM esté listo
+    if (typeof window !== 'undefined') {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+          setTimeout(() => this.applyCheckboxStyles(), 100);
+        });
+      } else {
+        setTimeout(() => this.applyCheckboxStyles(), 100);
+      }
+    }
   }
 
   createStyleElement() {
@@ -73,7 +86,9 @@ class ThemeManager {
       // Usar setTimeout para asegurar que el tema se haya aplicado completamente
       setTimeout(() => {
         window.dispatchEvent(new Event('theme-changed'));
-      }, 10);
+        // Aplicar estilos de checkboxes directamente al DOM
+        this.applyCheckboxStyles();
+      }, 50);
     }
   }
 
@@ -170,6 +185,10 @@ class ThemeManager {
         --ui-file-button-bg: transparent;
         --ui-titlebar-accent: ${usePrimaryColorsForTitlebar ? (colors['--ui-titlebar-accent'] || colors.buttonPrimary || '#1976d2') : (adjustColorBrightness(colors.sidebarBackground, 8) || colors.buttonPrimary || '#1976d2')};
         --ui-titlebar-text: ${usePrimaryColorsForTitlebar ? (colors['--ui-titlebar-text'] || '#fff') : (colors.buttonPrimary || '#fff')};
+        
+        /* Primary color - usado por checkboxes y otros componentes */
+        --primary-color: ${colors.buttonPrimary};
+        --primary-color-text: ${colors.buttonPrimaryText};
       }
 
       /* === SIDEBAR STYLES === */
@@ -311,6 +330,104 @@ class ThemeManager {
         border-top: 1px solid var(--ui-dialog-border) !important;
       }
 
+      /* === CHECKBOX OVERRIDES - SOBRESCRIBIR COLORES DE PRIMEREACT === */
+      /* Asegurar que todos los checkboxes usen el color del tema */
+      body .p-checkbox .p-checkbox-box.p-highlight,
+      body .p-checkbox .p-checkbox-box.p-checkbox-checked,
+      body .p-checkbox.p-checkbox-checked .p-checkbox-box,
+      body .p-checkbox.p-highlight .p-checkbox-box,
+      body .general-setting-control .p-checkbox .p-checkbox-box.p-highlight,
+      body .general-setting-control .p-checkbox .p-checkbox-box.p-checkbox-checked,
+      body .security-checkbox-wrapper .p-checkbox .p-checkbox-box.p-highlight,
+      body .security-checkbox-wrapper .p-checkbox .p-checkbox-box.p-checkbox-checked {
+        background: ${colors.buttonPrimary} !important;
+        background-color: ${colors.buttonPrimary} !important;
+        border-color: ${colors.buttonPrimary} !important;
+      }
+      
+      body .p-checkbox .p-checkbox-box.p-highlight .p-checkbox-icon,
+      body .p-checkbox .p-checkbox-box.p-checkbox-checked .p-checkbox-icon {
+        color: ${colors.buttonPrimaryText} !important;
+      }
+      
+      body .p-checkbox .p-checkbox-box:hover {
+        border-color: ${colors.buttonPrimary} !important;
+      }
+
+      /* === TOAST STYLES === */
+      .p-toast {
+        z-index: 1100;
+      }
+
+      .p-toast .p-toast-message {
+        background: var(--ui-dialog-bg) !important;
+        color: var(--ui-dialog-text) !important;
+        border: 1px solid var(--ui-dialog-border) !important;
+        box-shadow: 0 4px 12px var(--ui-dialog-shadow) !important;
+      }
+
+      .p-toast .p-toast-message .p-toast-message-content {
+        background: var(--ui-dialog-bg) !important;
+        color: var(--ui-dialog-text) !important;
+      }
+
+      .p-toast .p-toast-message .p-toast-message-text {
+        color: var(--ui-dialog-text) !important;
+      }
+
+      .p-toast .p-toast-message .p-toast-message-summary {
+        color: var(--ui-dialog-text) !important;
+        font-weight: 600;
+      }
+
+      .p-toast .p-toast-message .p-toast-message-detail {
+        color: var(--ui-dialog-text) !important;
+        opacity: 0.9;
+      }
+
+      .p-toast .p-toast-message .p-toast-icon-close {
+        color: var(--ui-dialog-text) !important;
+        opacity: 0.7;
+      }
+
+      .p-toast .p-toast-message .p-toast-icon-close:hover {
+        opacity: 1;
+        background: var(--ui-sidebar-hover) !important;
+      }
+
+      /* Toast severity colors - usando colores semánticos que se adaptan al tema */
+      .p-toast .p-toast-message.p-toast-message-success {
+        border-left: 4px solid #4caf50 !important;
+      }
+
+      .p-toast .p-toast-message.p-toast-message-success .p-toast-icon {
+        color: #4caf50 !important;
+      }
+
+      .p-toast .p-toast-message.p-toast-message-info {
+        border-left: 4px solid ${colors.buttonPrimary || '#2196f3'} !important;
+      }
+
+      .p-toast .p-toast-message.p-toast-message-info .p-toast-icon {
+        color: ${colors.buttonPrimary || '#2196f3'} !important;
+      }
+
+      .p-toast .p-toast-message.p-toast-message-warn {
+        border-left: 4px solid #ff9800 !important;
+      }
+
+      .p-toast .p-toast-message.p-toast-message-warn .p-toast-icon {
+        color: #ff9800 !important;
+      }
+
+      .p-toast .p-toast-message.p-toast-message-error {
+        border-left: 4px solid #f44336 !important;
+      }
+
+      .p-toast .p-toast-message.p-toast-message-error .p-toast-icon {
+        color: #f44336 !important;
+      }
+
       /* === BUTTON STYLES === */
       .p-button {
         background: var(--ui-button-secondary) !important;
@@ -334,14 +451,41 @@ class ThemeManager {
         background: var(--ui-context-bg) !important;
         border: 1px solid var(--ui-context-border) !important;
         box-shadow: 0 4px 12px var(--ui-context-shadow) !important;
+        border-radius: 6px !important;
+        padding: 4px 0 !important;
+      }
+
+      .p-menu .p-menuitem {
+        margin: 2px 4px !important;
       }
 
       .p-menu .p-menuitem-link {
         color: var(--ui-context-text) !important;
+        border-radius: 4px !important;
+        padding: 0.75rem 1rem !important;
       }
 
       .p-menu .p-menuitem-link:hover {
         background: var(--ui-context-hover) !important;
+      }
+
+      .p-menu .p-menuitem-icon {
+        color: var(--ui-context-text) !important;
+        opacity: 0.8;
+      }
+
+      .p-menu .p-menuitem-link:hover .p-menuitem-icon {
+        opacity: 1;
+      }
+
+      .p-menu .p-menuitem-text {
+        color: var(--ui-context-text) !important;
+      }
+
+      .p-menu .p-separator {
+        border-top: 1px solid var(--ui-context-border) !important;
+        margin: 4px 8px !important;
+        opacity: 0.5;
       }
 
       /* Custom context menus */
@@ -354,6 +498,82 @@ class ThemeManager {
 
       .context-menu-custom .context-menu-item:hover {
         background: var(--ui-context-hover) !important;
+      }
+
+      /* Menús contextuales personalizados de la aplicación */
+      .app-context-menu,
+      .app-context-menu-titlebar,
+      .app-context-menu-unified,
+      .app-context-menu-sidebar {
+        background: var(--ui-context-bg) !important;
+        border: 1px solid var(--ui-context-border) !important;
+        box-shadow: 0 4px 12px var(--ui-context-shadow) !important;
+        color: var(--ui-context-text) !important;
+      }
+
+      .app-context-menu .menu-item,
+      .app-context-menu-titlebar .menu-item-titlebar,
+      .app-context-menu-unified .menu-item-unified,
+      .app-context-menu-sidebar .menu-item {
+        color: var(--ui-context-text) !important;
+      }
+
+      .app-context-menu .menu-item:hover,
+      .app-context-menu-titlebar .menu-item-titlebar:hover,
+      .app-context-menu-unified .menu-item-unified:hover,
+      .app-context-menu-sidebar .menu-item:hover {
+        background: var(--ui-context-hover) !important;
+      }
+
+      .app-context-menu .menu-separator,
+      .app-context-menu-titlebar .menu-separator,
+      .app-context-menu-unified .menu-separator,
+      .app-context-menu-sidebar .menu-separator {
+        background: var(--ui-context-border) !important;
+        opacity: 0.5;
+      }
+
+      /* Menús contextuales de terminal y tabs (estilos para componentes con clases) */
+      .terminal-context-menu,
+      .tab-context-menu {
+        background: var(--ui-context-bg) !important;
+        border: 1px solid var(--ui-context-border) !important;
+        box-shadow: 0 4px 12px var(--ui-context-shadow) !important;
+        color: var(--ui-context-text) !important;
+        border-radius: 6px !important;
+      }
+
+      .terminal-context-menu .menu-item,
+      .tab-context-menu .menu-item {
+        color: var(--ui-context-text) !important;
+        transition: background-color 0.15s ease;
+      }
+
+      .terminal-context-menu .menu-item:hover,
+      .tab-context-menu .menu-item:hover {
+        background: var(--ui-context-hover) !important;
+      }
+
+      .terminal-context-menu .menu-separator,
+      .tab-context-menu .menu-separator {
+        background: var(--ui-context-border) !important;
+        opacity: 0.5;
+      }
+
+      .terminal-context-menu .menu-item i,
+      .tab-context-menu .menu-item i {
+        color: var(--ui-context-text) !important;
+        opacity: 0.8;
+      }
+
+      .terminal-context-menu .menu-item:hover i,
+      .tab-context-menu .menu-item:hover i {
+        opacity: 1;
+      }
+
+      .tab-context-menu .menu-header {
+        color: var(--ui-context-text) !important;
+        border-bottom: 1px solid var(--ui-context-border) !important;
       }
 
       /* === CARD STYLES === */
@@ -452,7 +672,83 @@ class ThemeManager {
     setTimeout(() => {
       const rootStyles = getComputedStyle(document.documentElement);
       // Log de debug removido para limpiar la consola
+      // Aplicar estilos de checkboxes directamente
+      this.applyCheckboxStyles();
     }, 100);
+  }
+
+  applyCheckboxStyles() {
+    if (typeof document === 'undefined') return;
+    
+    // Obtener el color primario del tema actual o de las variables CSS
+    const root = document.documentElement;
+    const primaryColor = this.currentTheme?.colors?.buttonPrimary || 
+                        getComputedStyle(root).getPropertyValue('--primary-color').trim() ||
+                        getComputedStyle(root).getPropertyValue('--ui-button-primary').trim() ||
+                        '#6366f1'; // Fallback
+    
+    const primaryColorText = this.currentTheme?.colors?.buttonPrimaryText || 
+                            getComputedStyle(root).getPropertyValue('--primary-color-text').trim() ||
+                            getComputedStyle(root).getPropertyValue('--ui-button-primary-text').trim() ||
+                            '#ffffff'; // Fallback
+    
+    // Buscar todos los checkboxes marcados
+    const checkboxes = document.querySelectorAll('.p-checkbox-box.p-highlight, .p-checkbox-box.p-checkbox-checked, .p-checkbox.p-checkbox-checked .p-checkbox-box');
+    
+    checkboxes.forEach(box => {
+      // Aplicar estilos directamente al elemento con !important usando setProperty
+      box.style.setProperty('background', primaryColor, 'important');
+      box.style.setProperty('background-color', primaryColor, 'important');
+      box.style.setProperty('border-color', primaryColor, 'important');
+      
+      // Aplicar color al icono si existe
+      const icon = box.querySelector('.p-checkbox-icon, .pi');
+      if (icon) {
+        icon.style.setProperty('color', primaryColorText, 'important');
+      }
+    });
+    
+    // También aplicar a checkboxes que puedan tener el estado en el input
+    const checkboxInputs = document.querySelectorAll('input[type="checkbox"]:checked');
+    checkboxInputs.forEach(input => {
+      const box = input.closest('.p-checkbox')?.querySelector('.p-checkbox-box');
+      if (box) {
+        box.style.setProperty('background', primaryColor, 'important');
+        box.style.setProperty('background-color', primaryColor, 'important');
+        box.style.setProperty('border-color', primaryColor, 'important');
+        box.classList.add('p-highlight', 'p-checkbox-checked');
+      }
+    });
+    
+    // Usar MutationObserver para aplicar estilos a checkboxes que se creen después
+    if (!this.checkboxObserver && typeof MutationObserver !== 'undefined') {
+      this.checkboxObserver = new MutationObserver(() => {
+        // Aplicar con un pequeño delay para evitar loops
+        clearTimeout(this.checkboxTimeout);
+        this.checkboxTimeout = setTimeout(() => {
+          this.applyCheckboxStyles();
+        }, 50);
+      });
+      
+      if (document.body) {
+        this.checkboxObserver.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['class', 'aria-checked']
+        });
+      }
+    }
+    
+    // También escuchar cambios en checkboxes
+    if (!this.checkboxChangeListener) {
+      this.checkboxChangeListener = (e) => {
+        if (e.target.type === 'checkbox') {
+          setTimeout(() => this.applyCheckboxStyles(), 10);
+        }
+      };
+      document.addEventListener('change', this.checkboxChangeListener, true);
+    }
   }
 
   applyAnimations(theme) {

@@ -123,7 +123,7 @@ try {
   });
 } catch (_) {}
 
-const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor } = require('electron');
 const path = require('path');
 const url = require('url');
 
@@ -154,6 +154,7 @@ try {
 }
 
 const SSH2Promise = require('ssh2-promise');
+const { Client: SSH2Client } = require('ssh2');
 const { NodeSSH } = require('node-ssh');
 const packageJson = require('./package.json');
 const { createBastionShell } = require('./src/components/bastion-ssh');
@@ -165,6 +166,45 @@ const GuacdService = require('./src/services/GuacdService');
 const AnythingLLMService = require('./src/services/AnythingLLMService');
 const OpenWebUIService = require('./src/services/OpenWebUIService');
 const GuacamoleLite = require('guacamole-lite');
+
+// ============================================================================
+// PARCHE CRÍTICO: Desactivar watchdog de 10s de guacamole-lite y hacer
+// lastActivity bidireccional (se actualiza tanto al enviar como al recibir)
+// Esto evita que las sesiones RDP se congelen prematuramente
+// ============================================================================
+(() => {
+  try {
+    const GuacdClient = require('guacamole-lite/lib/GuacdClient.js');
+    const originalConstructor = GuacdClient.prototype.constructor;
+    
+    // Guardar el método send original
+    const originalSend = GuacdClient.prototype.send;
+    
+    // Parchar el método send para actualizar lastActivity al ENVIAR datos
+    GuacdClient.prototype.send = function(data, afterOpened = false) {
+      // Actualizar lastActivity cuando el cliente ENVÍA datos (bidireccional)
+      this.lastActivity = Date.now();
+      return originalSend.call(this, data, afterOpened);
+    };
+    
+    // Parchar el constructor para desactivar el watchdog de 10s inmediatamente
+    const originalProcessConnectionOpen = GuacdClient.prototype.processConnectionOpen;
+    GuacdClient.prototype.processConnectionOpen = function() {
+      // Desactivar el watchdog de 10s INMEDIATAMENTE al abrir la conexión
+      if (this.activityCheckInterval) {
+        clearInterval(this.activityCheckInterval);
+        this.activityCheckInterval = null;
+      }
+      // Llamar al método original
+      return originalProcessConnectionOpen.call(this);
+    };
+    
+    console.log('✅ [GuacdClient] Parche de watchdog bidireccional aplicado correctamente');
+  } catch (e) {
+    console.error('❌ [GuacdClient] Error aplicando parche de watchdog:', e?.message || e);
+  }
+})();
+
 const { getUpdateService } = require('./src/main/services/UpdateService');
 const { registerRecordingHandlers, setSessionRecorder } = require('./src/main/handlers/recording-handlers');
 
@@ -266,11 +306,14 @@ let guacamoleServer = null;
 let guacamoleServerReadyAt = 0; // timestamp when guacamole-lite websocket server became ready
 // Track active guacamole client connections
 const activeGuacamoleConnections = new Set();
-// Watchdog configurable para inactividad de guacd (ms). 0 = desactivado. Por defecto 1h
-let guacdInactivityTimeoutMs = 3600000;
+// Watchdog configurable para inactividad de guacd (ms). 0 = desactivado.
+// Por defecto 2h (120 min) = sincronizado con el Umbral de actividad de sesión del frontend
+let guacdInactivityTimeoutMs = 7200000;
 // Flag para evitar inicialización múltiple
 let guacamoleInitializing = false;
 let guacamoleInitialized = false;
+// Logs detallados (debug) para Guacamole/guacd
+const DEBUG_GUACAMOLE = process.env.NODETERM_DEBUG_GUACAMOLE === '1';
 
 // Sistema de throttling para conexiones SSH
 const connectionThrottle = {
@@ -342,6 +385,44 @@ setInterval(() => {
 // Funciones de parsing movidas a main/utils/parsing-utils.js
 
 /**
+ * Obtiene o crea una clave secreta única para Guacamole
+ * La clave se genera una vez por instalación y se guarda de forma segura
+ */
+async function getOrCreateGuacamoleSecretKey() {
+  const crypto = require('crypto');
+  const fs = require('fs').promises;
+  const keyPath = path.join(app.getPath('userData'), 'guacamole-secret.key');
+  
+  try {
+    // Intentar cargar clave existente
+    const existingKey = await fs.readFile(keyPath);
+    if (existingKey.length === 32) {
+      console.log('🔐 [Guacamole] Clave secreta cargada desde archivo');
+      return existingKey;
+    } else {
+      console.warn('⚠️ [Guacamole] Clave existente tiene tamaño incorrecto, generando nueva');
+    }
+  } catch (error) {
+    // Archivo no existe o error al leerlo, generar nueva clave
+    console.log('🔐 [Guacamole] Generando nueva clave secreta única...');
+  }
+  
+  // Generar nueva clave aleatoria de 32 bytes (256 bits) para AES-256-CBC
+  const newKey = crypto.randomBytes(32);
+  
+  try {
+    // Guardar clave con permisos restrictivos (solo lectura para el usuario)
+    await fs.writeFile(keyPath, newKey, { mode: 0o600 });
+    console.log('✅ [Guacamole] Clave secreta única generada y guardada de forma segura');
+  } catch (writeError) {
+    console.error('❌ [Guacamole] Error guardando clave secreta:', writeError);
+    // Continuar con la clave en memoria aunque no se haya guardado
+  }
+  
+  return newKey;
+}
+
+/**
  * Inicializa servicios de Guacamole de forma asíncrona
  */
 async function initializeGuacamoleServices() {
@@ -368,7 +449,41 @@ async function initializeGuacamoleServices() {
     
     if (!guacdReady) {
       console.warn('⚠️ No se pudo inicializar guacd. RDP Guacamole no estará disponible.');
+      guacamoleInitializing = false; // Reset flag en caso de error
       return;
+    }
+
+    // Esperar a que guacd esté realmente accesible antes de continuar
+    // Esto evita race conditions donde Guacamole-lite se inicializa antes de que guacd esté listo
+    if (DEBUG_GUACAMOLE) {
+      console.log('⏳ [initializeGuacamoleServices] Esperando a que guacd esté accesible...');
+    }
+    const guacdStatus = guacdService.getStatus();
+    const maxWaitTime = 10000; // 10 segundos máximo
+    const checkInterval = 200; // Verificar cada 200ms
+    const startTime = Date.now();
+    let isReady = false;
+    
+    while (!isReady && (Date.now() - startTime) < maxWaitTime) {
+      try {
+        const isAvailable = await guacdService.isPortAvailable(guacdStatus.port);
+        if (!isAvailable) {
+          // Puerto ocupado = guacd está escuchando y accesible
+                isReady = true;
+                if (DEBUG_GUACAMOLE) {
+                  console.log(`✅ [initializeGuacamoleServices] guacd accesible en ${guacdStatus.host}:${guacdStatus.port}`);
+                }
+          break;
+        }
+      } catch (error) {
+        // Continuar esperando
+      }
+      await new Promise(resolve => setTimeout(resolve, checkInterval));
+    }
+    
+    if (!isReady) {
+      // Mantener warning (alto nivel)
+      console.warn('⚠️ [initializeGuacamoleServices] guacd no está accesible después de esperar, continuando de todas formas...');
     }
 
     // Configurar servidor Guacamole-lite
@@ -378,10 +493,10 @@ async function initializeGuacamoleServices() {
 
     const guacdOptions = guacdService.getGuacdOptions();
     
-    // Generar clave de 32 bytes para AES-256-CBC
+    // ✅ SEGURIDAD: Obtener o crear clave secreta única por instalación
+    // En lugar de usar una clave hardcodeada, generamos una única por instalación
     const crypto = require('crypto');
-    const SECRET_KEY_RAW = 'NodeTermGuacamoleSecretKey2024!';
-    const SECRET_KEY = crypto.createHash('sha256').update(SECRET_KEY_RAW).digest(); // 32 bytes exactos
+    const SECRET_KEY = await getOrCreateGuacamoleSecretKey(); // 32 bytes exactos para AES-256-CBC
     
     // Desactivar watchdogs de inactividad para evitar cierres falsos
     // 1) Watchdog de WebSocket (lado cliente en guacamole-lite): maxInactivityTime=0 → desactivado
@@ -400,17 +515,44 @@ async function initializeGuacamoleServices() {
     };
 
     // Configurar watchdog de inactividad para guacd (lado backend) de forma configurable
-    // GUACD_INACTIVITY_TIMEOUT_MS: 0 para desactivar, valor en ms para activar (por defecto 1h)
+    // Prioridad: 1) Variable de entorno, 2) Valor persistido, 3) Valor por defecto (120 min)
     const envTimeoutRaw = process.env.GUACD_INACTIVITY_TIMEOUT_MS;
-    // 1 hora por defecto si no se ha cambiado por IPC
     if (typeof envTimeoutRaw === 'string' && envTimeoutRaw.trim() !== '') {
+      // Usar variable de entorno si está definida
       const parsed = parseInt(envTimeoutRaw, 10);
       if (!Number.isNaN(parsed) && parsed >= 0) {
         guacdInactivityTimeoutMs = parsed;
+        console.log(`🕐 [Guacamole] Timeout de inactividad desde env: ${Math.round(guacdInactivityTimeoutMs / 60000)} minutos`);
+      }
+    } else {
+      // Cargar valor persistido (sincronizado con Umbral de actividad de sesión del frontend)
+      try {
+        const savedTimeout = await loadGuacdInactivityTimeout();
+        if (savedTimeout !== null && savedTimeout >= 0) {
+          guacdInactivityTimeoutMs = savedTimeout;
+          console.log(`🕐 [Guacamole] Timeout de inactividad cargado: ${Math.round(guacdInactivityTimeoutMs / 60000)} minutos`);
+        } else {
+          console.log(`🕐 [Guacamole] Timeout de inactividad por defecto: ${Math.round(guacdInactivityTimeoutMs / 60000)} minutos`);
+        }
+      } catch (e) {
+        console.log(`🕐 [Guacamole] Timeout de inactividad por defecto: ${Math.round(guacdInactivityTimeoutMs / 60000)} minutos`);
       }
     }
     // Crear servidor Guacamole-lite
-    guacamoleServer = new GuacamoleLite(websocketOptions, guacdOptions, clientOptions);
+    try {
+      guacamoleServer = new GuacamoleLite(websocketOptions, guacdOptions, clientOptions);
+      if (DEBUG_GUACAMOLE) {
+        console.log('🌐 [initializeGuacamoleServices] Servidor Guacamole-lite creado:', !!guacamoleServer);
+      }
+      if (guacamoleServer) {
+        if (DEBUG_GUACAMOLE) {
+          console.log('🌐 [initializeGuacamoleServices] Servidor tiene port:', guacamoleServer.port || 'no definido');
+        }
+      }
+    } catch (serverError) {
+      console.error('❌ [initializeGuacamoleServices] Error creando servidor Guacamole-lite:', serverError);
+      throw serverError;
+    }
     
     // Configurar eventos del servidor
     guacamoleServer.on('open', (clientConnection) => {
@@ -418,27 +560,53 @@ async function initializeGuacamoleServices() {
         // Nueva conexión Guacamole abierta
         activeGuacamoleConnections.add(clientConnection);
 
-        // Parche en runtime del watchdog de guacd (reemplaza el de 10s por uno configurable o lo desactiva)
+        // Parche en runtime del watchdog de guacd (backup del parche global)
+        // Reemplaza el de 10s por uno configurable o lo desactiva completamente
         try {
           const guacdClient = clientConnection && clientConnection.guacdClient ? clientConnection.guacdClient : null;
           if (guacdClient) {
+            // PASO 1: Desactivar SIEMPRE el watchdog original de 10s
             if (guacdClient.activityCheckInterval) {
               clearInterval(guacdClient.activityCheckInterval);
+              guacdClient.activityCheckInterval = null;
+              if (DEBUG_GUACAMOLE) {
+                console.log('🔧 [Guacamole] Watchdog original de 10s desactivado');
+              }
             }
 
+            // PASO 2: Aplicar watchdog personalizado solo si está configurado (>0)
             if (guacdInactivityTimeoutMs > 0) {
+              const timeoutMinutes = Math.round(guacdInactivityTimeoutMs / 60000);
+              console.log(`🕐 [Guacamole] Watchdog de inactividad configurado: ${timeoutMinutes} minutos`);
+              
               guacdClient.activityCheckInterval = setInterval(() => {
                 try {
-                  if (Date.now() > (guacdClient.lastActivity + guacdInactivityTimeoutMs)) {
-                    guacdClient.close(new Error('guacd was inactive for too long'));
+                  const inactiveMs = Date.now() - guacdClient.lastActivity;
+                  if (inactiveMs > guacdInactivityTimeoutMs) {
+                    const inactiveMinutes = Math.round(inactiveMs / 60000);
+                    console.warn(`⏰ [Guacamole] Cerrando conexión por inactividad: ${inactiveMinutes} minutos sin actividad`);
+                    guacdClient.close(new Error(`guacd inactivo por ${inactiveMinutes} minutos`));
                   }
                 } catch (e) {
                   // Si ocurre un error al cerrar, evitar que detenga el loop
                 }
-              }, 1000);
-              // Watchdog guacd aplicado
+              }, 30000); // Verificar cada 30 segundos en lugar de cada 1 segundo
             } else {
-              // Watchdog guacd desactivado
+              console.log('🔓 [Guacamole] Watchdog de inactividad DESACTIVADO (timeout = 0)');
+            }
+
+            // PASO 3: Interceptar método send para actualizar lastActivity bidireccionalmente
+            // (backup del parche global en caso de que no se aplicara)
+            if (!guacdClient._sendPatched) {
+              const originalSend = guacdClient.send.bind(guacdClient);
+              guacdClient.send = function(data, afterOpened = false) {
+                this.lastActivity = Date.now();
+                return originalSend(data, afterOpened);
+              };
+              guacdClient._sendPatched = true;
+              if (DEBUG_GUACAMOLE) {
+                console.log('🔧 [Guacamole] Parche bidireccional de lastActivity aplicado');
+              }
             }
           } else {
             console.warn('⚠️  No se encontró guacdClient para aplicar watchdog');
@@ -466,9 +634,13 @@ async function initializeGuacamoleServices() {
 
     guacamoleServerReadyAt = Date.now();
     guacamoleInitialized = true;
+    guacamoleInitializing = false; // Reset flag después de inicialización exitosa
     console.log('✅ Servicios Guacamole inicializados correctamente');
     console.log(`🌐 Servidor WebSocket: localhost:${websocketOptions.port}`);
     console.log(`🔧 GuacD: ${guacdOptions.host}:${guacdOptions.port}`);
+    if (DEBUG_GUACAMOLE) {
+      console.log(`📊 [initializeGuacamoleServices] guacamoleServer asignado:`, !!guacamoleServer);
+    }
     
   } catch (error) {
     console.error('❌ Error inicializando servicios Guacamole:', error);
@@ -478,7 +650,12 @@ async function initializeGuacamoleServices() {
 
 // === Preferencias Guacd (persistencia en userData) ===
 // Funciones movidas a src/main/utils/file-utils.js
-const { loadPreferredGuacdMethod, savePreferredGuacdMethod } = require('./src/main/utils/file-utils');
+const { 
+  loadPreferredGuacdMethod, 
+  savePreferredGuacdMethod,
+  loadGuacdInactivityTimeout,
+  saveGuacdInactivityTimeout
+} = require('./src/main/utils/file-utils');
 
 // Handlers de Guacamole movidos a src/main/handlers/guacamole-handlers.js
 
@@ -738,10 +915,14 @@ function createWindow() {
       cleanupOrphanedConnections,
       isAppQuitting,
       getGuacamoleServer: () => guacamoleServer,
-      getGuacamoleServerReadyAt: () => guacamoleServerReadyAt
+      getGuacamoleServerReadyAt: () => guacamoleServerReadyAt,
+      getOrCreateGuacamoleSecretKey: getOrCreateGuacamoleSecretKey,
+      isGuacamoleInitializing: () => guacamoleInitializing,
+      isGuacamoleInitialized: () => guacamoleInitialized
     });
     
     // Handlers registrados exitosamente
+    // Nota: get-user-home ya está registrado en registerSystemHandlers()
     
     // Inicializar servicios de Guacamole después de registrar los handlers
     initializeGuacamoleServices().catch((error) => {
@@ -805,17 +986,29 @@ ipcMain.on('app:save-passwords-for-mcp', async (event, passwords) => {
   }
 });
 
+// Cache para evitar logs repetidos de WSL
+let wslDetectionLogged = false;
+let wslDetectionResultLogged = false;
+
 // IPC handler para detectar todas las distribuciones WSL
 ipcMain.handle('detect-wsl-distributions', async () => {
-  // console.log('🚀 Detectando distribuciones WSL...'); // Eliminado por limpieza de logs
+  if (!wslDetectionLogged) {
+    console.log('🚀 [MAIN] Detectando distribuciones WSL...');
+    wslDetectionLogged = true;
+  }
   
   try {
     const distributions = await WSL.detectAllWSLDistributions();
-    // console.log('✅ Detección completada:', distributions.length, 'distribuciones encontradas'); // Eliminado por limpieza de logs
-    // distributions.forEach(distro => console.log(`  - ${distro.label} (${distro.executable})`)); // Eliminado por limpieza de logs
+    if (!wslDetectionResultLogged) {
+      console.log('✅ [MAIN] Detección completada:', distributions.length, 'distribuciones encontradas');
+      if (distributions.length > 0) {
+        distributions.forEach(distro => console.log(`  - ${distro.name} (${distro.label}, ${distro.category})`));
+      }
+      wslDetectionResultLogged = true;
+    }
     return distributions;
   } catch (error) {
-    console.error('❌ Error en detección de distribuciones WSL:', error);
+    console.error('❌ [MAIN] Error en detección de distribuciones WSL:', error);
     return [];
   }
 });
@@ -945,6 +1138,125 @@ app.on('activate', () => {
   }
 });
 
+// ============================================================================
+// POWER MONITOR: Detectar suspensión/reanudación del sistema
+// Cuando Windows apaga las pantallas o entra en suspensión, WSL puede suspenderse
+// Al reanudar, notificamos al frontend para que verifique/reconecte sesiones RDP
+// ============================================================================
+let systemSuspendedAt = null;
+
+powerMonitor.on('suspend', () => {
+  console.log('💤 [PowerMonitor] Sistema entrando en suspensión...');
+  systemSuspendedAt = Date.now();
+  
+  // Notificar al renderer que el sistema se va a suspender
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('system:suspend');
+  }
+});
+
+powerMonitor.on('resume', async () => {
+  const suspendDuration = systemSuspendedAt ? Math.round((Date.now() - systemSuspendedAt) / 1000) : 0;
+  console.log(`☀️ [PowerMonitor] Sistema reanudado después de ${suspendDuration}s de suspensión`);
+  systemSuspendedAt = null;
+  
+  // Si WSL está en uso, puede necesitar tiempo para despertar
+  // Esperar un poco antes de notificar al frontend
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
+  // Verificar si guacd (WSL) sigue accesible
+  if (guacdService && guacdService.getStatus) {
+    const status = guacdService.getStatus();
+    if (status.method === 'wsl') {
+      console.log('🔄 [PowerMonitor] Verificando que guacd en WSL siga accesible...');
+      try {
+        const isAvailable = await guacdService.isPortAvailable(status.port);
+        if (isAvailable) {
+          // Puerto disponible = guacd no está escuchando, puede haberse suspendido
+          console.warn('⚠️ [PowerMonitor] guacd en WSL parece suspendido, intentando reiniciar...');
+          await guacdService.restart();
+        } else {
+          console.log('✅ [PowerMonitor] guacd en WSL sigue accesible');
+        }
+      } catch (e) {
+        console.warn('⚠️ [PowerMonitor] Error verificando guacd:', e?.message);
+      }
+    }
+  }
+  
+  // Notificar al renderer que el sistema se ha reanudado
+  // El frontend debería verificar las conexiones RDP activas
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('system:resume', { suspendDuration });
+  }
+});
+
+powerMonitor.on('lock-screen', () => {
+  console.log('🔒 [PowerMonitor] Pantalla bloqueada');
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('system:lock-screen');
+  }
+});
+
+powerMonitor.on('unlock-screen', async () => {
+  console.log('🔓 [PowerMonitor] Pantalla desbloqueada');
+  
+  // Cuando se desbloquea, las pantallas estaban apagadas
+  // Verificar conexión WSL y notificar al frontend
+  if (guacdService && guacdService.getStatus) {
+    const status = guacdService.getStatus();
+    if (status.method === 'wsl') {
+      console.log('🔄 [PowerMonitor] Verificando guacd WSL tras desbloqueo...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      try {
+        const isAvailable = await guacdService.isPortAvailable(status.port);
+        if (isAvailable) {
+          console.warn('⚠️ [PowerMonitor] guacd WSL no responde tras desbloqueo, reiniciando...');
+          await guacdService.restart();
+        }
+      } catch {}
+    }
+  }
+  
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('system:unlock-screen');
+  }
+});
+
+// Monitor de idle del sistema - detecta cuando las pantallas se apagan por inactividad
+let lastIdleCheck = Date.now();
+let wasIdle = false;
+
+setInterval(() => {
+  try {
+    // powerMonitor.getSystemIdleTime() devuelve segundos de inactividad
+    const idleSeconds = powerMonitor.getSystemIdleTime();
+    const isCurrentlyIdle = idleSeconds > 60; // Más de 1 minuto de inactividad
+    
+    // Si pasamos de idle a activo, verificar conexión WSL
+    if (wasIdle && !isCurrentlyIdle) {
+      console.log(`🔄 [IdleMonitor] Usuario activo después de ${idleSeconds}s de inactividad`);
+      
+      // Verificar conexión WSL
+      if (guacdService && guacdService.getStatus) {
+        const status = guacdService.getStatus();
+        if (status.method === 'wsl' && status.isRunning) {
+          // Notificar al frontend para que verifique las sesiones RDP
+          if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('system:resume', { 
+              suspendDuration: idleSeconds,
+              reason: 'idle-recovery'
+            });
+          }
+        }
+      }
+    }
+    
+    wasIdle = isCurrentlyIdle;
+    lastIdleCheck = Date.now();
+  } catch {}
+}, 10000); // Verificar cada 10 segundos
+
 // Handler get-version-info movido a src/main/handlers/application-handlers.js
 
 // IPC handlers para funciones de View
@@ -954,6 +1266,10 @@ app.on('activate', () => {
 
 // IPC handler to establish an SSH connection
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
+  // Mostrar mensaje de conexión al inicio
+  const hostName = config.name || config.label || config.host;
+  sendToRenderer(event.sender, `ssh:data:${tabId}`, `Connecting to ${hostName}...\r\n`);
+  
   // Para bastiones: usar cacheKey único por destino (permite reutilización)
   // Para SSH directo: usar pooling normal para eficiencia
   const cacheKey = config.useBastionWallix 
@@ -988,9 +1304,13 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     const bastionConfig = {
       bastionHost: config.bastionHost,
       port: 22,
-      bastionUser: config.bastionUser,
-      password: config.password
+      bastionUser: config.bastionUser
     };
+    
+    // Si hay password, usarlo. Si no, permitir autenticación interactiva
+    if (config.password && config.password.trim()) {
+      bastionConfig.password = config.password;
+    }
     let shellStream;
     const { conn } = createBastionShell(
       bastionConfig,
@@ -1018,7 +1338,22 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         delete sshConnections[tabId];
       },
       (err) => {
-        sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
+        const conn = sshConnections[tabId];
+        // Detectar errores de autenticación
+        const isAuthError = err.message && (
+          err.message.includes('authentication') ||
+          err.message.includes('Authentication failed') ||
+          err.message.includes('All configured authentication methods failed')
+        );
+        
+        if (isAuthError && conn) {
+          // Activar modo manual de password para reintento interactivo
+          conn.manualPasswordMode = true;
+          conn.manualPasswordBuffer = '';
+          sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nAutenticación fallida. Por favor, introduce el password:\r\nPassword: `);
+        } else {
+          sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
+        }
       },
       (stream) => {
         if (sshConnections[tabId]) {
@@ -1050,8 +1385,16 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       statsTimeout: null,
       previousNet: null,
       previousTime: null,
-      statsLoopRunning: false
+      statsLoopRunning: false,
+      // Si no hay password, activar modo manual inmediatamente
+      manualPasswordMode: !(config.password && config.password.trim()),
+      manualPasswordBuffer: ''
     };
+    
+    // Si no hay password, mostrar prompt inmediatamente
+    if (!(config.password && config.password.trim())) {
+      sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPor favor, introduce el password:\r\nPassword: `);
+    }
     
     // Función de bucle de stats para Wallix/bastión
     function wallixStatsLoop() {
@@ -1352,9 +1695,17 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       const directConfig = {
         host: config.host,
         username: config.username,
-        password: config.password,
         port: config.port || 22
       };
+      
+      // Si hay password, usarlo. Si no, permitir autenticación interactiva
+      if (config.password && config.password.trim()) {
+        directConfig.password = config.password;
+      } else {
+        // Permitir autenticación interactiva (el usuario introducirá el password en la terminal)
+        directConfig.tryKeyboard = true;
+      }
+      
       ssh = new SSH2Promise(directConfig);
       sshConnectionPool[cacheKey] = ssh;
     }
@@ -1738,6 +2089,239 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   } catch (err) {
     // console.error(`Error en conexión SSH para ${tabId}:`, err);
     
+    // Detectar si es un error de autenticación
+    const isAuthError = err && (
+      (typeof err === 'string' && (
+        err.includes('All configured authentication methods failed') ||
+        err.includes('authentication') ||
+        err.includes('Authentication failed')
+      )) ||
+      (err.message && (
+        err.message.includes('All configured authentication methods failed') ||
+        err.message.includes('authentication') ||
+        err.message.includes('Authentication failed')
+      ))
+    );
+    
+    // Si es error de autenticación, permitir reintento interactivo
+    if (isAuthError && !config.useBastionWallix) {
+      try {
+        // Limpiar conexión problemática del pool
+        if (ssh && cacheKey && sshConnectionPool[cacheKey] === ssh) {
+          try {
+            ssh.close();
+          } catch (closeError) {
+            // Ignorar errores de cierre
+          }
+          delete sshConnectionPool[cacheKey];
+        }
+        
+        // Usar ssh2 Client directamente para permitir autenticación interactiva
+        const ssh2Client = new SSH2Client();
+        
+        // Guardar referencia inicial para capturar entrada durante autenticación
+        sshConnections[tabId] = {
+          ssh: ssh2Client,
+          stream: null,
+          config,
+          cacheKey,
+          originalKey: config.originalKey || tabId,
+          previousCpu: null,
+          statsTimeout: null,
+          previousNet: null,
+          previousTime: null,
+          manualPasswordMode: true, // Activar modo manual de password
+          manualPasswordBuffer: ''
+        };
+        
+        // Manejar autenticación interactiva
+        ssh2Client.on('keyboard-interactive', (name, instructions, instructionsLang, prompts, finish) => {
+          const conn = sshConnections[tabId];
+          if (conn) {
+            // Mostrar instrucciones y prompts en la terminal
+            if (instructions) {
+              sendToRenderer(event.sender, `ssh:data:${tabId}`, instructions + '\r\n');
+            }
+            
+            // Mostrar el primer prompt
+            if (prompts.length > 0 && prompts[0].prompt) {
+              sendToRenderer(event.sender, `ssh:data:${tabId}`, prompts[0].prompt);
+            } else if (prompts.length > 0) {
+              sendToRenderer(event.sender, `ssh:data:${tabId}`, 'Password: ');
+            }
+            
+            // Guardar callback para cuando el usuario escriba
+            conn.keyboardInteractiveFinish = finish;
+            conn.keyboardInteractivePrompts = prompts;
+            conn.keyboardInteractiveResponses = [];
+            conn._currentResponse = '';
+            
+            // NO llamar finish() aquí - esperar a que el usuario escriba
+          }
+        });
+        
+        // Crear shell cuando la conexión esté lista
+        ssh2Client.on('ready', () => {
+          ssh2Client.shell({ term: 'xterm-256color', cols: 80, rows: 24 }, async (err, shellStream) => {
+            if (err) {
+              sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
+              ssh2Client.end();
+              return;
+            }
+            
+            const conn = sshConnections[tabId];
+            if (!conn) return;
+            
+            // Crear wrapper para exec compatible con statsLoop
+            // IMPORTANTE: Guardar el método original antes de reemplazarlo para evitar recursión
+            const originalExec = ssh2Client.exec.bind(ssh2Client);
+            
+            const execWrapper = (command) => {
+              return new Promise((resolve, reject) => {
+                // Usar el método original, no el wrapper
+                originalExec(command, (err, stream) => {
+                  if (err) {
+                    reject(err);
+                    return;
+                  }
+                  let output = '';
+                  stream.on('data', (data) => {
+                    output += data.toString('utf-8');
+                  });
+                  stream.on('close', (code) => {
+                    if (code === 0) {
+                      resolve(output);
+                    } else {
+                      reject(new Error(`Command failed with code ${code}`));
+                    }
+                  });
+                  stream.stderr.on('data', (data) => {
+                    output += data.toString('utf-8');
+                  });
+                });
+              });
+            };
+            
+            // Agregar método exec para compatibilidad con statsLoop
+            ssh2Client.exec = execWrapper;
+            
+            // Obtener hostname y distro para stats
+            let realHostname = 'unknown';
+            let osRelease = '';
+            try {
+              realHostname = (await execWrapper('hostname')).trim() || 'unknown';
+            } catch (e) {
+              console.warn('[SSH] Error obteniendo hostname:', e);
+            }
+            try {
+              osRelease = await execWrapper('cat /etc/os-release');
+            } catch (e) {
+              osRelease = 'ID=linux';
+            }
+            const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
+            const finalDistroId = distroId.replace(/"/g, '').toLowerCase();
+            
+            // Actualizar conexión
+            conn.ssh = ssh2Client;
+            conn.stream = shellStream;
+            conn.realHostname = realHostname;
+            conn.finalDistroId = finalDistroId;
+            conn.manualPasswordMode = false; // Desactivar modo manual
+            
+            // Configurar listeners del stream
+            shellStream.on('data', (data) => {
+              const dataStr = data.toString('utf-8');
+              if (sessionRecorder.isRecording(tabId)) {
+                sessionRecorder.recordOutput(tabId, dataStr);
+              }
+              sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
+            });
+            
+            shellStream.on('close', () => {
+              sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
+              if (sshConnections[tabId] && sshConnections[tabId].statsTimeout) {
+                clearTimeout(sshConnections[tabId].statsTimeout);
+              }
+              sendToRenderer(event.sender, 'ssh-connection-disconnected', {
+                originalKey: conn.originalKey || tabId,
+                tabId: tabId
+              });
+              delete sshConnections[tabId];
+              ssh2Client.end();
+            });
+            
+            shellStream.stderr?.on('data', (data) => {
+              sendToRenderer(event.sender, `ssh:data:${tabId}`, data.toString('utf-8'));
+            });
+            
+            sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\n✅ Conectado exitosamente.\r\n');
+            sendToRenderer(event.sender, `ssh:ready:${tabId}`);
+            sendToRenderer(event.sender, 'ssh-connection-ready', {
+              originalKey: conn.originalKey || tabId,
+              tabId: tabId
+            });
+            
+            // Inicializar statsLoop después de un breve delay (IMPORTANTE: para que la status bar funcione)
+            setTimeout(() => {
+              if (sshConnections[tabId] && sshConnections[tabId].ssh) {
+                statsLoop(tabId, realHostname, finalDistroId, config.host);
+              }
+            }, 1000);
+          });
+        });
+        
+        ssh2Client.on('error', (err) => {
+          const conn = sshConnections[tabId];
+          // Si es error de autenticación, activar modo manual para reintentar
+          if (err.message && (err.message.includes('authentication') || err.message.includes('Authentication failed') || err.message.includes('All configured authentication methods failed'))) {
+            if (conn) {
+              conn.manualPasswordMode = true;
+              conn.manualPasswordBuffer = '';
+            }
+            sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nAutenticación fallida. Por favor, introduce el password:\r\nPassword: `);
+            return;
+          }
+          sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
+        });
+        
+        // Conectar con autenticación interactiva
+        const connectConfig = {
+          host: config.host,
+          username: config.username,
+          port: config.port || 22,
+          tryKeyboard: true, // Permitir autenticación interactiva
+          readyTimeout: 30000,
+          keepaliveInterval: 60000
+        };
+        
+        // NO incluir password si falló antes - forzar autenticación interactiva
+        // Si no hay password configurado, no incluirlo
+        if (config.password && config.password.trim() && !isAuthError) {
+          connectConfig.password = config.password;
+        }
+        
+        // Si no hay password configurado, activar modo manual inmediatamente
+        if (!config.password || !config.password.trim()) {
+          const conn = sshConnections[tabId];
+          if (conn) {
+            conn.manualPasswordMode = true;
+            conn.manualPasswordBuffer = '';
+            // Mostrar prompt inmediatamente con mensaje claro
+            sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPor favor, introduce el password:\r\nPassword: `);
+          }
+        }
+        
+        ssh2Client.connect(connectConfig);
+        
+        // No mostrar error, permitir que el usuario reintente interactivamente
+        return;
+        
+      } catch (retryError) {
+        console.error('Error en reintento interactivo:', retryError);
+        // Continuar con el manejo de error normal
+      }
+    }
+    
     // Limpiar conexión problemática del pool
     if (ssh && cacheKey && sshConnectionPool[cacheKey] === ssh) {
       try {
@@ -1766,22 +2350,552 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       }
     }
     
-    sendToRenderer(event.sender, `ssh:error:${tabId}`, errorMsg);
-    
-    // Enviar evento de error de conexión
-    const errorOriginalKey = config.originalKey || tabId;
-    // console.log('❌ SSH error - enviando evento para originalKey:', errorOriginalKey, 'error:', errorMsg);
-    sendToRenderer(event.sender, 'ssh-connection-error', { 
-      originalKey: errorOriginalKey,
-      tabId: tabId,
-      error: errorMsg 
-    });
+    // Solo mostrar error si NO es de autenticación (ya lo manejamos arriba)
+    if (!isAuthError) {
+      sendToRenderer(event.sender, `ssh:error:${tabId}`, errorMsg);
+      
+      // Enviar evento de error de conexión
+      const errorOriginalKey = config.originalKey || tabId;
+      sendToRenderer(event.sender, 'ssh-connection-error', { 
+        originalKey: errorOriginalKey,
+        tabId: tabId,
+        error: errorMsg 
+      });
+    }
   }
 });
 
 // IPC handler to send data to the SSH shell
 ipcMain.on('ssh:data', (event, { tabId, data }) => {
   const conn = sshConnections[tabId];
+  
+  if (!conn) {
+    return;
+  }
+  
+  // Si hay modo manual de password activo (cuando keyboard-interactive no funciona o password incorrecto)
+  if (conn.manualPasswordMode) {
+    // Acumular la entrada del usuario
+    if (!conn.manualPasswordBuffer) {
+      conn.manualPasswordBuffer = '';
+    }
+    
+    // Si el usuario presiona Enter, reconectar con el password
+    if (data.includes('\r') || data.includes('\n')) {
+      const password = (conn.manualPasswordBuffer + data.replace(/[\r\n]/g, '')).trim();
+      
+      if (password) {
+        // Limpiar modo manual
+        conn.manualPasswordMode = false;
+        conn.manualPasswordBuffer = '';
+        
+        // Cerrar conexión anterior si existe
+        if (conn.ssh && typeof conn.ssh.end === 'function') {
+          try {
+            conn.ssh.end();
+          } catch (e) {}
+        }
+        
+        // Reconectar con el password proporcionado
+        const newConfig = { ...conn.config, password: password };
+        
+        // Si es conexión Bastion, usar createBastionShell
+        if (newConfig.useBastionWallix) {
+          const bastionConfig = {
+            bastionHost: newConfig.bastionHost,
+            port: 22,
+            bastionUser: newConfig.bastionUser,
+            password: password
+          };
+          
+          const { conn: newBastionConn } = createBastionShell(
+            bastionConfig,
+            (data) => {
+              const dataStr = data.toString('utf-8');
+              if (sessionRecorder.isRecording(tabId)) {
+                sessionRecorder.recordOutput(tabId, dataStr);
+              }
+              sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
+            },
+            () => {
+              sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
+              if (sshConnections[tabId] && sshConnections[tabId].statsTimeout) {
+                clearTimeout(sshConnections[tabId].statsTimeout);
+              }
+              sendToRenderer(event.sender, 'ssh-connection-disconnected', {
+                originalKey: conn.originalKey || tabId,
+                tabId: tabId
+              });
+              delete bastionStatsState[tabId];
+              delete sshConnections[tabId];
+            },
+            (err) => {
+              const isAuthError = err.message && (
+                err.message.includes('authentication') ||
+                err.message.includes('Authentication failed') ||
+                err.message.includes('All configured authentication methods failed')
+              );
+              
+              if (isAuthError) {
+                conn.manualPasswordMode = true;
+                conn.manualPasswordBuffer = '';
+                sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPassword incorrecto. Intenta de nuevo:\r\nPassword: `);
+              } else {
+                sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
+              }
+            },
+            (stream) => {
+              if (sshConnections[tabId]) {
+                sshConnections[tabId].stream = stream;
+                const pending = sshConnections[tabId]._pendingResize;
+                if (pending && stream && !stream.destroyed && typeof stream.setWindow === 'function') {
+                  const safeRows = Math.max(1, Math.min(300, pending.rows || 24));
+                  const safeCols = Math.max(1, Math.min(500, pending.cols || 80));
+                  stream.setWindow(safeRows, safeCols);
+                  sshConnections[tabId]._pendingResize = null;
+                }
+                
+                // Crear función wallixStatsLoop si no existe
+                if (!conn.wallixStatsLoop) {
+                  function wallixStatsLoop() {
+                    const connObj = sshConnections[tabId];
+                    if (activeStatsTabId !== tabId) {
+                      if (connObj) {
+                        connObj.statsTimeout = null;
+                        connObj.statsLoopRunning = false;
+                      }
+                      return;
+                    }
+                    if (!connObj || !connObj.ssh || !connObj.stream) {
+                      return;
+                    }
+                    if (connObj.statsLoopRunning) {
+                      return;
+                    }
+                    
+                    connObj.statsLoopRunning = true;
+
+                    try {
+                      if (connObj.ssh.execCommand) {
+                        const command = 'grep "cpu " /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "" && cat /etc/os-release';
+                        connObj.ssh.execCommand(command, (err, result) => {
+                          if (err || !result) {
+                            const fallbackStats = {
+                              cpu: '0.00',
+                              mem: { total: 0, used: 0 },
+                              disk: [],
+                              uptime: 'Error',
+                              network: { rx_speed: 0, tx_speed: 0 },
+                              hostname: 'Bastión',
+                              distro: 'linux',
+                              ip: newConfig.host
+                            };
+                            sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, fallbackStats);
+                            
+                            if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
+                              sshConnections[tabId].statsLoopRunning = false;
+                              sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
+                            } else {
+                              if (sshConnections[tabId]) sshConnections[tabId].statsLoopRunning = false;
+                            }
+                            return;
+                          }
+                          
+                          const output = result.stdout;
+                          
+                          try {
+                            const parts = output.trim().split('\n');
+                            
+                            const cpuLineIndex = parts.findIndex(line => line.trim().startsWith('cpu '));
+                            let cpuLoad = '0.00';
+                            if (cpuLineIndex >= 0) {
+                              const cpuLine = parts[cpuLineIndex];
+                              const cpuTimes = cpuLine.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
+                              const previousCpu = bastionStatsState[tabId]?.previousCpu;
+                              if (cpuTimes.length >= 8) {
+                                const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
+                                if (previousCpu) {
+                                  const prevIdle = previousCpu.idle + previousCpu.iowait;
+                                  const currentIdle = currentCpu.idle + currentCpu.iowait;
+                                  const prevTotal = Object.values(previousCpu).reduce((a, b) => a + b, 0);
+                                  const currentTotal = Object.values(currentCpu).reduce((a, b) => a + b, 0);
+                                  const totalDiff = currentTotal - prevTotal;
+                                  const idleDiff = currentIdle - prevIdle;
+                                  if (totalDiff > 0) {
+                                    cpuLoad = ((1 - idleDiff / totalDiff) * 100).toFixed(2);
+                                  }
+                                }
+                                if (!bastionStatsState[tabId]) bastionStatsState[tabId] = {};
+                                bastionStatsState[tabId].previousCpu = currentCpu;
+                              }
+                            }
+                            
+                            const freeLineIndex = parts.findIndex(line => line.trim().startsWith('Mem:'));
+                            let mem = { total: 0, used: 0 };
+                            if (freeLineIndex >= 0) {
+                              const memParts = parts[freeLineIndex].trim().split(/\s+/);
+                              if (memParts.length >= 4) {
+                                mem.total = parseInt(memParts[1], 10);
+                                mem.used = parseInt(memParts[2], 10);
+                              }
+                            }
+                            
+                            const dfLines = parts.filter(line => line.trim() && !line.includes('Filesystem') && !line.includes('tmpfs') && !line.includes('devtmpfs'));
+                            const disks = dfLines.slice(0, 3).map(line => {
+                              const dfParts = line.trim().split(/\s+/);
+                              if (dfParts.length >= 5) {
+                                return {
+                                  mount: dfParts[5] || '/',
+                                  total: parseInt(dfParts[1], 10) * 1024,
+                                  used: parseInt(dfParts[2], 10) * 1024
+                                };
+                              }
+                              return null;
+                            }).filter(d => d !== null);
+                            
+                            const uptimeLine = parts.find(line => line.includes('up'));
+                            let uptime = 'N/A';
+                            if (uptimeLine) {
+                              uptime = uptimeLine.replace(/.*up\s+/, '').trim();
+                            }
+                            
+                            const netLineIndex = parts.findIndex(line => line.trim().startsWith('Inter-face') || line.trim().startsWith('face'));
+                            let network = { rx_speed: 0, tx_speed: 0 };
+                            if (netLineIndex >= 0 && netLineIndex + 1 < parts.length) {
+                              const netLine = parts[netLineIndex + 1];
+                              const netParts = netLine.trim().split(/\s+/);
+                              if (netParts.length >= 10) {
+                                const rx = parseInt(netParts[1], 10);
+                                const tx = parseInt(netParts[9], 10);
+                                const previousNet = bastionStatsState[tabId]?.previousNet;
+                                const previousTime = bastionStatsState[tabId]?.previousTime;
+                                const currentTime = Date.now();
+                                if (previousNet && previousTime) {
+                                  const timeDiff = (currentTime - previousTime) / 1000;
+                                  if (timeDiff > 0) {
+                                    network.rx_speed = Math.max(0, (rx - previousNet.rx) / timeDiff);
+                                    network.tx_speed = Math.max(0, (tx - previousNet.tx) / timeDiff);
+                                  }
+                                }
+                                if (!bastionStatsState[tabId]) bastionStatsState[tabId] = {};
+                                bastionStatsState[tabId].previousNet = { rx, tx };
+                                bastionStatsState[tabId].previousTime = currentTime;
+                              }
+                            }
+                            
+                            const hostnameLine = parts.find(line => line.trim() && !line.includes(':') && !line.includes('=') && !line.includes('Filesystem') && !line.includes('Mem:') && !line.includes('cpu ') && !line.includes('up') && !line.includes('Inter-face') && !line.includes('face'));
+                            const hostname = hostnameLine ? hostnameLine.trim() : 'Bastión';
+                            
+                            const ipLine = parts.find(line => /^\d+\.\d+\.\d+\.\d+/.test(line.trim()));
+                            const ip = ipLine ? ipLine.trim().split(/\s+/)[0] : newConfig.host;
+                            
+                            const osReleaseLines = parts.filter(line => line.includes('='));
+                            let finalDistroId = 'linux';
+                            let versionId = '';
+                            try {
+                              let idLine = osReleaseLines.find(line => line.trim().startsWith('ID='));
+                              let idLikeLine = osReleaseLines.find(line => line.trim().startsWith('ID_LIKE='));
+                              let versionIdLine = osReleaseLines.find(line => line.trim().startsWith('VERSION_ID='));
+                              let rawDistro = '';
+                              if (idLine) {
+                                const match = idLine.match(/^ID=("?)([^"\n]*)\1$/);
+                                if (match) rawDistro = match[2].toLowerCase();
+                              }
+                              if (["rhel", "redhat", "redhatenterpriseserver", "red hat enterprise linux"].includes(rawDistro)) {
+                                finalDistroId = "rhel";
+                              } else if (rawDistro === 'linux' && idLikeLine) {
+                                const match = idLikeLine.match(/^ID_LIKE=("?)([^"\n]*)\1$/);
+                                const idLike = match ? match[2].toLowerCase() : '';
+                                if (idLike.includes('rhel') || idLike.includes('redhat')) {
+                                  finalDistroId = "rhel";
+                                } else {
+                                  finalDistroId = rawDistro;
+                                }
+                              } else if (rawDistro) {
+                                finalDistroId = rawDistro;
+                              }
+                              if (versionIdLine) {
+                                const match = versionIdLine.match(/^VERSION_ID=("?)([^"\n]*)\1$/);
+                                if (match) versionId = match[2];
+                              }
+                            } catch (e) {}
+                            const stats = {
+                              cpu: cpuLoad,
+                              mem,
+                              disk: disks,
+                              uptime,
+                              network,
+                              hostname,
+                              distro: finalDistroId,
+                              versionId,
+                              ip
+                            };
+                            
+                            sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
+                            
+                          } catch (parseErr) {
+                            // Error parseando
+                          }
+                          
+                          if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
+                            sshConnections[tabId].statsLoopRunning = false;
+                            sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 2000);
+                          } else {
+                            if (sshConnections[tabId]) sshConnections[tabId].statsLoopRunning = false;
+                          }
+                        });
+                        
+                      } else {
+                        const stats = {
+                          cpu: '0.00',
+                          mem: { total: 0, used: 0 },
+                          disk: [],
+                          uptime: 'N/A',
+                          network: { rx_speed: 0, tx_speed: 0 },
+                          hostname: 'Bastión',
+                          distro: 'linux',
+                          ip: newConfig.host
+                        };
+                        sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
+                      }
+                      
+                    } catch (e) {
+                      if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
+                        sshConnections[tabId].statsLoopRunning = false;
+                        sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
+                      } else {
+                        if (sshConnections[tabId]) sshConnections[tabId].statsLoopRunning = false;
+                      }
+                    }
+                  }
+                  
+                  conn.wallixStatsLoop = wallixStatsLoop;
+                }
+                
+                if (activeStatsTabId === tabId) {
+                  conn.wallixStatsLoop();
+                }
+              }
+            }
+          );
+          
+          // Actualizar conexión
+          conn.ssh = newBastionConn;
+          conn.config = newConfig;
+          
+          sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\n✅ Conectado exitosamente.\r\n');
+          sendToRenderer(event.sender, `ssh:ready:${tabId}`);
+          sendToRenderer(event.sender, 'ssh-connection-ready', {
+            originalKey: conn.originalKey || tabId,
+            tabId: tabId
+          });
+        } else {
+          // Conexión SSH directa
+          const ssh2Client = new SSH2Client();
+          
+          ssh2Client.on('ready', () => {
+            ssh2Client.shell({ term: 'xterm-256color', cols: 80, rows: 24 }, async (err, shellStream) => {
+              if (err) {
+                sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
+                ssh2Client.end();
+                // Activar modo manual de nuevo para reintentar
+                conn.manualPasswordMode = true;
+                conn.manualPasswordBuffer = '';
+                sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPassword incorrecto. Intenta de nuevo:\r\nPassword: `);
+                return;
+              }
+              
+              // Crear wrapper para exec compatible con statsLoop
+              // IMPORTANTE: Guardar el método original antes de reemplazarlo para evitar recursión
+              const originalExec = ssh2Client.exec.bind(ssh2Client);
+              
+              const execWrapper = (command) => {
+                return new Promise((resolve, reject) => {
+                  // Usar el método original, no el wrapper
+                  originalExec(command, (err, stream) => {
+                    if (err) {
+                      reject(err);
+                      return;
+                    }
+                    let output = '';
+                    stream.on('data', (data) => {
+                      output += data.toString('utf-8');
+                    });
+                    stream.on('close', (code) => {
+                      if (code === 0) {
+                        resolve(output);
+                      } else {
+                        reject(new Error(`Command failed with code ${code}`));
+                      }
+                    });
+                    stream.stderr.on('data', (data) => {
+                      output += data.toString('utf-8');
+                    });
+                  });
+                });
+              };
+              
+              // Agregar método exec para compatibilidad con statsLoop
+              ssh2Client.exec = execWrapper;
+              
+              // Obtener hostname y distro para stats
+              let realHostname = 'unknown';
+              let osRelease = '';
+              try {
+                realHostname = (await execWrapper('hostname')).trim() || 'unknown';
+              } catch (e) {
+                console.warn('[SSH] Error obteniendo hostname:', e);
+              }
+              try {
+                osRelease = await execWrapper('cat /etc/os-release');
+              } catch (e) {
+                osRelease = 'ID=linux';
+              }
+              const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
+              const finalDistroId = distroId.replace(/"/g, '').toLowerCase();
+              
+              // Actualizar conexión
+              conn.ssh = ssh2Client;
+              conn.stream = shellStream;
+              conn.realHostname = realHostname;
+              conn.finalDistroId = finalDistroId;
+              
+              // Configurar listeners del stream
+              shellStream.on('data', (data) => {
+                const dataStr = data.toString('utf-8');
+                if (sessionRecorder.isRecording(tabId)) {
+                  sessionRecorder.recordOutput(tabId, dataStr);
+                }
+                sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
+              });
+              
+              shellStream.on('close', () => {
+                sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
+                if (sshConnections[tabId] && sshConnections[tabId].statsTimeout) {
+                  clearTimeout(sshConnections[tabId].statsTimeout);
+                }
+                sendToRenderer(event.sender, 'ssh-connection-disconnected', {
+                  originalKey: conn.originalKey || tabId,
+                  tabId: tabId
+                });
+                delete sshConnections[tabId];
+                ssh2Client.end();
+              });
+              
+              shellStream.stderr?.on('data', (data) => {
+                sendToRenderer(event.sender, `ssh:data:${tabId}`, data.toString('utf-8'));
+              });
+              
+              sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\n✅ Conectado exitosamente.\r\n');
+              sendToRenderer(event.sender, `ssh:ready:${tabId}`);
+              sendToRenderer(event.sender, 'ssh-connection-ready', {
+                originalKey: conn.originalKey || tabId,
+                tabId: tabId
+              });
+              
+              // CRÍTICO: Inicializar statsLoop después de un breve delay para que la status bar funcione
+              setTimeout(() => {
+                if (sshConnections[tabId] && sshConnections[tabId].ssh) {
+                  statsLoop(tabId, realHostname, finalDistroId, conn.config.host);
+                }
+              }, 1000);
+            });
+          });
+          
+          ssh2Client.on('error', (err) => {
+            sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
+            // Activar modo manual de nuevo para reintentar
+            conn.manualPasswordMode = true;
+            conn.manualPasswordBuffer = '';
+            sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPassword incorrecto. Intenta de nuevo:\r\nPassword: `);
+          });
+          
+          ssh2Client.connect({
+            host: newConfig.host,
+            username: newConfig.username,
+            port: newConfig.port || 22,
+            password: password,
+            readyTimeout: 30000,
+            keepaliveInterval: 60000
+          });
+        }
+      } else {
+        sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPassword vacío. Por favor, introduce el password:\r\nPassword: `);
+      }
+    } else {
+      // Acumular caracteres (ocultar en terminal para password)
+      // Solo acumular si no es Enter (Enter se procesa arriba)
+      if (!data.includes('\r') && !data.includes('\n')) {
+        // Detectar backspace (\b o \x7f)
+        if (data === '\b' || data === '\x7f' || data.charCodeAt(0) === 8 || data.charCodeAt(0) === 127) {
+          // Eliminar último carácter del buffer si existe
+          if (conn.manualPasswordBuffer.length > 0) {
+            conn.manualPasswordBuffer = conn.manualPasswordBuffer.slice(0, -1);
+            // Enviar backspace + espacio + backspace para borrar visualmente el asterisco
+            sendToRenderer(event.sender, `ssh:data:${tabId}`, '\b \b');
+          } else {
+            // Si no hay caracteres, solo enviar el backspace sin efecto
+            sendToRenderer(event.sender, `ssh:data:${tabId}`, '\b');
+          }
+        } else {
+          // Carácter normal: acumular y mostrar asterisco
+          conn.manualPasswordBuffer += data;
+          // Mostrar asteriscos en lugar del password
+          sendToRenderer(event.sender, `ssh:data:${tabId}`, '*');
+        }
+      }
+    }
+    return;
+  }
+  
+  // Si hay autenticación interactiva pendiente (keyboard-interactive)
+  if (conn && conn.keyboardInteractiveFinish && conn.keyboardInteractivePrompts) {
+    // Acumular la entrada del usuario
+    if (!conn._currentResponse) {
+      conn._currentResponse = '';
+    }
+    
+    // Si el usuario presiona Enter, procesar la respuesta
+    if (data.includes('\r') || data.includes('\n')) {
+      // Agregar la respuesta actual (sin el Enter)
+      const response = (conn._currentResponse + data.replace(/[\r\n]/g, '')).trim();
+      if (response) {
+        conn.keyboardInteractiveResponses.push(response);
+      } else if (conn.keyboardInteractiveResponses.length < conn.keyboardInteractivePrompts.length) {
+        // Respuesta vacía también cuenta
+        conn.keyboardInteractiveResponses.push('');
+      }
+      
+      conn._currentResponse = '';
+      
+      // Si tenemos todas las respuestas, enviarlas
+      if (conn.keyboardInteractiveResponses.length >= conn.keyboardInteractivePrompts.length) {
+        const responses = conn.keyboardInteractiveResponses.slice(0, conn.keyboardInteractivePrompts.length);
+        const finish = conn.keyboardInteractiveFinish;
+        
+        // Limpiar estado de autenticación interactiva antes de llamar finish
+        conn.keyboardInteractiveFinish = null;
+        conn.keyboardInteractivePrompts = null;
+        conn.keyboardInteractiveResponses = [];
+        conn._currentResponse = '';
+        
+        // Enviar las respuestas
+        finish(responses);
+      } else {
+        // Mostrar el siguiente prompt
+        const nextIndex = conn.keyboardInteractiveResponses.length;
+        if (nextIndex < conn.keyboardInteractivePrompts.length && conn.keyboardInteractivePrompts[nextIndex].prompt) {
+          sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\n' + conn.keyboardInteractivePrompts[nextIndex].prompt);
+        }
+      }
+    } else {
+      // Acumular caracteres (la entrada se mostrará en la terminal normalmente)
+      conn._currentResponse += data;
+    }
+    return;
+  }
+  
+  // Comportamiento normal: enviar datos al stream
   if (conn && conn.stream && !conn.stream.destroyed) {
     // Grabar input si hay grabación activa
     if (sessionRecorder.isRecording(tabId)) {

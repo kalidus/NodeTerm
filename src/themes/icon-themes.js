@@ -45,8 +45,80 @@ export const iconThemes = {
           <path d="M8 20l4 2 4-2" stroke="url(#materialRDP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="materialVNC" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#00c853"/>
+              <stop offset="100%" stopColor="#64dd17"/>
+            </linearGradient>
+          </defs>
+          <rect x="2" y="3" width="20" height="14" rx="3" fill="url(#materialVNC)" opacity="0.1"/>
+          <rect x="2" y="3" width="20" height="14" rx="3" stroke="url(#materialVNC)" strokeWidth="1.5"/>
+          <rect x="4" y="6" width="16" height="8" rx="1.5" fill="url(#materialVNC)" opacity="0.15"/>
+          {/* Ojo/símbolo de visualización VNC */}
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5" fill="none" stroke="url(#materialVNC)" strokeWidth="1.5"/>
+          <circle cx="12" cy="10" r="1.8" fill="url(#materialVNC)"/>
+          <circle cx="12" cy="10" r="1" fill="#fff"/>
+          <path d="M8 20l4 2 4-2" stroke="url(#materialVNC)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#616161" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      ),
+      sftp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="materialSFTP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ff9800"/>
+              <stop offset="100%" stopColor="#ffb74d"/>
+            </linearGradient>
+          </defs>
+          {/* Archivo con candado */}
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="url(#materialSFTP)" opacity="0.1"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="url(#materialSFTP)" strokeWidth="1.5" fill="none"/>
+          <polyline points="14 2 14 8 20 8" stroke="url(#materialSFTP)" strokeWidth="1.5"/>
+          {/* Candado de seguridad */}
+          <rect x="8" y="12" width="8" height="6" rx="1" stroke="url(#materialSFTP)" strokeWidth="1.5" fill="none"/>
+          <rect x="9" y="15" width="6" height="3" rx="0.5" stroke="url(#materialSFTP)" strokeWidth="1" fill="url(#materialSFTP)" opacity="0.3"/>
+          <circle cx="12" cy="13.5" r="1.5" stroke="url(#materialSFTP)" strokeWidth="1.5" fill="none"/>
+        </svg>
+      ),
+      ftp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="materialFTP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#2196f3"/>
+              <stop offset="100%" stopColor="#64b5f6"/>
+            </linearGradient>
+          </defs>
+          {/* Archivo con flechas de transferencia */}
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="url(#materialFTP)" opacity="0.1"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="url(#materialFTP)" strokeWidth="1.5" fill="none"/>
+          <polyline points="14 2 14 8 20 8" stroke="url(#materialFTP)" strokeWidth="1.5"/>
+          {/* Flechas de transferencia */}
+          <path d="M8 12l3-3 3 3" stroke="url(#materialFTP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M8 16l3 3 3-3" stroke="url(#materialFTP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      scp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="materialSCP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#4caf50"/>
+              <stop offset="100%" stopColor="#81c784"/>
+            </linearGradient>
+          </defs>
+          {/* Archivo con terminal y flecha */}
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="url(#materialSCP)" opacity="0.1"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="url(#materialSCP)" strokeWidth="1.5" fill="none"/>
+          <polyline points="14 2 14 8 20 8" stroke="url(#materialSCP)" strokeWidth="1.5"/>
+          {/* Terminal pequeño */}
+          <rect x="7" y="10" width="6" height="4" rx="1" stroke="url(#materialSCP)" strokeWidth="1" fill="none"/>
+          <rect x="8" y="11.5" width="4" height="1" rx="0.5" fill="url(#materialSCP)"/>
+          {/* Flecha de copia */}
+          <path d="M16 14l2 2 2-2" stroke="url(#materialSCP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
       )
     }
   },
@@ -152,8 +224,84 @@ export const iconThemes = {
           <rect x="1" y="17" width="18" height="1" fill="url(#rdpGlow)" rx="0.5"/>
         </svg>
       ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <defs>
+            <linearGradient id="vncGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#00ff00" stopOpacity="0.4"/>
+              <stop offset="100%" stopColor="#00ff00" stopOpacity="0.1"/>
+            </linearGradient>
+            <pattern id="vncTexture" patternUnits="userSpaceOnUse" width="3" height="3">
+              <rect width="3" height="3" fill="#1a1a1a"/>
+              <circle cx="1.5" cy="1.5" r="0.4" fill="#2a2a2a" opacity="0.4"/>
+            </pattern>
+          </defs>
+          <rect x="1" y="2" width="18" height="16" rx="2.5" fill="#2a2a2a" stroke="#666" strokeWidth="0.8"/>
+          <rect x="1" y="2" width="18" height="4" rx="2.5" fill="#3a3a3a" stroke="#666" strokeWidth="0.8"/>
+          <circle cx="3.5" cy="4" r="1.3" fill="#00ff00"/>
+          <circle cx="6.5" cy="4" r="1.3" fill="#00ff00"/>
+          <circle cx="9.5" cy="4" r="1.3" fill="#00ff00"/>
+          <rect x="4" y="7" width="12" height="9" rx="1.5" fill="#1a1a1a" stroke="#00ff00" strokeWidth="0.8"/>
+          <rect x="4" y="7" width="12" height="2.5" rx="1.5" fill="#2a2a2a" stroke="#00ff00" strokeWidth="0.8"/>
+          <rect x="4.5" y="9.5" width="11" height="6" rx="1" fill="url(#vncTexture)"/>
+          {/* Símbolo de ojo/visualización VNC */}
+          <ellipse cx="10" cy="12" rx="2.5" ry="1.8" fill="none" stroke="#00ff00" strokeWidth="1.2"/>
+          <circle cx="10" cy="12" r="1.5" fill="#00ff00" opacity="0.6"/>
+          <circle cx="10" cy="12" r="0.8" fill="#fff"/>
+          <rect x="11" y="12" width="3.5" height="2" rx="0.5" fill="#00ff00"/>
+          <text x="12.7" y="13.2" fontSize="1.8" fill="white" fontFamily="monospace" fontWeight="bold" textAnchor="middle">VNC</text>
+          <rect x="1" y="17" width="18" height="1" fill="url(#vncGlow)" rx="0.5"/>
+        </svg>
+      ),
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#605e5c"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="10" y="6" width="4" height="12" fill="#fff"/></svg>
+      ),
+      sftp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="fluentSFTP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#0078d4"/>
+              <stop offset="100%" stopColor="#106ebe"/>
+            </linearGradient>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#0078d4" opacity="0.1"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#0078d4" strokeWidth="1.5" fill="none"/>
+          <polyline points="14 2 14 8 20 8" stroke="#0078d4" strokeWidth="1.5"/>
+          <rect x="8" y="12" width="8" height="6" rx="1" stroke="#0078d4" strokeWidth="1.5" fill="none"/>
+          <rect x="9" y="15" width="6" height="3" rx="0.5" stroke="#0078d4" strokeWidth="1" fill="#0078d4" opacity="0.3"/>
+          <circle cx="12" cy="13.5" r="1.5" stroke="#0078d4" strokeWidth="1.5" fill="none"/>
+        </svg>
+      ),
+      ftp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="fluentFTP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#0078d4"/>
+              <stop offset="100%" stopColor="#106ebe"/>
+            </linearGradient>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#0078d4" opacity="0.1"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#0078d4" strokeWidth="1.5" fill="none"/>
+          <polyline points="14 2 14 8 20 8" stroke="#0078d4" strokeWidth="1.5"/>
+          <path d="M8 12l3-3 3 3" stroke="#0078d4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M8 16l3 3 3-3" stroke="#0078d4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      scp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="fluentSCP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#0078d4"/>
+              <stop offset="100%" stopColor="#106ebe"/>
+            </linearGradient>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#0078d4" opacity="0.1"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#0078d4" strokeWidth="1.5" fill="none"/>
+          <polyline points="14 2 14 8 20 8" stroke="#0078d4" strokeWidth="1.5"/>
+          <rect x="7" y="10" width="6" height="4" rx="1" stroke="#0078d4" strokeWidth="1" fill="none"/>
+          <rect x="8" y="11.5" width="4" height="1" rx="0.5" fill="#0078d4"/>
+          <path d="M16 14l2 2 2-2" stroke="#0078d4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
       )
     }
   },
@@ -180,6 +328,16 @@ export const iconThemes = {
           <line x1="8" y1="21" x2="16" y2="21"/>
           <line x1="12" y1="17" x2="12" y2="21"/>
           <circle cx="12" cy="10" r="3"/>
+        </svg>
+      ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00ff00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5" fill="none"/>
+          <circle cx="12" cy="10" r="2" fill="#00ff00" opacity="0.3"/>
+          <circle cx="12" cy="10" r="1.2" fill="#00ff00"/>
         </svg>
       ),
       file: (
@@ -229,6 +387,67 @@ export const iconThemes = {
           <path d="M8 20l4 2 4-2" stroke="url(#nordRDP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="nordVNC" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#a3be8c"/>
+              <stop offset="100%" stopColor="#8fbcbb"/>
+            </linearGradient>
+          </defs>
+          <rect x="2" y="3" width="20" height="14" rx="3" fill="#3b4252" stroke="url(#nordVNC)" strokeWidth="1.5"/>
+          <rect x="4" y="6" width="16" height="8" rx="1.5" fill="#2e3440"/>
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5" fill="none" stroke="url(#nordVNC)" strokeWidth="1.5"/>
+          <circle cx="12" cy="10" r="2" fill="#a3be8c" opacity="0.4"/>
+          <circle cx="12" cy="10" r="1.3" fill="#8fbcbb"/>
+          <circle cx="12" cy="10" r="0.7" fill="#eceff4"/>
+          <path d="M8 20l4 2 4-2" stroke="url(#nordVNC)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      sftp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="nordSFTP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ebcb8b"/>
+              <stop offset="100%" stopColor="#d08770"/>
+            </linearGradient>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#434c5e" stroke="url(#nordSFTP)" strokeWidth="1.5"/>
+          <polyline points="14 2 14 8 20 8" stroke="url(#nordSFTP)" strokeWidth="1.5"/>
+          <rect x="8" y="12" width="8" height="6" rx="1" stroke="url(#nordSFTP)" strokeWidth="1.5" fill="none"/>
+          <rect x="9" y="15" width="6" height="3" rx="0.5" stroke="url(#nordSFTP)" strokeWidth="1" fill="#d08770" opacity="0.3"/>
+          <circle cx="12" cy="13.5" r="1.5" stroke="url(#nordSFTP)" strokeWidth="1.5" fill="none"/>
+        </svg>
+      ),
+      ftp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="nordFTP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#88c0d0"/>
+              <stop offset="100%" stopColor="#81a1c1"/>
+            </linearGradient>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#434c5e" stroke="url(#nordFTP)" strokeWidth="1.5"/>
+          <polyline points="14 2 14 8 20 8" stroke="url(#nordFTP)" strokeWidth="1.5"/>
+          <path d="M8 12l3-3 3 3" stroke="url(#nordFTP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M8 16l3 3 3-3" stroke="url(#nordFTP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      scp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="nordSCP" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#a3be8c"/>
+              <stop offset="100%" stopColor="#8fbcbb"/>
+            </linearGradient>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#434c5e" stroke="url(#nordSCP)" strokeWidth="1.5"/>
+          <polyline points="14 2 14 8 20 8" stroke="url(#nordSCP)" strokeWidth="1.5"/>
+          <rect x="7" y="10" width="6" height="4" rx="1" stroke="url(#nordSCP)" strokeWidth="1" fill="none"/>
+          <rect x="8" y="11.5" width="4" height="1" rx="0.5" fill="#a3be8c"/>
+          <path d="M16 14l2 2 2-2" stroke="url(#nordSCP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#d8dee9"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="10" y="6" width="4" height="12" fill="#5e81ac"/></svg>
       )
@@ -259,6 +478,16 @@ export const iconThemes = {
           <circle cx="12" cy="10" r="3"/>
         </svg>
       ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#50fa7b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5" fill="none"/>
+          <circle cx="12" cy="10" r="2" fill="#50fa7b" opacity="0.3"/>
+          <circle cx="12" cy="10" r="1.2" fill="#50fa7b"/>
+        </svg>
+      ),
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#f8f8f2"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="10" y="6" width="4" height="12" fill="#bd93f9"/></svg>
       )
@@ -287,6 +516,16 @@ export const iconThemes = {
           <line x1="8" y1="21" x2="16" y2="21"/>
           <line x1="12" y1="17" x2="12" y2="21"/>
           <circle cx="12" cy="10" r="3"/>
+        </svg>
+      ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#859900" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5" fill="none"/>
+          <circle cx="12" cy="10" r="2" fill="#859900" opacity="0.3"/>
+          <circle cx="12" cy="10" r="1.2" fill="#859900"/>
         </svg>
       ),
       file: (
@@ -320,6 +559,16 @@ export const iconThemes = {
           <circle cx="12" cy="10" r="3"/>
         </svg>
       ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5" fill="none"/>
+          <circle cx="12" cy="10" r="2" fill="#4caf50" opacity="0.3"/>
+          <circle cx="12" cy="10" r="1.2" fill="#4caf50"/>
+        </svg>
+      ),
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#606060"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="8" y="4" width="8" height="3" fill="#fff"/><rect x="8" y="8" width="6" height="1" fill="#ccc"/><rect x="8" y="10" width="8" height="1" fill="#ccc"/></svg>
       )
@@ -349,6 +598,16 @@ export const iconThemes = {
           <line x1="8" y1="21" x2="16" y2="21"/>
           <line x1="12" y1="17" x2="12" y2="21"/>
           <circle cx="12" cy="10" r="3"/>
+        </svg>
+      ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5" fill="none"/>
+          <circle cx="12" cy="10" r="2" fill="#4caf50" opacity="0.3"/>
+          <circle cx="12" cy="10" r="1.2" fill="#4caf50"/>
         </svg>
       ),
       file: (
@@ -382,6 +641,16 @@ export const iconThemes = {
           <circle cx="12" cy="10" r="3"/>
         </svg>
       ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a6e22e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5" fill="none"/>
+          <circle cx="12" cy="10" r="2" fill="#a6e22e" opacity="0.3"/>
+          <circle cx="12" cy="10" r="1.2" fill="#a6e22e"/>
+        </svg>
+      ),
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#272822"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="8" y="4" width="8" height="14" fill="#a6e22e"/></svg>
       )
@@ -411,6 +680,16 @@ export const iconThemes = {
           <line x1="8" y1="21" x2="16" y2="21"/>
           <line x1="12" y1="17" x2="12" y2="21"/>
           <circle cx="12" cy="10" r="3"/>
+        </svg>
+      ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#98c379" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5" fill="none"/>
+          <circle cx="12" cy="10" r="2" fill="#98c379" opacity="0.3"/>
+          <circle cx="12" cy="10" r="1.2" fill="#98c379"/>
         </svg>
       ),
       file: (
@@ -461,6 +740,22 @@ export const iconThemes = {
           <path d="M8 20l4 2 4-2" stroke="url(#gruvboxRDP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="gruvboxVNC" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#b8bb26"/>
+              <stop offset="100%" stopColor="#98971a"/>
+            </linearGradient>
+          </defs>
+          <rect x="2" y="3" width="20" height="14" rx="3" fill="#3c3836" stroke="url(#gruvboxVNC)" strokeWidth="1.5"/>
+          <rect x="4" y="6" width="16" height="8" rx="1.5" fill="#282828"/>
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5" fill="none" stroke="url(#gruvboxVNC)" strokeWidth="1.5"/>
+          <circle cx="12" cy="10" r="2" fill="#b8bb26" opacity="0.4"/>
+          <circle cx="12" cy="10" r="1.3" fill="#98971a"/>
+          <path d="M8 20l4 2 4-2" stroke="url(#gruvboxVNC)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#ebdbb2"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="8" y="4" width="8" height="14" fill="#3c3836"/></svg>
       )
@@ -490,6 +785,16 @@ export const iconThemes = {
           <line x1="8" y1="21" x2="16" y2="21"/>
           <line x1="12" y1="17" x2="12" y2="21"/>
           <circle cx="12" cy="10" r="3"/>
+        </svg>
+      ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ece6a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5" fill="none"/>
+          <circle cx="12" cy="10" r="2" fill="#9ece6a" opacity="0.3"/>
+          <circle cx="12" cy="10" r="1.2" fill="#9ece6a"/>
         </svg>
       ),
       file: (
@@ -524,6 +829,16 @@ export const iconThemes = {
           <circle cx="12" cy="10" r="3"/>
         </svg>
       ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c3e88d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5" fill="none"/>
+          <circle cx="12" cy="10" r="2" fill="#c3e88d" opacity="0.3"/>
+          <circle cx="12" cy="10" r="1.2" fill="#c3e88d"/>
+        </svg>
+      ),
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#a6accd"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="8" y="4" width="8" height="14" fill="#292d3e"/></svg>
       )
@@ -553,6 +868,16 @@ export const iconThemes = {
           <line x1="8" y1="21" x2="16" y2="21"/>
           <line x1="12" y1="17" x2="12" y2="21"/>
           <circle cx="12" cy="10" r="3"/>
+        </svg>
+      ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5" fill="none"/>
+          <circle cx="12" cy="10" r="2" fill="#4caf50" opacity="0.3"/>
+          <circle cx="12" cy="10" r="1.2" fill="#4caf50"/>
         </svg>
       ),
       file: (
@@ -618,6 +943,29 @@ export const iconThemes = {
           <path d="M8 20l4 2 4-2" stroke="url(#synthwaveRDP)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#synthwaveRDPGlow)"/>
         </svg>
       ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="synthwaveVNC" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#00ff00"/>
+              <stop offset="100%" stopColor="#00d4ff"/>
+            </linearGradient>
+            <filter id="synthwaveVNCGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+              <feMerge> 
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <rect x="2" y="3" width="20" height="14" rx="3" fill="#0f0f23" stroke="url(#synthwaveVNC)" strokeWidth="1.5" filter="url(#synthwaveVNCGlow)"/>
+          <rect x="4" y="6" width="16" height="8" rx="1.5" fill="#1a1a3a"/>
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5" fill="none" stroke="url(#synthwaveVNC)" strokeWidth="1.5"/>
+          <circle cx="12" cy="10" r="2" fill="#00ff00" opacity="0.4"/>
+          <circle cx="12" cy="10" r="1.3" fill="#00d4ff"/>
+          <path d="M8 20l4 2 4-2" stroke="url(#synthwaveVNC)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#synthwaveVNCGlow)"/>
+        </svg>
+      ),
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#ff6b35"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="8" y="4" width="8" height="14" fill="#1a0033"/></svg>
       )
@@ -648,6 +996,16 @@ export const iconThemes = {
           <line x1="8" y1="21" x2="16" y2="21"/>
           <line x1="12" y1="17" x2="12" y2="21"/>
           <circle cx="12" cy="10" r="3"/>
+        </svg>
+      ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00ff00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5" fill="none"/>
+          <circle cx="12" cy="10" r="2" fill="#00ff00" opacity="0.3"/>
+          <circle cx="12" cy="10" r="1.2" fill="#00ff00"/>
         </svg>
       ),
       file: (
@@ -721,6 +1079,25 @@ export const iconThemes = {
           <line x1="8" y1="21" x2="16" y2="21" filter="url(#cyberGlow4)"/>
           <line x1="12" y1="17" x2="12" y2="21" filter="url(#cyberGlow4)"/>
           <circle cx="12" cy="10" r="3" filter="url(#cyberGlow4)"/>
+        </svg>
+      ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00ff41" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <defs>
+            <filter id="cyberVNCGlow">
+              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" filter="url(#cyberVNCGlow)"/>
+          <line x1="8" y1="21" x2="16" y2="21" filter="url(#cyberVNCGlow)"/>
+          <line x1="12" y1="17" x2="12" y2="21" filter="url(#cyberVNCGlow)"/>
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5" filter="url(#cyberVNCGlow)"/>
+          <circle cx="12" cy="10" r="2" fill="#00ff41" opacity="0.3" filter="url(#cyberVNCGlow)"/>
+          <circle cx="12" cy="10" r="1.2" fill="#00ff41" filter="url(#cyberVNCGlow)"/>
         </svg>
       ),
       file: (
@@ -1316,6 +1693,17 @@ export const iconThemes = {
           <line x1="12" y1="17" x2="12" y2="21"/>
           <circle cx="12" cy="10" r="3"/>
           <text x="11" y="11" fontSize="2" fill="#00ff00" fontFamily="monospace">RDP</text>
+        </svg>
+      ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00ff00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="1" ry="1"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+          <ellipse cx="12" cy="10" rx="3.5" ry="2.5"/>
+          <circle cx="12" cy="10" r="2" fill="#00ff00" opacity="0.2"/>
+          <circle cx="12" cy="10" r="1.2" fill="#00ff00"/>
+          <text x="10.5" y="11" fontSize="2" fill="#00ff00" fontFamily="monospace">VNC</text>
         </svg>
       ),
       file: (

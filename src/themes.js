@@ -1,3 +1,5 @@
+import { getExplorerFonts } from './utils/fontsList';
+
 export const themes = {
   'Default Dark': {
     name: 'Default Dark',
@@ -1464,50 +1466,11 @@ export const themes = {
 };
 
 // Fuentes recomendadas para el explorador de sesiones
+// Generada desde la lista maestra para garantizar sincronización y orden consistente
 export const explorerFonts = [
-  // Fuentes del sistema (existentes)
-  'Segoe UI',
-  'SF Pro Display',
-  'Helvetica Neue',
-  'Arial',
-  'sans-serif',
-  
-  // Fuentes modernas populares
-  'Inter',
-  'Roboto',
-  'Open Sans',
-  'Lato',
-  'Montserrat',
-  'Source Sans Pro',
-  'Poppins',
-  'Nunito',
-  'Work Sans',
-  'DM Sans',
-  'Lexend',
-  'Outfit',
-  'Plus Jakarta Sans',
-  'Manrope',
-  'Epilogue',
-  'Figtree',
-  'Geist',
-  'Ubuntu',
-  'Cabinet Grotesk',
-  'Satoshi',
-  'Clash Grotesk',
-  
-  // Fuentes monoespaciadas modernas
-  'JetBrains Mono',
-  'Fira Code',
-  'Cascadia Code',
-  'SF Mono',
-  'Monaco',
-  'Menlo',
-  'Consolas',
-  'Fira Sans',
-  'Ubuntu Mono',
-  
-  // Fuentes de fallback
-  'system-ui',
+  ...getExplorerFonts(),
+  // Fuentes de fallback al final
   '-apple-system',
-  'BlinkMacSystemFont'
+  'BlinkMacSystemFont',
+  'system-ui'
 ]; 

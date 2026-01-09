@@ -1,0 +1,880 @@
+/* --- Component: Security Settings (Clave Maestra) - PREMIUM DESIGN --- */
+
+/* ========================================
+   VARIABLES Y UTILIDADES
+   ======================================== */
+
+/* Usar variables del tema en lugar de gradientes fijos */
+
+/* ========================================
+   CONTENEDOR PRINCIPAL CON FONDO DECORATIVO
+   ======================================== */
+
+.security-settings-container {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  height: 100%;
+  min-height: 100%;
+  width: 100%;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* Decoraciones geométricas de fondo con colores del tema - Deshabilitadas para mantener consistencia visual */
+.security-settings-container::before {
+  display: none;
+}
+
+.security-settings-container::after {
+  display: none;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  33% {
+    transform: translate(30px, -30px) rotate(120deg);
+  }
+  66% {
+    transform: translate(-20px, 20px) rotate(240deg);
+  }
+}
+
+.security-settings-content {
+  max-width: 100%;
+  width: 100%;
+  text-align: left;
+  position: relative;
+  z-index: 1;
+}
+
+/* Layout de 2 columnas */
+.security-layout-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) minmax(300px, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Asegurar que las columnas no se compriman demasiado */
+.security-layout-grid > div {
+  min-width: 0;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+/* Asegurar que las secciones dentro del grid se adapten correctamente */
+.security-layout-grid .general-settings-section {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* Asegurar que los elementos internos no se desborden */
+.security-layout-grid .general-settings-options {
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.security-layout-grid .general-settings-options > * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Cambiar a una columna cuando el espacio es insuficiente */
+@media (max-width: 1200px) {
+  .security-layout-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .security-layout-grid > div[style*="gridColumn: '2'"] {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+}
+
+/* ========================================
+   HEADER COMPACTO Y MODERNO
+   ======================================== */
+
+.security-settings-header-wrapper {
+  background: rgba(0, 0, 0, 0.2) !important;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  margin-top: 0;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.security-header-content {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+}
+
+.security-header-icon.protocol-dialog-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.security-header-icon.protocol-dialog-header-icon:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+}
+
+.security-header-icon.protocol-dialog-header-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.security-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.security-header {
+  margin: 0 0 0.25rem 0;
+  color: var(--ui-dialog-text);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.security-description {
+  margin: 0;
+  color: var(--text-color-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  opacity: 0.75;
+  text-align: left;
+}
+
+/* ========================================
+   TARJETA DE ESTADO CON GLASSMORPHISM
+   ======================================== */
+
+.security-status-card {
+  margin-bottom: 1.5rem;
+  /* Usar color del tema con transparencia para efecto glassmorphism */
+  background: var(--ui-content-bg);
+  opacity: 0.95;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--ui-content-border);
+  border-radius: 20px;
+  padding: 0;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 var(--ui-button-primary);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  height: fit-content;
+}
+
+/* Mejora con color-mix para navegadores modernos */
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  .security-status-card {
+    background: color-mix(in srgb, var(--ui-content-bg) 88%, transparent);
+    border-color: color-mix(in srgb, var(--ui-content-border) 65%, transparent);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 color-mix(in srgb, var(--ui-button-primary) 25%, transparent);
+  }
+}
+
+.security-status-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--ui-button-primary);
+  opacity: 0.7;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.6s ease;
+}
+
+.security-status-card:hover::before {
+  transform: scaleX(1);
+}
+
+.security-status-card:hover {
+  transform: translateY(-4px);
+  opacity: 1;
+  box-shadow: 
+    0 16px 48px var(--ui-dialog-shadow),
+    inset 0 1px 0 var(--ui-button-primary);
+  border-color: var(--ui-button-primary);
+}
+
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  .security-status-card:hover {
+    box-shadow: 
+      0 16px 48px color-mix(in srgb, var(--ui-dialog-shadow) 45%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--ui-button-primary) 35%, transparent);
+    border-color: color-mix(in srgb, var(--ui-button-primary) 55%, transparent);
+  }
+}
+
+/* Contenedor interno para el padding - igual que general-settings-section */
+.security-status-info {
+  padding: 0 1.25rem;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.security-checkbox-container {
+  padding: 0 1.25rem;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.security-status-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  margin: 0;
+}
+
+.security-status-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: var(--ui-button-primary);
+  padding: 0;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.security-status-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+.security-status-icon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 2px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.security-status-icon:hover::before {
+  opacity: 1;
+}
+
+.security-status-icon.success {
+  color: #ffffff;
+  background: #28a745; /* Verde para éxito */
+}
+
+.security-status-icon.warning {
+  color: #ffffff;
+  background: #ffc107; /* Amarillo/Naranja para advertencia */
+}
+
+/* Animación pulse-glow eliminada para coincidir con General */
+
+.security-status-label {
+  margin: 0;
+  color: var(--ui-dialog-text) !important;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.02px;
+}
+
+.security-status-badge {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.security-status-badge .p-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0.4rem 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.security-status-info {
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  opacity: 0.75;
+  margin: 1rem 1.25rem 1.25rem 1.25rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  line-height: 1.3;
+  padding: 1rem;
+  background: var(--ui-content-bg);
+  border-radius: 12px;
+  border-left: 3px solid var(--ui-button-primary);
+  transition: all 0.3s ease;
+}
+
+.security-status-info:hover {
+  background: var(--ui-content-bg);
+  transform: translateX(4px);
+  border-left-color: var(--ui-button-primary);
+}
+
+.security-status-info i {
+  margin-top: 0.1rem;
+  color: var(--ui-button-primary);
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+/* ========================================
+   CHECKBOX PREMIUM
+   ======================================== */
+
+.security-checkbox-container {
+  margin: 0 1.25rem 1rem 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.security-checkbox-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.security-checkbox-wrapper:hover {
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateX(4px);
+}
+
+.security-checkbox-wrapper .p-checkbox {
+  margin-top: 0.2rem;
+}
+
+.security-checkbox-wrapper .p-checkbox .p-checkbox-box {
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  border-width: 2px;
+}
+
+.security-checkbox-wrapper .p-checkbox .p-checkbox-box.p-highlight,
+.security-checkbox-wrapper .p-checkbox .p-checkbox-box.p-checkbox-checked,
+.security-checkbox-wrapper .p-checkbox.p-checkbox-checked .p-checkbox-box {
+  background: var(--primary-color, var(--ui-button-primary)) !important;
+  background-color: var(--primary-color, var(--ui-button-primary)) !important;
+  border-color: var(--primary-color, var(--ui-button-primary)) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.security-checkbox-label {
+  font-size: 0.9375rem;
+  color: var(--ui-dialog-text) !important;
+  cursor: pointer;
+  user-select: none;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: 0.02px;
+}
+
+.security-checkbox-hint {
+  display: block;
+  margin-top: 0.5rem;
+  margin-left: 2.5rem;
+  color: var(--text-color-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  opacity: 0.75;
+}
+
+/* ========================================
+   FORMULARIO PREMIUM CON GLASSMORPHISM
+   ======================================== */
+
+.security-form-container {
+  margin-bottom: 1.5rem;
+  /* Usar color del tema con transparencia para efecto glassmorphism */
+  background: var(--ui-content-bg);
+  opacity: 0.95;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--ui-content-border);
+  border-radius: 20px;
+  padding: 0;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 var(--ui-button-primary);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  height: fit-content;
+}
+
+/* Mejora con color-mix para navegadores modernos */
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  .security-form-container {
+    background: color-mix(in srgb, var(--ui-content-bg) 88%, transparent);
+    border-color: color-mix(in srgb, var(--ui-content-border) 65%, transparent);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 color-mix(in srgb, var(--ui-button-primary) 25%, transparent);
+  }
+}
+
+.security-form-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--ui-button-primary);
+  opacity: 0.7;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.6s ease;
+}
+
+.security-form-container:hover::before {
+  transform: scaleX(1);
+}
+
+.security-form-container:hover {
+  transform: translateY(-4px);
+  opacity: 1;
+  box-shadow: 
+    0 16px 48px var(--ui-dialog-shadow),
+    inset 0 1px 0 var(--ui-button-primary);
+  border-color: var(--ui-button-primary);
+}
+
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  .security-form-container:hover {
+    box-shadow: 
+      0 16px 48px color-mix(in srgb, var(--ui-dialog-shadow) 45%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--ui-button-primary) 35%, transparent);
+    border-color: color-mix(in srgb, var(--ui-button-primary) 55%, transparent);
+  }
+}
+
+/* Contenedor interno para el padding - igual que general-settings-section */
+.security-form-title {
+  padding: 1rem 1.25rem;
+  margin: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.security-field {
+  padding: 0 1.25rem;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.security-actions {
+  padding: 0 1.25rem;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.security-form-title {
+  margin: 0;
+  color: var(--ui-dialog-text) !important;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.02px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.security-form-title-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: var(--ui-button-primary);
+  padding: 0;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.security-form-title-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+.security-form-title-icon:hover {
+  transform: scale(1.05);
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.25),
+    0 0 0 3px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* ========================================
+   CAMPOS DE INPUT PREMIUM
+   ======================================== */
+
+.security-field {
+  margin: 0 0 1.25rem 0;
+  padding: 0 1.25rem;
+  position: relative;
+}
+
+.security-field:first-of-type {
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.security-field:last-of-type {
+  margin-bottom: 1.5rem;
+}
+
+.security-field-label {
+  display: block;
+  margin-bottom: 0.625rem;
+  color: var(--text-color);
+  font-weight: 500;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: 0.1px;
+}
+
+.security-field-label i {
+  color: var(--ui-button-primary-text);
+  font-size: 0.95rem;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ui-button-primary);
+  border-radius: 6px;
+  padding: 0.3rem;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.security-field:hover .security-field-label i {
+  background: var(--ui-button-primary);
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.security-field-input {
+  width: 100%;
+  position: relative;
+}
+
+.security-field-input .p-inputtext {
+  width: 100%;
+  border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  min-height: 38px;
+  height: 38px;
+}
+
+.security-field-input .p-password {
+  position: relative;
+  width: 100%;
+  display: block;
+}
+
+.security-field-input .p-password .p-password-input {
+  width: 100%;
+  position: relative;
+}
+
+.security-field-input .p-password .p-password-input .p-inputtext {
+  width: 100% !important;
+  border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 0.625rem 2.5rem 0.625rem 0.875rem !important;
+  font-size: 0.875rem;
+  min-height: 38px;
+  height: 38px;
+  box-sizing: border-box;
+}
+
+.security-field-input .p-inputtext:focus {
+  border-color: var(--ui-button-primary);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 0 0 3px color-mix(in srgb, var(--ui-button-primary) 20%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.15);
+  outline: none;
+}
+
+.security-field-input .p-password .p-password-input .p-inputtext:focus {
+  border-color: var(--ui-button-primary);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 0 0 3px color-mix(in srgb, var(--ui-button-primary) 20%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.15);
+  outline: none;
+}
+
+
+.security-field-input .p-password .p-password-input .p-password-toggle {
+  color: var(--text-color-secondary);
+  transition: all 0.3s ease;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.875rem;
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.security-field-input .p-password .p-password-input .p-password-toggle:hover {
+  color: var(--ui-button-primary);
+  background: color-mix(in srgb, var(--ui-button-primary) 15%, transparent);
+  transform: translateY(-50%) scale(1.05);
+}
+
+/* ========================================
+   BOTONES PREMIUM CON GRADIENTES
+   ======================================== */
+
+.security-actions {
+  display: flex;
+  gap: 0.625rem;
+  margin: 1.25rem 1.25rem 1.25rem 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.security-button {
+  flex: 1;
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.1px;
+  border: none;
+  position: relative;
+  overflow: visible;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  min-height: 34px;
+  height: 34px;
+  max-height: 34px;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.security-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.security-button:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.security-button-primary {
+  background: var(--ui-button-primary);
+  color: var(--ui-button-primary-text);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.security-button-primary:hover:not(:disabled) {
+  background: var(--ui-button-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+}
+
+.security-button-primary:active:not(:disabled) {
+  transform: translateY(-1px) scale(1);
+}
+
+.security-button-danger {
+  background: #dc3545; /* Rojo para acciones peligrosas */
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(220, 53, 69, 0.25);
+}
+
+.security-button-danger:hover:not(:disabled) {
+  background: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(220, 53, 69, 0.35);
+}
+
+.security-button-danger:active:not(:disabled) {
+  transform: translateY(-1px) scale(1);
+}
+
+.security-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.security-button i {
+  font-size: 0.75rem;
+  position: relative;
+  z-index: 1;
+}
+
+.security-button span {
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* ========================================
+   ANIMACIONES Y EFECTOS
+   ======================================== */
+
+/* Sin animación de entrada - igual que General */
+
+/* Efecto de partículas flotantes con colores del tema */
+/* Nota: Los efectos flotantes ::before y ::after ya manejan las decoraciones con el tema */
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+
+@media (max-width: 768px) {
+  .security-settings-container {
+    padding: 1.5rem;
+  }
+
+  .security-header {
+    font-size: 1rem;
+  }
+
+  .security-header-icon.protocol-dialog-header-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .security-form-container {
+    padding: 2rem;
+  }
+
+  .security-actions {
+    flex-direction: column;
+  }
+
+  .security-button {
+    width: 100%;
+  }
+}
+
+/* Los colores ahora se adaptan automáticamente al tema mediante variables CSS */
+/* No necesitamos media queries específicas ya que usamos variables del tema */

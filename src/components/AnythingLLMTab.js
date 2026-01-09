@@ -9,6 +9,7 @@ import { Message } from 'primereact/message';
 import { Toast } from 'primereact/toast';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Card } from 'primereact/card';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/anything-llm.css';
 
 const INITIAL_STATUS = {
@@ -18,6 +19,8 @@ const INITIAL_STATUS = {
 };
 
 const AnythingLLMTab = () => {
+  const { t } = useTranslation('common');
+  
   const [status, setStatus] = useState(INITIAL_STATUS);
   const [error, setError] = useState(null);
   const [url, setUrl] = useState(null);
@@ -722,7 +725,7 @@ const AnythingLLMTab = () => {
             size="small"
             className="anythingllm-action-btn"
             onClick={startService}
-            tooltip="Reintentar"
+            tooltip={t('tooltips.retry')}
             tooltipOptions={{ position: 'top' }}
           />
           <Button
@@ -731,7 +734,7 @@ const AnythingLLMTab = () => {
             className="anythingllm-action-btn"
             disabled={!isReady}
             onClick={handleReloadWebView}
-            tooltip="Recargar UI"
+            tooltip={t('tooltips.reloadUI')}
             tooltipOptions={{ position: 'top' }}
           />
           <Button
@@ -739,7 +742,7 @@ const AnythingLLMTab = () => {
             size="small"
             className="anythingllm-action-btn"
             onClick={handleOpenMCPDialog}
-            tooltip="Editar configuración MCP"
+            tooltip={t('tooltips.editMCPConfig')}
             tooltipOptions={{ position: 'top' }}
           />
         </div>

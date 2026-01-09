@@ -179,6 +179,7 @@ export const useTabManagement = (toast, {
           password: matchedSidebarNode?.data?.password || '',
           port: session.port,
           originalKey: session.key,
+          name: session.label,
           useBastionWallix: session.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false,
           bastionHost: session.bastionHost || matchedSidebarNode?.data?.bastionHost || '',
           bastionUser: session.bastionUser || matchedSidebarNode?.data?.bastionUser || ''
@@ -194,7 +195,7 @@ export const useTabManagement = (toast, {
           groupId: newGroup.id
         };
         setSshTabs(prev => [...prev, sshTab]);
-      } else if (session.type === 'rdp' || session.type === 'rdp-guacamole') {
+      } else if (session.type === 'rdp' || session.type === 'rdp-guacamole' || session.type === 'vnc' || session.type === 'vnc-guacamole') {
         // Buscar el nodo original en el sidebar para obtener la configuración completa
         let matchedSidebarNode = null;
         if (session.host && session.username) {
@@ -252,27 +253,55 @@ export const useTabManagement = (toast, {
           };
           dfs(nodes);
         }
+      } else if (session.type === 'sftp' || session.type === 'ftp' || session.type === 'scp') {
+        // Buscar el nodo original en el sidebar para obtener la configuración completa
+        let matchedSidebarNode = null;
+        if (session.host && session.username) {
+          const protocol = session.protocol || session.type;
+          const matchesConn = (node) => {
+            if (!node || !node.data || (node.data.type !== protocol && node.data.type !== session.type)) return false;
+            const hostMatches = (node.data.host === session.host) || (node.data.targetServer === session.host) || (node.data.hostname === session.host);
+            const userMatches = (node.data.user === session.username) || (node.data.username === session.username);
+            const defaultPort = protocol === 'ftp' ? 21 : 22;
+            const portMatches = (node.data.port || defaultPort) === (session.port || defaultPort);
+            return hostMatches && userMatches && portMatches;
+          };
+          const dfs = (list) => {
+            if (!Array.isArray(list)) return;
+            for (const n of list) {
+              if (matchesConn(n)) { matchedSidebarNode = n; return; }
+              if (n.children && n.children.length > 0) dfs(n.children);
+              if (matchedSidebarNode) return;
+            }
+          };
+          dfs(nodes);
+        }
 
-        // Crear pestaña explorador con configuración completa
-        const explorerTab = {
-          key: session.key,
-          label: session.label,
-          type: 'explorer',
-          groupId: newGroup.id,
-          sshConfig: {
-            host: session.host,
-            username: session.username,
-            password: matchedSidebarNode?.data?.password || '',
-            port: session.port,
-            originalKey: session.key,
-            useBastionWallix: session.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false,
-            bastionHost: session.bastionHost || matchedSidebarNode?.data?.bastionHost || '',
-            bastionUser: session.bastionUser || matchedSidebarNode?.data?.bastionUser || ''
-          },
-          isExplorerInSSH: session.isExplorerInSSH || false,
-          needsOwnConnection: session.needsOwnConnection || false
+        // Crear pestaña de explorador de archivos
+        const nowTs = Date.now();
+        const tabId = `explorer_${session.key}_${nowTs}`;
+        const protocol = session.protocol || session.type;
+        const config = {
+          host: session.host,
+          username: session.username,
+          password: matchedSidebarNode?.data?.password || session.password || '',
+          port: session.port || (protocol === 'ftp' ? 21 : 22),
+          originalKey: session.key,
+          protocol: protocol
         };
-        setFileExplorerTabs(prev => [...prev, explorerTab]);
+        
+        const explorerTab = {
+          key: tabId,
+          label: session.label,
+          originalKey: session.key,
+          sshConfig: config, // Mantener nombre sshConfig para compatibilidad
+          type: 'explorer',
+          createdAt: nowTs,
+          needsOwnConnection: false,
+          isExplorerInSSH: true,
+          groupId: newGroup.id
+        };
+        setSshTabs(prev => [...prev, explorerTab]);
       }
     });
 
@@ -550,8 +579,8 @@ export const useTabManagement = (toast, {
       }
       const newRdpTabs = rdpTabs.filter(t => t.key !== closedTab.key);
       setRdpTabs(newRdpTabs);
-    } else if (closedTab.type === 'rdp-guacamole') {
-      // Cerrar pestañas RDP-Guacamole
+    } else if (closedTab.type === 'rdp-guacamole' || closedTab.type === 'vnc-guacamole') {
+      // Cerrar pestañas RDP-Guacamole o VNC-Guacamole
       try {
         if (externalTerminalRefs?.current) {
           const ref = externalTerminalRefs.current[closedTab.key];
@@ -590,6 +619,19 @@ export const useTabManagement = (toast, {
       setSshTabs(newSshTabs);
     } else if (closedTab.type === 'openwebui') {
       // Cerrar pestañas de Open WebUI (almacenadas en sshTabs)
+      const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+      setSshTabs(newSshTabs);
+    } else if (closedTab.type === 'docker') {
+      // Cerrar pestañas de Docker
+      if (window.electron && window.electron.ipcRenderer) {
+        // Detener el proceso Docker
+        window.electron.ipcRenderer.send(`docker:stop:${closedTab.key}`);
+      }
+      // Limpiar referencia del terminal si existe
+      if (externalTerminalRefs?.current) {
+        delete externalTerminalRefs.current[closedTab.key];
+      }
+      // Eliminar la pestaña de sshTabs
       const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
       setSshTabs(newSshTabs);
     } else {

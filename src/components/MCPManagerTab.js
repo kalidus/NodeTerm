@@ -9,8 +9,11 @@ import { InputTextarea } from 'primereact/inputtextarea';
 import { Dropdown } from 'primereact/dropdown';
 import MCPCatalog from './MCPCatalog';
 import mcpClient from '../services/MCPClientService';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 
 const MCPManagerTab = ({ themeColors }) => {
+  const { t } = useTranslation('common');
+  
   const [servers, setServers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -1289,7 +1292,7 @@ const MCPManagerTab = ({ themeColors }) => {
                     <Button label="Detener" icon="pi pi-stop" onClick={() => handleStopServer(server.id)} style={{ flex: 1, background: 'rgba(255, 193, 7, 0.2)', border: '1px solid rgba(255, 193, 7, 0.5)', color: '#ffc107', borderRadius: '8px' }} />
                   )}
                   <Button label="Configurar" icon="pi pi-cog" onClick={() => openConfigFor(server)} style={{ flex: 1, background: themeColors.primaryColor, border: 'none', color: 'white', borderRadius: '8px' }} />
-                  <Button icon="pi pi-trash" onClick={() => handleUninstall(server.id)} tooltip="Desinstalar" tooltipOptions={{ position: 'top' }} style={{ background: 'rgba(244, 67, 54, 0.2)', border: '1px solid rgba(244, 67, 54, 0.5)', color: '#f44336', borderRadius: '8px', minWidth: 'auto', aspectRatio: '1' }} />
+                  <Button icon="pi pi-trash" onClick={() => handleUninstall(server.id)} tooltip={t('tooltips.uninstall')} tooltipOptions={{ position: 'top' }} style={{ background: 'rgba(244, 67, 54, 0.2)', border: '1px solid rgba(244, 67, 54, 0.5)', color: '#f44336', borderRadius: '8px', minWidth: 'auto', aspectRatio: '1' }} />
                 </div>
               </div>
             ))
@@ -1366,7 +1369,7 @@ const MCPManagerTab = ({ themeColors }) => {
                         <Button 
                           icon="pi pi-folder-open" 
                           onClick={handleBrowseFilesystemPath}
-                          tooltip="Explorar..."
+                          tooltip={t('tooltips.browse')}
                           tooltipOptions={{ position: 'top' }}
                           style={{ 
                             background: 'rgba(33, 150, 243, 0.2)', 
@@ -1390,7 +1393,7 @@ const MCPManagerTab = ({ themeColors }) => {
                         <Button 
                           icon="pi pi-folder-open" 
                           onClick={handleBrowseAllowedDir}
-                          tooltip="Explorar..."
+                          tooltip={t('tooltips.browse')}
                           tooltipOptions={{ position: 'top' }}
                           style={{ 
                             background: 'rgba(33, 150, 243, 0.2)', 
@@ -1473,7 +1476,7 @@ const MCPManagerTab = ({ themeColors }) => {
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <Button
                           icon="pi pi-check"
-                          tooltip="Probar conexión"
+                          tooltip={t('tooltips.testConnection')}
                           tooltipOptions={{ position: 'top' }}
                           onClick={() => handleTestSSHConnection(conn)}
                           style={{
@@ -1487,7 +1490,7 @@ const MCPManagerTab = ({ themeColors }) => {
                         />
                         <Button
                           icon="pi pi-trash"
-                          tooltip="Eliminar"
+                          tooltip={t('tooltips.delete')}
                           tooltipOptions={{ position: 'top' }}
                           onClick={() => handleRemoveSSHConnection(idx)}
                           style={{

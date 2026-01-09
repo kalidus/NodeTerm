@@ -6,8 +6,9 @@ import { ProgressBar } from 'primereact/progressbar';
 import { Message } from 'primereact/message';
 import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
-import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
+import { confirmDialog } from 'primereact/confirmdialog';
 import { uiThemes } from '../themes/ui-themes';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 
 // Helper para obtener colores del tema
 const getThemeColors = (themeName) => {
@@ -21,10 +22,19 @@ import {
     FaImage, FaVideo, FaMusic, FaCode, FaGlobe, FaArchive, FaCog, 
     FaDatabase, FaFileAlt, FaArrowUp, FaLink, FaPython, FaJs, FaHtml5,
     FaCss3Alt, FaFileCode, FaChevronRight, FaUpload, FaDownload, FaTrash,
-    FaPlus, FaHome, FaSync, FaEye, FaEyeSlash, FaArrowRight
+    FaPlus, FaHome, FaSync, FaEye, FaEyeSlash, FaArrowRight, FaEdit
 } from 'react-icons/fa';
 
 const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont = 'Segoe UI', explorerColorTheme = 'Light', explorerFontSize = 15 }) => {
+    // Hook de internacionalización
+    const { t } = useTranslation('common');
+    
+    // sshConfig puede tener protocol para SFTP/FTP/SCP, o ser SSH tradicional
+    const config = sshConfig || {};
+    const protocol = config.protocol || 'ssh'; // Por defecto SSH para compatibilidad
+    const protocolLabel = protocol.toUpperCase();
+    const host = config.host || config.bastionHost || 'Unknown';
+    
     const [currentPath, setCurrentPath] = useState(null);
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -33,6 +43,9 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     const [error, setError] = useState(null);
     const [newFolderDialog, setNewFolderDialog] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
+    const [renameDialog, setRenameDialog] = useState(false);
+    const [fileToRename, setFileToRename] = useState(null);
+    const [newFileName, setNewFileName] = useState('');
     const [transferProgress, setTransferProgress] = useState(null);
     const [sshReady, setSshReady] = useState(false);
     const [showDotfiles, setShowDotfiles] = useState(false);
@@ -40,6 +53,11 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     const [isDragActive, setIsDragActive] = useState(false);
     const [homeDir, setHomeDir] = useState(null);
     const [pathInput, setPathInput] = useState('');
+    
+    const containerRef = React.useRef(null);
+    const filesContainerRef = React.useRef(null);
+    const isDeleteDialogOpenRef = React.useRef(false);
+    const deleteTimeoutRef = React.useRef(null);
 
     useEffect(() => {
         setSshReady(true);
@@ -51,7 +69,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
             setLoading(true);
             setError(null);
             try {
-                const homeResult = await window.electron.fileExplorer.getHomeDirectory(tabId, sshConfig);
+                const homeResult = await window.electron.fileExplorer.getHomeDirectory(tabId, config);
                 const homeDir = (homeResult && homeResult.success && typeof homeResult.home === 'string') ? homeResult.home : '/';
                 setHomeDir(homeDir);
                 setCurrentPath(homeDir);
@@ -67,7 +85,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         if (sshReady) {
             initializeExplorer();
         }
-    }, [tabId, sshReady]);
+    }, [tabId, sshReady, config]);
 
     useEffect(() => {
         if (currentPath !== null) {
@@ -76,6 +94,53 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         }
     }, [currentPath]);
 
+    // Calcular altura del contenedor de archivos dinámicamente
+    useEffect(() => {
+        const updateFilesContainerHeight = () => {
+            if (containerRef.current && filesContainerRef.current) {
+                const container = containerRef.current;
+                const filesContainer = filesContainerRef.current;
+                
+                // Calcular altura disponible restando headers, breadcrumbs, toolbars, etc.
+                const headerHeight = container.querySelector('.file-explorer-header')?.offsetHeight || 0;
+                const breadcrumbHeight = container.querySelector('.file-explorer-breadcrumb-row')?.offsetHeight || 0;
+                const toolbarHeight = container.querySelector('.file-explorer-toolbar')?.offsetHeight || 0;
+                const loadingHeight = container.querySelector('.file-explorer-loading')?.offsetHeight || 0;
+                const messageHeight = container.querySelector('.p-message')?.offsetHeight || 0;
+                const progressHeight = container.querySelector('.transfer-progress-container')?.offsetHeight || 0;
+                
+                const totalFixedHeight = headerHeight + breadcrumbHeight + toolbarHeight + loadingHeight + messageHeight + progressHeight;
+                const containerHeight = container.offsetHeight;
+                const availableHeight = containerHeight - totalFixedHeight;
+                
+                if (availableHeight > 0) {
+                    filesContainer.style.height = `${availableHeight}px`;
+                    filesContainer.style.maxHeight = `${availableHeight}px`;
+                }
+            }
+        };
+        
+        // Actualizar altura al montar y cuando cambia el contenido
+        updateFilesContainerHeight();
+        
+        // Actualizar al redimensionar
+        const resizeObserver = new ResizeObserver(() => {
+            updateFilesContainerHeight();
+        });
+        
+        if (containerRef.current) {
+            resizeObserver.observe(containerRef.current);
+        }
+        
+        // También actualizar después de cambios en el DOM
+        const timeoutId = setTimeout(updateFilesContainerHeight, 100);
+        
+        return () => {
+            resizeObserver.disconnect();
+            clearTimeout(timeoutId);
+        };
+    }, [files, loading, error, transferProgress, sshReady]);
+
     const loadFiles = async (path) => {
         if (!window.electron || !tabId) return;
         
@@ -83,7 +148,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         setError(null);
         
         try {
-            const result = await window.electron.fileExplorer.listFiles(tabId, path, sshConfig);
+            const result = await window.electron.fileExplorer.listFiles(tabId, path, config);
             
             if (result.success) {
                 setFiles(result.files);
@@ -122,8 +187,8 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         if (!window.electron || !tabId) return;
         
         try {
-            const exists = await window.electron.fileExplorer.checkDirectory(tabId, path, sshConfig);
-            if (exists) {
+            const result = await window.electron.fileExplorer.checkDirectory(tabId, path, config);
+            if (result && result.exists) {
                 setCurrentPath(path);
             } else {
                 setError(`El directorio ${path} no existe o no es accesible`);
@@ -271,7 +336,27 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         return typeMap[extension] || 'Archivo';
     };
 
-    const visibleFiles = showDotfiles ? files : files.filter(f => !f.name.startsWith('.') || f.name === '..');
+    // Filtrar archivos ocultos si es necesario
+    const filteredFiles = showDotfiles ? files : files.filter(f => !f.name.startsWith('.') || f.name === '..');
+    
+    // Ordenar: primero carpetas, luego archivos, ambos alfabéticamente
+    // ".." siempre va primero si existe
+    const visibleFiles = [...filteredFiles].sort((a, b) => {
+        // ".." siempre va primero
+        if (a.name === '..') return -1;
+        if (b.name === '..') return 1;
+        
+        // Separar carpetas de archivos
+        const aIsDir = a.type === 'directory';
+        const bIsDir = b.type === 'directory';
+        
+        // Si uno es carpeta y el otro no, la carpeta va primero
+        if (aIsDir && !bIsDir) return -1;
+        if (!aIsDir && bIsDir) return 1;
+        
+        // Si ambos son del mismo tipo, ordenar alfabéticamente (case-insensitive)
+        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true });
+    });
 
     const handleUploadFiles = async () => {
         try {
@@ -289,7 +374,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                     const remotePath = currentPath === '/' ? `/${fileName}` : `${currentPath}/${fileName}`;
                     
                     try {
-                        const uploadResult = await window.electron.fileExplorer.uploadFile(tabId, localPath, remotePath, sshConfig);
+                        const uploadResult = await window.electron.fileExplorer.uploadFile(tabId, localPath, remotePath, config);
                         if (uploadResult.success) {
                             toast.current?.show({
                                 severity: 'success',
@@ -332,7 +417,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 setTransferProgress({ type: 'download', current: 0, total: 1, fileName: file.name });
                 
                 const remotePath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
-                const downloadResult = await window.electron.fileExplorer.downloadFile(tabId, remotePath, result.filePath, sshConfig);
+                const downloadResult = await window.electron.fileExplorer.downloadFile(tabId, remotePath, result.filePath, config);
                 
                 if (downloadResult.success) {
                     toast.current?.show({
@@ -354,8 +439,29 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     };
 
     const handleDeleteFiles = (filesToDelete) => {
+        // Prevenir diálogos duplicados usando ref para evitar problemas de timing
+        if (isDeleteDialogOpenRef.current) {
+            console.log('[FileExplorer] Diálogo de eliminación ya está abierto, ignorando llamada duplicada');
+            return;
+        }
+        
         const filesTarget = filesToDelete || selectedFiles;
         if (filesTarget.length === 0) return;
+        
+        // Limpiar timeout anterior si existe
+        if (deleteTimeoutRef.current) {
+            clearTimeout(deleteTimeoutRef.current);
+            deleteTimeoutRef.current = null;
+        }
+        
+        // Marcar como abierto inmediatamente
+        isDeleteDialogOpenRef.current = true;
+        
+        // Usar timeout para resetear el flag después de un tiempo (fallback de seguridad)
+        deleteTimeoutRef.current = setTimeout(() => {
+            isDeleteDialogOpenRef.current = false;
+            deleteTimeoutRef.current = null;
+        }, 1000);
         
         const fileNames = filesTarget.map(f => f.name).join(', ');
         confirmDialog({
@@ -363,12 +469,18 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
             header: 'Confirmar eliminación',
             icon: 'pi pi-exclamation-triangle',
             accept: async () => {
+                isDeleteDialogOpenRef.current = false;
+                if (deleteTimeoutRef.current) {
+                    clearTimeout(deleteTimeoutRef.current);
+                    deleteTimeoutRef.current = null;
+                }
+                
                 setTransferProgress({ type: 'delete', current: 0, total: filesTarget.length });
                 for (let i = 0; i < filesTarget.length; i++) {
                     const file = filesTarget[i];
                     const remotePath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
                     try {
-                        const deleteResult = await window.electron.fileExplorer.deleteFile(tabId, remotePath, file.type === 'directory', sshConfig);
+                        const deleteResult = await window.electron.fileExplorer.deleteFile(tabId, remotePath, file.type === 'directory', config);
                         if (deleteResult.success) {
                             toast.current?.show({
                                 severity: 'success',
@@ -392,6 +504,13 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 setTransferProgress(null);
                 setSelectedFiles([]);
                 loadFiles(currentPath);
+            },
+            reject: () => {
+                isDeleteDialogOpenRef.current = false;
+                if (deleteTimeoutRef.current) {
+                    clearTimeout(deleteTimeoutRef.current);
+                    deleteTimeoutRef.current = null;
+                }
             }
         });
     };
@@ -401,7 +520,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         
         try {
             const remotePath = currentPath === '/' ? `/${newFolderName}` : `${currentPath}/${newFolderName}`;
-            const result = await window.electron.fileExplorer.createDirectory(tabId, remotePath, sshConfig);
+            const result = await window.electron.fileExplorer.createDirectory(tabId, remotePath, config);
             
             if (result.success) {
                 toast.current?.show({
@@ -426,6 +545,44 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         }
     };
 
+    const handleRenameFile = async () => {
+        if (!fileToRename || !newFileName.trim() || newFileName.trim() === fileToRename.name) return;
+        
+        try {
+            const oldPath = currentPath === '/' ? `/${fileToRename.name}` : `${currentPath}/${fileToRename.name}`;
+            const newPath = currentPath === '/' ? `/${newFileName.trim()}` : `${currentPath}/${newFileName.trim()}`;
+            const result = await window.electron.fileExplorer.renameFile(tabId, oldPath, newPath, config);
+            
+            if (result.success) {
+                toast.current?.show({
+                    severity: 'success',
+                    summary: 'Elemento renombrado',
+                    detail: `${fileToRename.name} renombrado a "${newFileName.trim()}"`,
+                    life: 3000
+                });
+                setNewFileName('');
+                setFileToRename(null);
+                setRenameDialog(false);
+                loadFiles(currentPath);
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (err) {
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error al renombrar',
+                detail: `Error renombrando ${fileToRename.name}: ${err.message}`,
+                life: 5000
+            });
+        }
+    };
+
+    const openRenameDialog = (file) => {
+        setFileToRename(file);
+        setNewFileName(file.name);
+        setRenameDialog(true);
+    };
+
     const handleDrop = async (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -434,6 +591,59 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         if (!sshReady || !currentPath || loading) {
             console.warn('Drop rejected: sshReady=', sshReady, 'currentPath=', currentPath, 'loading=', loading);
             return;
+        }
+        
+        // Verificar si el archivo viene del sidebar local (LocalFileExplorerSidebar)
+        const source = event.dataTransfer.getData('x-source');
+        const localFileData = event.dataTransfer.getData('application/x-local-file');
+        
+        if (source === 'local-explorer-sidebar' && localFileData) {
+            // Archivo viene del sidebar local
+            try {
+                const fileInfo = JSON.parse(localFileData);
+                console.log('📥 [FileExplorer] Recibido archivo del sidebar local:', fileInfo);
+                
+                if (!fileInfo.path) {
+                    console.error('No path in local file data');
+                    return;
+                }
+                
+                // Subir el archivo directamente usando la ruta local
+                const fileName = fileInfo.name || fileInfo.path.split(/[/\\]/).pop();
+                const remotePath = currentPath === '/' ? `/${fileName}` : `${currentPath}/${fileName}`;
+                
+                console.log(`Uploading from local sidebar: ${fileInfo.path} -> ${remotePath}`);
+                setTransferProgress({ type: 'upload', current: 0, total: 1 });
+                
+                try {
+                    const uploadResult = await window.electron.fileExplorer.uploadFile(tabId, fileInfo.path, remotePath, config);
+                    if (uploadResult.success) {
+                        toast.current?.show({
+                            severity: 'success',
+                            summary: 'Subida exitosa',
+                            detail: `${fileName} subido correctamente`,
+                            life: 3000
+                        });
+                    } else {
+                        throw new Error(uploadResult.error || 'Error desconocido');
+                    }
+                } catch (err) {
+                    console.error('Error uploading file:', err);
+                    toast.current?.show({
+                        severity: 'error',
+                        summary: 'Error al subir',
+                        detail: `Error subiendo ${fileName}: ${err.message}`,
+                        life: 5000
+                    });
+                }
+                
+                setTransferProgress(null);
+                loadFiles(currentPath);
+                return; // Salir temprano, ya procesamos el archivo
+            } catch (parseError) {
+                console.error('Error parsing local file data:', parseError);
+                // Continuar con el procesamiento normal
+            }
         }
         
         // En Electron, usar dataTransfer.files directamente
@@ -611,6 +821,77 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         }
     };
 
+    const handleShowHomeInSidebar = async () => {
+        try {
+            console.log('🏠 [FileExplorer] Iniciando obtención de directorio home...');
+            
+            let homePath = null;
+            
+            // Método 1: Intentar con handler IPC
+            if (window.electron && window.electron.ipcRenderer) {
+                try {
+                    console.log('🏠 [FileExplorer] Llamando a get-user-home...');
+                    const result = await window.electron.ipcRenderer.invoke('get-user-home');
+                    console.log('🏠 [FileExplorer] Respuesta IPC recibida:', result, 'tipo:', typeof result);
+                    
+                    if (result && typeof result === 'string' && result.trim().length > 0) {
+                        homePath = result.trim();
+                        console.log('✅ [FileExplorer] Home obtenido via IPC:', homePath);
+                    } else {
+                        console.warn('⚠️ [FileExplorer] IPC retornó valor inválido:', result);
+                    }
+                } catch (ipcError) {
+                    console.error('❌ [FileExplorer] Error en IPC:', ipcError);
+                }
+            } else {
+                console.error('❌ [FileExplorer] Electron IPC no disponible');
+            }
+            
+            // Método 2: Si IPC falla, usar un fallback mejor
+            if (!homePath) {
+                const platform = window.electron?.platform || 'win32';
+                // Llamar al handler de nuevo con un método alternativo o usar un fallback
+                // Por ahora, usar un path que el usuario pueda ajustar
+                homePath = platform === 'win32' ? 'C:\\Users\\User' : '/home/user';
+                console.warn('⚠️ [FileExplorer] IPC falló, usando path por defecto:', homePath);
+                console.warn('⚠️ [FileExplorer] Nota: Reinicia la aplicación para que el handler IPC funcione correctamente');
+            }
+            
+            console.log('✅ [FileExplorer] Home path final:', homePath);
+            
+            // Disparar evento para mostrar explorador local en sidebar
+            window.dispatchEvent(new CustomEvent('show-local-file-explorer', {
+                detail: { path: homePath }
+            }));
+            
+            toast.current?.show({
+                severity: 'success',
+                summary: 'Explorador local',
+                detail: `Mostrando directorio: ${homePath}`,
+                life: 2000
+            });
+        } catch (err) {
+            console.error('❌ [FileExplorer] Error completo:', err);
+            
+            // Aún así, intentar abrir con un path por defecto
+            const platform = window.electron?.platform || 'win32';
+            const defaultPath = platform === 'win32' ? 'C:\\Users\\User' : '/home/user';
+            
+            console.log('⚠️ [FileExplorer] Usando path por defecto debido a error:', defaultPath);
+            
+            window.dispatchEvent(new CustomEvent('show-local-file-explorer', {
+                detail: { path: defaultPath }
+            }));
+            
+            toast.current?.show({
+                severity: 'warn',
+                summary: 'Explorador local',
+                detail: `Abriendo directorio: ${defaultPath}`,
+                life: 3000
+            });
+        }
+    };
+
     const themeColors = getThemeColors(explorerColorTheme);
     const isDarkTheme = themeColors.contentBackground && 
         (themeColors.contentBackground.includes('#') && 
@@ -618,12 +899,19 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
 
     return (
         <div 
+            ref={containerRef}
             className="file-explorer-container material-design" 
             data-tab-id={tabId}
             data-theme={explorerColorTheme}
             style={{ 
                 fontFamily: explorerFont, 
                 fontSize: explorerFontSize,
+                height: '100%',
+                width: '100%',
+                minHeight: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative',
                 '--theme-bg': themeColors.contentBackground || '#ffffff',
                 '--theme-text': themeColors.dialogText || '#1e293b',
                 '--theme-border': themeColors.contentBorder || '#e2e8f0',
@@ -633,11 +921,11 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 '--theme-secondary': themeColors.tabBackground || '#f8fafc',
             }}
         >
-            <Card className="file-explorer-card">
+            <Card className="file-explorer-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 {/* Header */}
                 <div className="file-explorer-header">
                     <h2 className="file-explorer-title">
-                        Explorador <FaChevronRight className="header-separator" /> {sshConfig.host}
+                        Explorador {protocolLabel} <FaChevronRight className="header-separator" /> {host}
                     </h2>
                 </div>
 
@@ -691,7 +979,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                             onClick={handleNavigateFromInput}
                             disabled={!sshReady || loading}
                             className="breadcrumb-path-button"
-                            tooltip="Ir a ruta"
+                            tooltip={t('tooltips.goToPath')}
                         />
                     </div>
                 </div>
@@ -706,27 +994,33 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                                 navigateToPath(parentPath);
                             }}
                             disabled={!sshReady || !currentPath || currentPath === '/'}
-                            tooltip="Ir al directorio padre"
+                            tooltip={t('tooltips.goToParent')}
                             className="toolbar-button"
                         />
                         <Button 
                             icon={<FaSync />}
                             onClick={() => currentPath && loadFiles(currentPath)}
                             disabled={!sshReady || !currentPath}
-                            tooltip="Actualizar"
+                            tooltip={t('tooltips.refresh')}
                             className="toolbar-button"
                         />
                         <Button 
                             icon={<FaHome />}
                             onClick={() => homeDir && navigateToPath(homeDir)}
                             disabled={!sshReady || !currentPath}
-                            tooltip="Ir al home"
+                            tooltip={t('tooltips.goToHome')}
                             className="toolbar-button"
                         />
                         <Button 
                             icon={showDotfiles ? <FaEyeSlash /> : <FaEye />}
                             onClick={() => setShowDotfiles(v => !v)}
-                            tooltip={showDotfiles ? "Ocultar archivos ocultos" : "Mostrar archivos ocultos"}
+                            tooltip={showDotfiles ? t('tooltips.hideHiddenFiles') : t('tooltips.showHiddenFiles')}
+                            className="toolbar-button"
+                        />
+                        <Button 
+                            icon={<FaHome />}
+                            onClick={handleShowHomeInSidebar}
+                            tooltip="Mostrar home local en sidebar"
                             className="toolbar-button"
                         />
                     </div>
@@ -774,11 +1068,19 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 {/* Files List - Material Design Cards */}
                 {sshReady && (
                     <div 
+                        ref={filesContainerRef}
                         className={`file-explorer-files-container${isDragActive ? ' drag-active' : ''}`}
                         onDrop={handleDrop}
                         onDragEnter={handleDragEnter}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
+                        style={{
+                            flex: '1 1 0',
+                            minHeight: 0,
+                            overflowY: 'auto',
+                            overflowX: 'hidden',
+                            position: 'relative'
+                        }}
                     >
                         {visibleFiles.length === 0 ? (
                             <div className="empty-state">
@@ -812,22 +1114,39 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                                                 <span className="file-modified">{file.modified}</span>
                                             </div>
                                         </div>
-                                        {file.type === 'file' && (
-                                            <div className="file-card-actions" onClick={(e) => e.stopPropagation()}>
+                                        <div className="file-card-actions" onClick={(e) => e.stopPropagation()}>
+                                            {file.type === 'file' && (
                                                 <Button 
                                                     icon={<FaDownload />}
                                                     onClick={() => handleDownloadFile(file)}
-                                                    tooltip="Descargar"
+                                                    tooltip={t('tooltips.download')}
                                                     className="file-action-button"
                                                 />
-                                                <Button
-                                                    icon={<FaTrash />}
-                                                    onClick={() => handleDeleteFiles([file])}
-                                                    tooltip="Eliminar"
-                                                    className="file-action-button file-action-danger"
-                                                />
-                                            </div>
-                                        )}
+                                            )}
+                                            {file.name !== '..' && (
+                                                <>
+                                                    <Button
+                                                        icon={<FaEdit />}
+                                                        onClick={() => openRenameDialog(file)}
+                                                        tooltip={t('tooltips.rename')}
+                                                        className="file-action-button"
+                                                    />
+                                                    <Button
+                                                        icon={<FaTrash />}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            e.preventDefault();
+                                                            // Usar setTimeout para asegurar que el evento no se propague
+                                                            setTimeout(() => {
+                                                                handleDeleteFiles([file]);
+                                                            }, 0);
+                                                        }}
+                                                        tooltip={t('tooltips.delete')}
+                                                        className="file-action-button file-action-danger"
+                                                    />
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             })
@@ -902,8 +1221,62 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 </div>
             </Dialog>
             
+            {/* Rename File Dialog */}
+            <Dialog 
+                header="Renombrar Elemento" 
+                visible={renameDialog} 
+                style={{ width: '400px' }} 
+                onHide={() => {
+                    setRenameDialog(false);
+                    setFileToRename(null);
+                    setNewFileName('');
+                }}
+                footer={
+                    <div>
+                        <Button 
+                            label="Cancelar" 
+                            icon={<FaArrowUp />}
+                            className="p-button-text" 
+                            onClick={() => {
+                                setRenameDialog(false);
+                                setFileToRename(null);
+                                setNewFileName('');
+                            }}
+                        />
+                        <Button 
+                            label="Renombrar" 
+                            icon={<FaEdit />}
+                            className="p-button-primary" 
+                            onClick={handleRenameFile}
+                            disabled={!newFileName.trim() || !fileToRename || newFileName.trim() === fileToRename.name}
+                        />
+                    </div>
+                }
+            >
+                <div className="field">
+                    <label htmlFor="fileName">Nuevo nombre:</label>
+                    <InputText 
+                        id="fileName"
+                        value={newFileName} 
+                        onChange={(e) => setNewFileName(e.target.value)}
+                        placeholder="Ingresa el nuevo nombre"
+                        className="w-full mt-2"
+                        autoFocus
+                        onKeyPress={(e) => {
+                            if (e.key === 'Enter' && newFileName.trim() && fileToRename && newFileName.trim() !== fileToRename.name) {
+                                handleRenameFile();
+                            }
+                        }}
+                    />
+                    {fileToRename && (
+                        <small className="p-d-block mt-2" style={{ color: 'var(--theme-text)', opacity: 0.7 }}>
+                            Renombrando: <strong>{fileToRename.name}</strong>
+                        </small>
+                    )}
+                </div>
+            </Dialog>
+            
             <Toast ref={toast} />
-            <ConfirmDialog />
         </div>
     );
 };

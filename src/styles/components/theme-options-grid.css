@@ -1,0 +1,37 @@
+/* Grid responsive para opciones de tema - Diseño Limpio */
+
+.theme-options-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+/* En pantallas medianas: 2 columnas */
+@media (max-width: 1200px) {
+  .theme-options-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* En pantallas pequeñas: 1 columna */
+@media (max-width: 768px) {
+  .theme-options-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Estilos para las cards de opciones de tema */
+.theme-option-card {
+  position: relative;
+}
+
+/* Ajustes para el checkbox dentro de las cards */
+.theme-option-card .p-checkbox {
+  margin: 0 !important;
+}
+
+/* Ajustes para el dropdown dentro de las cards */
+.theme-option-card .p-dropdown {
+  width: 100%;
+}
+

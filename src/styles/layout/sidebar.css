@@ -203,14 +203,17 @@
   min-height: 20px !important;
   line-height: 20px !important;
   border-radius: 4px;
-  display: flex;
-  align-items: flex-start;
+  display: flex !important;
+  align-items: center !important;
   gap: 0.12rem;
   transition: background 0.2s;
   width: 100%;
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  font-size: inherit !important;
 }
 .sidebar-tree .p-treenode-content.p-highlight {
   background: transparent !important;
@@ -254,10 +257,6 @@
 .sidebar-tree .p-treenode-children {
   padding-left: 0.5rem !important;
 }
-.sidebar-tree .p-treenode-content {
-  margin-left: 0 !important;
-  padding-left: 0 !important;
-}
 .sidebar-tree .p-treenode-content::before,
 .sidebar-tree .p-treenode::before,
 .sidebar-tree .p-treenode-children::before,
@@ -277,10 +276,15 @@
   margin-right: 0.25rem;
 }
 .sidebar-tree .p-treenode-content .node-label {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  line-height: 20px !important;
+  height: 20px !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 .sidebar-tree .p-treenode-content .ml-auto {
   margin-left: auto;
@@ -289,15 +293,16 @@
   visibility: visible;
 }
 .node-label {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.7rem;
-  line-height: 1.2;
-  padding-top: 0.02rem;
-  display: flex;
-  align-items: center;
+  flex: 1 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: inherit !important;
+  line-height: 20px !important;
+  height: 20px !important;
+  padding: 0 !important;
+  display: block !important;
+  margin: 0 !important;
 }
 .node-action-button .p-button-icon {
   font-size: 0.65rem;
@@ -358,22 +363,22 @@
   color: #ffc107; /* Amarillo */
 }
 
-/* Ajuste para evitar exceso de espacio entre grupos en el árbol lateral */
+/* Ajuste para aumentar el espacio entre grupos en el árbol lateral */
 .sidebar-tree .p-treenode {
-  margin-bottom: -1px;
-  /* Reduce el espacio entre nodos */
+  margin-bottom: 3px;
+  /* Aumenta el espacio entre nodos */
 }
 
-/* Compactar espaciado SOLO entre conexiones (SSH y RDP) - MUY COMPACTO */
+/* Aumentar espaciado entre conexiones (SSH y RDP) */
 /* Selector para nodos que contienen conexiones SSH o RDP */
 .sidebar-tree .p-treenode:has(.p-treenode-content [data-connection-type="ssh"]),
 .sidebar-tree .p-treenode:has(.p-treenode-content [data-connection-type="rdp"]) {
-  margin-bottom: -8px; /* Espaciado muy compacto entre conexiones */
+  margin-bottom: 3px; /* Espaciado aumentado entre conexiones */
 }
 
 /* Alternativa para navegadores que no soportan :has() */
 .sidebar-tree .p-treenode[data-node-type="connection"] {
-  margin-bottom: -8px; /* Espaciado muy compacto entre conexiones */
+  margin-bottom: 3px; /* Espaciado aumentado entre conexiones */
 }
 
 /* Reducir también el padding interno de las conexiones para mayor compactación */
@@ -688,10 +693,6 @@
   padding-left: var(--tree-indent) !important;
   border-left: none !important;
 }
-.sidebar-tree .p-treenode-content {
-  margin-left: calc(-1 * var(--tree-indent));
-  padding-left: 0.1rem !important;
-}
 .sidebar-tree .p-treenode-icon {
   margin: 0 0.1rem 0 0 !important; /* icono más cerca del texto */
 }
@@ -788,15 +789,14 @@
 }
 /* Restablecer estilos del árbol para asegurar funcionalidad */
 .sidebar-tree .p-tree,
-.sidebar-tree .p-treenode,
-.sidebar-tree .p-treenode-content {
+.sidebar-tree .p-treenode {
   pointer-events: auto;
   cursor: default;
   user-select: none;
 }
 /* Cursor pointer solo para elementos clicables */
 .sidebar-tree .p-treenode-content:hover {
-  cursor: pointer;
+  cursor: pointer !important;
 }
 /* Botones de la sidebar */
 .sidebar-container .p-button {
@@ -964,4 +964,105 @@
 .sidebar-action-button.glass-button.key-button:hover {
   background: transparent !important;
   box-shadow: none !important;
+}
+
+/* === ESTILOS PARA LOCAL FILE EXPLORER SIDEBAR === */
+/* Asegurar que el componente local file explorer se adapte al ancho */
+.local-file-explorer-sidebar {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+}
+
+/* Header del local file explorer */
+.local-file-explorer-sidebar > div:first-child {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
+
+/* Contenedor del árbol en local file explorer */
+.local-file-explorer-sidebar .tree-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Árbol dentro del local file explorer */
+.local-file-explorer-sidebar .sidebar-tree {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Asegurar que los textos se trunquen correctamente */
+.local-file-explorer-sidebar span {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Footer del local file explorer - siempre visible */
+.local-file-explorer-sidebar > div:last-child {
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  min-height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Asegurar que el footer interno también sea visible */
+.local-file-explorer-sidebar .sidebar-footer {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  min-height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Colores de iconos en el footer del local file explorer */
+.local-file-explorer-sidebar .sidebar-footer {
+  background: var(--ui-sidebar-bg) !important;
+  border-top: 1px solid var(--ui-sidebar-border) !important;
+}
+
+.local-file-explorer-sidebar .sidebar-footer .sidebar-action-button {
+  color: var(--ui-sidebar-text) !important;
+  background: transparent !important;
+}
+
+.local-file-explorer-sidebar .sidebar-footer .sidebar-action-button span {
+  color: var(--ui-sidebar-text) !important;
+}
+
+.local-file-explorer-sidebar .sidebar-footer .sidebar-action-button span svg {
+  fill: var(--ui-sidebar-text) !important;
+  color: var(--ui-sidebar-text) !important;
+}
+
+.local-file-explorer-sidebar .sidebar-footer .sidebar-action-button .p-button-icon {
+  color: var(--ui-sidebar-text) !important;
+}
+
+.local-file-explorer-sidebar .sidebar-footer .sidebar-action-button:hover {
+  background: var(--ui-sidebar-hover) !important;
+}
+
+.local-file-explorer-sidebar .sidebar-footer .sidebar-action-button:hover span {
+  color: var(--ui-sidebar-text) !important;
+}
+
+.local-file-explorer-sidebar .sidebar-footer .sidebar-action-button:hover span svg {
+  fill: var(--ui-sidebar-text) !important;
+  color: var(--ui-sidebar-text) !important;
 }

@@ -4,6 +4,8 @@ import { explorerFonts } from '../themes';
 import { themeManager } from '../utils/themeManager';
 import { statusBarThemeManager } from '../utils/statusBarThemeManager';
 import { STORAGE_KEYS } from '../utils/constants';
+import { TREE_THEME_STORAGE_KEY } from '../themes/tree-themes';
+import { getAvailableFonts } from '../utils/fontsList';
 
 export const useThemeManagement = () => {
   // Storage keys
@@ -17,38 +19,9 @@ export const useThemeManagement = () => {
   const LOCAL_POWERSHELL_THEME_STORAGE_KEY = 'localPowerShellTheme';
   const LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY = 'localLinuxTerminalTheme';
 
-  // Available fonts
-  const availableFonts = [
-    // Fuentes monoespaciadas modernas y populares
-    { label: 'FiraCode Nerd Font', value: '"FiraCode Nerd Font", monospace' },
-    { label: 'JetBrains Mono', value: '"JetBrains Mono", monospace' },
-    { label: 'Cascadia Code', value: '"Cascadia Code", monospace' },
-    { label: 'SF Mono', value: '"SF Mono", monospace' },
-    { label: 'Source Code Pro', value: '"Source Code Pro", monospace' },
-    { label: 'Roboto Mono', value: '"Roboto Mono", monospace' },
-    { label: 'Fira Code', value: '"Fira Code", monospace' },
-    { label: 'Victor Mono', value: '"Victor Mono", monospace' },
-    { label: 'Operator Mono', value: '"Operator Mono", monospace' },
-    { label: 'Dank Mono', value: '"Dank Mono", monospace' },
-    { label: 'Recursive', value: '"Recursive", monospace' },
-    { label: 'IBM Plex Mono', value: '"IBM Plex Mono", monospace' },
-    { label: 'Space Mono', value: '"Space Mono", monospace' },
-    { label: 'Overpass Mono', value: '"Overpass Mono", monospace' },
-    { label: 'Inconsolata', value: 'Inconsolata, monospace' },
-    { label: 'Hack', value: 'Hack, monospace' },
-    { label: 'Monoid', value: 'Monoid, monospace' },
-    { label: 'Anonymous Pro', value: '"Anonymous Pro", monospace' },
-    { label: 'DejaVu Sans Mono', value: '"DejaVu Sans Mono", monospace' },
-    { label: 'Liberation Mono', value: '"Liberation Mono", monospace' },
-    { label: 'Ubuntu Mono', value: '"Ubuntu Mono", monospace' },
-    { label: 'Monaco', value: 'Monaco, monospace' },
-    { label: 'Consolas', value: 'Consolas, monospace' },
-    { label: 'Courier New', value: '"Courier New", monospace' },
-    { label: 'Lucida Console', value: '"Lucida Console", monospace' },
-    { label: 'Menlo', value: 'Menlo, monospace' },
-    { label: 'Andale Mono', value: '"Andale Mono", monospace' },
-    { label: 'PT Mono', value: '"PT Mono", monospace' }
-  ];
+  // Available fonts - Lista completa y unificada de todas las fuentes monoespaciadas
+  // Generada desde la lista maestra para garantizar sincronización
+  const availableFonts = getAvailableFonts();
 
   // Terminal themes
   const availableThemes = themes ? Object.keys(themes) : [];
@@ -221,6 +194,32 @@ export const useThemeManagement = () => {
     }
   });
 
+  const [sidebarFontColor, setSidebarFontColor] = useState(() => {
+    try {
+      return localStorage.getItem('sidebarFontColor') || '';
+    } catch {
+      return '';
+    }
+  });
+
+  // Tree theme state
+  const [treeTheme, setTreeTheme] = useState(() => {
+    try {
+      return localStorage.getItem(TREE_THEME_STORAGE_KEY) || 'default';
+    } catch {
+      return 'default';
+    }
+  });
+
+  // Session action icons theme state
+  const [sessionActionIconTheme, setSessionActionIconTheme] = useState(() => {
+    try {
+      return localStorage.getItem('sessionActionIconTheme') || 'modern';
+    } catch {
+      return 'modern';
+    }
+  });
+
   // Auto-save effects
   useEffect(() => {
     localStorage.setItem(FONT_FAMILY_STORAGE_KEY, fontFamily);
@@ -301,9 +300,32 @@ export const useThemeManagement = () => {
 
   useEffect(() => {
     try {
+      if (sidebarFontColor) {
+        localStorage.setItem('sidebarFontColor', sidebarFontColor);
+      } else {
+        localStorage.removeItem('sidebarFontColor');
+      }
+    } catch {}
+  }, [sidebarFontColor]);
+
+  useEffect(() => {
+    try {
       localStorage.setItem('iconSize', iconSize.toString());
     } catch {}
   }, [iconSize]);
+
+  // Tree theme auto-save
+  useEffect(() => {
+    try {
+      localStorage.setItem(TREE_THEME_STORAGE_KEY, treeTheme);
+    } catch {}
+  }, [treeTheme]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sessionActionIconTheme', sessionActionIconTheme);
+    } catch {}
+  }, [sessionActionIconTheme]);
 
   // Initial theme loading effect
   useEffect(() => {
@@ -355,9 +377,11 @@ export const useThemeManagement = () => {
     const updatedExplorerColorTheme = localStorage.getItem('explorerColorTheme') || 'Light';
     const updatedSidebarFont = localStorage.getItem('sidebarFont') || explorerFonts[0];
     const updatedSidebarFontSize = localStorage.getItem('sidebarFontSize');
+    const updatedSidebarFontColor = localStorage.getItem('sidebarFontColor') || '';
     const updatedIconSize = localStorage.getItem('iconSize');
     const updatedIconTheme = localStorage.getItem('iconTheme') || 'nord';
     const updatedIconThemeSidebar = localStorage.getItem('iconThemeSidebar') || 'nord';
+    const updatedTreeTheme = localStorage.getItem(TREE_THEME_STORAGE_KEY) || 'default';
 
     // Actualizar estados
     setStatusBarTheme(updatedStatusBarTheme);
@@ -370,9 +394,11 @@ export const useThemeManagement = () => {
     setExplorerColorTheme(updatedExplorerColorTheme);
     setSidebarFont(updatedSidebarFont);
     if (updatedSidebarFontSize) setSidebarFontSize(parseInt(updatedSidebarFontSize, 10));
+    setSidebarFontColor(updatedSidebarFontColor);
     if (updatedIconSize) setIconSize(parseInt(updatedIconSize, 10));
     setIconTheme(updatedIconTheme);
     setIconThemeSidebar(updatedIconThemeSidebar);
+    setTreeTheme(updatedTreeTheme);
 
     // Actualizar tema de terminal
     const updatedTerminalThemeObj = themes && themes[updatedLocalTerminalTheme] ? themes[updatedLocalTerminalTheme] : {};
@@ -445,6 +471,16 @@ export const useThemeManagement = () => {
     setSidebarFont,
     sidebarFontSize,
     setSidebarFontSize,
+    sidebarFontColor,
+    setSidebarFontColor,
+    
+    // Tree theme
+    treeTheme,
+    setTreeTheme,
+
+    // Session action icons theme
+    sessionActionIconTheme,
+    setSessionActionIconTheme,
 
     // Utility functions
     updateThemesFromSync

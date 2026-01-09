@@ -44,6 +44,8 @@ if (typeof window !== 'undefined') {
 
 // Custom styles
 import './styles/main.css';
+// Fuentes locales integradas (generadas con npm run download-fonts)
+import './styles/fonts.css';
 // import './assets/DashboardStyles.css';
 // import './assets/Dashboard.css';
 // import './assets/form-fixes.css';
@@ -158,14 +160,12 @@ initializeGlobalThemes();
 const container = document.getElementById('root');
 const root = createRoot(container);
 
-// Render y ocultar splash cuando React está listo en el siguiente frame
+// Render React
 root.render(<App />);
 
-// Ocultar splash y marcar app lista
+// NO ocultar splash aquí - se ocultará cuando el tema esté completamente aplicado
+// Solo marcar que React está renderizado
 requestAnimationFrame(() => {
-  const splash = document.getElementById('boot-splash');
-  if (splash) {
-    splash.classList.add('hidden');
-  }
   document.documentElement.classList.add('app-ready');
+  // El boot-splash se ocultará desde App.js cuando el tema esté listo
 });

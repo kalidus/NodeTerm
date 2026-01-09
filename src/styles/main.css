@@ -25,6 +25,11 @@
 @import './components/ai-chat.css';
 @import './components/anything-llm.css';
 @import './components/ai-clients-tab.css';
+@import './components/security-settings.css';
+@import './components/general-settings.css';
+@import './components/terminal-settings.css';
+/* Sobrescribir colores de PrimeReact después de todos los demás estilos */
+@import './components/prime-react-overrides.css';
 
 
 /* --- Pages --- */

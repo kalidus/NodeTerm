@@ -1,19 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from 'primereact/button';
 import { Tree } from 'primereact/tree';
 import { Divider } from 'primereact/divider';
 import SidebarFooter from './SidebarFooter';
 import { uiThemes, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
-import { FolderDialog, UnifiedConnectionDialog } from './Dialogs';
+import { FolderDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
+import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
+import { sessionActionIconThemes, getDefaultSessionActionIconTheme } from '../themes/session-action-icons';
 import ImportDialog from './ImportDialog';
 import PasswordManagerSidebar from './PasswordManagerSidebar';
 import SidebarFilesystemExplorer from './SidebarFilesystemExplorer';
+import LocalFileExplorerSidebar from './LocalFileExplorerSidebar';
+import ConnectionDetailsPanel from './ConnectionDetailsPanel';
 import { unblockAllInputs, detectBlockedInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
 import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorite as isFavoriteConn } from '../utils/connectionStore';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { STORAGE_KEYS } from '../utils/constants';
+import { getTreeTheme } from '../themes/tree-themes';
+import { useTranslation } from '../i18n/hooks/useTranslation';
+import '../styles/components/tree-themes.css';
 
 // Helper para loggear setNodes
 function logSetNodes(source, nodes) {
@@ -61,10 +68,12 @@ const Sidebar = React.memo(({
   connectionIconSize = 20,
   explorerFont,
   explorerFontSize = 14,
+  explorerFontColor,
   uiTheme = 'Light',
   showToast, // callback opcional para mostrar toast global
   confirmDialog, // callback para mostrar diálogo de confirmación
   onOpenSSHConnection, // nuevo prop para doble click en SSH
+  onOpenVncConnection, // nuevo prop para doble click en VNC
   onNodeContextMenu, // handler del menú contextual de nodos
   onTreeAreaContextMenu, // handler del menú contextual del área del árbol
   hideContextMenu, // función para cerrar el menú contextual
@@ -113,14 +122,60 @@ const Sidebar = React.memo(({
   onToggleLocalTerminalForAIChat,
   
   // Filtro de búsqueda desde TitleBar
-  sidebarFilter = ''
+  sidebarFilter = '',
+  
+  // Tema del árbol
+  treeTheme = 'default',
+  
+  // Tema de iconos de acción
+  sessionActionIconTheme = 'modern'
 }) => {
+  // Hook de internacionalización
+  const { t } = useTranslation('common');
   
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   
-  // Estado para modo de visualización (conexiones, passwords, filesystem)
-  const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'filesystem'
+  // Estado para modo de visualización (conexiones, passwords, filesystem, localExplorer)
+  const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'filesystem' | 'localExplorer'
+  
+  // Estado para el nodo seleccionado actualmente (para el panel de detalles)
+  const [selectedNodeForDetails, setSelectedNodeForDetails] = useState(null);
+
+  // Función para actualizar un nodo en el árbol
+  const updateNodeInTree = useCallback((updatedNode) => {
+    const findAndUpdateNode = (nodeList, targetKey) => {
+      return nodeList.map(node => {
+        if (node.key === targetKey) {
+          return updatedNode;
+        }
+        if (node.children) {
+          return {
+            ...node,
+            children: findAndUpdateNode(node.children, targetKey)
+          };
+        }
+        return node;
+      });
+    };
+
+    if (updatedNode && updatedNode.key) {
+      const updatedNodes = findAndUpdateNode(nodes, updatedNode.key);
+      setNodes(updatedNodes);
+      
+      // Actualizar también el nodo seleccionado
+      setSelectedNodeForDetails(updatedNode);
+      
+      if (showToast) {
+        showToast({
+          severity: 'success',
+          summary: 'Actualizado',
+          detail: 'Cambios guardados correctamente',
+          life: 2000
+        });
+      }
+    }
+  }, [nodes, setNodes, showToast]);
   const [filesystemStatus, setFilesystemStatus] = useState({
     active: false,
     allowedPaths: [],
@@ -128,6 +183,8 @@ const Sidebar = React.memo(({
     server: null,
     conversationId: null
   });
+  const [initialFilesystemPath, setInitialFilesystemPath] = useState(null);
+  const [localExplorerPath, setLocalExplorerPath] = useState(null);
   
   // 🔗 Sincronizar conexiones SSH a window para que AIChatPanel las acceda
   useEffect(() => {
@@ -151,13 +208,57 @@ const Sidebar = React.memo(({
     
     const sshConnections = extractSSHNodes(nodes);
     window.sshConnectionsFromSidebar = sshConnections;
-    console.log(`🔗 [Sidebar] Sincronizadas ${sshConnections.length} conexiones SSH a window`);
+    // console.log(`🔗 [Sidebar] Sincronizadas ${sshConnections.length} conexiones SSH a window`);
     
     // Disparar evento para que AIChatPanel se resincronice
     window.dispatchEvent(new CustomEvent('sidebar-ssh-connections-updated', {
       detail: { count: sshConnections.length }
     }));
   }, [nodes]);
+
+  // Sincronizar selectedNodeForDetails cuando cambia el nodo en el árbol
+  useEffect(() => {
+    // Helper local para encontrar nodo por key
+    const findNodeInTree = (nodeList, targetKey) => {
+      if (targetKey === null || targetKey === undefined) return null;
+      for (let node of nodeList) {
+        if (node.key === targetKey) return node;
+        if (node.children && node.children.length > 0) {
+          const found = findNodeInTree(node.children, targetKey);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const currentKey = typeof selectedNodeKey === 'object' && selectedNodeKey !== null
+      ? Object.keys(selectedNodeKey)[0]
+      : selectedNodeKey;
+    
+    // Si hay una key seleccionada, buscar el nodo actualizado en el árbol
+    if (currentKey) {
+      const updatedNode = findNodeInTree(nodes, currentKey);
+      if (updatedNode) {
+        // Solo actualizar si hay cambios reales comparando con el nodo actual
+        setSelectedNodeForDetails(prevNode => {
+          if (!prevNode || prevNode.key !== currentKey) {
+            // Si no hay nodo previo o la key cambió, actualizar directamente
+            return updatedNode;
+          }
+          
+          // Comparar si realmente hay cambios significativos
+          const hasChanges = 
+            updatedNode.label !== prevNode.label ||
+            JSON.stringify(updatedNode.data) !== JSON.stringify(prevNode.data);
+          
+          return hasChanges ? updatedNode : prevNode;
+        });
+      } else if (selectedNodeForDetails && selectedNodeForDetails.key === currentKey) {
+        // Si el nodo ya no existe en el árbol, limpiar la selección
+        setSelectedNodeForDetails(null);
+      }
+    }
+  }, [nodes, selectedNodeKey]); // Solo depender de nodes y selectedNodeKey, no de selectedNodeForDetails
 
   // Escuchar evento para cambiar a vista de conexiones
   useEffect(() => {
@@ -187,13 +288,32 @@ const Sidebar = React.memo(({
     };
   }, []);
 
+  // Listener simple para mostrar explorador local en sidebar
+  useEffect(() => {
+    const handleShowLocalExplorer = (event) => {
+      const { path } = event?.detail || {};
+      if (!path) return;
+      
+      setLocalExplorerPath(path);
+      setViewMode('localExplorer');
+      setSidebarCollapsed(false);
+    };
+    
+    window.addEventListener('show-local-file-explorer', handleShowLocalExplorer);
+    return () => {
+      window.removeEventListener('show-local-file-explorer', handleShowLocalExplorer);
+    };
+  }, []);
+
   const filesystemAvailable = !!filesystemStatus?.active;
   
+  // Permitir modo filesystem si se solicita explícitamente desde FileExplorer
+  // incluso sin AI Chat activo, pero solo si hay un path inicial establecido
   useEffect(() => {
-    if (!isAIChatActive && viewMode === 'filesystem') {
+    if (!isAIChatActive && viewMode === 'filesystem' && !initialFilesystemPath) {
       setViewMode('connections');
     }
-  }, [isAIChatActive, viewMode, setViewMode]);
+  }, [isAIChatActive, viewMode, setViewMode, initialFilesystemPath]);
 
   // Función para obtener el color por defecto del tema actual
   const getThemeDefaultColor = (themeName) => {
@@ -252,6 +372,7 @@ const Sidebar = React.memo(({
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [folderName, setFolderName] = useState('');
   const [folderColor, setFolderColor] = useState(() => getThemeDefaultColor(iconTheme));
+  const [folderIcon, setFolderIcon] = useState(null);
   const [parentNodeKey, setParentNodeKey] = useState(null);
   const [editingNode, setEditingNode] = useState(null); // Para saber si estamos editando un nodo existente
   
@@ -307,6 +428,28 @@ const Sidebar = React.memo(({
     }, 100);
     
   }, [iconTheme, setNodes]);
+  
+  // Actualizar variable CSS cuando cambie el color de fuente
+  // Usar useRef para evitar loops infinitos
+  const prevColorRef = React.useRef(explorerFontColor);
+  
+  React.useEffect(() => {
+    // Solo actualizar si el color realmente cambió
+    if (prevColorRef.current === explorerFontColor) {
+      return;
+    }
+    
+    prevColorRef.current = explorerFontColor;
+    
+    // Aplicar la variable CSS al contenedor del sidebar usando el elemento raíz
+    if (explorerFontColor) {
+      const root = document.documentElement;
+      root.style.setProperty('--ui-sidebar-text', explorerFontColor);
+    } else {
+      const root = document.documentElement;
+      root.style.removeProperty('--ui-sidebar-text');
+    }
+  }, [explorerFontColor]);
   
   // Estado para controlar la visibilidad de los botones de clientes de IA
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
@@ -394,7 +537,7 @@ const Sidebar = React.memo(({
   
   // Función para manejar el menú de aplicación (unificada)
   const handleAppMenuClick = (event) => {
-    const menuStructure = createAppMenu(setShowImportDialog);
+    const menuStructure = createAppMenu(setShowImportDialog, t);
     createContextMenu(event, menuStructure, 'app-context-menu-sidebar');
   };
   
@@ -842,18 +985,18 @@ const Sidebar = React.memo(({
     
     if (editingNode) {
       // Modo edición: actualizar carpeta existente
-      const updateNodeInTree = (nodes, targetKey, newLabel, newColor) => {
+      const updateNodeInTree = (nodes, targetKey, newLabel, newColor, newIcon) => {
         return nodes.map(node => {
           if (node.key === targetKey) {
-            return { ...node, label: newLabel, color: newColor };
+            return { ...node, label: newLabel, color: newColor, folderIcon: newIcon || 'general' };
           }
           if (node.children) {
-            return { ...node, children: updateNodeInTree(node.children, targetKey, newLabel, newColor) };
+            return { ...node, children: updateNodeInTree(node.children, targetKey, newLabel, newColor, newIcon) };
           }
           return node;
         });
       };
-      const updatedNodes = updateNodeInTree(nodesCopy, editingNode.key, folderName.trim(), folderColor);
+      const updatedNodes = updateNodeInTree(nodesCopy, editingNode.key, folderName.trim(), folderColor, folderIcon);
       setNodes(() => logSetNodes('Sidebar', updatedNodes));
       showToast && showToast({ severity: 'success', summary: 'Éxito', detail: `Carpeta "${folderName}" actualizada`, life: 3000 });
     } else {
@@ -867,7 +1010,8 @@ const Sidebar = React.memo(({
         uid: newKey,
         createdAt: new Date().toISOString(),
         isUserCreated: true,
-        color: folderColor
+        color: folderColor,
+        folderIcon: folderIcon || 'general'
       };
       
       if (parentNodeKey === null) {
@@ -986,13 +1130,6 @@ const Sidebar = React.memo(({
         createFolder: (parentKey) => {
           setParentNodeKey(parentKey);
           setShowFolderDialog(true);
-        },
-
-        createRDP: () => {
-          // Esta función debe ser pasada desde App.js
-          if (window.createRDP) {
-            window.createRDP();
-          }
         },
         editRDP: (node) => {
           // Esta función debe ser pasada desde App.js
@@ -1132,6 +1269,57 @@ const Sidebar = React.memo(({
           }
         },
 
+        duplicateVNC: (node) => {
+          // Duplicar conexión VNC
+          const nodesCopy = deepCopy(nodes);
+          const newKey = `vnc_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
+          const duplicatedNode = {
+            ...node,
+            key: newKey,
+            uid: newKey,
+            label: `${node.label} (Copia)`,
+            data: {
+              ...node.data,
+              // Mantener todos los datos originales
+            }
+          };
+          
+          // Buscar el nodo original para encontrar su posición
+          const findNodePosition = (nodes, targetKey) => {
+            for (let i = 0; i < nodes.length; i++) {
+              if (nodes[i].key === targetKey) {
+                return { parentNodes: nodes, index: i, isRoot: true };
+              }
+              if (nodes[i].children) {
+                for (let j = 0; j < nodes[i].children.length; j++) {
+                  if (nodes[i].children[j].key === targetKey) {
+                    return { parentNodes: nodes[i].children, index: j, isRoot: false };
+                  }
+                }
+                const found = findNodePosition(nodes[i].children, targetKey);
+                if (found) return found;
+              }
+            }
+            return null;
+          };
+          
+          const position = findNodePosition(nodesCopy, node.key);
+          if (position) {
+            position.parentNodes.splice(position.index + 1, 0, duplicatedNode);
+            setNodes(() => logSetNodes('Sidebar-DuplicateVNC', nodesCopy));
+            showToast && showToast({
+              severity: 'success',
+              summary: 'Duplicado',
+              detail: `Conexión VNC "${node.label}" duplicada`,
+              life: 3000
+            });
+            // Desbloquear formularios por si alguna máscara quedó activa
+            setTimeout(() => {
+              safeUnblockForms(showToast);
+            }, 0);
+          }
+        },
+
         duplicateFolder: (node) => {
           // Duplicar carpeta con todo su contenido
           const nodesCopy = deepCopy(nodes);
@@ -1211,6 +1399,9 @@ const Sidebar = React.memo(({
           const parentKey = findParent(nodes, node.key);
           setParentNodeKey(parentKey);
           setEditingNode(node); // Estado para saber que estamos editando
+          setFolderName(node.label);
+          setFolderColor(node.color || getThemeDefaultColor(iconTheme));
+          setFolderIcon(node.folderIcon || null);
           setShowFolderDialog(true);
         },
         deleteNode: (nodeKey, nodeLabel) => {
@@ -1331,6 +1522,8 @@ const Sidebar = React.memo(({
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && node.data.type === 'rdp';
+    const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
+    const isFileConnection = node.data && (node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp');
     const isPassword = node.data && node.data.type === 'password';
     // Icono según tema seleccionado para la sidebar
     let icon = null;
@@ -1357,19 +1550,61 @@ const Sidebar = React.memo(({
           height: `${connectionIconSize}px`
         }
       }) : '🖥️'; // Icono RDP o fallback
+    } else if (isVNC) {
+      // Usar icono VNC si existe, sino usar RDP como fallback
+      const vncIcon = themeIcons.vnc || themeIcons.rdp;
+      icon = vncIcon ? React.cloneElement(vncIcon, {
+        width: connectionIconSize,
+        height: connectionIconSize,
+        style: { 
+          ...vncIcon.props.style,
+          width: `${connectionIconSize}px`,
+          height: `${connectionIconSize}px`
+        }
+      }) : '🖥️'; // Icono VNC o fallback
     } else if (isPassword) {
       icon = <span className="pi pi-key" style={{ color: '#ffc107', fontSize: `${connectionIconSize}px` }} />;
+    } else if (isFileConnection) {
+      // Icono para conexiones de archivos (SFTP/FTP/SCP) usando el tema
+      const protocol = node.data?.protocol || node.data?.type || 'sftp';
+
+      // Buscar icono en tema actual, con fallback a material
+      const themeIcon = themeIcons[protocol] || iconThemes['material']?.icons?.[protocol];
+
+      if (themeIcon) {
+        icon = React.cloneElement(themeIcon, {
+          width: connectionIconSize,
+          height: connectionIconSize,
+          style: {
+            ...themeIcon.props.style,
+            width: `${connectionIconSize}px`,
+            height: `${connectionIconSize}px`
+          }
+        });
+      } else {
+        // Último fallback si no hay icono en ningún tema
+        const fallbackColors = {
+          sftp: '#ff9800',
+          ftp: '#2196f3',
+          scp: '#4caf50'
+        };
+        icon = <span className="pi pi-folder" style={{ color: fallbackColors[protocol] || '#ff9800', fontSize: `${connectionIconSize}px` }} />;
+      }
     } else if (isFolder) {
-      // Lógica inteligente para determinar el color de la carpeta:
-      // 1. Si no tiene color asignado → usar color por defecto del tema actual
-      // 2. Si tiene color pero es un color por defecto de algún tema → usar color por defecto del tema actual
-      // 3. Si tiene color personalizado → mantener ese color
-      const hasCustomColor = node.color && !isDefaultThemeColor(node.color);
-      const folderColor = hasCustomColor ? node.color : getThemeDefaultColor(iconTheme);
-      
-      
-      // Usar el icono del tema si existe, pero forzar el color
-      const themeIcon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
+      // Verificar si tiene icono personalizado (ignorar 'general' como si fuera null)
+      if (node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()]) {
+        const preset = FolderIconPresets[node.folderIcon.toUpperCase()];
+        icon = <FolderIconRenderer preset={preset} pixelSize={folderIconSize} />;
+      } else {
+        // Lógica inteligente para determinar el color de la carpeta:
+        // 1. Si no tiene color asignado → usar color por defecto del tema actual
+        // 2. Si tiene color pero es un color por defecto de algún tema → usar color por defecto del tema actual
+        // 3. Si tiene color personalizado → mantener ese color
+        const hasCustomColor = node.color && !isDefaultThemeColor(node.color);
+        const folderColor = hasCustomColor ? node.color : getThemeDefaultColor(iconTheme);
+        
+        // Usar el icono del tema si existe, pero forzar el color
+        const themeIcon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
       
       if (themeIcon) {
         // Si hay un icono del tema, clonarlo y aplicar el color y tamaño
@@ -1582,6 +1817,7 @@ const Sidebar = React.memo(({
               data-folder-color={folderColor}
               data-debug="sidebar-fallback-closed"
             />;
+        }
       }
     } else {
       icon = themeIcons.file;
@@ -1593,7 +1829,15 @@ const Sidebar = React.memo(({
       title += " | Doble click para abrir terminal SSH";
     } else if (isRDP) {
       title += " | Doble click para conectar RDP";
+    } else if (isVNC) {
+      title += " | Doble click para conectar VNC";
+    } else if (isFileConnection) {
+      const protocolLabel = (node.data?.protocol || node.data?.type || 'SFTP').toUpperCase();
+      title += ` | Doble click para abrir explorador ${protocolLabel}`;
     }
+    
+    // Detectar si tiene icono personalizado (para ajustar alineación del texto)
+    const hasCustomFolderIcon = isFolder && node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()];
     
     // Render básico, puedes añadir acciones/contextual aquí
     return (
@@ -1605,17 +1849,27 @@ const Sidebar = React.memo(({
             onOpenSSHConnection(node, nodes);
           } else if (isRDP && sidebarCallbacksRef?.current?.connectRDP) {
             sidebarCallbacksRef.current.connectRDP(node);
+          } else if (isVNC && onOpenVncConnection) {
+            onOpenVncConnection(node, nodes);
+          } else if (isFileConnection && sidebarCallbacksRef?.current?.openFileConnection) {
+            sidebarCallbacksRef.current.openFileConnection(node, nodes);
           }
         }}
-        style={{ cursor: 'pointer', fontFamily: explorerFont, alignItems: 'flex-start' }}
+        style={{ 
+          cursor: 'pointer', 
+          fontFamily: explorerFont,
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: '6px'
+        }}
         title={title}
-        data-connection-type={isSSH ? 'ssh' : (isRDP ? 'rdp' : null)}
+        data-connection-type={isSSH ? 'ssh' : (isRDP ? 'rdp' : (isVNC ? 'vnc' : null))}
         data-node-type={isFolder ? 'folder' : 'connection'}
       >
         <span style={{ 
-          minWidth: 20, // Hacer el icono más ancho
+          minWidth: 20,
           display: 'flex', 
-          alignItems: 'center', 
+          alignItems: 'flex-end', 
           justifyContent: 'center', 
           height: '20px',
           position: 'relative' // Para posicionar el tag SSH
@@ -1675,7 +1929,13 @@ const Sidebar = React.memo(({
         </span>
         <span className="node-label" style={{ 
           flex: 1,
-          marginLeft: (isSSH || isRDP) && iconTheme === 'nodetermBasic' ? '6px' : '0px' // Espaciado para conexiones SSH y RDP solo en tema Nodeterm Basic
+          marginLeft: (isSSH || isRDP || isVNC) && iconTheme === 'nodetermBasic' ? '6px' : '0px',
+          lineHeight: '20px',
+          height: '20px',
+          display: 'block',
+          margin: 0,
+          padding: 0,
+          ...(hasCustomFolderIcon ? { transform: 'translateY(3px)' } : {})
         }}>{node.label}</span>
         {/* Estrella de favoritos oculta en la lista lateral por solicitud */}
       </div>
@@ -1697,7 +1957,9 @@ const Sidebar = React.memo(({
         display: 'flex',
         flexDirection: 'column',
         fontFamily: explorerFont,
-        fontSize: `${explorerFontSize}px`
+        fontSize: `${explorerFontSize}px`,
+        color: explorerFontColor || undefined,
+        ...(explorerFontColor ? { '--ui-sidebar-text': explorerFontColor } : {})
       }}>
       {sidebarCollapsed ? (
         // Layout de sidebar colapsada: botón de colapsar arriba a la izquierda, menú y config abajo
@@ -1731,10 +1993,9 @@ const Sidebar = React.memo(({
             }}>
               {/* Botón de colapsar */}
               <Button 
-                icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
-                className="p-button-rounded p-button-text sidebar-action-button" 
+                className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                 onClick={() => setSidebarCollapsed(v => !v)} 
-                tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
+                tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')} 
                 tooltipOptions={{ position: 'right' }} 
                 style={{ 
                   margin: 0, 
@@ -1742,25 +2003,38 @@ const Sidebar = React.memo(({
                   height: 40, 
                   minWidth: 40, 
                   minHeight: 40, 
-                  fontSize: 18,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
                   justifyContent: 'center',
                   visibility: 'visible !important',
-                  opacity: '1 !important'
+                  opacity: '1 !important',
+                  padding: 0
                 }} 
-              />
+              >
+                <span style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: 'var(--ui-sidebar-text)'
+                }}>
+                  {sidebarCollapsed 
+                    ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
+                    : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft
+                  }
+                </span>
+              </Button>
               
               {/* Botón de conexiones */}
               <Button 
-                icon="pi pi-sitemap" 
-                className="p-button-rounded p-button-text sidebar-action-button" 
+                className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                 onClick={() => {
                   setViewMode('connections');
                   setSidebarCollapsed(false);
                 }} 
-                tooltip="Conexiones" 
+                tooltip={t('tooltips.connections')} 
                 tooltipOptions={{ position: 'right' }} 
                 style={{ 
                   margin: 0, 
@@ -1768,26 +2042,35 @@ const Sidebar = React.memo(({
                   height: 40, 
                   minWidth: 40, 
                   minHeight: 40, 
-                  fontSize: 18,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
                   justifyContent: 'center',
                   visibility: 'visible !important',
                   opacity: '1 !important',
-                  color: '#2196f3'
+                  padding: 0
                 }} 
-              />
+              >
+                <span style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: '#2196f3'
+                }}>
+                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
+                </span>
+              </Button>
               
               {/* Botón de passwords */}
               <Button 
-                icon="pi pi-key" 
-                className="p-button-rounded p-button-text sidebar-action-button" 
+                className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                 onClick={() => {
                   setViewMode('passwords');
                   setSidebarCollapsed(false);
                 }} 
-                tooltip="Passwords" 
+                tooltip={t('tooltips.passwords')} 
                 tooltipOptions={{ position: 'right' }} 
                 style={{ 
                   margin: 0, 
@@ -1795,23 +2078,32 @@ const Sidebar = React.memo(({
                   height: 40, 
                   minWidth: 40, 
                   minHeight: 40, 
-                  fontSize: 18,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
                   justifyContent: 'center',
                   visibility: 'visible !important',
                   opacity: '1 !important',
-                  color: '#ffc107'
+                  padding: 0
                 }} 
-              />
+              >
+                <span style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: '#ffc107'
+                }}>
+                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
+                </span>
+              </Button>
               
               {/* Botón de nuevo grupo */}
               <Button 
-                icon="pi pi-th-large" 
-                className="p-button-rounded p-button-text sidebar-action-button" 
+                className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                 onClick={() => setShowCreateGroupDialog(true)} 
-                tooltip="Crear grupo de pestañas" 
+                tooltip={t('tooltips.createGroup')} 
                 tooltipOptions={{ position: 'right' }} 
                 style={{ 
                   margin: 0, 
@@ -1819,15 +2111,26 @@ const Sidebar = React.memo(({
                   height: 40, 
                   minWidth: 40, 
                   minHeight: 40, 
-                  fontSize: 18,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
                   justifyContent: 'center',
                   visibility: 'visible !important',
-                  opacity: '1 !important'
+                  opacity: '1 !important',
+                  padding: 0
                 }} 
-              />
+              >
+                <span style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: 'var(--ui-sidebar-text)'
+                }}>
+                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
+                </span>
+              </Button>
               
             {/* Separador para clientes de IA */}
             {(aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui) && (
@@ -1863,7 +2166,7 @@ const Sidebar = React.memo(({
                     detail: { tab: newAITab }
                   }));
                 }} 
-                tooltip="Chat de IA" 
+                tooltip={t('tooltips.aiChat')} 
                 tooltipOptions={{ position: 'right' }} 
                 style={{ 
                   margin: 0, 
@@ -1888,7 +2191,7 @@ const Sidebar = React.memo(({
                 icon="pi pi-box" 
                 className="p-button-rounded p-button-text sidebar-action-button" 
                 onClick={openAnythingLLMTab} 
-                tooltip="AnythingLLM" 
+                tooltip={t('tooltips.anythingLLM')} 
                 tooltipOptions={{ position: 'right' }} 
                 style={{ 
                   margin: 0, 
@@ -1914,7 +2217,7 @@ const Sidebar = React.memo(({
                 icon="pi pi-globe" 
                 className="p-button-rounded p-button-text sidebar-action-button" 
                 onClick={openOpenWebUITab} 
-                tooltip="Open WebUI" 
+                tooltip={t('tooltips.openWebUI')} 
                 tooltipOptions={{ position: 'right' }} 
                 style={{ 
                   margin: 0, 
@@ -1950,13 +2253,12 @@ const Sidebar = React.memo(({
                   }}
                 />
                 <Button
-                  icon="pi pi-folder-open"
-                  className="p-button-rounded p-button-text sidebar-action-button"
+                  className="p-button-rounded p-button-text sidebar-action-button glass-button"
                   onClick={() => {
                     setViewMode('filesystem');
                     setSidebarCollapsed(false);
                   }}
-                  tooltip="Filesystem MCP"
+                  tooltip={t('tooltips.filesystemMCP')}
                   tooltipOptions={{ position: 'right' }}
                   style={{
                     margin: 0,
@@ -1964,16 +2266,26 @@ const Sidebar = React.memo(({
                     height: 40,
                     minWidth: 40,
                     minHeight: 40,
-                    fontSize: 18,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
                     justifyContent: 'center',
                     visibility: 'visible !important',
                     opacity: '1 !important',
-                    color: viewMode === 'filesystem' ? '#8bc34a' : '#cfd8dc'
+                    padding: 0
                   }}
-                />
+                >
+                  <span style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    width: '20px',
+                    height: '20px',
+                    color: viewMode === 'filesystem' ? '#8bc34a' : '#cfd8dc'
+                  }}>
+                    {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
+                  </span>
+                </Button>
               </>
             )}
 
@@ -1984,7 +2296,7 @@ const Sidebar = React.memo(({
                 onClick={() => {
                   onToggleLocalTerminalForAIChat();
                 }}
-                tooltip="Terminal local"
+                tooltip={t('tooltips.localTerminal')}
                 tooltipOptions={{ position: 'right' }}
                 style={{
                   margin: 0,
@@ -2020,10 +2332,9 @@ const Sidebar = React.memo(({
             zIndex: 1000
           }}>
             <Button
-              icon="pi pi-cog"
-              className="p-button-rounded p-button-text sidebar-action-button"
+              className="p-button-rounded p-button-text sidebar-action-button glass-button"
               onClick={() => setShowSettingsDialog(true)}
-              tooltip="Configuración"
+              tooltip={t('tooltips.settings')}
               tooltipOptions={{ position: 'right' }}
               style={{ 
                 margin: 0, 
@@ -2031,22 +2342,32 @@ const Sidebar = React.memo(({
                 height: 40, 
                 minWidth: 40, 
                 minHeight: 40, 
-                fontSize: 18,
                 border: 'none',
                 display: 'flex !important',
                 alignItems: 'center',
                 justifyContent: 'center',
                 visibility: 'visible !important',
-                opacity: '1 !important'
+                opacity: '1 !important',
+                padding: 0
               }} 
-            />
+            >
+              <span style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                width: '20px',
+                height: '20px',
+                color: 'var(--ui-sidebar-text)'
+              }}>
+                {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.settings}
+              </span>
+            </Button>
             <Button
-              icon="pi pi-bars"
-              className="p-button-rounded p-button-text sidebar-action-button"
+              className="p-button-rounded p-button-text sidebar-action-button glass-button"
               onClick={(e) => {
                 handleAppMenuClick(e);
               }}
-              tooltip="Menú de la aplicación"
+              tooltip={t('tooltips.appMenu')}
               tooltipOptions={{ position: 'right' }}
               style={{ 
                 margin: 0, 
@@ -2054,15 +2375,26 @@ const Sidebar = React.memo(({
                 height: 40, 
                 minWidth: 40, 
                 minHeight: 40, 
-                fontSize: 18,
                 border: 'none',
                 display: 'flex !important',
                 alignItems: 'center',
                 justifyContent: 'center',
                 visibility: 'visible !important',
-                opacity: '1 !important'
+                opacity: '1 !important',
+                padding: 0
               }} 
-            />
+            >
+              <span style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                width: '20px',
+                height: '20px',
+                color: 'var(--ui-sidebar-text)'
+              }}>
+                {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.menu}
+              </span>
+            </Button>
           </div>
         </div>
       ) : (
@@ -2086,48 +2418,149 @@ const Sidebar = React.memo(({
               )}
               <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
                 <Button 
-                  icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
-                  className="p-button-rounded p-button-text sidebar-action-button" 
+                  className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                   onClick={() => setSidebarCollapsed(v => !v)} 
-                  tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
+                  tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')} 
                   tooltipOptions={{ position: 'bottom' }} 
-                  style={{ marginRight: 8 }} 
-                />
+                  style={{ 
+                    marginRight: 8,
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    width: '40px',
+                    height: '40px',
+                    padding: 0
+                  }} 
+                >
+                  <span style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    width: '20px',
+                    height: '20px',
+                    color: 'var(--ui-sidebar-text)'
+                  }}>
+                    {sidebarCollapsed 
+                      ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
+                      : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft
+                    }
+                  </span>
+                </Button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
                   <Button 
-                    icon="pi pi-desktop" 
                     className="p-button-rounded p-button-text sidebar-action-button glass-button" 
-                    onClick={() => setShowUnifiedConnectionDialog && setShowUnifiedConnectionDialog(true)} 
-                    tooltip="Nueva conexión" 
+                    onClick={() => {
+                      // Abrir diálogo de selección de protocolo
+                      if (sidebarCallbacksRef?.current?.showProtocolSelection) {
+                        sidebarCallbacksRef.current.showProtocolSelection();
+                      } else {
+                        // Fallback: usar evento personalizado
+                        window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
+                      }
+                    }} 
+                    tooltip={t('tooltips.newConnection')} 
                     tooltipOptions={{ position: 'bottom' }}
-                  />
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '40px',
+                      height: '40px',
+                      padding: 0
+                    }}
+                  >
+                    <span style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '20px',
+                      height: '20px',
+                      color: 'var(--ui-sidebar-text)'
+                    }}>
+                      {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
+                    </span>
+                  </Button>
                   <Button 
-                    icon="pi pi-folder" 
                     className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                     onClick={() => setShowFolderDialog(true)} 
-                    tooltip="Crear carpeta" 
+                    tooltip={t('tooltips.createFolder')} 
                     tooltipOptions={{ position: 'bottom' }}
-                  />
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '40px',
+                      height: '40px',
+                      padding: 0
+                    }}
+                  >
+                    <span style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '20px',
+                      height: '20px',
+                      color: 'var(--ui-sidebar-text)'
+                    }}>
+                      {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
+                    </span>
+                  </Button>
                   <Button 
-                    icon="pi pi-th-large" 
                     className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                     onClick={() => setShowCreateGroupDialog(true)} 
-                    tooltip="Crear grupo de pestañas" 
+                    tooltip={t('tooltips.createGroup')} 
                     tooltipOptions={{ position: 'bottom' }}
-                  />
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '40px',
+                      height: '40px',
+                      padding: 0
+                    }}
+                  >
+                    <span style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '20px',
+                      height: '20px',
+                      color: 'var(--ui-sidebar-text)'
+                    }}>
+                      {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
+                    </span>
+                  </Button>
                   <Button 
-                    icon="pi pi-key" 
                     className="p-button-rounded p-button-text sidebar-action-button glass-button key-button" 
                     onClick={() => setViewMode('passwords')} 
-                    tooltip="Gestor de passwords" 
+                    tooltip={t('tooltips.passwordManager')} 
                     tooltipOptions={{ position: 'bottom' }}
-                  />
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '40px',
+                      height: '40px',
+                      padding: 0
+                    }}
+                  >
+                    <span style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '20px',
+                      height: '20px',
+                      color: '#ffc107'
+                    }}>
+                      {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
+                    </span>
+                  </Button>
                   {filesystemAvailable && isAIChatActive && (
                     <Button
                       icon="pi pi-folder-open"
                       className={`p-button-rounded p-button-text sidebar-action-button glass-button ${viewMode === 'filesystem' ? 'active' : ''}`}
                       onClick={() => setViewMode('filesystem')}
-                      tooltip="Explorador MCP"
+                      tooltip={t('tooltips.mcpExplorer')}
                       tooltipOptions={{ position: 'bottom' }}
                       style={{
                         borderColor: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : undefined,
@@ -2140,7 +2573,7 @@ const Sidebar = React.memo(({
                       icon="pi pi-desktop"
                       className="p-button-rounded p-button-text sidebar-action-button glass-button"
                       onClick={() => onToggleLocalTerminalForAIChat()}
-                      tooltip="Terminal local"
+                      tooltip={t('tooltips.localTerminal')}
                       tooltipOptions={{ position: 'bottom' }}
                       style={{
                         borderColor: '#90caf9',
@@ -2159,7 +2592,9 @@ const Sidebar = React.memo(({
                   overflowY: 'auto', 
                   overflowX: 'auto',
                   position: 'relative',
-                  fontSize: `${explorerFontSize}px`
+                  fontSize: `${explorerFontSize}px`,
+                  color: explorerFontColor || undefined,
+                  ...(explorerFontColor ? { '--ui-sidebar-text': explorerFontColor } : {})
                 }}
                 onContextMenu={onTreeAreaContextMenu}
                 className="tree-container"
@@ -2170,11 +2605,36 @@ const Sidebar = React.memo(({
                   </div>
                 ) : (
                   <Tree
-                    key={`tree-${iconTheme}-${explorerFontSize}`} // Forzar re-render cuando cambie el tema
+                    key={`tree-${iconTheme}-${explorerFontSize}-${treeTheme}-${explorerFontColor || 'default'}`} // Forzar re-render cuando cambie el tema
                     value={nodes}
                     selectionMode="single"
                     selectionKeys={selectedNodeKey}
-                    onSelectionChange={e => setSelectedNodeKey(e.value)}
+                    onSelectionChange={e => {
+                      setSelectedNodeKey(e.value);
+                      
+                      // Encontrar el nodo completo para el panel de detalles
+                      const findNode = (nodeList, key) => {
+                        for (const node of nodeList) {
+                          if (node.key === key) return node;
+                          if (node.children) {
+                            const found = findNode(node.children, key);
+                            if (found) return found;
+                          }
+                        }
+                        return null;
+                      };
+                      
+                      // e.value puede ser un objeto { "key": true } o directamente un string "key"
+                      let selectedKey = null;
+                      if (typeof e.value === 'string') {
+                        selectedKey = e.value;
+                      } else if (e.value && typeof e.value === 'object') {
+                        selectedKey = Object.keys(e.value)[0];
+                      }
+                      
+                      const node = selectedKey ? findNode(nodes, selectedKey) : null;
+                      setSelectedNodeForDetails(node);
+                    }}
                     expandedKeys={expandedKeys}
                     onToggle={e => setExpandedKeys(e.value)}
                     dragdropScope="files"
@@ -2183,16 +2643,31 @@ const Sidebar = React.memo(({
                       // if (e.node) setDraggedNodeKey(e.node.key); // This line was removed as per the edit hint
                     }}
                     onDragEnd={() => {}}
-                    className="sidebar-tree"
+                    className={`sidebar-tree tree-theme-${treeTheme}`}
                     data-icon-theme={iconTheme}
+                    data-tree-theme={treeTheme}
+                    data-font-color={explorerFontColor || ''}
                     style={{ 
                       fontSize: `${explorerFontSize}px`,
-                      '--icon-size': `${iconSize}px`
+                      color: explorerFontColor || undefined,
+                      '--icon-size': `${iconSize}px`,
+                      ...(explorerFontColor ? { 
+                        '--ui-sidebar-text': explorerFontColor,
+                        '--tree-text-color': explorerFontColor
+                      } : {})
                     }}
                     nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })}
                   />
                 )}
               </div>
+              
+              {/* Panel de detalles de conexión */}
+              <ConnectionDetailsPanel 
+                selectedNode={selectedNodeForDetails}
+                uiTheme={uiTheme}
+                sessionActionIconTheme={sessionActionIconTheme}
+                onNodeUpdate={updateNodeInTree}
+              />
               
               <SidebarFooter 
                 onConfigClick={() => setShowSettingsDialog(true)} 
@@ -2200,6 +2675,7 @@ const Sidebar = React.memo(({
                 toggleExpandAll={toggleExpandAll}
                 collapsed={sidebarCollapsed}
                 onShowImportDialog={setShowImportDialog}
+                sessionActionIconTheme={sessionActionIconTheme}
               />
             </>
           ) : viewMode === 'filesystem' ? (
@@ -2212,6 +2688,28 @@ const Sidebar = React.memo(({
               explorerFontSize={explorerFontSize}
               uiTheme={uiTheme}
               showToast={showToast}
+              sessionActionIconTheme={sessionActionIconTheme}
+              initialPath={initialFilesystemPath}
+              onPathNavigated={() => setInitialFilesystemPath(null)}
+            />
+          ) : viewMode === 'localExplorer' ? (
+            <LocalFileExplorerSidebar
+              initialPath={localExplorerPath}
+              onBackToConnections={() => {
+                setViewMode('connections');
+                setLocalExplorerPath(null);
+              }}
+              sidebarCollapsed={sidebarCollapsed}
+              setSidebarCollapsed={setSidebarCollapsed}
+              explorerFont={explorerFont}
+              explorerFontSize={explorerFontSize}
+              uiTheme={uiTheme}
+              showToast={showToast}
+              setShowSettingsDialog={setShowSettingsDialog}
+              sessionActionIconTheme={sessionActionIconTheme}
+              iconTheme={iconTheme}
+              iconSize={iconSize}
+              folderIconSize={folderIconSize}
             />
           ) : (
             // Vista de passwords
@@ -2234,7 +2732,9 @@ const Sidebar = React.memo(({
               secureStorage={secureStorage}
               setShowSettingsDialog={setShowSettingsDialog}
               onShowImportDialog={setShowImportDialog}
+              sessionActionIconTheme={sessionActionIconTheme}
               sidebarFilter={sidebarFilter}
+              treeTheme={treeTheme}
             />
           )}
         </>
@@ -2246,6 +2746,7 @@ const Sidebar = React.memo(({
           setShowFolderDialog(false);
           setFolderName('');
           setFolderColor(getThemeDefaultColor(iconTheme));
+          setFolderIcon(null);
           setEditingNode(null); // Limpiar estado de edición al cerrar
         }}
         mode={editingNode ? "edit" : "new"}
@@ -2253,47 +2754,13 @@ const Sidebar = React.memo(({
         setFolderName={setFolderName}
         folderColor={folderColor}
         setFolderColor={setFolderColor}
+        folderIcon={folderIcon}
+        setFolderIcon={setFolderIcon}
         onConfirm={createNewFolder}
         themeDefaultColor={getThemeDefaultColor(iconTheme)}
         themeName={iconThemes[iconTheme]?.name || 'Material'}
       />
-      <UnifiedConnectionDialog
-        visible={showUnifiedConnectionDialog}
-        onHide={() => {
-          setShowUnifiedConnectionDialog(false);
-        }}
-
-        foldersOptions={getAllFoldersToUse(nodes)}
-
-        sshLoading={false}
-        // Props RDP
-        rdpNodeData={rdpNodeData}
-        onSaveToSidebar={handleSaveRdpToSidebar}
-        editingNode={editingRdpNode}
-        // Props para modo edición
-        isEditMode={!!(editSSHNode || editingRdpNode)}
-        editConnectionType={editSSHNode ? 'ssh' : (editingRdpNode ? 'rdp' : null)}
-        editNodeData={editSSHNode || editingRdpNode}
-        // Props SSH
-        sshName={editSSHNode ? editSSHName : sshName}
-        setSSHName={editSSHNode ? setEditSSHName : setSSHName}
-        sshHost={editSSHNode ? editSSHHost : sshHost}
-        setSSHHost={editSSHNode ? setEditSSHHost : setSSHHost}
-        sshUser={editSSHNode ? editSSHUser : sshUser}
-        setSSHUser={editSSHNode ? setEditSSHUser : setSSHUser}
-        sshPassword={editSSHNode ? editSSHPassword : sshPassword}
-        setSSHPassword={editSSHNode ? setEditSSHPassword : setSSHPassword}
-        sshPort={editSSHNode ? editSSHPort : sshPort}
-        setSSHPort={editSSHNode ? setEditSSHPort : setSSHPort}
-        sshRemoteFolder={editSSHNode ? editSSHRemoteFolder : sshRemoteFolder}
-        setSSHRemoteFolder={editSSHNode ? setEditSSHRemoteFolder : setSSHRemoteFolder}
-        sshTargetFolder={sshTargetFolder}
-        setSSHTargetFolder={setSSHTargetFolder}
-        sshAutoCopyPassword={editSSHNode ? editSSHAutoCopyPassword : sshAutoCopyPassword}
-        setSSHAutoCopyPassword={editSSHNode ? setEditSSHAutoCopyPassword : setSSHAutoCopyPassword}
-        onSSHConfirm={editSSHNode ? saveEditSSH : createNewSSH}
-        allowPasswordTab={viewMode === 'passwords'}
-      />
+      {/* Los diálogos de edición SSH y RDP ahora se manejan en DialogsManager */}
       
       <ImportDialog
         visible={showImportDialog}

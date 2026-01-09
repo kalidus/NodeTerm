@@ -5,6 +5,7 @@ import { Dialog } from 'primereact/dialog';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { InputSwitch } from 'primereact/inputswitch';
 import mcpCatalogData from '../data/mcp-catalog.json';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 
 const normalizePrimeIcon = (iconName) => {
   if (!iconName) return 'pi pi-question-circle';
@@ -272,6 +273,8 @@ const MCPCard = ({ mcp, installed, serverState, onInstall, themeColors, accentCo
 };
 
 const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
+  const { t } = useTranslation('common');
+  
   const [searchTerm, setSearchTerm] = useState('');
   const VALID_CATEGORY_IDS = ['system','automation','development','data','web','websearch','productivity','security'];
   const [showConfigDialog, setShowConfigDialog] = useState(false);
@@ -644,7 +647,7 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
                   <Button 
                     icon="pi pi-folder-open" 
                     onClick={handleBrowseFilesystemPath}
-                    tooltip="Explorar..."
+                    tooltip={t('tooltips.browse')}
                     tooltipOptions={{ position: 'top' }}
                     style={{ 
                       background: 'rgba(33, 150, 243, 0.2)', 

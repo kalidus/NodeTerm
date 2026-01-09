@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
+import { FaWindows } from 'react-icons/fa';
 import PowerShellTerminal from './PowerShellTerminal';
 import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
@@ -59,9 +60,69 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         });
     };
     
-    // Determinar la pestaña inicial según el SO
-    const getInitialTab = () => {
+    // Determinar la pestaña inicial según el SO y configuración
+    const getInitialTab = (useCygwin = false, availableDistributions = []) => {
+        // Leer configuración de terminal por defecto
+        const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
         const platform = window.electron?.platform || 'unknown';
+        
+        // Si hay configuración guardada, usarla
+        if (defaultTerminal) {
+            const terminalTitles = {
+                'powershell': 'Windows PowerShell',
+                'wsl': 'WSL',
+                'cygwin': 'Cygwin',
+                'linux-terminal': platform === 'darwin' ? 'Terminal macOS' : 'Terminal Linux'
+            };
+            
+            // Si es Docker
+            if (defaultTerminal.startsWith('docker-')) {
+                return {
+                    id: 'tab-1',
+                    title: `🐳 ${defaultTerminal.replace('docker-', '')}`,
+                    type: 'docker',
+                    active: true
+                };
+            }
+            
+            // Si es una distribución WSL (puede ser nombre directo como "Ubuntu-24.04")
+            // Buscar en las distribuciones WSL disponibles (si están disponibles)
+            if (availableDistributions && availableDistributions.length > 0) {
+                const wslDistro = availableDistributions.find(d => 
+                    d.name === defaultTerminal || 
+                    d.label === defaultTerminal ||
+                    d.name.toLowerCase() === defaultTerminal.toLowerCase() ||
+                    d.label.toLowerCase() === defaultTerminal.toLowerCase()
+                );
+                if (wslDistro) {
+                    return {
+                        id: 'tab-1',
+                        title: wslDistro.label || wslDistro.name,
+                        type: wslDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro',
+                        distroInfo: wslDistro, // Agregar información completa de la distribución
+                        active: true
+                    };
+                }
+            }
+            
+            // Si es un tipo de terminal conocido
+            if (terminalTitles[defaultTerminal]) {
+                return {
+                    id: 'tab-1',
+                    title: terminalTitles[defaultTerminal],
+                    type: defaultTerminal === 'linux-terminal' ? 'powershell' : defaultTerminal,
+                    active: true
+                };
+            }
+            
+            // Fallback: usar el valor tal cual
+            return {
+                id: 'tab-1',
+                title: defaultTerminal,
+                type: 'powershell', // Fallback seguro
+                active: true
+            };
+        }
         if (platform === 'linux') {
             return {
                 id: 'tab-1',
@@ -77,6 +138,15 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 active: true
             };
         }
+        // Si Cygwin está disponible, usarlo como predeterminado en Windows
+        if (useCygwin) {
+            return {
+                id: 'tab-1',
+                title: 'Cygwin',
+                type: 'cygwin',
+                active: true
+            };
+        }
         return {
             id: 'tab-1',
             title: 'Windows PowerShell',
@@ -85,10 +155,226 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         };
     };
     
-    const [tabs, setTabs] = useState([getInitialTab()]);
+    const [tabs, setTabs] = useState([getInitialTab(false, [])]);
     const [nextTabId, setNextTabId] = useState(2);
-    // Determinar el tipo de terminal por defecto según el SO
+    
+    // Actualizar la pestaña inicial cuando se carguen las distribuciones WSL
+    useEffect(() => {
+        const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
+        
+        // Si no hay distribuciones WSL o no hay pestañas, esperar
+        if (wslDistributions.length === 0 || tabs.length === 0 || tabs[0].id !== 'tab-1') {
+            // if (wslDistributions.length === 0) {
+            //     console.log('⏳ [useEffect WSL] Esperando distribuciones WSL...');
+            // }
+            return;
+        }
+
+        const firstTab = tabs[0];
+        
+        // Si la pestaña ya tiene distroInfo correcto Y el tipo es correcto, no hacer nada
+        if (firstTab.distroInfo && 
+            (firstTab.type === 'ubuntu' || firstTab.type === 'wsl-distro') &&
+            firstTab.type !== 'powershell') {
+            // console.log('ℹ️ [useEffect WSL] Pestaña ya está correcta con distroInfo y tipo correcto');
+            return;
+        }
+
+        // console.log('🔍 [useEffect WSL] Verificando actualización de pestaña:', {
+        //     defaultTerminal,
+        //     wslDistributionsCount: wslDistributions.length,
+        //     firstTabType: firstTab.type,
+        //     firstTabTitle: firstTab.title,
+        //     hasDistroInfo: !!firstTab.distroInfo,
+        //     distroInfoName: firstTab.distroInfo?.name
+        // });
+
+        // Buscar distribución WSL por defaultTerminal O por el título de la pestaña
+        const searchTerms = [];
+        if (defaultTerminal) {
+            searchTerms.push(defaultTerminal);
+        }
+        if (firstTab.title && firstTab.title !== 'Windows PowerShell') {
+            searchTerms.push(firstTab.title);
+        }
+
+        let wslDistro = null;
+        for (const term of searchTerms) {
+            wslDistro = wslDistributions.find(d => 
+                d.name === term || 
+                d.label === term ||
+                d.name.toLowerCase() === term.toLowerCase() ||
+                d.label.toLowerCase() === term.toLowerCase()
+            );
+            if (wslDistro) {
+                console.log('✅ [useEffect WSL] Distribución encontrada por término:', term, wslDistro);
+                break;
+            }
+        }
+
+        if (wslDistro) {
+            const expectedType = wslDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+            const expectedTitle = wslDistro.label || wslDistro.name;
+            const needsUpdate = firstTab.type !== expectedType || 
+                               !firstTab.distroInfo ||
+                               (firstTab.distroInfo && firstTab.distroInfo.name !== wslDistro.name) ||
+                               firstTab.title !== expectedTitle;
+
+            // console.log('🔍 [useEffect WSL] Distribución encontrada:', {
+            //     wslDistro: { name: wslDistro.name, label: wslDistro.label, category: wslDistro.category },
+            //     expectedType,
+            //     expectedTitle,
+            //     currentTab: { type: firstTab.type, title: firstTab.title, hasDistroInfo: !!firstTab.distroInfo },
+            //     needsUpdate,
+            //     reason: needsUpdate ? {
+            //         typeMismatch: firstTab.type !== expectedType,
+            //         noDistroInfo: !firstTab.distroInfo,
+            //         distroMismatch: firstTab.distroInfo && firstTab.distroInfo.name !== wslDistro.name,
+            //         titleMismatch: firstTab.title !== expectedTitle
+            //     } : 'no necesita actualización'
+            // });
+
+            if (needsUpdate) {
+                // console.log('✅ [useEffect WSL] Actualizando pestaña inicial con distribución WSL');
+                setTabs(prevTabs => {
+                    const currentFirstTab = prevTabs[0];
+                    // Verificar de nuevo para evitar actualizaciones innecesarias
+                    if (currentFirstTab.distroInfo?.name === wslDistro.name && 
+                        currentFirstTab.type === expectedType &&
+                        currentFirstTab.type !== 'powershell') {
+                        // console.log('ℹ️ [useEffect WSL] Pestaña ya actualizada, saltando');
+                        return prevTabs;
+                    }
+                    const updatedTab = {
+                        ...currentFirstTab,
+                        title: expectedTitle,
+                        type: expectedType, // CRÍTICO: Cambiar el tipo de 'powershell' a 'ubuntu' o 'wsl-distro'
+                        distroInfo: wslDistro, // Agregar información completa de la distribución
+                        _updateKey: Date.now() // Forzar re-render
+                    };
+                    // console.log('✅ [useEffect WSL] Pestaña actualizada:', {
+                    //     antes: { type: currentFirstTab.type, title: currentFirstTab.title, hasDistroInfo: !!currentFirstTab.distroInfo },
+                    //     despues: { type: updatedTab.type, title: updatedTab.title, hasDistroInfo: !!updatedTab.distroInfo, distroName: updatedTab.distroInfo?.name }
+                    // });
+                    return [updatedTab, ...prevTabs.slice(1)];
+                });
+            } else {
+                // console.log('ℹ️ [useEffect WSL] No se necesita actualizar, la pestaña ya está correcta');
+            }
+        } else if (defaultTerminal || (firstTab.title && firstTab.title !== 'Windows PowerShell')) {
+            console.warn('⚠️ [useEffect WSL] No se encontró distribución WSL para:', {
+                defaultTerminal,
+                currentTitle: firstTab.title,
+                searchTerms,
+                availableDistros: wslDistributions.map(d => ({ name: d.name, label: d.label, category: d.category }))
+            });
+        }
+    }, [wslDistributions, tabs.length, tabs[0]?.type, tabs[0]?.title]); // Depender de cambios específicos en tabs
+    
+    // useEffect adicional para corregir pestañas que tienen el título correcto pero el tipo incorrecto
+    // Este es un fallback en caso de que el useEffect principal no haya funcionado
+    useEffect(() => {
+        // Solo ejecutar si hay distribuciones WSL disponibles
+        if (wslDistributions.length === 0 || tabs.length === 0 || tabs[0].id !== 'tab-1') {
+            return;
+        }
+        
+        const firstTab = tabs[0];
+        const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
+        
+        // Si la pestaña ya tiene distroInfo correcto Y el tipo es correcto, no hacer nada
+        if (firstTab.distroInfo && 
+            (firstTab.type === 'ubuntu' || firstTab.type === 'wsl-distro') &&
+            firstTab.type !== 'powershell') {
+            return;
+        }
+        
+        // Si el tipo es 'powershell' pero el título o defaultTerminal sugiere una distribución WSL, corregirlo
+        // Incluso si tiene distroInfo, si el tipo sigue siendo 'powershell', hay que corregirlo
+        const isPowerShellButShouldBeWSL = firstTab.type === 'powershell' && 
+                                           firstTab.title && 
+                                           firstTab.title !== 'Windows PowerShell';
+        
+        if (isPowerShellButShouldBeWSL) {
+            // console.log('🔍 [useEffect Corrección] Buscando distribución para corregir tipo:', {
+            //     defaultTerminal,
+            //     currentTitle: firstTab.title,
+            //     currentType: firstTab.type,
+            //     availableDistros: wslDistributions.map(d => ({ name: d.name, label: d.label, category: d.category }))
+            // });
+            
+            // Buscar por defaultTerminal o por título de la pestaña
+            const searchTerms = [];
+            if (defaultTerminal) {
+                searchTerms.push(defaultTerminal);
+            }
+            if (firstTab.title) {
+                searchTerms.push(firstTab.title);
+            }
+            
+            let wslDistro = null;
+            for (const term of searchTerms) {
+                wslDistro = wslDistributions.find(d => 
+                    d.name === term || 
+                    d.label === term ||
+                    d.name.toLowerCase() === term.toLowerCase() ||
+                    d.label.toLowerCase() === term.toLowerCase()
+                );
+                if (wslDistro) break;
+            }
+            
+            if (wslDistro) {
+                const expectedType = wslDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+                const expectedTitle = wslDistro.label || wslDistro.name;
+                // console.log('🔧 [useEffect Corrección] Corrigiendo tipo de pestaña:', {
+                //     currentType: firstTab.type,
+                //     currentTitle: firstTab.title,
+                //     expectedType: expectedType,
+                //     expectedTitle: expectedTitle,
+                //     distroName: wslDistro.name,
+                //     distroLabel: wslDistro.label,
+                //     distroCategory: wslDistro.category
+                // });
+                setTabs(prevTabs => {
+                    const currentFirstTab = prevTabs[0];
+                    // Verificar de nuevo para evitar actualizaciones innecesarias
+                    if (currentFirstTab.distroInfo?.name === wslDistro.name && 
+                        currentFirstTab.type === expectedType) {
+                        // console.log('ℹ️ [useEffect Corrección] Pestaña ya corregida, saltando');
+                        return prevTabs;
+                    }
+                    const updatedTab = {
+                        ...currentFirstTab,
+                        type: expectedType, // Cambiar el tipo
+                        title: expectedTitle, // Actualizar título también
+                        distroInfo: wslDistro, // Agregar distroInfo
+                        _updateKey: Date.now() // Forzar re-render
+                    };
+                    // console.log('✅ [useEffect Corrección] Pestaña corregida:', {
+                    //     antes: { type: currentFirstTab.type, title: currentFirstTab.title, hasDistroInfo: !!currentFirstTab.distroInfo },
+                    //     despues: { type: updatedTab.type, title: updatedTab.title, hasDistroInfo: !!updatedTab.distroInfo }
+                    // });
+                    return [updatedTab, ...prevTabs.slice(1)];
+                });
+            } else {
+                console.warn('⚠️ [useEffect Corrección] No se encontró distribución para corregir:', {
+                    defaultTerminal,
+                    currentTitle: firstTab.title,
+                    availableDistros: wslDistributions.map(d => ({ name: d.name, label: d.label, category: d.category }))
+                });
+            }
+        }
+    }, [wslDistributions, tabs]);
+    
+    // Determinar el tipo de terminal por defecto según el SO y configuración
     const getDefaultTerminalType = () => {
+        // Leer configuración de terminal por defecto
+        const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
+        if (defaultTerminal) {
+            return defaultTerminal;
+        }
+        
+        // Fallback a lógica anterior
         const platform = window.electron?.platform || 'unknown';
         if (platform === 'linux' || platform === 'darwin') {
             return 'linux-terminal';
@@ -97,6 +383,65 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     };
     
     const [selectedTerminalType, setSelectedTerminalType] = useState(getDefaultTerminalType());
+    
+    // Escuchar cambios en la configuración de terminal por defecto
+    useEffect(() => {
+        const handleDefaultTerminalChange = (e) => {
+            const newDefaultTerminal = e.detail?.terminalType;
+            console.log('📢 Evento default-terminal-changed recibido:', newDefaultTerminal);
+            if (newDefaultTerminal) {
+                setSelectedTerminalType(newDefaultTerminal);
+                
+                // Buscar la distribución WSL correspondiente
+                const findAndUpdateDistro = () => {
+                    if (wslDistributions.length > 0 && tabs.length > 0 && tabs[0].id === 'tab-1') {
+                        const wslDistro = wslDistributions.find(d => 
+                            d.name === newDefaultTerminal || 
+                            d.label === newDefaultTerminal ||
+                            d.name.toLowerCase() === newDefaultTerminal.toLowerCase() ||
+                            d.label.toLowerCase() === newDefaultTerminal.toLowerCase()
+                        );
+                        
+                        if (wslDistro) {
+                            const expectedType = wslDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+                            const expectedTitle = wslDistro.label || wslDistro.name;
+                            console.log('🔄 Actualizando pestaña por evento:', { 
+                                expectedType, 
+                                expectedTitle, 
+                                distroInfo: wslDistro,
+                                currentType: tabs[0].type,
+                                currentTitle: tabs[0].title
+                            });
+                            setTabs(prevTabs => {
+                                const updatedTab = {
+                                    ...prevTabs[0],
+                                    title: expectedTitle,
+                                    type: expectedType,
+                                    distroInfo: wslDistro, // Agregar información completa de la distribución
+                                    _updateKey: Date.now() // Forzar re-render
+                                };
+                                console.log('✅ Pestaña actualizada por evento:', updatedTab);
+                                return [updatedTab, ...prevTabs.slice(1)];
+                            });
+                        } else {
+                            console.warn('⚠️ No se encontró distribución WSL para:', newDefaultTerminal);
+                        }
+                    } else if (wslDistributions.length === 0) {
+                        // Si aún no se han cargado las distribuciones, esperar un poco
+                        console.log('⏳ Esperando a que se carguen las distribuciones WSL...');
+                        setTimeout(findAndUpdateDistro, 500);
+                    }
+                };
+                
+                findAndUpdateDistro();
+            }
+        };
+        
+        window.addEventListener('default-terminal-changed', handleDefaultTerminalChange);
+        return () => {
+            window.removeEventListener('default-terminal-changed', handleDefaultTerminalChange);
+        };
+    }, [wslDistributions, tabs]);
     const [activeTabKey, setActiveTabKey] = useState(0); // Para forzar re-render
     const [wslDistributions, setWSLDistributions] = useState([]);
     const [cygwinAvailable, setCygwinAvailable] = useState(false); // Estado para Cygwin
@@ -332,27 +677,79 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
     // Detectar distribuciones WSL usando el backend
     useEffect(() => {
+        // console.log('🔍 [Detectar WSL] Iniciando detección de distribuciones WSL...');
         
         const detectWSLDistributions = async () => {
             try {
                 if (window.electron && window.electron.ipcRenderer) {
+                    // console.log('🔍 [Detectar WSL] Invocando IPC detect-wsl-distributions...');
                     const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
-                    // console.log('✅ Distribuciones WSL detectadas:', distributions);
+                    // console.log('✅ [Detectar WSL] Respuesta recibida:', {
+                    //     isArray: Array.isArray(distributions),
+                    //     length: Array.isArray(distributions) ? distributions.length : 'N/A',
+                    //     data: distributions
+                    // });
                     
                     // Verificar que recibimos un array válido
                     if (Array.isArray(distributions)) {
+                        // console.log('✅ [Detectar WSL] Distribuciones WSL detectadas:', distributions.map(d => ({ name: d.name, label: d.label, category: d.category })));
                         setWSLDistributions(distributions);
-                        // distributions.forEach(distro => console.log(`  - ${distro.label} (${distro.category})`));
+                        // Forzar actualización inmediata de la pestaña después de un pequeño delay
+                        // para asegurar que el estado se haya actualizado
+                        setTimeout(() => {
+                            const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
+                            if (defaultTerminal && distributions.length > 0) {
+                                setTabs(prevTabs => {
+                                    if (prevTabs.length === 0 || prevTabs[0].id !== 'tab-1') {
+                                        return prevTabs;
+                                    }
+                                    const firstTab = prevTabs[0];
+                                    // Si ya está correcto, no hacer nada
+                                    if (firstTab.distroInfo && 
+                                        (firstTab.type === 'ubuntu' || firstTab.type === 'wsl-distro') &&
+                                        firstTab.type !== 'powershell') {
+                                        return prevTabs;
+                                    }
+                                    // Buscar distribución
+                                    const wslDistro = distributions.find(d => 
+                                        d.name === defaultTerminal || 
+                                        d.label === defaultTerminal ||
+                                        d.name === firstTab.title ||
+                                        d.label === firstTab.title ||
+                                        d.name.toLowerCase() === defaultTerminal.toLowerCase() ||
+                                        d.label.toLowerCase() === defaultTerminal.toLowerCase() ||
+                                        (firstTab.title && d.name.toLowerCase() === firstTab.title.toLowerCase()) ||
+                                        (firstTab.title && d.label.toLowerCase() === firstTab.title.toLowerCase())
+                                    );
+                                    if (wslDistro && (firstTab.type === 'powershell' || !firstTab.distroInfo || firstTab.distroInfo.name !== wslDistro.name)) {
+                                        const expectedType = wslDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+                                        const expectedTitle = wslDistro.label || wslDistro.name;
+                                        // console.log('🔧 [Detectar WSL] Actualización inmediata de pestaña:', {
+                                        //     antes: { type: firstTab.type, title: firstTab.title },
+                                        //     despues: { type: expectedType, title: expectedTitle }
+                                        // });
+                                        return [{
+                                            ...firstTab,
+                                            type: expectedType,
+                                            title: expectedTitle,
+                                            distroInfo: wslDistro,
+                                            _updateKey: Date.now()
+                                        }, ...prevTabs.slice(1)];
+                                    }
+                                    return prevTabs;
+                                });
+                            }
+                        }, 100);
                     } else {
-                        // console.log('⚠️ Respuesta no es un array, fallback a array vacío');
+                        console.warn('⚠️ [Detectar WSL] Respuesta no es un array, fallback a array vacío. Tipo recibido:', typeof distributions);
                         setWSLDistributions([]);
                     }
                 } else {
-                    // console.log('❌ No hay acceso a electron IPC');
+                    console.error('❌ [Detectar WSL] No hay acceso a electron IPC');
                     setWSLDistributions([]);
                 }
             } catch (error) {
-                // console.error('❌ Error en detección de distribuciones WSL:', error);
+                console.error('❌ [Detectar WSL] Error en detección de distribuciones WSL:', error);
                 setWSLDistributions([]);
             }
         };
@@ -369,6 +766,35 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     const result = await window.electronAPI.invoke('cygwin:detect');
                     if (result && typeof result.available === 'boolean') {
                         setCygwinAvailable(result.available);
+                        // NO actualizar el tab inicial si hay una configuración guardada
+                        // Solo actualizar si no hay configuración y el tab actual es PowerShell (el inicial)
+                        const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
+                        if (result.available && !defaultTerminal) {
+                            // Esperar más tiempo para asegurar que las distribuciones WSL se hayan cargado primero
+                            setTimeout(() => {
+                                setTabs(prevTabs => {
+                                    // Solo actualizar si el tab actual es PowerShell (el inicial)
+                                    // Y no es una distribución WSL ni Ubuntu
+                                    const firstTab = prevTabs[0];
+                                    const isDefaultPowerShell = firstTab && 
+                                        firstTab.type === 'powershell' && 
+                                        firstTab.id === 'tab-1' &&
+                                        firstTab.title === 'Windows PowerShell';
+                                    
+                                    // Verificar que no haya configuración guardada (doble verificación)
+                                    const currentDefaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
+                                    if (isDefaultPowerShell && !currentDefaultTerminal) {
+                                        return [{
+                                            id: 'tab-1',
+                                            title: 'Cygwin',
+                                            type: 'cygwin',
+                                            active: true
+                                        }];
+                                    }
+                                    return prevTabs;
+                                });
+                            }, 1000); // Delay más largo para dar tiempo a que se carguen las distribuciones WSL
+                        }
                         // Cygwin detectado silenciosamente
                     } else {
                         console.warn('⚠️ Cygwin: Respuesta inválida');
@@ -809,12 +1235,27 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
     // Función para crear una nueva pestaña
     const createNewTab = (terminalTypeOverride = null) => {
-        const terminalTypeToUse = terminalTypeOverride || selectedTerminalType;
+        // Usar siempre el terminal por defecto (configuración guardada). El dropdown sigue pudiendo pasar un override.
+        const defaultTerminalType = getDefaultTerminalType();
+        const terminalTypeToUse = terminalTypeOverride || defaultTerminalType || selectedTerminalType;
         // console.log('Creating new tab, type:', terminalTypeToUse);
         const newTabId = `tab-${nextTabId}`;
         
         // Determinar título y tipo basado en la selección
         let title, terminalType, distroInfo = null;
+
+        // Detectar si el valor seleccionado es directamente el nombre/label de una distro WSL
+        const findDistroByValue = (value) => {
+            if (!value) return null;
+            const normalized = value.startsWith('wsl-') ? value.replace('wsl-', '') : value;
+            return wslDistributions.find(d =>
+                d.name === normalized ||
+                d.label === normalized ||
+                d.name?.toLowerCase?.() === normalized.toLowerCase() ||
+                d.label?.toLowerCase?.() === normalized.toLowerCase()
+            );
+        };
+        const matchedDistro = findDistroByValue(terminalTypeToUse);
         
         if (terminalTypeToUse === 'powershell') {
             title = 'Windows PowerShell';
@@ -857,11 +1298,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             
             title = 'Cygwin';
             terminalType = 'cygwin';
-        } else if (terminalTypeToUse.startsWith('wsl-')) {
-            // Extraer información de la distribución WSL seleccionada
-            const distroName = terminalTypeToUse.replace('wsl-', '');
-            const selectedDistro = wslDistributions.find(d => d.name === distroName);
-            
+        } else if (terminalTypeToUse.startsWith('wsl-') || matchedDistro) {
+            // Extraer información de la distribución WSL seleccionada (permite tanto "wsl-<name>" como "<name>")
+            const selectedDistro = matchedDistro || findDistroByValue(terminalTypeToUse);
+
             if (selectedDistro) {
                 title = selectedDistro.label;
                 terminalType = selectedDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
@@ -1180,22 +1620,28 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 onDrop={(e) => handleLocalTabDrop(e, index)}
                                 onDragEnd={handleLocalTabDragEnd}
                             >
-                                <i 
-                                    className={tab.type === 'powershell' ? 'pi pi-desktop' : 
-                                              tab.type === 'wsl' ? 'pi pi-server' : 
-                                              tab.type === 'cygwin' ? 'pi pi-code' :
-                                              tab.type === 'docker' ? 'pi pi-box' :
-                                              tab.type === 'rdp-guacamole' ? 'pi pi-desktop' : 'pi pi-circle'} 
-                                    style={{ 
-                                        color: tab.type === 'powershell' ? '#4fc3f7' : 
-                                               tab.type === 'wsl' ? '#8ae234' : 
-                                               tab.type === 'cygwin' ? '#00FF00' :
-                                               tab.type === 'docker' ? '#2496ED' :
-                                               tab.type === 'rdp-guacamole' ? '#ff6b35' : '#e95420',
+                                {tab.type === 'powershell' ? (
+                                    <FaWindows style={{ 
+                                        color: '#4fc3f7',
                                         fontSize: '12px',
                                         marginRight: '6px'
-                                    }}
-                                />
+                                    }} />
+                                ) : (
+                                    <i 
+                                        className={tab.type === 'wsl' ? 'pi pi-server' : 
+                                                  tab.type === 'cygwin' ? 'pi pi-code' :
+                                                  tab.type === 'docker' ? 'pi pi-box' :
+                                                  tab.type === 'rdp-guacamole' ? 'pi pi-desktop' : 'pi pi-circle'} 
+                                        style={{ 
+                                            color: tab.type === 'wsl' ? '#8ae234' : 
+                                                   tab.type === 'cygwin' ? '#00FF00' :
+                                                   tab.type === 'docker' ? '#2496ED' :
+                                                   tab.type === 'rdp-guacamole' ? '#ff6b35' : '#e95420',
+                                            fontSize: '12px',
+                                            marginRight: '6px'
+                                        }}
+                                    />
+                                )}
                                 <span style={{
                                     color: tab.active ? tabActiveText : tabText,
                                     fontSize: '12px',
@@ -1257,16 +1703,16 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             {/* Botón para nueva pestaña */}
                             <Button
                                 icon="pi pi-plus"
-                                className="p-button-text p-button-sm"
+                                className="p-button-text p-button-sm tab-action-button"
                                 style={{
-                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    color: 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))',
+                                    background: 'transparent',
+                                    border: 'none',
                                     padding: '0',
                                     minWidth: '18px',
                                     width: '18px',
                                     height: '18px',
                                     fontSize: '9px',
-                                    background: 'transparent',
-                                    border: 'none',
                                     borderRadius: '2px',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -1283,16 +1729,16 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             {/* Botón dropdown para seleccionar tipo de terminal */}
                             <Button
                                 icon="pi pi-chevron-down"
-                                className="p-button-text p-button-sm"
+                                className="p-button-text p-button-sm tab-action-button"
                                 style={{
-                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    color: 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))',
+                                    background: 'transparent',
+                                    border: 'none',
                                     padding: '0',
                                     minWidth: '18px',
                                     width: '18px',
                                     height: '18px',
                                     fontSize: '8px',
-                                    background: 'transparent',
-                                    border: 'none',
                                     borderRadius: '2px',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -1339,8 +1785,13 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                                         option.value === 'wsl' ? '#8ae234' : 
                                                         option.value === 'cygwin' ? '#00FF00' : '#e95420';
                                         
+                                        // Usar icono de Windows para PowerShell, icono de PrimeReact para otros
+                                        const iconHTML = option.value === 'powershell' 
+                                            ? `<svg width="12" height="12" viewBox="0 0 448 512" fill="${iconColor}" style="margin-right: 0;"><path d="M0 93.7l183.6-25.3v177.4H0V93.7zm0 324.6l183.6 25.3V268.4H0v149.9zm203.8 28L448 480V268.4H203.8v177.9zm0-380.6v180.1H448V32L203.8 65.7z"/></svg>`
+                                            : `<i class="${option.icon}" style="color: ${iconColor}; font-size: 12px;"></i>`;
+                                        
                                         item.innerHTML = `
-                                            <i class="${option.icon}" style="color: ${iconColor}; font-size: 12px;"></i>
+                                            ${iconHTML}
                                             <span>${option.label}</span>
                                         `;
                                         
@@ -1697,9 +2148,27 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             opacity: tab.active ? 1 : 0
                         }}
                     >
+                        {(() => {
+                            // Log para depurar el tipo de terminal (deshabilitado)
+                            // if (tab.id === 'tab-1') {
+                            //     console.log('🔍 Renderizando terminal para tab-1:', {
+                            //         type: tab.type,
+                            //         title: tab.title,
+                            //         hasDistroInfo: !!tab.distroInfo,
+                            //         distroInfo: tab.distroInfo,
+                            //         updateKey: tab._updateKey,
+                            //         isPowerShell: tab.type === 'powershell',
+                            //         isUbuntu: tab.type === 'ubuntu',
+                            //         isWslDistro: tab.type === 'wsl-distro',
+                            //         willRenderPowerShell: tab.type === 'powershell',
+                            //         willRenderUbuntu: (tab.type === 'ubuntu' || tab.type === 'wsl-distro')
+                            //     });
+                            // }
+                            return null;
+                        })()}
                         {tab.type === 'powershell' ? (
                             <PowerShellTerminal
-                                key={`${tab.id}-terminal`}
+                                key={`${tab.id}-terminal-powershell-${tab._updateKey || ''}`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
@@ -1711,7 +2180,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             />
                         ) : tab.type === 'wsl' ? (
                             <WSLTerminal 
-                                key={`${tab.id}-terminal`}
+                                key={`${tab.id}-terminal-wsl-${tab._updateKey || ''}`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
@@ -1720,16 +2189,31 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 hideStatusBar={hideStatusBar}
                             />
                         ) : (tab.type === 'ubuntu' || tab.type === 'wsl-distro') ? (
-                            <UbuntuTerminal 
-                                key={`${tab.id}-terminal`}
-                                ref={(ref) => {
-                                    if (ref) terminalRefs.current[tab.id] = ref;
-                                }}
-                                tabId={tab.id}
-                                ubuntuInfo={tab.distroInfo}
-                                theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
-                                hideStatusBar={hideStatusBar}
-                            />
+                            (() => {
+                                const ubuntuInfo = tab.distroInfo || tab.ubuntuInfo;
+                                if (!ubuntuInfo) {
+                                    console.error('❌ ERROR: UbuntuTerminal sin ubuntuInfo!', {
+                                        tabId: tab.id,
+                                        tabType: tab.type,
+                                        tabTitle: tab.title,
+                                        tab: tab
+                                    });
+                                }
+                                return (
+                                    <UbuntuTerminal 
+                                        key={`${tab.id}-terminal-${tab.type}-${ubuntuInfo?.name || 'no-info'}-${tab._updateKey || ''}`}
+                                        ref={(ref) => {
+                                            if (ref) terminalRefs.current[tab.id] = ref;
+                                        }}
+                                        tabId={tab.id}
+                                        ubuntuInfo={ubuntuInfo}
+                                        fontFamily={localFontFamily}
+                                        fontSize={localFontSize}
+                                        theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
+                                        hideStatusBar={hideStatusBar}
+                                    />
+                                );
+                            })()
                         ) : tab.type === 'cygwin' ? (
                             <CygwinTerminal 
                                 key={`${tab.id}-terminal`}

@@ -10,42 +10,123 @@ class NextcloudService {
 
   /**
    * Configura la conexión con Nextcloud
+   * ✅ SEGURIDAD: Usa encriptación real con SecureStorage en lugar de Base64
    */
-  configure(baseUrl, username, password, ignoreSSLErrors = false) {
+  async configure(baseUrl, username, password, ignoreSSLErrors = false) {
     // Normalizar URL
     this.baseUrl = baseUrl.replace(/\/$/, '');
     this.username = username;
-    this.password = password;
-    this.ignoreSSLErrors = ignoreSSLErrors; // Guardar la opción SSL
+    this.password = password; // Mantener en memoria para uso inmediato
+    this.ignoreSSLErrors = ignoreSSLErrors;
     this.isConfigured = true;
 
-    // Guardar configuración (cifrada)
-    const config = {
-      baseUrl: this.baseUrl,
-      username: this.username,
-      password: btoa(password), // Base64 básico - en producción usar cifrado real
-      ignoreSSLErrors: this.ignoreSSLErrors // Guardar la opción SSL
-    };
-    localStorage.setItem('nodeterm_nextcloud_config', JSON.stringify(config));
+    // ✅ SEGURIDAD: Usar SecureStorage si está disponible
+    try {
+      // Intentar cargar SecureStorage
+      const SecureStorage = require('./SecureStorage').default || require('./SecureStorage');
+      const secureStorage = new SecureStorage();
+      
+      // Verificar si hay master key disponible
+      const masterKey = window.currentMasterKey || await secureStorage.getMasterKey();
+      
+      if (masterKey) {
+        // Encriptar password con SecureStorage
+        const encryptedPassword = await secureStorage.encryptData(password, masterKey);
+        
+        const config = {
+          baseUrl: this.baseUrl,
+          username: this.username,
+          password: encryptedPassword, // ✅ Encriptado con AES-GCM
+          encrypted: true, // Marca para indicar que está encriptado
+          ignoreSSLErrors: this.ignoreSSLErrors
+        };
+        localStorage.setItem('nodeterm_nextcloud_config', JSON.stringify(config));
+        console.log('✅ [Nextcloud] Contraseña guardada de forma segura con encriptación');
+      } else {
+        // Sin master key, no guardar password (requerirá reingreso)
+        console.warn('⚠️ [Nextcloud] No hay master key disponible. La contraseña no se guardará.');
+        const config = {
+          baseUrl: this.baseUrl,
+          username: this.username,
+          encrypted: false,
+          ignoreSSLErrors: this.ignoreSSLErrors
+        };
+        localStorage.setItem('nodeterm_nextcloud_config', JSON.stringify(config));
+      }
+    } catch (error) {
+      // Fallback: Si SecureStorage no está disponible, no guardar password
+      console.error('❌ [Nextcloud] Error usando SecureStorage:', error);
+      console.warn('⚠️ [Nextcloud] La contraseña no se guardará por seguridad');
+      const config = {
+        baseUrl: this.baseUrl,
+        username: this.username,
+        encrypted: false,
+        ignoreSSLErrors: this.ignoreSSLErrors
+      };
+      localStorage.setItem('nodeterm_nextcloud_config', JSON.stringify(config));
+    }
   }
 
   /**
    * Carga la configuración guardada
+   * ✅ SEGURIDAD: Descifra password si está encriptado con SecureStorage
    */
-  loadConfig() {
+  async loadConfig() {
     try {
       const config = localStorage.getItem('nodeterm_nextcloud_config');
       if (config) {
         const parsed = JSON.parse(config);
         this.baseUrl = parsed.baseUrl;
         this.username = parsed.username;
-        this.password = atob(parsed.password); // Decodificar Base64
-        this.ignoreSSLErrors = parsed.ignoreSSLErrors || false; // Cargar opción SSL
-        this.isConfigured = true;
-        return true;
+        this.ignoreSSLErrors = parsed.ignoreSSLErrors || false;
+        
+        // ✅ SEGURIDAD: Descifrar password si está encriptado
+        if (parsed.password) {
+          if (parsed.encrypted === true) {
+            // Password encriptado con SecureStorage
+            try {
+              const SecureStorage = require('./SecureStorage').default || require('./SecureStorage');
+              const secureStorage = new SecureStorage();
+              const masterKey = window.currentMasterKey || await secureStorage.getMasterKey();
+              
+              if (masterKey) {
+                this.password = await secureStorage.decryptData(parsed.password, masterKey);
+                this.isConfigured = true;
+                // console.log('✅ [Nextcloud] Contraseña descifrada correctamente');
+                return true;
+              } else {
+                console.warn('⚠️ [Nextcloud] No hay master key disponible para descifrar la contraseña');
+                this.isConfigured = false;
+                return false;
+              }
+            } catch (decryptError) {
+              console.error('❌ [Nextcloud] Error descifrando contraseña:', decryptError);
+              this.isConfigured = false;
+              return false;
+            }
+          } else {
+            // Migración: Si está en Base64 (formato antiguo), intentar decodificar
+            // pero marcar como no seguro
+            try {
+              this.password = atob(parsed.password);
+              console.warn('⚠️ [Nextcloud] Contraseña en formato antiguo (Base64). Se recomienda reconfigurar.');
+              this.isConfigured = true;
+              return true;
+            } catch (base64Error) {
+              console.error('❌ [Nextcloud] Error decodificando contraseña Base64:', base64Error);
+              this.isConfigured = false;
+              return false;
+            }
+          }
+        } else {
+          // No hay password guardado (requiere reingreso)
+          this.password = null;
+          this.isConfigured = false;
+          return false;
+        }
       }
     } catch (error) {
-      console.error('Error cargando configuración Nextcloud:', error);
+      console.error('❌ [Nextcloud] Error cargando configuración:', error);
     }
     return false;
   }

@@ -1,0 +1,112 @@
+# Archivos de desarrollo y fuente (ya compilados en dist/)
+# NOTA: src/main/, src/services/, src/utils/ y src/components/bastion-ssh.js son necesarios en runtime
+# Solo excluir lo que ya está compilado en dist/
+src/components/
+!src/components/bastion-ssh.js
+src/hooks/
+src/i18n/
+src/styles/
+src/themes/
+src/assets/
+src/data/
+src/mcp-servers/
+src/config/
+src/index.html
+src/index.js
+src/themes.js
+src/version-info.js
+scripts/
+docs/
+testing/
+
+# Archivos de configuración de desarrollo
+.git/
+.gitignore
+.gitattributes
+.editorconfig
+.eslintrc*
+.prettierrc*
+tsconfig.json
+jsconfig.json
+
+# Archivos de documentación
+*.md
+!README.md
+CHANGELOG.md
+RELEASE_NOTES.md
+
+# Archivos de build y temporales
+build/
+*.log
+*.tmp
+*.temp
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos de editores
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Archivos de entorno
+.env
+.env.local
+.env.*.local
+
+# Archivos de testing y coverage
+coverage/
+.nyc_output/
+*.test.js
+*.spec.js
+__tests__/
+__mocks__/
+
+# Archivos de Cygwin temporales (se incluyen desde resources/)
+cygwin-setup-temp.exe
+http*/
+ftp*/
+*%*/
+
+# Archivos de webpack y desarrollo
+webpack.config.js
+.babelrc*
+postcss.config.js
+
+# Archivos de configuración de electron-builder (no necesarios en el instalador)
+electron-builder.yml
+.electron-builder.json
+
+# Archivos de node_modules innecesarios (se optimizan con npm prune)
+node_modules/.cache/
+node_modules/.bin/
+node_modules/**/*.md
+node_modules/**/*.txt
+node_modules/**/*.map
+node_modules/**/test/
+node_modules/**/tests/
+node_modules/**/__tests__/
+node_modules/**/docs/
+node_modules/**/examples/
+node_modules/**/example/
+node_modules/**/.github/
+node_modules/**/.git/
+node_modules/**/.vscode/
+node_modules/**/.idea/
+
+# Archivos de TypeScript (si existen)
+*.ts
+*.tsx
+!*.d.ts
+
+# Archivos de configuración de linters y formatters
+.eslintignore
+.prettierignore
+

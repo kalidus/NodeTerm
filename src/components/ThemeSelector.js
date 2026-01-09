@@ -1,40 +1,57 @@
-import React, { useState, useEffect } from 'react';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
-import { Badge } from 'primereact/badge';
-import { TabView, TabPanel } from 'primereact/tabview';
-import { Checkbox } from 'primereact/checkbox';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS, ANIMATED_UI_KEYS, NATURE_UI_KEYS } from '../themes/ui-themes';
+import '../styles/components/theme-selector.css';
 
-const ANIM_SPEED_KEY = 'nodeterm_ui_anim_speed'; // 'slow' | 'normal' | 'fast' | 'turbo'
+const ANIM_SPEED_KEY = 'nodeterm_ui_anim_speed';
 const REDUCED_MOTION_KEY = 'nodeterm_ui_reduced_motion';
+const THEMES_PER_ROW_KEY = 'nodeterm_themes_per_row';
+
+// Definición de categorías
+const CATEGORIES = [
+  { id: 'all', name: 'Todos', icon: '🎯', keys: [...CLASSIC_UI_KEYS, ...FUTURISTIC_UI_KEYS, ...MODERN_UI_KEYS, ...ANIMATED_UI_KEYS, ...NATURE_UI_KEYS] },
+  { id: 'classic', name: 'Clásicos', icon: '🎨', keys: CLASSIC_UI_KEYS },
+  { id: 'futuristic', name: 'Futuristas', icon: '🚀', keys: FUTURISTIC_UI_KEYS },
+  { id: 'modern', name: 'Modernos', icon: '✨', keys: MODERN_UI_KEYS },
+  { id: 'animated', name: 'Animados', icon: '🎬', keys: ANIMATED_UI_KEYS },
+  { id: 'nature', name: 'Naturaleza', icon: '🌿', keys: NATURE_UI_KEYS }
+];
+
+// Descripciones de temas
+const THEME_DESCRIPTIONS = {
+  'Light': 'Tema claro y limpio, ideal para ambientes bien iluminados',
+  'Dark': 'Tema oscuro elegante para reducir fatiga visual',
+  'Solarized Light': 'Paleta Solarized clara, equilibrada y suave',
+  'Solarized Dark': 'Paleta Solarized oscura, fácil para los ojos',
+  'Dracula': 'Colores vibrantes sobre fondo oscuro púrpura',
+  'Monokai': 'Inspirado en el clásico tema de Sublime Text',
+  'Gruvbox Dark': 'Tonos retro cálidos sobre fondo oscuro',
+  'Nord': 'Paleta ártica fría y minimalista',
+  'One Dark': 'Inspirado en Atom, moderno y profesional',
+  'default': 'Un tema personalizado para tu terminal'
+};
 
 const ThemeSelector = ({ showPreview = false }) => {
   const [currentTheme, setCurrentTheme] = useState('Light');
-  const [previewMode, setPreviewMode] = useState(false);
   const [usePrimaryColorsForTitlebar, setUsePrimaryColorsForTitlebar] = useState(false);
   const [animSpeed, setAnimSpeed] = useState('normal');
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [themesPerRow, setThemesPerRow] = useState(4);
 
   useEffect(() => {
-    // Cargar el tema actual
     const savedTheme = localStorage.getItem('ui_theme') || 'Light';
     setCurrentTheme(savedTheme);
     
-    // Cargar la preferencia de colores primarios para titlebar
     const savedTitlebarPreference = localStorage.getItem('use_primary_colors_titlebar') === 'true';
     setUsePrimaryColorsForTitlebar(savedTitlebarPreference);
     
-    // Cargar preferencias de animación (ya inicializada globalmente)
     const savedSpeed = localStorage.getItem(ANIM_SPEED_KEY) || 'normal';
     setAnimSpeed(savedSpeed);
-    // No sobrescribir si ya está establecido globalmente
     if (!document.documentElement.hasAttribute('data-ui-anim-speed')) {
       document.documentElement.setAttribute('data-ui-anim-speed', savedSpeed);
     }
     
-    // Reduced motion inicial
     const savedReduced = localStorage.getItem(REDUCED_MOTION_KEY);
     let initialReduced = false;
     if (savedReduced === 'true' || savedReduced === 'false') {
@@ -44,542 +61,392 @@ const ThemeSelector = ({ showPreview = false }) => {
     }
     setReducedMotion(initialReduced);
     document.documentElement.setAttribute('data-ui-reduced-motion', initialReduced ? 'true' : 'false');
+    
+    const savedThemesPerRow = localStorage.getItem(THEMES_PER_ROW_KEY);
+    if (savedThemesPerRow) {
+      const parsed = parseInt(savedThemesPerRow, 10);
+      if ([2, 4, 6, 8].includes(parsed)) {
+        setThemesPerRow(parsed);
+      } else {
+        setThemesPerRow(4);
+      }
+    } else {
+      setThemesPerRow(4);
+    }
   }, []);
 
-  const handleThemeChange = (themeName) => {
+  const handleThemeChange = useCallback((themeName) => {
     setCurrentTheme(themeName);
     themeManager.applyTheme(themeName);
-  };
+  }, []);
 
-  const togglePreviewMode = () => {
-    setPreviewMode(!previewMode);
-  };
-
-  const handleTitlebarColorPreferenceChange = (usePrimary) => {
-    setUsePrimaryColorsForTitlebar(usePrimary);
-    localStorage.setItem('use_primary_colors_titlebar', usePrimary.toString());
-    
-    // Reaplicar el tema actual para que se actualice la titlebar
+  const handleTitlebarColorPreferenceChange = useCallback(() => {
+    const newValue = !usePrimaryColorsForTitlebar;
+    setUsePrimaryColorsForTitlebar(newValue);
+    localStorage.setItem('use_primary_colors_titlebar', newValue.toString());
     themeManager.applyTheme(currentTheme);
-  };
+  }, [usePrimaryColorsForTitlebar, currentTheme]);
 
-  const handleAnimSpeedChange = (e) => {
+  const handleAnimSpeedChange = useCallback((e) => {
     const speed = e.target.value;
     setAnimSpeed(speed);
     localStorage.setItem(ANIM_SPEED_KEY, speed);
     document.documentElement.setAttribute('data-ui-anim-speed', speed);
-  };
+  }, []);
 
-  const handleReducedMotionToggle = (e) => {
-    const reduced = e.target.checked;
-    setReducedMotion(reduced);
-    localStorage.setItem(REDUCED_MOTION_KEY, reduced.toString());
-    document.documentElement.setAttribute('data-ui-reduced-motion', reduced ? 'true' : 'false');
-  };
+  const handleReducedMotionToggle = useCallback(() => {
+    const newValue = !reducedMotion;
+    setReducedMotion(newValue);
+    localStorage.setItem(REDUCED_MOTION_KEY, newValue.toString());
+    document.documentElement.setAttribute('data-ui-reduced-motion', newValue ? 'true' : 'false');
+  }, [reducedMotion]);
 
-  const ThemeCard = ({ theme, isActive, onClick }) => {
+  const handleThemesPerRowToggle = useCallback(() => {
+    const options = [2, 4, 6, 8];
+    const currentIndex = options.indexOf(themesPerRow);
+    const nextIndex = (currentIndex + 1) % options.length;
+    const nextValue = options[nextIndex];
+    setThemesPerRow(nextValue);
+    localStorage.setItem(THEMES_PER_ROW_KEY, nextValue.toString());
+  }, [themesPerRow]);
+
+  // Obtener tema actual (memoizado)
+  const activeTheme = useMemo(() => {
+    for (const category of CATEGORIES) {
+      for (const key of category.keys) {
+        if (uiThemes[key]?.name === currentTheme) {
+          return uiThemes[key];
+        }
+      }
+    }
+    return uiThemes[CLASSIC_UI_KEYS[0]];
+  }, [currentTheme]);
+
+  // Obtener temas filtrados (memoizado para evitar recálculos durante resize)
+  const themes = useMemo(() => {
+    const category = CATEGORIES.find(c => c.id === selectedCategory);
+    if (!category) return [];
+    return category.keys
+      .filter(key => uiThemes[key] && uiThemes[key].name !== currentTheme)
+      .map(key => uiThemes[key]);
+  }, [selectedCategory, currentTheme]);
+
+  // Preview del tema hero (grande) - Memoizado para evitar re-renders innecesarios
+  const HeroPreview = memo(({ theme }) => {
     const colors = theme.colors;
-    
     return (
-      <Card
-        className={`theme-card ${isActive ? 'theme-card-active' : ''}`}
-        style={{
-          minWidth: '280px',
-          maxWidth: '320px',
-          margin: '10px',
-          cursor: 'pointer',
-          border: isActive ? '3px solid var(--primary-color)' : '2px solid #ddd',
-          borderRadius: '12px',
-          transition: 'all 0.2s ease',
-          transform: isActive ? 'scale(1.02)' : 'scale(1)',
-          boxShadow: isActive 
-            ? '0 8px 25px rgba(0, 0, 0, 0.15)' 
-            : '0 4px 15px rgba(0, 0, 0, 0.1)'
-        }}
-        onClick={onClick}
-      >
-        <div style={{ padding: '15px' }}>
-          {/* Header con nombre del tema */}
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            marginBottom: '15px'
-          }}>
-            <h4 style={{ 
-              margin: 0, 
-              fontSize: '16px',
-              fontWeight: 'bold',
-              color: 'var(--text-color)'
-            }}>
-              {theme.name}
-            </h4>
-            {isActive && (
-              <Badge 
-                value="Activo" 
-                severity="success" 
-                style={{ fontSize: '10px' }}
-              />
-            )}
-          </div>
-
-          {/* Preview de la interfaz */}
-          <div style={{
-            border: '1px solid #ccc',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            fontSize: '11px',
-            fontFamily: 'monospace'
-          }}>
-            {/* Barra superior (MenuBar) */}
-            <div style={{
-              background: colors.menuBarBackground,
-              color: colors.menuBarText,
-              padding: '6px 10px',
-              borderBottom: `1px solid ${colors.menuBarBorder}`,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <div style={{ fontSize: '9px' }}>🏠 📁 ⚙️</div>
-              <span style={{ fontSize: '9px' }}>NodeTerm</span>
-            </div>
-
-            {/* Área principal con sidebar y contenido */}
-            <div style={{ display: 'flex', height: '120px' }}>
-              {/* Sidebar */}
-              <div style={{
-                background: colors.sidebarBackground,
-                color: colors.sidebarText,
-                width: '80px',
-                borderRight: `1px solid ${colors.sidebarBorder}`,
-                padding: '8px 6px',
-                fontSize: '9px'
-              }}>
-                <div style={{
-                  background: colors.sidebarSelected,
-                  padding: '3px 6px',
-                  borderRadius: '3px',
-                  marginBottom: '4px'
-                }}>
-                  📁 Proyectos
-                </div>
-                <div style={{
-                  padding: '3px 6px',
-                  borderRadius: '3px',
-                  marginBottom: '4px'
-                }}>
-                  🖥️ SSH-1
-                </div>
-                <div style={{
-                  padding: '3px 6px',
-                  borderRadius: '3px'
-                }}>
-                  🖥️ SSH-2
-                </div>
-              </div>
-
-              {/* Área de contenido */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                {/* Tabs */}
-                <div style={{
-                  background: colors.tabBackground,
-                  borderBottom: `1px solid ${colors.tabBorder}`,
-                  display: 'flex',
-                  fontSize: '9px'
-                }}>
-                  <div style={{
-                    background: colors.tabActiveBackground,
-                    color: colors.tabActiveText,
-                    padding: '4px 8px',
-                    borderRight: `1px solid ${colors.tabBorder}`,
-                    borderBottom: `2px solid ${colors.tabActiveText}`
-                  }}>
-                    Terminal
-                  </div>
-                  <div style={{
-                    background: colors.tabBackground,
-                    color: colors.tabText,
-                    padding: '4px 8px',
-                    borderRight: `1px solid ${colors.tabBorder}`
-                  }}>
-                    Explorer
-                  </div>
-                </div>
-
-                {/* Contenido principal */}
-                <div style={{
-                  background: colors.contentBackground,
-                  color: colors.dialogText,
-                  flex: 1,
-                  padding: '8px',
-                  fontSize: '8px',
-                  lineHeight: '1.2'
-                }}>
-                  <div style={{ color: colors.buttonPrimary, marginBottom: '3px' }}>
-                    user@server:~$
-                  </div>
-                  <div style={{ marginBottom: '2px' }}>
-                    Welcome to {theme.name} theme
-                  </div>
-                  <div style={{ opacity: 0.7 }}>
-                    ls -la
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Status bar */}
-            <div style={{
-              background: colors.statusBarBackground,
-              color: colors.statusBarText,
-              padding: '4px 8px',
-              borderTop: `1px solid ${colors.statusBarBorder}`,
-              fontSize: '8px',
-              display: 'flex',
-              justifyContent: 'space-between'
-            }}>
-              <span>✓ Conectado</span>
-              <span>{theme.name}</span>
-            </div>
-          </div>
-
-          {/* Paleta de colores */}
-          <div style={{ marginTop: '12px' }}>
-            <div style={{ 
-              fontSize: '11px', 
-              marginBottom: '8px',
-              color: 'var(--text-color-secondary)',
-              fontWeight: '500'
-            }}>
-              Paleta principal:
-            </div>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(6, 1fr)', 
-              gap: '4px'
-            }}>
-              {[
-                colors.sidebarBackground,
-                colors.contentBackground,
-                colors.tabActiveBackground,
-                colors.buttonPrimary,
-                colors.statusBarBackground,
-                colors.dialogText
-              ].map((color, index) => (
-                <div
-                  key={index}
-                  style={{
-                    width: '20px',
-                    height: '20px',
-                    backgroundColor: color,
-                    borderRadius: '4px',
-                    border: '1px solid rgba(0,0,0,0.1)',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                  }}
-                  title={color}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Botón para aplicar tema */}
-          {!isActive && (
-            <Button
-              label="Aplicar Tema"
-              icon="pi pi-check"
-              className="p-button-sm"
-              style={{ 
-                width: '100%', 
-                marginTop: '15px',
-                padding: '8px',
-                backgroundColor: colors.buttonPrimary,
-                color: colors.buttonPrimaryText,
-                border: 'none'
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleThemeChange(theme.name);
-              }}
-            />
-          )}
+      <div className="theme-hero-preview">
+        <div 
+          className="theme-hero-menubar"
+          style={{ background: colors.menuBarBackground, color: colors.menuBarText }}
+        >
+          <span className="theme-hero-menubar-icons">🏠 📁 ⚙️</span>
+          <span className="theme-hero-menubar-title">NodeTerm</span>
         </div>
-      </Card>
+        <div className="theme-hero-main">
+          <div 
+            className="theme-hero-sidebar"
+            style={{ background: colors.sidebarBackground, color: colors.sidebarText, borderRight: `1px solid ${colors.sidebarBorder}` }}
+          >
+            <div className="theme-hero-sidebar-item" style={{ background: colors.sidebarSelected }}>📁 Projects</div>
+            <div className="theme-hero-sidebar-item">🖥️ SSH-Server</div>
+            <div className="theme-hero-sidebar-item">🖥️ Database</div>
+            <div className="theme-hero-sidebar-item">📂 Config</div>
+          </div>
+          <div className="theme-hero-content-area">
+            <div 
+              className="theme-hero-tabs"
+              style={{ background: colors.tabBackground, borderBottom: `1px solid ${colors.tabBorder}` }}
+            >
+              <div 
+                className="theme-hero-tab active"
+                style={{ background: colors.tabActiveBackground, color: colors.tabActiveText }}
+              >
+                Terminal
+              </div>
+              <div className="theme-hero-tab" style={{ color: colors.tabText }}>Explorer</div>
+              <div className="theme-hero-tab" style={{ color: colors.tabText }}>Logs</div>
+            </div>
+            <div 
+              className="theme-hero-terminal"
+              style={{ background: colors.contentBackground, color: colors.dialogText }}
+            >
+              <div style={{ color: colors.buttonPrimary, marginBottom: '4px' }}>user@server:~$</div>
+              <div style={{ opacity: 0.9 }}>Welcome to {theme.name} theme</div>
+              <div style={{ opacity: 0.7 }}>Last login: Today at 10:30</div>
+              <div style={{ opacity: 0.6, marginTop: '4px' }}>$ ls -la</div>
+            </div>
+          </div>
+        </div>
+        <div 
+          className="theme-hero-statusbar"
+          style={{ background: colors.statusBarBackground, color: colors.statusBarText, borderTop: `1px solid ${colors.statusBarBorder}` }}
+        >
+          <span>✓ Connected • SSH</span>
+          <span>UTF-8 • LF</span>
+        </div>
+      </div>
     );
-  };
+  });
+
+  // Preview miniatura - Memoizado para evitar re-renders durante resize
+  const ThumbnailPreview = memo(({ theme }) => {
+    const colors = theme.colors;
+    return (
+      <div className="theme-thumbnail-preview">
+        <div 
+          className="theme-thumbnail-menubar"
+          style={{ background: colors.menuBarBackground, color: colors.menuBarText }}
+        >
+          🏠📁⚙️ NodeTerm
+        </div>
+        <div className="theme-thumbnail-main">
+          <div 
+            className="theme-thumbnail-sidebar"
+            style={{ background: colors.sidebarBackground, color: colors.sidebarText }}
+          >
+            <div className="theme-thumbnail-sidebar-item" style={{ background: colors.sidebarSelected }}>📁 Proj</div>
+            <div className="theme-thumbnail-sidebar-item">🖥️ SSH</div>
+          </div>
+          <div className="theme-thumbnail-content">
+            <div 
+              className="theme-thumbnail-tabs"
+              style={{ background: colors.tabBackground }}
+            >
+              <div 
+                className="theme-thumbnail-tab"
+                style={{ background: colors.tabActiveBackground, color: colors.tabActiveText }}
+              >
+                Term
+              </div>
+            </div>
+            <div 
+              className="theme-thumbnail-terminal"
+              style={{ background: colors.contentBackground, color: colors.dialogText }}
+            >
+              <span style={{ color: colors.buttonPrimary }}>$</span> ls
+            </div>
+          </div>
+        </div>
+        <div 
+          className="theme-thumbnail-statusbar"
+          style={{ background: colors.statusBarBackground, color: colors.statusBarText }}
+        >
+          <span>✓</span>
+          <span>{theme.name}</span>
+        </div>
+      </div>
+    );
+  });
+
+  // Componente memoizado para las tarjetas de tema - Evita re-renders durante resize
+  const ThemeThumbnailCard = memo(({ theme, isActive, onSelect }) => {
+    return (
+      <div
+        className={`theme-thumbnail ${isActive ? 'active' : ''}`}
+        onClick={onSelect}
+      >
+        {isActive && (
+          <div className="theme-thumbnail-check">
+            <i className="pi pi-check"></i>
+          </div>
+        )}
+        
+        <ThumbnailPreview theme={theme} />
+        
+        <div className="theme-thumbnail-info">
+          <span className="theme-thumbnail-name">{theme.name}</span>
+          <div className="theme-thumbnail-palette">
+            {[
+              theme.colors.sidebarBackground,
+              theme.colors.buttonPrimary,
+              theme.colors.contentBackground
+            ].map((color, index) => (
+              <div
+                key={index}
+                className="theme-thumbnail-dot"
+                style={{ backgroundColor: color }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }, (prevProps, nextProps) => {
+    // Comparación personalizada: solo re-renderizar si cambia el tema activo o el tema mismo
+    return prevProps.isActive === nextProps.isActive && 
+           prevProps.theme.name === nextProps.theme.name;
+  });
 
   return (
-    <div style={{ width: '100%', maxWidth: '100%' }}>
-      {/* Header con controles */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '20px',
-        flexWrap: 'wrap',
-        gap: '10px'
-      }}>
-        <div>
-          <h4 style={{ 
-            margin: 0, 
-            color: 'var(--text-color)',
-            fontSize: '18px'
-          }}>
-            Seleccionar Tema de Interfaz
-          </h4>
-          <p style={{ 
-            margin: '5px 0 0 0', 
-            color: 'var(--text-color-secondary)',
-            fontSize: '14px'
-          }}>
-            Personaliza la apariencia de la aplicación
-          </p>
+    <div className="theme-selector-container">
+      {/* Hero Section - Tema Activo */}
+      <div className="theme-hero-section">
+        <div className="theme-hero-content">
+          <HeroPreview theme={activeTheme} />
+          
+          <div className="theme-hero-info">
+            {/* Panel de opciones a la derecha */}
+            <div className="theme-options-wrapper">
+              {/* Card de Animaciones */}
+              <div className="theme-anim-card">
+                <div className="theme-anim-card-header">
+                  <span className="theme-anim-card-title">🎬 Animaciones</span>
+                  <span 
+                    className="theme-anim-card-badge" 
+                    title="Muestra solo temas con animaciones activas"
+                  >
+                    Solo animados
+                  </span>
+                </div>
+                <div className="theme-anim-card-options">
+                  <div className="theme-anim-option-wrapper">
+                    <button 
+                      className={`theme-anim-option ${!reducedMotion ? 'active' : ''}`}
+                      onClick={handleReducedMotionToggle}
+                      title={reducedMotion ? "Activa las animaciones de la interfaz" : "Desactiva las animaciones para mejorar el rendimiento y reducir distracciones"}
+                    >
+                      <i className="pi pi-eye-slash" style={{ width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
+                      <span>Animaciones</span>
+                      <div className={`theme-mini-toggle ${!reducedMotion ? 'on' : ''}`} style={{ marginLeft: 'auto' }}></div>
+                    </button>
+                  </div>
+                  <div className="theme-anim-speed-wrapper">
+                    <span style={{ 
+                      fontSize: '0.6875rem', 
+                      fontWeight: 500, 
+                      color: 'var(--ui-dialog-text)',
+                      marginBottom: '0.25rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.375rem',
+                      paddingLeft: '0.375rem'
+                    }}>
+                      <i className="pi pi-forward" style={{ fontSize: '0.6875rem', opacity: 0.7, width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
+                      Velocidad animaciones
+                    </span>
+                    <div 
+                      className="theme-anim-speed"
+                      title="Controla la velocidad de las animaciones de la interfaz"
+                    >
+                      <select 
+                        className="theme-speed-select-mini"
+                        value={animSpeed} 
+                        onChange={handleAnimSpeedChange}
+                      >
+                        <option value="slow">Lento</option>
+                        <option value="normal">Normal</option>
+                        <option value="fast">Rápido</option>
+                        <option value="turbo">Turbo</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Botón Titlebar separado */}
+              <div className="theme-titlebar-wrapper">
+                <button 
+                  className={`theme-titlebar-btn ${usePrimaryColorsForTitlebar ? 'active' : ''}`}
+                  onClick={handleTitlebarColorPreferenceChange}
+                  title="Usa los colores primarios del tema en la barra de título"
+                >
+                  <i className="pi pi-window-maximize"></i>
+                  <div className="theme-titlebar-text-container">
+                    <span>Titlebar</span>
+                    <span className="theme-option-hint">Colores primarios</span>
+                  </div>
+                  <div className={`theme-mini-toggle ${usePrimaryColorsForTitlebar ? 'on' : ''}`}></div>
+                </button>
+              </div>
+            </div>
+            <div className="theme-hero-badge">
+              <i className="pi pi-check"></i>
+              Tema Activo
+            </div>
+            
+            <h2 className="theme-hero-name">{activeTheme.name}</h2>
+            
+            <p className="theme-hero-description">
+              {THEME_DESCRIPTIONS[activeTheme.name] || THEME_DESCRIPTIONS['default']}
+            </p>
+            
+            <div className="theme-hero-palette">
+              <span className="theme-hero-palette-label">Paleta:</span>
+              <div className="theme-hero-palette-colors">
+                {[
+                  activeTheme.colors.sidebarBackground,
+                  activeTheme.colors.contentBackground,
+                  activeTheme.colors.buttonPrimary,
+                  activeTheme.colors.tabActiveBackground,
+                  activeTheme.colors.statusBarBackground,
+                  activeTheme.colors.menuBarBackground
+                ].map((color, index) => (
+                  <div
+                    key={index}
+                    className="theme-hero-palette-dot"
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-        
-        {showPreview && (
-          <Button
-            label={previewMode ? "Vista Normal" : "Vista Previa"}
-            icon={previewMode ? "pi pi-times" : "pi pi-eye"}
-            className="p-button-outlined p-button-sm"
-            onClick={togglePreviewMode}
-          />
-        )}
       </div>
 
-      {/* Opción para colores de titlebar */}
-      <div style={{ 
-        marginBottom: '20px',
-        padding: '15px',
-        background: 'var(--ui-content-bg)',
-        border: '1px solid var(--ui-content-border)',
-        borderRadius: '8px'
-      }}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '10px',
-          marginBottom: '8px'
-        }}>
-          <Checkbox
-            inputId="titlebar-colors"
-            checked={usePrimaryColorsForTitlebar}
-            onChange={(e) => handleTitlebarColorPreferenceChange(e.checked)}
-          />
-          <label htmlFor="titlebar-colors" style={{ 
-            color: 'var(--ui-dialog-text)',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: 'pointer'
-          }}>
-            Usar colores primarios del tema en la titlebar
-          </label>
-        </div>
-        <p style={{ 
-          margin: '0',
-          color: 'var(--ui-dialog-text)',
-          fontSize: '12px',
-          opacity: 0.8,
-          marginLeft: '30px'
-        }}>
-          Cuando está activado, la titlebar usará los colores principales del tema (como en el preview). 
-          Cuando está desactivado, mantendrá los colores actuales.
-        </p>
-      </div>
-
-      {/* Controles de animación para temas animados */}
-      <div style={{ 
-        marginBottom: '20px',
-        padding: '15px',
-        background: 'var(--ui-content-bg)',
-        border: '1px solid var(--ui-content-border)',
-        borderRadius: '8px'
-      }}>
-        <h4 style={{ 
-          margin: '0 0 15px 0',
-          color: 'var(--ui-dialog-text)',
-          fontSize: '16px',
-          fontWeight: '600'
-        }}>
-          Configuración de Animaciones
-        </h4>
-        
-        <div style={{ 
-          display: 'flex',
-          alignItems: 'center',
-          gap: '20px',
-          flexWrap: 'wrap'
-        }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '10px'
-          }}>
-            <Checkbox
-              inputId="reduced-motion"
-              checked={reducedMotion}
-              onChange={handleReducedMotionToggle}
-            />
-            <label htmlFor="reduced-motion" style={{ 
-              color: 'var(--ui-dialog-text)',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }}>
-              Reducir animaciones
-            </label>
+      {/* Sección de Exploración */}
+      <div className="theme-explore-section">
+        <div className="theme-explore-header">
+          <div className="theme-explore-title">
+            <i className="pi pi-th-large"></i>
+            Explorar Temas
           </div>
           
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '10px'
-          }}>
-            <label style={{ 
-              color: 'var(--ui-dialog-text)',
-              fontSize: '14px',
-              fontWeight: '500'
-            }}>
-              Velocidad:
-            </label>
-            <select 
-              value={animSpeed} 
-              onChange={handleAnimSpeedChange}
-              style={{
-                background: 'var(--ui-content-bg)',
-                color: 'var(--ui-dialog-text)',
-                border: '1px solid var(--ui-content-border)',
-                borderRadius: '6px',
-                padding: '6px 12px',
-                fontSize: '14px',
-                cursor: 'pointer'
-              }}
-            >
-              <option value="slow">Lento</option>
-              <option value="normal">Normal</option>
-              <option value="fast">Rápido</option>
-              <option value="turbo">Turbo</option>
-            </select>
+          <div className="theme-category-filters">
+            {CATEGORIES.map(category => {
+              const count = category.keys.filter(key => uiThemes[key]).length;
+              return (
+                <button
+                  key={category.id}
+                  className={`theme-category-pill ${selectedCategory === category.id ? 'active' : ''}`}
+                  onClick={() => setSelectedCategory(category.id)}
+                >
+                  <span className="theme-category-pill-icon">{category.icon}</span>
+                  <span>{category.name}</span>
+                  <span className="theme-category-pill-count">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+          
+          <button
+            className="theme-per-row-btn"
+            onClick={handleThemesPerRowToggle}
+            title={`${themesPerRow} temas por fila. Clic para cambiar: 2 → 4 → 6 → 8 → 2...`}
+          >
+            <i className="pi pi-th-large"></i>
+          </button>
+        </div>
+
+        <div className="theme-thumbnails-container">
+          <div 
+            className={`theme-thumbnails-grid themes-per-row-${themesPerRow}`}
+            style={{
+              gridTemplateColumns: `repeat(${themesPerRow}, 1fr)`
+            }}
+          >
+            {themes.map((theme) => (
+              <ThemeThumbnailCard
+                key={theme.name}
+                theme={theme}
+                isActive={currentTheme === theme.name}
+                onSelect={() => handleThemeChange(theme.name)}
+              />
+            ))}
           </div>
         </div>
-        
-        <p style={{ 
-          margin: '10px 0 0 0',
-          color: 'var(--ui-dialog-text)',
-          fontSize: '12px',
-          opacity: 0.8
-        }}>
-          Estas configuraciones solo afectan a los temas animados. La opción "Reducir animaciones" respeta las preferencias del sistema.
-        </p>
       </div>
-
-      {/* Categorías en pestañas */}
-      <div style={{ width: '100%', maxWidth: '1200px', padding: '0 1rem' }}>
-        <TabView>
-          <TabPanel header="Clásicos">
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-              gap: '1.5rem',
-              width: '100%'
-            }}>
-              {CLASSIC_UI_KEYS.filter(key => uiThemes[key]).map((key) => {
-                const theme = uiThemes[key];
-                return (
-                  <ThemeCard
-                    key={key}
-                    theme={theme}
-                    isActive={currentTheme === theme.name}
-                    onClick={() => handleThemeChange(theme.name)}
-                  />
-                );
-              })}
-            </div>
-          </TabPanel>
-          <TabPanel header="Futuristas">
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-              gap: '1.5rem',
-              width: '100%'
-            }}>
-              {FUTURISTIC_UI_KEYS.filter(key => uiThemes[key]).map((key) => {
-                const theme = uiThemes[key];
-                return (
-                  <ThemeCard
-                    key={key}
-                    theme={theme}
-                    isActive={currentTheme === theme.name}
-                    onClick={() => handleThemeChange(theme.name)}
-                  />
-                );
-              })}
-            </div>
-          </TabPanel>
-          <TabPanel header="Modernos">
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-              gap: '1.5rem',
-              width: '100%'
-            }}>
-              {MODERN_UI_KEYS.filter(key => uiThemes[key]).map((key) => {
-                const theme = uiThemes[key];
-                return (
-                  <ThemeCard
-                    key={key}
-                    theme={theme}
-                    isActive={currentTheme === theme.name}
-                    onClick={() => handleThemeChange(theme.name)}
-                  />
-                );
-              })}
-            </div>
-          </TabPanel>
-          <TabPanel header="Animados">
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-              gap: '1.5rem',
-              width: '100%'
-            }}>
-              {ANIMATED_UI_KEYS.filter(key => uiThemes[key]).map((key) => {
-                const theme = uiThemes[key];
-                return (
-                  <ThemeCard
-                    key={key}
-                    theme={theme}
-                    isActive={currentTheme === theme.name}
-                    onClick={() => handleThemeChange(theme.name)}
-                  />
-                );
-              })}
-            </div>
-          </TabPanel>
-          <TabPanel header="Naturaleza">
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-              gap: '1.5rem',
-              width: '100%'
-            }}>
-              {NATURE_UI_KEYS.filter(key => uiThemes[key]).map((key) => {
-                const theme = uiThemes[key];
-                return (
-                  <ThemeCard
-                    key={key}
-                    theme={theme}
-                    isActive={currentTheme === theme.name}
-                    onClick={() => handleThemeChange(theme.name)}
-                  />
-                );
-              })}
-            </div>
-          </TabPanel>
-        </TabView>
-      </div>
-
-      {/* Información adicional */}
-      {/* Bloque eliminado: Información sobre temas */}
     </div>
   );
 };

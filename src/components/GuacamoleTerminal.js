@@ -1099,13 +1099,15 @@ const GuacamoleTerminal = forwardRef(({
         // Gestionar keep-alive al entrar/salir de conectado
         if (connectionState === 'connected') {
             if (keepAliveTimerRef.current) clearInterval(keepAliveTimerRef.current);
+            // Keep-alive más agresivo: cada 10s, enviar si hay >15s de inactividad
+            // Esto ayuda especialmente con WSL que puede perder conexiones más fácilmente
             keepAliveTimerRef.current = setInterval(() => {
                 try {
                     const client = guacamoleClientRef.current;
                     if (!client) return;
-                    // Enviar keep-alive solo si llevamos >60s sin actividad
+                    // Enviar keep-alive si llevamos >15s sin actividad (más agresivo para WSL)
                     const idleMs = Date.now() - (lastActivityTimeRef.current || 0);
-                    if (idleMs < 60000) return;
+                    if (idleMs < 15000) return;
                     // Pequeño nudge de ratón y SHIFT, sin clics
                     const disp = client.getDisplay?.();
                     const el = disp?.getElement?.();
@@ -1130,7 +1132,7 @@ const GuacamoleTerminal = forwardRef(({
                         }
                     }
                 } catch {}
-            }, 25000);
+            }, 10000); // Cada 10 segundos (más agresivo para WSL)
         } else {
             if (keepAliveTimerRef.current) {
                 clearInterval(keepAliveTimerRef.current);
@@ -1900,6 +1902,100 @@ const GuacamoleTerminal = forwardRef(({
             }
         };
     }, [connectionState, lastActivityTime, freezeDetected]);
+
+    // 🔌 POWER MONITOR: Detectar reanudación del sistema (después de suspensión/pantallas apagadas)
+    // WSL puede suspenderse cuando Windows entra en modo de ahorro de energía
+    useEffect(() => {
+        if (!window?.electron?.ipcRenderer) return;
+        
+        const handleSystemResume = (data) => {
+            const duration = data?.suspendDuration || 0;
+            const reason = data?.reason || 'system-resume';
+            console.log(`☀️ [Guacamole ${tabId}] Reanudación detectada (${reason}) después de ${duration}s`);
+            
+            // Si la sesión estaba conectada, verificar si sigue viva
+            if (connectionStateRef.current === 'connected') {
+                const client = guacamoleClientRef.current;
+                if (!client) return;
+                
+                // Verificar estado del cliente
+                let clientState = null;
+                try { clientState = client.currentState; } catch {}
+                
+                // Si el cliente está desconectado o en estado inválido, reconectar inmediatamente
+                if (clientState === 4 || clientState === 0) { // DISCONNECTED o IDLE
+                    console.warn(`⚠️ [Guacamole ${tabId}] Conexión perdida, reconectando...`);
+                    try { client.disconnect(); } catch {}
+                    setConnectionState('disconnected');
+                    setFreezeDetected(false);
+                    setLastActivityTime(Date.now());
+                    return;
+                }
+                
+                // Marcar tiempo antes del ping
+                const pingTime = Date.now();
+                
+                // Enviar un ping para verificar que la conexión sigue viva
+                console.log(`🔍 [Guacamole ${tabId}] Verificando conexión...`);
+                try {
+                    const disp = client.getDisplay?.();
+                    const el = disp?.getElement?.();
+                    const rect = el?.getBoundingClientRect?.();
+                    const x = Math.max(1, Math.floor((rect?.width || 10) / 2));
+                    const y = Math.max(1, Math.floor((rect?.height || 10) / 2));
+                    
+                    // Enviar múltiples eventos para asegurar que se detecte actividad
+                    client.sendMouseState?.({ x, y, left: false, middle: false, right: false });
+                    client.sendMouseState?.({ x: x + 1, y, left: false, middle: false, right: false });
+                    
+                    // También enviar tecla para más probabilidad de respuesta
+                    const SHIFT = 0xffe1;
+                    client.sendKeyEvent?.(1, SHIFT);
+                    client.sendKeyEvent?.(0, SHIFT);
+                } catch (e) {
+                    console.warn(`⚠️ [Guacamole ${tabId}] Error enviando ping:`, e?.message);
+                    // Error enviando = conexión probablemente muerta
+                    try { client.disconnect(); } catch {}
+                    setConnectionState('disconnected');
+                    setFreezeDetected(false);
+                    setLastActivityTime(Date.now());
+                    return;
+                }
+                
+                // Verificación rápida (3 segundos) para detectar conexiones muertas
+                setTimeout(() => {
+                    const timeSinceActivity = Date.now() - (lastActivityTimeRef.current || 0);
+                    const timeSincePing = Date.now() - pingTime;
+                    
+                    // Si lastActivity no se actualizó después del ping, la conexión está muerta
+                    if (lastActivityTimeRef.current < pingTime && connectionStateRef.current === 'connected') {
+                        console.warn(`🚨 [Guacamole ${tabId}] Sin respuesta en ${timeSincePing}ms, reconectando...`);
+                        try { guacamoleClientRef.current?.disconnect(); } catch {}
+                        setConnectionState('disconnected');
+                        setFreezeDetected(false);
+                        setLastActivityTime(Date.now());
+                    } else if (connectionStateRef.current === 'connected') {
+                        console.log(`✅ [Guacamole ${tabId}] Conexión verificada OK`);
+                    }
+                }, 3000); // Reducido a 3 segundos
+            }
+        };
+        
+        const handleSystemSuspend = () => {
+            console.log(`💤 [Guacamole ${tabId}] Sistema entrando en suspensión...`);
+            // Marcar el tiempo de última actividad para detectar congelación después
+            lastActivityTimeRef.current = Date.now();
+        };
+        
+        // Escuchar eventos de suspensión/reanudación
+        const unsubscribeResume = window.electron.ipcRenderer.on('system:resume', handleSystemResume);
+        const unsubscribeSuspend = window.electron.ipcRenderer.on('system:suspend', handleSystemSuspend);
+        
+        return () => {
+            if (typeof unsubscribeResume === 'function') unsubscribeResume();
+            if (typeof unsubscribeSuspend === 'function') unsubscribeSuspend();
+        };
+    }, [tabId]);
 
     // 📡 MONITOR: Actualizar actividad cuando hay eventos del cliente
     useEffect(() => {
