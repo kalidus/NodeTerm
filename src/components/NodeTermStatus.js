@@ -26,7 +26,7 @@ const NodeTermStatus = ({
 	showAIChat = false,
 	statusBarVisible = true
 }) => {
-	const { locale } = useTranslation();
+	const { t, locale } = useTranslation('common');
 	const [syncState, setSyncState] = useState({ configured: false, enabled: false, lastSync: null, connectivity: 'unknown' });
 	const [guacdState, setGuacdState] = useState({ isRunning: false, method: 'unknown', host: '127.0.0.1', port: 4822 });
 	const [vaultState, setVaultState] = useState({ configured: false, unlocked: false });
@@ -1040,7 +1040,7 @@ const NodeTermStatus = ({
 								textAlign: 'center',
 								lineHeight: compactBar.labelLineHeight
 							}}>
-								Nuevo
+								{t('homeTab.new')}
 							</span>
 						</div>
 
@@ -1103,7 +1103,7 @@ const NodeTermStatus = ({
 								textAlign: 'center',
 								lineHeight: compactBar.labelLineHeight
 							}}>
-								Grupo
+								{t('homeTab.group')}
 							</span>
 						</div>
 
@@ -1184,7 +1184,7 @@ const NodeTermStatus = ({
 										textAlign: 'center',
 										lineHeight: compactBar.labelLineHeight
 									}}>
-										Sesiones
+										{t('homeTab.sessions')}
 									</span>
 								</div>
 							);
@@ -1255,7 +1255,7 @@ const NodeTermStatus = ({
 										textAlign: 'center',
 										lineHeight: compactBar.labelLineHeight
 									}}>
-										{locale === 'es' ? 'Secretos' : 'Secrets'}
+										{t('homeTab.secrets')}
 									</span>
 								</div>
 							);
@@ -1324,7 +1324,7 @@ const NodeTermStatus = ({
 									textAlign: 'center',
 									lineHeight: compactBar.labelLineHeight
 								}}>
-									Herramientas
+									{t('homeTab.tools')}
 								</span>
 								</div>
 							);

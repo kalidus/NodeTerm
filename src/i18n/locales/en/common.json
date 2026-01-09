@@ -132,5 +132,12 @@
     "exit": "Exit",
     "exitConfirm": "Are you sure you want to exit NodeTerm?",
     "updateNow": "Update now"
+  },
+  "homeTab": {
+    "new": "New",
+    "group": "Group",
+    "sessions": "Sessions",
+    "secrets": "Secrets",
+    "tools": "Tools"
   }
 }
