@@ -466,7 +466,7 @@ class GuacdService {
 
   /**
    * Inicia el health check periódico para WSL
-   * Verifica que guacd sigue vivo y accesible
+   * Verifica que guacd sigue vivo y accesible con una conexión TCP real
    */
   _startHealthCheck() {
     // Solo para WSL
@@ -477,19 +477,18 @@ class GuacdService {
       clearInterval(this._healthCheckInterval);
     }
     
-    console.log('🏥 [GuacdService] Health check para WSL iniciado (cada 30s)');
+    console.log('🏥 [GuacdService] Health check para WSL iniciado (cada 15s)');
     
     this._healthCheckInterval = setInterval(async () => {
       try {
-        // Verificar si el puerto sigue accesible
-        const isAvailable = await this.isPortAvailable(this.port);
+        // Hacer una conexión TCP real para verificar que guacd responde
+        const isHealthy = await this._checkGuacdConnection();
         
-        if (isAvailable) {
-          // Puerto disponible = guacd no está escuchando
+        if (!isHealthy) {
           this._healthCheckFailures++;
-          console.warn(`⚠️ [GuacdService] Health check fallido (${this._healthCheckFailures}/3): guacd no responde en puerto ${this.port}`);
+          console.warn(`⚠️ [GuacdService] Health check fallido (${this._healthCheckFailures}/2): guacd no responde`);
           
-          if (this._healthCheckFailures >= 3) {
+          if (this._healthCheckFailures >= 2) {
             console.error('🚨 [GuacdService] guacd en WSL dejó de responder. Reiniciando...');
             this._healthCheckFailures = 0;
             
@@ -501,7 +500,6 @@ class GuacdService {
             }
           }
         } else {
-          // Puerto ocupado = guacd está escuchando
           if (this._healthCheckFailures > 0) {
             console.log('✅ [GuacdService] Health check OK: guacd respondiendo');
           }
@@ -511,7 +509,57 @@ class GuacdService {
       } catch (e) {
         console.warn('⚠️ [GuacdService] Error en health check:', e?.message);
       }
-    }, 30000); // Cada 30 segundos
+    }, 15000); // Cada 15 segundos (más frecuente)
+  }
+  
+  /**
+   * Verifica la conexión a guacd con una conexión TCP real
+   * @returns {Promise<boolean>} true si guacd responde correctamente
+   */
+  async _checkGuacdConnection() {
+    return new Promise((resolve) => {
+      const socket = new net.Socket();
+      let resolved = false;
+      
+      const cleanup = () => {
+        if (!resolved) {
+          resolved = true;
+          try { socket.destroy(); } catch {}
+        }
+      };
+      
+      socket.setTimeout(3000); // 3 segundos de timeout
+      
+      socket.on('connect', () => {
+        // Conexión exitosa - guacd está escuchando
+        cleanup();
+        resolve(true);
+      });
+      
+      socket.on('timeout', () => {
+        cleanup();
+        resolve(false);
+      });
+      
+      socket.on('error', () => {
+        cleanup();
+        resolve(false);
+      });
+      
+      socket.on('close', () => {
+        if (!resolved) {
+          resolved = true;
+          resolve(false);
+        }
+      });
+      
+      try {
+        socket.connect(this.port, this.host);
+      } catch {
+        cleanup();
+        resolve(false);
+      }
+    });
   }
   
   /**
