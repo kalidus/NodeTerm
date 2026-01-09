@@ -1,5 +1,64 @@
 /* Estilos para prevenir bloqueos de formularios */
 
+/* ===== ESTILOS GLOBALES PARA CHECKBOXES - USAR COLOR DEL TEMA ===== */
+/* Asegurar que TODOS los checkboxes usen el color primario del tema */
+/* Reglas con máxima especificidad para sobrescribir estilos de PrimeReact (lara-light-indigo) */
+
+/* Sobrescribir el tema indigo/lila de PrimeReact con el color del tema */
+.p-checkbox .p-checkbox-box.p-highlight,
+.p-checkbox .p-checkbox-box.p-checkbox-checked,
+.p-checkbox.p-checkbox-checked .p-checkbox-box,
+.p-checkbox.p-highlight .p-checkbox-box,
+.p-checkbox[aria-checked="true"] .p-checkbox-box,
+.p-checkbox input[type="checkbox"]:checked + .p-checkbox-box,
+.p-checkbox input[type="checkbox"]:checked ~ .p-checkbox-box {
+  background: var(--primary-color, var(--ui-button-primary)) !important;
+  background-color: var(--primary-color, var(--ui-button-primary)) !important;
+  border-color: var(--primary-color, var(--ui-button-primary)) !important;
+}
+
+/* Sobrescribir específicamente el color indigo del tema de PrimeReact */
+.p-checkbox .p-checkbox-box.p-highlight:not([style*="background"]),
+.p-checkbox .p-checkbox-box.p-checkbox-checked:not([style*="background"]) {
+  background: var(--primary-color, var(--ui-button-primary)) !important;
+  background-color: var(--primary-color, var(--ui-button-primary)) !important;
+  border-color: var(--primary-color, var(--ui-button-primary)) !important;
+}
+
+/* Color del icono de check también debe usar el color del tema */
+.p-checkbox .p-checkbox-box.p-highlight .p-checkbox-icon,
+.p-checkbox .p-checkbox-box.p-checkbox-checked .p-checkbox-icon,
+.p-checkbox .p-checkbox-box.p-highlight .pi,
+.p-checkbox .p-checkbox-box.p-checkbox-checked .pi {
+  color: var(--primary-color-text, var(--ui-button-primary-text)) !important;
+}
+
+.p-checkbox .p-checkbox-box:hover {
+  border-color: var(--primary-color, var(--ui-button-primary)) !important;
+}
+
+.p-checkbox .p-checkbox-box:focus,
+.p-checkbox .p-checkbox-box:focus-visible {
+  outline-color: var(--primary-color, var(--ui-button-primary)) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color, var(--ui-button-primary)) 20%, transparent) !important;
+}
+
+/* Sobrescribir cualquier color inline o de PrimeReact */
+.p-checkbox .p-checkbox-box[style*="background"] {
+  background: var(--primary-color, var(--ui-button-primary)) !important;
+  background-color: var(--primary-color, var(--ui-button-primary)) !important;
+}
+
+/* Sobrescribir el color indigo específico del tema lara-light-indigo */
+body .p-checkbox .p-checkbox-box.p-highlight,
+body .p-checkbox .p-checkbox-box.p-checkbox-checked {
+  background: var(--primary-color, var(--ui-button-primary)) !important;
+  background-color: var(--primary-color, var(--ui-button-primary)) !important;
+  border-color: var(--primary-color, var(--ui-button-primary)) !important;
+}
+
+/* ===== FIN DE ESTILOS GLOBALES PARA CHECKBOXES ===== */
+
 /* Asegurar que los inputs siempre sean interactivos */
 input, textarea, select, [contenteditable] {
   pointer-events: auto !important;
@@ -741,6 +800,94 @@ div[style*="borderTop"] .advanced-fieldset .p-fieldset-legend {
 
 /* REGLA CRÍTICA: Input nativo en opciones avanzadas */
 .unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox input[type="checkbox"]:checked {
+  background: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* ===== REGLAS ESPECÍFICAS PARA OPCIONES AVANZADAS - DIÁLOGO DE EDICIÓN RDP ===== */
+
+/* REGLA CRÍTICA: Checkboxes de opciones avanzadas en diálogo de edición RDP */
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-highlight,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked {
+  background: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* REGLA CRÍTICA: Ocultar icono completamente para rellenado sólido en opciones avanzadas - Diálogo edición RDP */
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-highlight .p-checkbox-icon,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked .p-checkbox-icon,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .p-checkbox-icon,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-highlight *,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked *,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .pi,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .pi-check {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  color: transparent !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  width: 0 !important;
+  height: 0 !important;
+  font-size: 0 !important;
+  content: "" !important;
+  text-indent: -9999px !important;
+}
+
+/* REGLA CRÍTICA: Contenedor de checkbox en opciones avanzadas - Diálogo edición RDP */
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox.p-checkbox-checked .p-checkbox-box {
+  background: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* REGLA CRÍTICA: Input nativo en opciones avanzadas - Diálogo edición RDP */
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox input[type="checkbox"]:checked {
+  background: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* REGLA CRÍTICA: Checkboxes de opciones avanzadas en diálogo de nueva conexión RDP */
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-highlight,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked {
+  background: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* REGLA CRÍTICA: Ocultar icono completamente para rellenado sólido en opciones avanzadas - Diálogo nueva conexión RDP */
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-highlight .p-checkbox-icon,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked .p-checkbox-icon,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .p-checkbox-icon,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-highlight *,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked *,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .pi,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .pi-check {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  color: transparent !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  width: 0 !important;
+  height: 0 !important;
+  font-size: 0 !important;
+  content: "" !important;
+  text-indent: -9999px !important;
+}
+
+/* REGLA CRÍTICA: Contenedor de checkbox en opciones avanzadas - Diálogo nueva conexión RDP */
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox.p-checkbox-checked .p-checkbox-box {
+  background: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* REGLA CRÍTICA: Input nativo en opciones avanzadas - Diálogo nueva conexión RDP */
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox input[type="checkbox"]:checked {
   background: var(--primary-color) !important;
   background-color: var(--primary-color) !important;
   border-color: var(--primary-color) !important;

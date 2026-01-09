@@ -1,0 +1,45 @@
+/* Estilos para ocultar elementos duplicados del ThemeSelector cuando está dentro de SettingsDialog */
+
+/* Ocultar el header duplicado del ThemeSelector (primer div hijo directo) */
+.theme-selector-wrapper > div > div:first-child {
+  display: none !important;
+}
+
+/* Ocultar las opciones duplicadas (titlebar - segundo div) */
+.theme-selector-wrapper > div > div:nth-child(2) {
+  display: none !important;
+}
+
+/* Ocultar las opciones de animación (tercer div) */
+.theme-selector-wrapper > div > div:nth-child(3) {
+  display: none !important;
+}
+
+/* Ajustar el contenedor del TabView */
+.theme-selector-wrapper > div > div:last-child {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+}
+
+/* Ajustar el TabView para que no tenga margen superior */
+.theme-selector-wrapper .p-tabview {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  width: 100% !important;
+}
+
+/* Asegurar que el contenido del TabView sea visible */
+.theme-selector-wrapper .p-tabview-panel {
+  padding: 1rem 0 !important;
+}
+
+/* Ajustar el grid de temas para mejor visualización */
+.theme-selector-wrapper .p-tabview-panel > div {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+  gap: 1.5rem !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+

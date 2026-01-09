@@ -6,7 +6,8 @@ const RECENTS_KEY = 'nodeterm_connection_history';
 const RECENT_PASSWORDS_KEY = 'nodeterm_recent_passwords';
 
 // Default max recents if caller does not specify
-const DEFAULT_RECENTS_LIMIT = 10;
+// Aumentado a 200 para permitir mostrar muchas más conexiones recientes
+const DEFAULT_RECENTS_LIMIT = 200;
 
 // Single event name for updates (favorites or recents)
 const UPDATED_EVENT = 'connections-updated';
@@ -32,13 +33,16 @@ function saveList(key, list) {
 
 function normalizePort(type, port) {
   if (port) return parseInt(port, 10);
-  if (type === 'ssh' || type === 'explorer') return 22;
+  if (type === 'ssh' || type === 'explorer' || type === 'sftp' || type === 'scp') return 22;
+  if (type === 'ftp') return 21;
   if (type === 'rdp-guacamole' || type === 'rdp') return 3389;
+  if (type === 'vnc-guacamole' || type === 'vnc') return 5900;
   return 0;
 }
 
 function buildId({ type, host, hostname, username, port }) {
-  const t = type === 'rdp' ? 'rdp-guacamole' : type; // normalize
+  let t = type === 'rdp' ? 'rdp-guacamole' : type; // normalize
+  t = t === 'vnc' ? 'vnc-guacamole' : t; // normalize VNC también
   const h = hostname || host || '';
   const p = normalizePort(t, port);
   const u = username || '';
@@ -46,7 +50,12 @@ function buildId({ type, host, hostname, username, port }) {
 }
 
 function toSerializable(connection) {
-  const type = connection.type === 'rdp' ? 'rdp-guacamole' : connection.type;
+  let type = connection.type === 'rdp' ? 'rdp-guacamole' : connection.type;
+  type = type === 'vnc' ? 'vnc-guacamole' : type; // normalize VNC también
+  // Mantener tipos de archivos como están (sftp, ftp, scp)
+  if (type === 'sftp' || type === 'ftp' || type === 'scp') {
+    type = connection.type;
+  }
   const host = connection.hostname || connection.host || '';
   const username = connection.username || connection.user || '';
   const port = normalizePort(type, connection.port);
@@ -74,7 +83,7 @@ function toSerializable(connection) {
     port,
     // Guardar credenciales y configuración importante
     password: connection.password || '',
-    clientType: connection.clientType || (type === 'rdp-guacamole' ? 'guacamole' : 'native'),
+    clientType: connection.clientType || (type === 'rdp-guacamole' || type === 'vnc-guacamole' ? 'guacamole' : 'native'),
     // Campos adicionales para RDP
     domain: connection.domain || '',
     resolution: connection.resolution || '1024x768',
@@ -108,6 +117,9 @@ function toSerializable(connection) {
     bastionUser: connection.bastionUser || '',
     targetServer: connection.targetServer || '',
     remoteFolder: connection.remoteFolder || '',
+    // Campos adicionales para conexiones de archivos (SFTP/FTP/SCP)
+    protocol: connection.protocol || (type === 'sftp' || type === 'ftp' || type === 'scp' ? type : undefined),
+    targetFolder: connection.targetFolder || '',
     lastConnected: connection.lastConnected ? new Date(connection.lastConnected).toISOString() : new Date().toISOString()
   };
 }
@@ -117,7 +129,9 @@ function fromSidebarNode(node, typeOverride = null) {
   if (!node) return null;
   const isSSH = node.data && node.data.type === 'ssh';
   const isRDP = node.data && (node.data.type === 'rdp' || node.data.type === 'rdp-guacamole');
-  const type = typeOverride || (isSSH ? 'ssh' : (isRDP ? 'rdp-guacamole' : (node.data?.type || 'ssh')));
+  const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
+  const isFileConnection = node.data && (node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp');
+  const type = typeOverride || (isSSH ? 'ssh' : (isRDP ? 'rdp-guacamole' : (isVNC ? 'vnc-guacamole' : (isFileConnection ? node.data.type : (node.data?.type || 'ssh')))));
   const base = {
     type,
     name: node.label,
@@ -163,6 +177,9 @@ function fromSidebarNode(node, typeOverride = null) {
     bastionUser: node.data?.bastionUser || '',
     targetServer: node.data?.targetServer || '',
     remoteFolder: node.data?.remoteFolder || '',
+    // Campos adicionales para conexiones de archivos (SFTP/FTP/SCP)
+    protocol: node.data?.protocol || (isFileConnection ? node.data.type : undefined),
+    targetFolder: node.data?.targetFolder || '',
   };
   return toSerializable(base);
 }
@@ -251,6 +268,43 @@ export function isGroupFavorite(groupId, groupName = null) {
     f.type === 'group' && 
     (f.id === groupId || (groupName && f.name === groupName))
   );
+}
+
+/**
+ * Actualiza un favorito cuando se edita una conexión
+ * Si el tipo cambió, remueve el favorito viejo y agrega uno nuevo
+ * @param {Object} oldConnection - La conexión antigua (nodo original)
+ * @param {Object} newConnection - La conexión nueva (nodo actualizado)
+ */
+export function updateFavoriteOnEdit(oldConnection, newConnection) {
+  if (!oldConnection || !newConnection) return;
+  
+  const oldSerial = toSerializable(oldConnection);
+  const newSerial = toSerializable(newConnection);
+  const oldId = oldSerial.id;
+  const newId = newSerial.id;
+  
+  const list = getFavorites();
+  const oldIdx = list.findIndex(f => f.id === oldId);
+  
+  // Si el ID cambió (por ejemplo, cambió el tipo), remover el viejo
+  if (oldId !== newId && oldIdx >= 0) {
+    list.splice(oldIdx, 1);
+  }
+  
+  // Si el favorito existía (con ID viejo o nuevo), actualizarlo
+  const newIdx = list.findIndex(f => f.id === newId);
+  if (newIdx >= 0) {
+    // Actualizar el favorito existente con los nuevos datos
+    list[newIdx] = newSerial;
+  } else if (oldIdx >= 0) {
+    // Si tenía ID viejo pero no nuevo, agregar con nuevo ID
+    list.unshift(newSerial);
+  }
+  // Si no estaba en favoritos, no hacer nada
+  
+  saveList(FAVORITES_KEY, list);
+  return list;
 }
 
 // RECENTS
@@ -357,6 +411,7 @@ export default {
   addGroupToFavorites,
   removeGroupFromFavorites,
   isGroupFavorite,
+  updateFavoriteOnEdit,
   getRecents,
   recordRecent,
   clearRecents,

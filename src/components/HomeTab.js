@@ -6,7 +6,6 @@ import { Divider } from 'primereact/divider';
 import { getVersionInfo } from '../version-info';
 import TabbedTerminal from './TabbedTerminal';
 import ConnectionHistory from './ConnectionHistory';
-import QuickAccessSidebar from './QuickAccessSidebar';
 import NodeTermStatus from './NodeTermStatus';
 import AIChatWithHistory from './AIChatWithHistory';
 import StandaloneStatusBar from './StandaloneStatusBar';
@@ -28,17 +27,23 @@ const HomeTab = ({
   localPowerShellTheme,
   localLinuxTerminalTheme,
   onCreateRdpConnection,
+  onCreateVncConnection,
   onEditConnection,
   onLoadGroup,
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [terminalState, setTerminalState] = useState('minimized'); // Cambiado a 'minimized' como en redesigned
-  const [terminalHidden, setTerminalHidden] = useState(true);
+  const [terminalState, setTerminalState] = useState('normal'); // Estado normal para tamaño correcto
+  const [terminalHidden, setTerminalHidden] = useState(false); // Terminal visible por defecto
+  const [manualPaneSize, setManualPaneSize] = useState(null); // Tamaño manual del panel superior
   const [isTerminalTransitioning, setIsTerminalTransitioning] = useState(false);
   const [favType, setFavType] = useState('all'); // Nuevo estado para filtros
   const [recentConnections, setRecentConnections] = useState([]); // Estado para conexiones recientes
   const [recentPasswords, setRecentPasswords] = useState([]); // Estado para passwords recientes
   const [showAIChat, setShowAIChat] = useState(false); // Estado para mostrar/ocultar chat de IA
+  const [recentContainerHeight, setRecentContainerHeight] = useState(400); // Altura del contenedor de recientes
+  const recentContainerRef = useRef(null);
+  const recentResizeRafRef = useRef(0);
+  const lastRecentMeasuredHeightRef = useRef(0);
   const [statusBarVisible, setStatusBarVisible] = useState(() => {
     // Cargar preferencia desde localStorage, por defecto visible
     try {
@@ -48,6 +53,24 @@ const HomeTab = ({
       return true;
     }
   }); // Estado para mostrar/ocultar status bar
+  
+  // Configuración de tipografía de HomeTab
+  const [homeTabFont, setHomeTabFont] = useState(() => {
+    try {
+      return localStorage.getItem('homeTabFont') || localStorage.getItem('sidebarFont') || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+    } catch {
+      return '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+    }
+  });
+  const [homeTabFontSize, setHomeTabFontSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('homeTabFontSize');
+      return saved ? parseInt(saved, 10) : null;
+    } catch {
+      return null;
+    }
+  });
+  
   const versionInfo = getVersionInfo();
   const tabbedTerminalRef = useRef();
 
@@ -77,6 +100,59 @@ const HomeTab = ({
     };
   }, []);
 
+  // Calcular número dinámico de recientes basado en la altura disponible
+  const calculateRecentLimit = React.useCallback(() => {
+    if (recentContainerHeight < 100) return 5; // Mínimo muy bajo para espacios pequeños
+    // Altura del header: título (~30px) + línea decorativa (1px) + márgenes (0.5rem + 0.5rem = ~16px) = ~47px
+    // Redondeamos a 50px para dar un poco de margen
+    const headerHeight = 50; 
+    // Altura de cada item: padding vertical (0.2rem * 2 = ~6px) + contenido (~18px) + gap (0.25rem = ~4px) = ~28px
+    const itemHeight = 28; 
+    const availableHeight = recentContainerHeight - headerHeight;
+    // Calcular cuántos items caben, permitiendo que crezca dinámicamente
+    const itemsCount = Math.floor(availableHeight / itemHeight);
+    // Mínimo 5 items, pero permitir que crezca tanto como el espacio lo permita
+    return Math.max(5, itemsCount);
+  }, [recentContainerHeight]);
+
+  const loadRecentConnections = React.useCallback(() => {
+    try {
+      const limit = calculateRecentLimit();
+      const recents = getRecents(limit); // Número dinámico de conexiones recientes
+      setRecentConnections(recents);
+    } catch (error) {
+      console.error('Error cargando conexiones recientes:', error);
+    }
+  }, [calculateRecentLimit]);
+
+  // Observar cambios en el tamaño del contenedor de recientes
+  useEffect(() => {
+    if (!recentContainerRef.current) return;
+    
+    const resizeObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        const height = entry.contentRect.height;
+        if (height > 0) {
+          // Throttle a 1 update por frame para evitar jank al mover el splitter
+          const rounded = Math.round(height);
+          if (Math.abs(rounded - (lastRecentMeasuredHeightRef.current || 0)) < 3) return;
+          lastRecentMeasuredHeightRef.current = rounded;
+          if (recentResizeRafRef.current) cancelAnimationFrame(recentResizeRafRef.current);
+          recentResizeRafRef.current = requestAnimationFrame(() => {
+            setRecentContainerHeight(rounded);
+          });
+        }
+      }
+    });
+    
+    resizeObserver.observe(recentContainerRef.current);
+    
+    return () => {
+      if (recentResizeRafRef.current) cancelAnimationFrame(recentResizeRafRef.current);
+      resizeObserver.disconnect();
+    };
+  }, []);
+
   // Cargar conexiones recientes y passwords recientes
   useEffect(() => {
     loadRecentConnections();
@@ -86,16 +162,7 @@ const HomeTab = ({
       loadRecentPasswords();
     });
     return () => off && off();
-  }, []);
-
-  const loadRecentConnections = () => {
-    try {
-      const recents = getRecents(5); // Limitar a 5 conexiones recientes
-      setRecentConnections(recents);
-    } catch (error) {
-      console.error('Error cargando conexiones recientes:', error);
-    }
-  };
+  }, [loadRecentConnections]);
 
   const loadRecentPasswords = () => {
     try {
@@ -112,6 +179,10 @@ const HomeTab = ({
       case 'ssh':
         return 'pi pi-server';
       case 'rdp-guacamole':
+      case 'rdp':
+        return 'pi pi-desktop';
+      case 'vnc-guacamole':
+      case 'vnc':
         return 'pi pi-desktop';
       case 'explorer':
         return 'pi pi-folder-open';
@@ -127,7 +198,11 @@ const HomeTab = ({
       case 'ssh':
         return '#4fc3f7';
       case 'rdp-guacamole':
+      case 'rdp':
         return '#ff6b35';
+      case 'vnc-guacamole':
+      case 'vnc':
+        return '#00ff00';
       case 'explorer':
         return '#FFB300';
       case 'group':
@@ -304,7 +379,8 @@ const HomeTab = ({
       hoverBackground: isNordTheme ? '#4c566a' : (currentTheme.colors?.sidebarHover || 'rgba(255,255,255,0.1)'),
       itemBackground: currentTheme.colors?.tabBackground || 'rgba(255,255,255,0.05)',
       cardBorder: currentTheme.colors?.dialogBorder || currentTheme.colors?.contentBorder || 'rgba(255,255,255,0.1)',
-      cardBackground: currentTheme.colors?.dialogBackground || 'rgba(16, 20, 28, 0.6)'
+      cardBackground: currentTheme.colors?.dialogBackground || 'rgba(16, 20, 28, 0.6)',
+      primaryColor: currentTheme.colors?.buttonPrimary || currentTheme.colors?.primaryColor || '#2196f3'
     };
   }, [currentTheme]);
   
@@ -320,6 +396,9 @@ const HomeTab = ({
     } else if (connection.type === 'rdp-guacamole') {
       // Manejar conexiones RDP-Guacamole
       handleCreateRdpConnection(connection);
+    } else if (connection.type === 'vnc-guacamole') {
+      // Manejar conexiones VNC-Guacamole
+      handleCreateVncConnection(connection);
     } else if (onCreateSSHConnection) {
       // Manejar conexiones SSH tradicionales
       onCreateSSHConnection(connection);
@@ -335,6 +414,12 @@ const HomeTab = ({
   const handleCreateRdpConnection = (connectionData) => {
     if (onCreateRdpConnection) {
       onCreateRdpConnection(connectionData);
+    }
+  };
+
+  const handleCreateVncConnection = (connectionData) => {
+    if (onCreateVncConnection) {
+      onCreateVncConnection(connectionData);
     }
   };
 
@@ -354,9 +439,16 @@ const HomeTab = ({
   // Función para resetear a modo manual cuando el usuario redimensiona
   const handleManualResize = () => {
     if (terminalState !== 'normal') {
-      // console.log('🖱️ Redimensionamiento manual detectado, volviendo a modo normal');
       setTerminalState('normal');
     }
+    // Cuando el usuario redimensiona, necesitamos obtener el nuevo tamaño del SplitLayout
+    // Esto se manejará a través del callback de redimensionamiento
+  };
+  
+  // Callback para cuando el usuario redimensiona manualmente
+  const handlePaneSizeChange = (newSize) => {
+    setManualPaneSize(newSize);
+    setTerminalState('normal');
   };
 
   // Función para toggle de visibilidad del terminal
@@ -412,6 +504,27 @@ const HomeTab = ({
     };
   }, [showAIChat, handleToggleTerminalVisibility]);
 
+  // Escuchar cambios de storage para statusBarVisible desde SettingsDialog
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'homeTab_statusBarVisible') {
+        const newValue = e.newValue === 'true';
+        setStatusBarVisible(newValue);
+      }
+    };
+    const handleCustomEvent = (e) => {
+      if (e.detail && typeof e.detail.visible === 'boolean') {
+        setStatusBarVisible(e.detail.visible);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('statusbar-visibility-changed', handleCustomEvent);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('statusbar-visibility-changed', handleCustomEvent);
+    };
+  }, []);
+
 
 
   // Determinar el tamaño del panel superior
@@ -419,6 +532,11 @@ const HomeTab = ({
     // Si el terminal está oculto, el dashboard ocupa toda la pantalla
     if (terminalHidden) {
       return window.innerHeight - 20; // Ocupar casi toda la pantalla, dejando un pequeño margen
+    }
+
+    // Si hay un tamaño manual guardado, usarlo
+    if (manualPaneSize !== null) {
+      return manualPaneSize;
     }
 
     const containerHeight = window.innerHeight;
@@ -432,8 +550,13 @@ const HomeTab = ({
         size = 0;
         break;
       default:
-        // Para 'normal', no forzar tamaño fijo, dejar que SplitLayout maneje el redimensionamiento
-        return null;
+        // Para 'normal', la terminal ocupa un poco menos de la mitad (45%)
+        // Esto significa que el panel superior ocupa 55% de la altura disponible
+        const statusBarHeight = statusBarVisible ? 40 : 0;
+        const availableHeight = containerHeight - statusBarHeight;
+        // Usar 55% de la altura disponible para el panel superior (terminal ocupa 45%)
+        size = Math.max(availableHeight * 0.55, 400);
+        break;
     }
 
     return size;
@@ -461,28 +584,15 @@ const HomeTab = ({
       visibility: terminalState === 'maximized' ? 'hidden' : 'visible',
       transition: 'opacity 0.1s ease, visibility 0.1s ease'
     }}>
-      <div className="home-page-scroll" style={{ flex: 1, overflow: 'auto' }}>
-        {/* Layout principal con 3 columnas */}
+      <div className="home-page-scroll" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {/* Layout principal sin QuickAccessSidebar */}
         <div style={{
           display: 'flex',
-          height: '100%',
-          minHeight: '600px'
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden',
+          height: '100%'
         }}>
-          {/* Columna izquierda: Accesos Rápidos */}
-          <QuickAccessSidebar
-            onCreateSSHConnection={onCreateSSHConnection}
-            onCreateFolder={onCreateFolder}
-            onOpenFileExplorer={onOpenFileExplorer}
-            onOpenSettings={onOpenSettings}
-            onToggleTerminalVisibility={handleToggleTerminalVisibility}
-            onToggleAIChat={handleToggleAIChat}
-            onToggleStatusBar={handleToggleStatusBar}
-            showAIChat={showAIChat}
-            statusBarVisible={statusBarVisible}
-            sshConnectionsCount={sshConnectionsCount}
-            foldersCount={foldersCount}
-          />
-
           {/* Mostrar Chat de IA o contenido normal */}
           {showAIChat ? (
             // Panel de Chat de IA
@@ -517,32 +627,197 @@ const HomeTab = ({
             flex: 1,
             padding: '1rem',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            minHeight: 0,
+            overflow: 'hidden',
+            height: '100%'
           }}>
-            {/* Cards de Conexiones Recientes y Passwords Recientes en la parte superior */}
+            {/* Cards de Estado de NodeTerm - Acciones/Terminales y Servicios/KPIs */}
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '1rem',
-              marginBottom: '1rem'
+              position: 'relative',
+              marginBottom: '1rem',
+              flexShrink: 0
             }}>
-              {/* Card de Conexiones Recientes */}
+              <NodeTermStatus
+                sshConnectionsCount={sshConnectionsCount}
+                foldersCount={foldersCount}
+                rdpConnectionsCount={rdpConnectionsCount}
+                themeColors={themeColors}
+                horizontal={true}
+                compact={true}
+                onCreateSSHConnection={onCreateSSHConnection}
+                onCreateFolder={onCreateFolder}
+                onOpenFileExplorer={onOpenFileExplorer}
+                onOpenSettings={onOpenSettings}
+                onToggleTerminalVisibility={handleToggleTerminalVisibility}
+                onToggleAIChat={handleToggleAIChat}
+                onToggleStatusBar={handleToggleStatusBar}
+                showAIChat={showAIChat}
+                statusBarVisible={statusBarVisible}
+              />
+              
+              {/* Overlay de transición para Estado de NodeTerm */}
+              {isTerminalTransitioning && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.6)',
+                  backdropFilter: 'blur(4px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '12px',
+                  zIndex: 10,
+                  pointerEvents: 'none'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    color: 'white'
+                  }}>
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '3px solid rgba(255,255,255,0.3)',
+                      borderTop: '3px solid #00BCD4',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }} />
+                    <div style={{
+                      fontSize: '0.9rem',
+                      fontWeight: '500',
+                      textAlign: 'center'
+                    }}>
+                      Actualizando terminal...
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Card única para Favoritos y Recientes */}
+            <div style={{
+              background: `linear-gradient(135deg,
+                rgba(16, 20, 28, 0.7) 0%,
+                rgba(16, 20, 28, 0.5) 100%)`,
+              backdropFilter: 'blur(12px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(12px) saturate(140%)',
+              border: `1px solid ${themeColors.cardBorder || 'rgba(255,255,255,0.15)'}`,
+              borderRadius: '16px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
+              padding: '1.5rem',
+              marginBottom: '1rem',
+              display: 'flex',
+              flexDirection: 'row',
+              gap: '1.5rem',
+              position: 'relative',
+              alignItems: 'stretch',
+              flex: 1,
+              minHeight: 0,
+              overflow: 'hidden',
+              height: '100%'
+            }}>
+              {/* Sección de Favoritos */}
               <div style={{
-                background: `linear-gradient(135deg,
-                  rgba(16, 20, 28, 0.6) 0%,
-                  rgba(16, 20, 28, 0.4) 100%)`,
-                backdropFilter: 'blur(8px) saturate(140%)',
-                WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-                border: `1px solid ${themeColors.cardBorder}`,
-                borderRadius: '12px',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-                padding: '1rem'
+                display: 'flex',
+                flexDirection: 'column',
+                flex: '2 1 0',
+                minWidth: 0,
+                position: 'relative',
+                overflow: 'hidden',
+                minHeight: 0,
+                height: '100%'
               }}>
+                <ConnectionHistory 
+                  onConnectToHistory={handleConnectToHistory}
+                  layout="two-columns"
+                  recentsLimit={10}
+                  activeIds={new Set()}
+                  templateColumns="3fr 2fr"
+                  favoritesColumns={3}
+                  recentsColumns={1}
+                  onEdit={onEditConnection}
+                  sshConnectionsCount={sshConnectionsCount}
+                  foldersCount={foldersCount}
+                  rdpConnectionsCount={rdpConnectionsCount}
+                  themeColors={themeColors}
+                />
+                
+                {/* Overlay de transición para favoritos */}
+                {isTerminalTransitioning && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.6)',
+                    backdropFilter: 'blur(4px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '12px',
+                    zIndex: 10
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '1rem',
+                      color: 'white'
+                    }}>
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        border: '3px solid rgba(255,255,255,0.3)',
+                        borderTop: '3px solid #00BCD4',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                      }} />
+                      <div style={{
+                        fontSize: '0.9rem',
+                        fontWeight: '500',
+                        textAlign: 'center'
+                      }}>
+                        Actualizando terminal...
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Separador decorativo vertical */}
+              <div style={{
+                width: '1px',
+                height: '100%',
+                background: 'linear-gradient(180deg, transparent, rgba(255,255,255,0.2), transparent)',
+                borderRadius: '1px',
+                flexShrink: 0
+              }} />
+
+              {/* Sección de Conexiones Recientes */}
+              <div 
+                ref={recentContainerRef}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  flex: '1 1 0',
+                  minWidth: 0,
+                  minHeight: 0,
+                  overflow: 'hidden',
+                  height: '100%'
+                }}>
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.6rem',
-                  marginBottom: '0.75rem'
+                  gap: '0.5rem',
+                  marginBottom: '0.5rem',
+                  flexShrink: 0
                 }}>
                   {/* Icono con efecto visual mejorado */}
                   <div style={{
@@ -580,12 +855,13 @@ const HomeTab = ({
                   <h3 style={{ 
                     margin: 0, 
                     color: themeColors.textPrimary, 
-                    fontSize: '0.9rem',
+                    fontSize: homeTabFontSize ? `${homeTabFontSize * 0.9}px` : '0.9rem',
+                    fontFamily: homeTabFont,
                     fontWeight: '700',
                     letterSpacing: '0.1px',
                     textShadow: '0 1px 2px rgba(0,0,0,0.1)'
                   }}>
-                    Conexiones Recientes
+                    Sesiones Recientes
                   </h3>
                 </div>
                 {/* Línea decorativa con gradiente azul */}
@@ -593,21 +869,24 @@ const HomeTab = ({
                   height: '1px',
                   background: 'linear-gradient(90deg, transparent, rgba(79, 195, 247, 0.3), transparent)',
                   borderRadius: '1px',
-                  marginBottom: '0.75rem'
+                  marginBottom: '0.5rem',
+                  flexShrink: 0
                 }} />
                 {/* Lista de conexiones recientes */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div 
+                  style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto', flex: 1, height: '100%', minHeight: 0 }}>
                   {recentConnections.length > 0 ? (
                     recentConnections.map(recentConn => (
                       <div key={recentConn.id} style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.5rem',
+                        gap: '0.25rem',
                         color: themeColors.textSecondary,
-                        fontSize: '0.8rem',
+                        fontSize: homeTabFontSize ? `${homeTabFontSize * 0.65}px` : '0.65rem',
+                        fontFamily: homeTabFont,
                         background: themeColors.itemBackground,
-                        padding: '0.4rem 0.6rem',
-                        borderRadius: '8px',
+                        padding: '0.2rem 0.35rem',
+                        borderRadius: '5px',
                         border: '1px solid transparent',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease'
@@ -624,7 +903,7 @@ const HomeTab = ({
                         {/* Icono del tipo de conexión */}
                         <i className={getConnectionTypeIcon(recentConn.type)} style={{
                           color: getConnectionTypeColor(recentConn.type),
-                          fontSize: '0.9rem'
+                          fontSize: '0.6rem'
                         }} />
                         
                         {/* Nombre de la conexión */}
@@ -641,8 +920,8 @@ const HomeTab = ({
                           <span
                             title={recentConn.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
                             style={{
-                              width: '20px',
-                              height: '20px',
+                              width: '16px',
+                              height: '16px',
                               borderRadius: '50%',
                               display: 'inline-flex',
                               alignItems: 'center',
@@ -657,7 +936,7 @@ const HomeTab = ({
                             onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
                             onClick={() => handleToggleFavorite(recentConn)}
                           >
-                            <i className={recentConn.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '10px' }} />
+                            <i className={recentConn.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '8px' }} />
                           </span>
 
                           {/* Botón de editar */}
@@ -665,8 +944,8 @@ const HomeTab = ({
                             <span
                               title="Editar"
                               style={{
-                                width: '20px',
-                                height: '20px',
+                                width: '16px',
+                                height: '16px',
                                 borderRadius: '50%',
                                 display: 'inline-flex',
                                 alignItems: 'center',
@@ -681,7 +960,7 @@ const HomeTab = ({
                               onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
                               onClick={() => onEditConnection(recentConn)}
                             >
-                              <i className="pi pi-pencil" style={{ fontSize: '10px' }} />
+                              <i className="pi pi-pencil" style={{ fontSize: '8px' }} />
                             </span>
                           )}
 
@@ -689,8 +968,8 @@ const HomeTab = ({
                           <span
                             title="Conectar"
                             style={{
-                              width: '20px',
-                              height: '20px',
+                              width: '16px',
+                              height: '16px',
                               borderRadius: '50%',
                               display: 'inline-flex',
                               alignItems: 'center',
@@ -705,7 +984,7 @@ const HomeTab = ({
                             onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
                             onClick={() => handleConnectToHistory(recentConn)}
                           >
-                            <i className="pi pi-external-link" style={{ fontSize: '10px' }} />
+                            <i className="pi pi-external-link" style={{ fontSize: '8px' }} />
                           </span>
                         </div>
                       </div>
@@ -715,381 +994,16 @@ const HomeTab = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      padding: '1rem',
+                      padding: '0.75rem',
                       color: themeColors.textSecondary,
-                      fontSize: '0.8rem',
+                      fontSize: homeTabFontSize ? `${homeTabFontSize * 0.75}px` : '0.75rem',
+                      fontFamily: homeTabFont,
                       fontStyle: 'italic'
                     }}>
-                      No hay conexiones recientes
+                      No hay sesiones recientes
                     </div>
                   )}
                 </div>
-              </div>
-
-              {/* Card de Passwords Recientes */}
-              <div style={{
-                background: `linear-gradient(135deg,
-                  rgba(16, 20, 28, 0.6) 0%,
-                  rgba(16, 20, 28, 0.4) 100%)`,
-                backdropFilter: 'blur(8px) saturate(140%)',
-                WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-                border: `1px solid ${themeColors.cardBorder}`,
-                borderRadius: '12px',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-                padding: '1rem'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.6rem',
-                  marginBottom: '0.75rem'
-                }}>
-                  {/* Icono con efecto visual mejorado */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '6px',
-                    background: 'linear-gradient(135deg, rgba(102, 187, 106, 0.2) 0%, rgba(102, 187, 106, 0.1) 100%)',
-                    border: '1px solid rgba(102, 187, 106, 0.3)',
-                    boxShadow: '0 1px 4px rgba(102, 187, 106, 0.15)',
-                    position: 'relative'
-                  }}>
-                    <i className="pi pi-key" style={{ 
-                      color: '#66bb6a', 
-                      fontSize: '0.9rem',
-                      filter: 'drop-shadow(0 0 2px rgba(102, 187, 106, 0.4))'
-                    }} />
-                    {/* Efecto de brillo sutil */}
-                    <div style={{
-                      position: 'absolute',
-                      top: '12%',
-                      left: '35%',
-                      width: '4px',
-                      height: '4px',
-                      borderRadius: '50%',
-                      background: 'rgba(255, 255, 255, 0.6)',
-                      filter: 'blur(1px)',
-                      animation: 'twinkle 4s infinite'
-                    }} />
-                  </div>
-                  
-                  {/* Título con mejor tipografía */}
-                  <h3 style={{ 
-                    margin: 0, 
-                    color: themeColors.textPrimary, 
-                    fontSize: '0.9rem',
-                    fontWeight: '700',
-                    letterSpacing: '0.1px',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.1)'
-                  }}>
-                    Passwords Recientes
-                  </h3>
-                </div>
-                {/* Línea decorativa con gradiente verde */}
-                <div style={{
-                  height: '1px',
-                  background: 'linear-gradient(90deg, transparent, rgba(102, 187, 106, 0.3), transparent)',
-                  borderRadius: '1px',
-                  marginBottom: '0.75rem'
-                }} />
-                {/* Lista de passwords recientes */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {recentPasswords.length > 0 ? (
-                    recentPasswords.map(recentPass => (
-                      <div key={recentPass.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        color: themeColors.textSecondary,
-                        fontSize: '0.8rem',
-                        background: themeColors.itemBackground,
-                        padding: '0.4rem 0.6rem',
-                        borderRadius: '8px',
-                        border: '1px solid transparent',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = themeColors.hoverBackground;
-                        e.currentTarget.style.border = `1px solid ${themeColors.borderColor}`;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = themeColors.itemBackground;
-                        e.currentTarget.style.border = '1px solid transparent';
-                      }}
-                      >
-                        {/* Icono del tipo de password */}
-                        <i className={getPasswordTypeIcon(recentPass.type)} style={{
-                          color: getPasswordTypeColor(recentPass.type),
-                          fontSize: '0.9rem'
-                        }} />
-                        
-                        {/* Nombre del password - clickeable para abrir pestaña */}
-                        <span 
-                          style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
-                          onClick={() => openPasswordTab(recentPass)}
-                          title={`Abrir ${recentPass.name}`}
-                        >
-                          {recentPass.name}
-                        </span>
-
-                        {/* Botones interactivos */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }} onClick={(e) => e.stopPropagation()}>
-                          {/* Botón de copiar usuario */}
-                          {recentPass.username && (
-                            <span
-                              title="Copiar usuario"
-                              style={{
-                                width: '20px',
-                                height: '20px',
-                                borderRadius: '50%',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: themeColors.textPrimary,
-                                background: 'rgba(255,255,255,0.08)',
-                                border: `1px solid ${themeColors.borderColor}`,
-                                transition: 'all .15s ease',
-                                cursor: 'pointer'
-                              }}
-                              onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground; e.style.color = themeColors.textPrimary; }}
-                              onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
-                              onClick={() => copyToClipboard(recentPass.username, 'Usuario')}
-                            >
-                              <i className="pi pi-user" style={{ fontSize: '10px' }} />
-                            </span>
-                          )}
-
-                          {/* Botón de copiar contraseña */}
-                          {recentPass.password && (
-                            <span
-                              title="Copiar contraseña"
-                              style={{
-                                width: '20px',
-                                height: '20px',
-                                borderRadius: '50%',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: themeColors.textPrimary,
-                                background: 'rgba(255,255,255,0.08)',
-                                border: `1px solid ${themeColors.borderColor}`,
-                                transition: 'all .15s ease',
-                                cursor: 'pointer'
-                              }}
-                              onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground; e.style.color = themeColors.textPrimary; }}
-                              onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
-                              onClick={() => copyToClipboard(recentPass.password, 'Contraseña')}
-                            >
-                              <i className="pi pi-key" style={{ fontSize: '10px' }} />
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '1rem',
-                      color: themeColors.textSecondary,
-                      fontSize: '0.8rem',
-                      fontStyle: 'italic'
-                    }}>
-                      No hay passwords recientes
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Card de ConnectionHistory (Conexiones Favoritas) en la parte inferior */}
-            <div style={{
-              background: `linear-gradient(135deg,
-                rgba(16, 20, 28, 0.6) 0%,
-                rgba(16, 20, 28, 0.4) 100%)`,
-              backdropFilter: 'blur(8px) saturate(140%)',
-              WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-              border: `1px solid ${themeColors.cardBorder}`,
-              borderRadius: '12px',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-              padding: '0.5rem',
-              maxHeight: '440px',
-              minHeight: '440px',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              position: 'relative'
-            }}>
-              <ConnectionHistory 
-                onConnectToHistory={handleConnectToHistory}
-                layout="two-columns"
-                recentsLimit={10}
-                activeIds={new Set()}
-                templateColumns="3fr 2fr"
-                favoritesColumns={2}
-                recentsColumns={1}
-                onEdit={onEditConnection}
-                sshConnectionsCount={sshConnectionsCount}
-                foldersCount={foldersCount}
-                rdpConnectionsCount={rdpConnectionsCount}
-                themeColors={themeColors}
-              />
-              
-              {/* Overlay de transición para favoritos */}
-              {isTerminalTransitioning && (
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: 'rgba(0, 0, 0, 0.6)',
-                  backdropFilter: 'blur(4px)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '12px',
-                  zIndex: 10
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    color: 'white'
-                  }}>
-                    <div style={{
-                      width: '32px',
-                      height: '32px',
-                      border: '3px solid rgba(255,255,255,0.3)',
-                      borderTop: '3px solid #00BCD4',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite'
-                    }} />
-                    <div style={{
-                      fontSize: '0.9rem',
-                      fontWeight: '500',
-                      textAlign: 'center'
-                    }}>
-                      Actualizando terminal...
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Columna derecha: Estado y Recientes */}
-          <div style={{
-            width: '300px',
-            padding: '1rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem'
-          }}>
-            {/* Estado de NodeTerm */}
-            <div style={{
-              background: `linear-gradient(135deg,
-                rgba(16, 20, 28, 0.6) 0%,
-                rgba(16, 20, 28, 0.4) 100%)`,
-              backdropFilter: 'blur(8px) saturate(140%)',
-              WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-              border: `1px solid ${themeColors.cardBorder}`,
-              borderRadius: '12px',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-              position: 'relative'
-            }}>
-              <NodeTermStatus
-                sshConnectionsCount={sshConnectionsCount}
-                foldersCount={foldersCount}
-                rdpConnectionsCount={rdpConnectionsCount}
-                themeColors={themeColors}
-              />
-              
-              {/* Overlay de transición para Estado de NodeTerm */}
-              {isTerminalTransitioning && (
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: 'rgba(0, 0, 0, 0.6)',
-                  backdropFilter: 'blur(4px)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '12px',
-                  zIndex: 10
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    color: 'white'
-                  }}>
-                    <div style={{
-                      width: '32px',
-                      height: '32px',
-                      border: '3px solid rgba(255,255,255,0.3)',
-                      borderTop: '3px solid #00BCD4',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite'
-                    }} />
-                    <div style={{
-                      fontSize: '0.9rem',
-                      fontWeight: '500',
-                      textAlign: 'center'
-                    }}>
-                      Actualizando terminal...
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Card adicional para futuras funcionalidades */}
-            <div style={{
-              background: `linear-gradient(135deg,
-                rgba(16, 20, 28, 0.6) 0%,
-                rgba(16, 20, 28, 0.4) 100%)`,
-              backdropFilter: 'blur(8px) saturate(140%)',
-              WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-              border: `1px solid ${themeColors.cardBorder}`,
-              borderRadius: '12px',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-              padding: '1rem',
-              minHeight: '120px'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                marginBottom: '0.75rem'
-              }}>
-                <i className="pi pi-plus-circle" style={{ color: themeColors.textSecondary }} />
-                <h3 style={{
-                  margin: 0,
-                  color: themeColors.textPrimary,
-                  fontSize: '1rem',
-                  fontWeight: '600'
-                }}>
-                  Nueva Funcionalidad
-                </h3>
-              </div>
-              <div style={{
-                color: themeColors.textSecondary,
-                fontSize: '0.8rem',
-                textAlign: 'center',
-                padding: '1rem 0'
-              }}>
-                Espacio reservado para futuras funcionalidades
               </div>
             </div>
           </div>
@@ -1176,6 +1090,7 @@ const HomeTab = ({
           isHomeTab={true}
           externalPaneSize={getTopPanelSize()}
           onManualResize={handleManualResize}
+          onPaneSizeChange={handlePaneSizeChange}
           splitterColor={splitterColor}
         />
       </div>

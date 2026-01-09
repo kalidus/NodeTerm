@@ -9,7 +9,6 @@ const { mcpService } = require('../services/MCPService');
  * Registrar todos los handlers IPC para MCP
  */
 function registerMCPHandlers() {
-  console.log('🔌 [MCP Handlers] Registrando handlers IPC...');
 
   // Inicializar servicio MCP
   ipcMain.handle('mcp:initialize', async () => {
@@ -175,8 +174,6 @@ function registerMCPHandlers() {
       return { success: false, error: error.message };
     }
   });
-
-  console.log('✅ [MCP Handlers] Handlers IPC registrados correctamente');
 }
 
 /**

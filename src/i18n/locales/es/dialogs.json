@@ -1,0 +1,448 @@
+{
+  "ssh": {
+    "title": {
+      "new": "Nueva conexión SSH",
+      "edit": "Editar conexión SSH"
+    },
+    "sections": {
+      "connection": "Conexión",
+      "authentication": "Autenticación",
+      "folders": "Carpetas",
+      "advanced": "Avanzado"
+    },
+    "fields": {
+      "name": "Nombre",
+      "host": "Host",
+      "port": "Puerto",
+      "user": "Usuario",
+      "password": "Contraseña",
+      "privateKey": "Clave privada",
+      "privateKeySSH": "Clave Privada SSH",
+      "passphrase": "Frase de paso",
+      "remoteFolder": "Carpeta remota",
+      "targetFolder": "Carpeta destino"
+    },
+    "descriptions": {
+      "name": "Identificador único para esta conexión",
+      "host": "Dirección IP o nombre del servidor",
+      "user": "Nombre de usuario para la conexión",
+      "password": "Contraseña para autenticación",
+      "privateKey": "Archivo de clave privada o pega el contenido",
+      "remoteFolder": "Ruta en el servidor remoto donde iniciar la sesión",
+      "targetFolder": "Carpeta local donde organizar esta conexión"
+    },
+    "auth": {
+      "method": "Método de Autenticación",
+      "methodDescription": "Selecciona cómo autenticarte en el servidor",
+      "password": "Contraseña",
+      "key": "Clave SSH",
+      "autoCopyPassword": "Copiar contraseña automáticamente",
+      "autoCopyPasswordDescription": "Copia la contraseña al portapapeles al conectar",
+      "selectKeyFile": "Seleccionar archivo de clave",
+      "pasteKey": "O pegar la clave privada aquí"
+    },
+    "validation": {
+      "nameRequired": "El nombre es requerido",
+      "hostRequired": "El host es requerido",
+      "userRequired": "El usuario es requerido",
+      "passwordRequired": "La contraseña es requerida",
+      "privateKeyRequired": "La clave privada es requerida"
+    },
+    "placeholders": {
+      "name": "Servidor de producción",
+      "host": "IP o nombre del servidor",
+      "port": "22",
+      "user": "root",
+      "password": "Contraseña",
+      "remoteFolder": "/home/usuario",
+      "targetFolder": "Seleccionar carpeta local"
+    },
+    "tooltips": {
+      "showPassword": "Mostrar contraseña",
+      "hidePassword": "Ocultar contraseña",
+      "selectFolder": "Seleccionar carpeta",
+      "selectPrivateKey": "Seleccionar archivo de clave privada"
+    }
+  },
+  "rdp": {
+    "title": {
+      "new": "Nueva Conexión RDP",
+      "edit": "Editar conexión RDP"
+    },
+    "sections": {
+      "connection": "Conexión",
+      "display": "Pantalla",
+      "resources": "Recursos",
+      "screen": "Pantalla",
+      "options": "Opciones",
+      "advanced": "Opciones Avanzadas"
+    },
+    "fields": {
+      "name": "Nombre",
+      "server": "Servidor",
+      "port": "Puerto",
+      "domain": "Dominio",
+      "user": "Usuario",
+      "username": "Usuario",
+      "password": "Contraseña",
+      "width": "Ancho",
+      "height": "Alto",
+      "fullscreen": "Pantalla completa",
+      "client": "Cliente",
+      "security": "Seguridad",
+      "preset": "Preset",
+      "resolution": "Resolución",
+      "color": "Color",
+      "dpi": "DPI",
+      "sharedFolder": "Carpeta Compartida",
+      "localPath": "Ruta del directorio local"
+    },
+    "placeholders": {
+      "name": "Nombre descriptivo",
+      "server": "IP o nombre del servidor",
+      "port": "3389",
+      "domain": "DOMINIO",
+      "user": "Usuario",
+      "username": "Usuario",
+      "password": "Contraseña (opcional)",
+      "dpi": "96",
+      "localPath": "Ej: C:\\Users\\TuUsuario\\Compartido"
+    },
+    "descriptions": {
+      "security": "Nivel de seguridad para la conexión RDP",
+      "sharedFolder": "Esta carpeta estará disponible como una unidad de red dentro de la sesión RDP."
+    },
+    "clientTypes": {
+      "mstsc": "Windows MSTSC",
+      "guacamole": "Apache Guacamole"
+    },
+    "securityOptions": {
+      "any": "Automático",
+      "rdp": "RDP Estándar",
+      "tls": "TLS",
+      "nla": "Network Level Authentication"
+    },
+    "presets": {
+      "default": "Por defecto",
+      "performance": "Rendimiento",
+      "quality": "Calidad"
+    },
+    "resolutions": {
+      "fullscreen": "Pantalla completa",
+      "1920x1080": "1920x1080",
+      "1600x1000": "1600x1000",
+      "1366x768": "1366x768",
+      "1024x768": "1024x768"
+    },
+    "colorDepths": {
+      "32": "32 bits",
+      "24": "24 bits",
+      "16": "16 bits",
+      "15": "15 bits"
+    },
+    "options": {
+      "clipboard": "Portapapeles",
+      "audio": "Audio",
+      "printers": "Impresoras",
+      "folders": "Carpetas",
+      "smartSizing": "Ajuste automático",
+      "fullscreen": "Pantalla completa",
+      "enableDrive": "Carpetas (NodeTerm Drive)",
+      "autoResize": "Ajuste automático",
+      "enableWallpaper": "Mostrar fondo"
+    },
+    "advanced": {
+      "performance": "Rendimiento",
+      "interface": "Interfaz",
+      "cache": "Caché",
+      "enableGfx": "Habilitar GFX",
+      "desktopComposition": "Desktop Composition",
+      "fontSmoothing": "Font Smoothing",
+      "theming": "Theming",
+      "fullWindowDrag": "Full Window Drag",
+      "menuAnimations": "Animaciones de menú",
+      "glyphCaching": "Glyph Caching",
+      "offscreenCaching": "Offscreen Caching",
+      "bitmapCaching": "Bitmap Caching",
+      "copyRect": "Copy-Rect"
+    },
+    "tooltips": {
+      "selectFolder": "Seleccionar carpeta",
+      "showPassword": "Mostrar contraseña",
+      "hidePassword": "Ocultar contraseña"
+    }
+  },
+  "vnc": {
+    "title": {
+      "new": "Nueva Conexión VNC",
+      "edit": "Editar conexión VNC"
+    },
+    "sections": {
+      "connection": "Conexión",
+      "screen": "Pantalla",
+      "options": "Opciones"
+    },
+    "fields": {
+      "name": "Nombre",
+      "server": "Servidor",
+      "port": "Puerto",
+      "password": "Contraseña VNC",
+      "resolution": "Resolución",
+      "colorDepth": "Profundidad de Color",
+      "imageQuality": "Calidad de Imagen",
+      "dpi": "DPI"
+    },
+    "placeholders": {
+      "name": "Nombre descriptivo",
+      "server": "IP o nombre del servidor",
+      "port": "5900",
+      "password": "Contraseña VNC (opcional)",
+      "dpi": "96"
+    },
+    "descriptions": {
+      "password": "Contraseña del servidor VNC (si está configurada)"
+    },
+    "colorDepths": {
+      "32": "32 bits",
+      "24": "24 bits",
+      "16": "16 bits",
+      "8": "8 bits"
+    },
+    "imageQualities": {
+      "lossless": "Sin pérdida",
+      "lossyLow": "Pérdida baja",
+      "lossyMedium": "Pérdida media",
+      "lossyHigh": "Pérdida alta"
+    },
+    "options": {
+      "readOnly": "Solo lectura",
+      "compression": "Compresión",
+      "autoReconnect": "Reconexión automática",
+      "autoResize": "Ajuste automático",
+      "clipboard": "Portapapeles"
+    },
+    "tooltips": {
+      "showPassword": "Mostrar contraseña",
+      "hidePassword": "Ocultar contraseña"
+    }
+  },
+  "fileConnection": {
+    "title": {
+      "new": "Nueva Conexión de Archivos",
+      "edit": "Editar Conexión de Archivos"
+    },
+    "sections": {
+      "connection": "Conexión de Archivos"
+    },
+    "fields": {
+      "name": "Nombre de la conexión",
+      "protocol": "Protocolo",
+      "host": "Host",
+      "user": "Usuario",
+      "port": "Puerto",
+      "password": "Contraseña",
+      "remoteFolder": "Carpeta remota",
+      "targetFolder": "Carpeta local destino"
+    },
+    "placeholders": {
+      "name": "Mi servidor SFTP",
+      "host": "192.168.1.100",
+      "user": "usuario",
+      "password": "Contraseña",
+      "remoteFolder": "/home/usuario",
+      "targetFolder": "C:\\Downloads"
+    },
+    "protocols": {
+      "sftp": "SFTP",
+      "ftp": "FTP",
+      "scp": "SCP"
+    },
+    "buttons": {
+      "saveChanges": "Guardar Cambios",
+      "create": "Crear Conexión"
+    }
+  },
+  "folder": {
+    "title": {
+      "new": "Nueva carpeta",
+      "edit": "Editar carpeta"
+    },
+    "subtitle": {
+      "new": "Crea una nueva carpeta organizada",
+      "edit": "Modifica los detalles de tu carpeta"
+    },
+    "fields": {
+      "name": "Nombre de la carpeta",
+      "icon": "Icono de la carpeta",
+      "color": "Color de la carpeta"
+    },
+    "placeholders": {
+      "name": "Ingresa el nombre de la carpeta"
+    },
+    "icon": {
+      "themeIcon": "Icono del tema",
+      "themeIconDescription": "Usa el icono del tema seleccionado"
+    },
+    "preview": {
+      "label": "Vista previa:",
+      "defaultName": "Nombre de la carpeta"
+    },
+    "buttons": {
+      "saveChanges": "Guardar cambios",
+      "create": "Crear carpeta"
+    }
+  },
+  "group": {
+    "title": {
+      "new": "Nuevo grupo de pestañas",
+      "edit": "Editar grupo"
+    },
+    "fields": {
+      "name": "Nombre del grupo",
+      "color": "Color del grupo"
+    },
+    "color": {
+      "custom": "Color personalizado"
+    },
+    "buttons": {
+      "create": "Crear grupo"
+    }
+  },
+  "common": {
+    "required": "Campo obligatorio",
+    "selectFolder": "Seleccionar carpeta",
+    "noFolders": "No hay carpetas disponibles",
+    "back": "Volver"
+  },
+  "protocolSelection": {
+    "title": "Configuración de Nueva Conexión",
+    "categories": {
+      "remoteAccess": "Acceso Remoto",
+      "fileTransfer": "Transferencia de Archivos",
+      "secretsManagement": "Gestión de Secretos"
+    },
+    "protocols": {
+      "ssh": {
+        "name": "SSH (Secure Shell)",
+        "description": "Acceso seguro a la línea de comandos de sistemas remotos (Linux/Unix). Esencial para administración de servidores y desarrollo.",
+        "advantages": [
+          "Alta seguridad",
+          "Versatilidad para tunelización y reenvío de puertos"
+        ]
+      },
+      "rdp": {
+        "name": "RDP (Remote Desktop Protocol)",
+        "description": "Acceso gráfico completo a escritorios de Windows. Permite control visual de un PC remoto.",
+        "advantages": [
+          "Experiencia de usuario familiar para entornos Windows",
+          "Soporte para múltiples sesiones"
+        ]
+      },
+      "vnc": {
+        "name": "VNC (Virtual Network Computing)",
+        "description": "Acceso remoto multiplataforma a escritorios gráficos. Compatible con Linux, Windows, macOS y sistemas embebidos.",
+        "advantages": [
+          "Multiplataforma (Linux, Windows, macOS)",
+          "Ligero y eficiente para conexiones remotas"
+        ]
+      },
+      "sftp": {
+        "name": "SFTP",
+        "fullName": "SFTP (SSH File Transfer Protocol)",
+        "description": "La forma más recomendada para mover archivos de forma encriptada, utilizando vías de seguridad de SSH.",
+        "advantages": [
+          "Transferencia encriptada y segura",
+          "Basado en SSH, ampliamente soportado"
+        ]
+      },
+      "ftp": {
+        "name": "FTP",
+        "fullName": "FTP (File Transfer Protocol)",
+        "description": "Protocolo clásico de transferencia. Rápido, pero *no encripta* los datos (no recomendado para información sensible).",
+        "advantages": [
+          "Rápido y eficiente",
+          "Amplia compatibilidad"
+        ]
+      },
+      "scp": {
+        "name": "SCP",
+        "fullName": "SCP (Secure Copy Protocol)",
+        "description": "Herramienta rápida y segura para copiar archivos y directorios entre hosts remotos (basado en SSH).",
+        "advantages": [
+          "Seguro y rápido",
+          "Basado en SSH"
+        ]
+      },
+      "password": {
+        "name": "Contraseña",
+        "description": "Almacena contraseñas de forma segura. Encriptación AES-256-GCM con master password opcional.",
+        "advantages": [
+          "Encriptación segura AES-256-GCM",
+          "Organización en carpetas y grupos"
+        ]
+      },
+      "crypto_wallet": {
+        "name": "Billetera Crypto",
+        "description": "Guarda seed phrases, claves privadas y direcciones de criptomonedas. Validación BIP-39 incluida.",
+        "advantages": [
+          "Soporte para 12+ redes (Bitcoin, Ethereum, Solana...)",
+          "Validación de seed phrases BIP-39"
+        ]
+      },
+      "api_key": {
+        "name": "Clave de API",
+        "description": "Almacena claves de API, tokens de acceso y credenciales de servicios externos de forma segura.",
+        "advantages": [
+          "Organización por servicio",
+          "Campos para key, secret y endpoint"
+        ]
+      },
+      "secure_note": {
+        "name": "Nota Segura",
+        "description": "Almacena notas, documentos y textos confidenciales con encriptación completa.",
+        "advantages": [
+          "Texto enriquecido",
+          "Sin límite de longitud"
+        ]
+      }
+    },
+    "badges": {
+      "secure": "Seguro",
+      "recommended": "Recomendado",
+      "insecure": "No seguro",
+      "windows": "Windows",
+      "crossPlatform": "Multiplataforma"
+    }
+  },
+  "passwordManager": {
+    "title": {
+      "new": "Nuevo Password",
+      "edit": "Editar Password"
+    },
+    "fields": {
+      "title": "Título",
+      "username": "Usuario",
+      "password": "Contraseña",
+      "url": "URL",
+      "group": "Grupo",
+      "folder": "Carpeta",
+      "notes": "Notas"
+    },
+    "placeholders": {
+      "title": "Mi cuenta",
+      "titleExample": "Ej: Gmail, GitHub, etc.",
+      "username": "Nombre de usuario o email",
+      "password": "Password",
+      "url": "https://ejemplo.com",
+      "group": "Categoría o grupo",
+      "notes": "Notas adicionales...",
+      "folder": "Seleccionar carpeta"
+    },
+    "tooltips": {
+      "showPassword": "Mostrar contraseña",
+      "hidePassword": "Ocultar contraseña",
+      "newPassword": "Nuevo password",
+      "generatePassword": "Generar password aleatorio"
+    }
+  }
+}

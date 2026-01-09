@@ -8,6 +8,14 @@
 .general-settings-container {
   padding: 2rem;
   max-width: 100%;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 .settings-header {
@@ -295,6 +303,64 @@
   flex-direction: column;
 }
 
+/* Home Icon Selector - Badge Expandible */
+.home-icon-expandable-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border-left: 2px solid var(--ui-button-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 180px;
+}
+
+.home-icon-expandable-badge:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(102, 126, 234, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.15);
+}
+
+.home-icon-badge-content {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.home-icon-badge-content svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.home-icon-badge-name {
+  color: var(--text-color);
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.home-icon-badge-chevron {
+  color: var(--text-color-secondary);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.home-icon-expandable-badge:hover .home-icon-badge-chevron {
+  transform: translateY(1px);
+}
+
 /* Home Icon Selector - themed */
 .home-icon-overlay .p-overlaypanel-content {
   background: var(--ui-dialog-bg) !important;
@@ -346,6 +412,64 @@
   border: 2px solid var(--ui-button-primary) !important;
   background: var(--ui-button-primary) !important;
   color: var(--ui-button-primary-text) !important;
+}
+
+/* Group Icon Selector - Badge Expandible */
+.group-icon-expandable-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border-left: 2px solid var(--ui-button-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 180px;
+}
+
+.group-icon-expandable-badge:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(102, 126, 234, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.15);
+}
+
+.group-icon-badge-content {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.group-icon-badge-content svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.group-icon-badge-name {
+  color: var(--text-color);
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.group-icon-badge-chevron {
+  color: var(--text-color-secondary);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.group-icon-expandable-badge:hover .group-icon-badge-chevron {
+  transform: translateY(1px);
 }
 
 /* Group Icon Selector - themed */
@@ -493,14 +617,13 @@
 .settings-dialog .settings-dialog-tabview .p-tabview-panels,
 .p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-panels {
   width: 100% !important;
-  min-height: unset !important;
-  max-height: unset !important;
-  height: auto !important;
+  min-height: 700px !important;
+  height: 700px !important;
   padding: 0 !important;
   margin: 0 !important;
   background: transparent !important;
   border: none !important;
-  overflow: visible !important;
+  overflow: hidden !important;
 }
 
 .settings-dialog .settings-dialog-tabview .p-tabview-panel,
@@ -509,11 +632,46 @@
   flex-direction: column !important;
   justify-content: flex-start !important;
   align-items: stretch !important;
-  min-height: 40vh !important;
+  min-height: 700px !important;
+  height: 700px !important;
+  max-height: 700px !important;
   width: 100% !important;
   padding: 0 !important;
   margin: 0 !important;
   background: transparent !important;
+  overflow: hidden !important;
+}
+
+/* Forzar que TODOS los hijos directos del panel respeten la altura */
+.settings-dialog .settings-dialog-tabview .p-tabview-panel > *,
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-panel > * {
+  flex: 0 1 auto !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Específico para general-settings-container - debe ocupar todo el espacio disponible */
+.settings-dialog .settings-dialog-tabview .p-tabview-panel .general-settings-container,
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-panel .general-settings-container {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Específico para ai-clients-tab - debe ocupar todo el espacio disponible */
+.settings-dialog .settings-dialog-tabview .p-tabview-panel .ai-clients-tab,
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-panel .ai-clients-tab {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
 }
 
 /* ========================================
@@ -701,10 +859,58 @@
   border-bottom: 1px solid var(--ui-dialog-border) !important;
 }
 
+.settings-dialog .p-dialog-header {
+  background: rgba(0, 0, 0, 0.3) !important;
+  color: var(--ui-dialog-text) !important;
+  border-bottom: 1px solid var(--ui-dialog-border) !important;
+  padding: 0 !important;
+}
+
+/* Header personalizado del diálogo de configuración */
+.settings-dialog-header-custom {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  width: 100%;
+}
+
+.settings-dialog-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+  color: white;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 6px rgba(255, 152, 0, 0.3);
+  padding: 0;
+}
+
+.settings-dialog-header-icon i {
+  font-size: 1rem;
+  color: white;
+}
+
+.settings-dialog-header-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ui-text-primary);
+  letter-spacing: 0.01em;
+}
+
 .p-dialog .p-dialog-content {
   background: var(--ui-dialog-bg) !important;
   color: var(--ui-dialog-text) !important;
   padding-top: 8px !important; /* Compactar separación superior por defecto */
+}
+
+/* Sobrescribir padding-top para settings-dialog */
+.settings-dialog.p-dialog .p-dialog-content,
+.p-dialog.settings-dialog .p-dialog-content {
+  padding-top: 0 !important;
 }
 
 .p-dialog .p-dialog-footer {
@@ -903,4 +1109,2243 @@
   .import-dialog .import-actions {
     justify-content: stretch;
   }
+}
+
+/* ========================================
+   ESTILOS PARA DIÁLOGO DE SELECCIÓN DE PROTOCOLO
+   ======================================== */
+
+/* ========================================
+   ESTILOS PARA NUEVO DISEÑO DE DIÁLOGO DE PROTOCOLOS
+   Diseño de dos paneles: categorías a la izquierda, protocolos a la derecha
+   ======================================== */
+
+.protocol-selection-dialog-new .p-dialog-header {
+  padding: 0 !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-bottom: 1px solid var(--ui-dialog-border) !important;
+}
+
+/* Header personalizado con icono */
+.protocol-dialog-header-custom {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  width: 100%;
+}
+
+.protocol-dialog-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  color: white;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+.protocol-dialog-header-icon i {
+  font-size: 1.25rem;
+}
+
+.protocol-dialog-header-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ui-text-primary);
+  letter-spacing: 0.01em;
+}
+
+.protocol-selection-dialog-new .p-dialog-content {
+  padding: 0 !important;
+  background: var(--ui-dialog-bg) !important;
+  overflow: hidden !important;
+}
+
+/* Layout principal de dos paneles */
+.protocol-selection-layout {
+  display: flex;
+  height: 500px;
+  max-height: 70vh;
+  background: var(--ui-dialog-bg) !important;
+}
+
+/* Panel izquierdo: Categorías */
+.protocol-categories-panel {
+  width: 200px;
+  min-width: 200px;
+  background: var(--ui-content-bg) !important;
+  border-right: 1px solid var(--ui-dialog-border) !important;
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 0;
+  overflow-y: auto;
+}
+
+.protocol-category-item {
+  padding: 0.875rem 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  background: transparent;
+  border-left: 4px solid transparent;
+}
+
+.protocol-category-item:hover {
+  background: var(--ui-sidebar-hover) !important;
+}
+
+/* Colores específicos por categoría */
+.protocol-category-item[data-category="Acceso Remoto"].active {
+  background: var(--ui-sidebar-selected) !important;
+  border-left-color: #2196F3;
+}
+
+.protocol-category-item[data-category="Transferencia de Archivos"].active {
+  background: var(--ui-sidebar-selected) !important;
+  border-left-color: #FF9800;
+}
+
+.protocol-category-item[data-category="Gestión de Contraseñas"].active {
+  background: var(--ui-sidebar-selected) !important;
+  border-left-color: #E91E63;
+}
+
+/* Hover con colores específicos por categoría */
+.protocol-category-item[data-category="Acceso Remoto"]:hover {
+  background: rgba(33, 150, 243, 0.1) !important;
+}
+
+.protocol-category-item[data-category="Transferencia de Archivos"]:hover {
+  background: rgba(255, 152, 0, 0.1) !important;
+}
+
+.protocol-category-item[data-category="Gestión de Contraseñas"]:hover {
+  background: rgba(233, 30, 99, 0.1) !important;
+}
+
+.protocol-category-title {
+  color: var(--ui-dialog-text) !important;
+  font-size: 0.9rem;
+  font-weight: 500;
+  user-select: none;
+}
+
+.protocol-category-item.active .protocol-category-title {
+  color: var(--ui-dialog-text) !important;
+  font-weight: 600;
+}
+
+/* Panel derecho: Protocolos */
+.protocol-options-panel {
+  flex: 1;
+  padding: 1.25rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  background: var(--ui-dialog-bg) !important;
+}
+
+/* Card de opción de protocolo - Profesional y elegante */
+.protocol-option-card {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.08) 0%, 
+    rgba(255, 255, 255, 0.03) 100%) !important;
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 14px;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.protocol-option-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 100%;
+  background: linear-gradient(180deg, 
+    var(--ui-button-primary) 0%, 
+    rgba(33, 150, 243, 0.8) 100%);
+  opacity: 0;
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 16px 0 0 16px;
+  box-shadow: 0 0 12px rgba(33, 150, 243, 0.4);
+}
+
+.protocol-option-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 30% 20%, 
+    rgba(255, 255, 255, 0.1) 0%, 
+    transparent 60%);
+  opacity: 0;
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.protocol-option-card:hover {
+  border-color: rgba(33, 150, 243, 0.4) !important;
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.12),
+    0 3px 10px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(33, 150, 243, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px) scale(1.005);
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.12) 0%, 
+    rgba(255, 255, 255, 0.05) 100%) !important;
+}
+
+.protocol-option-card:hover::before {
+  opacity: 1;
+}
+
+.protocol-option-card:hover::after {
+  opacity: 1;
+}
+
+/* Colores hover específicos por protocolo - Mejorados */
+.protocol-option-card[data-protocol="ssh"]:hover {
+  border-color: rgba(33, 150, 243, 0.5) !important;
+  background: linear-gradient(135deg, 
+    rgba(33, 150, 243, 0.12) 0%, 
+    rgba(33, 150, 243, 0.04) 100%) !important;
+  box-shadow: 
+    0 8px 24px rgba(33, 150, 243, 0.15),
+    0 4px 12px rgba(33, 150, 243, 0.1),
+    0 0 0 1px rgba(33, 150, 243, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.protocol-option-card[data-protocol="ssh"]:hover::before {
+  background: linear-gradient(180deg, #2196F3 0%, rgba(33, 150, 243, 0.8) 100%);
+  box-shadow: 0 0 16px rgba(33, 150, 243, 0.5);
+  opacity: 1;
+}
+
+.protocol-option-card[data-protocol="rdp"]:hover {
+  border-color: rgba(76, 175, 80, 0.5) !important;
+  background: linear-gradient(135deg, 
+    rgba(76, 175, 80, 0.12) 0%, 
+    rgba(76, 175, 80, 0.04) 100%) !important;
+  box-shadow: 
+    0 8px 24px rgba(76, 175, 80, 0.15),
+    0 4px 12px rgba(76, 175, 80, 0.1),
+    0 0 0 1px rgba(76, 175, 80, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.protocol-option-card[data-protocol="rdp"]:hover::before {
+  background: linear-gradient(180deg, #4CAF50 0%, rgba(76, 175, 80, 0.8) 100%);
+  box-shadow: 0 0 16px rgba(76, 175, 80, 0.5);
+  opacity: 1;
+}
+
+.protocol-option-card[data-protocol="vnc"]:hover {
+  border-color: rgba(255, 87, 34, 0.5) !important;
+  background: linear-gradient(135deg, 
+    rgba(255, 87, 34, 0.12) 0%, 
+    rgba(255, 87, 34, 0.04) 100%) !important;
+  box-shadow: 
+    0 8px 24px rgba(255, 87, 34, 0.15),
+    0 4px 12px rgba(255, 87, 34, 0.1),
+    0 0 0 1px rgba(255, 87, 34, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.protocol-option-card[data-protocol="vnc"]:hover::before {
+  background: linear-gradient(180deg, #FF5722 0%, rgba(255, 87, 34, 0.8) 100%);
+  box-shadow: 0 0 16px rgba(255, 87, 34, 0.5);
+  opacity: 1;
+}
+
+.protocol-option-card[data-protocol="sftp"]:hover {
+  border-color: rgba(255, 152, 0, 0.5) !important;
+  background: linear-gradient(135deg, 
+    rgba(255, 152, 0, 0.12) 0%, 
+    rgba(255, 152, 0, 0.04) 100%) !important;
+  box-shadow: 
+    0 8px 24px rgba(255, 152, 0, 0.15),
+    0 4px 12px rgba(255, 152, 0, 0.1),
+    0 0 0 1px rgba(255, 152, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.protocol-option-card[data-protocol="sftp"]:hover::before {
+  background: linear-gradient(180deg, #FF9800 0%, rgba(255, 152, 0, 0.8) 100%);
+  box-shadow: 0 0 16px rgba(255, 152, 0, 0.5);
+  opacity: 1;
+}
+
+.protocol-option-card[data-protocol="ftp"]:hover {
+  border-color: rgba(156, 39, 176, 0.5) !important;
+  background: linear-gradient(135deg, 
+    rgba(156, 39, 176, 0.12) 0%, 
+    rgba(156, 39, 176, 0.04) 100%) !important;
+  box-shadow: 
+    0 8px 24px rgba(156, 39, 176, 0.15),
+    0 4px 12px rgba(156, 39, 176, 0.1),
+    0 0 0 1px rgba(156, 39, 176, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.protocol-option-card[data-protocol="ftp"]:hover::before {
+  background: linear-gradient(180deg, #9C27B0 0%, rgba(156, 39, 176, 0.8) 100%);
+  box-shadow: 0 0 16px rgba(156, 39, 176, 0.5);
+  opacity: 1;
+}
+
+.protocol-option-card[data-protocol="scp"]:hover {
+  border-color: rgba(0, 188, 212, 0.5) !important;
+  background: linear-gradient(135deg, 
+    rgba(0, 188, 212, 0.12) 0%, 
+    rgba(0, 188, 212, 0.04) 100%) !important;
+  box-shadow: 
+    0 8px 24px rgba(0, 188, 212, 0.15),
+    0 4px 12px rgba(0, 188, 212, 0.1),
+    0 0 0 1px rgba(0, 188, 212, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.protocol-option-card[data-protocol="scp"]:hover::before {
+  background: linear-gradient(180deg, #00BCD4 0%, rgba(0, 188, 212, 0.8) 100%);
+  box-shadow: 0 0 16px rgba(0, 188, 212, 0.5);
+  opacity: 1;
+}
+
+.protocol-option-card[data-protocol="password"]:hover {
+  border-color: rgba(233, 30, 99, 0.5) !important;
+  background: linear-gradient(135deg, 
+    rgba(233, 30, 99, 0.12) 0%, 
+    rgba(233, 30, 99, 0.04) 100%) !important;
+  box-shadow: 
+    0 8px 24px rgba(233, 30, 99, 0.15),
+    0 4px 12px rgba(233, 30, 99, 0.1),
+    0 0 0 1px rgba(233, 30, 99, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.protocol-option-card[data-protocol="password"]:hover::before {
+  background: linear-gradient(180deg, #E91E63 0%, rgba(233, 30, 99, 0.8) 100%);
+  box-shadow: 0 0 16px rgba(233, 30, 99, 0.5);
+  opacity: 1;
+}
+
+/* Ícono del protocolo - Profesional y refinado */
+.protocol-option-icon {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.15rem;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.protocol-option-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.25) 0%, 
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 100%);
+  opacity: 0;
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.protocol-option-icon::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, 
+    rgba(255, 255, 255, 0.3) 0%, 
+    transparent 70%);
+  opacity: 0;
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: scale(0);
+}
+
+.protocol-option-card:hover .protocol-option-icon {
+  transform: scale(1.1) rotate(3deg);
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.25),
+    0 3px 10px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.protocol-option-card:hover .protocol-option-icon::before {
+  opacity: 1;
+}
+
+.protocol-option-card:hover .protocol-option-icon::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Efectos hover específicos en iconos por protocolo */
+.protocol-option-card[data-protocol="ssh"]:hover .protocol-option-icon {
+  transform: scale(1.1) rotate(3deg);
+  box-shadow: 0 4px 16px rgba(33, 150, 243, 0.4), 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+.protocol-option-card[data-protocol="rdp"]:hover .protocol-option-icon {
+  transform: scale(1.1) rotate(-3deg);
+  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.4), 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.protocol-option-card[data-protocol="vnc"]:hover .protocol-option-icon {
+  transform: scale(1.1) rotate(3deg);
+  box-shadow: 0 4px 16px rgba(255, 87, 34, 0.4), 0 2px 8px rgba(255, 87, 34, 0.3);
+}
+
+.protocol-option-card[data-protocol="sftp"]:hover .protocol-option-icon {
+  transform: scale(1.1) rotate(-2deg);
+  box-shadow: 0 4px 16px rgba(255, 152, 0, 0.4), 0 2px 8px rgba(255, 152, 0, 0.3);
+}
+
+.protocol-option-card[data-protocol="ftp"]:hover .protocol-option-icon {
+  transform: scale(1.1) rotate(2deg);
+  box-shadow: 0 4px 16px rgba(156, 39, 176, 0.4), 0 2px 8px rgba(156, 39, 176, 0.3);
+}
+
+.protocol-option-card[data-protocol="scp"]:hover .protocol-option-icon {
+  transform: scale(1.1) rotate(-2deg);
+  box-shadow: 0 4px 16px rgba(0, 188, 212, 0.4), 0 2px 8px rgba(0, 188, 212, 0.3);
+}
+
+.protocol-option-card[data-protocol="password"]:hover .protocol-option-icon {
+  transform: scale(1.1) rotate(2deg);
+  box-shadow: 0 4px 16px rgba(233, 30, 99, 0.4), 0 2px 8px rgba(233, 30, 99, 0.3);
+}
+
+.protocol-option-icon i {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
+  position: relative;
+  z-index: 1;
+}
+
+/* Contenido del protocolo - Compacto */
+.protocol-option-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding-right: 0.5rem;
+}
+
+/* Header con título y badges */
+.protocol-option-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Contenedor de badges principales */
+.protocol-badges-container {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Badge principal (Seguro, Recomendado, etc.) */
+.protocol-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.25s ease;
+}
+
+.protocol-badge-text {
+  font-size: 0.7rem;
+  letter-spacing: 0.01em;
+}
+
+/* Badge Seguro */
+.protocol-badge-seguro {
+  background: rgba(76, 175, 80, 0.15);
+  color: #81C784;
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+/* Badge Recomendado */
+.protocol-badge-recomendado {
+  background: rgba(33, 150, 243, 0.15);
+  color: #64B5F6;
+  border-color: rgba(33, 150, 243, 0.3);
+}
+
+/* Badge No seguro */
+.protocol-badge-no-seguro {
+  background: rgba(244, 67, 54, 0.15);
+  color: #E57373;
+  border-color: rgba(244, 67, 54, 0.3);
+}
+
+/* Badge Windows */
+.protocol-badge-windows {
+  background: rgba(76, 175, 80, 0.15);
+  color: #81C784;
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+/* Badge Multiplataforma */
+.protocol-badge-multiplataforma {
+  background: rgba(255, 152, 0, 0.15);
+  color: #FFB74D;
+  border-color: rgba(255, 152, 0, 0.3);
+}
+
+.protocol-option-card:hover .protocol-badge {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.protocol-option-title {
+  margin: 0;
+  color: var(--ui-dialog-text) !important;
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: color 0.3s ease;
+  flex: 1;
+  min-width: 0;
+}
+
+.protocol-option-card:hover .protocol-option-title {
+  color: var(--ui-dialog-text) !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.protocol-option-description {
+  margin: 0;
+  color: var(--ui-dialog-text) !important;
+  opacity: 0.8;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.3s ease;
+}
+
+.protocol-option-card:hover .protocol-option-description {
+  opacity: 0.95;
+}
+
+/* Sección de ventajas - Compacta con badges */
+.protocol-option-advantages {
+  margin-top: 0.2rem;
+}
+
+.protocol-advantages-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.protocol-advantage-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.175rem 0.45rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  color: var(--ui-dialog-text) !important;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  opacity: 0.85;
+  white-space: nowrap;
+  transition: all 0.25s ease;
+  position: relative;
+  padding-left: 1.35rem;
+}
+
+.protocol-advantage-badge::before {
+  content: '✓';
+  position: absolute;
+  left: 0.4rem;
+  color: #4CAF50;
+  font-weight: 700;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.protocol-option-card:hover .protocol-advantage-badge {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.protocol-option-card:hover .protocol-advantages-list li::before {
+  transform: scale(1.15);
+}
+
+/* Acciones (botón a la derecha) */
+.protocol-option-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding-left: 0.5rem;
+}
+
+/* Botón de acción - Opción 3: Pill/Cápsula */
+.protocol-option-button {
+  min-width: 125px;
+  height: 32px;
+  font-size: 0.85rem;
+  padding: 0.5rem 1.5rem;
+  border-radius: 999px;
+  font-weight: 600;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  position: relative;
+  border: none !important;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  cursor: pointer;
+  box-shadow: 
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.protocol-option-button.primary {
+  background: #2196F3 !important;
+  color: #ffffff !important;
+}
+
+.protocol-option-button.primary:hover {
+  background: #42A5F5 !important;
+  transform: scale(1.05);
+  box-shadow: 
+    0 4px 12px rgba(33, 150, 243, 0.3),
+    0 2px 6px rgba(33, 150, 243, 0.2);
+}
+
+.protocol-option-button.secondary {
+  background: #4CAF50 !important;
+  color: #ffffff !important;
+}
+
+.protocol-option-button.secondary:hover {
+  background: #66BB6A !important;
+  transform: scale(1.05);
+  box-shadow: 
+    0 4px 12px rgba(76, 175, 80, 0.3),
+    0 2px 6px rgba(76, 175, 80, 0.2);
+}
+
+.protocol-option-button:active {
+  transform: scale(1.02);
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* Efectos específicos por protocolo - versión pill */
+.protocol-option-card[data-protocol="ssh"] .protocol-option-button.primary {
+  background: #2196F3 !important;
+}
+
+.protocol-option-card[data-protocol="ssh"] .protocol-option-button.primary:hover {
+  background: #42A5F5 !important;
+  box-shadow: 
+    0 4px 12px rgba(33, 150, 243, 0.35),
+    0 2px 6px rgba(33, 150, 243, 0.25);
+}
+
+.protocol-option-card[data-protocol="rdp"] .protocol-option-button.secondary {
+  background: #4CAF50 !important;
+}
+
+.protocol-option-card[data-protocol="rdp"] .protocol-option-button.secondary:hover {
+  background: #66BB6A !important;
+  box-shadow: 
+    0 4px 12px rgba(76, 175, 80, 0.35),
+    0 2px 6px rgba(76, 175, 80, 0.25);
+}
+
+.protocol-option-card[data-protocol="sftp"] .protocol-option-button.primary,
+.protocol-option-card[data-protocol="ftp"] .protocol-option-button.primary,
+.protocol-option-card[data-protocol="scp"] .protocol-option-button.primary {
+  background: #FF9800 !important;
+}
+
+.protocol-option-card[data-protocol="sftp"] .protocol-option-button.primary:hover,
+.protocol-option-card[data-protocol="ftp"] .protocol-option-button.primary:hover,
+.protocol-option-card[data-protocol="scp"] .protocol-option-button.primary:hover {
+  background: #FFB74D !important;
+  box-shadow: 
+    0 4px 12px rgba(255, 152, 0, 0.35),
+    0 2px 6px rgba(255, 152, 0, 0.25);
+}
+
+.protocol-option-card[data-protocol="password"] .protocol-option-button.primary {
+  background: #E91E63 !important;
+}
+
+.protocol-option-card[data-protocol="password"] .protocol-option-button.primary:hover {
+  background: #F06292 !important;
+  box-shadow: 
+    0 4px 12px rgba(233, 30, 99, 0.35),
+    0 2px 6px rgba(233, 30, 99, 0.25);
+}
+
+/* Hacer toda la card clickeable */
+.protocol-option-card {
+  cursor: pointer;
+}
+
+.protocol-option-card:active {
+  transform: translateY(0) scale(0.998);
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+  .protocol-selection-layout {
+    flex-direction: column;
+    height: auto;
+    max-height: 90vh;
+  }
+
+  .protocol-categories-panel {
+    width: 100%;
+    min-width: unset;
+    border-right: none;
+    border-bottom: 1px solid var(--ui-dialog-border) !important;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0.5rem;
+  }
+
+  .protocol-category-item {
+    padding: 0.75rem 1rem;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+  }
+
+  .protocol-category-item.active {
+    border-left: none;
+    border-bottom-color: #FF9800;
+  }
+
+  .protocol-options-panel {
+    padding: 1.25rem;
+  }
+
+  .protocol-option-card {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .protocol-option-icon {
+    align-self: flex-start;
+  }
+
+  .protocol-option-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .protocol-badges-container {
+    width: 100%;
+  }
+
+  .protocol-option-actions {
+    align-self: stretch;
+    padding-left: 0;
+    padding-top: 0.5rem;
+  }
+
+  .protocol-option-button {
+    width: 100%;
+  }
+}
+
+/* Estilos antiguos (mantener para compatibilidad) */
+.protocol-selection-dialog .p-dialog-header {
+  padding: 1.5rem 2rem !important;
+  background: var(--ui-dialog-bg) !important;
+  border-bottom: 1px solid var(--ui-dialog-border) !important;
+}
+
+.protocol-selection-dialog .p-dialog-content {
+  padding: 0 !important;
+  background: var(--ui-dialog-bg) !important;
+}
+
+.protocol-selection-container {
+  padding: 2.5rem;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  background: var(--ui-dialog-bg) !important;
+}
+
+/* Header personalizado del diálogo de protocolo */
+.protocol-dialog-header-custom {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.protocol-dialog-header-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%) !important;
+  border-radius: 12px;
+  color: white !important;
+  font-size: 1.4rem;
+  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+  animation: iconPulse 3s ease-in-out infinite;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.protocol-dialog-header-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  animation: iconShine 3s ease-in-out infinite;
+}
+
+.protocol-dialog-header-icon:hover {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 4px 16px rgba(255, 152, 0, 0.5);
+}
+
+.protocol-dialog-header-icon:hover::before {
+  opacity: 1;
+}
+
+.protocol-dialog-header-icon i {
+  font-size: 1.4rem;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  transition: transform 0.3s ease;
+}
+
+.protocol-dialog-header-icon:hover i {
+  transform: scale(1.1);
+}
+
+.protocol-dialog-header-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.protocol-dialog-header-title {
+  margin: 0;
+  color: var(--ui-dialog-text) !important;
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.protocol-dialog-header-description {
+  margin: 0;
+  color: var(--ui-dialog-text) !important;
+  opacity: 0.8;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+/* === ESTILOS PARA SECCIONES DE PROTOCOLOS === */
+.protocol-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.protocol-section-header {
+  padding-bottom: 1.25rem;
+  border-bottom: 2px solid var(--ui-dialog-border) !important;
+  position: relative;
+}
+
+.protocol-section-header::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--ui-button-primary) 0%, transparent 100%);
+  border-radius: 2px;
+}
+
+.protocol-section-title-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.protocol-section-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: white !important;
+  font-size: 1.15rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Icono azul para Acceso Remoto */
+.protocol-section-icon[data-section-color="#2196F3"] {
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+  animation: iconPulseBlue 3s ease-in-out infinite;
+}
+
+.protocol-section-icon[data-section-color="#2196F3"]:hover {
+  box-shadow: 0 4px 16px rgba(33, 150, 243, 0.5);
+}
+
+/* Icono morado para Transferencia de Archivos */
+.protocol-section-icon[data-section-color="#9C27B0"] {
+  box-shadow: 0 2px 8px rgba(156, 39, 176, 0.3);
+  animation: iconPulsePurple 3s ease-in-out infinite;
+}
+
+.protocol-section-icon[data-section-color="#9C27B0"]:hover {
+  box-shadow: 0 4px 16px rgba(156, 39, 176, 0.5);
+}
+
+.protocol-section-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  animation: iconShine 3s ease-in-out infinite;
+}
+
+.protocol-section-icon:hover {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.protocol-section-icon:hover::before {
+  opacity: 1;
+}
+
+.protocol-section-icon i {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  transition: transform 0.3s ease;
+}
+
+.protocol-section-icon:hover i {
+  transform: scale(1.1);
+}
+
+@keyframes iconPulseBlue {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(33, 150, 243, 0.5);
+  }
+}
+
+@keyframes iconPulsePurple {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(156, 39, 176, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(156, 39, 176, 0.5);
+  }
+}
+
+@keyframes iconPulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(255, 152, 0, 0.5);
+  }
+}
+
+@keyframes iconShine {
+  0%, 100% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translateX(100%);
+  }
+}
+
+@keyframes buttonPulse {
+  0%, 100% {
+    box-shadow: 
+      0 4px 12px rgba(0, 0, 0, 0.15),
+      0 2px 6px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 5px 14px rgba(0, 0, 0, 0.18),
+      0 3px 8px rgba(0, 0, 0, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  }
+}
+
+@keyframes buttonShimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.protocol-section-title {
+  margin: 0;
+  color: var(--ui-dialog-text) !important;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Grid de protocolos dentro de cada sección */
+.protocol-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.875rem;
+  align-items: stretch;
+}
+
+/* Asegurar que todas las cards tengan el mismo ancho mínimo y altura */
+.protocol-section-grid .protocol-card {
+  min-width: 260px;
+  height: 100%;
+}
+
+/* En pantallas medianas, ajustar el ancho mínimo */
+@media (max-width: 1200px) {
+  .protocol-section-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.875rem;
+  }
+  
+  .protocol-section-grid .protocol-card {
+    min-width: 240px;
+  }
+}
+
+/* En pantallas pequeñas, usar 1 columna */
+@media (max-width: 768px) {
+  .protocol-section-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .protocol-section-grid .protocol-card {
+    min-width: unset;
+  }
+}
+
+/* Efecto de brillo de fondo en las cards */
+.protocol-card-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  border-radius: 12px;
+}
+
+.protocol-card {
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.02) 100%) !important;
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  border: 1px solid var(--ui-dialog-border) !important;
+  border-radius: 12px;
+  padding: 0;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.protocol-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--protocol-color, var(--ui-button-primary));
+  opacity: 0;
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 12px 12px 0 0;
+}
+
+.protocol-card:hover {
+  transform: translateY(-2px) scale(1.005);
+  border-color: var(--protocol-color, var(--ui-button-primary)) !important;
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.protocol-card:hover::before {
+  opacity: 1;
+}
+
+.protocol-card:hover .protocol-card-glow {
+  opacity: 1;
+}
+
+.protocol-card-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  height: 100%;
+  flex: 1;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+}
+
+.protocol-card-icon-wrapper {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.protocol-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.12),
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.protocol-card-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.protocol-card:hover .protocol-card-icon {
+  transform: scale(1.08) rotate(3deg);
+  box-shadow: 
+    0 6px 18px rgba(0, 0, 0, 0.25),
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.protocol-card:hover .protocol-card-icon::before {
+  opacity: 1;
+}
+
+.protocol-card-icon i {
+  color: white;
+  font-size: 1.2rem;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  position: relative;
+  z-index: 1;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.protocol-card:hover .protocol-card-icon i {
+  transform: scale(1.08);
+}
+
+.protocol-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  justify-content: space-between;
+}
+
+.protocol-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.protocol-card-name {
+  margin: 0;
+  color: var(--ui-dialog-text) !important;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.protocol-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.protocol-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.protocol-card-badge i {
+  font-size: 0.7rem;
+}
+
+.protocol-card-badge-recommended {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  color: #1a1a1a !important;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.protocol-card-badge-warning {
+  background: linear-gradient(135deg, #FF6B6B 0%, #EE5A52 100%);
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.protocol-card:hover .protocol-card-badge {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.protocol-card-description {
+  margin: 0;
+  color: var(--ui-dialog-text) !important;
+  opacity: 0.7;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  font-weight: 400;
+}
+
+.protocol-card-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--ui-content-bg) !important;
+  border: 1px solid var(--ui-button-primary) !important;
+  color: var(--ui-button-primary) !important;
+  opacity: 0.5;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.protocol-card:hover .protocol-card-arrow {
+  opacity: 1;
+  transform: translateX(3px);
+  background: var(--ui-button-primary) !important;
+  color: var(--ui-button-primary-text) !important;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12);
+}
+
+.protocol-card-arrow i {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .protocol-section-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .protocol-selection-container {
+    padding: 1.75rem;
+    gap: 2rem;
+  }
+
+  .protocol-selection-header {
+    margin-bottom: 0;
+  }
+
+  .protocol-section-header {
+    padding-bottom: 1rem;
+  }
+
+  .protocol-section-title-group {
+    gap: 0.75rem;
+  }
+
+  .protocol-section-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+    border-radius: 10px;
+  }
+
+  .protocol-section-title {
+    font-size: 1.15rem;
+  }
+
+  .protocol-section-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .protocol-card-content {
+    padding: 0.75rem;
+    gap: 0.625rem;
+  }
+
+  .protocol-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+  }
+
+  .protocol-card-icon i {
+    font-size: 1.1rem;
+  }
+
+  .protocol-card-name {
+    font-size: 0.875rem;
+  }
+
+  .protocol-card-description {
+    font-size: 0.7rem;
+  }
+
+  .protocol-card-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.55rem;
+  }
+
+  .protocol-card-arrow {
+    width: 28px;
+    height: 28px;
+  }
+
+  .protocol-card-arrow i {
+    font-size: 1rem;
+  }
+}
+
+/* ========================================
+   ESTILOS PARA DIÁLOGO DE EDICIÓN RDP
+   (Aplicar mismos estilos que unified-connection-dialog)
+   ======================================== */
+
+/* Estilos del diálogo de edición RDP - Opciones avanzadas */
+.edit-rdp-connection-dialog .advanced-fieldset.p-fieldset,
+.edit-rdp-connection-dialog .p-fieldset.advanced-fieldset {
+  border: none !important;
+  background: transparent !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-legend,
+.edit-rdp-connection-dialog .p-fieldset.advanced-fieldset .p-fieldset-legend {
+  background: transparent !important;
+  color: var(--ui-dialog-text, var(--text-color)) !important;
+  padding: 0 !important;
+  margin: 0 0 6px 0 !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  gap: 16px !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-legend-text {
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  order: 1;
+  flex: 1;
+  padding-left: 8px !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-toggler {
+  color: var(--primary-color) !important;
+  margin-left: 16px !important;
+  order: 2;
+  flex-shrink: 0;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content {
+  padding: 0 !important;
+}
+
+.edit-rdp-connection-dialog .p-fieldset {
+  border: none !important;
+  background: transparent !important;
+  padding: 0;
+  margin: 0;
+}
+
+.edit-rdp-connection-dialog .p-fieldset .p-fieldset-legend {
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+.edit-rdp-connection-dialog .p-fieldset .p-fieldset-legend a,
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-legend a {
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  color: var(--text-color) !important;
+  background: transparent !important;
+  border: none !important;
+  text-decoration: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+}
+
+.edit-rdp-connection-dialog .p-fieldset .p-fieldset-legend a:hover {
+  background: transparent !important;
+  color: var(--text-color) !important;
+}
+
+.edit-rdp-connection-dialog .p-fieldset:not(.p-fieldset-collapsed) .p-fieldset-legend {
+  margin-bottom: 1rem !important;
+}
+
+.edit-rdp-connection-dialog .p-fieldset .p-fieldset-content {
+  padding: 0;
+}
+
+.edit-rdp-connection-dialog .p-fieldset h5 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--text-color-secondary);
+  padding-bottom: 0.2rem;
+  margin-bottom: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+/* Opciones avanzadas compactas */
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content {
+  margin: 0 8px !important;
+  padding: 0 !important;
+  pointer-events: auto !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 4px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div {
+    grid-template-columns: 1fr !important;
+    gap: 2px !important;
+  }
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div > div {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: unset !important;
+  flex: unset !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div > div > div {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content * {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .p-element,
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .p-component,
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content div {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset h4,
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content h4,
+.edit-rdp-connection-dialog .p-fieldset-content > div > div h4 {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  margin: 4px 0 2px 0 !important;
+  padding: 0 !important;
+  color: var(--text-color-secondary) !important;
+  border-bottom: none !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+  background: transparent !important;
+  height: auto !important;
+  line-height: 1.2 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content div[style*="flexDirection"] {
+  gap: 0px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox:first-child,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox:not(:first-child) {
+  margin: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox,
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .field-checkbox,
+.edit-rdp-connection-dialog .p-fieldset-content > div > div .field-checkbox {
+  margin: 0 !important;
+  padding: 4px 12px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  border-radius: 4px;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox {
+  margin: 0 !important;
+  order: 1;
+  display: flex !important;
+  align-items: center !important;
+  flex-shrink: 0;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox label {
+  margin: 0 !important;
+  white-space: nowrap;
+  order: 2;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  line-height: 1.3;
+  margin-left: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box {
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 4px !important;
+  border: 1.5px solid var(--surface-border) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-right: 0 !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .p-checkbox-icon {
+  font-size: 8px !important;
+}
+
+/* Asegurar que los checkboxes dentro del Fieldset sean clickeables */
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox label {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* Asegurar que cuando el checkbox NO está marcado, no tenga clases de estado marcado */
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box {
+  background: transparent !important;
+  border-color: var(--surface-border) !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box .p-checkbox-icon,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box .p-checkbox-icon {
+  display: none !important;
+}
+
+/* Remover clases de estado marcado cuando no está marcado */
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box.p-highlight,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box.p-highlight,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box.p-checkbox-checked,
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box.p-checkbox-checked {
+  background: transparent !important;
+  border-color: var(--surface-border) !important;
+}
+
+.edit-rdp-connection-dialog .advanced-fieldset .field-checkbox label,
+.edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .field-checkbox label,
+.edit-rdp-connection-dialog .p-fieldset-content > div > div .field-checkbox label {
+  font-size: 0.85rem !important;
+  line-height: 1.3 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: var(--text-color) !important;
+  background: transparent !important;
+  font-weight: 400 !important;
+}
+
+.edit-rdp-connection-dialog .field-checkbox {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.3rem;
+}
+
+.edit-rdp-connection-dialog .field-checkbox label {
+  margin-left: 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* Asegurar que los checkboxes normales también limpien el estado visual cuando están desmarcados */
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box,
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box {
+  background: transparent !important;
+  border-color: var(--surface-border) !important;
+}
+
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box .p-checkbox-icon,
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box .p-checkbox-icon {
+  display: none !important;
+}
+
+/* Remover clases de estado marcado cuando no está marcado */
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box.p-highlight,
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box.p-highlight,
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box.p-checkbox-checked,
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box.p-checkbox-checked {
+  background: transparent !important;
+  border-color: var(--surface-border) !important;
+}
+
+/* Asegurar pointer-events en checkboxes normales */
+.edit-rdp-connection-dialog .field-checkbox,
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox,
+.edit-rdp-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box,
+.edit-rdp-connection-dialog .field-checkbox label {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* Estilos del diálogo de nueva conexión RDP - Opciones avanzadas */
+.new-rdp-connection-dialog .advanced-fieldset.p-fieldset,
+.new-rdp-connection-dialog .p-fieldset.advanced-fieldset {
+  border: none !important;
+  background: transparent !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-legend,
+.new-rdp-connection-dialog .p-fieldset.advanced-fieldset .p-fieldset-legend {
+  background: transparent !important;
+  color: var(--ui-dialog-text, var(--text-color)) !important;
+  padding: 0 !important;
+  margin: 0 0 6px 0 !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  gap: 16px !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-legend-text {
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  order: 1;
+  flex: 1;
+  padding-left: 8px !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-toggler {
+  color: var(--primary-color) !important;
+  margin-left: 16px !important;
+  order: 2;
+  flex-shrink: 0;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content {
+  padding: 0 !important;
+}
+
+.new-rdp-connection-dialog .p-fieldset {
+  border: none !important;
+  background: transparent !important;
+  padding: 0;
+  margin: 0;
+}
+
+.new-rdp-connection-dialog .p-fieldset .p-fieldset-legend {
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+.new-rdp-connection-dialog .p-fieldset .p-fieldset-legend a,
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-legend a {
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  color: var(--text-color) !important;
+  background: transparent !important;
+  border: none !important;
+  text-decoration: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+}
+
+.new-rdp-connection-dialog .p-fieldset .p-fieldset-legend a:hover {
+  background: transparent !important;
+  color: var(--text-color) !important;
+}
+
+.new-rdp-connection-dialog .p-fieldset:not(.p-fieldset-collapsed) .p-fieldset-legend {
+  margin-bottom: 1rem !important;
+}
+
+.new-rdp-connection-dialog .p-fieldset .p-fieldset-content {
+  padding: 0;
+}
+
+.new-rdp-connection-dialog .p-fieldset h5 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--text-color-secondary);
+  padding-bottom: 0.2rem;
+  margin-bottom: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+/* Opciones avanzadas compactas */
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content {
+  margin: 0 8px !important;
+  padding: 0 !important;
+  pointer-events: auto !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 4px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div {
+    grid-template-columns: 1fr !important;
+    gap: 2px !important;
+  }
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div > div {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: unset !important;
+  flex: unset !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content > div > div > div {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content * {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .p-element,
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .p-component,
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content div {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset h4,
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content h4,
+.new-rdp-connection-dialog .p-fieldset-content > div > div h4 {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  margin: 4px 0 2px 0 !important;
+  padding: 0 !important;
+  color: var(--text-color-secondary) !important;
+  border-bottom: none !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+  background: transparent !important;
+  height: auto !important;
+  line-height: 1.2 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content div[style*="flexDirection"] {
+  gap: 0px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox:first-child,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox:not(:first-child) {
+  margin: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox,
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .field-checkbox,
+.new-rdp-connection-dialog .p-fieldset-content > div > div .field-checkbox {
+  margin: 0 !important;
+  padding: 4px 12px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  border-radius: 4px;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox {
+  margin: 0 !important;
+  order: 1;
+  display: flex !important;
+  align-items: center !important;
+  flex-shrink: 0;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox label {
+  margin: 0 !important;
+  white-space: nowrap;
+  order: 2;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  line-height: 1.3;
+  margin-left: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box {
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 4px !important;
+  border: 1.5px solid var(--surface-border) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-right: 0 !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .p-checkbox-icon {
+  font-size: 8px !important;
+}
+
+/* Asegurar que los checkboxes dentro del Fieldset sean clickeables */
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox label {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* Asegurar que cuando el checkbox NO está marcado, no tenga clases de estado marcado */
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box {
+  background: transparent !important;
+  border-color: var(--surface-border) !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box .p-checkbox-icon,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box .p-checkbox-icon {
+  display: none !important;
+}
+
+/* Remover clases de estado marcado cuando no está marcado */
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box.p-highlight,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box.p-highlight,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box.p-checkbox-checked,
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box.p-checkbox-checked {
+  background: transparent !important;
+  border-color: var(--surface-border) !important;
+}
+
+.new-rdp-connection-dialog .advanced-fieldset .field-checkbox label,
+.new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content .field-checkbox label,
+.new-rdp-connection-dialog .p-fieldset-content > div > div .field-checkbox label {
+  font-size: 0.85rem !important;
+  line-height: 1.3 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: var(--text-color) !important;
+  background: transparent !important;
+  font-weight: 400 !important;
+}
+
+.new-rdp-connection-dialog .field-checkbox {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.3rem;
+}
+
+.new-rdp-connection-dialog .field-checkbox label {
+  margin-left: 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* Asegurar que los checkboxes normales también limpien el estado visual cuando están desmarcados */
+.new-rdp-connection-dialog .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box,
+.new-rdp-connection-dialog .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box {
+  background: transparent !important;
+  border-color: var(--surface-border) !important;
+}
+
+.new-rdp-connection-dialog .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box .p-checkbox-icon,
+.new-rdp-connection-dialog .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box .p-checkbox-icon {
+  display: none !important;
+}
+
+/* Remover clases de estado marcado cuando no está marcado */
+.new-rdp-connection-dialog .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box.p-highlight,
+.new-rdp-connection-dialog .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box.p-highlight,
+.new-rdp-connection-dialog .field-checkbox .p-checkbox:not(.p-checkbox-checked) .p-checkbox-box.p-checkbox-checked,
+.new-rdp-connection-dialog .field-checkbox .p-checkbox[aria-checked="false"] .p-checkbox-box.p-checkbox-checked {
+  background: transparent !important;
+  border-color: var(--surface-border) !important;
+}
+
+/* Asegurar pointer-events en checkboxes normales */
+.new-rdp-connection-dialog .field-checkbox,
+.new-rdp-connection-dialog .field-checkbox .p-checkbox,
+.new-rdp-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box,
+.new-rdp-connection-dialog .field-checkbox label {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* ========================================
+   ESTILOS PARA DIÁLOGO SSH CON CARDS ESTILO PROTOCOLO
+   ======================================== */
+
+/* ========================================
+   ESTILOS PARA DIÁLOGO SSH CON CARDS ESTILO GENERAL SETTINGS
+   ======================================== */
+
+/* Header del diálogo SSH igual que ProtocolSelectionDialog */
+.new-ssh-connection-dialog.p-dialog-header,
+.new-ssh-connection-dialog .p-dialog-header {
+  padding: 0 !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-bottom: 1px solid var(--ui-dialog-border) !important;
+}
+
+/* Asegurar que las cards del formulario SSH no sean clickeables */
+.new-ssh-connection-dialog .general-setting-card {
+  cursor: default !important;
+}
+
+.new-ssh-connection-dialog .general-setting-card:hover {
+  background: transparent !important;
+  transform: none !important;
+}
+
+/* Ajustar el control para inputs en las cards */
+.new-ssh-connection-dialog .general-setting-control {
+  min-width: 280px;
+  max-width: 400px;
+  flex: 1 1 auto;
+}
+
+/* Alinear arriba los controles que contienen inputs (no checkboxes) */
+.new-ssh-connection-dialog .general-setting-control.general-setting-control-inputs {
+  align-self: flex-start !important;
+  align-items: flex-start !important;
+}
+
+/* Reducir un poco el ancho del área de información para dar más espacio a los inputs */
+.new-ssh-connection-dialog .general-setting-info {
+  max-width: 200px;
+  flex: 0 1 auto;
+}
+
+.new-ssh-connection-dialog .general-setting-control input,
+.new-ssh-connection-dialog .general-setting-control .p-inputgroup {
+  width: 100%;
+}
+
+/* Grid para Host y Puerto */
+.new-ssh-connection-dialog .general-setting-control[style*="grid"] {
+  min-width: auto;
+  max-width: none;
+  width: 100%;
+}
+
+/* Permitir que el control de clave SSH se expanda completamente */
+.new-ssh-connection-dialog .general-setting-control.general-setting-control-ssh-key {
+  max-width: none !important;
+  width: 100% !important;
+  min-width: 300px !important;
+  align-self: stretch !important;
+  flex-shrink: 1 !important;
+  flex-grow: 1 !important;
+  flex-basis: auto !important;
+}
+
+/* Cuando el card contiene clave SSH, ajustar el layout del contenedor */
+.new-ssh-connection-dialog .general-setting-card-ssh-key .general-setting-content {
+  align-items: stretch !important;
+}
+
+/* Reducir el espacio del info cuando hay control de clave SSH para dar más espacio */
+.new-ssh-connection-dialog .general-setting-card-ssh-key .general-setting-info {
+  flex: 0 1 auto !important;
+  max-width: 200px !important;
+  min-width: 150px !important;
+}
+
+/* Permitir que el control de clave SSH crezca */
+.new-ssh-connection-dialog .general-setting-card-ssh-key .general-setting-control-ssh-key {
+  flex: 1 1 auto !important;
+}
+
+/* Asegurar que el FileUpload y Textarea de clave SSH ocupen todo el ancho disponible */
+.new-ssh-connection-dialog .general-setting-control-ssh-key .p-fileupload,
+.new-ssh-connection-dialog .general-setting-control-ssh-key textarea[id="sshPrivateKey"] {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* ========================================
+   ESTILOS PARA DIÁLOGO DE EDICIÓN SSH
+   ======================================== */
+
+/* Ajustar el control para inputs en el diálogo de edición */
+.edit-ssh-connection-dialog .general-setting-control.general-setting-control-inputs {
+  max-width: 280px !important;
+  align-self: flex-start !important;
+  align-items: flex-start !important;
+}
+
+/* Limitar el ancho del input del Host */
+.edit-ssh-connection-dialog .general-setting-control-inputs input[id="sshHost"] {
+  max-width: 200px !important;
+  min-width: 120px !important;
+  flex: 1 1 auto !important;
+}
+
+/* Limitar el ancho del input del Puerto */
+.edit-ssh-connection-dialog .general-setting-control-inputs input[id="sshPort"] {
+  width: 70px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Asegurar que el contenedor no use width: 100% en inputs */
+.edit-ssh-connection-dialog .general-setting-control-inputs input {
+  width: auto !important;
+}
+
+/* Permitir que el control de clave SSH se expanda completamente - Mayor especificidad */
+.edit-ssh-connection-dialog .general-setting-control.general-setting-control-ssh-key {
+  max-width: none !important;
+  width: 100% !important;
+  min-width: 300px !important;
+  align-self: stretch !important;
+  flex-shrink: 1 !important;
+  flex-grow: 1 !important;
+  flex-basis: auto !important;
+}
+
+/* Cuando el card contiene clave SSH, ajustar el layout del contenedor */
+.edit-ssh-connection-dialog .general-setting-card-ssh-key .general-setting-content {
+  align-items: stretch !important;
+}
+
+/* Reducir el espacio del info cuando hay control de clave SSH para dar más espacio */
+.edit-ssh-connection-dialog .general-setting-card-ssh-key .general-setting-info {
+  flex: 0 1 auto !important;
+  max-width: 200px !important;
+  min-width: 150px !important;
+}
+
+/* Permitir que el control de clave SSH crezca */
+.edit-ssh-connection-dialog .general-setting-card-ssh-key .general-setting-control-ssh-key {
+  flex: 1 1 auto !important;
+}
+
+/* Asegurar que el FileUpload y Textarea de clave SSH ocupen todo el ancho disponible */
+.edit-ssh-connection-dialog .general-setting-control-ssh-key .p-fileupload,
+.edit-ssh-connection-dialog .general-setting-control-ssh-key textarea[id="sshPrivateKey"] {
+  width: 100% !important;
+  max-width: 100% !important;
 }

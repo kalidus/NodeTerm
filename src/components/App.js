@@ -5,6 +5,8 @@ import { useSidebarManagement } from '../hooks/useSidebarManagement';
 import { useThemeManagement } from '../hooks/useThemeManagement';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import { loadSavedTabTheme } from '../utils/tabThemeLoader';
+import i18n from '../i18n';
+import ErrorBoundary from './ErrorBoundary';
 
 import { useStatusBarSettings } from '../hooks/useStatusBarSettings';
 import { useSessionManagement } from '../hooks/useSessionManagement';
@@ -121,15 +123,40 @@ const App = () => {
             themeManager.applyTheme('Nord');
             statusBarThemeManager.applyTheme('Night Owl');
           }
+          
+          // 5. Ocultar boot-splash cuando el tema esté completamente aplicado
+          // Esperar un frame adicional para asegurar que todo está renderizado
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const splash = document.getElementById('boot-splash');
+              if (splash) {
+                splash.classList.add('hidden');
+              }
+            });
+          });
         }, 200);
         
       } catch (error) {
         console.error('[THEME] Error inicializando temas:', error);
+        // En caso de error, ocultar splash después de un tiempo razonable
+        setTimeout(() => {
+          const splash = document.getElementById('boot-splash');
+          if (splash) {
+            splash.classList.add('hidden');
+          }
+        }, 1000);
       }
     };
     
     // Ejecutar inicialización
     initializeAllThemes();
+  }, []);
+
+  // Inicializar sistema de internacionalización (i18n)
+  useEffect(() => {
+    i18n.init().catch(err => {
+      console.error('[App] Error inicializando i18n:', err);
+    });
   }, []);
 
   // Detectar si necesita unlock al iniciar (o auto-unlock si está recordado)
@@ -781,6 +808,8 @@ const App = () => {
   const {
     onOpenSSHConnection,
     onOpenRdpConnection,
+    onOpenVncConnection,
+    onOpenFileConnection,
     openFileExplorer
   } = useConnectionManagement({
     activeGroupId, setActiveGroupId, activeTabIndex, setActiveTabIndex,
@@ -799,9 +828,79 @@ const App = () => {
     folderIconSize, setFolderIconSize, connectionIconSize, setConnectionIconSize,
     explorerFont, setExplorerFont,
     explorerFontSize, setExplorerFontSize, explorerColorTheme, setExplorerColorTheme,
-    sidebarFont, setSidebarFont, sidebarFontSize, setSidebarFontSize,
+    sidebarFont, setSidebarFont, sidebarFontSize, setSidebarFontSize, sidebarFontColor, setSidebarFontColor,
+    treeTheme, setTreeTheme,
+    sessionActionIconTheme, setSessionActionIconTheme,
     updateThemesFromSync
   } = useThemeManagement();
+
+  // Docker terminal theme state
+  const [localDockerTerminalTheme, setLocalDockerTerminalTheme] = useState(() => {
+    try {
+      return localStorage.getItem('localDockerTerminalTheme') || 'Default Dark';
+    } catch {
+      return 'Default Dark';
+    }
+  });
+
+  // Docker terminal font family state
+  const [dockerFontFamily, setDockerFontFamily] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nodeterm_docker_font_family');
+      if (saved) return saved;
+      // Fallback to localFontFamily if available, otherwise default
+      return localFontFamily || 'Consolas';
+    } catch {
+      return 'Consolas';
+    }
+  });
+
+  // Docker terminal font size state
+  const [dockerFontSize, setDockerFontSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nodeterm_docker_font_size');
+      if (saved) return parseInt(saved, 10);
+      // Fallback to localFontSize if available, otherwise default
+      return localFontSize || 14;
+    } catch {
+      return 14;
+    }
+  });
+
+  // Listen for Docker settings changes
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'localDockerTerminalTheme') {
+        setLocalDockerTerminalTheme(e.newValue || 'Default Dark');
+      } else if (e.key === 'nodeterm_docker_font_family') {
+        const newValue = e.newValue || localStorage.getItem('nodeterm_docker_font_family') || localFontFamily || 'Consolas';
+        setDockerFontFamily(newValue);
+      } else if (e.key === 'nodeterm_docker_font_size') {
+        const saved = e.newValue || localStorage.getItem('nodeterm_docker_font_size');
+        const newValue = saved ? parseInt(saved, 10) : (localFontSize || 14);
+        setDockerFontSize(newValue);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    // Also listen for custom events (for same-window updates)
+    const handleCustomStorageChange = (e) => {
+      if (e.detail?.key === 'localDockerTerminalTheme') {
+        setLocalDockerTerminalTheme(e.detail.value || 'Default Dark');
+      } else if (e.detail?.key === 'nodeterm_docker_font_family') {
+        const newValue = e.detail.value || localStorage.getItem('nodeterm_docker_font_family') || localFontFamily || 'Consolas';
+        setDockerFontFamily(newValue);
+      } else if (e.detail?.key === 'nodeterm_docker_font_size') {
+        const saved = e.detail.value || localStorage.getItem('nodeterm_docker_font_size');
+        const newValue = saved ? parseInt(saved, 10) : (localFontSize || 14);
+        setDockerFontSize(newValue);
+      }
+    };
+    window.addEventListener('localStorageChange', handleCustomStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('localStorageChange', handleCustomStorageChange);
+    };
+  }, [localFontFamily, localFontSize]);
 
   // Usar el hook de drag & drop
   const {
@@ -892,7 +991,7 @@ const App = () => {
   } = useSidebarManagement(toast, {
     activeGroupId, setActiveGroupId, activeTabIndex, setActiveTabIndex,
     setGroupActiveIndices, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey,
-    getFilteredTabs, openFileExplorer, openInSplit, onOpenRdpConnection,
+    getFilteredTabs, openFileExplorer, openInSplit, onOpenRdpConnection, onOpenVncConnection,
     homeTabs, fileExplorerTabs, sshTabs
   });
 
@@ -952,6 +1051,9 @@ const App = () => {
     showSyncDialog, setShowSyncDialog,
   
     showUnifiedConnectionDialog, setShowUnifiedConnectionDialog,
+    showFileConnectionDialog, setShowFileConnectionDialog,
+    showProtocolSelectionDialog, setShowProtocolSelectionDialog,
+    showNetworkToolsDialog, setShowNetworkToolsDialog,
     // Estados de formularios SSH
     sshName, setSSHName,
     sshHost, setSSHHost,
@@ -961,6 +1063,7 @@ const App = () => {
     sshPort, setSSHPort,
     sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
+    sshDescription, setSSHDescription,
     // Estados de formularios Edit SSH
     editSSHNode, setEditSSHNode,
     editSSHName, setEditSSHName,
@@ -970,6 +1073,7 @@ const App = () => {
     editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
+    editSSHDescription, setEditSSHDescription,
     // Estados de formularios RDP
     rdpName, setRdpName,
     rdpServer, setRdpServer,
@@ -981,11 +1085,27 @@ const App = () => {
     rdpTargetFolder, setRdpTargetFolder,
     rdpNodeData, setRdpNodeData,
     editingRdpNode, setEditingRdpNode,
+    vncNodeData, setVncNodeData,
+    editingVncNode, setEditingVncNode,
+    // Estados de formularios Archivos (SFTP/FTP/SCP)
+    fileConnectionName, setFileConnectionName,
+    fileConnectionHost, setFileConnectionHost,
+    fileConnectionUser, setFileConnectionUser,
+    fileConnectionPassword, setFileConnectionPassword,
+    fileConnectionPort, setFileConnectionPort,
+    fileConnectionProtocol, setFileConnectionProtocol,
+    fileConnectionRemoteFolder, setFileConnectionRemoteFolder,
+    fileConnectionTargetFolder, setFileConnectionTargetFolder,
+    editingFileConnectionNode, setEditingFileConnectionNode,
     // Estados de formularios Folder
     folderName, setFolderName,
+    folderColor, setFolderColor,
+    folderIcon, setFolderIcon,
     parentNodeKey, setParentNodeKey,
     editFolderNode, setEditFolderNode,
     editFolderName, setEditFolderName,
+    editFolderColor, setEditFolderColor,
+    editFolderIcon, setEditFolderIcon,
     // Funciones de utilidad
     resetSSHForm, resetRDPForm, resetFolderForm,
     resetEditSSHForm, resetEditFolderForm,
@@ -1077,9 +1197,15 @@ const App = () => {
     saveEditFolder,
     openEditSSHDialog,
     openNewRdpDialog,
+    openNewVncDialog,
     closeRdpDialog,
     openEditRdpDialog,
+    openEditVncDialog,
     handleSaveRdpToSidebar,
+    handleSaveVncToSidebar,
+    handleSaveFileConnectionToSidebar,
+    openEditFileConnectionDialog,
+    openNewUnifiedConnectionDialog,
     createNewPasswordEntry
   } = useFormHandlers({
     toast,
@@ -1088,11 +1214,14 @@ const App = () => {
     setShowEditFolderDialog,
 
     setShowUnifiedConnectionDialog,
+    setShowFileConnectionDialog,
+    setShowProtocolSelectionDialog,
     // Estados SSH para creación
     sshName, setSSHName, sshHost, setSSHHost, sshUser, setSSHUser, 
     sshPassword, setSSHPassword, sshRemoteFolder, setSSHRemoteFolder, 
     sshPort, setSSHPort, sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
+    sshDescription,
     closeSSHDialogWithReset,
     // Estados SSH para edición
     editSSHNode, setEditSSHNode,
@@ -1103,6 +1232,7 @@ const App = () => {
     editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
+    editSSHDescription, setEditSSHDescription,
     closeEditSSHDialogWithReset,
     // Estados RDP
     rdpName, setRdpName,
@@ -1114,6 +1244,18 @@ const App = () => {
     rdpTargetFolder, setRdpTargetFolder,
     rdpNodeData, setRdpNodeData,
     editingRdpNode, setEditingRdpNode,
+    vncNodeData, setVncNodeData,
+    editingVncNode, setEditingVncNode,
+    // Estados Archivos (SFTP/FTP/SCP)
+    fileConnectionName, setFileConnectionName,
+    fileConnectionHost, setFileConnectionHost,
+    fileConnectionUser, setFileConnectionUser,
+    fileConnectionPassword, setFileConnectionPassword,
+    fileConnectionPort, setFileConnectionPort,
+    fileConnectionProtocol, setFileConnectionProtocol,
+    fileConnectionRemoteFolder, setFileConnectionRemoteFolder,
+    fileConnectionTargetFolder, setFileConnectionTargetFolder,
+    editingFileConnectionNode, setEditingFileConnectionNode,
     // Estados Folder
     folderName, parentNodeKey,
     editFolderNode, setEditFolderNode,
@@ -1142,11 +1284,15 @@ const App = () => {
     setOnCreateActivateTabKey,
     homeTabs,
     onOpenRdpConnection,
+    onOpenVncConnection,
     iconThemes,
     iconThemeSidebar,
     sidebarFont,
+    folderIconSize,
     setEditFolderNode,
     setEditFolderName,
+    setEditFolderColor,
+    setEditFolderIcon,
     setShowEditFolderDialog,
     onNodeContextMenu,
     onTreeAreaContextMenu
@@ -1431,39 +1577,72 @@ const App = () => {
     return () => window.removeEventListener('open-password-tab-in-dialog', handler);
   }, []);
 
-  // Crear y activar pestaña de info de password desde doble clic
+  // Crear y activar pestaña de info de secreto (password, crypto_wallet, api_key, secure_note)
   useEffect(() => {
     const handler = (e) => {
       const info = e.detail || {};
       const tabId = `${info.key}_${Date.now()}`;
+      const secretType = info.type || info.data?.type || 'password';
+      
+      // Construir passwordData con todos los campos según el tipo
       const passwordData = {
-        title: info.label,
-        username: info.data?.username || '',
-        password: info.data?.password || '',
-        url: info.data?.url || '',
-        group: info.data?.group || '',
-        notes: info.data?.notes || ''
+        id: info.key,
+        title: info.label || info.title,
+        type: secretType,
+        // Campos comunes
+        notes: info.notes || info.data?.notes || '',
+        // Campos para password
+        username: info.username || info.data?.username || '',
+        password: info.password || info.data?.password || '',
+        url: info.url || info.data?.url || '',
+        group: info.group || info.data?.group || '',
+        // Campos para crypto_wallet
+        network: info.network || info.data?.network || '',
+        address: info.address || info.data?.address || '',
+        seedPhrase: info.seedPhrase || info.data?.seedPhrase || '',
+        seedWordsCount: info.seedWordsCount || info.data?.seedWordsCount || 24,
+        privateKey: info.privateKey || info.data?.privateKey || '',
+        passphrase: info.passphrase || info.data?.passphrase || '',
+        // Campos para api_key
+        apiKey: info.apiKey || info.data?.apiKey || '',
+        apiSecret: info.apiSecret || info.data?.apiSecret || '',
+        endpoint: info.endpoint || info.data?.endpoint || '',
+        serviceName: info.serviceName || info.data?.serviceName || '',
+        // Campos para secure_note
+        noteContent: info.noteContent || info.data?.noteContent || ''
       };
       
-      // Registrar como password reciente cuando se abre la pestaña
-      try {
-        recordRecentPassword({
-          id: info.key,
-          name: info.label,
-          username: info.data?.username || '',
-          password: info.data?.password || '',
-          url: info.data?.url || '',
-          group: info.data?.group || '',
-          notes: info.data?.notes || '',
-          type: info.data?.type || 'web',
-          icon: info.data?.icon || 'pi-globe'
-        }, 5);
-      } catch (e) {
-        console.warn('Error registrando password reciente:', e);
+      // Registrar como password reciente solo si es tipo password
+      if (secretType === 'password') {
+        try {
+          recordRecentPassword({
+            id: info.key,
+            name: info.label,
+            username: passwordData.username,
+            password: passwordData.password,
+            url: passwordData.url,
+            group: passwordData.group,
+            notes: passwordData.notes,
+            type: secretType,
+            icon: info.data?.icon || 'pi-globe'
+          }, 5);
+        } catch (e) {
+          console.warn('Error registrando password reciente:', e);
+        }
       }
       
+      // Determinar icono según tipo para la etiqueta de la pestaña
+      const getTabIcon = () => {
+        switch (secretType) {
+          case 'crypto_wallet': return '💰';
+          case 'api_key': return '🔑';
+          case 'secure_note': return '📝';
+          default: return '🔐';
+        }
+      };
+      
       // Usar TAB_TYPES.PASSWORD para que coincida con el renderer
-      const newTab = { key: tabId, label: `🔑 ${info.label}`, type: TAB_TYPES.PASSWORD, passwordData, createdAt: Date.now() };
+      const newTab = { key: tabId, label: `${getTabIcon()} ${info.label}`, type: TAB_TYPES.PASSWORD, passwordData, createdAt: Date.now() };
       setSshTabs(prev => [newTab, ...prev]);
       // Activar la nueva pestaña usando la misma lógica que otras pestañas
       setTimeout(() => {
@@ -1616,8 +1795,12 @@ const App = () => {
       sidebarCallbacksRef.current = {};
     }
     
-    sidebarCallbacksRef.current.createRDP = (targetFolder = null) => {
-      openNewRdpDialog(targetFolder);
+    sidebarCallbacksRef.current.showProtocolSelection = () => {
+      setShowProtocolSelectionDialog(true);
+    };
+    
+    sidebarCallbacksRef.current.createSSH = (targetFolder = null) => {
+      window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
     };
     sidebarCallbacksRef.current.editRDP = (node) => {
       openEditRdpDialog(node);
@@ -1625,13 +1808,82 @@ const App = () => {
     sidebarCallbacksRef.current.connectRDP = (node) => {
       onOpenRdpConnection(node);
     };
+    sidebarCallbacksRef.current.editVNC = (node) => {
+      openEditVncDialog(node);
+    };
+    sidebarCallbacksRef.current.connectVNC = (node) => {
+      onOpenVncConnection(node);
+    };
+    sidebarCallbacksRef.current.openFileConnection = (node, nodes) => {
+      onOpenFileConnection(node, nodes);
+    };
+    sidebarCallbacksRef.current.editFileConnection = (node) => {
+      openEditFileConnectionDialog(node);
+    };
     sidebarCallbacksRef.current.deleteNode = (nodeKey, nodeLabel) => {
       // Detectar si la carpeta tiene hijos
       const nodeInfo = findParentNodeAndIndex(nodes, nodeKey);
       const hasChildren = !!(nodeInfo.node && Array.isArray(nodeInfo.node.children) && nodeInfo.node.children.length);
       confirmDeleteNode(nodeKey, nodeLabel, hasChildren, nodes, setNodes);
     };
-  }, [sidebarCallbacksRef.current]);
+  }, [sidebarCallbacksRef.current, openEditFileConnectionDialog]);
+  
+  // Listener para evento personalizado de guardar conexión de archivos (fallback)
+  useEffect(() => {
+    const handleSaveFileConnection = (event) => {
+      const fileData = event.detail;
+      if (fileData && handleSaveFileConnectionToSidebar) {
+        console.log('App - Recibido evento save-file-connection, guardando:', fileData);
+        handleSaveFileConnectionToSidebar(fileData, false, null);
+      }
+    };
+
+    window.addEventListener('save-file-connection', handleSaveFileConnection);
+    return () => {
+      window.removeEventListener('save-file-connection', handleSaveFileConnection);
+    };
+  }, [handleSaveFileConnectionToSidebar]);
+
+  // Listener para abrir diálogo unificado de nueva conexión
+  useEffect(() => {
+    const handleOpenNewUnifiedConnectionDialog = (e) => {
+      const activeTab = e?.detail?.activeTab;
+      const initialCategory = e?.detail?.initialCategory;
+      
+      // Si hay initialCategory, dejar que DialogsManager lo maneje
+      if (initialCategory) {
+        return;
+      }
+      
+      if (activeTab === 'password') {
+        // Abrir diálogo unificado directamente en pestaña Password
+        if (setShowUnifiedConnectionDialog) {
+          setShowUnifiedConnectionDialog(true);
+          // Guardar en window para que el diálogo sepa qué pestaña abrir
+          window.__unifiedDialogActiveTab = 'password';
+        }
+      } else if (openNewUnifiedConnectionDialog) {
+        openNewUnifiedConnectionDialog();
+      }
+    };
+
+    window.addEventListener('open-new-unified-connection-dialog', handleOpenNewUnifiedConnectionDialog);
+    return () => {
+      window.removeEventListener('open-new-unified-connection-dialog', handleOpenNewUnifiedConnectionDialog);
+    };
+  }, [openNewUnifiedConnectionDialog, setShowUnifiedConnectionDialog]);
+
+  // Event listener para abrir el diálogo de herramientas de red
+  useEffect(() => {
+    const handleOpenNetworkTools = () => {
+      setShowNetworkToolsDialog(true);
+    };
+
+    window.addEventListener('open-network-tools-dialog', handleOpenNetworkTools);
+    return () => {
+      window.removeEventListener('open-network-tools-dialog', handleOpenNetworkTools);
+    };
+  }, [setShowNetworkToolsDialog]);
 
   // Desactivar reactivación automática al cambiar rdpTabs si hay activación forzada u orden explícito
   useEffect(() => {
@@ -1753,6 +2005,81 @@ const App = () => {
     };
   }, []);
 
+  // Listener global para Ctrl + rueda del ratón para cambiar tamaño de fuente de terminales
+  useEffect(() => {
+    const handleWheel = (e) => {
+      // Solo procesar si Ctrl está presionado
+      if (!e.ctrlKey) return;
+
+      // Detectar si el cursor está sobre una terminal
+      // xterm.js crea elementos con clase 'xterm' y también puede estar dentro de contenedores
+      const target = e.target;
+      const isOverTerminal = target.closest('.xterm') !== null || 
+                             target.closest('.terminal-outer-padding') !== null ||
+                             target.classList.contains('xterm') ||
+                             target.classList.contains('terminal-outer-padding') ||
+                             // También verificar si está dentro de un contenedor de terminal (para terminales locales)
+                             target.closest('[class*="terminal"]') !== null;
+
+      // Si no está sobre una terminal, no hacer nada
+      if (!isOverTerminal) return;
+
+      // Prevenir el comportamiento por defecto (zoom del navegador)
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Determinar dirección del scroll (arriba = aumentar, abajo = disminuir)
+      const delta = e.deltaY > 0 ? -1 : 1; // deltaY positivo = scroll abajo = disminuir
+      const step = 1; // Incremento/decremento de 1px
+
+      // Función para actualizar un tamaño de fuente con límites
+      const updateFontSize = (currentSize, setter, storageKey, min = 8, max = 32) => {
+        const newSize = Math.max(min, Math.min(max, currentSize + (delta * step)));
+        if (newSize !== currentSize) {
+          setter(newSize);
+          localStorage.setItem(storageKey, newSize.toString());
+          // Disparar evento de cambio para sincronización
+          window.dispatchEvent(new CustomEvent('localStorageChange', {
+            detail: { key: storageKey, value: newSize.toString() }
+          }));
+          window.dispatchEvent(new StorageEvent('storage', {
+            key: storageKey,
+            newValue: newSize.toString()
+          }));
+        }
+        return newSize;
+      };
+
+      // Actualizar todos los tamaños de fuente de terminales
+      // 1. SSH terminales
+      const currentSSHSize = fontSize || 14;
+      updateFontSize(currentSSHSize, setFontSize, 'basicapp_terminal_font_size');
+
+      // 2. PowerShell/Linux locales
+      const currentLocalSize = localFontSize || 14;
+      updateFontSize(currentLocalSize, setLocalFontSize, 'basicapp_local_terminal_font_size');
+
+      // 3. Linux/WSL terminales
+      const currentLinuxSize = parseInt(localStorage.getItem('nodeterm_linux_font_size') || localFontSize || '14', 10);
+      const newLinuxSize = updateFontSize(currentLinuxSize, () => {}, 'nodeterm_linux_font_size');
+      // Notificar cambio para que TerminalSettingsTab lo detecte
+      window.dispatchEvent(new CustomEvent('terminal-settings-changed', { 
+        detail: { linuxFontSize: newLinuxSize } 
+      }));
+
+      // 4. Docker terminales
+      const currentDockerSize = dockerFontSize || 14;
+      updateFontSize(currentDockerSize, setDockerFontSize, 'nodeterm_docker_font_size');
+    };
+
+    // Agregar listener con capture para interceptar antes que otros handlers
+    document.addEventListener('wheel', handleWheel, { passive: false, capture: true });
+
+    return () => {
+      document.removeEventListener('wheel', handleWheel, { capture: true });
+    };
+  }, [fontSize, setFontSize, localFontSize, setLocalFontSize, dockerFontSize, setDockerFontSize]);
+
   const activeTab = filteredTabs[activeTabIndex] || null;
   const isAIChatActive = activeTab?.type === 'ai-chat' || (activeTab?.type === 'home' && isHomeTabActive && isHomeAIChatVisible);
 
@@ -1788,10 +2115,12 @@ const App = () => {
     connectionIconSize: connectionIconSize,
     explorerFont: sidebarFont,
     explorerFontSize: sidebarFontSize,
+    explorerFontColor: sidebarFontColor,
     uiTheme: uiTheme || 'Light',
     showToast: toast.current && toast.current.show ? toast.current.show : undefined,
     confirmDialog: confirmDialog,
     onOpenSSHConnection,
+    onOpenVncConnection,
     onNodeContextMenu,
     onTreeAreaContextMenu,
     hideContextMenu,
@@ -1815,6 +2144,7 @@ const App = () => {
     sshRemoteFolder, setSSHRemoteFolder,
     sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
+    sshDescription,
     
     // Estados de formularios Edit SSH
     editSSHName, setEditSSHName,
@@ -1824,6 +2154,7 @@ const App = () => {
     editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
+    editSSHDescription, setEditSSHDescription,
     
     // Estados para modo edición
     editSSHNode, setEditSSHNode,
@@ -1836,11 +2167,17 @@ const App = () => {
     masterKey,
     secureStorage,
     isAIChatActive,
-    onToggleLocalTerminalForAIChat: handleToggleLocalTerminalForAIChat
+    onToggleLocalTerminalForAIChat: handleToggleLocalTerminalForAIChat,
+    
+    // Tema del árbol
+    treeTheme,
+    
+    // Tema de iconos de acción
+    sessionActionIconTheme
   }), [
     nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
-    iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, terminalTheme,
+    iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, sidebarFontColor, terminalTheme, treeTheme, sessionActionIconTheme,
     toast, confirmDialog, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu, hideContextMenu,
     sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey,
     
@@ -1849,9 +2186,11 @@ const App = () => {
     sshName, setSSHName, sshHost, setSSHHost, sshUser, setSSHUser, sshPassword, setSSHPassword,
     sshPort, setSSHPort, sshRemoteFolder, setSSHRemoteFolder, sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
+    sshDescription,
     editSSHName, setEditSSHName, editSSHHost, setEditSSHHost, editSSHUser, setEditSSHUser,
     editSSHPassword, setEditSSHPassword, editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort, editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
+    editSSHDescription, setEditSSHDescription,
     editSSHNode, setEditSSHNode,
     rdpNodeData, setRdpNodeData, editingRdpNode, setEditingRdpNode,
     
@@ -1891,6 +2230,9 @@ const App = () => {
     activeTabIndex,
     localLinuxTerminalTheme,
     localPowerShellTheme,
+    localDockerTerminalTheme,
+    dockerFontFamily,
+    dockerFontSize,
     // FileExplorer props
     iconTheme,
     explorerFont,
@@ -1912,9 +2254,9 @@ const App = () => {
     // Recording props
     setSshTabs
   }), [
-    onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, handleLoadGroupFromFavorites,
+    onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, onOpenVncConnection, handleLoadGroupFromFavorites,
     openEditRdpDialog, openEditSSHDialog, nodes, localFontFamily, localFontSize,
-    localLinuxTerminalTheme, localPowerShellTheme, iconTheme, explorerFont,
+    localLinuxTerminalTheme, localPowerShellTheme, localDockerTerminalTheme, dockerFontFamily, dockerFontSize, iconTheme, explorerFont,
     explorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
     handleTerminalContextMenu, showTerminalContextMenu, sshStatsByTabId,
     terminalRefs, statusBarIconTheme, handleCloseSplitPanel, rdpTabs, findNodeByKey,
@@ -1922,9 +2264,10 @@ const App = () => {
   ]);
 
   return (
-    <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
-      {/* UnlockDialog - Pide master password al inicio si existe */}
-      <UnlockDialog
+    <ErrorBoundary>
+      <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
+        {/* UnlockDialog - Pide master password al inicio si existe */}
+        <UnlockDialog
         visible={needsUnlock}
         onSuccess={handleUnlockSuccess}
         secureStorage={secureStorage}
@@ -1937,6 +2280,7 @@ const App = () => {
         findAllConnections={findAllConnections}
         onOpenSSHConnection={onOpenSSHConnection}
         onOpenRdpConnection={onOpenRdpConnection}
+        onOpenVncConnection={onOpenVncConnection}
         onShowImportDialog={setShowImportDialog}
         masterKey={masterKey}
         secureStorage={secureStorage}
@@ -1955,6 +2299,7 @@ const App = () => {
         }}
         openEditSSHDialog={openEditSSHDialog}
         openEditRdpDialog={openEditRdpDialog}
+        openNewVncDialog={openNewVncDialog}
         onQuickImportFromSource={async (source) => {
           try {
             if (!source?.filePath) {
@@ -2088,6 +2433,12 @@ const App = () => {
         setSidebarFont={setSidebarFont}
         sidebarFontSize={sidebarFontSize}
         setSidebarFontSize={setSidebarFontSize}
+        sidebarFontColor={sidebarFontColor}
+        setSidebarFontColor={setSidebarFontColor}
+        treeTheme={treeTheme}
+        setTreeTheme={setTreeTheme}
+        sessionActionIconTheme={sessionActionIconTheme}
+        setSessionActionIconTheme={setSessionActionIconTheme}
         statusBarIconTheme={statusBarIconTheme}
         setStatusBarIconTheme={setStatusBarIconTheme}
         statusBarPollingInterval={statusBarPollingInterval}
@@ -2113,7 +2464,13 @@ const App = () => {
         setShowCreateGroupDialog={setShowCreateGroupDialog}
         showUnifiedConnectionDialog={showUnifiedConnectionDialog}
         setShowUnifiedConnectionDialog={setShowUnifiedConnectionDialog}
-        
+        showFileConnectionDialog={showFileConnectionDialog}
+        setShowFileConnectionDialog={setShowFileConnectionDialog}
+        showProtocolSelectionDialog={showProtocolSelectionDialog}
+        setShowProtocolSelectionDialog={setShowProtocolSelectionDialog}
+        showNetworkToolsDialog={showNetworkToolsDialog}
+        setShowNetworkToolsDialog={setShowNetworkToolsDialog}
+
         // Estados de formularios SSH
         sshName={sshName}
         setSSHName={setSSHName}
@@ -2131,6 +2488,8 @@ const App = () => {
         setSSHTargetFolder={setSSHTargetFolder}
         sshAutoCopyPassword={sshAutoCopyPassword}
         setSSHAutoCopyPassword={setSSHAutoCopyPassword}
+        sshDescription={sshDescription}
+        setSSHDescription={setSSHDescription}
         
         // Estados de formularios Edit SSH
         editSSHName={editSSHName}
@@ -2147,6 +2506,8 @@ const App = () => {
         setEditSSHPort={setEditSSHPort}
         editSSHAutoCopyPassword={editSSHAutoCopyPassword}
         setEditSSHAutoCopyPassword={setEditSSHAutoCopyPassword}
+        editSSHDescription={editSSHDescription}
+        setEditSSHDescription={setEditSSHDescription}
         
         // Estados para modo edición
         editSSHNode={editSSHNode}
@@ -2172,14 +2533,46 @@ const App = () => {
         setRdpNodeData={setRdpNodeData}
         editingRdpNode={editingRdpNode}
         setEditingRdpNode={setEditingRdpNode}
+        vncNodeData={vncNodeData}
+        setVncNodeData={setVncNodeData}
+        editingVncNode={editingVncNode}
+        setEditingVncNode={setEditingVncNode}
+        
+        // Estados de formularios Archivos (SFTP/FTP/SCP)
+        fileConnectionName={fileConnectionName}
+        setFileConnectionName={setFileConnectionName}
+        fileConnectionHost={fileConnectionHost}
+        setFileConnectionHost={setFileConnectionHost}
+        fileConnectionUser={fileConnectionUser}
+        setFileConnectionUser={setFileConnectionUser}
+        fileConnectionPassword={fileConnectionPassword}
+        setFileConnectionPassword={setFileConnectionPassword}
+        fileConnectionPort={fileConnectionPort}
+        setFileConnectionPort={setFileConnectionPort}
+        fileConnectionProtocol={fileConnectionProtocol}
+        setFileConnectionProtocol={setFileConnectionProtocol}
+        fileConnectionRemoteFolder={fileConnectionRemoteFolder}
+        setFileConnectionRemoteFolder={setFileConnectionRemoteFolder}
+        fileConnectionTargetFolder={fileConnectionTargetFolder}
+        setFileConnectionTargetFolder={setFileConnectionTargetFolder}
+        editingFileConnectionNode={editingFileConnectionNode}
+        setEditingFileConnectionNode={setEditingFileConnectionNode}
         
         // Estados de formularios Folder
         folderName={folderName}
         setFolderName={setFolderName}
+        folderColor={folderColor}
+        setFolderColor={setFolderColor}
+        folderIcon={folderIcon}
+        setFolderIcon={setFolderIcon}
         parentNodeKey={parentNodeKey}
         editFolderNode={editFolderNode}
         editFolderName={editFolderName}
         setEditFolderName={setEditFolderName}
+        editFolderColor={editFolderColor}
+        setEditFolderColor={setEditFolderColor}
+        editFolderIcon={editFolderIcon}
+        setEditFolderIcon={setEditFolderIcon}
         
         // Estados de formularios Group
         newGroupName={newGroupName}
@@ -2196,6 +2589,14 @@ const App = () => {
         saveEditFolder={saveEditFolder}
         createNewGroup={createNewGroup}
         handleSaveRdpToSidebar={handleSaveRdpToSidebar}
+        handleSaveVncToSidebar={handleSaveVncToSidebar}
+        handleSaveFileConnectionToSidebar={handleSaveFileConnectionToSidebar}
+        // Exponer globalmente para acceso directo
+        onFileConnectionSave={(fileData) => {
+          if (handleSaveFileConnectionToSidebar) {
+            handleSaveFileConnectionToSidebar(fileData, false, null);
+          }
+        }}
         closeRdpDialog={closeRdpDialog}
         getAllFolders={getAllFolders}
         nodes={nodes}
@@ -2344,7 +2745,8 @@ const App = () => {
       
       {/* ConfirmDialog para confirmaciones globales */}
       <ConfirmDialog />
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 };
 

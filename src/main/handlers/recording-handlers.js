@@ -767,7 +767,6 @@ function registerRecordingHandlers() {
     }
   });
 
-  console.log('✅ Recording handlers registrados (incluye audit handlers)');
 }
 
 module.exports = {

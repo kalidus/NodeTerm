@@ -12,8 +12,11 @@
     <!-- Fuentes principales para la interfaz -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@300;400;600;700&family=Lato:wght@300;400;700&family=Montserrat:wght@300;400;500;600;700&family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
     
-    <!-- Fuentes monoespaciadas para terminales -->
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Fira+Code:wght@300;400;500;700&family=Source+Code+Pro:wght@300;400;600;700&family=Roboto+Mono:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Fuentes monoespaciadas para terminales - Integradas localmente -->
+    <!-- Se cargan desde src/styles/fonts.css (generado con npm run download-fonts) -->
+    <!-- Fallback a Google Fonts si las locales no están disponibles -->
+    <link id="terminal-fonts-fallback" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Fira+Code:wght@300;400;500;700&family=Source+Code+Pro:wght@300;400;600;700&family=Roboto+Mono:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Fira+Code:wght@300;400;500;700&family=Source+Code+Pro:wght@300;400;600;700&family=Roboto+Mono:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"></noscript>
     
     <!-- Fuentes modernas adicionales -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Nunito:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;700&family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -38,6 +41,62 @@
         }
         
         console.log('Global polyfill loaded:', typeof global !== 'undefined');
+      })();
+    </script>
+    <script>
+      // Aplicar fondo básico INMEDIATAMENTE para evitar flash blanco
+      // NO establecer variables CSS del tema aquí - el ThemeManager se encargará de eso
+      (function() {
+        try {
+          // Temas claros conocidos
+          const lightThemes = ['Light', 'Solarized Light', 'Atom One Light', 'Paper', 'Silver', 'Soft Gray', 'Minimal Gray'];
+          
+          // Leer tema guardado del localStorage
+          const savedTheme = localStorage.getItem('ui_theme');
+          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          
+          // Determinar si es tema claro u oscuro solo para el fondo básico
+          let isLight = false;
+          if (savedTheme) {
+            isLight = lightThemes.includes(savedTheme);
+          } else {
+            // Si no hay tema guardado, usar preferencia del sistema
+            isLight = !prefersDark;
+          }
+          
+          // Solo establecer el fondo básico - NO variables CSS del tema
+          // El ThemeManager aplicará el tema completo después
+          const basicBg = isLight ? '#ffffff' : '#0e1116';
+          
+          // Aplicar fondo inmediatamente al html (siempre existe)
+          document.documentElement.style.backgroundColor = basicBg;
+          
+          // Aplicar fondo al body solo si ya existe (puede no existir si el script corre en <head>)
+          if (document.body) {
+            document.body.style.backgroundColor = basicBg;
+          }
+          
+          // Si el body no existe aún, aplicar el fondo cuando esté disponible
+          if (!document.body) {
+            const observer = new MutationObserver((mutations, obs) => {
+              if (document.body) {
+                document.body.style.backgroundColor = basicBg;
+                obs.disconnect();
+              }
+            });
+            observer.observe(document.documentElement, { childList: true, subtree: true });
+          }
+          
+          // Marcar que el fondo básico está aplicado
+          window.__earlyThemeApplied = true;
+        } catch (e) {
+          console.error('[EARLY THEME] Error aplicando fondo temprano:', e);
+          // Fallback: aplicar fondo oscuro por defecto
+          document.documentElement.style.backgroundColor = '#0e1116';
+          if (document.body) {
+            document.body.style.backgroundColor = '#0e1116';
+          }
+        }
       })();
     </script>
     <style>

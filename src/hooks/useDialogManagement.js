@@ -13,6 +13,9 @@ export const useDialogManagement = () => {
   const [showSyncDialog, setShowSyncDialog] = useState(false);
 
   const [showUnifiedConnectionDialog, setShowUnifiedConnectionDialog] = useState(false);
+  const [showFileConnectionDialog, setShowFileConnectionDialog] = useState(false);
+  const [showProtocolSelectionDialog, setShowProtocolSelectionDialog] = useState(false);
+  const [showNetworkToolsDialog, setShowNetworkToolsDialog] = useState(false);
 
   // ============ ESTADOS DE FORMULARIOS SSH ============
   
@@ -25,6 +28,7 @@ export const useDialogManagement = () => {
   const [sshPort, setSSHPort] = useState(22);
   const [sshTargetFolder, setSSHTargetFolder] = useState(null);
   const [sshAutoCopyPassword, setSSHAutoCopyPassword] = useState(false);
+  const [sshDescription, setSSHDescription] = useState('');
 
   // Editar SSH
   const [editSSHNode, setEditSSHNode] = useState(null);
@@ -35,14 +39,37 @@ export const useDialogManagement = () => {
   const [editSSHRemoteFolder, setEditSSHRemoteFolder] = useState('');
   const [editSSHPort, setEditSSHPort] = useState(22);
   const [editSSHAutoCopyPassword, setEditSSHAutoCopyPassword] = useState(false);
+  const [editSSHDescription, setEditSSHDescription] = useState('');
 
   // ============ ESTADOS DE FORMULARIOS RDP ============
   
   const [rdpName, setRdpName] = useState('');
   const [rdpServer, setRdpServer] = useState('');
   const [rdpUsername, setRdpUsername] = useState('');
+
+  // ============ ESTADOS DE FORMULARIOS VNC ============
+  
+  const [vncName, setVncName] = useState('');
+  const [vncServer, setVncServer] = useState('');
+  const [vncPassword, setVncPassword] = useState('');
+  const [vncPort, setVncPort] = useState(5900);
+  const [vncTargetFolder, setVncTargetFolder] = useState(null);
+  const [vncNodeData, setVncNodeData] = useState(null);
+  const [editingVncNode, setEditingVncNode] = useState(null);
+  const [showVncDialog, setShowVncDialog] = useState(false);
   const [rdpPassword, setRdpPassword] = useState('');
   const [rdpPort, setRdpPort] = useState(3389);
+
+  // ============ ESTADOS DE FORMULARIOS ARCHIVOS (SFTP/FTP/SCP) ============
+  
+  const [fileConnectionName, setFileConnectionName] = useState('');
+  const [fileConnectionHost, setFileConnectionHost] = useState('');
+  const [fileConnectionUser, setFileConnectionUser] = useState('');
+  const [fileConnectionPassword, setFileConnectionPassword] = useState('');
+  const [fileConnectionPort, setFileConnectionPort] = useState(22);
+  const [fileConnectionProtocol, setFileConnectionProtocol] = useState('sftp');
+  const [fileConnectionRemoteFolder, setFileConnectionRemoteFolder] = useState('');
+  const [fileConnectionTargetFolder, setFileConnectionTargetFolder] = useState('');
   const [rdpClientType, setRdpClientType] = useState('guacamole');
   const [rdpGuacSecurity, setRdpGuacSecurity] = useState('any');
   const [rdpTargetFolder, setRdpTargetFolder] = useState(null);
@@ -52,9 +79,13 @@ export const useDialogManagement = () => {
   // ============ ESTADOS DE FORMULARIOS FOLDER ============
   
   const [folderName, setFolderName] = useState('');
+  const [folderColor, setFolderColor] = useState('');
+  const [folderIcon, setFolderIcon] = useState(null);
   const [parentNodeKey, setParentNodeKey] = useState(null);
   const [editFolderNode, setEditFolderNode] = useState(null);
   const [editFolderName, setEditFolderName] = useState('');
+  const [editFolderColor, setEditFolderColor] = useState('');
+  const [editFolderIcon, setEditFolderIcon] = useState(null);
 
   // ============ FUNCIONES DE UTILIDAD ============
   
@@ -68,6 +99,7 @@ export const useDialogManagement = () => {
     setSSHPort(22);
     setSSHTargetFolder(null);
     setSSHAutoCopyPassword(false);
+    setSSHDescription('');
   };
 
   // Resetear todos los campos RDP
@@ -85,7 +117,25 @@ export const useDialogManagement = () => {
   // Resetear todos los campos Folder
   const resetFolderForm = () => {
     setFolderName('');
+    setFolderColor('');
+    setFolderIcon(null);
     setParentNodeKey(null);
+  };
+
+  // Estados para edición de conexiones de archivos
+  const [editingFileConnectionNode, setEditingFileConnectionNode] = useState(null);
+
+  // Resetear todos los campos Archivos
+  const resetFileConnectionForm = () => {
+    setFileConnectionName('');
+    setFileConnectionHost('');
+    setFileConnectionUser('');
+    setFileConnectionPassword('');
+    setFileConnectionPort(22);
+    setFileConnectionProtocol('sftp');
+    setFileConnectionRemoteFolder('');
+    setFileConnectionTargetFolder('');
+    setEditingFileConnectionNode(null);
   };
 
   // Resetear todos los campos Edit SSH
@@ -98,12 +148,15 @@ export const useDialogManagement = () => {
     setEditSSHRemoteFolder('');
     setEditSSHPort(22);
     setEditSSHAutoCopyPassword(false);
+    setEditSSHDescription('');
   };
 
   // Resetear todos los campos Edit Folder
   const resetEditFolderForm = () => {
     setEditFolderNode(null);
     setEditFolderName('');
+    setEditFolderColor('');
+    setEditFolderIcon(null);
   };
 
   // Abrir diálogo SSH con reset automático
@@ -168,6 +221,9 @@ export const useDialogManagement = () => {
     showSyncDialog, setShowSyncDialog,
 
     showUnifiedConnectionDialog, setShowUnifiedConnectionDialog,
+    showFileConnectionDialog, setShowFileConnectionDialog,
+    showProtocolSelectionDialog, setShowProtocolSelectionDialog,
+    showNetworkToolsDialog, setShowNetworkToolsDialog,
 
     // Estados de formularios SSH
     sshName, setSSHName,
@@ -178,6 +234,7 @@ export const useDialogManagement = () => {
     sshPort, setSSHPort,
     sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
+    sshDescription, setSSHDescription,
 
     // Estados de formularios Edit SSH
     editSSHNode, setEditSSHNode,
@@ -188,6 +245,7 @@ export const useDialogManagement = () => {
     editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
+    editSSHDescription, setEditSSHDescription,
 
     // Estados de formularios RDP
     rdpName, setRdpName,
@@ -195,6 +253,16 @@ export const useDialogManagement = () => {
     rdpUsername, setRdpUsername,
     rdpPassword, setRdpPassword,
     rdpPort, setRdpPort,
+    
+    // Estados de formularios VNC
+    vncName, setVncName,
+    vncServer, setVncServer,
+    vncPassword, setVncPassword,
+    vncPort, setVncPort,
+    vncTargetFolder, setVncTargetFolder,
+    vncNodeData, setVncNodeData,
+    editingVncNode, setEditingVncNode,
+    showVncDialog, setShowVncDialog,
     rdpClientType, setRdpClientType,
     rdpGuacSecurity, setRdpGuacSecurity,
     rdpTargetFolder, setRdpTargetFolder,
@@ -203,9 +271,24 @@ export const useDialogManagement = () => {
 
     // Estados de formularios Folder
     folderName, setFolderName,
+    folderColor, setFolderColor,
+    folderIcon, setFolderIcon,
     parentNodeKey, setParentNodeKey,
     editFolderNode, setEditFolderNode,
     editFolderName, setEditFolderName,
+    editFolderColor, setEditFolderColor,
+    editFolderIcon, setEditFolderIcon,
+
+    // Estados de formularios Archivos (SFTP/FTP/SCP)
+    fileConnectionName, setFileConnectionName,
+    fileConnectionHost, setFileConnectionHost,
+    fileConnectionUser, setFileConnectionUser,
+    fileConnectionPassword, setFileConnectionPassword,
+    fileConnectionPort, setFileConnectionPort,
+    fileConnectionProtocol, setFileConnectionProtocol,
+    fileConnectionRemoteFolder, setFileConnectionRemoteFolder,
+    fileConnectionTargetFolder, setFileConnectionTargetFolder,
+    editingFileConnectionNode, setEditingFileConnectionNode,
 
     // Funciones de utilidad
     resetSSHForm, resetRDPForm, resetFolderForm,

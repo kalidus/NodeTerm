@@ -56,8 +56,60 @@ async function loadPreferredGuacdMethod() {
   }
 }
 
+/**
+ * Guarda el timeout de inactividad de guacd de forma persistente
+ * @param {number} timeoutMs - Timeout en milisegundos (0 = desactivado)
+ * @returns {Promise<boolean>} true si se guardó exitosamente
+ */
+async function saveGuacdInactivityTimeout(timeoutMs) {
+  const prefPath = getGuacdPrefPath();
+  if (!prefPath) return false;
+  try {
+    const dir = path.dirname(prefPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    
+    // Leer preferencias existentes para no sobrescribirlas
+    let existingPrefs = {};
+    try {
+      if (fs.existsSync(prefPath)) {
+        existingPrefs = JSON.parse(fs.readFileSync(prefPath, 'utf8') || '{}');
+      }
+    } catch {}
+    
+    // Actualizar solo el timeout
+    existingPrefs.inactivityTimeoutMs = timeoutMs;
+    fs.writeFileSync(prefPath, JSON.stringify(existingPrefs, null, 2), 'utf8');
+    return true;
+  } catch { 
+    return false; 
+  }
+}
+
+/**
+ * Carga el timeout de inactividad de guacd desde el archivo persistente
+ * @returns {Promise<number|null>} Timeout en ms o null si no existe
+ */
+async function loadGuacdInactivityTimeout() {
+  const prefPath = getGuacdPrefPath();
+  if (!prefPath) return null;
+  try {
+    if (!fs.existsSync(prefPath)) return null;
+    const raw = fs.readFileSync(prefPath, 'utf8');
+    const json = JSON.parse(raw || '{}');
+    const timeout = json.inactivityTimeoutMs;
+    if (typeof timeout === 'number' && timeout >= 0) {
+      return timeout;
+    }
+    return null;
+  } catch { 
+    return null; 
+  }
+}
+
 module.exports = {
   getGuacdPrefPath,
   savePreferredGuacdMethod,
-  loadPreferredGuacdMethod
+  loadPreferredGuacdMethod,
+  saveGuacdInactivityTimeout,
+  loadGuacdInactivityTimeout
 };

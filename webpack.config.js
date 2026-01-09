@@ -36,6 +36,13 @@ module.exports = {
       {
         test: /\.(png|jpe?g|gif|svg)$/i,
         type: 'asset/resource'
+      },
+      {
+        test: /\.(woff|woff2|ttf|eot)$/i,
+        type: 'asset/resource',
+        generator: {
+          filename: 'assets/fonts/[name][ext]'
+        }
       }
     ]
   },
@@ -46,7 +53,15 @@ module.exports = {
     new CopyWebpackPlugin({
       patterns: [
         { from: 'preload.js', to: 'preload.js' },
-        { from: 'node_modules/kdbxweb/dist/kdbxweb.min.js', to: 'vendor/kdbxweb.min.js' }
+        { from: 'node_modules/kdbxweb/dist/kdbxweb.min.js', to: 'vendor/kdbxweb.min.js' },
+        { 
+          from: 'src/assets/fonts', 
+          to: 'assets/fonts',
+          noErrorOnMissing: true,
+          globOptions: {
+            ignore: ['**/.gitkeep']
+          }
+        }
       ]
     }),
     new webpack.DefinePlugin({
@@ -148,5 +163,6 @@ module.exports = {
     'utf-8-validate': 'commonjs utf-8-validate',
     'bufferutil': 'commonjs bufferutil'
   },
-  devtool: 'source-map'
+  // Desactivar source maps en producción para reducir bundle size (~30-50% menos)
+  devtool: process.env.NODE_ENV === 'production' ? false : 'source-map'
 }; 

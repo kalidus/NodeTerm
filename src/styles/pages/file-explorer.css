@@ -5,6 +5,7 @@
 .file-explorer-container.material-design {
   height: 100%;
   width: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -15,6 +16,7 @@
 /* Card Container */
 .file-explorer-card {
   height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: var(--theme-bg, var(--ui-content-bg, #ffffff)) !important;
@@ -26,6 +28,7 @@
 
 .file-explorer-card .p-card-body {
   flex: 1;
+  min-height: 0;
   display: flex !important;
   flex-direction: column !important;
   padding: 0 !important;
@@ -299,11 +302,16 @@
 
 /* Files Container */
 .file-explorer-files-container {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   padding: 0.75rem 1.25rem;
   background: var(--theme-bg, var(--ui-content-bg, #ffffff));
+  position: relative;
+  /* Force scrollbar to always be visible when content overflows */
+  -webkit-overflow-scrolling: touch;
 }
 
 .file-explorer-files-container.drag-active {
@@ -543,21 +551,31 @@
 
 /* Scrollbar */
 .file-explorer-files-container::-webkit-scrollbar {
-  width: 10px;
+  width: 12px !important;
+  height: 12px !important;
 }
 
 .file-explorer-files-container::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
 }
 
 .file-explorer-files-container::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 
 .file-explorer-files-container::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: rgba(255, 255, 255, 0.5);
+  background-clip: content-box;
+}
+
+/* Firefox scrollbar */
+.file-explorer-files-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(0, 0, 0, 0.2);
 }
 
 /* Responsive */

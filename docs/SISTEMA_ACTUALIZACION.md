@@ -205,13 +205,13 @@ npm run dist
 
 1. Ir a `github.com/kalidus/NodeTerm/releases`
 2. Hacer clic en "Draft a new release"
-3. Tag: `v1.6.0` (debe coincidir con package.json)
-4. Título: `NodeTerm v1.6.0`
+3. Tag: `v1.6.1` (debe coincidir con package.json)
+4. Título: `NodeTerm v1.6.1`
 5. Descripción: Changelog de la versión
 6. Subir los binarios generados en `dist/`:
-   - `NodeTerm-Setup-1.6.0.exe` (Windows)
-   - `NodeTerm-1.6.0.AppImage` (Linux)
-   - `NodeTerm-1.6.0.dmg` (macOS)
+   - `NodeTerm-Setup-1.6.1.exe` (Windows)
+   - `NodeTerm-1.6.1.AppImage` (Linux)
+   - `NodeTerm-1.6.1.dmg` (macOS)
 7. Publicar release
 
 ### 4. Verificar

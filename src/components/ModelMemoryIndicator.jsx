@@ -4,6 +4,7 @@ import modelMemoryService from '../services/ModelMemoryService';
 const ModelMemoryIndicator = ({ visible = true, themeColors = {}, onExpandedChange }) => {
   const [stats, setStats] = useState(null);
   const [gpuMemory, setGpuMemory] = useState(null);
+  const [systemStats, setSystemStats] = useState(null); // ✅ NUEVO: Stats del sistema (CPU, etc.)
   const [expandedModels, setExpandedModels] = useState(false);
   const [expandedMemory, setExpandedMemory] = useState(false); // Colapsado por defecto
   const [updating, setUpdating] = useState(false);
@@ -36,12 +37,27 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {}, onExpandedChan
         const systemMemory = await modelMemoryService.getSystemMemory();
         modelMemoryService.lastSystemMemory = systemMemory;
         
+        // ✅ Obtener estadísticas del sistema (CPU, etc.)
+        try {
+          const sysStats = await window.electronAPI?.getSystemStats();
+          if (sysStats) {
+            setSystemStats({
+              cpu: Math.round((sysStats.cpu?.usage || 0) * 10) / 10,
+              hostname: sysStats.hostname || null,
+              platform: sysStats.platform || null
+            });
+          }
+        } catch (e) {
+          // Sistema stats no disponible
+          setSystemStats(null);
+        }
+        
         // Obtener modelos cargados
         await modelMemoryService.getLoadedModels();
         const newStats = modelMemoryService.getMemoryStats();
         setStats(newStats);
 
-        // 🎮 Cargar GPU stats
+        // 🎮 Cargar GPU stats (con más información ahora)
         try {
           const gpuStats = await modelMemoryService.getGPUStats();
           setGpuMemory(gpuStats);
@@ -58,7 +74,7 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {}, onExpandedChan
     };
 
     updateStats();
-    const interval = setInterval(updateStats, 5000);
+    const interval = setInterval(updateStats, 10000); // Reducido de 5000ms a 10000ms para ahorrar CPU/RAM
     return () => clearInterval(interval);
   }, [visible]);
 
@@ -164,19 +180,46 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {}, onExpandedChan
             style={{
               marginBottom: '8px',
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
+              flexDirection: 'column',
+              gap: '8px',
               marginTop: '12px'
             }}
           >
-            <span
-              style={{
-                fontWeight: 'bold',
-                color: statusColor
-              }}
-            >
-              💻 Sistema: {systemMem.usedMB}MB / {systemMem.totalMB}MB ({systemMem.usagePercent}%)
-            </span>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span
+                style={{
+                  fontWeight: 'bold',
+                  color: statusColor
+                }}
+              >
+                💻 RAM: {systemMem.usedMB}MB / {systemMem.totalMB}MB ({systemMem.usagePercent}%)
+              </span>
+              {systemStats && systemStats.cpu !== undefined && (
+                <span
+                  style={{
+                    fontWeight: 'bold',
+                    color: systemStats.cpu > 80 ? colors.colorWarning : colors.colorOk,
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  🔥 CPU: {systemStats.cpu}%
+                </span>
+              )}
+            </div>
+            {systemStats && systemStats.hostname && (
+              <div style={{
+                fontSize: '11px',
+                color: colors.textSecondary,
+                marginTop: '4px'
+              }}>
+                🖥️ {systemStats.hostname}
+                {systemStats.platform && ` (${systemStats.platform})`}
+              </div>
+            )}
           </div>
 
           {/* Barra de progreso */}
@@ -317,21 +360,41 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {}, onExpandedChan
               }}
             >
               <div style={{ marginBottom: '8px', color: colors.colorOk, fontWeight: 'bold' }}>
-                🎮 GPU Memory
+                🎮 GPU: {gpuMemory.name || (gpuMemory.gpus && gpuMemory.gpus.length > 0 && gpuMemory.gpus[0]?.name) || (gpuMemory.type ? `${gpuMemory.type.toUpperCase()} GPU` : 'GPU')}
               </div>
               {gpuMemory.available && gpuMemory.gpus && gpuMemory.gpus.length > 0 ? (
                 <div style={{ paddingLeft: '12px' }}>
                   {gpuMemory.gpus.map((gpu, idx) => (
                     <div key={idx} style={{ marginBottom: '8px', fontSize: '11px' }}>
                       <div style={{ color: colors.textPrimary, fontWeight: 'bold', marginBottom: '4px' }}>
-                        {gpu.name}
+                        {gpu.name || gpuMemory.name || 'GPU'}
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: colors.textSecondary }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        color: colors.textSecondary,
+                        marginBottom: '4px'
+                      }}>
                         <span>
                           VRAM: {gpu.usedGB}/{gpu.totalGB}GB ({gpu.usagePercent}%)
                         </span>
-                        <span>{gpu.status}</span>
+                        {(gpu.temperature !== null && gpu.temperature !== undefined) || (gpuMemory.temperature !== null && gpuMemory.temperature !== undefined) ? (
+                          <span style={{ 
+                            color: ((gpu.temperature || gpuMemory.temperature) > 80) ? colors.colorWarning : colors.colorOk 
+                          }}>
+                            🌡️ {gpu.temperature || gpuMemory.temperature}°C
+                          </span>
+                        ) : null}
                       </div>
+                      {(gpu.gpuUtilization !== null && gpu.gpuUtilization !== undefined) || (gpuMemory.gpuUtilization !== null && gpuMemory.gpuUtilization !== undefined) ? (
+                        <div style={{ 
+                          fontSize: '10px', 
+                          color: colors.textSecondary,
+                          marginBottom: '4px'
+                        }}>
+                          Uso GPU: {gpu.gpuUtilization || gpuMemory.gpuUtilization}%
+                        </div>
+                      ) : null}
                       <div
                         style={{
                           background: '#333',
@@ -358,8 +421,44 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {}, onExpandedChan
                     </div>
                   ))}
                 </div>
+              ) : (gpuMemory.type || gpuMemory.name) ? (
+                <div style={{ paddingLeft: '12px', fontSize: '11px' }}>
+                  {gpuMemory.type && (
+                    <div style={{ color: colors.textPrimary, marginBottom: '4px', fontWeight: 'bold' }}>
+                      Tipo: {gpuMemory.type.toUpperCase()}
+                    </div>
+                  )}
+                  {gpuMemory.name && (
+                    <div style={{ color: colors.textSecondary, marginBottom: '4px' }}>
+                      Modelo: {gpuMemory.name}
+                    </div>
+                  )}
+                  {gpuMemory.totalMB !== null && gpuMemory.usedMB !== null && (
+                    <div style={{ color: colors.textSecondary, marginBottom: '4px' }}>
+                      VRAM: {Math.round(gpuMemory.usedMB / 1024 * 10) / 10}GB / {Math.round(gpuMemory.totalMB / 1024 * 10) / 10}GB ({gpuMemory.usagePercent}%)
+                    </div>
+                  )}
+                  {gpuMemory.temperature !== null && gpuMemory.temperature !== undefined && (
+                    <div style={{ 
+                      color: gpuMemory.temperature > 80 ? colors.colorWarning : colors.textSecondary, 
+                      marginBottom: '4px' 
+                    }}>
+                      🌡️ Temperatura: {gpuMemory.temperature}°C
+                    </div>
+                  )}
+                  {gpuMemory.gpuUtilization !== null && gpuMemory.gpuUtilization !== undefined && (
+                    <div style={{ color: colors.textSecondary, marginBottom: '4px' }}>
+                      Uso: {gpuMemory.gpuUtilization}%
+                    </div>
+                  )}
+                  {gpuMemory.note && (
+                    <div style={{ color: colors.textSecondary, fontSize: '10px', marginTop: '4px', fontStyle: 'italic' }}>
+                      ℹ️ {gpuMemory.note}
+                    </div>
+                  )}
+                </div>
               ) : (
-                <div style={{ fontSize: '11px', color: colors.textSecondary }}>
+                <div style={{ fontSize: '11px', color: colors.textSecondary, paddingLeft: '12px' }}>
                   Sin GPU detectada o sin soporte
                 </div>
               )}

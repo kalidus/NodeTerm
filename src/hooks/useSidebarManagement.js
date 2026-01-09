@@ -116,12 +116,14 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     const {
       activeGroupId, setActiveGroupId, activeTabIndex, setActiveTabIndex,
       setGroupActiveIndices, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey,
-      getFilteredTabs, openFileExplorer, openInSplit, onOpenRdpConnection
+      getFilteredTabs, openFileExplorer, openInSplit, onOpenRdpConnection, onOpenVncConnection
     } = tabManagementProps;
     if (!node) return [];
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && node.data.type === 'rdp';
+    const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
+    const isFileConnection = node.data && (node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp');
     const isPassword = node.data && node.data.type === 'password';
     const items = [];
     
@@ -146,6 +148,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
               password: node.data.password,
               port: node.data.port || 22,
               originalKey: node.key,
+              name: node.label,
               useBastionWallix: node.data.useBastionWallix || false,
               bastionHost: node.data.bastionHost || '',
               bastionUser: node.data.bastionUser || ''
@@ -267,7 +270,43 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           }))
         });
       }
-      
+
+      // Opción para copiar contraseña
+      if (node.data?.password) {
+        items.push({
+          label: 'Copiar contraseña',
+          icon: 'pi pi-key',
+          command: async () => {
+            try {
+              if (window.electron?.clipboard?.writeText) {
+                await window.electron.clipboard.writeText(node.data.password);
+              } else if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(node.data.password);
+              }
+              // Mostrar toast de confirmación
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'success',
+                  summary: 'Copiado',
+                  detail: 'Contraseña copiada al portapapeles',
+                  life: 1500
+                });
+              }
+            } catch (error) {
+              console.error('Error copiando contraseña:', error);
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'error',
+                  summary: 'Error',
+                  detail: 'No se pudo copiar la contraseña',
+                  life: 3000
+                });
+              }
+            }
+          }
+        });
+      }
+
       items.push({ separator: true });
       items.push({
         label: 'Duplicar',
@@ -345,6 +384,43 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           } catch (e) { /* noop */ }
         }
       });
+
+      // Opción para copiar contraseña en RDP
+      if (node.data?.password) {
+        items.push({
+          label: 'Copiar contraseña',
+          icon: 'pi pi-key',
+          command: async () => {
+            try {
+              if (window.electron?.clipboard?.writeText) {
+                await window.electron.clipboard.writeText(node.data.password);
+              } else if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(node.data.password);
+              }
+              // Mostrar toast de confirmación
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'success',
+                  summary: 'Copiado',
+                  detail: 'Contraseña copiada al portapapeles',
+                  life: 1500
+                });
+              }
+            } catch (error) {
+              console.error('Error copiando contraseña:', error);
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'error',
+                  summary: 'Error',
+                  detail: 'No se pudo copiar la contraseña',
+                  life: 3000
+                });
+              }
+            }
+          }
+        });
+      }
+
       items.push({ separator: true });
       items.push({
         label: 'Duplicar',
@@ -373,8 +449,198 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           }
         }
       });
+    } else if (isVNC) {
+      items.push({
+        label: 'Conectar VNC',
+        icon: 'pi pi-desktop',
+        command: () => onOpenVncConnection(node, nodes)
+      });
+      items.push({
+        label: 'Agregar/Quitar de Favoritos',
+        icon: 'pi pi-star',
+        command: () => {
+          try {
+            connectionStore.toggleFavorite({
+              type: 'vnc',
+              name: node.label,
+              host: node.data?.host || node.data?.server || node.data?.hostname,
+              port: node.data?.port || 5900,
+              password: node.data?.password || '',
+              clientType: node.data?.clientType || 'guacamole',
+              resolution: node.data?.resolution || '1024x768',
+              colorDepth: node.data?.colorDepth || 32,
+              readOnly: node.data?.readOnly || false,
+              enableCompression: node.data?.enableCompression !== false,
+              imageQuality: node.data?.imageQuality || 'lossless',
+              autoReconnect: node.data?.autoReconnect !== false,
+              autoResize: node.data?.autoResize !== false,
+              redirectClipboard: node.data?.redirectClipboard !== false,
+              guacDpi: node.data?.guacDpi || 96
+            });
+          } catch (e) { /* noop */ }
+        }
+      });
+
+      // Opción para copiar contraseña en VNC
+      if (node.data?.password) {
+        items.push({
+          label: 'Copiar contraseña',
+          icon: 'pi pi-key',
+          command: async () => {
+            try {
+              if (window.electron?.clipboard?.writeText) {
+                await window.electron.clipboard.writeText(node.data.password);
+              } else if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(node.data.password);
+              }
+              // Mostrar toast de confirmación
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'success',
+                  summary: 'Copiado',
+                  detail: 'Contraseña copiada al portapapeles',
+                  life: 1500
+                });
+              }
+            } catch (error) {
+              console.error('Error copiando contraseña:', error);
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'error',
+                  summary: 'Error',
+                  detail: 'No se pudo copiar la contraseña',
+                  life: 3000
+                });
+              }
+            }
+          }
+        });
+      }
+
+      items.push({ separator: true });
+      items.push({
+        label: 'Duplicar',
+        icon: 'pi pi-copy',
+        command: () => {
+          if (sidebarCallbacksRef.current.duplicateVNC) {
+            sidebarCallbacksRef.current.duplicateVNC(node);
+          }
+        }
+      });
+      items.push({
+        label: 'Editar',
+        icon: 'pi pi-pencil',
+        command: () => {
+          if (sidebarCallbacksRef.current.editVNC) {
+            sidebarCallbacksRef.current.editVNC(node);
+          }
+        }
+      });
+      items.push({
+        label: 'Eliminar',
+        icon: 'pi pi-trash',
+        command: () => {
+          if (sidebarCallbacksRef.current.deleteNode) {
+            sidebarCallbacksRef.current.deleteNode(node.key, node.label);
+          }
+        }
+      });
+    } else if (isFileConnection) {
+      const protocol = node.data?.protocol || node.data?.type || 'sftp';
+      const protocolLabel = protocol.toUpperCase();
+      
+      items.push({
+        label: `Abrir Explorador ${protocolLabel}`,
+        icon: 'pi pi-folder-open',
+        command: () => {
+          if (activeGroupId !== null) {
+            const currentGroupKey = activeGroupId || 'no-group';
+            setGroupActiveIndices(prev => ({
+              ...prev,
+              [currentGroupKey]: activeTabIndex
+            }));
+            setActiveGroupId(null);
+          }
+          openFileExplorer(node);
+        }
+      });
+      
+      items.push({
+        label: 'Agregar/Quitar de Favoritos',
+        icon: 'pi pi-star',
+        command: () => {
+          try {
+            connectionStore.toggleFavorite({
+              type: protocol,
+              name: node.label,
+              host: node.data?.host,
+              username: node.data?.username || node.data?.user,
+              port: node.data?.port || (protocol === 'ftp' ? 21 : 22),
+              password: node.data?.password || '',
+              protocol: protocol,
+              remoteFolder: node.data?.remoteFolder || '',
+              targetFolder: node.data?.targetFolder || ''
+            });
+          } catch (e) { /* noop */ }
+        }
+      });
+      
+      items.push({ separator: true });
+      items.push({
+        label: 'Editar',
+        icon: 'pi pi-pencil',
+        command: () => {
+          if (sidebarCallbacksRef.current.editFileConnection) {
+            sidebarCallbacksRef.current.editFileConnection(node);
+          }
+        }
+      });
+      items.push({
+        label: 'Eliminar',
+        icon: 'pi pi-trash',
+        command: () => {
+          if (sidebarCallbacksRef.current.deleteNode) {
+            sidebarCallbacksRef.current.deleteNode(node.key, node.label);
+          }
+        }
+      });
     } else if (isPassword) {
-      // Solo opción de eliminar para passwords antiguos en la sidebar de conexiones
+      // Opción para copiar contraseña en conexiones de tipo password
+      if (node.data?.password) {
+        items.push({
+          label: 'Copiar contraseña',
+          icon: 'pi pi-key',
+          command: async () => {
+            try {
+              if (window.electron?.clipboard?.writeText) {
+                await window.electron.clipboard.writeText(node.data.password);
+              } else if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(node.data.password);
+              }
+              // Mostrar toast de confirmación
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'success',
+                  summary: 'Copiado',
+                  detail: 'Contraseña copiada al portapapeles',
+                  life: 1500
+                });
+              }
+            } catch (error) {
+              console.error('Error copiando contraseña:', error);
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'error',
+                  summary: 'Error',
+                  detail: 'No se pudo copiar la contraseña',
+                  life: 3000
+                });
+              }
+            }
+          }
+        });
+      }
+
       items.push({
         label: 'Eliminar',
         icon: 'pi pi-trash',
@@ -386,6 +652,16 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       });
     } else if (isFolder) {
       items.push({
+        label: 'Nueva Conexión',
+        icon: 'pi pi-desktop',
+        command: () => {
+          if (sidebarCallbacksRef.current.createSSH) {
+            sidebarCallbacksRef.current.createSSH(node.key);
+          }
+        }
+      });
+      items.push({ separator: true });
+      items.push({
         label: 'Nueva Carpeta',
         icon: 'pi pi-folder',
         command: () => {
@@ -394,25 +670,6 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           }
         }
       });
-      items.push({
-        label: 'Nueva Conexión SSH',
-        icon: 'pi pi-desktop',
-        command: () => {
-          if (sidebarCallbacksRef.current.createSSH) {
-            sidebarCallbacksRef.current.createSSH(node.key);
-          }
-        }
-      });
-      items.push({
-        label: 'Nueva Conexión RDP',
-        icon: 'pi pi-desktop',
-        command: () => {
-          if (sidebarCallbacksRef.current.createRDP) {
-            sidebarCallbacksRef.current.createRDP(node.key);
-          }
-        }
-      });
-      items.push({ separator: true });
       items.push({
         label: 'Duplicar Carpeta',
         icon: 'pi pi-copy',
@@ -457,11 +714,12 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         }
       },
       {
-        label: 'Nueva Conexión SSH',
-        icon: 'pi pi-desktop',
+        label: 'Nueva Conexión',
+        icon: 'pi pi-sitemap',
         command: () => {
-          if (sidebarCallbacksRef.current.createSSH) {
-            sidebarCallbacksRef.current.createSSH();
+          // Abrir diálogo de selección de protocolo
+          if (sidebarCallbacksRef.current.showProtocolSelection) {
+            sidebarCallbacksRef.current.showProtocolSelection();
           }
         }
       }

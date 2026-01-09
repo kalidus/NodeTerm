@@ -138,6 +138,7 @@ const SplitLayout = ({
   statusBarIconTheme = 'classic',
   externalPaneSize = null, // Nuevo prop para controlar el tamaño externamente
   onManualResize = null, // Callback para notificar redimensionamiento manual
+  onPaneSizeChange = null, // Callback para notificar cambio de tamaño durante redimensionamiento
   splitterColor, // <-- nuevo prop
   onCloseLeft = null, // Callback para cerrar panel izquierdo
   onCloseRight = null // Callback para cerrar panel derecho
@@ -268,7 +269,8 @@ const SplitLayout = ({
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
-      transition: externalPaneSize !== null ? 'all 0.1s ease' : 'none'
+      // La transición se aplica SOLO cuando no se está arrastrando (ver estilos finales).
+      transition: 'none'
     };
 
     const secondaryPaneStyle = {
@@ -278,30 +280,37 @@ const SplitLayout = ({
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
-      transition: externalPaneSize !== null ? 'all 0.1s ease' : 'none',
+      // La transición se aplica SOLO cuando no se está arrastrando (ver estilos finales).
+      transition: 'none',
       background: theme?.background || undefined
     };
 
     // Necesitamos agregar el handle de resize horizontal
     const [internalPaneSize, setInternalPaneSize] = useState(() => {
-      // Calcular 30% menos de la altura de la ventana (70% del tamaño original)
-      return Math.max(window.innerHeight * 0.7, 200);
+      // Si hay un externalPaneSize, usarlo como inicial, sino calcular 70% de la altura
+      return externalPaneSize !== null ? externalPaneSize : Math.max(window.innerHeight * 0.7, 200);
     });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0, size: 0 });
+    const dragRafRef = useRef(0);
+    const latestDragSizeRef = useRef(internalPaneSize);
     
-    const finalPrimaryPaneSize = externalPaneSize !== null ? externalPaneSize : internalPaneSize;
+    // Durante el redimensionamiento, usar internalPaneSize, sino usar externalPaneSize si está disponible
+    const finalPrimaryPaneSize = isDragging ? internalPaneSize : (externalPaneSize !== null ? externalPaneSize : internalPaneSize);
     
     // Actualizar los estilos con el tamaño final
     const finalPrimaryPaneStyle = {
       ...primaryPaneStyle,
       height: `${finalPrimaryPaneSize}px`,
-      position: 'relative'
+      position: 'relative',
+      // Desactivar transiciones durante el drag para evitar "lag" visual
+      transition: isDragging ? 'none' : (externalPaneSize !== null ? 'all 0.1s ease' : 'none')
     };
     
     const finalSecondaryPaneStyle = {
       ...secondaryPaneStyle,
-      height: `calc(100% - ${finalPrimaryPaneSize}px)`
+      height: `calc(100% - ${finalPrimaryPaneSize}px)`,
+      transition: isDragging ? 'none' : (externalPaneSize !== null ? 'all 0.1s ease' : 'none')
     };
 
     // Handlers de resize horizontal
@@ -313,6 +322,7 @@ const SplitLayout = ({
         y: e.clientY,
         size: finalPrimaryPaneSize
       });
+      latestDragSizeRef.current = finalPrimaryPaneSize;
       
       if (externalPaneSize !== null && onManualResize) {
         onManualResize();
@@ -329,14 +339,29 @@ const SplitLayout = ({
       const maxSize = window.innerHeight - 100;
       
       const clampedSize = Math.max(minSize, Math.min(maxSize, newSize));
-      setInternalPaneSize(clampedSize);
-    }, [isDragging, dragStart]);
+      // Guardar y aplicar el tamaño a 1 update por frame (más suave)
+      latestDragSizeRef.current = clampedSize;
+      if (dragRafRef.current) return;
+      dragRafRef.current = requestAnimationFrame(() => {
+        dragRafRef.current = 0;
+        setInternalPaneSize(latestDragSizeRef.current);
+      });
+    }, [isDragging, dragStart, onPaneSizeChange]);
 
     const handleMouseUp = useCallback(() => {
       if (isDragging) {
         setIsDragging(false);
+        // Cancelar RAF pendiente si lo hay
+        if (dragRafRef.current) {
+          cancelAnimationFrame(dragRafRef.current);
+          dragRafRef.current = 0;
+        }
+        // Notificar al padre SOLO al soltar, evitando rerenders pesados durante el drag
+        if (onPaneSizeChange) {
+          onPaneSizeChange(latestDragSizeRef.current);
+        }
       }
-    }, [isDragging]);
+    }, [isDragging, onPaneSizeChange]);
 
     // Event listeners para el drag horizontal
     React.useEffect(() => {

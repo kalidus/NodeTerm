@@ -80,14 +80,11 @@ const TabContextMenu = ({
   return (
     <>
       <div
+        className="tab-context-menu"
         style={{
           position: 'fixed',
           left: tabContextMenu.x,
           top: tabContextMenu.y,
-          backgroundColor: 'white',
-          border: '1px solid #ccc',
-          borderRadius: '6px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
           zIndex: 10000,
           minWidth: '180px',
           overflow: 'hidden'
@@ -96,10 +93,11 @@ const TabContextMenu = ({
         {tabContextMenu.isGroup ? (
           // Menú contextual para grupos
           <>
-            <div style={{ padding: '8px 12px', fontWeight: 'bold', borderBottom: '1px solid #e0e0e0', fontSize: '12px', color: '#666' }}>
+            <div className="menu-header" style={{ padding: '8px 12px', fontWeight: 'bold', borderBottom: '1px solid var(--ui-context-border)', fontSize: '12px', color: 'var(--ui-context-text)', opacity: 0.7 }}>
               Opciones del grupo "{tabContextMenu.group.name}":
             </div>
             <div
+              className="menu-item"
               style={{
                 padding: '8px 12px',
                 cursor: 'pointer',
@@ -107,15 +105,14 @@ const TabContextMenu = ({
                 alignItems: 'center',
                 gap: '8px'
               }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
               onClick={handleAddToFavorites}
             >
               <i className={isGroupFavorite(tabContextMenu.group.id, tabContextMenu.group.name) ? 'pi pi-star-fill' : 'pi pi-star'} style={{ width: '16px' }}></i>
               {isGroupFavorite(tabContextMenu.group.id, tabContextMenu.group.name) ? 'Quitar de favoritos' : 'Añadir a favoritos'}
             </div>
-            <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
+            <div className="menu-separator" style={{ height: '1px', margin: '4px 0' }}></div>
             <div
+              className="menu-item"
               style={{
                 padding: '8px 12px',
                 cursor: 'pointer',
@@ -124,8 +121,6 @@ const TabContextMenu = ({
                 gap: '8px',
                 color: '#d32f2f'
               }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#ffebee'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
               onClick={handleDeleteGroup}
             >
               <i className="pi pi-trash" style={{ width: '16px' }}></i>
@@ -137,10 +132,11 @@ const TabContextMenu = ({
           <>
             {tabGroups.length > 0 && (
               <>
-                <div style={{ padding: '8px 12px', fontWeight: 'bold', borderBottom: '1px solid #e0e0e0', fontSize: '12px', color: '#666' }}>
+                <div className="menu-header" style={{ padding: '8px 12px', fontWeight: 'bold', borderBottom: '1px solid var(--ui-context-border)', fontSize: '12px', color: 'var(--ui-context-text)', opacity: 0.7 }}>
                   Mover a grupo:
                 </div>
                 <div
+                  className="menu-item"
                   style={{
                     padding: '8px 12px',
                     cursor: 'pointer',
@@ -148,19 +144,18 @@ const TabContextMenu = ({
                     alignItems: 'center',
                     gap: '8px'
                   }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                   onClick={() => {
                     moveTabToGroup(tabContextMenu.tabKey, null);
                     setTabContextMenu(null);
                   }}
                 >
-                  <i className="pi pi-circle" style={{ width: '16px', color: '#999' }}></i>
+                  <i className="pi pi-circle" style={{ width: '16px', color: 'var(--ui-context-text)', opacity: 0.6 }}></i>
                   Home
                 </div>
                 {tabGroups.map(group => (
                   <div
                     key={group.id}
+                    className="menu-item"
                     style={{
                       padding: '8px 12px',
                       cursor: 'pointer',
@@ -168,8 +163,6 @@ const TabContextMenu = ({
                       alignItems: 'center',
                       gap: '8px'
                     }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                     onClick={() => {
                       moveTabToGroup(tabContextMenu.tabKey, group.id);
                       setTabContextMenu(null);
@@ -186,10 +179,11 @@ const TabContextMenu = ({
                     {group.name}
                   </div>
                 ))}
-                <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
+                <div className="menu-separator" style={{ height: '1px', margin: '4px 0' }}></div>
               </>
             )}
             <div
+              className="menu-item"
               style={{
                 padding: '8px 12px',
                 cursor: 'pointer',
@@ -197,8 +191,6 @@ const TabContextMenu = ({
                 alignItems: 'center',
                 gap: '8px'
               }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
               onClick={() => {
                 setTabContextMenu(null);
                 setShowCreateGroupDialog(true);

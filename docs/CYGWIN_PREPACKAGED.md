@@ -30,14 +30,21 @@ Cygwin es una colección de herramientas Unix/Linux para Windows que proporciona
 Ejecuta el script principal para crear la instalación completa:
 
 ```powershell
-# Instalación ULTRA COMPLETA con TODAS las herramientas (RECOMENDADO)
+# Instalación MEDIUM (POR DEFECTO - RECOMENDADO)
+# Básicos + red + utilidades + herramientas avanzadas (sin compiladores ni lenguajes)
 .\scripts\create-cygwin-portable.ps1
 
-# Instalación completa (herramientas básicas + red, sin lenguajes)
-.\scripts\create-cygwin-portable.ps1 -NoUltraComplete
+# O explícitamente:
+.\scripts\create-cygwin-portable.ps1 -Medium
 
 # Instalación mínima (solo básico)
 .\scripts\create-cygwin-portable.ps1 -Minimal
+
+# Instalación completa (MEDIUM + compiladores y herramientas de desarrollo)
+.\scripts\create-cygwin-portable.ps1 -Full
+
+# Instalación ULTRA COMPLETA (FULL + lenguajes de programación)
+.\scripts\create-cygwin-portable.ps1 -NoUltraComplete
 
 # Instalación en directorio temporal (para evitar problemas de permisos)
 .\scripts\create-cygwin-portable.ps1 -UseTemp
@@ -49,19 +56,31 @@ Esto creará `resources\cygwin64\` con todo Cygwin instalado.
 
 **🔹 MODO MINIMAL (`-Minimal`):**
 - ✅ **Básicos**: bash, coreutils, grep, sed, gawk, findutils, which, less, ncurses
+- 📦 **Tamaño estimado**: ~50-100 MB
 
-**🔹 MODO FULL (`-NoUltraComplete`):**
-- ✅ **Básicos**: bash, coreutils, grep, sed, gawk, findutils
-- ✅ **Red**: wget, curl, openssh, netcat, ping, telnet, nmap, traceroute, tcpdump
-- ✅ **Herramientas**: git, vim, nano, tar, gzip, bzip2, rsync
+**🔹 MODO MEDIUM (`-Medium` o por defecto):**
+- ✅ **Básicos**: bash, coreutils, grep, sed, gawk, findutils, which, less, ncurses
+- ✅ **Red esencial**: wget, curl, openssh, netcat, iputils (ping), nmap, net-tools, openssl, ca-certificates, libcurl4, libssh2, rsync
+- ✅ **Utilidades básicas**: git, vim, nano, tar, gzip, zip, unzip, procps-ng
+- ✅ **Herramientas avanzadas**: htop (monitoreo del sistema)
+- ❌ **SIN herramientas pesadas** (tcpdump, strace, lsof, telnet - tienen muchas dependencias)
+- ❌ **SIN compiladores** (gcc, g++, make, cmake)
+- ❌ **SIN lenguajes de programación** (python, nodejs, ruby, etc.)
+- ❌ **SIN documentación pesada** (man-db, info)
+- ❌ **SIN herramientas redundantes** (bzip2, diffutils, file, inetutils, traceroute, ltrace, iotop, sysstat, more)
+- 📦 **Tamaño estimado**: ~200-400 MB (optimizado con nmap y htop)
+
+**🔹 MODO FULL (`-Full`):**
+- ✅ **Todo MEDIUM** PLUS:
 - ✅ **Desarrollo**: gcc, g++, make, cmake, autoconf, automake, libtool, pkg-config, binutils
-- ✅ **Utilidades**: openssl, ca-certificates, unzip, zip, man-db
+- 📦 **Tamaño estimado**: ~500-800 MB
 
-**🔹 MODO ULTRA COMPLETE (POR DEFECTO):**
-- ✅ **Todo lo anterior** PLUS:
-- ✅ **Sistema**: htop, iotop, tree, strace, lsof, sysstat, util-linux
-- ✅ **Lenguajes**: python3, nodejs, ruby, perl, php, go, rust, java-openjdk
+**🔹 MODO ULTRA COMPLETE (`-NoUltraComplete` o sin parámetros):**
+- ✅ **Todo FULL** PLUS:
+- ✅ **Utilidades adicionales**: tree, psmisc, util-linux, time, parallel
+- ✅ **Lenguajes**: python3, pip, nodejs, npm, yarn, ruby, perl, php, go, rust, java-openjdk
 - ✅ **Utilidades avanzadas**: gnuplot, graphviz, imagemagick, ffmpeg
+- 📦 **Tamaño estimado**: ~1-2 GB
 
 ### 3. Verificar Estructura
 
@@ -112,9 +131,20 @@ Una vez compilada la aplicación:
 
 ## 📊 Tamaños Esperados
 
-- **Cygwin sin comprimir:** ~858 MB
-- **Instalador final:** ~514 MB (comprimido por Electron Builder)
-- **Espacio en disco del usuario:** ~858 MB después de instalar
+**Modo MEDIUM (por defecto):**
+- **Cygwin sin comprimir:** ~150-300 MB
+- **Instalador final:** ~100-200 MB (comprimido por Electron Builder)
+- **Espacio en disco del usuario:** ~150-300 MB después de instalar
+
+**Modo FULL:**
+- **Cygwin sin comprimir:** ~500-800 MB
+- **Instalador final:** ~300-500 MB (comprimido)
+- **Espacio en disco del usuario:** ~500-800 MB después de instalar
+
+**Modo ULTRA COMPLETE:**
+- **Cygwin sin comprimir:** ~1-2 GB
+- **Instalador final:** ~600-900 MB (comprimido)
+- **Espacio en disco del usuario:** ~1-2 GB después de instalar
 
 ## 🔧 Arquitectura Técnica
 
@@ -245,15 +275,19 @@ El instalador incluye automáticamente `resources\cygwin64\` gracias a la config
 - **PowerShell 5.0+**
 - **Conexión a Internet** (para descargar paquetes)
 - **Permisos de escritura** en el directorio del proyecto
-- **~858MB de espacio libre** para instalación Ultra Complete
-- **~200MB de espacio libre** para instalación Full
-- **~50MB de espacio libre** para instalación Minimal
+- **~150-300MB de espacio libre** para instalación Medium (por defecto)
+- **~500-800MB de espacio libre** para instalación Full
+- **~1-2GB de espacio libre** para instalación Ultra Complete
+- **~50-100MB de espacio libre** para instalación Minimal
 
 ## ⚠️ Notas Importantes
 
 1. **Primera ejecución**: Los scripts descargan el instalador de Cygwin (~2MB)
-2. **Tiempo de instalación**: 5-10 minutos dependiendo de la conexión
-3. **Tamaño final**: ~858MB para instalación Ultra Complete
+2. **Tiempo de instalación**: 5-10 minutos dependiendo de la conexión y modo seleccionado
+3. **Tamaño final**: 
+   - **Medium (por defecto)**: ~150-300MB
+   - **Full**: ~500-800MB
+   - **Ultra Complete**: ~1-2GB
 4. **Reinstalación**: Ejecutar `create-cygwin-portable.ps1` sobrescribe la instalación anterior
 
 ## 🐛 Solución de Problemas
@@ -313,15 +347,19 @@ Este error se solucionó automáticamente en el script. Si aparece:
 
 ### ¿El instalador será muy grande?
 
-- **Sí, ~514MB** - Pero incluye todo lo necesario
+- **Medium (por defecto): ~100-200MB** - Incluye herramientas esenciales y de red
+- **Full: ~300-500MB** - Incluye también compiladores
+- **Ultra Complete: ~600-900MB** - Incluye lenguajes de programación
 - **Una sola descarga** - El usuario no necesita descargar nada más
 - **Sin instalaciones adicionales** - Todo viene listo
 
 ### ¿Puedo crear versiones más pequeñas?
 
 Sí, usando los parámetros del script:
-- `-NoUltraComplete`: ~200MB (sin lenguajes de programación)
-- `-Minimal`: ~50MB (solo herramientas básicas)
+- **Por defecto (Medium)**: ~150-300MB (básicos + red + utilidades + herramientas avanzadas esenciales)
+- `-Minimal`: ~50-100MB (solo herramientas básicas)
+- `-Full`: ~500-800MB (Medium + compiladores)
+- Sin parámetros: ~1-2GB (Ultra Complete con lenguajes)
 
 ## 📊 Rendimiento
 

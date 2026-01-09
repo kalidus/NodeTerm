@@ -1,13 +1,51 @@
 /**
  * GlobalAuditTab - Muestra todas las grabaciones organizadas por conexión
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
-const GlobalAuditTab = ({ recordings = [], onPlayRecording }) => {
+const GlobalAuditTab = ({ recordings: initialRecordings = [], onPlayRecording }) => {
+  const [recordings, setRecordings] = useState(initialRecordings);
   const [groupedRecordings, setGroupedRecordings] = useState({});
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Función para cargar todas las grabaciones
+  const loadRecordings = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Cargar todas las grabaciones sin filtros
+      const result = await window.electron.ipcRenderer.invoke('recording:list', {});
+      
+      if (result.success) {
+        setRecordings(result.recordings || []);
+      } else {
+        console.error('Error cargando grabaciones:', result.error);
+      }
+    } catch (error) {
+      console.error('Error al cargar grabaciones:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Cargar grabaciones al montar el componente
+  useEffect(() => {
+    loadRecordings();
+  }, [loadRecordings]);
+
+  // Escuchar evento de actualización
+  useEffect(() => {
+    const handleRefresh = () => {
+      loadRecordings();
+    };
+
+    window.addEventListener('refresh-audit-tab', handleRefresh);
+    return () => {
+      window.removeEventListener('refresh-audit-tab', handleRefresh);
+    };
+  }, [loadRecordings]);
+
+  // Agrupar grabaciones cuando cambian
   useEffect(() => {
     // Agrupar grabaciones por conexión (host + usuario)
     const grouped = recordings.reduce((acc, recording) => {
@@ -99,8 +137,8 @@ const GlobalAuditTab = ({ recordings = [], onPlayRecording }) => {
       const result = await window.electron.ipcRenderer.invoke('recording:delete', { recordingId });
       
       if (result.success) {
-        // Recargar la lista
-        window.dispatchEvent(new CustomEvent('refresh-audit-tab'));
+        // Recargar la lista directamente
+        await loadRecordings();
         showToast('success', 'Grabación eliminada', 'La grabación se eliminó correctamente');
       } else {
         showToast('error', 'Error', 'Error al eliminar la grabación');
@@ -145,6 +183,26 @@ const GlobalAuditTab = ({ recordings = [], onPlayRecording }) => {
               {recordings.length} grabaciones de {groups.length} conexiones
             </p>
           </div>
+          <button
+            onClick={loadRecordings}
+            disabled={loading}
+            style={{
+              marginLeft: 'auto',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: '1px solid var(--ui-content-border)',
+              background: 'var(--ui-button-secondary)',
+              color: 'var(--ui-button-secondary-text)',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              opacity: loading ? 0.6 : 1
+            }}
+          >
+            <span className={`pi ${loading ? 'pi-spin pi-spinner' : 'pi-refresh'}`}></span>
+            Actualizar
+          </button>
         </div>
 
         {/* Stats generales */}
@@ -183,7 +241,12 @@ const GlobalAuditTab = ({ recordings = [], onPlayRecording }) => {
         </div>
       </div>
 
-      {groups.length === 0 ? (
+      {loading && recordings.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--ui-dialog-text)' }}>
+          <span className="pi pi-spin pi-spinner" style={{ fontSize: '32px' }}></span>
+          <p>Cargando grabaciones...</p>
+        </div>
+      ) : groups.length === 0 ? (
         <div style={{
           textAlign: 'center',
           padding: '60px 20px',

@@ -49,6 +49,9 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
   const initializeTerminal = () => {
     if (!terminalRef.current) return;
 
+    // Leer scrollback desde configuración (configurable en Settings)
+    const scrollbackLines = parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10);
+
     const term = new Terminal({
       fontFamily: fontFamily || 'Consolas, Courier New, monospace',
       fontSize: fontSize || 14,
@@ -61,7 +64,7 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
       rows: recording?.metadata?.height || 24,
       cols: recording?.metadata?.width || 80,
       allowTransparency: true,
-      scrollback: 10000
+      scrollback: scrollbackLines // Configurable desde Settings (default: 1000)
     });
 
     fitAddon.current = new FitAddon();

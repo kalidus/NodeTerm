@@ -1,19 +1,110 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Badge } from 'primereact/badge';
 import { getFavorites, toggleFavorite, onUpdate } from '../utils/connectionStore';
+import { iconThemes } from '../themes/icon-themes';
 
 const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recentsLimit = 10, activeIds = new Set(), onEdit, templateColumns, favoritesColumns = 2, recentsColumns = 1, sshConnectionsCount = 0, foldersCount = 0, rdpConnectionsCount = 0, themeColors = {} }) => {
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
-	const [favType, setFavType] = useState(() => localStorage.getItem('nodeterm_fav_type') || 'all');
+	const [favType, setFavType] = useState(() => {
+		const saved = localStorage.getItem('nodeterm_fav_type');
+		// Convertir 'explorer' a 'sftp' para consistencia
+		if (saved === 'explorer') return 'sftp';
+		return saved || 'all';
+	});
 	const [favQuery, setFavQuery] = useState('');
 	const [currentPage, setCurrentPage] = useState(1);
-	const itemsPerPage = 15;
+	const [containerHeight, setContainerHeight] = useState(400); // Altura inicial estimada
+	const favoritesContainerRef = useRef(null);
+	const resizeRafRef = useRef(0);
+	const lastMeasuredHeightRef = useRef(0);
+	
+	// Configuración de tipografía de HomeTab
+	const [homeTabFont, setHomeTabFont] = useState(() => {
+		try {
+			return localStorage.getItem('homeTabFont') || localStorage.getItem('sidebarFont') || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+		} catch {
+			return '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+		}
+	});
+	const [homeTabFontSize, setHomeTabFontSize] = useState(() => {
+		try {
+			const saved = localStorage.getItem('homeTabFontSize');
+			return saved ? parseInt(saved, 10) : null;
+		} catch {
+			return null;
+		}
+	});
+	
+	// Calcular items por página dinámicamente basado en la altura disponible
+	// Cada tile compacto tiene aproximadamente ~52px de altura, más gaps
+	const itemHeight = 56; // Altura aproximada de cada tile (contenido + gap)
+	const itemsPerRow = favoritesColumns;
+	const calculateItemsPerPage = useCallback(() => {
+		if (containerHeight < 200) return 14; // Mínimo
+		const headerHeight = 80; // Altura del header con filtros
+		const paginationHeight = 40; // Altura de la paginación (si existe)
+		const availableHeight = containerHeight - headerHeight - paginationHeight;
+		const rowsPerPage = Math.max(1, Math.floor(availableHeight / itemHeight));
+		const calculatedItems = rowsPerPage * itemsPerRow;
+		// Mínimo 14 items, pero permitir que crezca dinámicamente
+		return Math.max(14, calculatedItems);
+	}, [containerHeight, favoritesColumns]);
+	
+	const itemsPerPage = calculateItemsPerPage();
 
 	useEffect(() => {
 		loadConnectionHistory();
 		const off = onUpdate(() => loadConnectionHistory());
 		return () => off && off();
 	}, [recentsLimit]);
+
+	// Escuchar cambios en la tipografía de HomeTab
+	useEffect(() => {
+		const handleHomeTabFontChange = () => {
+			try {
+				const newFont = localStorage.getItem('homeTabFont') || localStorage.getItem('sidebarFont') || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+				const newSize = localStorage.getItem('homeTabFontSize');
+				const parsedSize = newSize ? parseInt(newSize, 10) : null;
+				setHomeTabFont(newFont);
+				setHomeTabFontSize(parsedSize);
+			} catch {}
+		};
+		handleHomeTabFontChange();
+		window.addEventListener('home-tab-font-changed', handleHomeTabFontChange);
+		window.addEventListener('sidebar-font-changed', handleHomeTabFontChange);
+		return () => {
+			window.removeEventListener('home-tab-font-changed', handleHomeTabFontChange);
+			window.removeEventListener('sidebar-font-changed', handleHomeTabFontChange);
+		};
+	}, []);
+
+	// Observar cambios en el tamaño del contenedor de favoritos
+	useEffect(() => {
+		if (!favoritesContainerRef.current) return;
+		
+		const resizeObserver = new ResizeObserver(entries => {
+			for (let entry of entries) {
+				const height = entry.contentRect.height;
+				if (height > 0) {
+					// Throttle a 1 update por frame para que el redimensionado del splitter sea fluido
+					const rounded = Math.round(height);
+					if (Math.abs(rounded - (lastMeasuredHeightRef.current || 0)) < 3) return;
+					lastMeasuredHeightRef.current = rounded;
+					if (resizeRafRef.current) cancelAnimationFrame(resizeRafRef.current);
+					resizeRafRef.current = requestAnimationFrame(() => {
+						setContainerHeight(rounded);
+					});
+				}
+			}
+		});
+		
+		resizeObserver.observe(favoritesContainerRef.current);
+		
+		return () => {
+			if (resizeRafRef.current) cancelAnimationFrame(resizeRafRef.current);
+			resizeObserver.disconnect();
+		};
+	}, []);
 
 
 	const loadConnectionHistory = () => {
@@ -30,13 +121,42 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 			case 'ssh':
 				return 'pi pi-server';
 			case 'rdp-guacamole':
+			case 'rdp':
+				return 'pi pi-desktop';
+			case 'vnc-guacamole':
+			case 'vnc':
 				return 'pi pi-desktop';
 			case 'explorer':
+			case 'sftp':
 				return 'pi pi-folder-open';
+			case 'ftp':
+				return 'pi pi-cloud-upload';
+			case 'scp':
+				return 'pi pi-copy';
 			case 'group':
 				return 'pi pi-th-large';
 			default:
 				return 'pi pi-circle';
+		}
+	};
+
+	const getConnectionTypeIconSVG = (type) => {
+		const iconTheme = localStorage.getItem('nodeterm_icon_theme') || 'material';
+		const theme = iconThemes[iconTheme] || iconThemes['material'];
+		switch (type) {
+			case 'ssh':
+				return theme.icons.ssh;
+			case 'rdp':
+			case 'rdp-guacamole':
+				return theme.icons.rdp;
+			case 'vnc':
+			case 'vnc-guacamole':
+				return theme.icons.vnc;
+			case 'sftp':
+			case 'explorer':
+				return theme.icons.sftp;
+			default:
+				return null;
 		}
 	};
 
@@ -45,9 +165,18 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 			case 'ssh':
 				return '#4fc3f7';
 			case 'rdp-guacamole':
+			case 'rdp':
 				return '#ff6b35';
+			case 'vnc-guacamole':
+			case 'vnc':
+				return '#00ff00';
 			case 'explorer':
+			case 'sftp':
 				return '#FFB300';
+			case 'ftp':
+				return '#4CAF50';
+			case 'scp':
+				return '#9C27B0';
 			case 'group':
 				return '#9c27b0';
 			default:
@@ -55,38 +184,140 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 		}
 	};
 
-	const TypeChips = ({ value, onChange }) => (
-		<>
-			<div style={{ display: 'flex', gap: 5 }}>
-				{[
+	const TypeChips = ({ value, onChange }) => {
+		// Determinar el valor del selector de archivos (SFTP/FTP/SCP)
+		const getFileProtocolValue = () => {
+			if (value === 'explorer' || value === 'sftp') return 'sftp';
+			if (value === 'ftp') return 'ftp';
+			if (value === 'scp') return 'scp';
+			return 'sftp'; // Por defecto SFTP
+		};
+
+		const fileProtocolValue = getFileProtocolValue();
+		const isFileProtocolSelected = ['explorer', 'sftp', 'ftp', 'scp'].includes(value);
+
+		const handleFileProtocolChange = (newValue) => {
+			// Mapear el valor del selector al tipo de conexión
+			const typeMap = {
+				'sftp': 'sftp',
+				'ftp': 'ftp',
+				'scp': 'scp'
+			};
+			const connectionType = typeMap[newValue] || 'sftp';
+			onChange(connectionType);
+			if (onChange === setFavType) localStorage.setItem('nodeterm_fav_type', connectionType);
+		};
+
+		return (
+			<>
+				<div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+					{/* Botones: Todos, SSH, RDP */}
+					{[
 					{ key: 'all', label: 'Todos' },
 					{ key: 'ssh', label: 'SSH' },
 					{ key: 'rdp-guacamole', label: 'RDP' },
-					{ key: 'explorer', label: 'SFTP' },
-					{ key: 'group', label: 'Grupos' }
-				].map(opt => (
+					{ key: 'vnc-guacamole', label: 'VNC' }
+					].map(opt => (
+						<button
+							key={opt.key}
+							onClick={() => { onChange(opt.key); if (onChange === setFavType) localStorage.setItem('nodeterm_fav_type', opt.key); }}
+							style={{
+								padding: '2px 7px',
+								borderRadius: 999,
+								border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.14)'}`,
+								background: value === opt.key ? (themeColors.hoverBackground || 'rgba(255,255,255,0.12)') : (themeColors.itemBackground || 'rgba(255,255,255,0.04)'),
+								color: themeColors.textPrimary || 'var(--text-color)',
+								fontSize: 10,
+								cursor: 'pointer',
+								backdropFilter: 'blur(8px) saturate(130%)',
+								height: '20px',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center'
+							}}
+						>{opt.label}</button>
+					))}
+					
+					{/* Selector para SFTP/FTP/SCP - después de RDP */}
+					<div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+						<select
+							value={fileProtocolValue}
+							onChange={(e) => handleFileProtocolChange(e.target.value)}
+							style={{
+								padding: '0 20px 0 7px',
+								borderRadius: 999,
+								border: `1px solid ${isFileProtocolSelected ? (themeColors.hoverBackground || 'rgba(255,255,255,0.12)') : (themeColors.borderColor || 'rgba(255,255,255,0.14)')}`,
+								background: isFileProtocolSelected ? (themeColors.hoverBackground || 'rgba(255,255,255,0.12)') : (themeColors.itemBackground || 'rgba(255,255,255,0.04)'),
+								color: themeColors.textPrimary || 'var(--text-color)',
+								fontSize: 10,
+								cursor: 'pointer',
+								backdropFilter: 'blur(8px) saturate(130%)',
+								outline: 'none',
+								appearance: 'none',
+								WebkitAppearance: 'none',
+								MozAppearance: 'none',
+								width: 'auto',
+								minWidth: '50px',
+								height: '20px',
+								lineHeight: '20px',
+								verticalAlign: 'middle',
+								boxSizing: 'border-box',
+								margin: 0
+							}}
+						>
+							<option value="sftp">SFTP</option>
+							<option value="ftp">FTP</option>
+							<option value="scp">SCP</option>
+						</select>
+						<i 
+							className="pi pi-chevron-down" 
+							style={{ 
+								position: 'absolute',
+								right: '6px',
+								top: '50%',
+								transform: 'translateY(-50%)',
+								pointerEvents: 'none',
+								fontSize: '8px',
+								color: themeColors.textPrimary || 'var(--text-color)',
+								opacity: 0.7
+							}} 
+						/>
+					</div>
+					
+					{/* Botón Grupos - después del selector */}
 					<button
-						key={opt.key}
-						onClick={() => { onChange(opt.key); if (onChange === setFavType) localStorage.setItem('nodeterm_fav_type', opt.key); }}
+						key="group"
+						onClick={() => { onChange('group'); if (onChange === setFavType) localStorage.setItem('nodeterm_fav_type', 'group'); }}
 						style={{
 							padding: '2px 7px',
 							borderRadius: 999,
 							border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.14)'}`,
-							background: value === opt.key ? (themeColors.hoverBackground || 'rgba(255,255,255,0.12)') : (themeColors.itemBackground || 'rgba(255,255,255,0.04)'),
+							background: value === 'group' ? (themeColors.hoverBackground || 'rgba(255,255,255,0.12)') : (themeColors.itemBackground || 'rgba(255,255,255,0.04)'),
 							color: themeColors.textPrimary || 'var(--text-color)',
 							fontSize: 10,
 							cursor: 'pointer',
-							backdropFilter: 'blur(8px) saturate(130%)'
+							backdropFilter: 'blur(8px) saturate(130%)',
+							height: '20px',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center'
 						}}
-					>{opt.label}</button>
-				))}
-			</div>
-		</>
-	);
+					>Grupos</button>
+				</div>
+			</>
+		);
+	};
 
 
 	const applyTypeFilter = (items, type) => {
 		if (type === 'all') return items;
+		if (type === 'vnc-guacamole' || type === 'vnc') {
+			return items.filter(c => c.type === 'vnc-guacamole' || c.type === 'vnc');
+		}
+		// 'explorer' y 'sftp' son ambos SFTP, así que los tratamos igual
+		if (type === 'sftp') {
+			return items.filter(c => c.type === 'sftp' || c.type === 'explorer');
+		}
 		return items.filter(c => c.type === type);
 	};
 
@@ -114,172 +345,135 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	const endIndex = startIndex + itemsPerPage;
 	const paginatedFavorites = filteredFavorites.slice(startIndex, endIndex);
 
+	// Escalado visual cuando hay pocas cards y se estiran verticalmente.
+	// Calculamos un "scale" en función de la altura real por fila.
+	const favScale = React.useMemo(() => {
+		if (!paginatedFavorites.length) return 1;
+		const rows = Math.max(1, Math.ceil(paginatedFavorites.length / favoritesColumns));
+		const paginationHeight = totalPages > 1 ? 40 : 0;
+		const availableForGrid = Math.max(0, containerHeight - paginationHeight);
+		const rowHeight = availableForGrid / rows;
+		const scale = rowHeight / itemHeight; // itemHeight ~58px (tile compacta)
+		const clamped = Math.max(1, Math.min(1.6, scale));
+		return Number(clamped.toFixed(3));
+	}, [paginatedFavorites.length, favoritesColumns, totalPages, containerHeight]);
+
+	const isSparseFavoritesLayout = favScale > 1.15;
+
 	const ConnectionCard = ({ connection, showFavoriteAction = false, compact = false, micro = false, onEdit }) => {
 		const isActive = activeIds.has(`${connection.type}:${connection.host}:${connection.username}:${connection.port}`);
+		const typeColor = getConnectionTypeColor(connection.type);
+		
+		const protocolLabel =
+			connection.type === 'rdp-guacamole' || connection.type === 'rdp' ? 'RDP' :
+			connection.type === 'vnc-guacamole' || connection.type === 'vnc' ? 'VNC' :
+			connection.type === 'explorer' ? 'SFTP' :
+			connection.type === 'sftp' ? 'SFTP' :
+			connection.type === 'ftp' ? 'FTP' :
+			connection.type === 'scp' ? 'SCP' :
+			connection.type === 'group' ? 'GRUPO' : 'SSH';
+		
+		const hostLabel = connection.host || connection.hostname || '—';
+		
+		const r = parseInt(typeColor.slice(1,3), 16);
+		const g = parseInt(typeColor.slice(3,5), 16);
+		const b = parseInt(typeColor.slice(5,7), 16);
+		
 		return (
 			<div
-				className="connection-mini-row"
+				className="favorite-tile"
 				onClick={() => onConnectToHistory?.(connection)}
+				onKeyDown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						onConnectToHistory?.(connection);
+					}
+				}}
+				role="button"
+				tabIndex={0}
+				aria-label={`Conectar a ${connection.name}`}
 				style={{
-					display: 'grid',
-					gridTemplateColumns: 'auto 1fr auto 12px',
-					alignItems: 'center',
-					gap: micro ? '6px' : (compact ? '8px' : '12px'),
-					padding: micro ? '4px 8px' : (compact ? '6px 10px' : '10px 14px'),
-					border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.14)'}`,
-					borderRadius: micro ? '8px' : (compact ? '10px' : '14px'),
-					background: themeColors.itemBackground || 'rgba(16, 20, 28, 0.45)',
-					backdropFilter: 'blur(10px) saturate(140%)',
-					boxShadow: micro ? '0 3px 12px rgba(0,0,0,0.2)' : (compact ? '0 4px 16px rgba(0,0,0,0.22)' : '0 6px 24px rgba(0,0,0,0.25)'),
-					cursor: 'pointer',
-					transition: 'all 0.2s ease'
+					'--fav-accent': typeColor,
+					'--fav-icon-bg': `rgba(${r}, ${g}, ${b}, 0.15)`,
+					'--fav-icon-border': `rgba(${r}, ${g}, ${b}, 0.35)`,
+					'--fav-icon-color': typeColor,
+					'--fav-chip-bg': `rgba(${r}, ${g}, ${b}, 0.18)`,
+					'--fav-chip-border': `rgba(${r}, ${g}, ${b}, 0.45)`,
+					'--fav-chip-color': typeColor,
+					'--fav-bg': themeColors.itemBackground || 'rgba(12, 14, 20, 0.55)',
+					'--fav-bg-hover': themeColors.hoverBackground || 'rgba(16, 20, 28, 0.70)',
+					'--fav-border': themeColors.borderColor || 'rgba(255,255,255,0.10)',
+					'--fav-font-family': homeTabFont || 'inherit',
+					'--fav-name-font-size': homeTabFontSize ? `${homeTabFontSize * 0.85}px` : 'calc(11px * var(--fav-scale))',
+					'--fav-host-font-size': homeTabFontSize ? `${homeTabFontSize * 0.7}px` : 'calc(10px * var(--fav-scale))',
+					'--fav-chip-font-size': homeTabFontSize ? `${homeTabFontSize * 0.65}px` : 'calc(7.5px * var(--fav-scale))',
 				}}
 				onMouseEnter={(e) => {
-					const typeColor = getConnectionTypeColor(connection.type);
-					e.currentTarget.style.borderColor = typeColor;
-					e.currentTarget.style.boxShadow = micro ? `0 0 0 1px ${typeColor}66, 0 4px 12px rgba(0,0,0,0.28)` : (compact ? `0 0 0 1px ${typeColor}66, 0 6px 18px rgba(0,0,0,0.3)` : `0 0 0 1px ${typeColor}66, 0 10px 28px rgba(0,0,0,0.35)`);
+					e.currentTarget.style.setProperty('--fav-bg', themeColors.hoverBackground || 'rgba(16, 20, 28, 0.70)');
+					e.currentTarget.style.setProperty('--fav-border', themeColors.borderColor || 'rgba(255,255,255,0.16)');
 				}}
 				onMouseLeave={(e) => {
-					e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)';
-					e.currentTarget.style.boxShadow = micro ? '0 3px 12px rgba(0,0,0,0.2)' : (compact ? '0 4px 16px rgba(0,0,0,0.22)' : '0 6px 24px rgba(0,0,0,0.25)');
+					e.currentTarget.style.setProperty('--fav-bg', themeColors.itemBackground || 'rgba(12, 14, 20, 0.55)');
+					e.currentTarget.style.setProperty('--fav-border', themeColors.borderColor || 'rgba(255,255,255,0.10)');
 				}}
 			>
-				<div style={{
-					display: 'flex',
-					alignItems: 'center',
-					justifyContent: 'center',
-					width: micro ? 26 : (compact ? 32 : 38),
-					height: micro ? 26 : (compact ? 32 : 38),
-					borderRadius: micro ? 8 : (compact ? 10 : 12),
-					background: `linear-gradient(135deg, ${getConnectionTypeColor(connection.type)}88, ${getConnectionTypeColor(connection.type)}44)`,
-					border: '1px solid rgba(255,255,255,0.18)',
-					boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)'
-				}}>
-					<i className={getConnectionTypeIcon(connection.type)} style={{ color: '#fff', fontSize: micro ? 12 : (compact ? 14 : 16) }} />
+				{/* Icono grande en badge a la izquierda */}
+				<div className="favorite-tile__icon-badge">
+					{getConnectionTypeIconSVG(connection.type) ? (
+						React.cloneElement(getConnectionTypeIconSVG(connection.type), {
+							width: '18',
+							height: '18'
+						})
+					) : (
+						<i
+							className={getConnectionTypeIcon(connection.type)}
+							aria-hidden="true"
+						/>
+					)}
 				</div>
-
-				<div style={{ minWidth: 0 }}>
-					<div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-						<span style={{ color: themeColors.textPrimary || 'var(--text-color)', fontWeight: 700, fontSize: micro ? 12 : (compact ? 13 : 14), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{connection.name}</span>
-						<span style={{
-							display: 'inline-flex',
-							alignItems: 'center',
-							gap: 6,
-							padding: micro ? '1px 6px' : (compact ? '2px 8px' : '4px 10px'),
-							borderRadius: 999,
-							background: 'rgba(255,255,255,0.06)',
-							border: '1px solid rgba(255,255,255,0.16)',
-							color: getConnectionTypeColor(connection.type),
-							fontSize: micro ? 9 : (compact ? 10 : 11),
-							fontWeight: 700
-						}}>
-							{connection.type === 'rdp-guacamole' ? 'RDP' : 
-							 (connection.type === 'explorer' ? 'SFTP' : 
-							  connection.type === 'group' ? 'Grupo' : 'SSH')}
-						</span>
-						{connection.type === 'group' && connection.sessions && (
-							<span style={{
-								display: 'inline-flex',
-								alignItems: 'center',
-								gap: 4,
-								padding: micro ? '1px 4px' : (compact ? '2px 6px' : '3px 8px'),
-								borderRadius: 999,
-								background: 'rgba(255,255,255,0.08)',
-								border: '1px solid rgba(255,255,255,0.12)',
-								color: themeColors.textPrimary || 'var(--text-color)',
-								fontSize: micro ? 8 : (compact ? 9 : 10),
-								fontWeight: 600
-							}}>
-								{connection.sessions.length}
-							</span>
-						)}
+				
+				{/* Contenido central */}
+				<div className="favorite-tile__content">
+					<div 
+						className="favorite-tile__name" 
+						title={connection.name}
+					>
+						{connection.name}
 					</div>
-				</div>
-
-				<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }} onClick={(e) => e.stopPropagation()}>
-					<div style={{
-						display: 'inline-flex',
-						alignItems: 'center',
-						gap: 6,
-						padding: micro ? 1 : (compact ? 2 : 4),
-						borderRadius: 999,
-						background: 'rgba(255,255,255,0.06)',
-						border: '1px solid rgba(255,255,255,0.16)'
-					}}>
-						{showFavoriteAction && (
-							<span
-								title={connection.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-								style={{
-									width: micro ? 20 : (compact ? 24 : 28),
-									height: micro ? 20 : (compact ? 24 : 28),
-									borderRadius: '50%',
-									display: 'inline-flex',
-									alignItems: 'center',
-									justifyContent: 'center',
-									color: themeColors.textPrimary || 'var(--text-color)',
-									background: 'rgba(255,255,255,0.08)',
-									border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.16)'}`,
-									transition: 'all .15s ease',
-									cursor: 'pointer'
-								}}
-								onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.16)'; e.style.color = themeColors.textPrimary || '#fff'; }}
-								onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary || 'var(--text-color)'; }}
-								onClick={() => { toggleFavorite(connection); loadConnectionHistory(); }}
-							>
-								<i className={connection.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: micro ? 10 : (compact ? 12 : 14) }} />
-							</span>
-						)}
-						{onEdit && (
-							<span
-								title="Editar"
-								style={{
-									width: micro ? 20 : (compact ? 24 : 28),
-									height: micro ? 20 : (compact ? 24 : 28),
-									borderRadius: '50%',
-									display: 'inline-flex',
-									alignItems: 'center',
-									justifyContent: 'center',
-									color: themeColors.textPrimary || 'var(--text-color)',
-									background: 'rgba(255,255,255,0.08)',
-									border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.16)'}`,
-									transition: 'all .15s ease',
-									cursor: 'pointer'
-								}}
-								onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.16)'; e.style.color = themeColors.textPrimary || '#fff'; }}
-								onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary || 'var(--text-color)'; }}
-								onClick={() => onEdit(connection)}
-							>
-								<i className="pi pi-pencil" style={{ fontSize: micro ? 10 : (compact ? 12 : 14) }} />
-							</span>
-						)}
-						<span
-							title="Conectar"
-							style={{
-								width: micro ? 20 : (compact ? 24 : 28),
-								height: micro ? 20 : (compact ? 24 : 28),
-								borderRadius: '50%',
-								display: 'inline-flex',
-								alignItems: 'center',
-								justifyContent: 'center',
-								color: 'var(--text-color)',
-								background: 'rgba(255,255,255,0.08)',
-								border: '1px solid rgba(255,255,255,0.16)',
-								transition: 'all .15s ease',
-								cursor: 'pointer'
-							}}
-							onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,\
-255,255,0.16)'; e.style.color = '#fff'; }}
-							onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,\
-255,255,0.08)'; e.style.color = 'var(--text-color)'; }}
-							onClick={() => onConnectToHistory?.(connection)}
+					<div className="favorite-tile__host-row">
+						<span 
+							className="favorite-tile__host" 
+							title={hostLabel}
 						>
-							<i className="pi pi-external-link" style={{ fontSize: micro ? 10 : (compact ? 12 : 14) }} />
+							{hostLabel}
 						</span>
+						{/* Botones de acción al final de la línea del host */}
+						<div className="favorite-tile__actions" onClick={(e) => e.stopPropagation()}>
+							<button
+								className="favorite-tile__btn-favorite"
+								title={connection.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+								onClick={() => { toggleFavorite(connection); loadConnectionHistory(); }}
+								aria-label={connection.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+							>
+								<i className={connection.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} />
+							</button>
+							{onEdit && (
+								<button
+									className="favorite-tile__btn-menu"
+									title="Editar"
+									onClick={() => onEdit(connection)}
+									aria-label="Editar conexión"
+								>
+									<i className="pi pi-pencil" />
+								</button>
+							)}
+						</div>
 					</div>
 				</div>
-
-				<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-						<span style={{ width: micro ? 6 : (compact ? 8 : 10), height: micro ? 6 : (compact ? 8 : 10), borderRadius: '50%', background: isActive ? '#22c55e' : '#9E9E9E', boxShadow: isActive ? '0 0 10px rgba(34,197,94,0.5)' : 'none' }} />
+				
+				{/* Chip protocolo en esquina superior derecha */}
+				<div className="favorite-tile__chip">
+					{protocolLabel}
 				</div>
 			</div>
 		);
@@ -287,23 +481,26 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 
 	return (
 		<div style={{ 
-			padding: '0.5rem 0.5rem 0.25rem 0.5rem', 
-			height: '100%', 
+			padding: '0.25rem 0.5rem 0.25rem 0.5rem', 
+			flex: 1,
+			height: '100%',
+			minHeight: 0,
 			display: 'flex', 
 			flexDirection: 'column',
 			background: 'transparent !important',
 			backgroundColor: 'transparent !important'
 		}}>
-			<div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.25rem', flex: '0 0 auto' }}>
+			<div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0', height: '100%', minHeight: 0 }}>
 				{/* Columna única: Favoritos */}
-				<div style={{ display: 'flex', flexDirection: 'column', background: 'transparent !important', backgroundColor: 'transparent !important' }}>
+				<div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', minHeight: 0, background: 'transparent !important', backgroundColor: 'transparent !important' }}>
 					{/* Título mejorado con mejor separación visual */}
 					<div style={{ 
-						marginBottom: '0.9rem',
-						padding: '0.5rem 0',
-						position: 'relative'
+						marginBottom: '0.5rem',
+						padding: 0,
+						position: 'relative',
+						flexShrink: 0
 					}}>
-						<div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
+						<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
 							{/* Icono con efecto visual mejorado */}
 							<div style={{
 								display: 'flex',
@@ -340,7 +537,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 							<h3 style={{ 
 								margin: 0, 
 								color: themeColors.textPrimary || 'var(--text-color)', 
-								fontSize: '0.9rem',
+								fontSize: homeTabFontSize ? `${homeTabFontSize * 0.9}px` : '0.9rem',
+								fontFamily: homeTabFont,
 								fontWeight: '700',
 								letterSpacing: '0.1px',
 								textShadow: '0 1px 2px rgba(0,0,0,0.1)'
@@ -383,29 +581,41 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 						}} />
 					</div>
 					
-					{/* Contenedor con altura fija para los favoritos */}
-					<div style={{ 
-						maxHeight: '380px', 
-						minHeight: '380px',
-						overflow: 'hidden',
-						display: 'flex',
-						flexDirection: 'column',
-						background: 'transparent !important',
-						backgroundColor: 'transparent !important'
-					}}>
+					{/* Contenedor con altura dinámica para los favoritos */}
+					<div 
+						ref={favoritesContainerRef}
+						className="home-hide-scrollbar"
+						style={{ 
+							flex: 1,
+							height: '100%',
+							minHeight: 0,
+							overflow: 'auto',
+							overflowX: 'hidden',
+							display: 'flex',
+							flexDirection: 'column',
+							background: 'transparent !important',
+							backgroundColor: 'transparent !important'
+						}}>
 						{filteredFavorites.length > 0 ? (
 							<>
 								<div style={{ 
+									'--fav-scale': favScale,
 									display: 'grid', 
 									gridTemplateColumns: `repeat(${favoritesColumns}, 1fr)`, 
-									gap: 4,
-									flex: '0 0 auto',
+									gap: 8,
+									flex: '1 1 auto',
+									height: 'fit-content',
+									alignContent: 'start',
+									alignItems: 'start',
+									gridAutoRows: 'min-content',
 									paddingRight: '4px',
 									background: 'transparent !important',
 									backgroundColor: 'transparent !important'
-								}}>
+								}}
+								className={isSparseFavoritesLayout ? 'favorite-grid favorite-grid--sparse' : 'favorite-grid'}
+								>
 									{paginatedFavorites.map(connection => (
-										<ConnectionCard key={connection.id} connection={connection} showFavoriteAction={true} compact={true} micro={true} onEdit={onEdit} />
+										<ConnectionCard key={connection.id} connection={connection} showFavoriteAction={true} compact={false} micro={false} onEdit={onEdit} />
 									))}
 								</div>
 								
@@ -546,7 +756,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 								<h3 style={{ 
 									color: themeColors.textPrimary || 'var(--text-color)', 
 									margin: '0 0 0.5rem 0',
-									fontSize: '1.2rem',
+									fontSize: homeTabFontSize ? `${homeTabFontSize * 1.2}px` : '1.2rem',
+									fontFamily: homeTabFont,
 									fontWeight: '600',
 									textAlign: 'center'
 								}}>
@@ -557,7 +768,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 								<p style={{ 
 									color: themeColors.textSecondary || 'var(--text-color-secondary)', 
 									margin: '0 0 1.5rem 0',
-									fontSize: '0.9rem',
+									fontSize: homeTabFontSize ? `${homeTabFontSize * 0.9}px` : '0.9rem',
+									fontFamily: homeTabFont,
 									textAlign: 'center',
 									lineHeight: '1.4',
 									maxWidth: '280px'

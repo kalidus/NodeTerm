@@ -6,10 +6,18 @@ import { Dialog } from 'primereact/dialog';
 import { Divider } from 'primereact/divider';
 import { Tree } from 'primereact/tree';
 import { ContextMenu } from 'primereact/contextmenu';
+import { Dropdown } from 'primereact/dropdown';
+import { Message } from 'primereact/message';
 import { FolderDialog } from './Dialogs';
 import SidebarFooter from './SidebarFooter';
 import { iconThemes } from '../themes/icon-themes';
+import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
+import { useTranslation } from '../i18n/hooks/useTranslation';
+import { sessionActionIconThemes } from '../themes/session-action-icons';
+import { CRYPTO_NETWORK_OPTIONS, getNetworkById } from '../utils/cryptoNetworks';
+import { validateSeedPhrase, countWords } from '../utils/bip39Validator';
 import '../styles/components/password-manager-sidebar.css';
+import '../styles/components/tree-themes.css';
 
 const PasswordManagerSidebar = ({ 
   nodes, 
@@ -30,8 +38,17 @@ const PasswordManagerSidebar = ({
   secureStorage,
   setShowSettingsDialog,
   onShowImportDialog,
-  sidebarFilter = '' // Filtro desde la TitleBar
+  sidebarFilter = '', // Filtro desde la TitleBar
+  treeTheme = 'default', // Tema del árbol
+  sessionActionIconTheme = 'modern'
 }) => {
+  // Hook de internacionalización
+  const { t } = useTranslation('dialogs');
+  const { t: tCommon } = useTranslation('common');
+  
+  // Obtener la categoría de Gestión de Secretos para el diálogo
+  const secretsManagementCategory = t('protocolSelection.categories.secretsManagement');
+  
   // Estado separado para passwords - no usar el árbol principal de conexiones
   const [passwordNodes, setPasswordNodes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,13 +86,32 @@ const PasswordManagerSidebar = ({
   const [currentContextNode, setCurrentContextNode] = useState(null);
   
   // Estados del formulario
+  const [selectedSecretType, setSelectedSecretType] = useState('password');
+  const [seedWordsCount, setSeedWordsCount] = useState(12); // 12 o 24 palabras
+  const [seedWords, setSeedWords] = useState(Array(12).fill('')); // Array de palabras individuales
   const [formData, setFormData] = useState({
+    // Campos comunes
     title: '',
+    notes: '',
+    // Campos para password
     username: '',
     password: '',
     url: '',
     group: '',
-    notes: ''
+    // Campos para crypto_wallet
+    network: 'bitcoin',
+    seedPhrase: '',
+    seedWordsCount: 24,
+    privateKey: '',
+    address: '',
+    passphrase: '',
+    // Campos para api_key
+    apiKey: '',
+    apiSecret: '',
+    endpoint: '',
+    serviceName: '',
+    // Campos para secure_note
+    noteContent: ''
   });
   
   // Función para obtener el color por defecto del tema actual
@@ -114,6 +150,7 @@ const PasswordManagerSidebar = ({
   // Estados para carpetas
   const [folderName, setFolderName] = useState('');
   const [folderColor, setFolderColor] = useState(() => getThemeDefaultColor(iconTheme));
+  const [folderIcon, setFolderIcon] = useState(null);
   const [parentNodeKey, setParentNodeKey] = useState(null);
 
   // CARGAR passwords (con o sin encriptación)
@@ -220,7 +257,29 @@ const PasswordManagerSidebar = ({
       }
     };
     window.addEventListener('import-passwords-to-manager', handler);
-    return () => window.removeEventListener('import-passwords-to-manager', handler);
+    
+    // Listener para abrir diálogo de nuevo secreto desde el diálogo de selección de protocolo
+    const handleOpenNewSecretDialog = (e) => {
+      const secretType = e.detail?.secretType || 'password';
+      resetForm();
+      setSelectedSecretType(secretType);
+      setShowPasswordDialog(true);
+    };
+    window.addEventListener('open-new-secret-dialog', handleOpenNewSecretDialog);
+    
+    // Compatibilidad con el evento antiguo
+    const handleOpenNewPasswordDialog = () => {
+      resetForm();
+      setSelectedSecretType('password');
+      setShowPasswordDialog(true);
+    };
+    window.addEventListener('open-new-password-dialog', handleOpenNewPasswordDialog);
+    
+    return () => {
+      window.removeEventListener('import-passwords-to-manager', handler);
+      window.removeEventListener('open-new-secret-dialog', handleOpenNewSecretDialog);
+      window.removeEventListener('open-new-password-dialog', handleOpenNewPasswordDialog);
+    };
   }, [passwordNodes, iconTheme, showToast]);
 
   // Escuchar sincronización desde Nextcloud
@@ -262,15 +321,44 @@ const PasswordManagerSidebar = ({
 
   const resetForm = () => {
     setFormData({
+      // Campos comunes
       title: '',
+      notes: '',
+      // Campos para password
       username: '',
       password: '',
       url: '',
       group: '',
-      notes: ''
+      // Campos para crypto_wallet
+      network: 'bitcoin',
+      seedPhrase: '',
+      seedWordsCount: 24,
+      privateKey: '',
+      address: '',
+      passphrase: '',
+      // Campos para api_key
+      apiKey: '',
+      apiSecret: '',
+      endpoint: '',
+      serviceName: '',
+      // Campos para secure_note
+      noteContent: ''
     });
+    setSeedWordsCount(12);
+    setSeedWords(Array(12).fill(''));
     setEditingPassword(null);
+    setSelectedSecretType('password');
   };
+
+  // Sincronizar formData.seedPhrase cuando cambian seedWords
+  useEffect(() => {
+    if (selectedSecretType === 'crypto_wallet') {
+      const phrase = seedWords.filter(w => w.trim().length > 0).join(' ');
+      if (phrase !== formData.seedPhrase) {
+        setFormData(prev => ({ ...prev, seedPhrase: phrase }));
+      }
+    }
+  }, [seedWords, selectedSecretType]);
 
   const handleNewPassword = () => {
     resetForm();
@@ -314,7 +402,8 @@ const PasswordManagerSidebar = ({
             return {
               ...node,
               label: folderName.trim(),
-              color: folderColor
+              color: folderColor,
+              folderIcon: folderIcon && folderIcon !== 'general' ? folderIcon : null
             };
           }
           if (node.children) {
@@ -345,6 +434,7 @@ const PasswordManagerSidebar = ({
         createdAt: new Date().toISOString(),
         isUserCreated: true,
         color: folderColor,
+        folderIcon: folderIcon && folderIcon !== 'general' ? folderIcon : null,
         data: { type: 'password-folder' }
       };
       
@@ -384,17 +474,99 @@ const PasswordManagerSidebar = ({
     setEditingFolder(null);
   };
 
-  const handleEditPassword = (password) => {
+  const handleEditPassword = (secret) => {
+    const secretType = secret.data?.type || 'password';
+    setSelectedSecretType(secretType);
+    
+    const seedPhrase = secret.data?.seedPhrase || '';
+    const words = seedPhrase.trim().split(/\s+/).filter(w => w.length > 0);
+    const wordCount = words.length === 12 ? 12 : words.length === 24 ? 24 : 12;
+    
+    // Inicializar seedWords
+    if (secretType === 'crypto_wallet' && words.length > 0) {
+      const newWords = Array(wordCount).fill('');
+      words.forEach((word, index) => {
+        if (index < wordCount) {
+          newWords[index] = word;
+        }
+      });
+      setSeedWords(newWords);
+      setSeedWordsCount(wordCount);
+    } else {
+      setSeedWords(Array(12).fill(''));
+      setSeedWordsCount(12);
+    }
+    
     setFormData({
-      title: password.label || password.title,
-      username: password.data?.username || password.username || '',
-      password: password.data?.password || password.password || '',
-      url: password.data?.url || password.url || '',
-      group: password.data?.group || password.group || '',
-      notes: password.data?.notes || password.notes || ''
+      // Campos comunes
+      title: secret.label || secret.title || '',
+      notes: secret.data?.notes || secret.notes || '',
+      // Campos para password
+      username: secret.data?.username || secret.username || '',
+      password: secret.data?.password || secret.password || '',
+      url: secret.data?.url || secret.url || '',
+      group: secret.data?.group || secret.group || '',
+      // Campos para crypto_wallet
+      network: secret.data?.network || 'bitcoin',
+      seedPhrase: seedPhrase,
+      seedWordsCount: wordCount,
+      privateKey: secret.data?.privateKey || '',
+      address: secret.data?.address || '',
+      passphrase: secret.data?.passphrase || '',
+      // Campos para api_key
+      apiKey: secret.data?.apiKey || '',
+      apiSecret: secret.data?.apiSecret || '',
+      endpoint: secret.data?.endpoint || '',
+      serviceName: secret.data?.serviceName || '',
+      // Campos para secure_note
+      noteContent: secret.data?.noteContent || ''
     });
-    setEditingPassword(password);
+    setEditingPassword(secret);
     setShowPasswordDialog(true);
+  };
+
+  // Función para construir los datos según el tipo de secreto
+  const buildSecretData = () => {
+    const baseData = {
+      type: selectedSecretType,
+      notes: formData.notes
+    };
+
+    switch (selectedSecretType) {
+      case 'password':
+        return {
+          ...baseData,
+          username: formData.username,
+          password: formData.password,
+          url: formData.url,
+          group: formData.group
+        };
+      case 'crypto_wallet':
+        return {
+          ...baseData,
+          network: formData.network,
+          seedPhrase: formData.seedPhrase,
+          seedWordsCount: seedWordsCount,
+          privateKey: formData.privateKey,
+          address: formData.address,
+          passphrase: formData.passphrase
+        };
+      case 'api_key':
+        return {
+          ...baseData,
+          apiKey: formData.apiKey,
+          apiSecret: formData.apiSecret,
+          endpoint: formData.endpoint,
+          serviceName: formData.serviceName
+        };
+      case 'secure_note':
+        return {
+          ...baseData,
+          noteContent: formData.noteContent
+        };
+      default:
+        return baseData;
+    }
   };
 
   const handleSavePassword = () => {
@@ -409,9 +581,10 @@ const PasswordManagerSidebar = ({
     }
 
     const passwordNodesCopy = JSON.parse(JSON.stringify(passwordNodes));
+    const secretData = buildSecretData();
 
     if (editingPassword) {
-      // Editar password existente
+      // Editar secreto existente
       const updatePasswordInTree = (nodeList) => {
         return nodeList.map(node => {
           if (node.key === editingPassword.key) {
@@ -420,11 +593,7 @@ const PasswordManagerSidebar = ({
               label: formData.title,
               data: {
                 ...node.data,
-                username: formData.username,
-                password: formData.password,
-                url: formData.url,
-                group: formData.group,
-                notes: formData.notes
+                ...secretData
               }
             };
           }
@@ -441,26 +610,22 @@ const PasswordManagerSidebar = ({
       const updatedPasswordNodes = updatePasswordInTree(passwordNodesCopy);
       setPasswordNodes(updatedPasswordNodes);
 
+      const typeLabel = selectedSecretType === 'password' ? 'Contraseña' : 
+                        selectedSecretType === 'crypto_wallet' ? 'Billetera' :
+                        selectedSecretType === 'api_key' ? 'API Key' : 'Nota';
       showToast && showToast({
         severity: 'success',
         summary: 'Actualizado',
-        detail: `Password "${formData.title}" actualizado`,
+        detail: `${typeLabel} "${formData.title}" actualizado`,
         life: 3000
       });
     } else {
-      // Crear nuevo password
-      const newKey = `password_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
+      // Crear nuevo secreto
+      const newKey = `${selectedSecretType}_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
       const newPasswordNode = {
         key: newKey,
         label: formData.title,
-        data: {
-          type: 'password',
-          username: formData.username,
-          password: formData.password,
-          url: formData.url,
-          group: formData.group,
-          notes: formData.notes
-        },
+        data: secretData,
         uid: newKey,
         createdAt: new Date().toISOString(),
         isUserCreated: true,
@@ -483,10 +648,13 @@ const PasswordManagerSidebar = ({
       }
       setPasswordNodes(passwordNodesCopy);
 
+      const typeLabel = selectedSecretType === 'password' ? 'Contraseña' : 
+                        selectedSecretType === 'crypto_wallet' ? 'Billetera' :
+                        selectedSecretType === 'api_key' ? 'API Key' : 'Nota';
       showToast && showToast({
         severity: 'success',
         summary: 'Creado',
-        detail: `Password "${formData.title}" creado`,
+        detail: `${typeLabel} "${formData.title}" creado`,
         life: 3000
       });
     }
@@ -553,14 +721,37 @@ const PasswordManagerSidebar = ({
     
     const search = searchTerm.toLowerCase();
     return nodes.filter(node => {
-      if (node.data && node.data.type === 'password') {
-        return (
-          node.label.toLowerCase().includes(search) ||
-          (node.data.username && node.data.username.toLowerCase().includes(search)) ||
-          (node.data.password && node.data.password.toLowerCase().includes(search)) ||
-          (node.data.url && node.data.url.toLowerCase().includes(search)) ||
-          (node.data.group && node.data.group.toLowerCase().includes(search))
-        );
+      const secretType = node.data?.type;
+      const isSecret = node.data && ['password', 'crypto_wallet', 'api_key', 'secure_note'].includes(secretType);
+      
+      if (isSecret) {
+        // Buscar en campos comunes
+        let matches = node.label.toLowerCase().includes(search) ||
+                      (node.data.notes && node.data.notes.toLowerCase().includes(search));
+        
+        // Buscar en campos específicos según tipo
+        if (secretType === 'password') {
+          matches = matches ||
+                   (node.data.username && node.data.username.toLowerCase().includes(search)) ||
+                   (node.data.password && node.data.password.toLowerCase().includes(search)) ||
+                   (node.data.url && node.data.url.toLowerCase().includes(search)) ||
+                   (node.data.group && node.data.group.toLowerCase().includes(search));
+        } else if (secretType === 'crypto_wallet') {
+          matches = matches ||
+                   (node.data.address && node.data.address.toLowerCase().includes(search)) ||
+                   (node.data.network && node.data.network.toLowerCase().includes(search)) ||
+                   (node.data.seedPhrase && node.data.seedPhrase.toLowerCase().includes(search));
+        } else if (secretType === 'api_key') {
+          matches = matches ||
+                   (node.data.serviceName && node.data.serviceName.toLowerCase().includes(search)) ||
+                   (node.data.apiKey && node.data.apiKey.toLowerCase().includes(search)) ||
+                   (node.data.endpoint && node.data.endpoint.toLowerCase().includes(search));
+        } else if (secretType === 'secure_note') {
+          matches = matches ||
+                   (node.data.noteContent && node.data.noteContent.toLowerCase().includes(search));
+        }
+        
+        return matches;
       } else if (node.droppable) {
         // Para carpetas, filtrar recursivamente sus hijos
         const filteredChildren = filterNodes(node.children || [], searchTerm);
@@ -714,13 +905,10 @@ const PasswordManagerSidebar = ({
     const payload = {
       key: node.key,
       label: node.label,
-      data: {
-        username: node.data?.username || '',
-        password: node.data?.password || '',
-        url: node.data?.url || '',
-        group: node.data?.group || '',
-        notes: node.data?.notes || ''
-      }
+      title: node.label,
+      type: node.data?.type || 'password',
+      // Incluir todos los campos posibles según el tipo
+      ...node.data
     };
     window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
   };
@@ -732,15 +920,16 @@ const PasswordManagerSidebar = ({
     const collectRecursive = (currentNode) => {
       if (currentNode.children && currentNode.children.length > 0) {
         currentNode.children.forEach(child => {
-          if (child.data && child.data.type === 'password') {
+          const secretType = child.data?.type;
+          const isSecret = child.data && ['password', 'crypto_wallet', 'api_key', 'secure_note'].includes(secretType);
+          
+          if (isSecret) {
             passwords.push({
               key: child.key,
               label: child.label,
-              username: child.data.username || '',
-              password: child.data.password || '',
-              url: child.data.url || '',
-              group: child.data.group || '',
-              notes: child.data.notes || ''
+              title: child.label,
+              type: secretType,
+              ...child.data
             });
           } else if (child.droppable) {
             // Si es una subcarpeta, recolectar recursivamente
@@ -767,7 +956,8 @@ const PasswordManagerSidebar = ({
   // Node template para el árbol de passwords - igual que la sidebar de conexiones
   const nodeTemplate = (node, options) => {
     const isFolder = node.droppable;
-    const isPassword = node.data && node.data.type === 'password';
+    const secretType = node.data?.type || 'password';
+    const isSecret = node.data && ['password', 'crypto_wallet', 'api_key', 'secure_note'].includes(secretType);
     
     let icon = null;
     const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['nord'].icons;
@@ -826,22 +1016,57 @@ const PasswordManagerSidebar = ({
       return <span className={`pi ${cls}`} style={{ color, fontSize: `${sizePx}px` }} />;
     };
 
-    if (isPassword) {
-      if (node.data && node.data.iconImage) {
-        icon = (
-          <img 
-            src={node.data.iconImage} 
-            alt="icon" 
-            style={{ width: `${connectionIconSize}px`, height: `${connectionIconSize}px`, objectFit: 'cover', borderRadius: 3 }}
-          />
-        );
-      } else if (node.data && node.data.iconId != null) {
-        icon = renderStandardIcon(Number(node.data.iconId), connectionIconSize);
-      } else {
-        icon = <span className="pi pi-key" style={{ color: '#ffc107', fontSize: `${connectionIconSize}px` }} />;
-      }
+    if (isSecret) {
+      // Determinar icono según tipo de secreto
+      const getSecretIcon = () => {
+        // Si tiene icono personalizado, usarlo
+        if (node.data?.iconImage) {
+          return (
+            <img 
+              src={node.data.iconImage} 
+              alt="icon" 
+              style={{ width: `${connectionIconSize}px`, height: `${connectionIconSize}px`, objectFit: 'cover', borderRadius: 3 }}
+            />
+          );
+        }
+        if (node.data?.iconId != null) {
+          return renderStandardIcon(Number(node.data.iconId), connectionIconSize);
+        }
+        
+        // Icono por defecto según tipo
+        switch (secretType) {
+          case 'crypto_wallet':
+            const network = node.data?.network;
+            const networkColors = {
+              bitcoin: '#F7931A',
+              ethereum: '#627EEA',
+              solana: '#9945FF',
+              polygon: '#8247E5',
+              bnb: '#F3BA2F',
+              cardano: '#0033AD',
+              avalanche: '#E84142',
+              cosmos: '#2E3148',
+              polkadot: '#E6007A',
+              arbitrum: '#28A0F0',
+              xrp: '#23292F',
+              tron: '#FF0013'
+            };
+            return <span className="pi pi-wallet" style={{ color: networkColors[network] || '#F7931A', fontSize: `${connectionIconSize}px` }} />;
+          case 'api_key':
+            return <span className="pi pi-key" style={{ color: '#00BCD4', fontSize: `${connectionIconSize}px` }} />;
+          case 'secure_note':
+            return <span className="pi pi-file-edit" style={{ color: '#9C27B0', fontSize: `${connectionIconSize}px` }} />;
+          default: // password
+            return <span className="pi pi-lock" style={{ color: '#E91E63', fontSize: `${connectionIconSize}px` }} />;
+        }
+      };
+      icon = getSecretIcon();
     } else if (isFolder) {
-      if (node.data && node.data.iconImage) {
+      // Verificar si tiene icono personalizado (ignorar 'general' como si fuera null)
+      if (node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()]) {
+        const preset = FolderIconPresets[node.folderIcon.toUpperCase()];
+        icon = <FolderIconRenderer preset={preset} pixelSize={folderIconSize} />;
+      } else if (node.data && node.data.iconImage) {
         icon = (
           <img 
             src={node.data.iconImage} 
@@ -878,27 +1103,36 @@ const PasswordManagerSidebar = ({
       }
     }
     
+    // Detectar si tiene icono personalizado (para ajustar alineación del texto)
+    const hasCustomFolderIcon = isFolder && node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()];
+    
     return (
       <div 
         className="flex align-items-center gap-1"
         onContextMenu={options.onNodeContextMenu ? (e) => options.onNodeContextMenu(e, node) : undefined}
         onDoubleClick={(e) => {
           e.stopPropagation();
-          if (isPassword) {
+          if (isSecret) {
             handleOpenPassword(node);
           } else if (isFolder) {
             handleOpenFolder(node);
           }
         }}
-        style={{ cursor: 'pointer', fontFamily: explorerFont, alignItems: 'flex-start' }}
-        data-connection-type={isPassword ? 'password' : null}
+        style={{ 
+          cursor: 'pointer', 
+          fontFamily: explorerFont,
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: '6px'
+        }}
+        data-connection-type={isSecret ? secretType : null}
         data-node-type={isFolder ? 'folder' : 'connection'}
         draggable={true}
       >
         <span style={{ 
           minWidth: 20,
           display: 'flex', 
-          alignItems: 'center', 
+          alignItems: 'flex-end', 
           justifyContent: 'center', 
           height: '20px',
           position: 'relative'
@@ -907,7 +1141,13 @@ const PasswordManagerSidebar = ({
         </span>
         <span className="node-label" style={{ 
           flex: 1,
-          marginLeft: '0px'
+          marginLeft: '0px',
+          lineHeight: '20px',
+          height: '20px',
+          display: 'block',
+          margin: 0,
+          padding: 0,
+          ...(hasCustomFolderIcon ? { transform: 'translateY(3px)' } : {})
         }}>{node.label}</span>
       </div>
     );
@@ -952,6 +1192,7 @@ const PasswordManagerSidebar = ({
   const handleEditFolder = (folder) => {
     setFolderName(folder.label);
     setFolderColor(folder.color || getThemeDefaultColor(iconTheme));
+    setFolderIcon(folder.folderIcon || null);
     setEditingFolder(folder);
     setShowFolderDialog(true);
   };
@@ -998,6 +1239,88 @@ const PasswordManagerSidebar = ({
     }
   };
 
+  // Menú contextual para el área vacía del árbol
+  const onTreeAreaContextMenu = (event) => {
+    const targetElement = event.target;
+    const isNodeClick = targetElement.closest('.p-treenode-content') || 
+                       targetElement.closest('.p-treenode') ||
+                       targetElement.closest('.p-tree-toggler');
+    
+    if (!isNodeClick) {
+      event.preventDefault();
+      event.stopPropagation();
+      setSelectedNodeKey(null);
+      setCurrentContextNode(null);
+      
+      const menuItems = [
+        {
+          label: 'Nuevo Secreto',
+          icon: 'pi pi-plus',
+          items: [
+            {
+              label: 'Nueva Contraseña',
+              icon: 'pi pi-lock',
+              command: () => {
+                resetForm();
+                setSelectedSecretType('password');
+                setParentNodeKey(null);
+                setShowPasswordDialog(true);
+              }
+            },
+            {
+              label: 'Nueva Billetera Crypto',
+              icon: 'pi pi-wallet',
+              command: () => {
+                resetForm();
+                setSelectedSecretType('crypto_wallet');
+                setParentNodeKey(null);
+                setShowPasswordDialog(true);
+              }
+            },
+            {
+              label: 'Nueva API Key',
+              icon: 'pi pi-key',
+              command: () => {
+                resetForm();
+                setSelectedSecretType('api_key');
+                setParentNodeKey(null);
+                setShowPasswordDialog(true);
+              }
+            },
+            {
+              label: 'Nueva Nota Segura',
+              icon: 'pi pi-file-edit',
+              command: () => {
+                resetForm();
+                setSelectedSecretType('secure_note');
+                setParentNodeKey(null);
+                setShowPasswordDialog(true);
+              }
+            }
+          ]
+        },
+        {
+          label: 'Nueva Carpeta',
+          icon: 'pi pi-folder-plus',
+          command: () => {
+            setFolderName('');
+            setFolderColor(getThemeDefaultColor(iconTheme));
+            setFolderIcon(null);
+            setParentNodeKey(null);
+            setShowFolderDialog(true);
+          }
+        }
+      ];
+      
+      setContextMenuItems(menuItems);
+      
+      // Mostrar el menú contextual nativo
+      if (contextMenuRef.current) {
+        contextMenuRef.current.show(event);
+      }
+    }
+  };
+
   // Menú contextual para passwords usando ContextMenu nativo
   const onNodeContextMenu = (event, node) => {
     event.preventDefault();
@@ -1005,11 +1328,12 @@ const PasswordManagerSidebar = ({
     setSelectedNodeKey({ [node.key]: true });
     setCurrentContextNode(node);
     
-    // Crear menú contextual simple para passwords
-    const isPassword = node.data && node.data.type === 'password';
+    // Crear menú contextual simple para secretos
+    const secretType = node.data?.type;
+    const isSecret = node.data && ['password', 'crypto_wallet', 'api_key', 'secure_note'].includes(secretType);
     const isFolder = node.droppable;
     
-    if (isPassword) {
+    if (isSecret) {
       const menuItems = [
         {
           label: 'Ver detalles',
@@ -1018,58 +1342,106 @@ const PasswordManagerSidebar = ({
             handleOpenPassword(node);
           }
         },
-        { separator: true },
-        {
-          label: 'Copiar usuario',
-          icon: 'pi pi-user',
-          command: () => {
-            const username = node.data?.username || '';
-            if (username) {
-              handleCopyToClipboard(username, 'Usuario');
-            } else {
-              showToast && showToast({
-                severity: 'warn',
-                summary: 'Sin usuario',
-                detail: 'Este password no tiene usuario configurado',
-                life: 2000
-              });
+        { separator: true }
+      ];
+
+      // Opciones específicas según el tipo de secreto
+      if (secretType === 'password') {
+        menuItems.push(
+          {
+            label: 'Copiar usuario',
+            icon: 'pi pi-user',
+            command: () => {
+              const username = node.data?.username || '';
+              if (username) {
+                handleCopyToClipboard(username, 'Usuario');
+              } else {
+                showToast && showToast({
+                  severity: 'warn',
+                  summary: 'Sin usuario',
+                  detail: 'Este password no tiene usuario configurado',
+                  life: 2000
+                });
+              }
+            }
+          },
+          {
+            label: 'Copiar contraseña',
+            icon: 'pi pi-key',
+            command: () => {
+              const password = node.data?.password || '';
+              if (password) {
+                handleCopyToClipboard(password, 'Password');
+              } else {
+                showToast && showToast({
+                  severity: 'warn',
+                  summary: 'Sin contraseña',
+                  detail: 'Este password no tiene contraseña configurada',
+                  life: 2000
+                });
+              }
+            }
+          },
+          {
+            label: 'Abrir URL',
+            icon: 'pi pi-external-link',
+            command: () => {
+              const url = node.data?.url || '';
+              if (url) {
+                handleOpenUrl(url);
+              } else {
+                showToast && showToast({
+                  severity: 'warn',
+                  summary: 'Sin URL',
+                  detail: 'Este password no tiene URL configurada',
+                  life: 2000
+                });
+              }
             }
           }
-        },
-        {
-          label: 'Copiar contraseña',
-          icon: 'pi pi-key',
-          command: () => {
-            const password = node.data?.password || '';
-            if (password) {
-              handleCopyToClipboard(password, 'Password');
-            } else {
-              showToast && showToast({
-                severity: 'warn',
-                summary: 'Sin contraseña',
-                detail: 'Este password no tiene contraseña configurada',
-                life: 2000
-              });
+        );
+      } else if (secretType === 'crypto_wallet') {
+        if (node.data?.address) {
+          menuItems.push({
+            label: 'Copiar dirección',
+            icon: 'pi pi-copy',
+            command: () => {
+              handleCopyToClipboard(node.data.address, 'Dirección');
             }
-          }
-        },
-        {
-          label: 'Abrir URL',
-          icon: 'pi pi-external-link',
-          command: () => {
-            const url = node.data?.url || '';
-            if (url) {
-              handleOpenUrl(url);
-            } else {
-              showToast && showToast({
-                severity: 'warn',
-                summary: 'Sin URL',
-                detail: 'Este password no tiene URL configurada',
-                life: 2000
-              });
+          });
+        }
+        if (node.data?.seedPhrase) {
+          menuItems.push({
+            label: 'Copiar seed phrase',
+            icon: 'pi pi-lock',
+            command: () => {
+              handleCopyToClipboard(node.data.seedPhrase, 'Seed Phrase');
             }
-          }
-        },
+          });
+        }
+      } else if (secretType === 'api_key') {
+        if (node.data?.apiKey) {
+          menuItems.push({
+            label: 'Copiar API Key',
+            icon: 'pi pi-key',
+            command: () => {
+              handleCopyToClipboard(node.data.apiKey, 'API Key');
+            }
+          });
+        }
+        if (node.data?.endpoint) {
+          menuItems.push({
+            label: 'Abrir endpoint',
+            icon: 'pi pi-external-link',
+            command: () => {
+              handleOpenUrl(node.data.endpoint);
+            }
+          });
+        }
+      }
+
+      // Opciones comunes
+      menuItems.push(
         { separator: true },
         {
           label: 'Editar',
@@ -1085,7 +1457,7 @@ const PasswordManagerSidebar = ({
             handleDeletePassword(node);
           }
         }
-      ];
+      );
       
       setContextMenuItems(menuItems);
       
@@ -1096,12 +1468,50 @@ const PasswordManagerSidebar = ({
     } else if (isFolder) {
       const menuItems = [
         {
-          label: 'Nuevo Password',
+          label: 'Nuevo Secreto',
           icon: 'pi pi-plus',
-          command: () => {
-            setParentNodeKey(node.key);
-            setShowPasswordDialog(true);
-          }
+          items: [
+            {
+              label: 'Nueva Contraseña',
+              icon: 'pi pi-lock',
+              command: () => {
+                resetForm();
+                setSelectedSecretType('password');
+                setParentNodeKey(node.key);
+                setShowPasswordDialog(true);
+              }
+            },
+            {
+              label: 'Nueva Billetera Crypto',
+              icon: 'pi pi-wallet',
+              command: () => {
+                resetForm();
+                setSelectedSecretType('crypto_wallet');
+                setParentNodeKey(node.key);
+                setShowPasswordDialog(true);
+              }
+            },
+            {
+              label: 'Nueva API Key',
+              icon: 'pi pi-key',
+              command: () => {
+                resetForm();
+                setSelectedSecretType('api_key');
+                setParentNodeKey(node.key);
+                setShowPasswordDialog(true);
+              }
+            },
+            {
+              label: 'Nueva Nota Segura',
+              icon: 'pi pi-file-edit',
+              command: () => {
+                resetForm();
+                setSelectedSecretType('secure_note');
+                setParentNodeKey(node.key);
+                setShowPasswordDialog(true);
+              }
+            }
+          ]
         },
         {
           label: 'Nueva Carpeta',
@@ -1142,33 +1552,91 @@ const PasswordManagerSidebar = ({
       {/* Header igual que la sidebar de conexiones */}
       <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
         <Button 
-          icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
-          className="p-button-rounded p-button-text sidebar-action-button" 
+          className="p-button-rounded p-button-text sidebar-action-button glass-button" 
           onClick={() => setSidebarCollapsed && setSidebarCollapsed(v => !v)} 
-          tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
+          tooltip={sidebarCollapsed ? tCommon('tooltips.expandSidebar') : tCommon('tooltips.collapseSidebar')} 
           tooltipOptions={{ position: 'bottom' }} 
-          style={{ marginRight: 8 }} 
-        />
+          style={{ 
+            marginRight: 8,
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: '40px',
+            height: '40px',
+            padding: 0
+          }} 
+        >
+          <span style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: '20px',
+            height: '20px',
+            color: 'var(--ui-sidebar-text)'
+          }}>
+            {sidebarCollapsed 
+              ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
+              : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft}
+          </span>
+        </Button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
           <Button 
-            icon="pi pi-key" 
-            className="p-button-rounded p-button-text sidebar-action-button" 
-            onClick={handleNewPassword} 
-            tooltip="Nuevo password" 
+            className="p-button-rounded p-button-text sidebar-action-button glass-button" 
+            onClick={() => {
+              // Abrir diálogo de selección de protocolo directamente en la categoría de Gestión de Secretos
+              window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog', {
+                detail: { initialCategory: secretsManagementCategory }
+              }));
+            }} 
+            tooltip={tCommon('tooltips.newConnection')} 
             tooltipOptions={{ position: 'bottom' }} 
-            style={{ color: '#ffc107' }}
-          />
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              padding: 0
+            }}
+          >
+            <span style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '20px',
+              height: '20px',
+              color: 'var(--ui-sidebar-text)'
+            }}>
+              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
+            </span>
+          </Button>
           <Button 
-            icon="pi pi-folder" 
-            className="p-button-rounded p-button-text sidebar-action-button" 
+            className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={handleNewFolder} 
-            tooltip="Nueva carpeta" 
+            tooltip={tCommon('tooltips.newFolder')} 
             tooltipOptions={{ position: 'bottom' }} 
-            style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
-          />
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              padding: 0
+            }}
+          >
+            <span style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '20px',
+              height: '20px',
+              color: 'var(--ui-sidebar-text)'
+            }}>
+              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
+            </span>
+          </Button>
           <Button 
-            icon="pi pi-th-large" 
-            className="p-button-rounded p-button-text sidebar-action-button" 
+            className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={() => {
               // Volver a la vista de conexiones y crear grupo
               onBackToConnections();
@@ -1177,18 +1645,75 @@ const PasswordManagerSidebar = ({
                 window.dispatchEvent(new CustomEvent('open-create-group-dialog'));
               }, 100);
             }} 
-            tooltip="Crear grupo de pestañas" 
+            tooltip={tCommon('tooltips.createGroup')} 
             tooltipOptions={{ position: 'bottom' }} 
-            style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
-          />
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              padding: 0
+            }}
+          >
+            <span style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '20px',
+              height: '20px',
+              color: 'var(--ui-sidebar-text)'
+            }}>
+              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
+            </span>
+          </Button>
           <Button 
-            icon="pi pi-sitemap" 
-            className="p-button-rounded p-button-text sidebar-action-button" 
+            className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={onBackToConnections} 
-            tooltip="Ir a conexiones" 
+            tooltip={tCommon('tooltips.goToConnections')} 
             tooltipOptions={{ position: 'bottom' }} 
-            style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
-          />
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              padding: 0
+            }}
+          >
+            <span style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '20px',
+              height: '20px',
+              color: '#10b981'
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Red de nodos interconectados */}
+                {/* Nodo central */}
+                <circle cx="12" cy="12" r="2.5" fill="currentColor"/>
+                {/* Nodos periféricos */}
+                <circle cx="6" cy="6" r="2" fill="currentColor"/>
+                <circle cx="18" cy="6" r="2" fill="currentColor"/>
+                <circle cx="6" cy="18" r="2" fill="currentColor"/>
+                <circle cx="18" cy="18" r="2" fill="currentColor"/>
+                <circle cx="12" cy="4" r="1.5" fill="currentColor"/>
+                <circle cx="12" cy="20" r="1.5" fill="currentColor"/>
+                <circle cx="4" cy="12" r="1.5" fill="currentColor"/>
+                <circle cx="20" cy="12" r="1.5" fill="currentColor"/>
+                {/* Líneas de conexión entre nodos */}
+                <line x1="12" y1="12" x2="6" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
+                <line x1="12" y1="12" x2="18" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
+                <line x1="12" y1="12" x2="6" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
+                <line x1="12" y1="12" x2="18" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
+                <line x1="12" y1="12" x2="12" y2="4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
+                <line x1="12" y1="12" x2="12" y2="20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
+                <line x1="12" y1="12" x2="4" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
+                <line x1="12" y1="12" x2="20" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
+              </svg>
+            </span>
+          </Button>
         </div>
       </div>
       <Divider className="my-2" />
@@ -1203,14 +1728,16 @@ const PasswordManagerSidebar = ({
           overflowX: 'auto',
           position: 'relative',
           fontSize: `${explorerFontSize}px`
-        }}>
+        }}
+        onContextMenu={onTreeAreaContextMenu}
+      >
         {filteredPasswordNodes.length === 0 ? (
           <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
             No hay passwords guardados.<br/>Usa el botón "+" para crear uno.
           </div>
         ) : (
                   <Tree
-                    key={`password-tree-${iconTheme}-${explorerFontSize}`}
+                    key={`password-tree-${iconTheme}-${explorerFontSize}-${treeTheme}`}
                     value={filteredPasswordNodes}
                     selectionMode="single"
                     selectionKeys={selectedNodeKey}
@@ -1225,8 +1752,9 @@ const PasswordManagerSidebar = ({
                     onDragEnd={() => {
                       // Feedback visual opcional
                     }}
-                    className="sidebar-tree"
+                    className={`sidebar-tree tree-theme-${treeTheme}`}
                     data-icon-theme={iconTheme}
+                    data-tree-theme={treeTheme}
                     style={{ 
                       fontSize: `${explorerFontSize}px`,
                       '--icon-size': `${iconSize}px`
@@ -1242,13 +1770,33 @@ const PasswordManagerSidebar = ({
         toggleExpandAll={toggleExpandAll}
         collapsed={false}
         onShowImportDialog={onShowImportDialog}
+        sessionActionIconTheme={sessionActionIconTheme}
       />
 
-      {/* Dialog para crear/editar password */}
+      {/* Dialog para crear/editar secreto */}
       <Dialog
-        header={editingPassword ? 'Editar Password' : 'Nuevo Password'}
+        header={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <i className={
+              selectedSecretType === 'password' ? 'pi pi-lock' :
+              selectedSecretType === 'crypto_wallet' ? 'pi pi-wallet' :
+              selectedSecretType === 'api_key' ? 'pi pi-key' : 'pi pi-file-edit'
+            } style={{ 
+              fontSize: '1.2rem',
+              color: selectedSecretType === 'password' ? '#E91E63' :
+                     selectedSecretType === 'crypto_wallet' ? '#F7931A' :
+                     selectedSecretType === 'api_key' ? '#00BCD4' : '#9C27B0'
+            }}></i>
+            <span>
+              {editingPassword ? 'Editar ' : 'Nuevo '}
+              {selectedSecretType === 'password' ? 'Contraseña' :
+               selectedSecretType === 'crypto_wallet' ? 'Billetera Crypto' :
+               selectedSecretType === 'api_key' ? 'Clave de API' : 'Nota Segura'}
+            </span>
+          </div>
+        }
         visible={showPasswordDialog}
-        style={{ width: '500px' }}
+        style={{ width: '550px' }}
         onHide={() => {
           setShowPasswordDialog(false);
           resetForm();
@@ -1256,7 +1804,7 @@ const PasswordManagerSidebar = ({
         footer={
           <div>
             <Button
-              label="Cancelar"
+              label={tCommon('buttons.cancel')}
               icon="pi pi-times"
               className="p-button-text"
               onClick={() => {
@@ -1265,7 +1813,7 @@ const PasswordManagerSidebar = ({
               }}
             />
             <Button
-              label={editingPassword ? 'Guardar' : 'Crear'}
+              label={editingPassword ? tCommon('buttons.save') : tCommon('buttons.create')}
               icon="pi pi-check"
               className="p-button-primary"
               onClick={handleSavePassword}
@@ -1273,83 +1821,448 @@ const PasswordManagerSidebar = ({
           </div>
         }
       >
-        <div className="password-form">
+        <div className="secret-form">
+          {/* Campo común: Título */}
           <div className="field">
-            <label htmlFor="title">Título *</label>
+            <label htmlFor="title">{t('passwordManager.fields.title')} *</label>
             <InputText
               id="title"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Ej: Gmail, GitHub, etc."
+              placeholder={
+                selectedSecretType === 'password' ? 'Ej: Gmail, Netflix...' :
+                selectedSecretType === 'crypto_wallet' ? 'Ej: Mi Wallet Bitcoin' :
+                selectedSecretType === 'api_key' ? 'Ej: API de OpenAI' : 'Ej: Notas importantes'
+              }
               className="w-full"
               autoFocus
             />
           </div>
 
-          <div className="field">
-            <label htmlFor="username">Usuario</label>
-            <InputText
-              id="username"
-              value={formData.username}
-              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-              placeholder="Nombre de usuario o email"
-              className="w-full"
-            />
-          </div>
+          {/* Campos para PASSWORD */}
+          {selectedSecretType === 'password' && (
+            <>
+              <div className="field">
+                <label htmlFor="username">{t('passwordManager.fields.username')}</label>
+                <InputText
+                  id="username"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  placeholder={t('passwordManager.placeholders.username')}
+                  className="w-full"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="password">{t('passwordManager.fields.password')}</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <InputText
+                    id="password"
+                    type="text"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder={t('passwordManager.placeholders.password')}
+                    className="w-full"
+                  />
+                  <Button
+                    icon="pi pi-refresh"
+                    className="p-button-secondary"
+                    onClick={generateRandomPassword}
+                    tooltip={t('passwordManager.tooltips.generatePassword')}
+                  />
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor="url">{t('passwordManager.fields.url')}</label>
+                <InputText
+                  id="url"
+                  value={formData.url}
+                  onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                  placeholder={t('passwordManager.placeholders.url')}
+                  className="w-full"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="group">{t('passwordManager.fields.group')}</label>
+                <InputText
+                  id="group"
+                  value={formData.group}
+                  onChange={(e) => setFormData({ ...formData, group: e.target.value })}
+                  placeholder={t('passwordManager.placeholders.group')}
+                  className="w-full"
+                />
+              </div>
+            </>
+          )}
 
-          <div className="field">
-            <label htmlFor="password">Password</label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <InputText
-                id="password"
-                type="text"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Password"
+          {/* Campos para CRYPTO WALLET */}
+          {selectedSecretType === 'crypto_wallet' && (
+            <>
+              <div className="field">
+                <label htmlFor="network">Red / Blockchain</label>
+                <Dropdown
+                  id="network"
+                  value={formData.network}
+                  options={CRYPTO_NETWORK_OPTIONS}
+                  onChange={(e) => setFormData({ ...formData, network: e.value })}
+                  placeholder="Selecciona una red"
+                  className="w-full"
+                  itemTemplate={(option) => (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ 
+                        width: '12px', 
+                        height: '12px', 
+                        borderRadius: '50%', 
+                        backgroundColor: option.color 
+                      }}></span>
+                      <span>{option.label}</span>
+                    </div>
+                  )}
+                  valueTemplate={(option) => option ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ 
+                        width: '12px', 
+                        height: '12px', 
+                        borderRadius: '50%', 
+                        backgroundColor: option.color 
+                      }}></span>
+                      <span>{option.label}</span>
+                    </div>
+                  ) : 'Selecciona una red'}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="address">Dirección Pública</label>
+                <InputText
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="0x... / bc1... / etc."
+                  className="w-full"
+                  style={{ fontFamily: 'monospace' }}
+                />
+              </div>
+              <div className="field">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <label htmlFor="seedPhrase">
+                    Seed Phrase
+                    {formData.seedPhrase && (
+                      <span style={{ marginLeft: '8px', fontSize: '0.85em', color: 'var(--text-color-secondary)' }}>
+                        ({countWords(formData.seedPhrase)} palabras)
+                      </span>
+                    )}
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <Button
+                      label="12"
+                      className={seedWordsCount === 12 ? 'p-button-primary' : 'p-button-secondary'}
+                      size="small"
+                      onClick={() => {
+                        if (seedWordsCount !== 12) {
+                          const newWords = Array(12).fill('');
+                          seedWords.slice(0, 12).forEach((word, index) => {
+                            newWords[index] = word;
+                          });
+                          setSeedWords(newWords);
+                          setSeedWordsCount(12);
+                        }
+                      }}
+                    />
+                    <Button
+                      label="24"
+                      className={seedWordsCount === 24 ? 'p-button-primary' : 'p-button-secondary'}
+                      size="small"
+                      onClick={() => {
+                        if (seedWordsCount !== 24) {
+                          const newWords = Array(24).fill('');
+                          seedWords.forEach((word, index) => {
+                            if (index < 24) {
+                              newWords[index] = word;
+                            }
+                          });
+                          setSeedWords(newWords);
+                          setSeedWordsCount(24);
+                        }
+                      }}
+                    />
+                    <Button
+                      icon="pi pi-copy"
+                      className="p-button-text p-button-sm"
+                      style={{ padding: '2px 6px', fontSize: '0.75rem' }}
+                      onClick={async () => {
+                        if (formData.seedPhrase) {
+                          try {
+                            if (window.electron?.clipboard?.writeText) {
+                              await window.electron.clipboard.writeText(formData.seedPhrase);
+                            } else {
+                              await navigator.clipboard.writeText(formData.seedPhrase);
+                            }
+                            showToast && showToast({
+                              severity: 'success',
+                              summary: 'Copiado',
+                              detail: 'Seed phrase copiada al portapapeles',
+                              life: 2000
+                            });
+                          } catch (err) {
+                            console.error('Error copiando:', err);
+                          }
+                        }
+                      }}
+                      tooltip="Copiar seed phrase completa"
+                      tooltipOptions={{ position: 'top' }}
+                      disabled={!formData.seedPhrase}
+                    />
+                  </div>
+                </div>
+                
+                {/* Campo para pegar seed phrase completa */}
+                <InputTextarea
+                  placeholder="Pega aquí tu seed phrase completa para llenar automáticamente los campos..."
+                  rows={2}
+                  className="w-full"
+                  style={{ fontFamily: 'monospace', marginBottom: '12px' }}
+                  onPaste={(e) => {
+                    const pastedText = e.clipboardData.getData('text');
+                    const words = pastedText.trim().split(/\s+/).filter(w => w.length > 0);
+                    if (words.length > 0) {
+                      const newWords = Array(seedWordsCount).fill('');
+                      words.forEach((word, index) => {
+                        if (index < seedWordsCount) {
+                          newWords[index] = word;
+                        }
+                      });
+                      setSeedWords(newWords);
+                      if (words.length === 12 || words.length === 24) {
+                        setSeedWordsCount(words.length);
+                      }
+                    }
+                  }}
+                />
+                
+                {/* Grid de campos individuales para cada palabra */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '8px',
+                  marginTop: '12px',
+                  marginBottom: '12px'
+                }}>
+                  {Array(seedWordsCount).fill(null).map((_, index) => (
+                    <div key={index} style={{ position: 'relative' }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        marginBottom: '4px'
+                      }}>
+                        <span style={{
+                          color: 'var(--ui-button-primary)',
+                          fontWeight: '600',
+                          fontSize: '12px',
+                          minWidth: '24px'
+                        }}>
+                          {index + 1}.
+                        </span>
+                        <Button
+                          icon="pi pi-copy"
+                          className="p-button-text p-button-sm"
+                          style={{ 
+                            padding: '2px 4px', 
+                            fontSize: '0.7rem',
+                            minWidth: 'auto',
+                            height: '20px'
+                          }}
+                          onClick={async () => {
+                            const word = seedWords[index];
+                            if (word) {
+                              try {
+                                if (window.electron?.clipboard?.writeText) {
+                                  await window.electron.clipboard.writeText(word);
+                                } else {
+                                  await navigator.clipboard.writeText(word);
+                                }
+                                showToast && showToast({
+                                  severity: 'success',
+                                  summary: 'Copiado',
+                                  detail: `Palabra ${index + 1} copiada`,
+                                  life: 1500
+                                });
+                              } catch (err) {
+                                console.error('Error copiando:', err);
+                              }
+                            }
+                          }}
+                          tooltip={`Copiar palabra ${index + 1}`}
+                          tooltipOptions={{ position: 'top' }}
+                          disabled={!seedWords[index]}
+                        />
+                      </div>
+                      <InputText
+                        value={seedWords[index] || ''}
+                        onChange={(e) => {
+                          const newWords = [...seedWords];
+                          newWords[index] = e.target.value;
+                          setSeedWords(newWords);
+                        }}
+                        placeholder={`Palabra ${index + 1}`}
+                        className="w-full"
+                        style={{
+                          fontFamily: 'monospace',
+                          fontSize: '13px',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--ui-content-border)',
+                          background: 'var(--ui-dialog-bg)'
+                        }}
+                        onKeyDown={(e) => {
+                          // Navegar al siguiente campo con Enter o Tab
+                          if (e.key === 'Enter' || e.key === 'Tab') {
+                            if (index < seedWordsCount - 1) {
+                              e.preventDefault();
+                              const nextInput = document.querySelector(`input[placeholder="Palabra ${index + 2}"]`);
+                              if (nextInput) nextInput.focus();
+                            }
+                          }
+                          // Navegar al campo anterior con Shift+Tab
+                          if (e.key === 'Tab' && e.shiftKey && index > 0) {
+                            e.preventDefault();
+                            const prevInput = document.querySelector(`input[placeholder="Palabra ${index}"]`);
+                            if (prevInput) prevInput.focus();
+                          }
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Validación */}
+                {formData.seedPhrase && (() => {
+                  const validation = validateSeedPhrase(formData.seedPhrase);
+                  if (!validation.valid) {
+                    return (
+                      <Message 
+                        severity="warn" 
+                        text={validation.errors[0]} 
+                        style={{ marginTop: '8px', width: '100%' }}
+                      />
+                    );
+                  }
+                  return (
+                    <Message 
+                      severity="success" 
+                      text="✓ Seed phrase válida" 
+                      style={{ marginTop: '8px', width: '100%' }}
+                    />
+                  );
+                })()}
+              </div>
+              <div className="field">
+                <label htmlFor="passphrase">Passphrase (25ta palabra, opcional)</label>
+                <InputText
+                  id="passphrase"
+                  value={formData.passphrase}
+                  onChange={(e) => setFormData({ ...formData, passphrase: e.target.value })}
+                  placeholder="Palabra adicional de seguridad"
+                  className="w-full"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="privateKey">Clave Privada (opcional)</label>
+                <InputText
+                  id="privateKey"
+                  type="password"
+                  value={formData.privateKey}
+                  onChange={(e) => setFormData({ ...formData, privateKey: e.target.value })}
+                  placeholder="Solo si no tienes seed phrase"
+                  className="w-full"
+                  style={{ fontFamily: 'monospace' }}
+                />
+              </div>
+              <Message 
+                severity="warn" 
+                text="⚠️ NUNCA compartas tu seed phrase o clave privada con nadie" 
+                style={{ marginBottom: '12px', width: '100%' }}
+              />
+            </>
+          )}
+
+          {/* Campos para API KEY */}
+          {selectedSecretType === 'api_key' && (
+            <>
+              <div className="field">
+                <label htmlFor="serviceName">Nombre del Servicio</label>
+                <InputText
+                  id="serviceName"
+                  value={formData.serviceName}
+                  onChange={(e) => setFormData({ ...formData, serviceName: e.target.value })}
+                  placeholder="Ej: OpenAI, AWS, Stripe..."
+                  className="w-full"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="apiKey">API Key / Token</label>
+                <InputText
+                  id="apiKey"
+                  value={formData.apiKey}
+                  onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+                  placeholder="sk-... / api_..."
+                  className="w-full"
+                  style={{ fontFamily: 'monospace' }}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="apiSecret">API Secret (opcional)</label>
+                <InputText
+                  id="apiSecret"
+                  type="password"
+                  value={formData.apiSecret}
+                  onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })}
+                  placeholder="Secret key si aplica"
+                  className="w-full"
+                  style={{ fontFamily: 'monospace' }}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="endpoint">Endpoint / URL Base (opcional)</label>
+                <InputText
+                  id="endpoint"
+                  value={formData.endpoint}
+                  onChange={(e) => setFormData({ ...formData, endpoint: e.target.value })}
+                  placeholder="https://api.ejemplo.com/v1"
+                  className="w-full"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Campos para SECURE NOTE */}
+          {selectedSecretType === 'secure_note' && (
+            <div className="field">
+              <label htmlFor="noteContent">Contenido de la Nota</label>
+              <InputTextarea
+                id="noteContent"
+                value={formData.noteContent}
+                onChange={(e) => setFormData({ ...formData, noteContent: e.target.value })}
+                placeholder="Escribe aquí tu nota segura..."
+                rows={8}
                 className="w-full"
               />
-              <Button
-                icon="pi pi-refresh"
-                className="p-button-secondary"
-                onClick={generateRandomPassword}
-                tooltip="Generar password aleatorio"
+            </div>
+          )}
+
+          {/* Campo común: Notas adicionales (excepto para secure_note) */}
+          {selectedSecretType !== 'secure_note' && (
+            <div className="field">
+              <label htmlFor="notes">{t('passwordManager.fields.notes')}</label>
+              <InputTextarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder={t('passwordManager.placeholders.notes')}
+                rows={2}
+                className="w-full"
               />
             </div>
-          </div>
-
-          <div className="field">
-            <label htmlFor="url">URL</label>
-            <InputText
-              id="url"
-              value={formData.url}
-              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-              placeholder="https://ejemplo.com"
-              className="w-full"
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="group">Grupo</label>
-            <InputText
-              id="group"
-              value={formData.group}
-              onChange={(e) => setFormData({ ...formData, group: e.target.value })}
-              placeholder="Categoría o grupo"
-              className="w-full"
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="notes">Notas</label>
-            <InputTextarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Notas adicionales..."
-              rows={3}
-              className="w-full"
-            />
-          </div>
+          )}
         </div>
       </Dialog>
 
@@ -1360,6 +2273,7 @@ const PasswordManagerSidebar = ({
           setShowFolderDialog(false);
           setFolderName('');
           setFolderColor(getThemeDefaultColor(iconTheme));
+          setFolderIcon(null);
           setEditingFolder(null);
         }}
         mode={editingFolder ? "edit" : "new"}
@@ -1367,6 +2281,8 @@ const PasswordManagerSidebar = ({
         setFolderName={setFolderName}
         folderColor={folderColor}
         setFolderColor={setFolderColor}
+        folderIcon={folderIcon}
+        setFolderIcon={setFolderIcon}
         onConfirm={createNewFolder}
         iconTheme={iconTheme}
       />

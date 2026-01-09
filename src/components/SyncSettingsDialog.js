@@ -11,6 +11,7 @@ import { Message } from 'primereact/message';
 import { Badge } from 'primereact/badge';
 import { Tooltip } from 'primereact/tooltip';
 import SyncManager from '../utils/SyncManager';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 
 // Función robusta para extraer todas las sesiones SSH del árbol de nodos
 function extractAllSshSessions(nodes) {
@@ -28,6 +29,7 @@ function extractAllSshSessions(nodes) {
 }
 
 const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager, exportTreeToJson, importTreeFromJson }) => {
+  const { t } = useTranslation('common');
   const [syncManager] = useState(() => new SyncManager(sessionManager));
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
@@ -51,18 +53,22 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
     updateSyncStatus();
   }, []);
 
-  const loadConfiguration = () => {
-    // Cargar configuración de Nextcloud si existe
-    syncManager.nextcloudService.loadConfig();
-    
-    if (syncManager.nextcloudService.isConfigured) {
-      setNextcloudConfig({
-        baseUrl: syncManager.nextcloudService.baseUrl || '',
-        username: syncManager.nextcloudService.username || '',
-        password: '••••••••', // Mostrar asteriscos por seguridad
-        ignoreSSLErrors: syncManager.nextcloudService.ignoreSSLErrors || false
-      });
-      setIsConfigured(true);
+  const loadConfiguration = async () => {
+    // Cargar configuración de Nextcloud si existe (ahora es async)
+    try {
+      const loaded = await syncManager.nextcloudService.loadConfig();
+      
+      if (loaded && syncManager.nextcloudService.isConfigured) {
+        setNextcloudConfig({
+          baseUrl: syncManager.nextcloudService.baseUrl || '',
+          username: syncManager.nextcloudService.username || '',
+          password: '••••••••', // Mostrar asteriscos por seguridad
+          ignoreSSLErrors: syncManager.nextcloudService.ignoreSSLErrors || false
+        });
+        setIsConfigured(true);
+      }
+    } catch (error) {
+      console.error('Error cargando configuración Nextcloud:', error);
     }
   };
 
@@ -98,12 +104,12 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
     setMessage(null);
 
     try {
-      // Configurar temporalmente para hacer la prueba
+      // Configurar temporalmente para hacer la prueba (ahora es async)
       const tempPassword = nextcloudConfig.password === '••••••••' 
         ? syncManager.nextcloudService.password 
         : nextcloudConfig.password;
         
-      syncManager.nextcloudService.configure(
+      await syncManager.nextcloudService.configure(
         nextcloudConfig.baseUrl,
         nextcloudConfig.username,
         tempPassword,
@@ -125,7 +131,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
     }
   };
 
-  const saveConfiguration = () => {
+  const saveConfiguration = async () => {
     if (!isConfigured) {
       setMessage({ severity: 'warn', summary: 'Advertencia', detail: 'Pruebe la conexión primero' });
       return;
@@ -136,7 +142,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
         ? syncManager.nextcloudService.password 
         : nextcloudConfig.password;
         
-      syncManager.nextcloudService.configure(
+      await syncManager.nextcloudService.configure(
         nextcloudConfig.baseUrl,
         nextcloudConfig.username,
         tempPassword,
@@ -552,7 +558,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
                     loading={loading}
                     disabled={loading || syncStatus.inProgress}
                     className="p-button-outlined"
-                    tooltip="Sube la configuración local a Nextcloud"
+                    tooltip={t('tooltips.uploadToNextcloud')}
                   />
                   <Button
                     label="Descargar de la Nube"
@@ -561,7 +567,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
                     loading={loading}
                     disabled={loading || syncStatus.inProgress}
                     className="p-button-outlined"
-                    tooltip="Descarga la configuración desde Nextcloud"
+                    tooltip={t('tooltips.downloadFromNextcloud')}
                   />
                   <Button
                     label="Sincronización Inteligente"
@@ -569,7 +575,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
                     onClick={() => performSync('smart')}
                     loading={loading}
                     disabled={loading || syncStatus.inProgress}
-                    tooltip="Sincroniza automáticamente la versión más reciente"
+                    tooltip={t('tooltips.autoSyncLatest')}
                   />
                 </div>
               </div>

@@ -1,0 +1,720 @@
+/* ========================================
+   SETTINGS DIALOG SIDEBAR - VERTICAL LAYOUT
+   ======================================== */
+
+/* Estilos para el Dialog de Configuración */
+.settings-dialog {
+  /* Los tamaños ahora se controlan dinámicamente desde el componente */
+  /* width y height se establecen inline desde useDialogResize */
+}
+
+.settings-dialog .p-dialog-content {
+  display: flex !important;
+  flex-direction: column !important;
+  /* height se establece dinámicamente desde el componente */
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+/* Contenedor principal con layout flex - ALTURA DINÁMICA */
+.settings-dialog-vertical {
+  display: flex !important;
+  flex-direction: row !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
+  width: 100% !important;
+  gap: 0 !important;
+  background: var(--ui-dialog-bg) !important;
+}
+
+/* Sidebar vertical */
+.settings-sidebar {
+  width: 240px !important;
+  min-width: 240px !important;
+  max-width: 240px !important;
+  height: 100% !important;
+  background: var(--ui-content-bg) !important;
+  border-right: 1px solid var(--ui-dialog-border) !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-sidebar * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-sidebar *::-webkit-scrollbar,
+.settings-sidebar *::-webkit-scrollbar-track,
+.settings-sidebar *::-webkit-scrollbar-thumb {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Scroll suave en sidebar - INVISIBLE */
+.settings-sidebar::-webkit-scrollbar {
+  width: 0px !important;
+  display: none !important;
+  height: 0 !important;
+  visibility: hidden !important;
+}
+
+.settings-sidebar::-webkit-scrollbar-track {
+  background: transparent !important;
+  display: none !important;
+  visibility: hidden !important;
+}
+
+.settings-sidebar::-webkit-scrollbar-thumb {
+  background: transparent !important;
+  border-radius: 0;
+  display: none !important;
+  visibility: hidden !important;
+}
+
+.settings-sidebar::-webkit-scrollbar-thumb:hover {
+  background: transparent !important;
+  display: none !important;
+}
+
+/* Contenedor de items del sidebar */
+.settings-nav-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 0.75rem;
+  flex: 1;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+}
+
+.settings-nav-items * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-nav-items *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+}
+
+.settings-nav-items::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.settings-nav-items:hover::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Item de navegación principal */
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  position: relative;
+  background: transparent;
+  color: var(--ui-dialog-text);
+  font-size: 0.95rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+  min-height: 40px;
+  overflow: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-nav-item::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+}
+
+.settings-nav-item:hover {
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.08));
+  border-color: var(--ui-dialog-border);
+  transform: translateX(2px);
+}
+
+.settings-nav-item.active {
+  background: var(--ui-button-primary) !important;
+  color: var(--ui-button-primary-text, #ffffff) !important;
+  border-color: var(--ui-button-primary) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* .settings-nav-item.active::before - ELIMINADO PORQUE GENERA LÍNEA BLANCA */
+/* No usar pseudo-elementos para indicar estado activo */
+
+/* Icono del item de navegación */
+.settings-nav-item-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Texto del item de navegación */
+.settings-nav-item-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Chevron para items expandibles */
+.settings-nav-item-chevron {
+  font-size: 0.7rem;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+  color: var(--ui-dialog-text);
+  opacity: 0.6;
+}
+
+.settings-nav-item.expanded .settings-nav-item-chevron {
+  transform: rotate(90deg);
+}
+
+/* Subpestañas (indentadas) */
+.settings-nav-subitems {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 0;
+  overflow: hidden !important;
+  transition: max-height 0.3s ease;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  flex-shrink: 0;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.settings-nav-subitems * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-nav-subitems *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.settings-nav-subitems::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
+}
+
+.settings-nav-subitems:hover::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
+}
+
+.settings-nav-item.expanded ~ .settings-nav-subitems,
+.settings-nav-item.expanded .settings-nav-subitems {
+  max-height: 500px;
+  overflow: visible !important;
+  pointer-events: auto;
+}
+
+/* Estilo de los items secundarios */
+.settings-nav-subitem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem 0.65rem 2.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  background: transparent;
+  color: var(--ui-dialog-text);
+  font-size: 0.85rem;
+  font-weight: 400;
+  border: 1px solid transparent;
+  opacity: 0.8;
+  overflow: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  flex-shrink: 0;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  white-space: nowrap;
+}
+
+.settings-nav-subitem * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.settings-nav-subitem *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.settings-nav-subitem::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
+}
+
+.settings-nav-subitem:hover::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
+}
+
+.settings-nav-subitem:hover {
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.06));
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+.settings-nav-subitem.active {
+  background: var(--ui-button-primary) !important;
+  color: var(--ui-button-primary-text, #ffffff) !important;
+  font-weight: 500;
+  opacity: 1;
+  border-color: var(--ui-button-primary);
+}
+
+/* .settings-nav-subitem.active::before - ELIMINADO PORQUE GENERA LÍNEA BLANCA */
+/* No usar pseudo-elementos para indicar estado activo */
+
+/* Icono del subitem */
+.settings-nav-subitem-icon {
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Contenedor de contenido - ALTURA DINÁMICA */
+.settings-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
+  overflow: hidden !important;
+  background: var(--ui-dialog-bg) !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Panel de contenido */
+.settings-content-panel {
+  flex: 1;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0;
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+  background: var(--ui-dialog-bg) !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Contenedores internos del contenido */
+.settings-content-panel > div,
+.settings-content-panel .general-settings-container,
+.settings-content-panel .ai-clients-tab {
+  flex: 1;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* ========================================
+   RESPONSIVE - PANTALLAS PEQUEÑAS
+   ======================================== */
+
+@media (max-width: 1200px) {
+  .settings-dialog-vertical {
+    height: auto !important;
+    max-height: 80vh !important;
+  }
+
+  .settings-sidebar {
+    width: 200px !important;
+    min-width: 200px !important;
+    max-width: 200px !important;
+  }
+
+  .settings-nav-item {
+    padding: 0.65rem 0.85rem;
+    font-size: 0.9rem;
+  }
+
+  .settings-nav-subitem {
+    padding: 0.6rem 0.9rem 0.6rem 2.2rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 768px) {
+  /* En móviles: convertir a hamburger + contenido full width */
+  .settings-dialog-vertical {
+    flex-direction: column !important;
+    height: auto !important;
+    max-height: 85vh !important;
+    gap: 0 !important;
+  }
+
+  .settings-sidebar {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 50px !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--ui-dialog-border) !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    padding: 0 !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+
+  .settings-nav-items {
+    flex-direction: row !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .settings-nav-item {
+    flex-shrink: 0;
+    padding: 0.65rem 1rem;
+    border-radius: 0;
+    border: none;
+    border-bottom: 3px solid transparent;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .settings-nav-item:hover {
+    border-bottom-color: var(--ui-button-primary);
+    transform: none;
+  }
+
+  .settings-nav-item.active {
+    border-bottom: 3px solid var(--ui-button-primary) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .settings-nav-item.active::before {
+    display: none;
+  }
+
+  .settings-nav-item-chevron {
+    display: none;
+  }
+
+  /* Las subpestañas en móvil se ocultan */
+  .settings-nav-subitems {
+    display: none !important;
+  }
+
+  .settings-nav-subitem {
+    display: none !important;
+  }
+
+  .settings-content-wrapper {
+    height: auto !important;
+    max-height: calc(85vh - 50px) !important;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .settings-content-panel {
+    height: auto !important;
+    max-height: 100% !important;
+  }
+}
+
+/* ========================================
+   OCULTAR TODOS LOS SCROLLBARS (INVISIBLE)
+   ======================================== */
+
+/* WebKit (Chrome, Safari, Edge) - TODOS los selectores */
+.settings-sidebar::-webkit-scrollbar,
+.settings-content-panel::-webkit-scrollbar,
+.settings-content-wrapper::-webkit-scrollbar,
+.p-tabview-panel::-webkit-scrollbar,
+.settings-dialog-vertical::-webkit-scrollbar,
+.settings-sidebar:hover::-webkit-scrollbar,
+.settings-content-panel:hover::-webkit-scrollbar,
+.settings-content-wrapper:hover::-webkit-scrollbar,
+.p-tabview-panel:hover::-webkit-scrollbar,
+.settings-dialog-vertical:hover::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
+}
+
+.settings-sidebar::-webkit-scrollbar-track,
+.settings-content-panel::-webkit-scrollbar-track,
+.settings-content-wrapper::-webkit-scrollbar-track,
+.p-tabview-panel::-webkit-scrollbar-track,
+.settings-dialog-vertical::-webkit-scrollbar-track,
+.settings-sidebar:hover::-webkit-scrollbar-track,
+.settings-content-panel:hover::-webkit-scrollbar-track,
+.settings-content-wrapper:hover::-webkit-scrollbar-track,
+.p-tabview-panel:hover::-webkit-scrollbar-track,
+.settings-dialog-vertical:hover::-webkit-scrollbar-track {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+.settings-sidebar::-webkit-scrollbar-thumb,
+.settings-content-panel::-webkit-scrollbar-thumb,
+.settings-content-wrapper::-webkit-scrollbar-thumb,
+.p-tabview-panel::-webkit-scrollbar-thumb,
+.settings-dialog-vertical::-webkit-scrollbar-thumb,
+.settings-sidebar:hover::-webkit-scrollbar-thumb,
+.settings-content-panel:hover::-webkit-scrollbar-thumb,
+.settings-content-wrapper:hover::-webkit-scrollbar-thumb,
+.p-tabview-panel:hover::-webkit-scrollbar-thumb,
+.settings-dialog-vertical:hover::-webkit-scrollbar-thumb {
+  display: none !important;
+  visibility: hidden !important;
+  background: transparent !important;
+}
+
+/* Firefox */
+.settings-sidebar,
+.settings-content-panel,
+.settings-content-wrapper,
+.p-tabview-panel,
+.settings-dialog-vertical,
+.settings-sidebar:hover,
+.settings-content-panel:hover,
+.settings-content-wrapper:hover,
+.p-tabview-panel:hover,
+.settings-dialog-vertical:hover {
+  scrollbar-width: none !important;
+}
+
+/* IE y Edge legacy */
+.settings-sidebar,
+.settings-content-panel,
+.settings-content-wrapper,
+.p-tabview-panel,
+.settings-dialog-vertical,
+.settings-sidebar:hover,
+.settings-content-panel:hover,
+.settings-content-wrapper:hover,
+.p-tabview-panel:hover,
+.settings-dialog-vertical:hover {
+  -ms-overflow-style: none !important;
+}
+
+/* Firefox scrollbars - INVISIBLE */
+.settings-sidebar {
+  scrollbar-width: none;
+  overflow: -moz-scrollbars-none;
+}
+
+.settings-sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+.settings-content-panel {
+  scrollbar-width: none;
+  overflow: -moz-scrollbars-none;
+}
+
+.settings-content-panel::-webkit-scrollbar {
+  display: none;
+}
+
+.p-tabview-panel {
+  scrollbar-width: none;
+  overflow: -moz-scrollbars-none;
+}
+
+.p-tabview-panel::-webkit-scrollbar {
+  display: none;
+}
+
+/* ========================================
+   ESTILOS PARA TABVIEW DENTRO DEL SIDEBAR
+   ======================================== */
+
+.settings-content-wrapper .p-tabview {
+  height: 100% !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+/* OCULTAR SOLO LA BARRA DE NAVEGACIÓN DEL TABVIEW PRINCIPAL */
+/* SOLO usar descendencia DIRECTA (>) para NO afectar TabViews anidados dentro de ThemeSelector */
+.settings-content-wrapper > .p-tabview > .p-tabview-nav,
+.settings-content-wrapper > .p-tabview > .p-tabview-nav-container,
+.settings-content-wrapper > .settings-dialog-tabview > .p-tabview-nav,
+.settings-content-wrapper > .settings-dialog-tabview > .p-tabview-nav-container {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* SOLO el TabView principal (nivel 1) - ALTURA DINÁMICA */
+.settings-content-wrapper > .p-tabview {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
+}
+
+.settings-content-wrapper > .p-tabview > .p-tabview-panels {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
+  flex: 1;
+  overflow: hidden !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Contenedor hijo - debe ocupar todo el espacio disponible */
+.settings-content-wrapper > .p-tabview > .p-tabview-panels > .p-tabview-panel > div {
+  flex: 1 !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Contenedor específico para el tab de Apariencia */
+.apariencia-tab-container {
+  height: 100% !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Cuando muestra ThemeSelector */
+.apariencia-tab-container > .theme-selector-container {
+  flex: 1 !important;
+  min-height: 0 !important;
+}
+
+/* Cuando muestra otros subtabs (terminal, explorador, etc) - permitir scroll */
+.apariencia-tab-container > div:not(.theme-selector-container) {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ========================================
+   TABS ANIDADOS ELIMINADOS (RENDERIZADO CONDICIONAL)
+   ======================================== */
+
+/* Los TabViews anidados de Seguridad y Apariencia fueron removidos.
+   Ahora se usa renderizado condicional basado en activeSubTab.
+   No hay necesidad de ocultar tabs con CSS. */
+
+/* ========================================
+   HANDLES DE REDIMENSIONAMIENTO
+   ======================================== */
+
+.resize-handle {
+  transition: background-color 0.2s ease;
+}
+
+.resize-handle:hover {
+  background-color: var(--ui-button-primary, #2196F3) !important;
+  opacity: 0.6;
+}
+
+.resize-handle-right:hover {
+  background-color: var(--ui-button-primary, #2196F3) !important;
+  opacity: 0.6;
+}
+
+.resize-handle-bottom:hover {
+  background-color: var(--ui-button-primary, #2196F3) !important;
+  opacity: 0.6;
+}
+
+.resize-handle-bottom-right {
+  border-bottom-right-radius: 8px;
+}
+
+.resize-handle-bottom-right:hover {
+  background-color: var(--ui-button-primary, #2196F3) !important;
+  opacity: 0.8;
+  border-bottom-right-radius: 8px;
+}
+

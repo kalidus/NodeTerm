@@ -1,14 +1,14 @@
-# 🚀 NodeTerm v1.6.0 - Release Notes
+# 🚀 NodeTerm v1.6.1 - Release Notes
 
 **Fecha de Release**: 19 de Noviembre, 2025  
-**Tipo de Release**: Major Feature Release  
-**Versión Anterior**: v1.5.9
+**Tipo de Release**: Patch Release  
+**Versión Anterior**: v1.6.0
 
 ---
 
-## 🎉 ¡Bienvenido a NodeTerm v1.6.0!
+## 🎉 ¡Bienvenido a NodeTerm v1.6.1!
 
-Esta es una **versión mayor** que introduce un **Sistema Completo de IA y Chat**, integración completa con **MCP (Model Context Protocol)**, soporte para **AnythingLLM** y **OpenWebUI**, conexiones **Docker**, mejoras significativas en terminales, y el **Sistema de Actualización Automática**. Esta versión representa un salto cuántico en las capacidades de NodeTerm, transformándolo en una plataforma completa de productividad con IA integrada.
+Esta es una **versión patch** que corrige problemas críticos con conexiones a través de Bastion Wallix. Esta actualización mejora la estabilidad y confiabilidad de las conexiones SSH que utilizan servidores bastion.
 
 ---
 
@@ -273,8 +273,8 @@ src/mcp-servers/
 git clone https://github.com/kalidus/NodeTerm.git
 cd NodeTerm
 
-# Cambiar a la rama v1.6.0
-git checkout v1.6.0
+# Cambiar a la rama v1.6.1
+git checkout v1.6.1
 
 # Instalar dependencias
 npm install
@@ -357,4 +357,4 @@ Puedes invitarme a un café ☕ o dejar una estrella ⭐ en GitHub. ¡Gracias!
 
 ---
 
-**¡Disfruta de NodeTerm v1.6.0!** 🚀
+**¡Disfruta de NodeTerm v1.6.1!** 🚀
