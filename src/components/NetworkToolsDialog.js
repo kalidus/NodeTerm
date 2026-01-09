@@ -105,6 +105,26 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1200);
   const [liveOutput, setLiveOutput] = useState(''); // Salida en tiempo real
+  
+  // Estados para tamaño y posición del diálogo
+  const [dialogSize, setDialogSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('network-tools-dialog-size');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          width: Math.max(800, Math.min(window.innerWidth * 0.95, parsed.width || window.innerWidth * 0.9)),
+          height: Math.max(600, Math.min(window.innerHeight * 0.95, parsed.height || window.innerHeight * 0.85))
+        };
+      }
+    } catch (e) {
+      console.warn('Error loading dialog size:', e);
+    }
+    return {
+      width: window.innerWidth * 0.9,
+      height: window.innerHeight * 0.85
+    };
+  });
 
   // Estados de inputs para cada herramienta
   const [pingHost, setPingHost] = useState('');
@@ -174,12 +194,32 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
     };
   }, [currentTheme]);
 
-  // Cargar interfaces de red al abrir
+  // Cargar interfaces de red al abrir y centrar el diálogo
   useEffect(() => {
     if (visible) {
       loadNetworkInterfaces();
+      
+      // Centrar el diálogo cuando se abre
+      setTimeout(() => {
+        const dialogElement = document.querySelector('.network-tools-dialog .p-dialog');
+        if (dialogElement) {
+          // Aplicar tamaño guardado o por defecto
+          dialogElement.style.width = `${dialogSize.width}px`;
+          dialogElement.style.height = `${dialogSize.height}px`;
+          
+          // Centrar el diálogo
+          const left = (window.innerWidth - dialogSize.width) / 2;
+          const top = (window.innerHeight - dialogSize.height) / 2;
+          dialogElement.style.left = `${Math.max(0, left)}px`;
+          dialogElement.style.top = `${Math.max(0, top)}px`;
+          
+          // Actualizar estado de mobile
+          setIsMobile(dialogSize.width < 1200);
+          setWindowWidth(dialogSize.width);
+        }
+      }, 100);
     }
-  }, [visible]);
+  }, [visible, dialogSize]);
 
   // Escuchar eventos de progreso en tiempo real
   useEffect(() => {
@@ -2498,14 +2538,14 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
       <style key={isMobile ? 'mobile' : 'desktop'}>{`
         .network-tools-dialog .p-dialog {
           position: fixed !important;
-          top: 0 !important;
-          left: 0 !important;
-          width: 100vw !important;
-          height: 100vh !important;
-          max-width: 100vw !important;
-          max-height: 100vh !important;
+          max-width: 95vw !important;
+          max-height: 95vh !important;
+          min-width: 800px !important;
+          min-height: 600px !important;
           margin: 0 !important;
-          border-radius: 0 !important;
+          border-radius: 8px !important;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5) !important;
+          transition: width 0.2s ease, height 0.2s ease !important;
         }
         .network-tools-dialog .p-dialog-mask {
           background-color: rgba(0, 0, 0, 0.9) !important;
@@ -2622,61 +2662,66 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
         }
         .network-tools-dialog .p-resizable-handle {
           background: transparent !important;
-          border: 2px solid rgba(6, 182, 212, 0.3) !important;
+          border: 2px solid rgba(6, 182, 212, 0.4) !important;
           border-radius: 4px !important;
-          transition: all 0.2s ease !important;
+          transition: all 0.15s ease !important;
           z-index: 1000 !important;
         }
         .network-tools-dialog .p-resizable-handle:hover {
-          background: rgba(6, 182, 212, 0.2) !important;
-          border-color: rgba(6, 182, 212, 0.6) !important;
+          background: rgba(6, 182, 212, 0.3) !important;
+          border-color: rgba(6, 182, 212, 0.8) !important;
+          border-width: 3px !important;
+        }
+        .network-tools-dialog .p-resizable-handle:active {
+          background: rgba(6, 182, 212, 0.5) !important;
+          border-color: rgba(6, 182, 212, 1) !important;
         }
         .network-tools-dialog .p-resizable-handle-se {
-          width: 20px !important;
-          height: 20px !important;
-          right: 0 !important;
-          bottom: 0 !important;
+          width: 24px !important;
+          height: 24px !important;
+          right: -2px !important;
+          bottom: -2px !important;
           cursor: nwse-resize !important;
         }
         .network-tools-dialog .p-resizable-handle-e {
-          width: 8px !important;
-          right: 0 !important;
+          width: 12px !important;
+          right: -2px !important;
           cursor: ew-resize !important;
         }
         .network-tools-dialog .p-resizable-handle-w {
-          width: 8px !important;
-          left: 0 !important;
+          width: 12px !important;
+          left: -2px !important;
           cursor: ew-resize !important;
         }
         .network-tools-dialog .p-resizable-handle-s {
-          height: 8px !important;
-          bottom: 0 !important;
+          height: 12px !important;
+          bottom: -2px !important;
           cursor: ns-resize !important;
         }
         .network-tools-dialog .p-resizable-handle-n {
-          height: 8px !important;
-          top: 0 !important;
+          height: 12px !important;
+          top: -2px !important;
           cursor: ns-resize !important;
         }
         .network-tools-dialog .p-resizable-handle-ne {
-          width: 20px !important;
-          height: 20px !important;
-          top: 0 !important;
-          right: 0 !important;
+          width: 24px !important;
+          height: 24px !important;
+          top: -2px !important;
+          right: -2px !important;
           cursor: nesw-resize !important;
         }
         .network-tools-dialog .p-resizable-handle-nw {
-          width: 20px !important;
-          height: 20px !important;
-          top: 0 !important;
-          left: 0 !important;
+          width: 24px !important;
+          height: 24px !important;
+          top: -2px !important;
+          left: -2px !important;
           cursor: nwse-resize !important;
         }
         .network-tools-dialog .p-resizable-handle-sw {
-          width: 20px !important;
-          height: 20px !important;
-          bottom: 0 !important;
-          left: 0 !important;
+          width: 24px !important;
+          height: 24px !important;
+          bottom: -2px !important;
+          left: -2px !important;
           cursor: nesw-resize !important;
         }
       `}</style>
@@ -2686,14 +2731,13 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
       header={dialogHeader}
       className="network-tools-dialog"
       style={{ 
-        width: '100vw',
-        maxWidth: '100vw',
-        minWidth: '100vw',
-        height: '100vh',
-        maxHeight: '100vh',
-        margin: 0,
-        top: 0,
-        left: 0
+        width: `${dialogSize.width}px`,
+        maxWidth: '95vw',
+        minWidth: '800px',
+        height: `${dialogSize.height}px`,
+        maxHeight: '95vh',
+        minHeight: '600px',
+        margin: 0
       }}
       contentStyle={{ 
         padding: 0,
@@ -2703,9 +2747,9 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        height: 'calc(100vh - 60px)',
-        minHeight: 'calc(100vh - 60px)',
-        maxHeight: 'calc(100vh - 60px)'
+        height: `calc(${dialogSize.height}px - 60px)`,
+        minHeight: 'calc(600px - 60px)',
+        maxHeight: 'calc(95vh - 60px)'
       }}
       headerStyle={{
         background: 'var(--surface-card)',
@@ -2718,15 +2762,63 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
       dismissableMask
       draggable={true}
       resizable={true}
+      onResize={(e) => {
+        // Actualizar el estado durante el redimensionamiento para mejor respuesta
+        const dialogElement = document.querySelector('.network-tools-dialog .p-dialog');
+        if (dialogElement) {
+          const width = dialogElement.clientWidth || dialogElement.offsetWidth;
+          if (width > 0) {
+            setIsMobile(width < 1200);
+            setWindowWidth(width);
+          }
+        }
+      }}
       onResizeEnd={(e) => {
         // Actualizar el estado cuando termina el redimensionamiento
         setTimeout(() => {
           const dialogElement = document.querySelector('.network-tools-dialog .p-dialog');
           if (dialogElement) {
             const width = dialogElement.clientWidth || dialogElement.offsetWidth;
-            if (width > 0) {
-              setIsMobile(width < 1200);
-              setWindowWidth(width);
+            const height = dialogElement.clientHeight || dialogElement.offsetHeight;
+            if (width > 0 && height > 0) {
+              // Asegurar que el diálogo no se salga de los límites de la pantalla
+              const maxWidth = window.innerWidth * 0.95;
+              const maxHeight = window.innerHeight * 0.95;
+              const minWidth = 800;
+              const minHeight = 600;
+              
+              const finalWidth = Math.max(minWidth, Math.min(maxWidth, width));
+              const finalHeight = Math.max(minHeight, Math.min(maxHeight, height));
+              
+              dialogElement.style.width = `${finalWidth}px`;
+              dialogElement.style.height = `${finalHeight}px`;
+              
+              // Asegurar que el diálogo no se salga de la pantalla
+              const rect = dialogElement.getBoundingClientRect();
+              if (rect.left < 0) {
+                dialogElement.style.left = '0px';
+              }
+              if (rect.top < 0) {
+                dialogElement.style.top = '0px';
+              }
+              if (rect.right > window.innerWidth) {
+                dialogElement.style.left = `${window.innerWidth - finalWidth}px`;
+              }
+              if (rect.bottom > window.innerHeight) {
+                dialogElement.style.top = `${window.innerHeight - finalHeight}px`;
+              }
+              
+              // Guardar tamaño para próxima vez
+              const newSize = { width: finalWidth, height: finalHeight };
+              setDialogSize(newSize);
+              try {
+                localStorage.setItem('network-tools-dialog-size', JSON.stringify(newSize));
+              } catch (e) {
+                console.warn('Error saving dialog size:', e);
+              }
+              
+              setIsMobile(finalWidth < 1200);
+              setWindowWidth(finalWidth);
             }
           }
         }, 50);
