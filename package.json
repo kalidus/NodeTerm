@@ -21,11 +21,10 @@
     "appId": "com.electron.nodeterm",
     "productName": "NodeTerm",
     "copyright": "Copyright © 2024",
-    "compression": "normal",
+    "compression": "maximum",
     "files": [
       "dist/",
       "binaries/**",
-      "node_modules/",
       "main.js",
       "preload.js",
       "system-stats-worker.js",
@@ -33,7 +32,39 @@
       "src/main/**",
       "src/services/**",
       "src/utils/**",
-      "src/components/bastion-ssh.js"
+      "src/components/bastion-ssh.js",
+      "node_modules/**/*",
+      "!**/*.{md,markdown,ts,map,test,spec}",
+      "!**/test/**",
+      "!**/tests/**",
+      "!**/__tests__/**",
+      "!**/docs/**",
+      "!**/doc/**",
+      "!**/examples/**",
+      "!**/example/**",
+      "!**/.github/**",
+      "!**/.git/**",
+      "!**/LICENSE*",
+      "!**/CHANGELOG*",
+      "!**/README*",
+      "!**/HISTORY*",
+      "!**/CONTRIBUTING*",
+      "!**/AUTHORS*",
+      "!**/NOTICE*",
+      "!**/*.d.ts",
+      "!**/coverage/**",
+      "!**/.nyc_output/**",
+      "!**/.eslintrc*",
+      "!**/.prettierrc*",
+      "!**/tsconfig.json",
+      "!**/jest.config.*",
+      "!**/.travis.yml",
+      "!**/.circleci/**"
+    ],
+    "asarUnpack": [
+      "binaries/**",
+      "node_modules/ssh2-promise/**",
+      "node_modules/ssh2/**"
     ],
     "extraResources": [
       {
@@ -43,11 +74,6 @@
           "**/*"
         ]
       }
-    ],
-    "asarUnpack": [
-      "binaries/**",
-      "node_modules/ssh2-promise/**",
-      "node_modules/ssh2/**"
     ],
     "win": {
       "target": "nsis",
