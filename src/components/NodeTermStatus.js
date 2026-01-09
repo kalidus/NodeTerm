@@ -1157,31 +1157,21 @@ const NodeTermStatus = ({
 											height: `${compactBar.buttonSize}px`,
 											padding: '0',
 											borderRadius: `${compactBar.buttonRadius}px`,
-											background: 'transparent',
-											border: 'none',
-											boxShadow: 'none',
-											transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-											position: 'relative',
-											overflow: 'visible'
+											background: 'linear-gradient(135deg, rgba(100, 200, 255, 0.25) 0%, rgba(100, 200, 255, 0.15) 100%)',
+											border: '1px solid rgba(100, 200, 255, 0.35)',
+											boxShadow: '0 1px 4px rgba(100, 200, 255, 0.2)',
+											transition: 'all 0.2s ease',
+											position: 'relative'
 										}}
 										onMouseEnter={(e) => {
-											e.currentTarget.classList.add('terminal-button-hover');
-											e.currentTarget.style.transform = 'scale(1.1)';
-											// Agregar efecto de brillo al icono
-											const icon = e.currentTarget.querySelector('svg');
-											if (icon) {
-												icon.style.transition = 'all 0.3s ease';
-												icon.style.filter = `drop-shadow(0 0 8px ${conexionesColor}) drop-shadow(0 0 4px ${conexionesColor})`;
-											}
+											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(100, 200, 255, 0.35) 0%, rgba(100, 200, 255, 0.25) 100%)';
+											e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+											e.currentTarget.style.boxShadow = '0 3px 8px rgba(100, 200, 255, 0.3)';
 										}}
 										onMouseLeave={(e) => {
-											e.currentTarget.classList.remove('terminal-button-hover');
-											e.currentTarget.style.transform = 'scale(1)';
-											// Quitar efecto de brillo del icono
-											const icon = e.currentTarget.querySelector('svg');
-											if (icon) {
-												icon.style.filter = 'none';
-											}
+											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(100, 200, 255, 0.25) 0%, rgba(100, 200, 255, 0.15) 100%)';
+											e.currentTarget.style.transform = 'translateY(0) scale(1)';
+											e.currentTarget.style.boxShadow = '0 1px 4px rgba(100, 200, 255, 0.2)';
 										}}
 									>
 										{getActionBarIcon(actionBarIconTheme, 'conexiones', conexionesIconSize, conexionesColor)}
@@ -1238,31 +1228,21 @@ const NodeTermStatus = ({
 											height: `${compactBar.buttonSize}px`,
 											padding: '0',
 											borderRadius: `${compactBar.buttonRadius}px`,
-											background: 'transparent',
-											border: 'none',
-											boxShadow: 'none',
-											transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-											position: 'relative',
-											overflow: 'visible'
+											background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)',
+											border: '1px solid rgba(255, 193, 7, 0.35)',
+											boxShadow: '0 1px 4px rgba(255, 193, 7, 0.2)',
+											transition: 'all 0.2s ease',
+											position: 'relative'
 										}}
 										onMouseEnter={(e) => {
-											e.currentTarget.classList.add('terminal-button-hover');
-											e.currentTarget.style.transform = 'scale(1.1)';
-											// Agregar efecto de brillo al icono
-											const icon = e.currentTarget.querySelector('svg');
-											if (icon) {
-												icon.style.transition = 'all 0.3s ease';
-												icon.style.filter = `drop-shadow(0 0 8px ${passwordsColor}) drop-shadow(0 0 4px ${passwordsColor})`;
-											}
+											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 193, 7, 0.35) 0%, rgba(255, 193, 7, 0.25) 100%)';
+											e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+											e.currentTarget.style.boxShadow = '0 3px 8px rgba(255, 193, 7, 0.3)';
 										}}
 										onMouseLeave={(e) => {
-											e.currentTarget.classList.remove('terminal-button-hover');
-											e.currentTarget.style.transform = 'scale(1)';
-											// Quitar efecto de brillo del icono
-											const icon = e.currentTarget.querySelector('svg');
-											if (icon) {
-												icon.style.filter = 'none';
-											}
+											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)';
+											e.currentTarget.style.transform = 'translateY(0) scale(1)';
+											e.currentTarget.style.boxShadow = '0 1px 4px rgba(255, 193, 7, 0.2)';
 										}}
 									>
 										{getActionBarIcon(actionBarIconTheme, 'contraseñas', passwordsIconSize, passwordsColor)}
@@ -1341,31 +1321,21 @@ const NodeTermStatus = ({
 											height: `${compactBar.buttonSize}px`,
 											padding: '0',
 											borderRadius: `${compactBar.buttonRadius}px`,
-											background: 'transparent',
-											border: 'none',
-											boxShadow: 'none',
-											transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-											position: 'relative',
-											overflow: 'visible'
+											background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)',
+											border: '1px solid rgba(168, 85, 247, 0.35)',
+											boxShadow: '0 1px 4px rgba(168, 85, 247, 0.2)',
+											transition: 'all 0.2s ease',
+											position: 'relative'
 										}}
 										onMouseEnter={(e) => {
-											e.currentTarget.classList.add('terminal-button-hover');
-											e.currentTarget.style.transform = 'scale(1.1)';
-											// Agregar efecto de brillo al icono
-											const icon = e.currentTarget.querySelector('i');
-											if (icon) {
-												icon.style.transition = 'all 0.3s ease';
-												icon.style.filter = `drop-shadow(0 0 8px ${auditColor}) drop-shadow(0 0 4px ${auditColor})`;
-											}
+											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.35) 0%, rgba(168, 85, 247, 0.25) 100%)';
+											e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+											e.currentTarget.style.boxShadow = '0 3px 8px rgba(168, 85, 247, 0.3)';
 										}}
 										onMouseLeave={(e) => {
-											e.currentTarget.classList.remove('terminal-button-hover');
-											e.currentTarget.style.transform = 'scale(1)';
-											// Quitar efecto de brillo del icono
-											const icon = e.currentTarget.querySelector('i');
-											if (icon) {
-												icon.style.filter = 'none';
-											}
+											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)';
+											e.currentTarget.style.transform = 'translateY(0) scale(1)';
+											e.currentTarget.style.boxShadow = '0 1px 4px rgba(168, 85, 247, 0.2)';
 										}}
 									>
 										{getActionBarIcon(actionBarIconTheme, 'audit', auditIconSize, auditColor)}
@@ -1420,31 +1390,21 @@ const NodeTermStatus = ({
 											height: `${compactBar.buttonSize}px`,
 											padding: '0',
 											borderRadius: `${compactBar.buttonRadius}px`,
-											background: 'transparent',
-											border: 'none',
-											boxShadow: 'none',
-											transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-											position: 'relative',
-											overflow: 'visible'
+											background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(6, 182, 212, 0.15) 100%)',
+											border: '1px solid rgba(6, 182, 212, 0.35)',
+											boxShadow: '0 1px 4px rgba(6, 182, 212, 0.2)',
+											transition: 'all 0.2s ease',
+											position: 'relative'
 										}}
 										onMouseEnter={(e) => {
-											e.currentTarget.classList.add('terminal-button-hover');
-											e.currentTarget.style.transform = 'scale(1.1)';
-											// Agregar efecto de brillo al icono
-											const icon = e.currentTarget.querySelector('i');
-											if (icon) {
-												icon.style.transition = 'all 0.3s ease';
-												icon.style.filter = `drop-shadow(0 0 8px ${netToolsColor}) drop-shadow(0 0 4px ${netToolsColor})`;
-											}
+											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.35) 0%, rgba(6, 182, 212, 0.25) 100%)';
+											e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+											e.currentTarget.style.boxShadow = '0 3px 8px rgba(6, 182, 212, 0.3)';
 										}}
 										onMouseLeave={(e) => {
-											e.currentTarget.classList.remove('terminal-button-hover');
-											e.currentTarget.style.transform = 'scale(1)';
-											// Quitar efecto de brillo del icono
-											const icon = e.currentTarget.querySelector('i');
-											if (icon) {
-												icon.style.filter = 'none';
-											}
+											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(6, 182, 212, 0.15) 100%)';
+											e.currentTarget.style.transform = 'translateY(0) scale(1)';
+											e.currentTarget.style.boxShadow = '0 1px 4px rgba(6, 182, 212, 0.2)';
 										}}
 									>
 										{getActionBarIcon(actionBarIconTheme, 'nettools', netToolsIconSize, netToolsColor)}
