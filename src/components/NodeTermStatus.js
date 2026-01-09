@@ -2619,7 +2619,7 @@ const NodeTermStatus = ({
 											textOverflow: 'ellipsis',
 											whiteSpace: 'nowrap'
 										}}>
-											Nextcloud
+											Cloud
 										</span>
 									</div>
 								);
@@ -2629,6 +2629,7 @@ const NodeTermStatus = ({
 							{(() => {
 								const guacdColor = guacdState.isRunning ? '#22c55e' : '#ef4444';
 								const guacdStatus = guacdState.isRunning ? 'En ejecución' : 'Detenido';
+								const isDocker = guacdState.method === 'docker';
 								return (
 									<div style={{
 										display: 'flex',
@@ -2665,7 +2666,11 @@ const NodeTermStatus = ({
 												e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.2)`;
 											}}
 										>
-											<i className="pi pi-desktop" style={{ color: guacdColor, fontSize: compactBar.serviceIconSize }} />
+											{isDocker ? (
+												<i className="pi pi-box" style={{ color: guacdColor, fontSize: compactBar.serviceIconSize }} />
+											) : (
+												<i className="pi pi-window-maximize" style={{ color: guacdColor, fontSize: compactBar.serviceIconSize }} />
+											)}
 										</button>
 										<span style={{
 											fontSize: compactBar.labelFontSize,
@@ -2679,7 +2684,7 @@ const NodeTermStatus = ({
 											textOverflow: 'ellipsis',
 											whiteSpace: 'nowrap'
 										}}>
-											Guacd
+											RDP
 										</span>
 									</div>
 								);
@@ -2799,7 +2804,7 @@ const NodeTermStatus = ({
 											textOverflow: 'ellipsis',
 											whiteSpace: 'nowrap'
 										}}>
-											Ollama
+											IA
 										</span>
 									</div>
 								);
