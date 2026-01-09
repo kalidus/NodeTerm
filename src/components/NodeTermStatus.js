@@ -80,21 +80,39 @@ const NodeTermStatus = ({
 		if (!syncManagerRef.current) syncManagerRef.current = new SyncManager();
 		if (!secureStorageRef.current) secureStorageRef.current = new SecureStorage();
 
-		// Estado Nextcloud
-		try {
-			const st = syncManagerRef.current.getSyncStatus();
-			setSyncState(prev => ({ ...prev, configured: st.configured, enabled: st.enabled, lastSync: st.lastSync, connectivity: st.configured ? 'checking' : 'unknown' }));
-			if (st.configured) {
-				setTimeout(async () => {
-					try {
-						const res = await syncManagerRef.current.nextcloudService.testConnection();
-						setSyncState(prev => ({ ...prev, connectivity: res?.success ? 'ok' : 'error' }));
-					} catch (_) {
-						setSyncState(prev => ({ ...prev, connectivity: 'error' }));
+		// Estado Nextcloud - Función para actualizar el estado
+		const updateNextcloudState = async () => {
+			try {
+				if (syncManagerRef.current) {
+					const st = syncManagerRef.current.getSyncStatus();
+					setSyncState(prev => ({ ...prev, configured: st.configured, enabled: st.enabled, lastSync: st.lastSync, connectivity: st.configured ? 'checking' : 'unknown' }));
+					if (st.configured) {
+						try {
+							const res = await syncManagerRef.current.nextcloudService.testConnection();
+							setSyncState(prev => ({ ...prev, connectivity: res?.success ? 'ok' : 'error' }));
+						} catch (_) {
+							setSyncState(prev => ({ ...prev, connectivity: 'error' }));
+						}
 					}
-				}, 0);
+				}
+			} catch {}
+		};
+		
+		// Actualizar estado inicial
+		updateNextcloudState();
+		
+		// Escuchar eventos de cambio en la configuración de Nextcloud (solo cuando cambia, no periódicamente)
+		const handleSyncConfigChange = () => {
+			updateNextcloudState();
+		};
+		const handleSyncStorageChange = (e) => {
+			// Actualizar cuando cambie algo relacionado con sync en localStorage
+			if (e.key && (e.key.includes('nextcloud') || e.key.includes('sync'))) {
+				updateNextcloudState();
 			}
-		} catch {}
+		};
+		window.addEventListener('sync-config-changed', handleSyncConfigChange);
+		window.addEventListener('storage', handleSyncStorageChange);
 
 		// Estado Vault
 		try {
@@ -344,6 +362,8 @@ const NodeTermStatus = ({
 			window.removeEventListener('sidebar-font-changed', handleFontConfigChange);
 			window.removeEventListener('action-bar-icon-theme-changed', handleActionBarIconThemeChange);
 			window.removeEventListener('storage', handleActionBarIconThemeStorageChange);
+			window.removeEventListener('sync-config-changed', handleSyncConfigChange);
+			window.removeEventListener('storage', handleSyncStorageChange);
 		};
 	}, []);
 
@@ -2469,7 +2489,7 @@ const NodeTermStatus = ({
 							{/* Botón Grabaciones y Auditoría */}
 							{(() => {
 								const auditColor = '#a855f7';
-								// Usar el mismo tamaño que las terminales (1.3x del tamaño base)
+								// Usar un tamaño más pequeño para el icono de Audit (1.0x del tamaño base en lugar de 1.3x)
 								let baseIconSizePx = 20;
 								const iconSizeStr = compactBar.buttonIconSize;
 								if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
@@ -2478,7 +2498,7 @@ const NodeTermStatus = ({
 								} else if (typeof iconSizeStr === 'number') {
 									baseIconSizePx = Math.max(iconSizeStr, 20);
 								}
-								const auditIconSize = Math.round(baseIconSizePx * 1.3);
+								const auditIconSize = Math.round(baseIconSizePx * 1.0);
 								
 								return (
 									<div style={{
@@ -2559,11 +2579,11 @@ const NodeTermStatus = ({
 								);
 							})()}
 
-							{/* Nextcloud */}
+							{/* Vault */}
 							{(() => {
-								const ncConfigured = !!syncState.configured;
-								const ncColor = !ncConfigured ? '#9ca3af' : (syncState.connectivity === 'ok' ? '#22c55e' : (syncState.connectivity === 'checking' ? '#60a5fa' : '#ef4444'));
-								const ncStatus = ncConfigured ? (syncState.connectivity === 'ok' ? 'Conectado' : 'Error') : 'No configurado';
+								// Naranja cuando está configurado, gris cuando no está configurado
+								const vaultColor = !vaultState.configured ? '#9ca3af' : '#f59e0b';
+								const vaultStatus = !vaultState.configured ? 'No configurado' : (vaultState.unlocked ? 'Desbloqueado' : 'Bloqueado');
 								return (
 									<div style={{
 										display: 'flex',
@@ -2573,10 +2593,99 @@ const NodeTermStatus = ({
 										flexShrink: 0
 									}}>
 										<button
-											onClick={onOpenSettings}
+											onClick={() => {
+												if (onOpenSettings) {
+													onOpenSettings();
+												} else {
+													// Fallback: disparar evento directamente si onOpenSettings no está disponible
+													try {
+														window.dispatchEvent(new CustomEvent('open-settings-dialog', {
+															detail: { tab: 'security' }
+														}));
+													} catch (e) {
+														console.warn('[NodeTermStatus] Error abriendo configuración de Vault:', e);
+													}
+												}
+											}}
+											title={`Vault: ${vaultStatus}`}
+											style={{
+												cursor: 'pointer',
+												display: 'flex',
+												alignItems: 'center',
+												justifyContent: 'center',
+												width: `${compactBar.buttonSize}px`,
+												height: `${compactBar.buttonSize}px`,
+												padding: '0',
+												borderRadius: `${compactBar.buttonRadius}px`,
+												background: `linear-gradient(135deg, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.15) 100%)`,
+												border: `1px solid rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.35)`,
+												boxShadow: `0 1px 4px rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.2)`,
+												transition: 'all 0.2s ease',
+												position: 'relative'
+											}}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.35) 0%, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.25) 100%)`;
+												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+												e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.3)`;
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.15) 100%)`;
+												e.currentTarget.style.transform = 'translateY(0) scale(1)';
+												e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.2)`;
+											}}
+										>
+											<i className={vaultState.unlocked ? 'pi pi-unlock' : 'pi pi-lock'} style={{ color: vaultColor, fontSize: compactBar.serviceIconSize }} />
+										</button>
+										<span style={{
+											fontSize: compactBar.labelFontSize,
+											fontFamily: compactBar.labelFontFamily,
+											fontWeight: '500',
+											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+											textAlign: 'center',
+											lineHeight: compactBar.labelLineHeight,
+											maxWidth: `${compactBar.labelMaxWidth}px`,
+											overflow: 'hidden',
+											textOverflow: 'ellipsis',
+											whiteSpace: 'nowrap'
+										}}>
+											Vault
+										</span>
+									</div>
+								);
+							})()}
+
+							{/* Nextcloud */}
+							{(() => {
+								const ncConfigured = !!syncState.configured;
+								// Azul si está configurado (bien configurado), rojo solo si hay error explícito
+								const ncColor = !ncConfigured ? '#60a5fa' : (syncState.connectivity === 'error' ? '#ef4444' : '#60a5fa');
+								const ncStatus = ncConfigured ? (syncState.connectivity === 'ok' ? 'Conectado' : (syncState.connectivity === 'error' ? 'Error' : 'Configurado')) : 'No configurado';
+								return (
+									<div style={{
+										display: 'flex',
+										flexDirection: 'column',
+										alignItems: 'center',
+										gap: '0.25rem',
+										flexShrink: 0
+									}}>
+										<button
+											onClick={() => {
+												if (onOpenSettings) {
+													onOpenSettings();
+												} else {
+													// Fallback: disparar evento directamente si onOpenSettings no está disponible
+													try {
+														window.dispatchEvent(new CustomEvent('open-settings-dialog', {
+															detail: { tab: 'sync' }
+														}));
+													} catch (e) {
+														console.warn('[NodeTermStatus] Error abriendo configuración de Cloud:', e);
+													}
+												}
+											}}
 											title={`Nextcloud: ${ncStatus}`}
 											style={{
-												cursor: onOpenSettings ? 'pointer' : 'default',
+												cursor: 'pointer',
 												display: 'flex',
 												alignItems: 'center',
 												justifyContent: 'center',
@@ -2591,18 +2700,14 @@ const NodeTermStatus = ({
 												position: 'relative'
 											}}
 											onMouseEnter={(e) => {
-												if (onOpenSettings) {
-													e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.35) 0%, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.25) 100%)`;
-													e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-													e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.3)`;
-												}
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.35) 0%, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.25) 100%)`;
+												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+												e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.3)`;
 											}}
 											onMouseLeave={(e) => {
-												if (onOpenSettings) {
-													e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.15) 100%)`;
-													e.currentTarget.style.transform = 'translateY(0) scale(1)';
-													e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.2)`;
-												}
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.15) 100%)`;
+												e.currentTarget.style.transform = 'translateY(0) scale(1)';
+												e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.2)`;
 											}}
 										>
 											<i className="pi pi-cloud" style={{ color: ncColor, fontSize: compactBar.serviceIconSize }} />
@@ -2685,66 +2790,6 @@ const NodeTermStatus = ({
 											whiteSpace: 'nowrap'
 										}}>
 											RDP
-										</span>
-									</div>
-								);
-							})()}
-
-							{/* Vault */}
-							{(() => {
-								const vaultColor = !vaultState.configured ? '#9ca3af' : (vaultState.unlocked ? '#22c55e' : '#f59e0b');
-								const vaultStatus = !vaultState.configured ? 'No configurado' : (vaultState.unlocked ? 'Desbloqueado' : 'Bloqueado');
-								return (
-									<div style={{
-										display: 'flex',
-										flexDirection: 'column',
-										alignItems: 'center',
-										gap: '0.25rem',
-										flexShrink: 0
-									}}>
-										<button
-											title={`Vault: ${vaultStatus}`}
-											style={{
-												cursor: 'pointer',
-												display: 'flex',
-												alignItems: 'center',
-												justifyContent: 'center',
-												width: `${compactBar.buttonSize}px`,
-												height: `${compactBar.buttonSize}px`,
-												padding: '0',
-												borderRadius: `${compactBar.buttonRadius}px`,
-												background: `linear-gradient(135deg, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.15) 100%)`,
-												border: `1px solid rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.35)`,
-												boxShadow: `0 1px 4px rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.2)`,
-												transition: 'all 0.2s ease',
-												position: 'relative'
-											}}
-											onMouseEnter={(e) => {
-												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.35) 0%, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.25) 100%)`;
-												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-												e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.3)`;
-											}}
-											onMouseLeave={(e) => {
-												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.15) 100%)`;
-												e.currentTarget.style.transform = 'translateY(0) scale(1)';
-												e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.2)`;
-											}}
-										>
-											<i className={vaultState.unlocked ? 'pi pi-unlock' : 'pi pi-lock'} style={{ color: vaultColor, fontSize: compactBar.serviceIconSize }} />
-										</button>
-										<span style={{
-											fontSize: compactBar.labelFontSize,
-											fontFamily: compactBar.labelFontFamily,
-											fontWeight: '500',
-											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-											textAlign: 'center',
-											lineHeight: compactBar.labelLineHeight,
-											maxWidth: `${compactBar.labelMaxWidth}px`,
-											overflow: 'hidden',
-											textOverflow: 'ellipsis',
-											whiteSpace: 'nowrap'
-										}}>
-											Vault
 										</span>
 									</div>
 								);
