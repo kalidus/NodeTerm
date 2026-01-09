@@ -123,25 +123,17 @@ npm run build:win
 
 ## 🎉 Versión Actual: v1.6.1
 
-### 🔄 Sistema de Actualización Automática
+### 🐛 Correcciones de Bugs
+- **Fix de Conexión WALLIX**: Corrección de problemas críticos con conexiones a través de Bastion Wallix
+- **Mejora de Estabilidad**: Mejoras en la estabilidad y confiabilidad de las conexiones SSH que utilizan servidores bastion
+
+### 🔄 Sistema de Actualización Automática (v1.6.0)
 - **Actualizaciones desde GitHub Releases**: Sistema completo de actualización automática
 - **Configuración Avanzada**: Control completo sobre cuándo y cómo actualizar
 - **Canales Stable/Beta**: Elige entre versiones estables o beta
 - **Notificaciones Inteligentes**: Recibe avisos de nuevas versiones sin interrupciones
 - **Actualizaciones Seguras**: Todas las actualizaciones están firmadas y verificadas
 - **Descarga en Background**: Sin interrumpir tu flujo de trabajo
-
-### 🎨 Mejoras de UI/UX
-- **Nueva Pestaña de Actualizaciones**: Interfaz dedicada en configuración
-- **Indicadores Visuales**: Estado claro de actualizaciones disponibles
-- **Proceso Transparente**: Información detallada del progreso de actualización
-- **Configuración Flexible**: Personaliza intervalos y canales de actualización
-
-### 🔧 Mejoras Técnicas
-- **Integración electron-updater**: Sistema robusto de actualización automática
-- **Gestión de Versiones**: Control avanzado de versiones y compatibilidad
-- **Seguridad Reforzada**: Verificación de firmas y checksums
-- **Arquitectura Mejorada**: Mejor separación de responsabilidades
 
 ---
 
