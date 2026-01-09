@@ -1198,12 +1198,64 @@ powerMonitor.on('lock-screen', () => {
   }
 });
 
-powerMonitor.on('unlock-screen', () => {
+powerMonitor.on('unlock-screen', async () => {
   console.log('🔓 [PowerMonitor] Pantalla desbloqueada');
+  
+  // Cuando se desbloquea, las pantallas estaban apagadas
+  // Verificar conexión WSL y notificar al frontend
+  if (guacdService && guacdService.getStatus) {
+    const status = guacdService.getStatus();
+    if (status.method === 'wsl') {
+      console.log('🔄 [PowerMonitor] Verificando guacd WSL tras desbloqueo...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      try {
+        const isAvailable = await guacdService.isPortAvailable(status.port);
+        if (isAvailable) {
+          console.warn('⚠️ [PowerMonitor] guacd WSL no responde tras desbloqueo, reiniciando...');
+          await guacdService.restart();
+        }
+      } catch {}
+    }
+  }
+  
   if (mainWindow && mainWindow.webContents) {
     mainWindow.webContents.send('system:unlock-screen');
   }
 });
+
+// Monitor de idle del sistema - detecta cuando las pantallas se apagan por inactividad
+let lastIdleCheck = Date.now();
+let wasIdle = false;
+
+setInterval(() => {
+  try {
+    // powerMonitor.getSystemIdleTime() devuelve segundos de inactividad
+    const idleSeconds = powerMonitor.getSystemIdleTime();
+    const isCurrentlyIdle = idleSeconds > 60; // Más de 1 minuto de inactividad
+    
+    // Si pasamos de idle a activo, verificar conexión WSL
+    if (wasIdle && !isCurrentlyIdle) {
+      console.log(`🔄 [IdleMonitor] Usuario activo después de ${idleSeconds}s de inactividad`);
+      
+      // Verificar conexión WSL
+      if (guacdService && guacdService.getStatus) {
+        const status = guacdService.getStatus();
+        if (status.method === 'wsl' && status.isRunning) {
+          // Notificar al frontend para que verifique las sesiones RDP
+          if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('system:resume', { 
+              suspendDuration: idleSeconds,
+              reason: 'idle-recovery'
+            });
+          }
+        }
+      }
+    }
+    
+    wasIdle = isCurrentlyIdle;
+    lastIdleCheck = Date.now();
+  } catch {}
+}, 10000); // Verificar cada 10 segundos
 
 // Handler get-version-info movido a src/main/handlers/application-handlers.js
 
