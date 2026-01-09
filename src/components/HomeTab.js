@@ -861,7 +861,7 @@ const HomeTab = ({
                     letterSpacing: '0.1px',
                     textShadow: '0 1px 2px rgba(0,0,0,0.1)'
                   }}>
-                    Conexiones Recientes
+                    Sesiones Recientes
                   </h3>
                 </div>
                 {/* Línea decorativa con gradiente azul */}
@@ -1000,7 +1000,7 @@ const HomeTab = ({
                       fontFamily: homeTabFont,
                       fontStyle: 'italic'
                     }}>
-                      No hay conexiones recientes
+                      No hay sesiones recientes
                     </div>
                   )}
                 </div>

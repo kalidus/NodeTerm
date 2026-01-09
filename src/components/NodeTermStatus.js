@@ -1141,7 +1141,7 @@ const NodeTermStatus = ({
 									flexShrink: 0
 								}}>
 									<button
-										title="Ver historial de conexiones"
+										title="Ver historial de sesiones"
 										onClick={() => {
 											const expandSidebarEvent = new CustomEvent('expand-sidebar');
 											window.dispatchEvent(expandSidebarEvent);
@@ -1184,7 +1184,7 @@ const NodeTermStatus = ({
 										textAlign: 'center',
 										lineHeight: compactBar.labelLineHeight
 									}}>
-										Conexiones
+										Sesiones
 									</span>
 								</div>
 							);
@@ -1256,99 +1256,6 @@ const NodeTermStatus = ({
 										lineHeight: compactBar.labelLineHeight
 									}}>
 										{locale === 'es' ? 'Secretos' : 'Secrets'}
-									</span>
-								</div>
-							);
-						})()}
-
-						{/* Botón Grabaciones y Auditoría */}
-						{(() => {
-							const auditColor = '#a855f7';
-							// Usar el mismo tamaño que las terminales (1.3x del tamaño base)
-							let baseIconSizePx = 20;
-							const iconSizeStr = compactBar.buttonIconSize;
-							if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
-								const remValue = parseFloat(iconSizeStr.replace('rem', ''));
-								baseIconSizePx = Math.max(remValue * 16, 20);
-							} else if (typeof iconSizeStr === 'number') {
-								baseIconSizePx = Math.max(iconSizeStr, 20);
-							}
-							const auditIconSize = Math.round(baseIconSizePx * 1.3);
-							
-							return (
-								<div style={{
-									display: 'flex',
-									flexDirection: 'column',
-									alignItems: 'center',
-									gap: '0.25rem',
-									flexShrink: 0
-								}}>
-									<button
-										title="Ver grabaciones y auditoría"
-										onClick={async () => {
-											try {
-												if (window?.electron?.ipcRenderer) {
-													const result = await window.electron.ipcRenderer.invoke('recording:list', {});
-													if (result && result.success && Array.isArray(result.recordings) && result.recordings.length > 0) {
-														const auditTabId = `audit_global_${Date.now()}`;
-														window.dispatchEvent(new CustomEvent('create-audit-tab', {
-															detail: {
-																tabId: auditTabId,
-																title: 'Auditoría Global',
-																recordings: result.recordings
-															}
-														}));
-													} else {
-														// Si no hay grabaciones, mostrar mensaje
-														if (window.showToast) {
-															window.showToast('info', 'Sin grabaciones', 'No hay grabaciones disponibles para mostrar');
-														}
-													}
-												}
-											} catch (e) {
-												console.warn('[NodeTermStatus] Error abriendo auditoría global:', e?.message || e);
-												if (window.showToast) {
-													window.showToast('error', 'Error', 'Error al cargar las grabaciones');
-												}
-											}
-										}}
-										style={{
-											cursor: 'pointer',
-											display: 'flex',
-											alignItems: 'center',
-											justifyContent: 'center',
-											width: `${compactBar.buttonSize}px`,
-											height: `${compactBar.buttonSize}px`,
-											padding: '0',
-											borderRadius: `${compactBar.buttonRadius}px`,
-											background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)',
-											border: '1px solid rgba(168, 85, 247, 0.35)',
-											boxShadow: '0 1px 4px rgba(168, 85, 247, 0.2)',
-											transition: 'all 0.2s ease',
-											position: 'relative'
-										}}
-										onMouseEnter={(e) => {
-											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.35) 0%, rgba(168, 85, 247, 0.25) 100%)';
-											e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-											e.currentTarget.style.boxShadow = '0 3px 8px rgba(168, 85, 247, 0.3)';
-										}}
-										onMouseLeave={(e) => {
-											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)';
-											e.currentTarget.style.transform = 'translateY(0) scale(1)';
-											e.currentTarget.style.boxShadow = '0 1px 4px rgba(168, 85, 247, 0.2)';
-										}}
-									>
-										{getActionBarIcon(actionBarIconTheme, 'audit', auditIconSize, auditColor)}
-									</button>
-									<span style={{
-										fontSize: compactBar.labelFontSize,
-										fontFamily: compactBar.labelFontFamily,
-										fontWeight: '500',
-										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-										textAlign: 'center',
-										lineHeight: compactBar.labelLineHeight
-									}}>
-										Audit
 									</span>
 								</div>
 							);
@@ -2559,6 +2466,99 @@ const NodeTermStatus = ({
 							overflow: 'visible',
 							width: 'auto'
 						}}>
+							{/* Botón Grabaciones y Auditoría */}
+							{(() => {
+								const auditColor = '#a855f7';
+								// Usar el mismo tamaño que las terminales (1.3x del tamaño base)
+								let baseIconSizePx = 20;
+								const iconSizeStr = compactBar.buttonIconSize;
+								if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+									const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+									baseIconSizePx = Math.max(remValue * 16, 20);
+								} else if (typeof iconSizeStr === 'number') {
+									baseIconSizePx = Math.max(iconSizeStr, 20);
+								}
+								const auditIconSize = Math.round(baseIconSizePx * 1.3);
+								
+								return (
+									<div style={{
+										display: 'flex',
+										flexDirection: 'column',
+										alignItems: 'center',
+										gap: '0.25rem',
+										flexShrink: 0
+									}}>
+										<button
+											title="Ver grabaciones y auditoría"
+											onClick={async () => {
+												try {
+													if (window?.electron?.ipcRenderer) {
+														const result = await window.electron.ipcRenderer.invoke('recording:list', {});
+														if (result && result.success && Array.isArray(result.recordings) && result.recordings.length > 0) {
+															const auditTabId = `audit_global_${Date.now()}`;
+															window.dispatchEvent(new CustomEvent('create-audit-tab', {
+																detail: {
+																	tabId: auditTabId,
+																	title: 'Auditoría Global',
+																	recordings: result.recordings
+																}
+															}));
+														} else {
+															// Si no hay grabaciones, mostrar mensaje
+															if (window.showToast) {
+																window.showToast('info', 'Sin grabaciones', 'No hay grabaciones disponibles para mostrar');
+															}
+														}
+													}
+												} catch (e) {
+													console.warn('[NodeTermStatus] Error abriendo auditoría global:', e?.message || e);
+													if (window.showToast) {
+														window.showToast('error', 'Error', 'Error al cargar las grabaciones');
+													}
+												}
+											}}
+											style={{
+												cursor: 'pointer',
+												display: 'flex',
+												alignItems: 'center',
+												justifyContent: 'center',
+												width: `${compactBar.buttonSize}px`,
+												height: `${compactBar.buttonSize}px`,
+												padding: '0',
+												borderRadius: `${compactBar.buttonRadius}px`,
+												background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)',
+												border: '1px solid rgba(168, 85, 247, 0.35)',
+												boxShadow: '0 1px 4px rgba(168, 85, 247, 0.2)',
+												transition: 'all 0.2s ease',
+												position: 'relative'
+											}}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.35) 0%, rgba(168, 85, 247, 0.25) 100%)';
+												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+												e.currentTarget.style.boxShadow = '0 3px 8px rgba(168, 85, 247, 0.3)';
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)';
+												e.currentTarget.style.transform = 'translateY(0) scale(1)';
+												e.currentTarget.style.boxShadow = '0 1px 4px rgba(168, 85, 247, 0.2)';
+											}}
+										>
+											{getActionBarIcon(actionBarIconTheme, 'audit', auditIconSize, auditColor)}
+										</button>
+										<span style={{
+											fontSize: compactBar.labelFontSize,
+											fontFamily: compactBar.labelFontFamily,
+											fontWeight: '500',
+											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+											textAlign: 'center',
+											lineHeight: compactBar.labelLineHeight
+										}}>
+											Audit
+										</span>
+									</div>
+								);
+							})()}
+
 							{/* Nextcloud */}
 							{(() => {
 								const ncConfigured = !!syncState.configured;
@@ -2572,38 +2572,41 @@ const NodeTermStatus = ({
 										gap: '0.25rem',
 										flexShrink: 0
 									}}>
-										<div 
+										<button
 											onClick={onOpenSettings}
 											title={`Nextcloud: ${ncStatus}`}
 											style={{
-												position: 'relative',
-												width: `${compactBar.serviceSize}px`,
-												height: `${compactBar.serviceSize}px`,
-												borderRadius: '50%',
-												background: `linear-gradient(135deg, ${ncColor}25 0%, ${ncColor}15 100%)`,
-												border: `2px solid ${ncColor}50`,
 												cursor: onOpenSettings ? 'pointer' : 'default',
-												transition: 'all 0.2s ease',
 												display: 'flex',
 												alignItems: 'center',
 												justifyContent: 'center',
-												boxShadow: `0 1px 4px ${ncColor}20`
+												width: `${compactBar.buttonSize}px`,
+												height: `${compactBar.buttonSize}px`,
+												padding: '0',
+												borderRadius: `${compactBar.buttonRadius}px`,
+												background: `linear-gradient(135deg, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.15) 100%)`,
+												border: `1px solid rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.35)`,
+												boxShadow: `0 1px 4px rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.2)`,
+												transition: 'all 0.2s ease',
+												position: 'relative'
 											}}
 											onMouseEnter={(e) => {
 												if (onOpenSettings) {
-													e.currentTarget.style.transform = 'translateY(-1px) scale(1.1)';
-													e.currentTarget.style.boxShadow = `0 3px 8px ${ncColor}30`;
+													e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.35) 0%, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.25) 100%)`;
+													e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+													e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.3)`;
 												}
 											}}
 											onMouseLeave={(e) => {
 												if (onOpenSettings) {
+													e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.15) 100%)`;
 													e.currentTarget.style.transform = 'translateY(0) scale(1)';
-													e.currentTarget.style.boxShadow = `0 1px 4px ${ncColor}20`;
+													e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.2)`;
 												}
 											}}
 										>
 											<i className="pi pi-cloud" style={{ color: ncColor, fontSize: compactBar.serviceIconSize }} />
-										</div>
+										</button>
 										<span style={{
 											fontSize: compactBar.labelFontSize,
 											fontFamily: compactBar.labelFontFamily,
@@ -2634,23 +2637,36 @@ const NodeTermStatus = ({
 										gap: '0.25rem',
 										flexShrink: 0
 									}}>
-										<div 
+										<button
 											title={`Guacd: ${guacdStatus} (${guacdState.method})`}
 											style={{
-												position: 'relative',
-												width: `${compactBar.serviceSize}px`,
-												height: `${compactBar.serviceSize}px`,
-												borderRadius: '50%',
-												background: `linear-gradient(135deg, ${guacdColor}25 0%, ${guacdColor}15 100%)`,
-												border: `2px solid ${guacdColor}50`,
+												cursor: 'pointer',
 												display: 'flex',
 												alignItems: 'center',
 												justifyContent: 'center',
-												boxShadow: `0 1px 4px ${guacdColor}20`
+												width: `${compactBar.buttonSize}px`,
+												height: `${compactBar.buttonSize}px`,
+												padding: '0',
+												borderRadius: `${compactBar.buttonRadius}px`,
+												background: `linear-gradient(135deg, rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.15) 100%)`,
+												border: `1px solid rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.35)`,
+												boxShadow: `0 1px 4px rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.2)`,
+												transition: 'all 0.2s ease',
+												position: 'relative'
+											}}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.35) 0%, rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.25) 100%)`;
+												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+												e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.3)`;
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.15) 100%)`;
+												e.currentTarget.style.transform = 'translateY(0) scale(1)';
+												e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.2)`;
 											}}
 										>
 											<i className="pi pi-desktop" style={{ color: guacdColor, fontSize: compactBar.serviceIconSize }} />
-										</div>
+										</button>
 										<span style={{
 											fontSize: compactBar.labelFontSize,
 											fontFamily: compactBar.labelFontFamily,
@@ -2681,23 +2697,36 @@ const NodeTermStatus = ({
 										gap: '0.25rem',
 										flexShrink: 0
 									}}>
-										<div 
+										<button
 											title={`Vault: ${vaultStatus}`}
 											style={{
-												position: 'relative',
-												width: `${compactBar.serviceSize}px`,
-												height: `${compactBar.serviceSize}px`,
-												borderRadius: '50%',
-												background: `linear-gradient(135deg, ${vaultColor}25 0%, ${vaultColor}15 100%)`,
-												border: `2px solid ${vaultColor}50`,
+												cursor: 'pointer',
 												display: 'flex',
 												alignItems: 'center',
 												justifyContent: 'center',
-												boxShadow: `0 1px 4px ${vaultColor}20`
+												width: `${compactBar.buttonSize}px`,
+												height: `${compactBar.buttonSize}px`,
+												padding: '0',
+												borderRadius: `${compactBar.buttonRadius}px`,
+												background: `linear-gradient(135deg, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.15) 100%)`,
+												border: `1px solid rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.35)`,
+												boxShadow: `0 1px 4px rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.2)`,
+												transition: 'all 0.2s ease',
+												position: 'relative'
+											}}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.35) 0%, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.25) 100%)`;
+												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+												e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.3)`;
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.15) 100%)`;
+												e.currentTarget.style.transform = 'translateY(0) scale(1)';
+												e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.2)`;
 											}}
 										>
 											<i className={vaultState.unlocked ? 'pi pi-unlock' : 'pi pi-lock'} style={{ color: vaultColor, fontSize: compactBar.serviceIconSize }} />
-										</div>
+										</button>
 										<span style={{
 											fontSize: compactBar.labelFontSize,
 											fontFamily: compactBar.labelFontFamily,
@@ -2728,23 +2757,36 @@ const NodeTermStatus = ({
 										gap: '0.25rem',
 										flexShrink: 0
 									}}>
-										<div 
+										<button
 											title={`Ollama: ${ollamaStatus}${ollamaState.isRemote ? ' (Remoto)' : ''}`}
 											style={{
-												position: 'relative',
-												width: `${compactBar.serviceSize}px`,
-												height: `${compactBar.serviceSize}px`,
-												borderRadius: '50%',
-												background: `linear-gradient(135deg, ${ollamaColor}25 0%, ${ollamaColor}15 100%)`,
-												border: `2px solid ${ollamaColor}50`,
+												cursor: 'pointer',
 												display: 'flex',
 												alignItems: 'center',
 												justifyContent: 'center',
-												boxShadow: `0 1px 4px ${ollamaColor}20`
+												width: `${compactBar.buttonSize}px`,
+												height: `${compactBar.buttonSize}px`,
+												padding: '0',
+												borderRadius: `${compactBar.buttonRadius}px`,
+												background: `linear-gradient(135deg, rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.15) 100%)`,
+												border: `1px solid rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.35)`,
+												boxShadow: `0 1px 4px rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.2)`,
+												transition: 'all 0.2s ease',
+												position: 'relative'
+											}}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.35) 0%, rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.25) 100%)`;
+												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+												e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.3)`;
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.15) 100%)`;
+												e.currentTarget.style.transform = 'translateY(0) scale(1)';
+												e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.2)`;
 											}}
 										>
 											<i className="pi pi-desktop" style={{ color: ollamaColor, fontSize: compactBar.serviceIconSize }} />
-										</div>
+										</button>
 										<span style={{
 											fontSize: compactBar.labelFontSize,
 											fontFamily: compactBar.labelFontFamily,

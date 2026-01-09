@@ -4268,7 +4268,7 @@ const SettingsDialog = ({
                             {[
                               { label: 'Nuevo', icon: 'nuevo' },
                               { label: 'Grupo', icon: 'grupo' },
-                              { label: 'Conexiones', icon: 'conexiones' },
+                              { label: 'Sesiones', icon: 'conexiones' },
                               { label: 'Contraseñas', icon: 'contraseñas' },
                               { label: 'Audit', icon: 'audit' },
                               { label: 'NetTools', icon: 'nettools' },
