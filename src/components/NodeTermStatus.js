@@ -1321,11 +1321,11 @@ const NodeTermStatus = ({
 										fontFamily: compactBar.labelFontFamily,
 										fontWeight: '500',
 										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-										textAlign: 'center',
-										lineHeight: compactBar.labelLineHeight
-									}}>
-										NetTools
-									</span>
+									textAlign: 'center',
+									lineHeight: compactBar.labelLineHeight
+								}}>
+									Herramientas
+								</span>
 								</div>
 							);
 						})()}
