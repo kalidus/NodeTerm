@@ -132,5 +132,12 @@
     "exit": "Salir",
     "exitConfirm": "¿Estás seguro de que quieres salir de NodeTerm?",
     "updateNow": "Actualizar ahora"
+  },
+  "homeTab": {
+    "new": "Nuevo",
+    "group": "Grupo",
+    "sessions": "Sesiones",
+    "secrets": "Secretos",
+    "tools": "Herramientas"
   }
 }
