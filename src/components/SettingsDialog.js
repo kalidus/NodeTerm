@@ -4271,7 +4271,7 @@ const SettingsDialog = ({
                               { label: 'Sesiones', icon: 'conexiones' },
                               { label: 'Contraseñas', icon: 'contraseñas' },
                               { label: 'Audit', icon: 'audit' },
-                              { label: 'NetTools', icon: 'nettools' },
+                              { label: 'Herramientas', icon: 'nettools' },
                               { label: 'Config', icon: 'config' },
                               { label: 'Terminal', icon: 'terminal' },
                               { label: 'StatusBar', icon: 'statusbar' }
