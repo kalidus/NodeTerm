@@ -86,7 +86,10 @@
       "typography": "Tipografía",
       "font": "Fuente",
       "fontSize": "Tamaño",
-      "preview": "Vista Previa"
+      "preview": "Vista Previa",
+      "iconTheme": "Tema de Iconos",
+      "iconThemeDescription": "Selecciona el estilo de los iconos de la barra de acciones",
+      "selectIconTheme": "Seleccionar tema"
     }
   },
   "rdp": {

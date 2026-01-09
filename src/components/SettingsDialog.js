@@ -38,6 +38,7 @@ import TerminalSettingsTab from './TerminalSettingsTab';
 import { useDialogResize } from '../hooks/useDialogResize';
 import { treeThemes, treeThemeOptions, getTreeTheme } from '../themes/tree-themes';
 import { sessionActionIconThemes, getDefaultSessionActionIconTheme } from '../themes/session-action-icons';
+import { actionBarIconThemes, actionBarIconThemeList, getActionBarIcon, actionBarIconColors, actionBarIconNames } from '../themes/action-bar-icon-themes';
 import '../styles/components/settings-sidebar.css';
 import '../styles/components/tree-themes.css';
 
@@ -265,6 +266,15 @@ const SettingsDialog = ({
       return saved ? parseInt(saved, 10) : 15;
     } catch {
       return 15;
+    }
+  });
+
+  // Tema de iconos de la barra de acciones
+  const [actionBarIconTheme, setActionBarIconTheme] = useState(() => {
+    try {
+      return localStorage.getItem('actionBarIconTheme') || 'original';
+    } catch {
+      return 'original';
     }
   });
 
@@ -1117,6 +1127,16 @@ const SettingsDialog = ({
       window.dispatchEvent(new CustomEvent('home-tab-font-changed'));
     } catch {}
   }, [homeTabFontSize]);
+
+  // Persistir tema de iconos de la barra de acciones
+  useEffect(() => {
+    try {
+      localStorage.setItem('actionBarIconTheme', actionBarIconTheme);
+      window.dispatchEvent(new CustomEvent('action-bar-icon-theme-changed', { 
+        detail: { theme: actionBarIconTheme } 
+      }));
+    } catch {}
+  }, [actionBarIconTheme]);
 
   // Cargar ruta de grabaciones
   useEffect(() => {
@@ -4136,6 +4156,83 @@ const SettingsDialog = ({
                         </div>
                       </div>
 
+                      {/* Tema de Iconos */}
+                      <div style={{
+                        background: 'rgba(0, 0, 0, 0.08)',
+                        borderRadius: '10px',
+                        padding: '0.875rem 1rem',
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        marginTop: '1rem'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          marginBottom: '0.75rem'
+                        }}>
+                          <i className="pi pi-palette" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
+                          <span style={{
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                            color: 'var(--ui-dialog-text)'
+                          }}>{t('appearance.homePage.iconTheme')}</span>
+                        </div>
+                        
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            minWidth: '60px'
+                          }}>
+                            <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>{t('appearance.homePage.selectIconTheme')}</span>
+                          </div>
+                          <Dropdown
+                            id="actionbar-icon-theme"
+                            value={actionBarIconTheme}
+                            options={actionBarIconThemeList}
+                            onChange={e => setActionBarIconTheme(e.value)}
+                            placeholder={t('appearance.homePage.selectIconTheme')}
+                            style={{ flex: 1 }}
+                            itemTemplate={option => (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <div style={{ 
+                                  width: '24px', 
+                                  height: '24px', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center' 
+                                }}>
+                                  {getActionBarIcon(option.value, 'nuevo', 18)}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: 500 }}>{option.label}</div>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-color-secondary)' }}>{option.description}</div>
+                                </div>
+                              </div>
+                            )}
+                            valueTemplate={option => option ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div style={{ 
+                                  width: '20px', 
+                                  height: '20px', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center' 
+                                }}>
+                                  {getActionBarIcon(option.value, 'nuevo', 16)}
+                                </div>
+                                <span>{option.label}</span>
+                              </div>
+                            ) : t('appearance.homePage.selectIconTheme')}
+                          />
+                        </div>
+                      </div>
+
                       {/* Vista Previa */}
                       <div style={{
                         background: 'rgba(0, 0, 0, 0.08)',
@@ -4168,7 +4265,17 @@ const SettingsDialog = ({
                             gap: '1rem',
                             flexWrap: 'wrap'
                           }}>
-                            {['Nuevo', 'Grupo', 'Conexiones', 'Contraseñas', 'Audit', 'NetTools', 'Config', 'Terminal', 'StatusBar'].map((label, idx) => (
+                            {[
+                              { label: 'Nuevo', icon: 'nuevo' },
+                              { label: 'Grupo', icon: 'grupo' },
+                              { label: 'Conexiones', icon: 'conexiones' },
+                              { label: 'Contraseñas', icon: 'contraseñas' },
+                              { label: 'Audit', icon: 'audit' },
+                              { label: 'NetTools', icon: 'nettools' },
+                              { label: 'Config', icon: 'config' },
+                              { label: 'Terminal', icon: 'terminal' },
+                              { label: 'StatusBar', icon: 'statusbar' }
+                            ].map((item, idx) => (
                               <div key={idx} style={{
                                 display: 'flex',
                                 flexDirection: 'column',
@@ -4182,20 +4289,20 @@ const SettingsDialog = ({
                                   width: '40px',
                                   height: '40px',
                                   borderRadius: '8px',
-                                  background: 'rgba(79, 195, 247, 0.1)',
-                                  border: '1px solid rgba(79, 195, 247, 0.2)',
+                                  background: `rgba(${actionBarIconColors[item.icon] ? parseInt(actionBarIconColors[item.icon].slice(1, 3), 16) : 79}, ${actionBarIconColors[item.icon] ? parseInt(actionBarIconColors[item.icon].slice(3, 5), 16) : 195}, ${actionBarIconColors[item.icon] ? parseInt(actionBarIconColors[item.icon].slice(5, 7), 16) : 247}, 0.1)`,
+                                  border: `1px solid rgba(${actionBarIconColors[item.icon] ? parseInt(actionBarIconColors[item.icon].slice(1, 3), 16) : 79}, ${actionBarIconColors[item.icon] ? parseInt(actionBarIconColors[item.icon].slice(3, 5), 16) : 195}, ${actionBarIconColors[item.icon] ? parseInt(actionBarIconColors[item.icon].slice(5, 7), 16) : 247}, 0.2)`,
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center'
                                 }}>
-                                  <i className="pi pi-circle" style={{ fontSize: '20px', color: '#4fc3f7' }}></i>
+                                  {getActionBarIcon(actionBarIconTheme, item.icon, 20)}
                                 </div>
                                 <span style={{
                                   fontSize: `${homeTabFontSize * 0.65}px`,
                                   fontFamily: homeTabFont,
                                   color: 'var(--text-color-secondary)',
                                   textAlign: 'center'
-                                }}>{label}</span>
+                                }}>{item.label}</span>
                               </div>
                             ))}
                           </div>
