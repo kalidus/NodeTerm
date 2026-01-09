@@ -7,6 +7,7 @@ import { aiService } from '../services/AIService';
 import { FaUbuntu, FaLinux, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian, SiDocker } from 'react-icons/si';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import { getActionBarIcon, actionBarIconColors } from '../themes/action-bar-icon-themes';
 
 const NodeTermStatus = ({ 
 	sshConnectionsCount = 0, 
@@ -43,6 +44,14 @@ const NodeTermStatus = ({
 			return saved ? parseInt(saved, 10) : null;
 		} catch {
 			return null;
+		}
+	});
+	// Estado para el tema de iconos de la barra de acciones
+	const [actionBarIconTheme, setActionBarIconTheme] = useState(() => {
+		try {
+			return localStorage.getItem('actionBarIconTheme') || 'original';
+		} catch {
+			return 'original';
 		}
 	});
 	const [aiClientsState, setAiClientsState] = useState({
@@ -288,6 +297,23 @@ const NodeTermStatus = ({
 		window.addEventListener('home-tab-font-changed', handleFontConfigChange);
 		window.addEventListener('sidebar-font-changed', handleFontConfigChange);
 		
+		// Escuchar cambios en el tema de iconos de la barra de acciones
+		const handleActionBarIconThemeChange = (e) => {
+			try {
+				const newTheme = e?.detail?.theme || localStorage.getItem('actionBarIconTheme') || 'original';
+				setActionBarIconTheme(newTheme);
+			} catch {}
+		};
+		window.addEventListener('action-bar-icon-theme-changed', handleActionBarIconThemeChange);
+		
+		// Escuchar cambios en localStorage para el tema de iconos
+		const handleActionBarIconThemeStorageChange = (e) => {
+			if (e.key === 'actionBarIconTheme') {
+				handleActionBarIconThemeChange(e);
+			}
+		};
+		window.addEventListener('storage', handleActionBarIconThemeStorageChange);
+		
 		// Polling periódico para detectar cambios (por si el evento no se dispara)
 		const fontCheckInterval = setInterval(() => {
 			try {
@@ -297,6 +323,11 @@ const NodeTermStatus = ({
 				if (currentFont !== homeTabFont || parsedSize !== homeTabFontSize) {
 					setHomeTabFont(currentFont);
 					setHomeTabFontSize(parsedSize);
+				}
+				// Verificar también cambios en el tema de iconos
+				const currentIconTheme = localStorage.getItem('actionBarIconTheme') || 'original';
+				if (currentIconTheme !== actionBarIconTheme) {
+					setActionBarIconTheme(currentIconTheme);
 				}
 			} catch {}
 		}, 1000);
@@ -311,6 +342,8 @@ const NodeTermStatus = ({
 			window.removeEventListener('storage', handleHomeTabFontStorageChange);
 			window.removeEventListener('home-tab-font-changed', handleFontConfigChange);
 			window.removeEventListener('sidebar-font-changed', handleFontConfigChange);
+			window.removeEventListener('action-bar-icon-theme-changed', handleActionBarIconThemeChange);
+			window.removeEventListener('storage', handleActionBarIconThemeStorageChange);
 		};
 	}, []);
 
@@ -987,7 +1020,17 @@ const NodeTermStatus = ({
 									e.currentTarget.style.boxShadow = '0 1px 4px rgba(34, 197, 94, 0.2)';
 								}}
 							>
-								<i className="pi pi-plus-circle" style={{ color: '#22c55e', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
+								{getActionBarIcon(actionBarIconTheme, 'nuevo', (() => {
+									let baseIconSizePx = 20;
+									const iconSizeStr = compactBar.buttonIconSize;
+									if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+										const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+										baseIconSizePx = Math.max(remValue * 16, 20);
+									} else if (typeof iconSizeStr === 'number') {
+										baseIconSizePx = Math.max(iconSizeStr, 20);
+									}
+									return Math.round(baseIconSizePx * 1.3);
+								})(), '#22c55e')}
 							</button>
 							<span style={{
 								fontSize: compactBar.labelFontSize,
@@ -1040,7 +1083,17 @@ const NodeTermStatus = ({
 									e.currentTarget.style.boxShadow = '0 1px 4px rgba(255, 152, 0, 0.2)';
 								}}
 							>
-								<i className="pi pi-th-large" style={{ color: '#ff9800', fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />
+								{getActionBarIcon(actionBarIconTheme, 'grupo', (() => {
+									let baseIconSizePx = 20;
+									const iconSizeStr = compactBar.buttonIconSize;
+									if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+										const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+										baseIconSizePx = Math.max(remValue * 16, 20);
+									} else if (typeof iconSizeStr === 'number') {
+										baseIconSizePx = Math.max(iconSizeStr, 20);
+									}
+									return Math.round(baseIconSizePx * 1.3);
+								})(), '#ff9800')}
 							</button>
 							<span style={{
 								fontSize: compactBar.labelFontSize,
@@ -1131,29 +1184,7 @@ const NodeTermStatus = ({
 											}
 										}}
 									>
-										<svg width={conexionesIconSize} height={conexionesIconSize} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: conexionesColor }}>
-											{/* Red de nodos interconectados */}
-											{/* Nodo central */}
-											<circle cx="12" cy="12" r="2.5" fill="currentColor"/>
-											{/* Nodos periféricos */}
-											<circle cx="6" cy="6" r="2" fill="currentColor"/>
-											<circle cx="18" cy="6" r="2" fill="currentColor"/>
-											<circle cx="6" cy="18" r="2" fill="currentColor"/>
-											<circle cx="18" cy="18" r="2" fill="currentColor"/>
-											<circle cx="12" cy="4" r="1.5" fill="currentColor"/>
-											<circle cx="12" cy="20" r="1.5" fill="currentColor"/>
-											<circle cx="4" cy="12" r="1.5" fill="currentColor"/>
-											<circle cx="20" cy="12" r="1.5" fill="currentColor"/>
-											{/* Líneas de conexión entre nodos */}
-											<line x1="12" y1="12" x2="6" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
-											<line x1="12" y1="12" x2="18" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
-											<line x1="12" y1="12" x2="6" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
-											<line x1="12" y1="12" x2="18" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
-											<line x1="12" y1="12" x2="12" y2="4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
-											<line x1="12" y1="12" x2="12" y2="20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
-											<line x1="12" y1="12" x2="4" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
-											<line x1="12" y1="12" x2="20" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
-										</svg>
+										{getActionBarIcon(actionBarIconTheme, 'conexiones', conexionesIconSize, conexionesColor)}
 									</button>
 									<span style={{
 										fontSize: compactBar.labelFontSize,
@@ -1234,19 +1265,7 @@ const NodeTermStatus = ({
 											}
 										}}
 									>
-										<svg width={passwordsIconSize} height={passwordsIconSize} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: passwordsColor }}>
-											<path fillRule="evenodd" clipRule="evenodd" d="M39.9999 13C33.8099 16.1734 26.9136 17.8608 19.8642 17.8608C18.9124 17.8608 17.9635 17.8301 17.0187 17.7691C15.7991 23.3474 15.6642 29.1518 16.6707 34.8601C18.4726 45.0788 23.8172 54.336 31.766 61.0058C34.3146 63.1443 37.0786 64.973 40 66.4707C42.9214 64.973 45.6854 63.1443 48.234 61.0058C56.1828 54.336 61.5274 45.0788 63.3292 34.8601C64.3358 29.1518 64.2008 23.3474 62.9813 17.769C62.0364 17.8301 61.0874 17.8608 60.1356 17.8608C53.0862 17.8608 46.1899 16.1734 39.9999 13Z" fill={passwordsColor} fillOpacity="0.8"/>
-											<path d="M39.9999 13L40.9123 11.2203C40.3395 10.9266 39.6603 10.9266 39.0875 11.2203L39.9999 13ZM17.0187 17.7691L17.1476 15.7732C16.1611 15.7095 15.276 16.3761 15.0649 17.3419L17.0187 17.7691ZM16.6707 34.8601L14.7011 35.2074L16.6707 34.8601ZM31.766 61.0058L33.0515 59.4737L31.766 61.0058ZM40 66.4707L39.0876 68.2504C39.6604 68.5441 40.3396 68.5441 40.9124 68.2504L40 66.4707ZM48.234 61.0058L49.5196 62.5379L48.234 61.0058ZM63.3292 34.8601L65.2989 35.2074V35.2074L63.3292 34.8601ZM62.9813 17.769L64.9351 17.3419C64.724 16.3761 63.8389 15.7095 62.8524 15.7732L62.9813 17.769ZM39.0875 11.2203C33.1779 14.2499 26.5941 15.8608 19.8642 15.8608V19.8608C27.2331 19.8608 34.4419 18.0969 40.9123 14.7797L39.0875 11.2203ZM19.8642 15.8608C18.9555 15.8608 18.0496 15.8315 17.1476 15.7732L16.8898 19.7649C17.8774 19.8287 18.8693 19.8608 19.8642 19.8608V15.8608ZM15.0649 17.3419C13.79 23.1729 13.649 29.2404 14.7011 35.2074L18.6403 34.5128C17.6794 29.0632 17.8082 23.5218 18.9726 18.1962L15.0649 17.3419ZM14.7011 35.2074C16.5846 45.8892 22.1714 55.5658 30.4804 62.5379L33.0515 59.4737C25.463 53.1061 20.3605 44.2684 18.6403 34.5128L14.7011 35.2074ZM30.4804 62.5379C33.1444 64.7733 36.0338 66.6849 39.0876 68.2504L40.9124 64.691C38.1235 63.2611 35.4847 61.5153 33.0515 59.4737L30.4804 62.5379ZM40.9124 68.2504C43.9662 66.6849 46.8555 64.7733 49.5196 62.5379L46.9484 59.4737C44.5153 61.5153 41.8765 63.2611 39.0876 64.691L40.9124 68.2504ZM49.5196 62.5379C57.8285 55.5658 63.4154 45.8892 65.2989 35.2074L61.3596 34.5128C59.6394 44.2684 54.537 53.1061 46.9484 59.4737L49.5196 62.5379ZM65.2989 35.2074C66.351 29.2404 66.2099 23.1729 64.9351 17.3419L61.0274 18.1962C62.1917 23.5218 62.3205 29.0632 61.3596 34.5128L65.2989 35.2074ZM62.8524 15.7732C61.9503 15.8315 61.0443 15.8608 60.1356 15.8608V19.8608C61.1305 19.8608 62.1225 19.8287 63.1102 19.7649L62.8524 15.7732ZM60.1356 15.8608C53.4057 15.8608 46.8219 14.2499 40.9123 11.2203L39.0875 14.7797C45.5579 18.0969 52.7667 19.8608 60.1356 19.8608V15.8608Z" fill={passwordsColor} fillOpacity="0.6"/>
-											<g clipPath="url(#clip0_passwords)">
-												<path fillRule="evenodd" clipRule="evenodd" d="M39.9999 23.2373C36.5071 25.1816 32.5508 26.2242 28.4937 26.2242C27.9184 26.2242 27.3452 26.2032 26.775 26.1617C26.1045 29.4411 26.0267 32.836 26.5688 36.1831L26.823 37.7531C27.7555 43.5117 30.6063 48.7863 34.9129 52.7212L35.5499 53.3032C36.9142 54.5498 38.409 55.6225 39.9999 56.5082C41.5908 55.6225 43.0856 54.5498 44.4499 53.3032L45.0869 52.7212C49.3935 48.7863 52.2443 43.5117 53.1768 37.7531L53.431 36.1831C53.9731 32.836 53.8953 29.4411 53.2248 26.1617C52.6546 26.2032 52.0813 26.2242 51.506 26.2242C47.4489 26.2242 43.4926 25.1816 39.9999 23.2373Z" fill={passwordsColor} fillOpacity="0.95"/>
-												<path d="M39.9999 23.2373L40.9726 21.4898C40.3678 21.1531 39.6319 21.1531 39.0271 21.4898L39.9999 23.2373ZM26.775 26.1617L26.9202 24.167C25.9177 24.094 25.0168 24.7763 24.8155 25.7611L26.775 26.1617ZM26.5688 36.1831L24.5945 36.5028L26.5688 36.1831ZM26.823 37.7531L28.7973 37.4334L26.823 37.7531ZM34.9129 52.7212L33.5639 54.1977H33.5639L34.9129 52.7212ZM35.5499 53.3032L36.899 51.8267L36.899 51.8267L35.5499 53.3032ZM39.9999 56.5082L39.0271 58.2556C39.6319 58.5923 40.3679 58.5923 40.9727 58.2556L39.9999 56.5082ZM44.4499 53.3032L45.7989 54.7797L44.4499 53.3032ZM45.0869 52.7212L43.7378 51.2447L43.7378 51.2447L45.0869 52.7212ZM53.1768 37.7531L51.2025 37.4334L53.1768 37.7531ZM53.431 36.1831L51.4568 35.8634V35.8634L53.431 36.1831ZM53.2248 26.1617L55.1843 25.7611C54.983 24.7763 54.082 24.094 53.0796 24.167L53.2248 26.1617ZM39.0271 21.4898C35.8295 23.2698 32.2077 24.2242 28.4937 24.2242V28.2242C32.8939 28.2242 37.1847 27.0934 40.9726 24.9848L39.0271 21.4898ZM28.4937 24.2242C27.967 24.2242 27.4422 24.205 26.9202 24.167L26.6297 28.1564C27.2481 28.2015 27.8698 28.2242 28.4937 28.2242V24.2242ZM24.8155 25.7611C24.0968 29.2761 24.0135 32.9151 24.5945 36.5028L28.543 35.8634C28.04 32.7569 28.1121 29.606 28.7344 26.5623L24.8155 25.7611ZM24.5945 36.5028L24.8487 38.0728L28.7973 37.4334L28.543 35.8634L24.5945 36.5028ZM24.8487 38.0728C25.8533 44.2764 28.9244 49.9587 33.5639 54.1977L36.262 51.2447C32.2882 47.6139 29.6577 42.7469 28.7973 37.4334L24.8487 38.0728ZM33.5639 54.1977L34.2008 54.7797L36.899 51.8267L36.262 51.2447L33.5639 54.1977ZM34.2008 54.7797C35.6804 56.1316 37.3016 57.2951 39.0271 58.2556L40.9727 54.7607C39.5163 53.9499 38.148 52.9679 36.899 51.8267L34.2008 54.7797ZM40.9727 58.2556C42.6982 57.2951 44.3194 56.1316 45.7989 54.7797L43.1008 51.8267C41.8518 52.9679 40.4835 53.9499 39.0271 54.7607L40.9727 58.2556ZM45.7989 54.7797L46.4359 54.1977L43.7378 51.2447L43.1008 51.8267L45.7989 54.7797ZM46.4359 54.1977C51.0754 49.9587 54.1465 44.2764 55.1511 38.0728L51.2025 37.4334C50.3421 42.7469 47.7116 47.6139 43.7378 51.2447L46.4359 54.1977ZM55.1511 38.0728L55.4053 36.5028L51.4568 35.8634L51.2025 37.4334L55.1511 38.0728ZM55.4053 36.5028C55.9863 32.9151 55.903 29.2761 55.1843 25.7611L51.2654 26.5623C51.8877 29.606 51.9598 32.7569 51.4568 35.8634L55.4053 36.5028ZM53.0796 24.167C52.5576 24.205 52.0327 24.2242 51.506 24.2242V28.2242C52.1299 28.2242 52.7517 28.2015 53.3701 28.1564L53.0796 24.167ZM51.506 24.2242C47.792 24.2242 44.1702 23.2698 40.9726 21.4898L39.0271 24.9848C42.815 27.0934 47.1058 28.2242 51.506 28.2242V24.2242Z" fill={passwordsColor} fillOpacity="0.75"/>
-											</g>
-											<defs>
-												<clipPath id="clip0_passwords">
-													<rect width="32" height="37.3335" fill="white" transform="translate(24 21.333)" />
-												</clipPath>
-											</defs>
-										</svg>
+										{getActionBarIcon(actionBarIconTheme, 'contraseñas', passwordsIconSize, passwordsColor)}
 									</button>
 									<span style={{
 										fontSize: compactBar.labelFontSize,
@@ -1349,7 +1368,7 @@ const NodeTermStatus = ({
 											}
 										}}
 									>
-										<i className="pi pi-video" style={{ color: auditColor, fontSize: `${auditIconSize}px` }} />
+										{getActionBarIcon(actionBarIconTheme, 'audit', auditIconSize, auditColor)}
 									</button>
 									<span style={{
 										fontSize: compactBar.labelFontSize,
@@ -1428,7 +1447,7 @@ const NodeTermStatus = ({
 											}
 										}}
 									>
-										<i className="pi pi-wifi" style={{ color: netToolsColor, fontSize: `${netToolsIconSize}px` }} />
+										{getActionBarIcon(actionBarIconTheme, 'nettools', netToolsIconSize, netToolsColor)}
 									</button>
 									<span style={{
 										fontSize: compactBar.labelFontSize,
@@ -2375,7 +2394,7 @@ const NodeTermStatus = ({
 											}
 										}}
 									>
-										<i className="pi pi-sliders-h" style={{ color: configColor, fontSize: `${configIconSize}px`, fontWeight: '300' }} />
+										{getActionBarIcon(actionBarIconTheme, 'config', configIconSize, configColor)}
 									</button>
 									<span style={{
 										fontSize: compactBar.labelFontSize,
@@ -2454,20 +2473,7 @@ const NodeTermStatus = ({
 											}
 										}}
 									>
-										<svg
-											width={terminalIconSize}
-											height={terminalIconSize}
-											viewBox="0 0 24 24"
-											fill="none"
-											style={{
-												transition: 'all 0.3s ease'
-											}}
-										>
-											{/* Icono de terminal moderno */}
-											<rect x="3" y="5" width="18" height="14" rx="2" stroke={terminalColor} strokeWidth="1.5" fill="none"/>
-											<path d="M8 10 L11 12 L8 14 Z" fill={terminalColor}/>
-											<line x1="14" y1="12" x2="18" y2="12" stroke={terminalColor} strokeWidth="1.5" strokeLinecap="round"/>
-										</svg>
+										{getActionBarIcon(actionBarIconTheme, 'terminal', terminalIconSize, terminalColor)}
 									</button>
 									<span style={{
 										fontSize: compactBar.labelFontSize,
@@ -2545,40 +2551,7 @@ const NodeTermStatus = ({
 											}
 										}}
 									>
-										<svg
-											width={statusIconSize}
-											height={statusIconSize}
-											viewBox="0 0 32 20"
-											fill="none"
-											style={{
-												transition: 'all 0.3s ease'
-											}}
-										>
-											{/* Fondo de la status bar con bordes redondeados */}
-											<rect x="1" y="1" width="30" height="18" rx="2" fill={statusColor} opacity={statusBarVisible ? "0.12" : "0.06"} stroke={statusColor} strokeWidth="0.5" strokeOpacity={statusBarVisible ? "0.3" : "0.15"}/>
-											
-											{/* Icono CPU - círculo con punto */}
-											<circle cx="4" cy="6" r="1.5" fill={statusColor} opacity={statusBarVisible ? "1" : "0.6"}/>
-											<circle cx="4" cy="6" r="0.6" fill={statusColor} opacity={statusBarVisible ? "0.3" : "0.2"}/>
-											<text x="6.5" y="7.5" fontSize="3" fill={statusColor} opacity={statusBarVisible ? "0.9" : "0.5"} fontFamily="monospace" fontWeight="500">0 dB</text>
-											
-											{/* Sparkline - barras verticales de diferentes alturas */}
-											<g opacity={statusBarVisible ? "0.9" : "0.5"}>
-												<rect x="13" y="9" width="1.2" height="2" fill={statusColor}/>
-												<rect x="14.8" y="7.5" width="1.2" height="3.5" fill={statusColor}/>
-												<rect x="16.6" y="5" width="1.2" height="6" fill={statusColor}/>
-												<rect x="18.4" y="7" width="1.2" height="4" fill={statusColor}/>
-												<rect x="20.2" y="8.5" width="1.2" height="2.5" fill={statusColor}/>
-												<rect x="22" y="9.5" width="1.2" height="1.5" fill={statusColor}/>
-											</g>
-											
-											{/* Icono de altavoz/memoria */}
-											<path d="M 24 5 L 24 11 M 24 5 L 26 7 L 26 9 L 24 11" stroke={statusColor} strokeWidth="1.2" fill="none" opacity={statusBarVisible ? "0.9" : "0.5"} strokeLinecap="round" strokeLinejoin="round"/>
-											<text x="27.5" y="8.5" fontSize="3" fill={statusColor} opacity={statusBarVisible ? "0.9" : "0.5"} fontFamily="monospace" fontWeight="500">34/12</text>
-											
-											{/* Barra horizontal inferior */}
-											<rect x="2" y="16" width="28" height="1.5" rx="0.5" fill={statusColor} opacity={statusBarVisible ? "0.7" : "0.35"}/>
-										</svg>
+										{getActionBarIcon(actionBarIconTheme, 'statusbar', statusIconSize, statusColor)}
 									</button>
 									<span style={{
 										fontSize: compactBar.labelFontSize,
