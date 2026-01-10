@@ -337,59 +337,38 @@ class FileAnalysisService {
   }
 
   /**
-   * Procesar archivos PDF usando el proceso principal
+   * Procesar archivos PDF - DESHABILITADO (pdf-parse eliminado)
    */
   async processPDFFile(file) {
+    // pdf-parse ha sido eliminado, solo detectamos PDFs sin procesarlos
     try {
       const arrayBuffer = await file.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
       
       // Verificar si es un PDF válido
       if (uint8Array[0] === 0x25 && uint8Array[1] === 0x50 && uint8Array[2] === 0x44 && uint8Array[3] === 0x46) {
-        
-        // Crear archivo temporal usando el proceso principal
-        const tempFilePath = await window.electron.pdfProcessor.createTempFile(file.name, arrayBuffer);
-        
-        try {
-          // Procesar PDF usando el proceso principal
-          const result = await window.electron.pdfProcessor.processPDF(tempFilePath);
-          
-          // Limpiar archivo temporal
-          await window.electron.pdfProcessor.cleanupTempFile(tempFilePath);
-          
-          if (result.success && result.text && result.text.length > 10) {
-            return {
-              text: result.text,
-              isPDF: true,
-              size: file.size,
-              pages: result.pages,
-              wordCount: result.wordCount,
-              characterCount: result.characterCount,
-              extracted: true,
-              note: result.note
-            };
-          } else {
-            return {
-              text: '[PDF detectado pero no se pudo extraer el contenido]',
-              isPDF: true,
-              size: file.size,
-              extracted: false,
-              error: result.error,
-              note: result.note || 'PDF detectado pero el contenido no se pudo extraer.'
-            };
-          }
-        } catch (processError) {
-          // Limpiar archivo temporal en caso de error
-          await window.electron.pdfProcessor.cleanupTempFile(tempFilePath);
-          throw processError;
-        }
+        return {
+          text: '[PDF detectado - Procesamiento de PDFs deshabilitado]',
+          isPDF: true,
+          size: file.size,
+          pages: 0,
+          extracted: false,
+          note: 'PDF detectado pero el procesamiento de contenido está deshabilitado (pdf-parse eliminado)'
+        };
       } else {
         throw new Error('Archivo PDF no válido');
       }
       
     } catch (error) {
       console.error('Error procesando PDF:', error);
-      throw new Error(`Error procesando PDF: ${error.message}`);
+      return {
+        text: '[Error procesando PDF]',
+        isPDF: false,
+        size: file.size,
+        extracted: false,
+        error: error.message,
+        note: `Error: ${error.message}`
+      };
     }
   }
 

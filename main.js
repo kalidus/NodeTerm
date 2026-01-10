@@ -93,7 +93,7 @@ let Docker = null;
 const { WSL, PowerShell, Cygwin } = require('./src/main/services');
 
 // Importar procesador de PDFs
-const pdfProcessor = require('./src/services/PDFProcessor');
+// const pdfProcessor = require('./src/services/PDFProcessor'); // DESHABILITADO: pdf-parse eliminado
 
 try {
   // Importar configuraciones de terminal desde archivo externo
