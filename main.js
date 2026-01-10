@@ -137,23 +137,17 @@ const url = require('url');
 const os = require('os');
 const fs = require('fs');
 
-// Inicializar Docker
-
-try {
-  // Intento 1: Importar directamente
-  const DockerServiceImport = require('./src/main/services/DockerService');
-  
-  // Intento 2: Importar desde index
-  const services = require('./src/main/services');
-  Docker = services.Docker;
-  
-  // Fallback: Usar importación directa
-  if (!Docker || !Docker.DockerHandlers) {
-    Docker = DockerServiceImport;
+// 🚀 OPTIMIZACIÓN: Docker con lazy loading (no se usa hasta listar contenedores)
+function getDocker() {
+  if (Docker === null) {
+    try {
+      Docker = require('./src/main/services/DockerService');
+    } catch (importError) {
+      console.error('❌ Error importing Docker service:', importError.message);
+      Docker = false; // Marcar como fallido para no reintentar
+    }
   }
-} catch (importError) {
-  console.error('❌ Error importing Docker service:', importError.message);
-  Docker = null;
+  return Docker || null;
 }
 
 // ============================================
@@ -236,21 +230,22 @@ function getOpenWebUIService() {
 }
 
 // ============================================================================
-// PARCHE CRÍTICO: Desactivar watchdog de 10s de guacamole-lite y hacer
-// lastActivity bidireccional (se actualiza tanto al enviar como al recibir)
-// Esto evita que las sesiones RDP se congelen prematuramente
+// 🚀 OPTIMIZACIÓN: Parche de GuacdClient DIFERIDO
+// Se aplicará la primera vez que se use Guacamole, no al arrancar
 // ============================================================================
-(() => {
+let _guacdClientPatched = false;
+function ensureGuacdClientPatched() {
+  if (_guacdClientPatched) return;
+  _guacdClientPatched = true;
+  
   try {
     const GuacdClient = require('guacamole-lite/lib/GuacdClient.js');
-    const originalConstructor = GuacdClient.prototype.constructor;
     
     // Guardar el método send original
     const originalSend = GuacdClient.prototype.send;
     
     // Parchar el método send para actualizar lastActivity al ENVIAR datos
     GuacdClient.prototype.send = function(data, afterOpened = false) {
-      // Actualizar lastActivity cuando el cliente ENVÍA datos (bidireccional)
       this.lastActivity = Date.now();
       return originalSend.call(this, data, afterOpened);
     };
@@ -258,12 +253,10 @@ function getOpenWebUIService() {
     // Parchar el constructor para desactivar el watchdog de 10s inmediatamente
     const originalProcessConnectionOpen = GuacdClient.prototype.processConnectionOpen;
     GuacdClient.prototype.processConnectionOpen = function() {
-      // Desactivar el watchdog de 10s INMEDIATAMENTE al abrir la conexión
       if (this.activityCheckInterval) {
         clearInterval(this.activityCheckInterval);
         this.activityCheckInterval = null;
       }
-      // Llamar al método original
       return originalProcessConnectionOpen.call(this);
     };
     
@@ -271,14 +264,37 @@ function getOpenWebUIService() {
   } catch (e) {
     console.error('❌ [GuacdClient] Error aplicando parche de watchdog:', e?.message || e);
   }
-})();
+}
 
-const { getUpdateService } = require('./src/main/services/UpdateService');
-const { registerRecordingHandlers, setSessionRecorder } = require('./src/main/handlers/recording-handlers');
+// 🚀 OPTIMIZACIÓN: Lazy loading de UpdateService, Recording y SessionRecorder
+let _updateService = null;
+let _sessionRecorder = null;
+let _recordingHandlersRegistered = false;
 
-// Importar y crear instancia de SessionRecorder para grabaciones
-const SessionRecorder = require('./src/services/SessionRecorder');
-const sessionRecorder = new SessionRecorder();
+function getUpdateServiceLazy() {
+  if (!_updateService) {
+    const { getUpdateService } = require('./src/main/services/UpdateService');
+    _updateService = getUpdateService(); // Llamar al getter del módulo, no a esta función
+  }
+  return _updateService;
+}
+
+function getSessionRecorder() {
+  if (!_sessionRecorder) {
+    const SessionRecorder = require('./src/services/SessionRecorder');
+    _sessionRecorder = new SessionRecorder();
+  }
+  return _sessionRecorder;
+}
+
+function ensureRecordingHandlersRegistered() {
+  if (_recordingHandlersRegistered) return;
+  _recordingHandlersRegistered = true;
+  
+  const { registerRecordingHandlers, setSessionRecorder } = require('./src/main/handlers/recording-handlers');
+  setSessionRecorder(getSessionRecorder());
+  registerRecordingHandlers();
+}
 
 // Helper para obtener directorio de grabaciones (misma lógica que recording-handlers.js)
 async function getRecordingsDirectory() {
@@ -500,6 +516,9 @@ async function initializeGuacamoleServices() {
   }
   
   guacamoleInitializing = true;
+  
+  // 🚀 OPTIMIZACIÓN: Aplicar parche de GuacdClient justo antes de inicializar
+  ensureGuacdClientPatched();
   
   try {
     console.log('🚀 Inicializando servicios Guacamole...');
@@ -907,24 +926,18 @@ function createWindow() {
       isAppQuitting
     });
     Cygwin.setMainWindow(mainWindow);
-    if (Docker && Docker.setMainWindow) {
-      Docker.setMainWindow(mainWindow);
+    // 🚀 OPTIMIZACIÓN: Docker se inicializa de forma diferida
+    const docker = getDocker();
+    if (docker && docker.setMainWindow) {
+      docker.setMainWindow(mainWindow);
       console.log('✅ Docker main window set successfully');
-    } else {
-      console.warn('⚠️ Docker.setMainWindow not available');
     }
     
-    // Inicializar servicio de actualizaciones
-    const updateService = getUpdateService();
-    updateService.setMainWindow(mainWindow);
-    
-    // Cargar configuración desde localStorage (se sincronizará desde el renderer)
-    // La configuración se cargará cuando el renderer la solicite
-    
-    // Iniciar comprobación automática si está habilitada
+    // 🚀 OPTIMIZACIÓN: Servicio de actualizaciones DIFERIDO 5s después de cargar
     mainWindow.webContents.once('did-finish-load', () => {
-      // Esperar 5 segundos antes de iniciar el servicio de actualización
       setTimeout(() => {
+        const updateService = getUpdateServiceLazy();
+        updateService.setMainWindow(mainWindow);
         updateService.startAutoCheck();
       }, 5000);
     });
@@ -934,11 +947,8 @@ function createWindow() {
 
   // Registrar todos los handlers después de crear la ventana
   try {
-    // Inicializar SessionRecorder
-    setSessionRecorder(sessionRecorder);
-    
-  // Registrar handlers de grabación
-  registerRecordingHandlers();
+    // 🚀 OPTIMIZACIÓN: Registrar handlers de grabación de forma diferida
+    setTimeout(() => ensureRecordingHandlersRegistered(), 200);
   
   // Handlers simples para auditoría
   ipcMain.handle('app:get-user-data-path', () => {
@@ -1116,10 +1126,11 @@ ipcMain.handle('cygwin:detect', async () => {
 
 ipcMain.handle('docker:list', async () => {
   try {
-    if (!Docker || !Docker.DockerHandlers) {
+    const docker = getDocker();
+    if (!docker || !docker.DockerHandlers) {
       return { success: false, available: false, containers: [], error: 'Docker service not initialized' };
     }
-    const result = Docker.DockerHandlers.list();
+    const result = docker.DockerHandlers.list();
     return result;
   } catch (error) {
     console.error('❌ Error listing Docker containers:', error.message);
@@ -1239,7 +1250,7 @@ powerMonitor.on('resume', async () => {
   await new Promise(resolve => setTimeout(resolve, 2000));
   
   // Verificar si guacd (WSL) sigue accesible
-  if (guacdService && getGuacdService().getStatus) {
+  if (_guacdService && getGuacdService().getStatus) {
     const status = getGuacdService().getStatus();
     if (status.method === 'wsl') {
       console.log('🔄 [PowerMonitor] Verificando que guacd en WSL siga accesible...');
@@ -1277,7 +1288,7 @@ powerMonitor.on('unlock-screen', async () => {
   
   // Cuando se desbloquea, las pantallas estaban apagadas
   // Verificar conexión WSL y notificar al frontend
-  if (guacdService && getGuacdService().getStatus) {
+  if (_guacdService && getGuacdService().getStatus) {
     const status = getGuacdService().getStatus();
     if (status.method === 'wsl') {
       console.log('🔄 [PowerMonitor] Verificando guacd WSL tras desbloqueo...');
@@ -1312,7 +1323,7 @@ setInterval(() => {
       console.log(`🔄 [IdleMonitor] Usuario activo después de ${idleSeconds}s de inactividad`);
       
       // Verificar conexión WSL
-      if (guacdService && getGuacdService().getStatus) {
+      if (_guacdService && getGuacdService().getStatus) {
         const status = getGuacdService().getStatus();
         if (status.method === 'wsl' && status.isRunning) {
           // Notificar al frontend para que verifique las sesiones RDP
@@ -1392,8 +1403,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         const dataStr = data.toString('utf-8');
         
         // Grabar output si hay grabación activa
-        if (sessionRecorder.isRecording(tabId)) {
-          sessionRecorder.recordOutput(tabId, dataStr);
+        if (getSessionRecorder().isRecording(tabId)) {
+          getSessionRecorder().recordOutput(tabId, dataStr);
         }
         
         sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
@@ -2056,8 +2067,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         }
         
         // Grabar output si hay grabación activa
-        if (sessionRecorder.isRecording(tabId)) {
-          sessionRecorder.recordOutput(tabId, dataStr);
+        if (getSessionRecorder().isRecording(tabId)) {
+          getSessionRecorder().recordOutput(tabId, dataStr);
         }
         
         // For all subsequent packets, just send them
@@ -2075,9 +2086,9 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       }
       
       // Detener grabación automática si está activa
-      if (sessionRecorder.isRecording(tabId)) {
+      if (getSessionRecorder().isRecording(tabId)) {
         try {
-          const recording = sessionRecorder.stopRecording(tabId);
+          const recording = getSessionRecorder().stopRecording(tabId);
           
           // Guardar grabación automáticamente (siempre guardar cuando hay una grabación activa)
           const autoRecordingEnabled = true; // Asumir que si hay grabación activa, debe guardarse
@@ -2090,7 +2101,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
             await fsPromises.mkdir(recordingsDir, { recursive: true });
             
             // Generar formato asciicast
-            const asciicastContent = sessionRecorder.toAsciicast(recording);
+            const asciicastContent = getSessionRecorder().toAsciicast(recording);
             const filename = `${recording.id}.cast`;
             const filepath = path.join(recordingsDir, filename);
             
@@ -2305,8 +2316,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
             // Configurar listeners del stream
             shellStream.on('data', (data) => {
               const dataStr = data.toString('utf-8');
-              if (sessionRecorder.isRecording(tabId)) {
-                sessionRecorder.recordOutput(tabId, dataStr);
+              if (getSessionRecorder().isRecording(tabId)) {
+                getSessionRecorder().recordOutput(tabId, dataStr);
               }
               sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
             });
@@ -2486,8 +2497,8 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
             bastionConfig,
             (data) => {
               const dataStr = data.toString('utf-8');
-              if (sessionRecorder.isRecording(tabId)) {
-                sessionRecorder.recordOutput(tabId, dataStr);
+              if (getSessionRecorder().isRecording(tabId)) {
+                getSessionRecorder().recordOutput(tabId, dataStr);
               }
               sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
             },
@@ -2837,8 +2848,8 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
               // Configurar listeners del stream
               shellStream.on('data', (data) => {
                 const dataStr = data.toString('utf-8');
-                if (sessionRecorder.isRecording(tabId)) {
-                  sessionRecorder.recordOutput(tabId, dataStr);
+                if (getSessionRecorder().isRecording(tabId)) {
+                  getSessionRecorder().recordOutput(tabId, dataStr);
                 }
                 sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
               });
@@ -2972,8 +2983,8 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
   // Comportamiento normal: enviar datos al stream
   if (conn && conn.stream && !conn.stream.destroyed) {
     // Grabar input si hay grabación activa
-    if (sessionRecorder.isRecording(tabId)) {
-      sessionRecorder.recordInput(tabId, data);
+    if (getSessionRecorder().isRecording(tabId)) {
+      getSessionRecorder().recordInput(tabId, data);
     }
     
     conn.stream.write(data);
@@ -3142,9 +3153,10 @@ app.on('before-quit', () => {
   }
 
   // Cleanup Docker processes
-  if (Docker && Docker.DockerHandlers) {
+  const docker = getDocker();
+  if (docker && docker.DockerHandlers) {
     try {
-      Docker.DockerHandlers.cleanup();
+      docker.DockerHandlers.cleanup();
     } catch (error) {
       console.error('Error cleaning up Docker processes:', error);
     }
@@ -3403,7 +3415,7 @@ ipcMain.handle('window:close', () => {
 // === Update System Handlers ===
 ipcMain.handle('updater:check', async () => {
   try {
-    const updateService = getUpdateService();
+    const updateService = getUpdateServiceLazy();
     const result = await updateService.checkForUpdates();
     return result;
   } catch (error) {
@@ -3414,7 +3426,7 @@ ipcMain.handle('updater:check', async () => {
 
 ipcMain.handle('updater:download', async () => {
   try {
-    const updateService = getUpdateService();
+    const updateService = getUpdateServiceLazy();
     const result = await updateService.downloadUpdate();
     return result;
   } catch (error) {
@@ -3425,7 +3437,7 @@ ipcMain.handle('updater:download', async () => {
 
 ipcMain.handle('updater:quit-and-install', async () => {
   try {
-    const updateService = getUpdateService();
+    const updateService = getUpdateServiceLazy();
     updateService.quitAndInstall();
     return { success: true };
   } catch (error) {
@@ -3436,7 +3448,7 @@ ipcMain.handle('updater:quit-and-install', async () => {
 
 ipcMain.handle('updater:get-config', async () => {
   try {
-    const updateService = getUpdateService();
+    const updateService = getUpdateServiceLazy();
     const config = updateService.getConfig();
     return { success: true, config };
   } catch (error) {
@@ -3447,7 +3459,7 @@ ipcMain.handle('updater:get-config', async () => {
 
 ipcMain.handle('updater:update-config', async (event, newConfig) => {
   try {
-    const updateService = getUpdateService();
+    const updateService = getUpdateServiceLazy();
     const config = updateService.updateConfig(newConfig);
     updateService.restart(); // Reiniciar el servicio con la nueva configuración
     return { success: true, config };
@@ -3459,7 +3471,7 @@ ipcMain.handle('updater:update-config', async (event, newConfig) => {
 
 ipcMain.handle('updater:get-info', async () => {
   try {
-    const updateService = getUpdateService();
+    const updateService = getUpdateServiceLazy();
     const info = updateService.getUpdateInfo();
     return { success: true, ...info };
   } catch (error) {
@@ -3470,7 +3482,7 @@ ipcMain.handle('updater:get-info', async () => {
 
 ipcMain.handle('updater:clear-cache', async () => {
   try {
-    const updateService = getUpdateService();
+    const updateService = getUpdateServiceLazy();
     const result = updateService.clearUpdateCache();
     return result;
   } catch (error) {
@@ -3665,7 +3677,7 @@ app.on('before-quit', () => {
   rdpManager.cleanupAllTempFiles();
   
   // Cleanup Guacamole services
-  if (guacdService) {
+  if (_guacdService) {
     getGuacdService().stop();
   }
 });
@@ -3869,7 +3881,14 @@ async function disconnectAllGuacamoleConnections() {
 // });
 
 // === Terminal Support ===
-const pty = require('node-pty');
+// 🚀 OPTIMIZACIÓN: node-pty con lazy loading (módulo nativo muy pesado)
+let _pty = null;
+function getPty() {
+  if (!_pty) {
+    _pty = require('node-pty');
+  }
+  return _pty;
+}
 
 let powershellProcesses = {}; // Cambiar a objeto para múltiples procesos
 // wslProcesses ahora se maneja en WSLService.js
@@ -3986,7 +4005,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
     for (let i = 0; i < configsToTry.length && !spawnSuccess; i++) {
       try {
         // línea eliminada: console.log(`Intentando configuración ${i + 1}/${configsToTry.length} para PowerShell ${tabId}...`);
-        powershellProcesses[tabId] = pty.spawn(shell, args, configsToTry[i]);
+        powershellProcesses[tabId] = getPty().spawn(shell, args, configsToTry[i]);
         spawnSuccess = true;
         // línea eliminada: console.log(`Configuración ${i + 1} exitosa para PowerShell ${tabId}`);
       } catch (spawnError) {
@@ -4098,7 +4117,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
     
     // Agregar manejador de errores del proceso
     if (powershellProcesses[tabId] && powershellProcesses[tabId].pty) {
-      powershellProcesses[tabId].pty.on('error', (error) => {
+      powershellProcesses[tabId].on('error', (error) => {
         if (error.message && error.message.includes('AttachConsole failed')) {
           console.warn(`Error AttachConsole en PowerShell ${tabId}:`, error.message);
         } else {
@@ -4292,7 +4311,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
         for (let i = 0; i < wslConfigurations.length && !spawnSuccess; i++) {
             try {
                 // console.log(`Intentando configuración ${i + 1}/${wslConfigurations.length} para WSL ${shell} ${tabId}...`); // Eliminado por limpieza de logs
-                wslDistroProcesses[tabId] = pty.spawn(shell, args, wslConfigurations[i]);
+                wslDistroProcesses[tabId] = getPty().spawn(shell, args, wslConfigurations[i]);
                 // console.log(`Configuración ${i + 1} exitosa para WSL ${shell} ${tabId}`); // Eliminado por limpieza de logs
                 spawnSuccess = true;
             } catch (spawnError) {
@@ -4452,7 +4471,7 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
       spawnOptions.backend = 'winpty';             // Forzar uso de WinPTY
     }
     
-    ubuntuProcesses[tabId] = pty.spawn(shell, args, spawnOptions);
+    ubuntuProcesses[tabId] = getPty().spawn(shell, args, spawnOptions);
 
     // Handle Ubuntu output
     ubuntuProcesses[tabId].onData((data) => {
@@ -4806,27 +4825,28 @@ function registerTabEvents(tabId) {
     Cygwin.CygwinHandlers.stop(tabId);
   });
 
-  // Handlers para Docker
-  if (Docker && Docker.DockerHandlers) {
+  // Handlers para Docker (lazy loading)
+  const dockerSvc = getDocker();
+  if (dockerSvc && dockerSvc.DockerHandlers) {
     ipcMain.removeAllListeners(`docker:start:${tabId}`);
     ipcMain.removeAllListeners(`docker:data:${tabId}`);
     ipcMain.removeAllListeners(`docker:resize:${tabId}`);
     ipcMain.removeAllListeners(`docker:stop:${tabId}`);
     
     ipcMain.on(`docker:start:${tabId}`, (event, data) => {
-      Docker.DockerHandlers.start(tabId, data.containerName, data);
+      dockerSvc.DockerHandlers.start(tabId, data.containerName, data);
     });
     
     ipcMain.on(`docker:data:${tabId}`, (event, data) => {
-      Docker.DockerHandlers.data(tabId, data);
+      dockerSvc.DockerHandlers.data(tabId, data);
     });
     
     ipcMain.on(`docker:resize:${tabId}`, (event, data) => {
-      Docker.DockerHandlers.resize(tabId, data);
+      dockerSvc.DockerHandlers.resize(tabId, data);
     });
     
     ipcMain.on(`docker:stop:${tabId}`, (event) => {
-      Docker.DockerHandlers.stop(tabId);
+      dockerSvc.DockerHandlers.stop(tabId);
     });
   }
 }
