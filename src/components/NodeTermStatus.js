@@ -367,73 +367,78 @@ const NodeTermStatus = ({
 		};
 	}, []);
 
-	// Detectar distribuciones WSL
+	// 🚀 OPTIMIZACIÓN: Detectar distribuciones WSL DIFERIDO
 	useEffect(() => {
 		if (!horizontal || !compact) return;
-		const detectWSLDistributions = async () => {
-			try {
-				if (window.electron && window.electron.ipcRenderer) {
-					const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
-					if (Array.isArray(distributions)) {
-						setWSLDistributions(distributions);
+		const timer = setTimeout(() => {
+			const detectWSLDistributions = async () => {
+				try {
+					if (window.electron && window.electron.ipcRenderer) {
+						const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
+						if (Array.isArray(distributions)) {
+							setWSLDistributions(distributions);
+						} else {
+							setWSLDistributions([]);
+						}
 					} else {
 						setWSLDistributions([]);
 					}
-				} else {
+				} catch (error) {
 					setWSLDistributions([]);
 				}
-			} catch (error) {
-				console.error('Error en detección de distribuciones WSL:', error);
-				setWSLDistributions([]);
-			}
-		};
-		detectWSLDistributions();
+			};
+			detectWSLDistributions();
+		}, 900); // Diferir 900ms
+		return () => clearTimeout(timer);
 	}, [horizontal, compact]);
 
-	// Detectar disponibilidad de Cygwin
+	// 🚀 OPTIMIZACIÓN: Detectar disponibilidad de Cygwin DIFERIDO
 	useEffect(() => {
 		if (!horizontal || !compact) return;
-		const detectCygwin = async () => {
-			if (window.electron && window.electron.platform === 'win32') {
-				try {
-					const result = await window.electronAPI.invoke('cygwin:detect');
-					if (result && typeof result.available === 'boolean') {
-						setCygwinAvailable(result.available);
-					} else {
+		const timer = setTimeout(() => {
+			const detectCygwin = async () => {
+				if (window.electron && window.electron.platform === 'win32') {
+					try {
+						const result = await window.electronAPI.invoke('cygwin:detect');
+						if (result && typeof result.available === 'boolean') {
+							setCygwinAvailable(result.available);
+						} else {
+							setCygwinAvailable(false);
+						}
+					} catch (error) {
 						setCygwinAvailable(false);
 					}
-				} catch (error) {
-					console.error('Error detectando Cygwin:', error);
+				} else {
 					setCygwinAvailable(false);
 				}
-			} else {
-				setCygwinAvailable(false);
-			}
-		};
-		detectCygwin();
+			};
+			detectCygwin();
+		}, 1000); // Diferir 1000ms
+		return () => clearTimeout(timer);
 	}, [horizontal, compact]);
 
-	// Detectar contenedores Docker
+	// 🚀 OPTIMIZACIÓN: Detectar contenedores Docker DIFERIDO
 	useEffect(() => {
 		if (!horizontal || !compact) return;
 		let mounted = true;
-		const detectDocker = async () => {
-			try {
-				if (window.electron && window.electronAPI && mounted) {
-					const result = await window.electronAPI.invoke('docker:list');
-					if (mounted && result && result.success && Array.isArray(result.containers)) {
-						setDockerContainers(result.containers);
-					} else {
-						setDockerContainers([]);
+		const timer = setTimeout(() => {
+			const detectDocker = async () => {
+				try {
+					if (window.electron && window.electronAPI && mounted) {
+						const result = await window.electronAPI.invoke('docker:list');
+						if (mounted && result && result.success && Array.isArray(result.containers)) {
+							setDockerContainers(result.containers);
+						} else {
+							setDockerContainers([]);
+						}
 					}
+				} catch (error) {
+					setDockerContainers([]);
 				}
-			} catch (error) {
-				console.error('Error detectando Docker:', error);
-				setDockerContainers([]);
-			}
-		};
-		detectDocker();
-		return () => { mounted = false; };
+			};
+			detectDocker();
+		}, 1100); // Diferir 1100ms
+		return () => { mounted = false; clearTimeout(timer); };
 	}, [horizontal, compact]);
 
 	// Cerrar menú Docker al hacer clic fuera

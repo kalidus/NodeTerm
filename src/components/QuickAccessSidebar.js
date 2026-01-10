@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
+// 🚀 OPTIMIZACIÓN: Usar hook centralizado para detección de sistema
+import { useSystemDetection } from '../hooks/useSystemDetection';
 
 const QuickAccessSidebar = ({ 
   onCreateSSHConnection, 
@@ -16,10 +18,13 @@ const QuickAccessSidebar = ({
   showAIChat = false,
   statusBarVisible = true
 }) => {
-  // Estados para terminales detectados dinámicamente
-  const [wslDistributions, setWSLDistributions] = useState([]);
-  const [cygwinAvailable, setCygwinAvailable] = useState(false);
-  const [dockerContainers, setDockerContainers] = useState([]);
+  // 🚀 OPTIMIZACIÓN: Usar hook centralizado con delay para no bloquear render
+  const { 
+    wslDistributions, 
+    cygwinAvailable, 
+    dockerContainers 
+  } = useSystemDetection({ delay: 300 });
+  
   const [availableTerminals, setAvailableTerminals] = useState([]);
   const [quickActionItems, setQuickActionItems] = useState([]);
   
@@ -219,80 +224,8 @@ const QuickAccessSidebar = ({
     } catch (e) { /* noop */ }
   };
 
-  // Detectar distribuciones WSL
-  useEffect(() => {
-    const detectWSLDistributions = async () => {
-      try {
-        if (window.electron && window.electron.ipcRenderer) {
-          const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
-          if (Array.isArray(distributions)) {
-            setWSLDistributions(distributions);
-          } else {
-            setWSLDistributions([]);
-          }
-        } else {
-          setWSLDistributions([]);
-        }
-      } catch (error) {
-        console.error('Error en detección de distribuciones WSL:', error);
-        setWSLDistributions([]);
-      }
-    };
-    
-    detectWSLDistributions();
-  }, []);
-
-  // Detectar disponibilidad de Cygwin
-  useEffect(() => {
-    const detectCygwin = async () => {
-      if (window.electron && window.electron.platform === 'win32') {
-        try {
-          const result = await window.electronAPI.invoke('cygwin:detect');
-          if (result && typeof result.available === 'boolean') {
-            setCygwinAvailable(result.available);
-          } else {
-            setCygwinAvailable(false);
-          }
-        } catch (error) {
-          console.error('Error detectando Cygwin:', error);
-          setCygwinAvailable(false);
-        }
-      } else {
-        setCygwinAvailable(false);
-      }
-    };
-    
-    detectCygwin();
-  }, []);
-
-  // Detectar contenedores Docker disponibles (UNA SOLA VEZ al montar)
-  useEffect(() => {
-    let mounted = true;
-    
-    const detectDocker = async () => {
-      try {
-        if (window.electron && window.electronAPI && mounted) {
-          const result = await window.electronAPI.invoke('docker:list');
-          if (mounted && result && result.success && Array.isArray(result.containers)) {
-            console.log(`🐳 Docker detectado: ${result.containers.length} contenedor(es)`);
-            setDockerContainers(result.containers);
-          } else {
-            setDockerContainers([]);
-          }
-        }
-      } catch (error) {
-        console.error('❌ Error detectando Docker:', error);
-        setDockerContainers([]);
-      }
-    };
-    
-    detectDocker();
-    
-    // Cleanup
-    return () => {
-      mounted = false;
-    };
-  }, []); // Solo ejecutar UNA VEZ al montar
+  // 🚀 OPTIMIZACIÓN: Las detecciones de WSL, Cygwin y Docker ahora usan el hook useSystemDetection
+  // que está centralizado y cacheado para evitar llamadas IPC duplicadas
 
   // Generar lista de terminales disponibles
   useEffect(() => {

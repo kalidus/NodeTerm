@@ -675,10 +675,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         }
     }), [tabs, selectedTerminalType]); // Agregar tabs y selectedTerminalType como dependencias
 
-    // Detectar distribuciones WSL usando el backend
+    // 🚀 OPTIMIZACIÓN: Detectar distribuciones WSL DIFERIDO para no bloquear arranque
     useEffect(() => {
-        // console.log('🔍 [Detectar WSL] Iniciando detección de distribuciones WSL...');
-        
+        // Diferir detección 500ms para que la UI aparezca primero
+        const timer = setTimeout(() => {
         const detectWSLDistributions = async () => {
             try {
                 if (window.electron && window.electron.ipcRenderer) {
@@ -755,10 +755,13 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         };
         
         detectWSLDistributions();
+        }, 500); // 🚀 Diferir 500ms
+        return () => clearTimeout(timer);
     }, []);
 
-    // Detectar disponibilidad de Cygwin embebido
+    // 🚀 OPTIMIZACIÓN: Detectar disponibilidad de Cygwin DIFERIDO
     useEffect(() => {
+        const timer = setTimeout(() => {
         const detectCygwin = async () => {
             if (window.electron && window.electron.platform === 'win32') {
                 try {
@@ -808,12 +811,15 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         };
         
         detectCygwin();
+        }, 600); // 🚀 Diferir 600ms (después de WSL)
+        return () => clearTimeout(timer);
     }, []);
 
-    // Detectar contenedores Docker disponibles (UNA SOLA VEZ)
+    // 🚀 OPTIMIZACIÓN: Detectar contenedores Docker DIFERIDO
     useEffect(() => {
         let mounted = true;
         
+        const timer = setTimeout(() => {
         const detectDocker = async () => {
             try {
                 if (window.electron && window.electronAPI && mounted) {
@@ -825,15 +831,17 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     }
                 }
             } catch (error) {
-                console.error('❌ Error detectando Docker:', error);
+                // Docker no disponible - silencioso
                 setDockerContainers([]);
             }
         };
         
         detectDocker();
+        }, 700); // 🚀 Diferir 700ms (después de Cygwin)
         
         return () => {
             mounted = false;
+            clearTimeout(timer);
         };
     }, []); // Solo ejecutar UNA VEZ al montar
 
