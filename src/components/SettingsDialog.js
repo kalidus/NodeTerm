@@ -4687,7 +4687,7 @@ const SettingsDialog = ({
                                 letterSpacing: '-0.3px',
                                 marginBottom: '0.125rem'
                               }}>
-                                v1.6.1
+                                v1.6.2
                               </div>
                               <div style={{
                                 fontSize: '0.75rem',
