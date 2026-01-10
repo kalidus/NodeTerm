@@ -138,20 +138,23 @@ function extractFontUrls(css) {
   return urls;
 }
 
+// Contadores globales para el resumen
+const stats = {
+  skipped: 0,
+  downloaded: 0,
+  errors: 0
+};
+
 /**
  * Descarga una fuente completa
  */
-async function downloadFont(font) {
-  console.log(`\n📥 Descargando ${font.name}...`);
-  
+async function downloadFont(font, verbose = false) {
   try {
     // Obtener CSS de Google Fonts
     const css = await getFontCSS(font.googleName, font.weights);
     
     // Verificar si el CSS está vacío o es muy corto (posible error)
     if (!css || css.length < 50) {
-      console.log(`  ⚠️  ${font.name} no está disponible en Google Fonts`);
-      console.log(`  💡 Esta fuente usará el fallback del sistema si está instalada`);
       return null;
     }
     
@@ -159,12 +162,12 @@ async function downloadFont(font) {
     const fontUrls = extractFontUrls(css);
     
     if (fontUrls.length === 0) {
-      console.log(`  ⚠️  No se encontraron URLs de fuentes para ${font.name}`);
-      console.log(`  💡 Esta fuente usará el fallback del sistema si está instalada`);
       return null;
     }
     
     const fontFiles = [];
+    let fontSkipped = 0;
+    let fontDownloaded = 0;
     
     // Descargar cada archivo de fuente
     for (const fontUrl of fontUrls) {
@@ -175,7 +178,8 @@ async function downloadFont(font) {
         
         // Si ya existe, saltar
         if (fs.existsSync(localPath)) {
-          console.log(`  ✓ ${fileName} ya existe, saltando...`);
+          stats.skipped++;
+          fontSkipped++;
           fontFiles.push({
             fileName: fileName,
             url: `./assets/fonts/${fileName}`,
@@ -184,9 +188,9 @@ async function downloadFont(font) {
           continue;
         }
         
-        console.log(`  ⬇️  Descargando ${fileName}...`);
         await downloadFile(fontUrl, localPath);
-        console.log(`  ✅ ${fileName} descargado`);
+        stats.downloaded++;
+        fontDownloaded++;
         
         fontFiles.push({
           fileName: fileName,
@@ -197,8 +201,13 @@ async function downloadFont(font) {
         // Pequeña pausa para no sobrecargar
         await new Promise(resolve => setTimeout(resolve, 200));
       } catch (error) {
-        console.error(`  ❌ Error descargando archivo: ${error.message}`);
+        stats.errors++;
       }
+    }
+    
+    // Mostrar progreso compacto solo si hubo descargas nuevas
+    if (fontDownloaded > 0) {
+      console.log(`  ⬇️  ${font.name}: ${fontDownloaded} archivo(s) nuevo(s)`);
     }
     
     // Generar @font-face declarations
@@ -230,8 +239,6 @@ async function downloadFont(font) {
       css: fontFacesCSS
     };
   } catch (error) {
-    console.error(`  ❌ Error descargando ${font.name}:`, error.message);
-    console.log(`  💡 Esta fuente usará el fallback del sistema si está instalada`);
     return null;
   }
 }
@@ -240,8 +247,7 @@ async function downloadFont(font) {
  * Función principal
  */
 async function main() {
-  console.log('🚀 Iniciando descarga de fuentes...\n');
-  console.log(`📁 Directorio de destino: ${fontsDir}\n`);
+  console.log('🚀 Descargando fuentes...\n');
   
   const allFontFaces = [];
   let successCount = 0;
@@ -271,19 +277,15 @@ ${allFontFaces.join('\n\n')}
 `;
   
   fs.writeFileSync(fontsCSSFile, cssContent);
-  console.log(`\n✅ Archivo CSS generado: ${fontsCSSFile}`);
-  console.log(`\n✨ Descarga completada!`);
-  console.log(`   ✅ ${successCount} fuentes descargadas correctamente`);
-  if (failCount > 0) {
-    console.log(`   ⚠️  ${failCount} fuentes no están disponibles en Google Fonts`);
-    console.log(`   💡 Nota: Hack y Monoid no están en Google Fonts`);
-    console.log(`   💡 Estas fuentes funcionarán si están instaladas en el sistema`);
-    console.log(`   💡 Puedes descargarlas desde: https://github.com/source-foundry/Hack y https://larsenwork.com/monoid/`);
+  
+  // Resumen compacto
+  console.log('\n✨ Completado!');
+  console.log(`   📦 Fuentes: ${successCount} OK, ${failCount} no disponibles`);
+  console.log(`   📁 Archivos: ${stats.downloaded} nuevos, ${stats.skipped} ya existían${stats.errors > 0 ? `, ${stats.errors} errores` : ''}`);
+  
+  if (stats.downloaded === 0 && stats.skipped > 0) {
+    console.log('   ✅ Todo actualizado, nada que descargar');
   }
-  console.log(`\n📦 Las fuentes descargadas están listas para usar offline!`);
-  console.log(`\n💡 Total: ${fontsToDownload.length} fuentes en la lista`);
-  console.log(`   ✅ ${successCount} integradas en la app (funcionan offline)`);
-  console.log(`   ⚠️  ${failCount} requieren instalación del sistema`);
 }
 
 // Ejecutar
