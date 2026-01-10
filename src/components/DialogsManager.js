@@ -368,8 +368,8 @@ const DialogsManager = ({
       
 
       
-      {/* Settings Dialog */}
-      <SettingsDialog
+      {/* 🚀 OPTIMIZACIÓN: Settings Dialog solo se monta cuando es visible */}
+      {showSettingsDialog && <SettingsDialog
         visible={showSettingsDialog}
         onHide={() => setShowSettingsDialog(false)}
         availableThemes={availableThemes}
@@ -426,10 +426,10 @@ const DialogsManager = ({
         importTreeFromJson={importTreeFromJson}
         sessionManager={sessionManager}
         onMasterPasswordConfigured={onMasterPasswordConfigured}
-      />
+      />}
       
-      {/* Sync Settings Dialog */}
-      <SyncSettingsDialog
+      {/* Sync Settings Dialog - solo se monta cuando es visible */}
+      {showSyncDialog && <SyncSettingsDialog
         visible={showSyncDialog}
         onHide={() => setShowSyncDialog(false)}
         updateThemesFromSync={updateThemesFromSync}
@@ -437,7 +437,7 @@ const DialogsManager = ({
         exportTreeToJson={exportTreeToJson}
         importTreeFromJson={importTreeFromJson}
         sessionManager={sessionManager}
-      />
+      />}
 
       {/* Diálogo: Nueva conexión SSH */}
       <SSHDialog

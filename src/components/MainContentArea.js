@@ -209,30 +209,32 @@ const MainContentArea = ({
     return localStorage.getItem('lock_home_button') === 'true';
   });
   
-  // Detectar contenedores Docker disponibles
+  // 🚀 OPTIMIZACIÓN: Detectar contenedores Docker DIFERIDO
   useEffect(() => {
     let mounted = true;
     
-    const detectDocker = async () => {
-      try {
-          if (window.electron && window.electronAPI && mounted) {
-          const result = await window.electronAPI.invoke('docker:list');
-          if (mounted && result && result.success && Array.isArray(result.containers)) {
-            setDockerContainers(result.containers);
-          } else {
-            setDockerContainers([]);
+    const timer = setTimeout(() => {
+      const detectDocker = async () => {
+        try {
+            if (window.electron && window.electronAPI && mounted) {
+            const result = await window.electronAPI.invoke('docker:list');
+            if (mounted && result && result.success && Array.isArray(result.containers)) {
+              setDockerContainers(result.containers);
+            } else {
+              setDockerContainers([]);
+            }
           }
+        } catch (error) {
+          // Docker no disponible - silencioso
+          setDockerContainers([]);
         }
-      } catch (error) {
-        console.error('❌ Error detectando Docker en MainContentArea:', error);
-        setDockerContainers([]);
-      }
-    };
-    
-    detectDocker();
+      };
+      detectDocker();
+    }, 800); // Diferir 800ms
     
     return () => {
       mounted = false;
+      clearTimeout(timer);
     };
   }, []);
 
@@ -642,27 +644,29 @@ const MainContentArea = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wslDistributions, dockerContainers, dispatchAnythingLLMTab, dispatchOpenWebUITab, aiClientsEnabled]);
   
-  // Detectar distribuciones WSL disponibles al montar el componente
+  // 🚀 OPTIMIZACIÓN: Detectar distribuciones WSL DIFERIDO
   useEffect(() => {
-    const detectWSLDistributions = async () => {
-      try {
-        if (window.electron && window.electron.ipcRenderer) {
-          const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
-          if (Array.isArray(distributions)) {
-            setWslDistributions(distributions);
+    const timer = setTimeout(() => {
+      const detectWSLDistributions = async () => {
+        try {
+          if (window.electron && window.electron.ipcRenderer) {
+            const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
+            if (Array.isArray(distributions)) {
+              setWslDistributions(distributions);
+            } else {
+              setWslDistributions([]);
+            }
           } else {
             setWslDistributions([]);
           }
-        } else {
+        } catch (error) {
           setWslDistributions([]);
         }
-      } catch (error) {
-        console.error('Error detecting WSL distributions:', error);
-        setWslDistributions([]);
-      }
-    };
+      };
+      detectWSLDistributions();
+    }, 600); // Diferir 600ms
     
-    detectWSLDistributions();
+    return () => clearTimeout(timer);
   }, []);
   
   // Efecto para añadir botones después de las pestañas usando DOM

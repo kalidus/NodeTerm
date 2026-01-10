@@ -13,9 +13,49 @@ module.exports = {
     __filename: false
   },
   output: {
-    filename: 'bundle.js',
+    filename: '[name].bundle.js',
+    chunkFilename: '[name].chunk.js',
     path: path.resolve(__dirname, 'dist'),
     clean: true,
+  },
+  // 🚀 OPTIMIZACIÓN: Code splitting para reducir bundle inicial
+  optimization: {
+    splitChunks: {
+      chunks: 'all',
+      maxInitialRequests: 10,
+      minSize: 20000,
+      cacheGroups: {
+        // Vendors de React (críticos, cargar primero)
+        react: {
+          test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+          name: 'react',
+          priority: 40,
+          chunks: 'all',
+        },
+        // PrimeReact (pesado pero necesario para UI)
+        primereact: {
+          test: /[\\/]node_modules[\\/](primereact|primeicons|primeflex)[\\/]/,
+          name: 'primereact',
+          priority: 30,
+          chunks: 'all',
+        },
+        // xterm (para terminales - se puede diferir)
+        xterm: {
+          test: /[\\/]node_modules[\\/](@xterm|xterm)[\\/]/,
+          name: 'xterm',
+          priority: 25,
+          chunks: 'async',
+        },
+        // Otros vendors
+        vendors: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          priority: 10,
+          chunks: 'all',
+          reuseExistingChunk: true,
+        },
+      },
+    },
   },
   module: {
     rules: [

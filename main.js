@@ -1,4 +1,16 @@
 // ============================================
+// 🔬 PROFILER DE ARRANQUE - Medir tiempos de carga
+// ============================================
+const _startupTime = Date.now();
+const _timings = [];
+function logTiming(label) {
+  const elapsed = Date.now() - _startupTime;
+  _timings.push({ label, elapsed });
+  console.log(`⏱️ [${elapsed}ms] ${label}`);
+}
+logTiming('Inicio del proceso main.js');
+
+// ============================================
 // POLYFILL DOMMatrix para jsdom en Node.js
 // Debe cargarse ANTES de cualquier módulo que use jsdom
 // ============================================
@@ -79,18 +91,21 @@
     global.window.DOMMatrixReadOnly = global.DOMMatrixReadOnly;
   }
 })();
+logTiming('Polyfill DOMMatrix cargado');
 
 // Declarar variables
 let alternativePtyConfig, SafeWindowsTerminal, registerAllHandlers;
 
 // Importar utilidades centralizadas (fuera del try-catch para acceso global)
 const { parseDfOutput, parseNetDev, getGuacdPrefPath, sendToRenderer, cleanupOrphanedConnections } = require('./src/main/utils');
+logTiming('Utils cargados');
 
 // Importar servicios centralizados (fuera del try-catch para acceso global)
 // Nota: Docker se importará después de que se carguen fs y path
 let Docker = null;
 
 const { WSL, PowerShell, Cygwin } = require('./src/main/services');
+logTiming('Servicios WSL/PowerShell/Cygwin cargados');
 
 // Importar procesador de PDFs
 // const pdfProcessor = require('./src/services/PDFProcessor'); // DESHABILITADO: pdf-parse eliminado
@@ -127,13 +142,10 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor } = require('electron');
+logTiming('Electron cargado');
 const path = require('path');
 const url = require('url');
 
-// ============================================
-// 🚨 VERIFICACIÓN CRÍTICA DE CAMBIOS APLICADOS
-// (logs temporales eliminados)
-// ============================================
 const os = require('os');
 const fs = require('fs');
 
@@ -746,6 +758,7 @@ const {
 // Handlers de Guacamole movidos a src/main/handlers/guacamole-handlers.js
 
 function createWindow() {
+  logTiming('createWindow() iniciado');
   mainWindow = new BrowserWindow({
     width: 1600,
     height: 1000,
@@ -765,6 +778,7 @@ function createWindow() {
       enableBlinkFeatures: 'PreciseMemoryInfo' // Habilitar info de memoria precisa
     }
   });
+  logTiming('BrowserWindow creado');
 
   // 🚀 OPTIMIZACIÓN: Precalentamiento de guacd DIFERIDO hasta después de ready-to-show
   // Se ejecutará en initializeServicesAfterShow() para no bloquear el arranque
@@ -819,8 +833,9 @@ function createWindow() {
     });
 
     try {
+      logTiming('Iniciando loadURL...');
       await mainWindow.loadURL(urlToLoad);
-      console.log('✅ Ventana cargada correctamente');
+      logTiming('loadURL completado');
     } catch (error) {
       console.error('❌ Error cargando ventana:', error.message);
       // Si falla, intentar recargar después de un momento
@@ -834,6 +849,7 @@ function createWindow() {
 
   // Mostrar ventana cuando esté lista para mostrar
   mainWindow.once('ready-to-show', () => {
+    logTiming('🎯 ready-to-show - VENTANA VISIBLE');
     if (mainWindow) mainWindow.show();
     
     // 🚀 OPTIMIZACIÓN: Inicializar servicios pesados DESPUÉS de mostrar la ventana
@@ -908,6 +924,7 @@ function createWindow() {
   // 🚀 OPTIMIZACIÓN: Establecer dependencias de servicios DESPUÉS de did-finish-load
   // Esto permite que la ventana se muestre más rápido
   mainWindow.webContents.once('did-finish-load', () => {
+    logTiming('did-finish-load - HTML/JS cargado');
     // Diferir configuración de servicios para no bloquear el render inicial
     setImmediate(() => {
       try {
@@ -1198,7 +1215,10 @@ ipcMain.handle('cygwin:install', async () => {
   }
 });
 
-app.on('ready', createWindow);
+app.on('ready', () => {
+  logTiming('app ready event');
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

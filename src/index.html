@@ -5,21 +5,18 @@
     <title>NodeTerm</title>
     <meta name="color-scheme" content="dark light" />
     
-    <!-- Preload de fuentes modernas desde Google Fonts -->
+    <!-- 🚀 OPTIMIZACIÓN: Google Fonts cargados de forma NO BLOQUEANTE -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     
-    <!-- Fuentes principales para la interfaz -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@300;400;600;700&family=Lato:wght@300;400;700&family=Montserrat:wght@300;400;500;600;700&family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Fuentes principales para la interfaz - DIFERIDAS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     
-    <!-- Fuentes monoespaciadas para terminales - Integradas localmente -->
-    <!-- Se cargan desde src/styles/fonts.css (generado con npm run download-fonts) -->
-    <!-- Fallback a Google Fonts si las locales no están disponibles -->
-    <link id="terminal-fonts-fallback" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Fira+Code:wght@300;400;500;700&family=Source+Code+Pro:wght@300;400;600;700&family=Roboto+Mono:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-    <noscript><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Fira+Code:wght@300;400;500;700&family=Source+Code+Pro:wght@300;400;600;700&family=Roboto+Mono:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"></noscript>
+    <!-- Fuentes monoespaciadas para terminales - DIFERIDAS -->
+    <link id="terminal-fonts-fallback" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     
-    <!-- Fuentes modernas adicionales -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Nunito:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;700&family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Fuentes adicionales - DIFERIDAS con delay mayor -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <script>
       // Global polyfill - DEBE ejecutarse ANTES que cualquier otro script
       (function() {
@@ -40,7 +37,7 @@
           window.global = window;
         }
         
-        console.log('Global polyfill loaded:', typeof global !== 'undefined');
+        // Polyfill cargado silenciosamente
       })();
     </script>
     <script>

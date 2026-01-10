@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useTabManagement } from '../hooks/useTabManagement';
 import { useConnectionManagement } from '../hooks/useConnectionManagement';
 import { useSidebarManagement } from '../hooks/useSidebarManagement';
@@ -7,6 +7,8 @@ import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import { loadSavedTabTheme } from '../utils/tabThemeLoader';
 import i18n from '../i18n';
 import ErrorBoundary from './ErrorBoundary';
+// 🚀 OPTIMIZACIÓN: Servicio de detección centralizado para evitar múltiples llamadas IPC
+import systemDetectionService from '../services/SystemDetectionService';
 
 import { useStatusBarSettings } from '../hooks/useStatusBarSettings';
 import { useSessionManagement } from '../hooks/useSessionManagement';
@@ -29,7 +31,7 @@ import { TabView, TabPanel } from 'primereact/tabview';
 
 import { ContextMenu } from 'primereact/contextmenu';
 import TerminalComponent from './TerminalComponent';
-import FileExplorer from './FileExplorer';
+// FileExplorer ahora usa lazy loading arriba
 import Sidebar from './Sidebar';
 import SplitLayout from './SplitLayout';
 import { themes } from '../themes';
@@ -37,21 +39,24 @@ import { iconThemes } from '../themes/icon-themes';
 import { FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 
 
-import SettingsDialog from './SettingsDialog';
+// 🚀 OPTIMIZACIÓN: Lazy loading de componentes pesados
+// Estos componentes se cargan bajo demanda, no al inicio
+const SettingsDialog = lazy(() => import('./SettingsDialog'));
+const SyncSettingsDialog = lazy(() => import('./SyncSettingsDialog'));
+const ImportDialog = lazy(() => import('./ImportDialog'));
+const RdpSessionTab = lazy(() => import('./RdpSessionTab'));
+const GuacamoleTab = lazy(() => import('./GuacamoleTab'));
+const GuacamoleTerminal = lazy(() => import('./GuacamoleTerminal'));
+const FileExplorer = lazy(() => import('./FileExplorer'));
+
+// Componentes críticos (se cargan inmediatamente)
 import TitleBar from './TitleBar';
 import HomeTab from './HomeTab';
 import { SSHDialog, FolderDialog, GroupDialog } from './Dialogs';
-
-import SyncSettingsDialog from './SyncSettingsDialog';
-import ImportDialog from './ImportDialog';
 import ImportService from '../services/ImportService';
 import { unblockAllInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import SecureStorage from '../services/SecureStorage';
 import UnlockDialog from './UnlockDialog';
-
-import RdpSessionTab from './RdpSessionTab';
-import GuacamoleTab from './GuacamoleTab';
-import GuacamoleTerminal from './GuacamoleTerminal';
 import { detectBlockedInputs } from '../utils/formDebugger';
 // import '../assets/form-fixes.css';
 import '../styles/layout/sidebar.css';
@@ -157,6 +162,13 @@ const App = () => {
     i18n.init().catch(err => {
       console.error('[App] Error inicializando i18n:', err);
     });
+  }, []);
+
+  // 🚀 OPTIMIZACIÓN: Inicializar detecciones de sistema de forma diferida
+  // Esto evita bloquear el render inicial con llamadas IPC
+  useEffect(() => {
+    // Diferir detecciones 800ms después del mount para no bloquear el render
+    systemDetectionService.initializeDeferred(800);
   }, []);
 
   // Detectar si necesita unlock al iniciar (o auto-unlock si está recordado)
@@ -2712,36 +2724,39 @@ const App = () => {
         sessionManager={sessionManager}
       />
       
-      <ImportDialog
-        visible={showImportDialog}
-        onHide={() => setShowImportDialog(false)}
-        onImportComplete={async (result) => {
-          try {
-            const res = await handleImportComplete(result);
-            return res;
-          } catch (error) {
-            console.error('🔍 DEBUG App.js - Error en handleImportComplete:', error);
-            throw error;
-          }
-        }}
-        showToast={(message) => toast.current?.show(message)}
-        presetOptions={importPreset}
-        targetFolderOptions={(() => {
-          const list = [];
-          const walk = (arr, prefix = '') => {
-            if (!Array.isArray(arr)) return;
-            for (const n of arr) {
-              if (n && n.droppable) {
-                list.push({ label: `${prefix}${n.label}`, value: n.key });
-                if (n.children && n.children.length) walk(n.children, `${prefix}${n.label} / `);
-              }
+      {/* 🚀 OPTIMIZACIÓN: Lazy loading con Suspense */}
+      <Suspense fallback={null}>
+        <ImportDialog
+          visible={showImportDialog}
+          onHide={() => setShowImportDialog(false)}
+          onImportComplete={async (result) => {
+            try {
+              const res = await handleImportComplete(result);
+              return res;
+            } catch (error) {
+              console.error('🔍 DEBUG App.js - Error en handleImportComplete:', error);
+              throw error;
             }
-          };
-          walk(nodes || []);
-          return list;
-        })()}
-        defaultTargetFolderKey={null}
-      />
+          }}
+          showToast={(message) => toast.current?.show(message)}
+          presetOptions={importPreset}
+          targetFolderOptions={(() => {
+            const list = [];
+            const walk = (arr, prefix = '') => {
+              if (!Array.isArray(arr)) return;
+              for (const n of arr) {
+                if (n && n.droppable) {
+                  list.push({ label: `${prefix}${n.label}`, value: n.key });
+                  if (n.children && n.children.length) walk(n.children, `${prefix}${n.label} / `);
+                }
+              }
+            };
+            walk(nodes || []);
+            return list;
+          })()}
+          defaultTargetFolderKey={null}
+        />
+      </Suspense>
       
       {/* ConfirmDialog para confirmaciones globales */}
       <ConfirmDialog />
