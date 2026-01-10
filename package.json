@@ -85,7 +85,8 @@
       "!node_modules/stream-browserify/**",
       "!node_modules/url/**",
       "!node_modules/util/**",
-      "!node_modules/crypto-browserify/**"
+      "!node_modules/crypto-browserify/**",
+      "!node_modules/pdf-parse/**"
     ],
     "asarUnpack": [
       "binaries/**",
@@ -108,7 +109,10 @@
       "verifyUpdateCodeSignature": false,
       "requestedExecutionLevel": "asInvoker"
     },
-    "electronLanguages": ["en", "es"],
+    "electronLanguages": [
+      "en",
+      "es"
+    ],
     "nsis": {
       "oneClick": true,
       "perMachine": false,
@@ -187,7 +191,6 @@
     "node-pty": "^1.1.0-beta34",
     "node-ssh": "^13.2.1",
     "pako": "^2.1.0",
-    "pdf-parse": "^2.4.5",
     "primeflex": "^3.3.1",
     "primeicons": "^6.0.1",
     "primereact": "^10.2.1",
@@ -216,7 +219,7 @@
     "concurrently": "^8.2.2",
     "copy-webpack-plugin": "^13.0.0",
     "cross-env": "^10.0.0",
-    "crypto-browserify": "^3.12.1",
+    "crypto-browserify": "^3.5.1",
     "css-loader": "^6.8.1",
     "electron": "^38.1.2",
     "electron-builder": "^26.0.12",

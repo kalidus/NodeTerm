@@ -68,12 +68,13 @@ contextBridge.exposeInMainWorld('electron', {
     getVersionInfo: () => ipcRenderer.invoke('get-version-info'),
     quit: () => ipcRenderer.send('app-quit')
   },
-  pdfProcessor: {
-    processPDF: (filePath) => ipcRenderer.invoke('process-pdf', filePath),
-    processPDFBuffer: (base64Data) => ipcRenderer.invoke('process-pdf-buffer', base64Data),
-    createTempFile: (fileName, arrayBuffer) => ipcRenderer.invoke('create-temp-file', fileName, arrayBuffer),
-    cleanupTempFile: (filePath) => ipcRenderer.invoke('cleanup-temp-file', filePath)
-  },
+  // pdfProcessor: DESHABILITADO - pdf-parse eliminado
+  // pdfProcessor: {
+  //   processPDF: (filePath) => ipcRenderer.invoke('process-pdf', filePath),
+  //   processPDFBuffer: (base64Data) => ipcRenderer.invoke('process-pdf-buffer', base64Data),
+  //   createTempFile: (fileName, arrayBuffer) => ipcRenderer.invoke('create-temp-file', fileName, arrayBuffer),
+  //   cleanupTempFile: (filePath) => ipcRenderer.invoke('cleanup-temp-file', filePath)
+  // },
   mcp: {
     initialize: () => ipcRenderer.invoke('mcp:initialize'),
     listInstalled: () => ipcRenderer.invoke('mcp:list-installed'),
@@ -127,10 +128,10 @@ contextBridge.exposeInMainWorld('electron', {
         /^updater:.*$/,
         /^system:.*$/,
         /^file:.*$/,
-        'process-pdf',
-        'process-pdf-buffer',
-        'create-temp-file',
-        'cleanup-temp-file',
+        // 'process-pdf', // DESHABILITADO - pdf-parse eliminado
+        // 'process-pdf-buffer', // DESHABILITADO
+        // 'create-temp-file', // DESHABILITADO
+        // 'cleanup-temp-file', // DESHABILITADO
         /^recording:.*$/,
         /^mcp:.*$/,
         /^network-tools:.*$/
