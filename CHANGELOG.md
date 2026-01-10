@@ -5,6 +5,11 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2] - Por definir
+
+### 🔧 Mejoras y Correcciones
+- **Actualización de Versión**: Actualización a versión 1.6.2 con mejoras generales
+
 ## [1.6.1] - 2025-11-19
 
 ### 🐛 Correcciones de Bugs

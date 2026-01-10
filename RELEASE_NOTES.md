@@ -1,14 +1,14 @@
-# 🚀 NodeTerm v1.6.1 - Release Notes
+# 🚀 NodeTerm v1.6.2 - Release Notes
 
-**Fecha de Release**: 19 de Noviembre, 2025  
+**Fecha de Release**: Por definir  
 **Tipo de Release**: Patch Release  
-**Versión Anterior**: v1.6.0
+**Versión Anterior**: v1.6.1
 
 ---
 
-## 🎉 ¡Bienvenido a NodeTerm v1.6.1!
+## 🎉 ¡Bienvenido a NodeTerm v1.6.2!
 
-Esta es una **versión patch** que corrige problemas críticos con conexiones a través de Bastion Wallix. Esta actualización mejora la estabilidad y confiabilidad de las conexiones SSH que utilizan servidores bastion.
+Esta es una **versión patch** que incluye mejoras y correcciones generales. Esta actualización mejora la estabilidad y confiabilidad de la aplicación.
 
 ---
 
@@ -273,8 +273,8 @@ src/mcp-servers/
 git clone https://github.com/kalidus/NodeTerm.git
 cd NodeTerm
 
-# Cambiar a la rama v1.6.1
-git checkout v1.6.1
+# Cambiar a la rama v1.6.2
+git checkout release/1.6.2
 
 # Instalar dependencias
 npm install
@@ -357,4 +357,4 @@ Puedes invitarme a un café ☕ o dejar una estrella ⭐ en GitHub. ¡Gracias!
 
 ---
 
-**¡Disfruta de NodeTerm v1.6.1!** 🚀
+**¡Disfruta de NodeTerm v1.6.2!** 🚀
