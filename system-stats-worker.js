@@ -1,7 +1,15 @@
 // system-stats-worker.js
+// 🚀 OPTIMIZACIÓN: Lazy loading de systeminformation
 const os = require('os');
-const si = require('systeminformation');
-const { execSync } = require('child_process');
+
+// systeminformation se carga solo cuando se necesita
+let _si = null;
+function getSI() {
+  if (!_si) {
+    _si = require('systeminformation');
+  }
+  return _si;
+}
 
 let lastNetStats = null;
 let lastNetTime = null;
@@ -48,7 +56,7 @@ async function getSystemStats() {
   // CPU (solo actualizar si obtiene datos válidos)
   try {
     const cpuData = await Promise.race([
-      si.currentLoad(),
+      getSI().currentLoad(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('CPU timeout')), 3000))
     ]);
     
@@ -64,7 +72,7 @@ async function getSystemStats() {
   // Discos - optimizado con timeout reducido y detección de red asíncrona
   try {
     const diskData = await Promise.race([
-      si.fsSize(),
+      getSI().fsSize(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Disk timeout')), 2500)) // Reducido de 5000ms a 2500ms
     ]);
     if (Array.isArray(diskData) && diskData.length > 0) {
@@ -166,8 +174,8 @@ async function getSystemStats() {
 
   // Red
   try {
-    const netIfaces = await si.networkInterfaces();
-    const netStats = await si.networkStats();
+    const netIfaces = await getSI().networkInterfaces();
+    const netStats = await getSI().networkStats();
     const now = Date.now();
     const validIfaces = netIfaces.filter(i => i.operstate === 'up' && !i.virtual && !i.internal);
     const validNames = validIfaces.map(i => i.iface);
@@ -206,7 +214,7 @@ async function getSystemStats() {
   // Temperatura (solo actualizar si obtenemos datos válidos)
   try {
     const tempData = await Promise.race([
-      si.cpuTemperature(),
+      getSI().cpuTemperature(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Temperature timeout')), 2000))
     ]);
     
