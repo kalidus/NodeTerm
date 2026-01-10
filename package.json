@@ -120,7 +120,6 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "NodeTerm",
-      "include": "build/installer.nsh",
       "deleteAppDataOnUninstall": false,
       "differentialPackage": false,
       "warningsAsErrors": false
