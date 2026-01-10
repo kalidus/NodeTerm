@@ -845,21 +845,10 @@ function createWindow() {
   
   // 🚀 OPTIMIZACIÓN: Función para inicializar servicios pesados después del arranque
   async function initializeServicesAfterShow() {
-    // Precalentar guacd en background
-    try {
-      console.log('🔥 [POST-SHOW] Precalentando guacd en background...');
-      const pref = await loadPreferredGuacdMethod();
-      if (pref) {
-        getGuacdService().setPreferredMethod(pref);
-      }
-      // Solo precalentar si no está ya inicializando o inicializado
-      if (!guacamoleInitializing && !guacamoleInitialized) {
-        await getGuacdService().initialize();
-        console.log('✅ [POST-SHOW] Guacd precalentado y listo');
-      }
-    } catch (error) {
-      console.warn('⚠️ [POST-SHOW] Error en precalentamiento de guacd:', error.message);
-    }
+    // Inicializar Guacamole en background (no bloquea la UI)
+    initializeGuacamoleServices().catch((error) => {
+      console.error('❌ [POST-SHOW] Error en inicialización de Guacamole:', error);
+    });
   }
 
   // Open the DevTools in development mode
@@ -916,34 +905,36 @@ function createWindow() {
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
 
-  // Establecer dependencias de los servicios
-  try {
-    WSL.setMainWindow(mainWindow);
-    PowerShell.setDependencies({
-      mainWindow,
-      alternativePtyConfig,
-      SafeWindowsTerminal,
-      isAppQuitting
+  // 🚀 OPTIMIZACIÓN: Establecer dependencias de servicios DESPUÉS de did-finish-load
+  // Esto permite que la ventana se muestre más rápido
+  mainWindow.webContents.once('did-finish-load', () => {
+    // Diferir configuración de servicios para no bloquear el render inicial
+    setImmediate(() => {
+      try {
+        WSL.setMainWindow(mainWindow);
+        PowerShell.setDependencies({
+          mainWindow,
+          alternativePtyConfig,
+          SafeWindowsTerminal,
+          isAppQuitting
+        });
+        Cygwin.setMainWindow(mainWindow);
+        const docker = getDocker();
+        if (docker && docker.setMainWindow) {
+          docker.setMainWindow(mainWindow);
+        }
+      } catch (err) {
+        console.error('[MAIN] Error estableciendo dependencias de servicios:', err);
+      }
     });
-    Cygwin.setMainWindow(mainWindow);
-    // 🚀 OPTIMIZACIÓN: Docker se inicializa de forma diferida
-    const docker = getDocker();
-    if (docker && docker.setMainWindow) {
-      docker.setMainWindow(mainWindow);
-      console.log('✅ Docker main window set successfully');
-    }
     
-    // 🚀 OPTIMIZACIÓN: Servicio de actualizaciones DIFERIDO 5s después de cargar
-    mainWindow.webContents.once('did-finish-load', () => {
-      setTimeout(() => {
-        const updateService = getUpdateServiceLazy();
-        updateService.setMainWindow(mainWindow);
-        updateService.startAutoCheck();
-      }, 5000);
-    });
-  } catch (err) {
-    console.error('[MAIN] Error estableciendo dependencias de servicios:', err);
-  }
+    // Servicio de actualizaciones DIFERIDO 5s
+    setTimeout(() => {
+      const updateService = getUpdateServiceLazy();
+      updateService.setMainWindow(mainWindow);
+      updateService.startAutoCheck();
+    }, 5000);
+  });
 
   // Registrar todos los handlers después de crear la ventana
   try {
@@ -1008,10 +999,8 @@ function createWindow() {
     // Handlers registrados exitosamente
     // Nota: get-user-home ya está registrado en registerSystemHandlers()
     
-    // Inicializar servicios de Guacamole después de registrar los handlers
-    initializeGuacamoleServices().catch((error) => {
-      console.error('❌ Error en inicialización de Guacamole:', error);
-    });
+    // 🚀 OPTIMIZACIÓN: Guacamole se inicializa en initializeServicesAfterShow()
+    // después de que la ventana se muestre, para no bloquear el arranque
     
   } catch (err) {
     console.error('[MAIN] Error registrando handlers:', err);
