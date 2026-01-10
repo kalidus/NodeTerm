@@ -3,20 +3,105 @@
  * 
  * Este archivo centraliza la importación y registro de todos los handlers
  * para mantener una estructura organizada y facilitar el mantenimiento.
+ * 
+ * 🚀 OPTIMIZACIÓN: Los handlers se registran en dos fases:
+ * - CRÍTICOS: Se registran inmediatamente (app, sistema)
+ * - DIFERIDOS: Se registran después de 50ms (SSH, Guacamole, MCP, etc.)
  */
 
-const { registerAppHandlers } = require('./app-handlers');
-const { registerSystemHandlers } = require('./system-handlers');
-const { registerGuacamoleHandlers } = require('./guacamole-handlers');
-const { registerAnythingLLMHandlers } = require('./anythingllm-handlers');
-const { registerOpenWebUIHandlers } = require('./openwebui-handlers');
-const registerSSHHandlers = require('./ssh-handlers');
-const { registerMCPHandlers } = require('./mcp-handlers');
-const { registerFileHandlers } = require('./file-handlers');
-const { registerNetworkToolsHandlers } = require('./network-tools-handlers');
+// 🚀 OPTIMIZACIÓN: Lazy loading de handlers para reducir tiempo de arranque
+let _appHandlers = null;
+let _systemHandlers = null;
+let _guacamoleHandlers = null;
+let _anythingLLMHandlers = null;
+let _openWebUIHandlers = null;
+let _sshHandlers = null;
+let _mcpHandlers = null;
+let _fileHandlers = null;
+let _networkToolsHandlers = null;
+
+function getAppHandlers() {
+  if (!_appHandlers) _appHandlers = require('./app-handlers');
+  return _appHandlers;
+}
+
+function getSystemHandlers() {
+  if (!_systemHandlers) _systemHandlers = require('./system-handlers');
+  return _systemHandlers;
+}
+
+function getGuacamoleHandlers() {
+  if (!_guacamoleHandlers) _guacamoleHandlers = require('./guacamole-handlers');
+  return _guacamoleHandlers;
+}
+
+function getAnythingLLMHandlers() {
+  if (!_anythingLLMHandlers) _anythingLLMHandlers = require('./anythingllm-handlers');
+  return _anythingLLMHandlers;
+}
+
+function getOpenWebUIHandlers() {
+  if (!_openWebUIHandlers) _openWebUIHandlers = require('./openwebui-handlers');
+  return _openWebUIHandlers;
+}
+
+function getSSHHandlers() {
+  if (!_sshHandlers) _sshHandlers = require('./ssh-handlers');
+  return _sshHandlers;
+}
+
+function getMCPHandlers() {
+  if (!_mcpHandlers) _mcpHandlers = require('./mcp-handlers');
+  return _mcpHandlers;
+}
+
+function getFileHandlers() {
+  if (!_fileHandlers) _fileHandlers = require('./file-handlers');
+  return _fileHandlers;
+}
+
+function getNetworkToolsHandlers() {
+  if (!_networkToolsHandlers) _networkToolsHandlers = require('./network-tools-handlers');
+  return _networkToolsHandlers;
+}
+
+/**
+ * Registra handlers CRÍTICOS inmediatamente (necesarios para mostrar la UI)
+ */
+function registerCriticalHandlers(dependencies) {
+  // Handlers de aplicación (UI, versión, cierre) - CRÍTICOS
+  getAppHandlers().registerAppHandlers(dependencies);
+  
+  // Handlers del sistema - CRÍTICOS
+  getSystemHandlers().registerSystemHandlers();
+}
+
+/**
+ * Registra handlers SECUNDARIOS (pueden esperar)
+ */
+function registerSecondaryHandlers(dependencies) {
+  // Handlers de Guacamole
+  getGuacamoleHandlers().registerGuacamoleHandlers(dependencies);
+  getAnythingLLMHandlers().registerAnythingLLMHandlers(dependencies);
+  getOpenWebUIHandlers().registerOpenWebUIHandlers(dependencies);
+  
+  // Handlers SSH
+  getSSHHandlers()(dependencies);
+  
+  // Handlers MCP
+  getMCPHandlers().registerMCPHandlers();
+  
+  // Handlers de archivos (SFTP/FTP/SCP)
+  getFileHandlers().registerFileHandlers();
+  
+  // Handlers de herramientas de red
+  getNetworkToolsHandlers().registerNetworkToolsHandlers();
+}
 
 /**
  * Registra todos los handlers del sistema
+ * 🚀 OPTIMIZACIÓN: Registro progresivo para arranque más rápido
+ * 
  * @param {Object} dependencies - Dependencias necesarias para los handlers
  * @param {BrowserWindow} dependencies.mainWindow - Ventana principal
  * @param {Function} dependencies.disconnectAllGuacamoleConnections - Función para desconectar conexiones Guacamole
@@ -33,40 +118,28 @@ const { registerNetworkToolsHandlers } = require('./network-tools-handlers');
  * @param {Object} dependencies.isAppQuitting - Variable de estado de cierre
  */
 function registerAllHandlers(dependencies) {
-  // Registrando handlers silenciosamente
+  // 🚀 FASE 1: Registrar handlers CRÍTICOS inmediatamente
+  registerCriticalHandlers(dependencies);
   
-  // Registrar handlers de aplicación (UI, versión, cierre)
-  registerAppHandlers(dependencies);
-  
-  // Registrar handlers del sistema
-  registerSystemHandlers();
-  
-  // Registrar handlers de Guacamole
-  registerGuacamoleHandlers(dependencies);
-  registerAnythingLLMHandlers(dependencies);
-  registerOpenWebUIHandlers(dependencies);
-  
-  // Registrar handlers SSH
-  registerSSHHandlers(dependencies);
-  
-  // Registrar handlers MCP
-  registerMCPHandlers();
-  
-  // Registrar handlers de archivos (SFTP/FTP/SCP)
-  registerFileHandlers();
-  
-  // Registrar handlers de herramientas de red
-  registerNetworkToolsHandlers();
+  // 🚀 FASE 2: Registrar handlers SECUNDARIOS después de 50ms
+  // Esto permite que la UI se renderice mientras se registran los handlers menos urgentes
+  setTimeout(() => {
+    registerSecondaryHandlers(dependencies);
+  }, 50);
 }
 
 module.exports = {
   registerAllHandlers,
-  registerAppHandlers,
-  registerSystemHandlers,
-  registerGuacamoleHandlers,
-  registerAnythingLLMHandlers,
-  registerOpenWebUIHandlers,
-  registerSSHHandlers,
-  registerMCPHandlers,
-  registerNetworkToolsHandlers
+  registerCriticalHandlers,
+  registerSecondaryHandlers,
+  // Getters para acceso individual a handlers (lazy loading)
+  getAppHandlers,
+  getSystemHandlers,
+  getGuacamoleHandlers,
+  getAnythingLLMHandlers,
+  getOpenWebUIHandlers,
+  getSSHHandlers,
+  getMCPHandlers,
+  getFileHandlers,
+  getNetworkToolsHandlers
 };

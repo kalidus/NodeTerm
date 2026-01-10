@@ -110,18 +110,21 @@ try {
   process.exit(1);
 }
 
-try {
-  require('electron-reloader')(module, {
-    ignore: [
-      'resources/**',           // Ignorar carpeta resources (Cygwin, etc.)
-      'node_modules/**',
-      'dist/**',
-      '**/*.map',
-      '.git/**'
-    ],
-    watchRenderer: true
-  });
-} catch (_) {}
+// 🚀 OPTIMIZACIÓN: Solo cargar electron-reloader en desarrollo
+if (process.env.NODE_ENV === 'development') {
+  try {
+    require('electron-reloader')(module, {
+      ignore: [
+        'resources/**',           // Ignorar carpeta resources (Cygwin, etc.)
+        'node_modules/**',
+        'dist/**',
+        '**/*.map',
+        '.git/**'
+      ],
+      watchRenderer: true
+    });
+  } catch (_) {}
+}
 
 const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor } = require('electron');
 const path = require('path');
@@ -153,19 +156,84 @@ try {
   Docker = null;
 }
 
-const SSH2Promise = require('ssh2-promise');
-const { Client: SSH2Client } = require('ssh2');
-const { NodeSSH } = require('node-ssh');
+// ============================================
+// 🚀 OPTIMIZACIÓN: LAZY LOADING DE MÓDULOS PESADOS
+// Estos módulos se cargan solo cuando se necesitan por primera vez
+// ============================================
+
+// Módulos con lazy loading (se cargan bajo demanda)
+let _SSH2Promise = null;
+let _SSH2Client = null;
+let _NodeSSH = null;
+let _SftpClient = null;
+let _si = null;
+let _GuacamoleLite = null;
+
+// Getters para módulos con lazy loading
+function getSSH2Promise() {
+  if (!_SSH2Promise) _SSH2Promise = require('ssh2-promise');
+  return _SSH2Promise;
+}
+
+function getSSH2Client() {
+  if (!_SSH2Client) _SSH2Client = require('ssh2').Client;
+  return _SSH2Client;
+}
+
+function getNodeSSH() {
+  if (!_NodeSSH) _NodeSSH = require('node-ssh').NodeSSH;
+  return _NodeSSH;
+}
+
+function getSftpClient() {
+  if (!_SftpClient) _SftpClient = require('ssh2-sftp-client');
+  return _SftpClient;
+}
+
+function getSystemInfo() {
+  if (!_si) _si = require('systeminformation');
+  return _si;
+}
+
+function getGuacamoleLite() {
+  if (!_GuacamoleLite) _GuacamoleLite = require('guacamole-lite');
+  return _GuacamoleLite;
+}
+
+// Módulos que se usan inmediatamente (carga normal)
 const packageJson = require('./package.json');
 const { createBastionShell } = require('./src/components/bastion-ssh');
 const RdpManager = require('./src/utils/RdpManager');
-const SftpClient = require('ssh2-sftp-client');
-const si = require('systeminformation');
 const { fork } = require('child_process');
-const GuacdService = require('./src/services/GuacdService');
-const AnythingLLMService = require('./src/services/AnythingLLMService');
-const OpenWebUIService = require('./src/services/OpenWebUIService');
-const GuacamoleLite = require('guacamole-lite');
+
+// 🚀 OPTIMIZACIÓN: Servicios con instanciación diferida
+let _guacdService = null;
+let _anythingLLMService = null;
+let _openWebUIService = null;
+
+function getGuacdService() {
+  if (!_guacdService) {
+    const GuacdService = require('./src/services/GuacdService');
+    _guacdService = new GuacdService();
+  }
+  return _guacdService;
+}
+
+function getAnythingLLMService() {
+  if (!_anythingLLMService) {
+    const AnythingLLMService = require('./src/services/AnythingLLMService');
+    _anythingLLMService = new AnythingLLMService();
+  }
+  return _anythingLLMService;
+}
+
+function getOpenWebUIService() {
+  if (!_openWebUIService) {
+    const OpenWebUIService = require('./src/services/OpenWebUIService');
+    _openWebUIService = new OpenWebUIService();
+  }
+  return _openWebUIService;
+}
 
 // ============================================================================
 // PARCHE CRÍTICO: Desactivar watchdog de 10s de guacamole-lite y hacer
@@ -243,8 +311,8 @@ async function getRecordingsDirectory() {
     return path.join(userDataPath, 'recordings');
   }
 }
-const anythingLLMService = new AnythingLLMService();
-const openWebUIService = new OpenWebUIService();
+// 🚀 OPTIMIZACIÓN: Servicios AnythingLLM y OpenWebUI ahora usan lazy loading
+// Ver getAnythingLLMService() y getOpenWebUIService() arriba
 
 let mainWindow;
 let isAppQuitting = false; // Flag para evitar operaciones durante el cierre
@@ -300,8 +368,7 @@ const sshConnectionPool = {};
 // RDP Manager instance
 const rdpManager = new RdpManager();
 
-// Guacamole services
-const guacdService = new GuacdService();
+// Guacamole services - guacdService ahora usa lazy loading via getGuacdService()
 let guacamoleServer = null;
 let guacamoleServerReadyAt = 0; // timestamp when guacamole-lite websocket server became ready
 // Track active guacamole client connections
@@ -440,12 +507,12 @@ async function initializeGuacamoleServices() {
     try {
       const pref = await loadPreferredGuacdMethod();
       if (pref) {
-        guacdService.setPreferredMethod(pref);
+        getGuacdService().setPreferredMethod(pref);
       }
     } catch {}
     
     // Inicializar GuacdService
-    const guacdReady = await guacdService.initialize();
+    const guacdReady = await getGuacdService().initialize();
     
     if (!guacdReady) {
       console.warn('⚠️ No se pudo inicializar guacd. RDP Guacamole no estará disponible.');
@@ -458,7 +525,7 @@ async function initializeGuacamoleServices() {
     if (DEBUG_GUACAMOLE) {
       console.log('⏳ [initializeGuacamoleServices] Esperando a que guacd esté accesible...');
     }
-    const guacdStatus = guacdService.getStatus();
+    const guacdStatus = getGuacdService().getStatus();
     const maxWaitTime = 10000; // 10 segundos máximo
     const checkInterval = 200; // Verificar cada 200ms
     const startTime = Date.now();
@@ -466,7 +533,7 @@ async function initializeGuacamoleServices() {
     
     while (!isReady && (Date.now() - startTime) < maxWaitTime) {
       try {
-        const isAvailable = await guacdService.isPortAvailable(guacdStatus.port);
+        const isAvailable = await getGuacdService().isPortAvailable(guacdStatus.port);
         if (!isAvailable) {
           // Puerto ocupado = guacd está escuchando y accesible
                 isReady = true;
@@ -491,7 +558,7 @@ async function initializeGuacamoleServices() {
       port: 8081 // Puerto para WebSocket de Guacamole
     };
 
-    const guacdOptions = guacdService.getGuacdOptions();
+    const guacdOptions = getGuacdService().getGuacdOptions();
     
     // ✅ SEGURIDAD: Obtener o crear clave secreta única por instalación
     // En lugar de usar una clave hardcodeada, generamos una única por instalación
@@ -540,7 +607,7 @@ async function initializeGuacamoleServices() {
     }
     // Crear servidor Guacamole-lite
     try {
-      guacamoleServer = new GuacamoleLite(websocketOptions, guacdOptions, clientOptions);
+      guacamoleServer = new (getGuacamoleLite())(websocketOptions, guacdOptions, clientOptions);
       if (DEBUG_GUACAMOLE) {
         console.log('🌐 [initializeGuacamoleServices] Servidor Guacamole-lite creado:', !!guacamoleServer);
       }
@@ -680,26 +747,8 @@ function createWindow() {
     }
   });
 
-  // 🚀 PRECALENTAMIENTO: Iniciar guacd en paralelo mientras se carga la UI
-  // Esto reduce significativamente el tiempo de primera conexión RDP
-  (async () => {
-    try {
-      console.log('🔥 Precalentando guacd en background...');
-      const pref = await loadPreferredGuacdMethod();
-      if (pref) {
-        guacdService.setPreferredMethod(pref);
-      }
-      // Solo precalentar si no está ya inicializando o inicializado
-      if (!guacamoleInitializing && !guacamoleInitialized) {
-        await guacdService.initialize();
-        console.log('✅ Guacd precalentado y listo');
-      } else {
-        console.log('✅ Guacd ya está inicializado o en proceso');
-      }
-    } catch (error) {
-      console.warn('⚠️ Error en precalentamiento de guacd:', error.message);
-    }
-  })();
+  // 🚀 OPTIMIZACIÓN: Precalentamiento de guacd DIFERIDO hasta después de ready-to-show
+  // Se ejecutará en initializeServicesAfterShow() para no bloquear el arranque
 
   // 🔧 ESPERAR A QUE WEBPACK TERMINE DE COMPILAR EN DESARROLLO
   // Función para verificar si el archivo compilado existe
@@ -767,7 +816,32 @@ function createWindow() {
   // Mostrar ventana cuando esté lista para mostrar
   mainWindow.once('ready-to-show', () => {
     if (mainWindow) mainWindow.show();
+    
+    // 🚀 OPTIMIZACIÓN: Inicializar servicios pesados DESPUÉS de mostrar la ventana
+    // Esto asegura que la UI aparezca lo más rápido posible
+    setTimeout(() => {
+      initializeServicesAfterShow();
+    }, 100); // Pequeño delay para asegurar que la UI se pinte primero
   });
+  
+  // 🚀 OPTIMIZACIÓN: Función para inicializar servicios pesados después del arranque
+  async function initializeServicesAfterShow() {
+    // Precalentar guacd en background
+    try {
+      console.log('🔥 [POST-SHOW] Precalentando guacd en background...');
+      const pref = await loadPreferredGuacdMethod();
+      if (pref) {
+        getGuacdService().setPreferredMethod(pref);
+      }
+      // Solo precalentar si no está ya inicializando o inicializado
+      if (!guacamoleInitializing && !guacamoleInitialized) {
+        await getGuacdService().initialize();
+        console.log('✅ [POST-SHOW] Guacd precalentado y listo');
+      }
+    } catch (error) {
+      console.warn('⚠️ [POST-SHOW] Error en precalentamiento de guacd:', error.message);
+    }
+  }
 
   // Open the DevTools in development mode
   if (process.env.NODE_ENV === 'development') {
@@ -903,13 +977,13 @@ function createWindow() {
       mainWindow, 
       findSSHConnection,
       disconnectAllGuacamoleConnections,
-      guacdService,
+      guacdService: getGuacdService(),
       guacamoleServer,
       guacamoleServerReadyAt,
       sendToRenderer,
       guacdInactivityTimeoutMs,
-      anythingLLMService,
-      openWebUIService,
+      anythingLLMService: getAnythingLLMService(),
+      openWebUIService: getOpenWebUIService(),
       packageJson,
       sshConnections,
       cleanupOrphanedConnections,
@@ -1165,16 +1239,16 @@ powerMonitor.on('resume', async () => {
   await new Promise(resolve => setTimeout(resolve, 2000));
   
   // Verificar si guacd (WSL) sigue accesible
-  if (guacdService && guacdService.getStatus) {
-    const status = guacdService.getStatus();
+  if (guacdService && getGuacdService().getStatus) {
+    const status = getGuacdService().getStatus();
     if (status.method === 'wsl') {
       console.log('🔄 [PowerMonitor] Verificando que guacd en WSL siga accesible...');
       try {
-        const isAvailable = await guacdService.isPortAvailable(status.port);
+        const isAvailable = await getGuacdService().isPortAvailable(status.port);
         if (isAvailable) {
           // Puerto disponible = guacd no está escuchando, puede haberse suspendido
           console.warn('⚠️ [PowerMonitor] guacd en WSL parece suspendido, intentando reiniciar...');
-          await guacdService.restart();
+          await getGuacdService().restart();
         } else {
           console.log('✅ [PowerMonitor] guacd en WSL sigue accesible');
         }
@@ -1203,16 +1277,16 @@ powerMonitor.on('unlock-screen', async () => {
   
   // Cuando se desbloquea, las pantallas estaban apagadas
   // Verificar conexión WSL y notificar al frontend
-  if (guacdService && guacdService.getStatus) {
-    const status = guacdService.getStatus();
+  if (guacdService && getGuacdService().getStatus) {
+    const status = getGuacdService().getStatus();
     if (status.method === 'wsl') {
       console.log('🔄 [PowerMonitor] Verificando guacd WSL tras desbloqueo...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       try {
-        const isAvailable = await guacdService.isPortAvailable(status.port);
+        const isAvailable = await getGuacdService().isPortAvailable(status.port);
         if (isAvailable) {
           console.warn('⚠️ [PowerMonitor] guacd WSL no responde tras desbloqueo, reiniciando...');
-          await guacdService.restart();
+          await getGuacdService().restart();
         }
       } catch {}
     }
@@ -1238,8 +1312,8 @@ setInterval(() => {
       console.log(`🔄 [IdleMonitor] Usuario activo después de ${idleSeconds}s de inactividad`);
       
       // Verificar conexión WSL
-      if (guacdService && guacdService.getStatus) {
-        const status = guacdService.getStatus();
+      if (guacdService && getGuacdService().getStatus) {
+        const status = getGuacdService().getStatus();
         if (status.method === 'wsl' && status.isRunning) {
           // Notificar al frontend para que verifique las sesiones RDP
           if (mainWindow && mainWindow.webContents) {
@@ -1706,7 +1780,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         directConfig.tryKeyboard = true;
       }
       
-      ssh = new SSH2Promise(directConfig);
+      ssh = new (getSSH2Promise())(directConfig);
       sshConnectionPool[cacheKey] = ssh;
     }
   }
@@ -2117,7 +2191,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         }
         
         // Usar ssh2 Client directamente para permitir autenticación interactiva
-        const ssh2Client = new SSH2Client();
+        const ssh2Client = new (getSSH2Client())();
         
         // Guardar referencia inicial para capturar entrada durante autenticación
         sshConnections[tabId] = {
@@ -2691,7 +2765,7 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
           });
         } else {
           // Conexión SSH directa
-          const ssh2Client = new SSH2Client();
+          const ssh2Client = new (getSSH2Client())();
           
           ssh2Client.on('ready', () => {
             ssh2Client.shell({ term: 'xterm-256color', cols: 80, rows: 24 }, async (err, shellStream) => {
@@ -3592,7 +3666,7 @@ app.on('before-quit', () => {
   
   // Cleanup Guacamole services
   if (guacdService) {
-    guacdService.stop();
+    getGuacdService().stop();
   }
 });
 
@@ -3633,7 +3707,7 @@ async function disconnectAllGuacamoleConnections() {
   //   console.log('📋 [MAIN] CONFIG COMPLETO RECIBIDO:', config);
     // // Si guacd está en modo mock, informar al usuario y rechazar
     // try {
-    //   if (guacdService && guacdService.getStatus && guacdService.getStatus().method === 'mock') {
+    //   if (guacdService && getGuacdService().getStatus && getGuacdService().getStatus().method === 'mock') {
     //     const message = 'RDP requiere Docker Desktop o WSL. Activa Docker Desktop o instala/activa WSL para utilizar RDP con Guacamole.';
     //     console.warn('⚠️  [MAIN] Intento de crear token con guacd en modo mock. ' + message);
     //     return { success: false, error: message };
@@ -3697,13 +3771,13 @@ async function disconnectAllGuacamoleConnections() {
     //   if (config.enableDrive) {
         // // Si llega una carpeta de host desde UI, resolverla según método actual
         // let resolvedDrivePath = null;
-        // if (config.driveHostDir && typeof config.driveHostDir === 'string' && config.driveHostDir.trim().length > 0 && typeof guacdService.resolveDrivePath === 'function') {
-        //   resolvedDrivePath = guacdService.resolveDrivePath(config.driveHostDir);
-        // } else if (typeof guacdService.getDrivePathForCurrentMethod === 'function') {
-        //   resolvedDrivePath = guacdService.getDrivePathForCurrentMethod();
+        // if (config.driveHostDir && typeof config.driveHostDir === 'string' && config.driveHostDir.trim().length > 0 && typeof getGuacdService().resolveDrivePath === 'function') {
+        //   resolvedDrivePath = getGuacdService().resolveDrivePath(config.driveHostDir);
+        // } else if (typeof getGuacdService().getDrivePathForCurrentMethod === 'function') {
+        //   resolvedDrivePath = getGuacdService().getDrivePathForCurrentMethod();
         // }
         // const drivePath = resolvedDrivePath;
-        // const driveName = guacdService.getDriveName ? guacdService.getDriveName() : 'NodeTerm Drive';
+        // const driveName = getGuacdService().getDriveName ? getGuacdService().getDriveName() : 'NodeTerm Drive';
         // if (typeof drivePath === 'string' && drivePath.trim().length > 0) {
         //   driveSettings = {
         //     'enable-drive': true,
@@ -4889,7 +4963,7 @@ async function getSystemStats() {
   // CPU con timeout individual
   try {
     const cpuData = await Promise.race([
-      si.currentLoad(),
+      getSystemInfo().currentLoad(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('CPU timeout')), 3000))
     ]);
     
@@ -4905,7 +4979,7 @@ async function getSystemStats() {
   // Discos con timeout reducido
   try {
     const diskData = await Promise.race([
-      si.fsSize(),
+      getSystemInfo().fsSize(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Disk timeout')), 2500)) // Reducido de 5000ms a 2500ms
     ]);
     
@@ -4926,8 +5000,8 @@ async function getSystemStats() {
 
   // Red diferencial (solo interfaces activas y físicas, Mbps)
   try {
-    const netIfaces = await si.networkInterfaces();
-    const netStats = await si.networkStats();
+    const netIfaces = await getSystemInfo().networkInterfaces();
+    const netStats = await getSystemInfo().networkStats();
     const now = Date.now();
     // Filtrar solo interfaces físicas y activas
     const validIfaces = netIfaces.filter(i => i.operstate === 'up' && !i.virtual && !i.internal);
@@ -4958,7 +5032,7 @@ async function getSystemStats() {
   // Temperatura con timeout individual  
   try {
     const tempData = await Promise.race([
-      si.cpuTemperature(),
+      getSystemInfo().cpuTemperature(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Temperature timeout')), 2000))
     ]);
     
