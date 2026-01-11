@@ -3149,6 +3149,16 @@ export function ProtocolSelectionDialog({
           iconColor: '#FF5722',
           advantages: t('protocolSelection.protocols.vnc.advantages'),
           badges: [t('protocolSelection.badges.crossPlatform')]
+        },
+        {
+          id: 'ssh-tunnel',
+          name: t('protocolSelection.protocols.sshTunnel.name') || 'SSH Tunnel',
+          fullName: t('protocolSelection.protocols.sshTunnel.fullName') || 'SSH Tunnel / Port Forwarding',
+          description: t('protocolSelection.protocols.sshTunnel.description') || 'Crea túneles SSH para redirigir puertos de forma segura',
+          icon: 'pi pi-share-alt',
+          iconColor: '#89b4fa',
+          advantages: t('protocolSelection.protocols.sshTunnel.advantages') || 'Acceso seguro a servicios internos, proxy SOCKS, bypass de firewalls',
+          badges: [t('protocolSelection.badges.secure')]
         }
       ]
     },

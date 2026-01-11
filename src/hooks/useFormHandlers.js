@@ -76,6 +76,10 @@ export const useFormHandlers = ({
   editFolderIcon, setEditFolderIcon,
   closeFolderDialogWithReset,
   
+  // Estados de formularios SSH Tunnel
+  setShowSSHTunnelDialog,
+  closeSSHTunnelDialogWithReset,
+  
   // Funciones de gestión de datos
   nodes, setNodes,
   findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser,
@@ -328,6 +332,97 @@ export const useFormHandlers = ({
       life: 3000
     });
   }, [rdpName, rdpServer, rdpUsername, rdpPassword, rdpPort, rdpClientType, rdpTargetFolder, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, toast]);
+
+  /**
+   * Crear nueva conexión de túnel SSH
+   */
+  const createNewSSHTunnel = useCallback((tunnelData) => {
+    // Validar campos obligatorios
+    if (!tunnelData.name || !tunnelData.sshHost || !tunnelData.sshUser) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Nombre, servidor SSH y usuario son obligatorios',
+        life: 3000
+      });
+      return;
+    }
+    
+    if (tunnelData.authType === 'password' && !tunnelData.sshPassword) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'La contraseña es obligatoria',
+        life: 3000
+      });
+      return;
+    }
+    
+    if (tunnelData.authType === 'key' && !tunnelData.privateKeyPath) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'La ruta de la clave privada es obligatoria',
+        life: 3000
+      });
+      return;
+    }
+    
+    const newKey = generateUniqueKey();
+    const newTunnelNode = {
+      key: newKey,
+      label: tunnelData.name.trim(),
+      data: {
+        type: 'ssh-tunnel',
+        tunnelType: tunnelData.tunnelType,
+        sshHost: tunnelData.sshHost.trim(),
+        sshPort: tunnelData.sshPort || 22,
+        sshUser: tunnelData.sshUser.trim(),
+        sshPassword: tunnelData.sshPassword || '',
+        authType: tunnelData.authType || 'password',
+        privateKeyPath: tunnelData.privateKeyPath || '',
+        passphrase: tunnelData.passphrase || '',
+        localHost: tunnelData.localHost || '127.0.0.1',
+        localPort: tunnelData.localPort || 0,
+        remoteHost: tunnelData.remoteHost || '',
+        remotePort: tunnelData.remotePort || 0,
+        bindHost: tunnelData.bindHost || '0.0.0.0',
+        // Estado del túnel (se actualiza cuando se inicia)
+        tunnelStatus: 'stopped',
+        activeTunnelId: null
+      },
+      draggable: true,
+      droppable: false,
+      uid: newKey,
+      createdAt: new Date().toISOString(),
+      isUserCreated: true
+    };
+    
+    const nodesCopy = deepCopy(nodes);
+    if (tunnelData.targetFolder) {
+      const parentNode = findNodeByKey(nodesCopy, tunnelData.targetFolder);
+      if (parentNode) {
+        parentNode.children = parentNode.children || [];
+        parentNode.children.unshift(newTunnelNode);
+      } else {
+        nodesCopy.push(newTunnelNode);
+      }
+    } else {
+      nodesCopy.unshift(newTunnelNode);
+    }
+    
+    setNodes(nodesCopy);
+    if (setShowSSHTunnelDialog) {
+      setShowSSHTunnelDialog(false);
+    }
+    
+    toast.current.show({
+      severity: 'success',
+      summary: 'Túnel SSH creado',
+      detail: `Túnel "${tunnelData.name}" añadido al árbol`,
+      life: 3000
+    });
+  }, [nodes, setNodes, deepCopy, findNodeByKey, generateUniqueKey, setShowSSHTunnelDialog, toast]);
 
   /**
    * Crear nueva entrada de Password
@@ -1016,6 +1111,7 @@ export const useFormHandlers = ({
     createNewFolder,
     createNewSSH,
     createNewRdp,
+    createNewSSHTunnel,
     
     // Funciones de edición
     saveEditSSH,

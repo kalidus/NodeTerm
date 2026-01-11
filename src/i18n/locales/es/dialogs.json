@@ -404,6 +404,16 @@
           "Texto enriquecido",
           "Sin límite de longitud"
         ]
+      },
+      "sshTunnel": {
+        "name": "SSH Tunnel",
+        "fullName": "SSH Tunnel / Port Forwarding",
+        "description": "Crea túneles SSH para redirigir puertos de forma segura. Accede a servicios internos, crea proxies SOCKS y atraviesa firewalls.",
+        "advantages": [
+          "Acceso seguro a servicios internos",
+          "Proxy SOCKS para navegación anónima",
+          "Bypass de firewalls"
+        ]
       }
     },
     "badges": {
@@ -412,6 +422,81 @@
       "insecure": "No seguro",
       "windows": "Windows",
       "crossPlatform": "Multiplataforma"
+    }
+  },
+  "sshTunnel": {
+    "title": {
+      "new": "Nuevo Túnel SSH",
+      "edit": "Editar Túnel SSH"
+    },
+    "types": {
+      "local": "Local port forwarding",
+      "remote": "Remote port forwarding",
+      "dynamic": "Dynamic port forwarding (SOCKS proxy)"
+    },
+    "sections": {
+      "localConfig": "Configuración Local",
+      "localServer": "Servidor Local",
+      "sshServer": "Servidor SSH"
+    },
+    "fields": {
+      "name": "Nombre del túnel",
+      "tunnelType": "Tipo de túnel",
+      "localServer": "Servidor local",
+      "localPort": "Puerto local",
+      "socksPort": "Puerto SOCKS",
+      "remoteHost": "Host remoto",
+      "remotePort": "Puerto remoto",
+      "forwardedPort": "Puerto reenviado (en servidor SSH)",
+      "sshServer": "Servidor SSH",
+      "sshPort": "Puerto SSH",
+      "sshLogin": "Usuario SSH",
+      "authType": "Autenticación",
+      "password": "Contraseña",
+      "privateKey": "Ruta clave privada",
+      "passphrase": "Passphrase (opcional)",
+      "folder": "Guardar en carpeta"
+    },
+    "placeholders": {
+      "name": "Mi túnel SSH",
+      "folder": "Raíz del árbol"
+    },
+    "auth": {
+      "password": "Contraseña",
+      "key": "Clave privada"
+    },
+    "status": {
+      "active": "Activo",
+      "connecting": "Conectando...",
+      "error": "Error",
+      "disconnected": "Desconectado",
+      "stopped": "Detenido"
+    },
+    "actions": {
+      "start": "Iniciar",
+      "stop": "Detener",
+      "reconnect": "Reconectar",
+      "clearLogs": "Limpiar logs"
+    },
+    "connections": "conexiones",
+    "noLogs": "Sin logs disponibles",
+    "diagram": {
+      "localTitle": "Local Port Forwarding (-L)",
+      "localDesc": "Conexiones locales se reenvían al servidor remoto",
+      "remoteTitle": "Remote Port Forwarding (-R)",
+      "remoteDesc": "Conexiones remotas se reenvían a tu computadora",
+      "dynamicTitle": "Dynamic Port Forwarding (-D) - SOCKS Proxy",
+      "dynamicDesc": "Proxy SOCKS que enruta todo el tráfico a través del túnel SSH",
+      "yourComputer": "Tu Computadora",
+      "localServer": "Servidor Local",
+      "sshServer": "Servidor SSH",
+      "target": "Destino",
+      "remoteClients": "Clientes Remotos",
+      "localApps": "Aplicaciones",
+      "sshTunnel": "Túnel SSH",
+      "localExample": "Ejemplo: localhost:{localPort} → {remoteHost}:{remotePort}",
+      "remoteExample": "Ejemplo: Clientes → SSH:{remotePort} → localhost:{localPort}",
+      "dynamicExample": "Configura tus apps para usar proxy SOCKS5 en localhost:{localPort}"
     }
   },
   "passwordManager": {

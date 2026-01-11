@@ -136,6 +136,59 @@ export const useConnectionManagement = ({
     openFileExplorer(node);
   }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, openFileExplorer]);
 
+  // === FUNCIÓN PARA ABRIR TÚNELES SSH ===
+  const onOpenSSHTunnel = useCallback((node, nodes) => {
+    // Si no estamos en el grupo Home, cambiar a Home primero
+    if (activeGroupId !== null) {
+      const currentGroupKey = activeGroupId || 'no-group';
+      setGroupActiveIndices(prev => ({
+        ...prev,
+        [currentGroupKey]: activeTabIndex
+      }));
+      setActiveGroupId(null);
+    }
+
+    // Preparar configuración del túnel
+    const tunnelConfig = {
+      name: node.label,
+      tunnelType: node.data?.tunnelType || 'local',
+      sshHost: node.data?.sshHost || '',
+      sshPort: node.data?.sshPort || 22,
+      sshUser: node.data?.sshUser || '',
+      sshPassword: node.data?.sshPassword || '',
+      authType: node.data?.authType || 'password',
+      privateKeyPath: node.data?.privateKeyPath || '',
+      passphrase: node.data?.passphrase || '',
+      localHost: node.data?.localHost || '127.0.0.1',
+      localPort: node.data?.localPort || 0,
+      remoteHost: node.data?.remoteHost || '',
+      remotePort: node.data?.remotePort || 0,
+      bindHost: node.data?.bindHost || '0.0.0.0',
+      nodeKey: node.key
+    };
+
+    // Crear nueva pestaña de túnel SSH
+    const nowTs = Date.now();
+    const tunnelTabId = `ssh-tunnel-${node.key}-${nowTs}`;
+    
+    const newTunnelTab = {
+      key: tunnelTabId,
+      type: 'ssh-tunnel',
+      tunnelConfig: tunnelConfig,
+      label: node.label || 'Túnel SSH',
+      createdAt: nowTs,
+      nodeKey: node.key
+    };
+    
+    // Insertar y activar
+    setSshTabs(prevSshTabs => [newTunnelTab, ...prevSshTabs]);
+    setLastOpenedTabKey(tunnelTabId);
+    setOnCreateActivateTabKey(tunnelTabId);
+    setActiveTabIndex(1);
+    setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+    setOpenTabOrder(prev => [tunnelTabId, ...prev.filter(k => k !== tunnelTabId)]);
+  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setOpenTabOrder]);
+
   // === FUNCIÓN PARA ABRIR CONEXIONES SSH ===
   const onOpenSSHConnection = useCallback((nodeOrConn, nodes) => {
     // Permitir recibir un nodo de sidebar (con .data) o un objeto de conexión directo (desde Home/Favoritos)
@@ -851,6 +904,7 @@ export const useConnectionManagement = ({
     onOpenRdpConnection,
     onOpenVncConnection,
     onOpenFileConnection,
+    onOpenSSHTunnel,
     openFileExplorer
   };
 };

@@ -11,6 +11,7 @@ import SettingsDialog from './SettingsDialog';
 import SyncSettingsDialog from './SyncSettingsDialog';
 import NetworkToolsDialog from './NetworkToolsDialog';
 import { SSHDialog, FolderDialog, GroupDialog, EditSSHConnectionDialog, EditRDPConnectionDialog, EditVNCConnectionDialog, FileConnectionDialog, ProtocolSelectionDialog, NewSSHConnectionDialog, NewRDPConnectionDialog, NewVNCConnectionDialog } from './Dialogs';
+import { SSHTunnelDialog } from './SSHTunnelDialog';
 
 /**
  * DialogsManager - Componente que centraliza la gestión de todos los diálogos
@@ -46,6 +47,11 @@ const DialogsManager = ({
   setShowProtocolSelectionDialog,
   showNetworkToolsDialog,
   setShowNetworkToolsDialog,
+  
+  // Estados SSH Tunnel
+  showSSHTunnelDialog,
+  setShowSSHTunnelDialog,
+  createNewSSHTunnel,
 
   // Estados de formularios SSH
   sshName,
@@ -310,10 +316,16 @@ const DialogsManager = ({
         }
         setShowFileConnectionDialog(true);
         break;
+      case 'ssh-tunnel':
+        // Abrir diálogo de túnel SSH
+        if (setShowSSHTunnelDialog) {
+          setShowSSHTunnelDialog(true);
+        }
+        break;
       default:
         console.warn('Protocolo no reconocido:', protocolId);
     }
-  }, [setShowFileConnectionDialog, setFileConnectionProtocol]);
+  }, [setShowFileConnectionDialog, setFileConnectionProtocol, setShowSSHTunnelDialog]);
 
   // Escuchar evento para abrir diálogo de selección de protocolo con categoría inicial
   useEffect(() => {
@@ -673,6 +685,26 @@ const DialogsManager = ({
         visible={showNetworkToolsDialog}
         onHide={() => setShowNetworkToolsDialog(false)}
       />
+
+      {/* Diálogo de túnel SSH */}
+      {showSSHTunnelDialog && (
+        <SSHTunnelDialog
+          visible={showSSHTunnelDialog}
+          onHide={() => setShowSSHTunnelDialog(false)}
+          mode="new"
+          onConfirm={(tunnelData) => {
+            if (createNewSSHTunnel) {
+              createNewSSHTunnel(tunnelData);
+            }
+            setShowSSHTunnelDialog(false);
+          }}
+          onGoBack={() => {
+            setShowSSHTunnelDialog(false);
+            setShowProtocolSelectionDialog(true);
+          }}
+          foldersOptions={getAllFolders && nodes ? getAllFolders(nodes) : []}
+        />
+      )}
     </>
   );
 };

@@ -19,6 +19,7 @@ let _sshHandlers = null;
 let _mcpHandlers = null;
 let _fileHandlers = null;
 let _networkToolsHandlers = null;
+let _sshTunnelHandlers = null;
 
 function getAppHandlers() {
   if (!_appHandlers) _appHandlers = require('./app-handlers');
@@ -65,6 +66,11 @@ function getNetworkToolsHandlers() {
   return _networkToolsHandlers;
 }
 
+function getSSHTunnelHandlers() {
+  if (!_sshTunnelHandlers) _sshTunnelHandlers = require('./ssh-tunnel-handlers');
+  return _sshTunnelHandlers;
+}
+
 /**
  * Registra handlers CRÍTICOS inmediatamente (necesarios para mostrar la UI)
  */
@@ -96,6 +102,9 @@ function registerSecondaryHandlers(dependencies) {
   
   // Handlers de herramientas de red
   getNetworkToolsHandlers().registerNetworkToolsHandlers();
+  
+  // Handlers de túneles SSH
+  getSSHTunnelHandlers().registerSSHTunnelHandlers(dependencies);
 }
 
 /**
@@ -141,5 +150,6 @@ module.exports = {
   getSSHHandlers,
   getMCPHandlers,
   getFileHandlers,
-  getNetworkToolsHandlers
+  getNetworkToolsHandlers,
+  getSSHTunnelHandlers
 };
