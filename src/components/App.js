@@ -822,6 +822,7 @@ const App = () => {
     onOpenRdpConnection,
     onOpenVncConnection,
     onOpenFileConnection,
+    onOpenSSHTunnel,
     openFileExplorer
   } = useConnectionManagement({
     activeGroupId, setActiveGroupId, activeTabIndex, setActiveTabIndex,
@@ -1847,7 +1848,7 @@ const App = () => {
       const hasChildren = !!(nodeInfo.node && Array.isArray(nodeInfo.node.children) && nodeInfo.node.children.length);
       confirmDeleteNode(nodeKey, nodeLabel, hasChildren, nodes, setNodes);
     };
-  }, [sidebarCallbacksRef.current, openEditFileConnectionDialog]);
+  }, [sidebarCallbacksRef.current, openEditFileConnectionDialog, onOpenSSHTunnel]);
   
   // Listener para evento personalizado de guardar conexión de archivos (fallback)
   useEffect(() => {

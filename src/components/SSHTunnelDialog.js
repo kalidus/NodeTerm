@@ -511,21 +511,22 @@ export function SSHTunnelDialog({
       style={{ width: '90vw', maxWidth: '900px' }}
       modal
       className="ssh-tunnel-dialog protocol-selection-dialog-new"
-      contentStyle={{ padding: '0', overflow: 'auto' }}
+      contentStyle={{ padding: '0', overflow: 'hidden' }}
     >
-      <div style={{ padding: '1.5rem' }}>
+      <div className="tunnel-form-content" style={{ padding: '1rem', maxHeight: '70vh', overflowY: 'auto' }}>
         {/* Selector de tipo de túnel */}
-        <div className="tunnel-type-selector" style={{ marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div className="tunnel-type-selector" style={{ marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <label 
               className={`tunnel-type-option ${tunnelType === 'local' ? 'selected' : ''}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1.25rem',
-                borderRadius: '8px',
+                gap: '0.35rem',
+                padding: '0.5rem 0.75rem',
+                borderRadius: '6px',
                 cursor: 'pointer',
+                fontSize: '0.85rem',
                 border: tunnelType === 'local' ? '2px solid var(--ui-button-primary)' : '2px solid transparent',
                 background: tunnelType === 'local' ? 'rgba(137, 180, 250, 0.1)' : 'var(--ui-card-bg)',
                 transition: 'all 0.2s'
@@ -547,10 +548,11 @@ export function SSHTunnelDialog({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1.25rem',
-                borderRadius: '8px',
+                gap: '0.35rem',
+                padding: '0.5rem 0.75rem',
+                borderRadius: '6px',
                 cursor: 'pointer',
+                fontSize: '0.85rem',
                 border: tunnelType === 'remote' ? '2px solid var(--ui-button-primary)' : '2px solid transparent',
                 background: tunnelType === 'remote' ? 'rgba(137, 180, 250, 0.1)' : 'var(--ui-card-bg)',
                 transition: 'all 0.2s'
@@ -572,10 +574,11 @@ export function SSHTunnelDialog({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1.25rem',
-                borderRadius: '8px',
+                gap: '0.35rem',
+                padding: '0.5rem 0.75rem',
+                borderRadius: '6px',
                 cursor: 'pointer',
+                fontSize: '0.85rem',
                 border: tunnelType === 'dynamic' ? '2px solid var(--ui-button-primary)' : '2px solid transparent',
                 background: tunnelType === 'dynamic' ? 'rgba(137, 180, 250, 0.1)' : 'var(--ui-card-bg)',
                 transition: 'all 0.2s'
@@ -595,16 +598,16 @@ export function SSHTunnelDialog({
         </div>
 
         {/* Diagrama visual */}
-        <div className="tunnel-diagram-container" style={{ marginBottom: '1.5rem', borderRadius: '8px', overflow: 'hidden' }}>
+        <div className="tunnel-diagram-container" style={{ marginBottom: '0.75rem', borderRadius: '6px', overflow: 'hidden' }}>
           <TunnelDiagram tunnelType={tunnelType} config={diagramConfig} />
         </div>
 
         {/* Formulario */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+        <div className="tunnel-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
           {/* Columna izquierda: Configuración local */}
           <div className="tunnel-form-section">
-            <h4 style={{ marginBottom: '1rem', color: 'var(--ui-dialog-text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <i className="pi pi-home" style={{ color: 'var(--ui-button-primary)' }}></i>
+            <h4 style={{ marginBottom: '0.5rem', color: 'var(--ui-dialog-text)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.9rem' }}>
+              <i className="pi pi-home" style={{ color: 'var(--ui-button-primary)', fontSize: '0.85rem' }}></i>
               {tunnelType === 'remote' 
                 ? (t('sshTunnel.sections.localServer') || 'Servidor Local')
                 : (t('sshTunnel.sections.localConfig') || 'Configuración Local')
@@ -612,8 +615,8 @@ export function SSHTunnelDialog({
             </h4>
             
             {/* Nombre del túnel */}
-            <div className="p-field" style={{ marginBottom: '1rem' }}>
-              <label htmlFor="tunnelName" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+            <div className="p-field" style={{ marginBottom: '0.5rem' }}>
+              <label htmlFor="tunnelName" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>
                 {t('sshTunnel.fields.name') || 'Nombre'} <span style={{ color: 'var(--ui-button-danger)' }}>*</span>
               </label>
               <InputText
@@ -627,8 +630,8 @@ export function SSHTunnelDialog({
 
             {/* Host local (solo para remote forwarding) */}
             {tunnelType === 'remote' && (
-              <div className="p-field" style={{ marginBottom: '1rem' }}>
-                <label htmlFor="localHost" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              <div className="p-field" style={{ marginBottom: '0.5rem' }}>
+                <label htmlFor="localHost" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>
                   {t('sshTunnel.fields.localServer') || 'Servidor local'}
                 </label>
                 <InputText
@@ -642,8 +645,8 @@ export function SSHTunnelDialog({
             )}
 
             {/* Puerto local */}
-            <div className="p-field" style={{ marginBottom: '1rem' }}>
-              <label htmlFor="localPort" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+            <div className="p-field" style={{ marginBottom: '0.5rem' }}>
+              <label htmlFor="localPort" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>
                 {tunnelType === 'dynamic' 
                   ? (t('sshTunnel.fields.socksPort') || 'Puerto SOCKS')
                   : (t('sshTunnel.fields.localPort') || 'Puerto local')
@@ -662,8 +665,8 @@ export function SSHTunnelDialog({
             {/* Host y puerto remoto (solo para local forwarding) */}
             {tunnelType === 'local' && (
               <>
-                <div className="p-field" style={{ marginBottom: '1rem' }}>
-                  <label htmlFor="remoteHost" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                <div className="p-field" style={{ marginBottom: '0.5rem' }}>
+                  <label htmlFor="remoteHost" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>
                     {t('sshTunnel.fields.remoteHost') || 'Host remoto'} <span style={{ color: 'var(--ui-button-danger)' }}>*</span>
                   </label>
                   <InputText
@@ -674,8 +677,8 @@ export function SSHTunnelDialog({
                     style={{ width: '100%' }}
                   />
                 </div>
-                <div className="p-field" style={{ marginBottom: '1rem' }}>
-                  <label htmlFor="remotePort" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                <div className="p-field" style={{ marginBottom: '0.5rem' }}>
+                  <label htmlFor="remotePort" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>
                     {t('sshTunnel.fields.remotePort') || 'Puerto remoto'} <span style={{ color: 'var(--ui-button-danger)' }}>*</span>
                   </label>
                   <InputText
@@ -692,8 +695,8 @@ export function SSHTunnelDialog({
 
             {/* Puerto reenviado (solo para remote forwarding) */}
             {tunnelType === 'remote' && (
-              <div className="p-field" style={{ marginBottom: '1rem' }}>
-                <label htmlFor="remotePort" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              <div className="p-field" style={{ marginBottom: '0.5rem' }}>
+                <label htmlFor="remotePort" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>
                   {t('sshTunnel.fields.forwardedPort') || 'Puerto reenviado (en servidor SSH)'} <span style={{ color: 'var(--ui-button-danger)' }}>*</span>
                 </label>
                 <InputText
@@ -710,15 +713,15 @@ export function SSHTunnelDialog({
 
           {/* Columna derecha: Servidor SSH */}
           <div className="tunnel-form-section">
-            <h4 style={{ marginBottom: '1rem', color: 'var(--ui-dialog-text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <i className="pi pi-server" style={{ color: 'var(--ui-button-primary)' }}></i>
+            <h4 style={{ marginBottom: '0.5rem', color: 'var(--ui-dialog-text)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.9rem' }}>
+              <i className="pi pi-server" style={{ color: 'var(--ui-button-primary)', fontSize: '0.85rem' }}></i>
               {t('sshTunnel.sections.sshServer') || 'Servidor SSH'}
             </h4>
             
             {/* SSH Host */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.5rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.5rem', marginBottom: '0.5rem' }}>
               <div className="p-field">
-                <label htmlFor="sshHost" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                <label htmlFor="sshHost" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>
                   {t('sshTunnel.fields.sshServer') || 'Servidor SSH'} <span style={{ color: 'var(--ui-button-danger)' }}>*</span>
                 </label>
                 <InputText
@@ -730,7 +733,7 @@ export function SSHTunnelDialog({
                 />
               </div>
               <div className="p-field">
-                <label htmlFor="sshPort" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                <label htmlFor="sshPort" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>
                   {t('sshTunnel.fields.sshPort') || 'Puerto'}
                 </label>
                 <InputText
@@ -745,8 +748,8 @@ export function SSHTunnelDialog({
             </div>
 
             {/* Usuario SSH */}
-            <div className="p-field" style={{ marginBottom: '1rem' }}>
-              <label htmlFor="sshUser" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+            <div className="p-field" style={{ marginBottom: '0.5rem' }}>
+              <label htmlFor="sshUser" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>
                 {t('sshTunnel.fields.sshLogin') || 'Usuario SSH'} <span style={{ color: 'var(--ui-button-danger)' }}>*</span>
               </label>
               <InputText
@@ -759,8 +762,8 @@ export function SSHTunnelDialog({
             </div>
 
             {/* Selector de tipo de autenticación */}
-            <div className="p-field" style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+            <div className="p-field" style={{ marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>
                 {t('sshTunnel.fields.authType') || 'Autenticación'}
               </label>
               <div style={{ display: 'flex', gap: '1rem' }}>
@@ -787,8 +790,8 @@ export function SSHTunnelDialog({
 
             {/* Contraseña o clave */}
             {authType === 'password' ? (
-              <div className="p-field" style={{ marginBottom: '1rem' }}>
-                <label htmlFor="sshPassword" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              <div className="p-field" style={{ marginBottom: '0.5rem' }}>
+                <label htmlFor="sshPassword" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>
                   {t('sshTunnel.fields.password') || 'Contraseña'} <span style={{ color: 'var(--ui-button-danger)' }}>*</span>
                 </label>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -810,8 +813,8 @@ export function SSHTunnelDialog({
               </div>
             ) : (
               <>
-                <div className="p-field" style={{ marginBottom: '1rem' }}>
-                  <label htmlFor="privateKeyPath" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                <div className="p-field" style={{ marginBottom: '0.5rem' }}>
+                  <label htmlFor="privateKeyPath" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>
                     {t('sshTunnel.fields.privateKey') || 'Ruta clave privada'} <span style={{ color: 'var(--ui-button-danger)' }}>*</span>
                   </label>
                   <InputText
@@ -822,8 +825,8 @@ export function SSHTunnelDialog({
                     style={{ width: '100%' }}
                   />
                 </div>
-                <div className="p-field" style={{ marginBottom: '1rem' }}>
-                  <label htmlFor="passphrase" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                <div className="p-field" style={{ marginBottom: '0.5rem' }}>
+                  <label htmlFor="passphrase" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>
                     {t('sshTunnel.fields.passphrase') || 'Passphrase (opcional)'}
                   </label>
                   <InputText
@@ -838,28 +841,11 @@ export function SSHTunnelDialog({
               </>
             )}
 
-            {/* Carpeta destino */}
-            {foldersOptions.length > 0 && (
-              <div className="p-field" style={{ marginBottom: '1rem' }}>
-                <label htmlFor="targetFolder" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                  {t('sshTunnel.fields.folder') || 'Guardar en carpeta'}
-                </label>
-                <Dropdown
-                  id="targetFolder"
-                  value={targetFolder}
-                  options={foldersOptions}
-                  onChange={(e) => setTargetFolder(e.value)}
-                  placeholder={t('sshTunnel.placeholders.folder') || 'Raíz del árbol'}
-                  style={{ width: '100%' }}
-                  showClear
-                />
-              </div>
-            )}
           </div>
         </div>
 
         {/* Botones */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--ui-content-border)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--ui-content-border)' }}>
           <div>
             {onGoBack && (
               <Button

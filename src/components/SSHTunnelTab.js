@@ -34,7 +34,7 @@ const SSHTunnelTab = ({
 
   // Escuchar eventos de estado del túnel
   useEffect(() => {
-    const handleStatusChange = (event, data) => {
+    const handleStatusChange = (data) => {
       if (data.tunnelId === activeTunnelIdRef.current) {
         setStatus(data.status);
         if (data.error) {
@@ -46,24 +46,26 @@ const SSHTunnelTab = ({
       }
     };
 
-    const handleLog = (event, data) => {
+    const handleLog = (data) => {
       if (data.tunnelId === activeTunnelIdRef.current) {
         setLogs(prev => [...prev, data.log]);
       }
     };
 
     // Escuchar eventos IPC
-    if (window.electronAPI) {
-      window.electronAPI.on('ssh-tunnel:status-changed', handleStatusChange);
-      window.electronAPI.on('ssh-tunnel:log', handleLog);
-    }
+    if (window.electron?.ipcRenderer) {
+      const unsubscribeStatus = window.electron.ipcRenderer.on('ssh-tunnel:status-changed', handleStatusChange);
+      const unsubscribeLog = window.electron.ipcRenderer.on('ssh-tunnel:log', handleLog);
 
-    return () => {
-      if (window.electronAPI) {
-        window.electronAPI.removeListener('ssh-tunnel:status-changed', handleStatusChange);
-        window.electronAPI.removeListener('ssh-tunnel:log', handleLog);
-      }
-    };
+      return () => {
+        if (unsubscribeStatus && typeof unsubscribeStatus === 'function') {
+          unsubscribeStatus();
+        }
+        if (unsubscribeLog && typeof unsubscribeLog === 'function') {
+          unsubscribeLog();
+        }
+      };
+    }
   }, [onStatusChange]);
 
   // Iniciar túnel automáticamente al montar
@@ -90,7 +92,7 @@ const SSHTunnelTab = ({
     setLogs([{ timestamp: new Date().toISOString(), level: 'info', message: 'Iniciando túnel...' }]);
 
     try {
-      const result = await window.electronAPI.invoke('ssh-tunnel:start', tunnelConfig);
+      const result = await window.electron.ipcRenderer.invoke('ssh-tunnel:start', tunnelConfig);
       
       if (result.success) {
         activeTunnelIdRef.current = result.tunnelId;
@@ -129,7 +131,7 @@ const SSHTunnelTab = ({
     setIsLoading(true);
 
     try {
-      await window.electronAPI.invoke('ssh-tunnel:stop', { tunnelId: activeTunnelIdRef.current });
+      await window.electron.ipcRenderer.invoke('ssh-tunnel:stop', { tunnelId: activeTunnelIdRef.current });
       setStatus('stopped');
       setLogs(prev => [...prev, { 
         timestamp: new Date().toISOString(), 
