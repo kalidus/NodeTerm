@@ -581,80 +581,16 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
 
     switch (selectedTool) {
       case 'ping':
-        return (
-          <>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Host / IP</label>
-              <InputText
-                value={pingHost}
-                onChange={(e) => setPingHost(e.target.value)}
-                placeholder="ejemplo.com o 192.168.1.1"
-                style={commonInputStyle}
-                onKeyPress={(e) => e.key === 'Enter' && executeTool()}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Número de pings</label>
-              <InputNumber
-                value={pingCount}
-                onValueChange={(e) => setPingCount(e.value)}
-                min={1}
-                max={20}
-                style={commonInputStyle}
-              />
-            </div>
-          </>
-        );
+        // Layout especial: formulario en el header
+        return null;
 
       case 'traceroute':
-        return (
-          <>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Host / IP</label>
-              <InputText
-                value={tracerouteHost}
-                onChange={(e) => setTracerouteHost(e.target.value)}
-                placeholder="ejemplo.com o 8.8.8.8"
-                style={commonInputStyle}
-                onKeyPress={(e) => e.key === 'Enter' && executeTool()}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Máximo de saltos</label>
-              <InputNumber
-                value={tracerouteMaxHops}
-                onValueChange={(e) => setTracerouteMaxHops(e.value)}
-                min={1}
-                max={64}
-                style={commonInputStyle}
-              />
-            </div>
-          </>
-        );
+        // Layout especial: formulario en el header
+        return null;
 
       case 'port-scan':
-        return (
-          <>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Host / IP</label>
-              <InputText
-                value={portScanHost}
-                onChange={(e) => setPortScanHost(e.target.value)}
-                placeholder="ejemplo.com o 192.168.1.1"
-                style={commonInputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Puertos (ej: 80,443 o 1-100)</label>
-              <InputText
-                value={portScanPorts}
-                onChange={(e) => setPortScanPorts(e.target.value)}
-                placeholder="21,22,80,443 o 1-1024"
-                style={commonInputStyle}
-              />
-            </div>
-          </>
-        );
+        // Layout especial: formulario en el header
+        return null;
 
       case 'network-scan':
         return (
@@ -2900,8 +2836,8 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
               background: 'rgba(0,0,0,0.1)',
               flexShrink: 0
             }}>
-              {/* Primera fila: Solo título para SSL Checker, título + botón para otros */}
-              {selectedTool !== 'ssl-check' ? (
+              {/* Primera fila: Solo título para herramientas con header especial, título + botón para otros */}
+              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) ? (
                 <div style={{
                   display: 'flex',
                   flexDirection: isMobile ? 'column' : 'row',
@@ -3073,6 +3009,174 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                 </div>
               )}
 
+              {/* Card para Ping */}
+              {selectedTool === 'ping' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(34, 197, 94, 0.04) 100%)',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid rgba(34, 197, 94, 0.35)',
+                  width: 'fit-content',
+                  maxWidth: '700px',
+                  boxShadow: '0 2px 12px rgba(34, 197, 94, 0.15)'
+                }}>
+                  {/* Host */}
+                  <span style={{ color: '#22c55e', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    Host:
+                  </span>
+                  <InputText
+                    value={pingHost}
+                    onChange={(e) => setPingHost(e.target.value)}
+                    placeholder="ejemplo.com o 192.168.1.1"
+                    style={{
+                      width: '300px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '30px'
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && executeTool()}
+                  />
+                  
+                  {/* Botón Ejecutar */}
+                  <Button
+                    label="Ejecutar"
+                    icon="pi pi-play"
+                    onClick={executeTool}
+                    disabled={loading}
+                    style={{
+                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
+                      marginLeft: '0.25rem'
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Card para Traceroute */}
+              {selectedTool === 'traceroute' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(34, 197, 94, 0.04) 100%)',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid rgba(34, 197, 94, 0.35)',
+                  width: 'fit-content',
+                  maxWidth: '700px',
+                  boxShadow: '0 2px 12px rgba(34, 197, 94, 0.15)'
+                }}>
+                  {/* Host */}
+                  <span style={{ color: '#22c55e', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    Host:
+                  </span>
+                  <InputText
+                    value={tracerouteHost}
+                    onChange={(e) => setTracerouteHost(e.target.value)}
+                    placeholder="ejemplo.com o 8.8.8.8"
+                    style={{
+                      width: '300px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '30px'
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && executeTool()}
+                  />
+                  
+                  {/* Botón Ejecutar */}
+                  <Button
+                    label="Ejecutar"
+                    icon="pi pi-play"
+                    onClick={executeTool}
+                    disabled={loading}
+                    style={{
+                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
+                      marginLeft: '0.25rem'
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Card para Port Scanner */}
+              {selectedTool === 'port-scan' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.04) 100%)',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid rgba(245, 158, 11, 0.35)',
+                  width: 'fit-content',
+                  maxWidth: '700px',
+                  boxShadow: '0 2px 12px rgba(245, 158, 11, 0.15)'
+                }}>
+                  {/* Host */}
+                  <span style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    Host:
+                  </span>
+                  <InputText
+                    value={portScanHost}
+                    onChange={(e) => setPortScanHost(e.target.value)}
+                    placeholder="ejemplo.com o 192.168.1.1"
+                    style={{
+                      width: '300px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(245, 158, 11, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '30px'
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && executeTool()}
+                  />
+                  
+                  {/* Botón Ejecutar */}
+                  <Button
+                    label="Escanear"
+                    icon="pi pi-search"
+                    onClick={executeTool}
+                    disabled={loading}
+                    style={{
+                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
+                      marginLeft: '0.25rem'
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Card para Host Vulnerability Scanner */}
               {selectedTool === 'host-vuln-scan' && (
                 <div style={{
@@ -3224,7 +3328,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
           {/* Contenido: formulario y resultados */}
           <div className="network-tools-form-results">
             {/* Panel de formulario - Solo si NO es tool con header especial */}
-            {!['ssl-check', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) && (
+            {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) && (
               <div className="network-tools-form" style={{
                 padding: '1rem',
                 paddingBottom: '2rem',
@@ -3240,12 +3344,12 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
               padding: '1rem',
               paddingBottom: '2rem',
               background: 'rgba(0,0,0,0.1)',
-              width: ['ssl-check', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) ? '100%' : undefined
+              width: ['ssl-check', 'ping', 'traceroute', 'port-scan', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) ? '100%' : undefined
             }}>
-              {!['ssl-check', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) && (
-                <div style={{ 
-                  marginBottom: '0.75rem', 
-                  fontSize: '0.85rem', 
+              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) && (
+                <div style={{
+                  marginBottom: '0.75rem',
+                  fontSize: '0.85rem',
                   fontWeight: '600',
                   color: 'var(--text-color-secondary)',
                   textTransform: 'uppercase',
