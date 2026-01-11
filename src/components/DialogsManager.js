@@ -52,6 +52,8 @@ const DialogsManager = ({
   showSSHTunnelDialog,
   setShowSSHTunnelDialog,
   createNewSSHTunnel,
+  editingSSHTunnelNode,
+  setEditingSSHTunnelNode,
 
   // Estados de formularios SSH
   sshName,
@@ -690,8 +692,30 @@ const DialogsManager = ({
       {showSSHTunnelDialog && (
         <SSHTunnelDialog
           visible={showSSHTunnelDialog}
-          onHide={() => setShowSSHTunnelDialog(false)}
-          mode="new"
+          onHide={() => {
+            setShowSSHTunnelDialog(false);
+            if (setEditingSSHTunnelNode) {
+              setEditingSSHTunnelNode(null);
+            }
+          }}
+          mode={editingSSHTunnelNode ? 'edit' : 'new'}
+          initialData={editingSSHTunnelNode ? {
+            name: editingSSHTunnelNode.label,
+            tunnelType: editingSSHTunnelNode.data?.tunnelType || 'local',
+            sshHost: editingSSHTunnelNode.data?.sshHost || '',
+            sshPort: editingSSHTunnelNode.data?.sshPort || 22,
+            sshUser: editingSSHTunnelNode.data?.sshUser || '',
+            sshPassword: editingSSHTunnelNode.data?.sshPassword || '',
+            authType: editingSSHTunnelNode.data?.authType || 'password',
+            privateKeyPath: editingSSHTunnelNode.data?.privateKeyPath || '',
+            passphrase: editingSSHTunnelNode.data?.passphrase || '',
+            localHost: editingSSHTunnelNode.data?.localHost || '127.0.0.1',
+            localPort: editingSSHTunnelNode.data?.localPort || '',
+            remoteHost: editingSSHTunnelNode.data?.remoteHost || '',
+            remotePort: editingSSHTunnelNode.data?.remotePort || '',
+            bindHost: editingSSHTunnelNode.data?.bindHost || '0.0.0.0',
+            targetFolder: null
+          } : null}
           onConfirm={(tunnelData) => {
             if (createNewSSHTunnel) {
               createNewSSHTunnel(tunnelData);
@@ -700,7 +724,9 @@ const DialogsManager = ({
           }}
           onGoBack={() => {
             setShowSSHTunnelDialog(false);
-            setShowProtocolSelectionDialog(true);
+            if (!editingSSHTunnelNode) {
+              setShowProtocolSelectionDialog(true);
+            }
           }}
           foldersOptions={getAllFolders && nodes ? getAllFolders(nodes) : []}
         />

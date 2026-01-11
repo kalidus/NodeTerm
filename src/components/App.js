@@ -1126,7 +1126,8 @@ const App = () => {
     resetSSHTunnelForm,
     openSSHDialog, openRDPDialog, openFolderDialog, openSSHTunnelDialog,
     closeSSHDialogWithReset, closeRDPDialogWithReset, closeFolderDialogWithReset,
-    closeEditSSHDialogWithReset, closeEditFolderDialogWithReset, closeSSHTunnelDialogWithReset
+    closeEditSSHDialogWithReset, closeEditFolderDialogWithReset, closeSSHTunnelDialogWithReset,
+    editingSSHTunnelNode, setEditingSSHTunnelNode
   } = useDialogManagement();
 
 
@@ -1209,6 +1210,8 @@ const App = () => {
     createNewSSH,
     createNewRdp,
     createNewSSHTunnel,
+    openEditSSHTunnelDialog,
+    duplicateSSHTunnel,
     saveEditSSH,
     saveEditFolder,
     openEditSSHDialog,
@@ -1280,6 +1283,8 @@ const App = () => {
     // Estados SSH Tunnel
     setShowSSHTunnelDialog,
     closeSSHTunnelDialogWithReset,
+    editingSSHTunnelNode,
+    setEditingSSHTunnelNode,
     // Utilidades
     nodes, setNodes,
     findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser,
@@ -1842,13 +1847,23 @@ const App = () => {
     sidebarCallbacksRef.current.openSSHTunnel = (node, nodes) => {
       onOpenSSHTunnel(node, nodes);
     };
+    sidebarCallbacksRef.current.editSSHTunnel = (node) => {
+      if (openEditSSHTunnelDialog) {
+        openEditSSHTunnelDialog(node);
+      }
+    };
+    sidebarCallbacksRef.current.duplicateSSHTunnel = (node) => {
+      if (duplicateSSHTunnel) {
+        duplicateSSHTunnel(node);
+      }
+    };
     sidebarCallbacksRef.current.deleteNode = (nodeKey, nodeLabel) => {
       // Detectar si la carpeta tiene hijos
       const nodeInfo = findParentNodeAndIndex(nodes, nodeKey);
       const hasChildren = !!(nodeInfo.node && Array.isArray(nodeInfo.node.children) && nodeInfo.node.children.length);
       confirmDeleteNode(nodeKey, nodeLabel, hasChildren, nodes, setNodes);
     };
-  }, [sidebarCallbacksRef.current, openEditFileConnectionDialog, onOpenSSHTunnel]);
+  }, [sidebarCallbacksRef.current, openEditFileConnectionDialog, onOpenSSHTunnel, openEditSSHTunnelDialog, duplicateSSHTunnel]);
   
   // Listener para evento personalizado de guardar conexión de archivos (fallback)
   useEffect(() => {
@@ -2495,6 +2510,8 @@ const App = () => {
         showSSHTunnelDialog={showSSHTunnelDialog}
         setShowSSHTunnelDialog={setShowSSHTunnelDialog}
         createNewSSHTunnel={createNewSSHTunnel}
+        editingSSHTunnelNode={editingSSHTunnelNode}
+        setEditingSSHTunnelNode={setEditingSSHTunnelNode}
 
         // Estados de formularios SSH
         sshName={sshName}

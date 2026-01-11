@@ -125,6 +125,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
     const isFileConnection = node.data && (node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp');
     const isPassword = node.data && node.data.type === 'password';
+    const isSSHTunnel = node.data && node.data.type === 'ssh-tunnel';
     const items = [];
     
     if (isSSH) {
@@ -641,6 +642,82 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         });
       }
 
+      items.push({
+        label: 'Eliminar',
+        icon: 'pi pi-trash',
+        command: () => {
+          if (sidebarCallbacksRef.current.deleteNode) {
+            sidebarCallbacksRef.current.deleteNode(node.key, node.label);
+          }
+        }
+      });
+    } else if (isSSHTunnel) {
+      // Abrir túnel
+      items.push({
+        label: 'Abrir Túnel',
+        icon: 'pi pi-share-alt',
+        command: () => {
+          if (sidebarCallbacksRef.current.openSSHTunnel) {
+            sidebarCallbacksRef.current.openSSHTunnel(node, nodes);
+          }
+        }
+      });
+      
+      // Opción para copiar contraseña
+      if (node.data?.sshPassword) {
+        items.push({
+          label: 'Copiar contraseña',
+          icon: 'pi pi-key',
+          command: async () => {
+            try {
+              if (window.electron?.clipboard?.writeText) {
+                await window.electron.clipboard.writeText(node.data.sshPassword);
+              } else if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(node.data.sshPassword);
+              }
+              // Mostrar toast de confirmación
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'success',
+                  summary: 'Copiado',
+                  detail: 'Contraseña copiada al portapapeles',
+                  life: 1500
+                });
+              }
+            } catch (error) {
+              console.error('Error copiando contraseña:', error);
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'error',
+                  summary: 'Error',
+                  detail: 'No se pudo copiar la contraseña',
+                  life: 3000
+                });
+              }
+            }
+          }
+        });
+      }
+      
+      items.push({ separator: true });
+      items.push({
+        label: 'Duplicar',
+        icon: 'pi pi-copy',
+        command: () => {
+          if (sidebarCallbacksRef.current.duplicateSSHTunnel) {
+            sidebarCallbacksRef.current.duplicateSSHTunnel(node);
+          }
+        }
+      });
+      items.push({
+        label: 'Editar',
+        icon: 'pi pi-pencil',
+        command: () => {
+          if (sidebarCallbacksRef.current.editSSHTunnel) {
+            sidebarCallbacksRef.current.editSSHTunnel(node);
+          }
+        }
+      });
       items.push({
         label: 'Eliminar',
         icon: 'pi pi-trash',
