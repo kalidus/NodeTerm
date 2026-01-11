@@ -593,74 +593,16 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
         return null;
 
       case 'network-scan':
-        return (
-          <>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Subred (CIDR)</label>
-              <InputText
-                value={networkScanSubnet}
-                onChange={(e) => setNetworkScanSubnet(e.target.value)}
-                placeholder="192.168.1.0/24"
-                style={commonInputStyle}
-              />
-            </div>
-            {networkInterfaces.length > 0 && (
-              <div style={{ marginBottom: '1rem', fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>
-                <span style={{ fontWeight: '500' }}>Interfaces detectadas:</span>
-                <div style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {networkInterfaces.filter(i => i.family === 'IPv4').map((iface, idx) => (
-                    <Badge 
-                      key={idx}
-                      value={`${iface.name}: ${iface.cidr || iface.address}`}
-                      severity="info"
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => iface.cidr && setNetworkScanSubnet(iface.cidr)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        );
+        // Layout especial: formulario en el header
+        return null;
 
       case 'dns-lookup':
-        return (
-          <>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Dominio</label>
-              <InputText
-                value={dnsLookupDomain}
-                onChange={(e) => setDnsLookupDomain(e.target.value)}
-                placeholder="ejemplo.com"
-                style={commonInputStyle}
-                onKeyPress={(e) => e.key === 'Enter' && executeTool()}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Tipo de registro</label>
-              <Dropdown
-                value={dnsLookupType}
-                onChange={(e) => setDnsLookupType(e.value)}
-                options={DNS_RECORD_TYPES}
-                style={{ ...commonInputStyle, width: '100%' }}
-              />
-            </div>
-          </>
-        );
+        // Layout especial: formulario en el header
+        return null;
 
       case 'reverse-dns':
-        return (
-          <div style={fieldStyle}>
-            <label style={labelStyle}>Dirección IP</label>
-            <InputText
-              value={reverseDnsIp}
-              onChange={(e) => setReverseDnsIp(e.target.value)}
-              placeholder="8.8.8.8"
-              style={commonInputStyle}
-              onKeyPress={(e) => e.key === 'Enter' && executeTool()}
-            />
-          </div>
-        );
+        // Layout especial: formulario en el header
+        return null;
 
       case 'ssl-check':
         // Layout especial para SSL Checker: inputs horizontales arriba
@@ -2837,7 +2779,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
               flexShrink: 0
             }}>
               {/* Primera fila: Solo título para herramientas con header especial, título + botón para otros */}
-              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) ? (
+              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) ? (
                 <div style={{
                   display: 'flex',
                   flexDirection: isMobile ? 'column' : 'row',
@@ -3177,6 +3119,174 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                 </div>
               )}
 
+              {/* Card para Network Scan */}
+              {selectedTool === 'network-scan' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.04) 100%)',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid rgba(245, 158, 11, 0.35)',
+                  width: 'fit-content',
+                  maxWidth: '700px',
+                  boxShadow: '0 2px 12px rgba(245, 158, 11, 0.15)'
+                }}>
+                  {/* Subred */}
+                  <span style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    Subred:
+                  </span>
+                  <InputText
+                    value={networkScanSubnet}
+                    onChange={(e) => setNetworkScanSubnet(e.target.value)}
+                    placeholder="192.168.1.0/24"
+                    style={{
+                      width: '300px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(245, 158, 11, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '30px'
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && executeTool()}
+                  />
+                  
+                  {/* Botón Escanear */}
+                  <Button
+                    label="Escanear"
+                    icon="pi pi-search"
+                    onClick={executeTool}
+                    disabled={loading}
+                    style={{
+                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
+                      marginLeft: '0.25rem'
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Card para DNS Lookup */}
+              {selectedTool === 'dns-lookup' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0.04) 100%)',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid rgba(59, 130, 246, 0.35)',
+                  width: 'fit-content',
+                  maxWidth: '700px',
+                  boxShadow: '0 2px 12px rgba(59, 130, 246, 0.15)'
+                }}>
+                  {/* Dominio */}
+                  <span style={{ color: '#3b82f6', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    Dominio:
+                  </span>
+                  <InputText
+                    value={dnsLookupDomain}
+                    onChange={(e) => setDnsLookupDomain(e.target.value)}
+                    placeholder="ejemplo.com"
+                    style={{
+                      width: '300px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '30px'
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && executeTool()}
+                  />
+                  
+                  {/* Botón Buscar */}
+                  <Button
+                    label="Buscar"
+                    icon="pi pi-search"
+                    onClick={executeTool}
+                    disabled={loading}
+                    style={{
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
+                      marginLeft: '0.25rem'
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Card para Reverse DNS */}
+              {selectedTool === 'reverse-dns' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0.04) 100%)',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid rgba(59, 130, 246, 0.35)',
+                  width: 'fit-content',
+                  maxWidth: '700px',
+                  boxShadow: '0 2px 12px rgba(59, 130, 246, 0.15)'
+                }}>
+                  {/* IP */}
+                  <span style={{ color: '#3b82f6', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    IP:
+                  </span>
+                  <InputText
+                    value={reverseDnsIp}
+                    onChange={(e) => setReverseDnsIp(e.target.value)}
+                    placeholder="8.8.8.8"
+                    style={{
+                      width: '300px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '30px'
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && executeTool()}
+                  />
+                  
+                  {/* Botón Buscar */}
+                  <Button
+                    label="Buscar"
+                    icon="pi pi-search"
+                    onClick={executeTool}
+                    disabled={loading}
+                    style={{
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
+                      marginLeft: '0.25rem'
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Card para Host Vulnerability Scanner */}
               {selectedTool === 'host-vuln-scan' && (
                 <div style={{
@@ -3328,7 +3438,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
           {/* Contenido: formulario y resultados */}
           <div className="network-tools-form-results">
             {/* Panel de formulario - Solo si NO es tool con header especial */}
-            {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) && (
+            {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) && (
               <div className="network-tools-form" style={{
                 padding: '1rem',
                 paddingBottom: '2rem',
@@ -3344,9 +3454,9 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
               padding: '1rem',
               paddingBottom: '2rem',
               background: 'rgba(0,0,0,0.1)',
-              width: ['ssl-check', 'ping', 'traceroute', 'port-scan', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) ? '100%' : undefined
+              width: ['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) ? '100%' : undefined
             }}>
-              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) && (
+              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) && (
                 <div style={{
                   marginBottom: '0.75rem',
                   fontSize: '0.85rem',
