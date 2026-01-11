@@ -929,18 +929,28 @@ const SettingsDialog = ({
     const ms = Math.max(60000, (rdpIdleMinutes || 0) * 60000);
     localStorage.setItem('rdp_idle_threshold_ms', String(ms));
   }, [rdpIdleMinutes]);
+  // Ref para rastrear el último valor enviado y evitar guardados duplicados
+  const lastSentGuacdTimeout = useRef(null);
+  
   useEffect(() => {
     const ms = Math.max(60000, (rdpSessionActivityMinutes || 0) * 60000);
     localStorage.setItem('rdp_freeze_timeout_ms', String(ms));
     
     // Sincronizar automáticamente el watchdog de guacd con el umbral de sesión
     // para evitar que guacd cierre la conexión antes de que el vigilante pueda reconectar
-    setRdpGuacdInactivityMs(ms);
-    try {
-      if (window?.electron?.ipcRenderer) {
-        window.electron.ipcRenderer.invoke('guacamole:set-guacd-timeout-ms', ms).catch(() => {});
-      }
-    } catch {}
+    // Solo enviar si el valor realmente cambió
+    if (lastSentGuacdTimeout.current !== ms) {
+      lastSentGuacdTimeout.current = ms;
+      setRdpGuacdInactivityMs(ms);
+      try {
+        if (window?.electron?.ipcRenderer) {
+          window.electron.ipcRenderer.invoke('guacamole:set-guacd-timeout-ms', ms).catch(() => {
+            // Si falla, permitir reintento
+            lastSentGuacdTimeout.current = null;
+          });
+        }
+      } catch {}
+    }
   }, [rdpSessionActivityMinutes]);
   useEffect(() => {
     localStorage.setItem('rdp_resize_debounce_ms', String(Math.max(100, Math.min(2000, rdpResizeDebounceMs || 300))));
@@ -951,12 +961,20 @@ const SettingsDialog = ({
 
   // Sincronizar watchdog de guacd con el proceso principal vía IPC al montar
   // Envía el valor de localStorage al backend para asegurar sincronización
+  // Solo se ejecuta una vez al montar el componente
+  const hasSyncedGuacdTimeout = useRef(false);
   useEffect(() => {
+    // Evitar múltiples sincronizaciones
+    if (hasSyncedGuacdTimeout.current) return;
+    
     try {
       if (window?.electron?.ipcRenderer) {
         // Leer valor actual de localStorage (Umbral de actividad de sesión)
         const localStorageMs = parseInt(localStorage.getItem('rdp_freeze_timeout_ms') || '7200000', 10);
         const validMs = Math.max(60000, localStorageMs);
+        
+        // Marcar como sincronizado antes de la llamada para evitar llamadas duplicadas
+        hasSyncedGuacdTimeout.current = true;
         
         // Enviar al backend para sincronizar
         window.electron.ipcRenderer.invoke('guacamole:set-guacd-timeout-ms', validMs)
@@ -965,7 +983,10 @@ const SettingsDialog = ({
               setRdpGuacdInactivityMs(validMs);
             }
           })
-          .catch(() => {});
+          .catch(() => {
+            // Si falla, permitir reintento
+            hasSyncedGuacdTimeout.current = false;
+          });
       }
     } catch {}
   }, []);
