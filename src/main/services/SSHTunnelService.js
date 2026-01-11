@@ -63,6 +63,64 @@ class SSHTunnelService extends EventEmitter {
   }
 
   /**
+   * Verifica si un puerto está libre
+   * @param {number} port - Puerto a verificar
+   * @param {string} host - Host (por defecto '127.0.0.1')
+   * @returns {Promise<boolean>} - true si el puerto está libre, false si está ocupado
+   */
+  async isPortAvailable(port, host = '127.0.0.1') {
+    return new Promise((resolve) => {
+      const server = net.createServer();
+      
+      server.once('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+          resolve(false);
+        } else {
+          resolve(false);
+        }
+      });
+      
+      server.once('listening', () => {
+        server.close();
+        resolve(true);
+      });
+      
+      server.listen(port, host);
+    });
+  }
+
+  /**
+   * Encuentra y cierra túneles que usen el mismo puerto local
+   * @param {number} localPort - Puerto local a verificar
+   * @param {string} localHost - Host local (por defecto '127.0.0.1')
+   * @returns {Promise<number>} - Número de túneles cerrados
+   */
+  async closeTunnelsUsingPort(localPort, localHost = '127.0.0.1') {
+    let closedCount = 0;
+    const tunnelsToClose = [];
+    
+    // Buscar túneles que usen el mismo puerto
+    for (const [tunnelId, tunnel] of this.activeTunnels) {
+      if (tunnel.config.localPort === localPort && 
+          (tunnel.config.localHost || '127.0.0.1') === localHost) {
+        tunnelsToClose.push(tunnelId);
+      }
+    }
+    
+    // Cerrar túneles encontrados
+    for (const tunnelId of tunnelsToClose) {
+      try {
+        await this.stopTunnel(tunnelId);
+        closedCount++;
+      } catch (err) {
+        console.error(`[SSHTunnelService] Error cerrando túnel ${tunnelId}:`, err);
+      }
+    }
+    
+    return closedCount;
+  }
+
+  /**
    * Crea la configuración de conexión SSH
    */
   buildSSHConfig(config) {
@@ -500,6 +558,31 @@ class SSHTunnelService extends EventEmitter {
    * Inicia un túnel según su tipo
    */
   async startTunnel(config) {
+    // Verificar y limpiar puerto local si es necesario (para local y dynamic)
+    if (config.tunnelType === 'local' || config.tunnelType === 'dynamic') {
+      const localHost = config.localHost || '127.0.0.1';
+      const localPort = config.localPort;
+      
+      if (!localPort) {
+        return { success: false, error: 'Puerto local requerido' };
+      }
+      
+      // Cerrar túneles anteriores que usen el mismo puerto
+      const closedCount = await this.closeTunnelsUsingPort(localPort, localHost);
+      if (closedCount > 0) {
+        console.log(`[SSHTunnelService] Se cerraron ${closedCount} túnel(es) anterior(es) usando el puerto ${localPort}`);
+      }
+      
+      // Verificar si el puerto está libre
+      const isAvailable = await this.isPortAvailable(localPort, localHost);
+      if (!isAvailable) {
+        return { 
+          success: false, 
+          error: `El puerto ${localPort} en ${localHost} está ocupado. Por favor, cierra la aplicación que lo está usando o elige otro puerto.` 
+        };
+      }
+    }
+    
     switch (config.tunnelType) {
       case 'local':
         return this.createLocalForward(config);

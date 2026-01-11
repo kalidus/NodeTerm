@@ -119,6 +119,7 @@ try {
 
   // Importar manejadores centralizados
   ({ registerAllHandlers } = require('./src/main/handlers'));
+  const { cleanupTunnels } = require('./src/main/handlers/ssh-tunnel-handlers');
 } catch (err) {
   console.error('[MAIN] ERROR EN IMPORTACIONES:', err);
   console.error('[MAIN] Stack trace:', err.stack);
@@ -3098,7 +3099,7 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
 // Handler app-quit movido a src/main/handlers/application-handlers.js
 
 // Limpieza robusta también en before-quit
-app.on('before-quit', () => {
+app.on('before-quit', async () => {
   isAppQuitting = true;
   
   Object.values(sshConnections).forEach(conn => {
@@ -3152,6 +3153,13 @@ app.on('before-quit', () => {
     }
   });
   
+  // Cleanup SSH tunnels
+  try {
+    await cleanupTunnels();
+  } catch (error) {
+    console.error('Error cleaning up SSH tunnels:', error);
+  }
+
   // Cleanup Cygwin processes
   if (Cygwin && Cygwin.CygwinHandlers) {
     try {
