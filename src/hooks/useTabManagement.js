@@ -486,6 +486,12 @@ export const useTabManagement = (toast, {
       
       const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
       setSshTabs(newSshTabs);
+    } else if (closedTab.type === 'ssh-tunnel') {
+      // Manejar cierre de pestañas de túnel SSH
+      // Nota: El componente SSHTunnelTab tiene un cleanup que detiene el túnel al desmontarse
+      // Simplemente eliminamos la pestaña y el componente se encargará de detener el túnel
+      const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+      setSshTabs(newSshTabs);
     } else if (isSSHTab) {
       // Manejar cierre de pestañas split
       if (closedTab.type === 'split') {
