@@ -609,18 +609,8 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
         return null; // El formulario se renderiza en el header de la herramienta
 
       case 'http-headers':
-        return (
-          <div style={fieldStyle}>
-            <label style={labelStyle}>URL</label>
-            <InputText
-              value={httpHeadersUrl}
-              onChange={(e) => setHttpHeadersUrl(e.target.value)}
-              placeholder="https://ejemplo.com"
-              style={commonInputStyle}
-              onKeyPress={(e) => e.key === 'Enter' && executeTool()}
-            />
-          </div>
-        );
+        // Layout especial: formulario en el header
+        return null;
 
       case 'host-vuln-scan':
         // Layout especial: formulario en el header
@@ -631,56 +621,16 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
         return null;
 
       case 'whois':
-        return (
-          <div style={fieldStyle}>
-            <label style={labelStyle}>Dominio</label>
-            <InputText
-              value={whoisDomain}
-              onChange={(e) => setWhoisDomain(e.target.value)}
-              placeholder="ejemplo.com"
-              style={commonInputStyle}
-              onKeyPress={(e) => e.key === 'Enter' && executeTool()}
-            />
-          </div>
-        );
+        // Layout especial: formulario en el header
+        return null;
 
       case 'subnet-calc':
-        return (
-          <div style={fieldStyle}>
-            <label style={labelStyle}>CIDR (ej: 192.168.1.0/24)</label>
-            <InputText
-              value={subnetCalcCidr}
-              onChange={(e) => setSubnetCalcCidr(e.target.value)}
-              placeholder="192.168.1.0/24"
-              style={commonInputStyle}
-              onKeyPress={(e) => e.key === 'Enter' && executeTool()}
-            />
-          </div>
-        );
+        // Layout especial: formulario en el header
+        return null;
 
       case 'wake-on-lan':
-        return (
-          <>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Dirección MAC</label>
-              <InputText
-                value={wolMac}
-                onChange={(e) => setWolMac(e.target.value)}
-                placeholder="AA:BB:CC:DD:EE:FF"
-                style={commonInputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Broadcast IP</label>
-              <InputText
-                value={wolBroadcast}
-                onChange={(e) => setWolBroadcast(e.target.value)}
-                placeholder="255.255.255.255"
-                style={commonInputStyle}
-              />
-            </div>
-          </>
-        );
+        // Layout especial: formulario en el header
+        return null;
 
       default:
         return <div>Selecciona una herramienta</div>;
@@ -2779,7 +2729,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
               flexShrink: 0
             }}>
               {/* Primera fila: Solo título para herramientas con header especial, título + botón para otros */}
-              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) ? (
+              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) ? (
                 <div style={{
                   display: 'flex',
                   flexDirection: isMobile ? 'column' : 'row',
@@ -3287,6 +3237,230 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
                 </div>
               )}
 
+              {/* Card para HTTP Headers */}
+              {selectedTool === 'http-headers' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.04) 100%)',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid rgba(239, 68, 68, 0.35)',
+                  width: 'fit-content',
+                  maxWidth: '700px',
+                  boxShadow: '0 2px 12px rgba(239, 68, 68, 0.15)'
+                }}>
+                  {/* URL */}
+                  <span style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    URL:
+                  </span>
+                  <InputText
+                    value={httpHeadersUrl}
+                    onChange={(e) => setHttpHeadersUrl(e.target.value)}
+                    placeholder="https://ejemplo.com"
+                    style={{
+                      width: '300px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '30px'
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && executeTool()}
+                  />
+                  
+                  {/* Botón Analizar */}
+                  <Button
+                    label="Analizar"
+                    icon="pi pi-file"
+                    onClick={executeTool}
+                    disabled={loading}
+                    style={{
+                      background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
+                      marginLeft: '0.25rem'
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Card para WHOIS */}
+              {selectedTool === 'whois' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(139, 92, 246, 0.04) 100%)',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid rgba(139, 92, 246, 0.35)',
+                  width: 'fit-content',
+                  maxWidth: '700px',
+                  boxShadow: '0 2px 12px rgba(139, 92, 246, 0.15)'
+                }}>
+                  {/* Dominio */}
+                  <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    Dominio:
+                  </span>
+                  <InputText
+                    value={whoisDomain}
+                    onChange={(e) => setWhoisDomain(e.target.value)}
+                    placeholder="ejemplo.com"
+                    style={{
+                      width: '300px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '30px'
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && executeTool()}
+                  />
+                  
+                  {/* Botón Buscar */}
+                  <Button
+                    label="Buscar"
+                    icon="pi pi-search"
+                    onClick={executeTool}
+                    disabled={loading}
+                    style={{
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(139, 92, 246, 0.3)',
+                      marginLeft: '0.25rem'
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Card para Subnet Calculator */}
+              {selectedTool === 'subnet-calc' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(139, 92, 246, 0.04) 100%)',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid rgba(139, 92, 246, 0.35)',
+                  width: 'fit-content',
+                  maxWidth: '700px',
+                  boxShadow: '0 2px 12px rgba(139, 92, 246, 0.15)'
+                }}>
+                  {/* CIDR */}
+                  <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    CIDR:
+                  </span>
+                  <InputText
+                    value={subnetCalcCidr}
+                    onChange={(e) => setSubnetCalcCidr(e.target.value)}
+                    placeholder="192.168.1.0/24"
+                    style={{
+                      width: '300px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '30px'
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && executeTool()}
+                  />
+                  
+                  {/* Botón Calcular */}
+                  <Button
+                    label="Calcular"
+                    icon="pi pi-calculator"
+                    onClick={executeTool}
+                    disabled={loading}
+                    style={{
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(139, 92, 246, 0.3)',
+                      marginLeft: '0.25rem'
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Card para Wake on LAN */}
+              {selectedTool === 'wake-on-lan' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(139, 92, 246, 0.04) 100%)',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid rgba(139, 92, 246, 0.35)',
+                  width: 'fit-content',
+                  maxWidth: '700px',
+                  boxShadow: '0 2px 12px rgba(139, 92, 246, 0.15)'
+                }}>
+                  {/* MAC */}
+                  <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    MAC:
+                  </span>
+                  <InputText
+                    value={wolMac}
+                    onChange={(e) => setWolMac(e.target.value)}
+                    placeholder="AA:BB:CC:DD:EE:FF"
+                    style={{
+                      width: '300px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '30px'
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && executeTool()}
+                  />
+                  
+                  {/* Botón Enviar */}
+                  <Button
+                    label="Enviar"
+                    icon="pi pi-power-off"
+                    onClick={executeTool}
+                    disabled={loading}
+                    style={{
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(139, 92, 246, 0.3)',
+                      marginLeft: '0.25rem'
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Card para Host Vulnerability Scanner */}
               {selectedTool === 'host-vuln-scan' && (
                 <div style={{
@@ -3438,7 +3612,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
           {/* Contenido: formulario y resultados */}
           <div className="network-tools-form-results">
             {/* Panel de formulario - Solo si NO es tool con header especial */}
-            {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) && (
+            {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) && (
               <div className="network-tools-form" style={{
                 padding: '1rem',
                 paddingBottom: '2rem',
@@ -3454,9 +3628,9 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
               padding: '1rem',
               paddingBottom: '2rem',
               background: 'rgba(0,0,0,0.1)',
-              width: ['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) ? '100%' : undefined
+              width: ['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) ? '100%' : undefined
             }}>
-              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) && (
+              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) && (
                 <div style={{
                   marginBottom: '0.75rem',
                   fontSize: '0.85rem',
