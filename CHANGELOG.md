@@ -10,6 +10,21 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 ### 🔧 Mejoras y Correcciones
 - **Actualización de Versión**: Actualización a versión 1.6.2 con mejoras generales
 
+### 🔌 Mejoras de Túneles SSH
+- **Verificación de Puertos**: Verificación automática de puertos libres antes de crear túneles
+- **Limpieza Automática**: Cierre automático de túneles anteriores que usen el mismo puerto
+- **Limpieza al Cerrar App**: Todos los túneles SSH se cierran correctamente al cerrar la aplicación
+- **Gestión de Recursos**: Prevención de puertos ocupados y túneles huérfanos
+- **Mensajes de Error Mejorados**: Mensajes claros cuando un puerto está ocupado
+
+### 🚀 Optimizaciones de Arranque
+- **Arranque Más Rápido**: Optimizaciones significativas que reducen el tiempo de inicio de la aplicación
+- **Lazy Loading de Módulos**: Carga diferida de módulos pesados (SSH2, Docker, Guacamole, etc.) solo cuando se necesitan
+- **Inicialización Diferida**: Servicios pesados (Guacamole, AnythingLLM, OpenWebUI) se inicializan después de mostrar la ventana
+- **Registro Progresivo de Handlers**: Handlers críticos se registran inmediatamente, secundarios después de 50ms
+- **Profiler de Arranque**: Sistema de medición de tiempos de carga para identificar cuellos de botella
+- **Optimización de Desarrollo**: electron-reloader solo se carga en modo desarrollo
+
 ## [1.6.1] - 2025-11-19
 
 ### 🐛 Correcciones de Bugs

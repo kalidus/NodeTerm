@@ -90,6 +90,23 @@ npm run build:win
 - Agrupación de pestañas por proyectos
 - Pool de conexiones para optimización de recursos
 
+### 🔌 **Túneles SSH Avanzados**
+- **Túneles Locales (-L)**: Redirige puerto local a servidor remoto
+- **Túneles Remotos (-R)**: Redirige puerto remoto a servidor local
+- **Proxy SOCKS Dinámico (-D)**: Proxy SOCKS5 para enrutar todo el tráfico
+- **Verificación de Puertos**: Verificación automática de puertos libres antes de crear túneles
+- **Limpieza Automática**: Cierre automático de túneles anteriores que usen el mismo puerto
+- **Gestión de Recursos**: Prevención de puertos ocupados y túneles huérfanos
+- **Limpieza al Cerrar**: Todos los túneles se cierran correctamente al cerrar la aplicación
+- **Logs en Tiempo Real**: Visualización de logs y estado de túneles activos
+
+### 🚀 **Optimizaciones de Arranque**
+- **Arranque Mucho Más Rápido**: Optimizaciones significativas que reducen drásticamente el tiempo de inicio
+- **Lazy Loading Inteligente**: Módulos pesados se cargan solo cuando se necesitan
+- **Inicialización Diferida**: Servicios pesados se inicializan después de mostrar la ventana
+- **Registro Progresivo**: Handlers críticos primero, secundarios después para no bloquear la UI
+- **Profiler Integrado**: Sistema de medición de tiempos para monitorear el arranque
+
 ### 📊 **Monitoreo y Estadísticas**
 - CPU, RAM y carga del sistema en tiempo real
 - Gráficas de histórico de rendimiento
@@ -123,9 +140,23 @@ npm run build:win
 
 ## 🎉 Versión Actual: v1.6.2
 
+### 🔌 Mejoras de Túneles SSH
+- **Verificación de Puertos**: Verificación automática de puertos libres antes de crear túneles
+- **Limpieza Automática**: Cierre automático de túneles anteriores que usen el mismo puerto
+- **Limpieza al Cerrar App**: Todos los túneles SSH se cierran correctamente al cerrar la aplicación
+- **Gestión de Recursos**: Prevención de puertos ocupados y túneles huérfanos
+- **Mensajes de Error Mejorados**: Mensajes claros cuando un puerto está ocupado
+
+### 🚀 Optimizaciones de Arranque
+- **Arranque Mucho Más Rápido**: Optimizaciones significativas que reducen drásticamente el tiempo de inicio
+- **Lazy Loading**: Módulos pesados (SSH2, Docker, Guacamole, etc.) se cargan solo cuando se necesitan
+- **Inicialización Diferida**: Servicios pesados se inicializan después de mostrar la ventana
+- **Mejora de Percepción**: La aplicación aparece más rápido mientras los servicios se cargan en background
+
 ### 🐛 Correcciones de Bugs
 - **Fix de Conexión WALLIX**: Corrección de problemas críticos con conexiones a través de Bastion Wallix
 - **Mejora de Estabilidad**: Mejoras en la estabilidad y confiabilidad de las conexiones SSH que utilizan servidores bastion
+- **Fix de Túneles Huérfanos**: Corrección de problemas donde los túneles quedaban abiertos al cerrar la app
 
 ### 🔄 Sistema de Actualización Automática (v1.6.0)
 - **Actualizaciones desde GitHub Releases**: Sistema completo de actualización automática
