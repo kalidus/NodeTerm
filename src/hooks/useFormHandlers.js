@@ -79,6 +79,8 @@ export const useFormHandlers = ({
   // Estados de formularios SSH Tunnel
   setShowSSHTunnelDialog,
   closeSSHTunnelDialogWithReset,
+  editingSSHTunnelNode,
+  setEditingSSHTunnelNode,
   
   // Funciones de gestión de datos
   nodes, setNodes,
@@ -368,6 +370,51 @@ export const useFormHandlers = ({
       return;
     }
     
+    const nodesCopy = deepCopy(nodes);
+    const isEditing = editingSSHTunnelNode !== null;
+    
+    if (isEditing && editingSSHTunnelNode) {
+      // Modo edición: actualizar nodo existente
+      const nodeToEdit = findNodeByKey(nodesCopy, editingSSHTunnelNode.key);
+      if (nodeToEdit) {
+        nodeToEdit.label = tunnelData.name.trim();
+        nodeToEdit.data = {
+          ...nodeToEdit.data,
+          type: 'ssh-tunnel',
+          tunnelType: tunnelData.tunnelType,
+          sshHost: tunnelData.sshHost.trim(),
+          sshPort: tunnelData.sshPort || 22,
+          sshUser: tunnelData.sshUser.trim(),
+          sshPassword: tunnelData.sshPassword || '',
+          authType: tunnelData.authType || 'password',
+          privateKeyPath: tunnelData.privateKeyPath || '',
+          passphrase: tunnelData.passphrase || '',
+          localHost: tunnelData.localHost || '127.0.0.1',
+          localPort: tunnelData.localPort || 0,
+          remoteHost: tunnelData.remoteHost || '',
+          remotePort: tunnelData.remotePort || 0,
+          bindHost: tunnelData.bindHost || '0.0.0.0'
+        };
+        
+        setNodes(nodesCopy);
+        if (setShowSSHTunnelDialog) {
+          setShowSSHTunnelDialog(false);
+        }
+        if (setEditingSSHTunnelNode) {
+          setEditingSSHTunnelNode(null);
+        }
+        
+        toast.current.show({
+          severity: 'success',
+          summary: 'Túnel SSH actualizado',
+          detail: `Túnel "${tunnelData.name}" actualizado`,
+          life: 3000
+        });
+        return;
+      }
+    }
+    
+    // Modo creación: crear nuevo nodo
     const newKey = generateUniqueKey();
     const newTunnelNode = {
       key: newKey,
@@ -398,7 +445,6 @@ export const useFormHandlers = ({
       isUserCreated: true
     };
     
-    const nodesCopy = deepCopy(nodes);
     if (tunnelData.targetFolder) {
       const parentNode = findNodeByKey(nodesCopy, tunnelData.targetFolder);
       if (parentNode) {
@@ -422,7 +468,89 @@ export const useFormHandlers = ({
       detail: `Túnel "${tunnelData.name}" añadido al árbol`,
       life: 3000
     });
-  }, [nodes, setNodes, deepCopy, findNodeByKey, generateUniqueKey, setShowSSHTunnelDialog, toast]);
+  }, [nodes, setNodes, deepCopy, findNodeByKey, generateUniqueKey, setShowSSHTunnelDialog, editingSSHTunnelNode, setEditingSSHTunnelNode, toast]);
+
+  /**
+   * Abrir diálogo de edición de túnel SSH
+   */
+  const openEditSSHTunnelDialog = useCallback((node) => {
+    if (!node || !node.data) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Nodo inválido para editar',
+        life: 3000
+      });
+      return;
+    }
+    
+    // Establecer el nodo que estamos editando
+    if (setEditingSSHTunnelNode) {
+      setEditingSSHTunnelNode(node);
+    }
+    
+    // Abrir el diálogo (el DialogsManager pasará initialData basado en editingSSHTunnelNode)
+    if (setShowSSHTunnelDialog) {
+      setShowSSHTunnelDialog(true);
+    }
+  }, [setEditingSSHTunnelNode, setShowSSHTunnelDialog, toast]);
+
+  /**
+   * Duplicar túnel SSH
+   */
+  const duplicateSSHTunnel = useCallback((node) => {
+    if (!node || !node.data) return;
+    
+    const newKey = generateUniqueKey();
+    const duplicatedNode = {
+      key: newKey,
+      label: `${node.label} (copia)`,
+      data: {
+        ...node.data,
+        tunnelStatus: 'stopped',
+        activeTunnelId: null
+      },
+      draggable: true,
+      droppable: false,
+      uid: newKey,
+      createdAt: new Date().toISOString(),
+      isUserCreated: true
+    };
+    
+    const nodesCopy = deepCopy(nodes);
+    
+    // Buscar el nodo original y su padre
+    let parentFound = null;
+    const findParentAndNode = (nodesList, targetKey, parent = null) => {
+      for (const n of nodesList) {
+        if (n.key === targetKey) {
+          return parent;
+        }
+        if (n.children && n.children.length > 0) {
+          const found = findParentAndNode(n.children, targetKey, n);
+          if (found !== undefined) return found;
+        }
+      }
+      return undefined;
+    };
+    
+    parentFound = findParentAndNode(nodesCopy, node.key);
+    
+    if (parentFound && parentFound.droppable) {
+      parentFound.children = parentFound.children || [];
+      parentFound.children.unshift(duplicatedNode);
+    } else {
+      nodesCopy.unshift(duplicatedNode);
+    }
+    
+    setNodes(nodesCopy);
+    toast.current.show({
+      severity: 'success',
+      summary: 'Duplicado',
+      detail: `Túnel "${duplicatedNode.label}" duplicado`,
+      life: 3000
+    });
+  }, [nodes, setNodes, deepCopy, generateUniqueKey, toast]);
 
   /**
    * Crear nueva entrada de Password
@@ -1112,11 +1240,13 @@ export const useFormHandlers = ({
     createNewSSH,
     createNewRdp,
     createNewSSHTunnel,
-    
+    openEditSSHTunnelDialog,
+    duplicateSSHTunnel,
+
     // Funciones de edición
     saveEditSSH,
     saveEditFolder,
-    
+
     // Funciones de diálogos
     openEditSSHDialog,
     openNewRdpDialog,
