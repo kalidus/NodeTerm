@@ -14,6 +14,22 @@ Esta es una **versión patch** que incluye mejoras y correcciones generales. Est
 
 ## ✨ Características Principales
 
+### 🔌 Túneles SSH Mejorados
+- **Verificación de Puertos**: Verificación automática de puertos libres antes de crear túneles SSH
+- **Limpieza Automática**: Cierre automático de túneles anteriores que usen el mismo puerto local
+- **Gestión de Recursos**: Prevención de puertos ocupados y túneles huérfanos
+- **Limpieza al Cerrar**: Todos los túneles SSH se cierran correctamente al cerrar la aplicación
+- **Mensajes de Error Claros**: Información detallada cuando un puerto está ocupado por otra aplicación
+- **Soporte Completo**: Funciona con túneles locales, remotos y proxies SOCKS dinámicos
+
+### 🚀 Optimizaciones de Arranque
+- **Arranque Mucho Más Rápido**: Optimizaciones significativas que reducen drásticamente el tiempo de inicio
+- **Lazy Loading Inteligente**: Módulos pesados (SSH2, Docker, Guacamole, AnythingLLM, OpenWebUI) se cargan solo cuando se necesitan
+- **Inicialización Diferida**: Servicios pesados se inicializan después de que la ventana esté visible, mejorando la percepción de velocidad
+- **Registro Progresivo**: Handlers críticos se registran inmediatamente, secundarios después de 50ms para no bloquear la UI
+- **Profiler Integrado**: Sistema de medición de tiempos de carga para monitorear y optimizar el arranque
+- **Optimización de Desarrollo**: electron-reloader solo se carga en modo desarrollo, reduciendo el overhead en producción
+
 ### 🤖 Sistema Completo de IA y Chat
 - **Chat de IA Integrado**: Sistema completo de chat con múltiples proveedores (OpenAI, Anthropic, Google, Ollama)
 - **Soporte Multi-Proveedor**: Integración nativa con OpenAI GPT, Anthropic Claude, Google Gemini, y modelos locales Ollama
@@ -169,6 +185,13 @@ Esta es una **versión patch** que incluye mejoras y correcciones generales. Est
 - **Gestión de Memoria**: Optimización en el manejo de actualizaciones y modelos IA
 - **Carga de Datos**: Mejor rendimiento al verificar actualizaciones y cargar conversaciones
 - **Renderizado**: Los componentes se renderizan más eficientemente
+- **Arranque Optimizado**: Reducción significativa del tiempo de inicio gracias a lazy loading e inicialización diferida
+
+### 🔌 Correcciones de Túneles SSH
+- **Fix de Túneles Huérfanos**: Corrección de problemas donde los túneles quedaban abiertos al cerrar la app
+- **Fix de Puertos Ocupados**: Mejor manejo de errores cuando un puerto está en uso
+- **Fix de Limpieza**: Corrección de problemas de limpieza de recursos al cerrar túneles
+- **Mejora de Estabilidad**: Los túneles ahora se gestionan de forma más robusta
 
 ### 🎯 Correcciones Generales
 - **Estabilidad General**: Mejoras significativas en la estabilidad de la aplicación
