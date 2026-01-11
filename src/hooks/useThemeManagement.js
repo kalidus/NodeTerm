@@ -247,6 +247,8 @@ export const useThemeManagement = () => {
   useEffect(() => {
     try {
       localStorage.setItem('iconThemeSidebar', iconThemeSidebar);
+      // Notificar a los componentes que el tema de iconos cambió
+      window.dispatchEvent(new Event('icon-theme-changed'));
     } catch {}
   }, [iconThemeSidebar]);
 

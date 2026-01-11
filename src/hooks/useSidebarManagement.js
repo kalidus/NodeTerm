@@ -235,12 +235,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
               host: node.data?.useBastionWallix ? node.data?.targetServer : node.data?.host,
               username: node.data?.user,
               port: node.data?.port || 22,
-              password: node.data?.password || '',
-              useBastionWallix: node.data?.useBastionWallix || false,
-              bastionHost: node.data?.bastionHost || '',
-              bastionUser: node.data?.bastionUser || '',
-              targetServer: node.data?.targetServer || '',
-              remoteFolder: node.data?.remoteFolder || ''
+              password: node.data?.password || ''
             });
           } catch (e) { /* noop */ }
         }
@@ -353,34 +348,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
               host: node.data?.host || node.data?.server || node.data?.hostname,
               username: node.data?.username,
               port: node.data?.port || 3389,
-              password: node.data?.password || '',
-              clientType: node.data?.clientType || 'guacamole',
-              domain: node.data?.domain || '',
-              resolution: node.data?.resolution || '1024x768',
-              colors: node.data?.colors || '32',
-              // Opciones avanzadas de RDP (usar nombres consistentes con el formulario)
-              guacEnableWallpaper: node.data?.guacEnableWallpaper || node.data?.enableWallpaper || false,
-              guacEnableDesktopComposition: node.data?.guacEnableDesktopComposition || node.data?.enableDesktopComposition || false,
-              guacEnableFontSmoothing: node.data?.guacEnableFontSmoothing || node.data?.enableFontSmoothing || false,
-              guacEnableTheming: node.data?.guacEnableTheming || node.data?.enableTheming || false,
-              guacEnableFullWindowDrag: node.data?.guacEnableFullWindowDrag || node.data?.enableFullWindowDrag || false,
-              guacEnableMenuAnimations: node.data?.guacEnableMenuAnimations || node.data?.enableMenuAnimations || false,
-              guacEnableGfx: node.data?.guacEnableGfx || node.data?.enableGfx || false,
-              guacDisableGlyphCaching: node.data?.guacDisableGlyphCaching || node.data?.disableGlyphCaching || false,
-              guacDisableOffscreenCaching: node.data?.guacDisableOffscreenCaching || node.data?.disableOffscreenCaching || false,
-              guacDisableBitmapCaching: node.data?.guacDisableBitmapCaching || node.data?.disableBitmapCaching || false,
-              guacDisableCopyRect: node.data?.guacDisableCopyRect || node.data?.disableCopyRect || false,
-              autoResize: node.data?.autoResize !== false, // Por defecto true, solo false si explícitamente se establece
-              guacDpi: node.data?.guacDpi || 96,
-              guacSecurity: node.data?.guacSecurity || 'any',
-              redirectFolders: node.data?.redirectFolders !== false,
-              redirectClipboard: node.data?.redirectClipboard !== false,
-              redirectPrinters: node.data?.redirectPrinters || false,
-              redirectAudio: node.data?.redirectAudio !== false,
-              fullscreen: node.data?.fullscreen || false,
-              smartSizing: node.data?.smartSizing !== false,
-              span: node.data?.span || false,
-              admin: node.data?.admin || false
+              password: node.data?.password || ''
             });
           } catch (e) { /* noop */ }
         }
@@ -466,17 +434,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
               name: node.label,
               host: node.data?.host || node.data?.server || node.data?.hostname,
               port: node.data?.port || 5900,
-              password: node.data?.password || '',
-              clientType: node.data?.clientType || 'guacamole',
-              resolution: node.data?.resolution || '1024x768',
-              colorDepth: node.data?.colorDepth || 32,
-              readOnly: node.data?.readOnly || false,
-              enableCompression: node.data?.enableCompression !== false,
-              imageQuality: node.data?.imageQuality || 'lossless',
-              autoReconnect: node.data?.autoReconnect !== false,
-              autoResize: node.data?.autoResize !== false,
-              redirectClipboard: node.data?.redirectClipboard !== false,
-              guacDpi: node.data?.guacDpi || 96
+              password: node.data?.password || ''
             });
           } catch (e) { /* noop */ }
         }
@@ -577,10 +535,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
               host: node.data?.host,
               username: node.data?.username || node.data?.user,
               port: node.data?.port || (protocol === 'ftp' ? 21 : 22),
-              password: node.data?.password || '',
-              protocol: protocol,
-              remoteFolder: node.data?.remoteFolder || '',
-              targetFolder: node.data?.targetFolder || ''
+              password: node.data?.password || ''
             });
           } catch (e) { /* noop */ }
         }

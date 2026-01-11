@@ -14,6 +14,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	const [favQuery, setFavQuery] = useState('');
 	const [currentPage, setCurrentPage] = useState(1);
 	const [containerHeight, setContainerHeight] = useState(400); // Altura inicial estimada
+	const [iconThemeKey, setIconThemeKey] = useState(0); // Para forzar re-render cuando cambia el tema
 	const favoritesContainerRef = useRef(null);
 	const resizeRafRef = useRef(0);
 	const lastMeasuredHeightRef = useRef(0);
@@ -75,6 +76,22 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 		return () => {
 			window.removeEventListener('home-tab-font-changed', handleHomeTabFontChange);
 			window.removeEventListener('sidebar-font-changed', handleHomeTabFontChange);
+		};
+	}, []);
+
+	// Escuchar cambios en el tema de iconos de la Sidebar
+	useEffect(() => {
+		const handleIconThemeChange = () => {
+			// Forzar re-render cuando cambia el tema de iconos
+			setIconThemeKey(prev => prev + 1);
+		};
+		
+		window.addEventListener('storage', handleIconThemeChange);
+		window.addEventListener('icon-theme-changed', handleIconThemeChange);
+		
+		return () => {
+			window.removeEventListener('storage', handleIconThemeChange);
+			window.removeEventListener('icon-theme-changed', handleIconThemeChange);
 		};
 	}, []);
 
@@ -141,20 +158,26 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	};
 
 	const getConnectionTypeIconSVG = (type) => {
-		const iconTheme = localStorage.getItem('nodeterm_icon_theme') || 'material';
-		const theme = iconThemes[iconTheme] || iconThemes['material'];
+		// Usar el mismo tema de iconos que la Sidebar
+		const iconTheme = localStorage.getItem('iconThemeSidebar') || 'nord';
+		const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['nord'].icons;
+		
 		switch (type) {
 			case 'ssh':
-				return theme.icons.ssh;
+				return themeIcons.ssh;
 			case 'rdp':
 			case 'rdp-guacamole':
-				return theme.icons.rdp;
+				return themeIcons.rdp;
 			case 'vnc':
 			case 'vnc-guacamole':
-				return theme.icons.vnc;
+				return themeIcons.vnc;
 			case 'sftp':
 			case 'explorer':
-				return theme.icons.sftp;
+				return themeIcons.sftp;
+			case 'ftp':
+				return themeIcons.ftp || themeIcons.sftp;
+			case 'scp':
+				return themeIcons.scp || themeIcons.sftp;
 			default:
 				return null;
 		}
@@ -394,8 +417,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 				aria-label={`Conectar a ${connection.name}`}
 				style={{
 					'--fav-accent': typeColor,
-					'--fav-icon-bg': `rgba(${r}, ${g}, ${b}, 0.15)`,
-					'--fav-icon-border': `rgba(${r}, ${g}, ${b}, 0.35)`,
+					'--fav-icon-bg': `rgba(${r}, ${g}, ${b}, 0.08)`,
+					'--fav-icon-border': `rgba(${r}, ${g}, ${b}, 0.25)`,
 					'--fav-icon-color': typeColor,
 					'--fav-chip-bg': `rgba(${r}, ${g}, ${b}, 0.18)`,
 					'--fav-chip-border': `rgba(${r}, ${g}, ${b}, 0.45)`,
@@ -419,17 +442,26 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 			>
 				{/* Icono grande en badge a la izquierda */}
 				<div className="favorite-tile__icon-badge">
-					{getConnectionTypeIconSVG(connection.type) ? (
-						React.cloneElement(getConnectionTypeIconSVG(connection.type), {
-							width: '18',
-							height: '18'
-						})
-					) : (
-						<i
-							className={getConnectionTypeIcon(connection.type)}
-							aria-hidden="true"
-						/>
-					)}
+					{(() => {
+						const iconSVG = getConnectionTypeIconSVG(connection.type);
+						if (iconSVG) {
+							return React.cloneElement(iconSVG, {
+								width: 22,
+								height: 22,
+								style: {
+									...iconSVG.props?.style,
+									width: '22px',
+									height: '22px'
+								}
+							});
+						}
+						return (
+							<i
+								className={getConnectionTypeIcon(connection.type)}
+								aria-hidden="true"
+							/>
+						);
+					})()}
 				</div>
 				
 				{/* Contenido central */}
