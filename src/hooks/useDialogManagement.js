@@ -16,6 +16,26 @@ export const useDialogManagement = () => {
   const [showFileConnectionDialog, setShowFileConnectionDialog] = useState(false);
   const [showProtocolSelectionDialog, setShowProtocolSelectionDialog] = useState(false);
   const [showNetworkToolsDialog, setShowNetworkToolsDialog] = useState(false);
+  const [showSSHTunnelDialog, setShowSSHTunnelDialog] = useState(false);
+
+  // ============ ESTADOS DE FORMULARIOS SSH TUNNEL ============
+  
+  const [sshTunnelName, setSSHTunnelName] = useState('');
+  const [sshTunnelType, setSSHTunnelType] = useState('local');
+  const [sshTunnelHost, setSSHTunnelHost] = useState('');
+  const [sshTunnelPort, setSSHTunnelPort] = useState(22);
+  const [sshTunnelUser, setSSHTunnelUser] = useState('');
+  const [sshTunnelPassword, setSSHTunnelPassword] = useState('');
+  const [sshTunnelAuthType, setSSHTunnelAuthType] = useState('password');
+  const [sshTunnelPrivateKeyPath, setSSHTunnelPrivateKeyPath] = useState('');
+  const [sshTunnelPassphrase, setSSHTunnelPassphrase] = useState('');
+  const [sshTunnelLocalHost, setSSHTunnelLocalHost] = useState('127.0.0.1');
+  const [sshTunnelLocalPort, setSSHTunnelLocalPort] = useState('');
+  const [sshTunnelRemoteHost, setSSHTunnelRemoteHost] = useState('');
+  const [sshTunnelRemotePort, setSSHTunnelRemotePort] = useState('');
+  const [sshTunnelBindHost, setSSHTunnelBindHost] = useState('0.0.0.0');
+  const [sshTunnelTargetFolder, setSSHTunnelTargetFolder] = useState(null);
+  const [editingSSHTunnelNode, setEditingSSHTunnelNode] = useState(null);
 
   // ============ ESTADOS DE FORMULARIOS SSH ============
   
@@ -159,6 +179,39 @@ export const useDialogManagement = () => {
     setEditFolderIcon(null);
   };
 
+  // Resetear todos los campos SSH Tunnel
+  const resetSSHTunnelForm = () => {
+    setSSHTunnelName('');
+    setSSHTunnelType('local');
+    setSSHTunnelHost('');
+    setSSHTunnelPort(22);
+    setSSHTunnelUser('');
+    setSSHTunnelPassword('');
+    setSSHTunnelAuthType('password');
+    setSSHTunnelPrivateKeyPath('');
+    setSSHTunnelPassphrase('');
+    setSSHTunnelLocalHost('127.0.0.1');
+    setSSHTunnelLocalPort('');
+    setSSHTunnelRemoteHost('');
+    setSSHTunnelRemotePort('');
+    setSSHTunnelBindHost('0.0.0.0');
+    setSSHTunnelTargetFolder(null);
+    setEditingSSHTunnelNode(null);
+  };
+
+  // Abrir diálogo SSH Tunnel con reset automático
+  const openSSHTunnelDialog = (targetFolder = null) => {
+    resetSSHTunnelForm();
+    setSSHTunnelTargetFolder(targetFolder);
+    setShowSSHTunnelDialog(true);
+  };
+
+  // Cerrar diálogo SSH Tunnel con reset automático
+  const closeSSHTunnelDialogWithReset = () => {
+    setShowSSHTunnelDialog(false);
+    resetSSHTunnelForm();
+  };
+
   // Abrir diálogo SSH con reset automático
   const openSSHDialog = (targetFolder = null) => {
     resetSSHForm();
@@ -224,6 +277,25 @@ export const useDialogManagement = () => {
     showFileConnectionDialog, setShowFileConnectionDialog,
     showProtocolSelectionDialog, setShowProtocolSelectionDialog,
     showNetworkToolsDialog, setShowNetworkToolsDialog,
+    showSSHTunnelDialog, setShowSSHTunnelDialog,
+
+    // Estados de formularios SSH Tunnel
+    sshTunnelName, setSSHTunnelName,
+    sshTunnelType, setSSHTunnelType,
+    sshTunnelHost, setSSHTunnelHost,
+    sshTunnelPort, setSSHTunnelPort,
+    sshTunnelUser, setSSHTunnelUser,
+    sshTunnelPassword, setSSHTunnelPassword,
+    sshTunnelAuthType, setSSHTunnelAuthType,
+    sshTunnelPrivateKeyPath, setSSHTunnelPrivateKeyPath,
+    sshTunnelPassphrase, setSSHTunnelPassphrase,
+    sshTunnelLocalHost, setSSHTunnelLocalHost,
+    sshTunnelLocalPort, setSSHTunnelLocalPort,
+    sshTunnelRemoteHost, setSSHTunnelRemoteHost,
+    sshTunnelRemotePort, setSSHTunnelRemotePort,
+    sshTunnelBindHost, setSSHTunnelBindHost,
+    sshTunnelTargetFolder, setSSHTunnelTargetFolder,
+    editingSSHTunnelNode, setEditingSSHTunnelNode,
 
     // Estados de formularios SSH
     sshName, setSSHName,
@@ -293,8 +365,9 @@ export const useDialogManagement = () => {
     // Funciones de utilidad
     resetSSHForm, resetRDPForm, resetFolderForm,
     resetEditSSHForm, resetEditFolderForm,
-    openSSHDialog, openRDPDialog, openFolderDialog,
+    resetSSHTunnelForm,
+    openSSHDialog, openRDPDialog, openFolderDialog, openSSHTunnelDialog,
     closeSSHDialogWithReset, closeRDPDialogWithReset, closeFolderDialogWithReset,
-    closeEditSSHDialogWithReset, closeEditFolderDialogWithReset
+    closeEditSSHDialogWithReset, closeEditFolderDialogWithReset, closeSSHTunnelDialogWithReset
   };
 };

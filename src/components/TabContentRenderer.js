@@ -17,6 +17,7 @@ import GlobalAuditTab from './GlobalAuditTab';
 import AIChatTab from './AIChatTab';
 import AnythingLLMTab from './AnythingLLMTab';
 import OpenWebUITab from './OpenWebUITab';
+import SSHTunnelTab from './SSHTunnelTab';
 import { themes } from '../themes';
 import { TAB_TYPES } from '../utils/constants';
 import { recordRecentPassword } from '../utils/connectionStore';
@@ -1532,6 +1533,23 @@ const TabContentRenderer = React.memo(({
         fontFamily={fontFamily}
         fontSize={fontSize}
         theme={terminalTheme.theme}
+      />
+    );
+  }
+
+  // Tab de túnel SSH
+  if (tab.type === 'ssh-tunnel') {
+    return (
+      <SSHTunnelTab
+        key={tab.key}
+        tunnelConfig={tab.tunnelConfig}
+        tunnelId={tab.tunnelId}
+        onClose={() => {
+          // El cierre de la pestaña se maneja externamente
+        }}
+        onStatusChange={(status) => {
+          // Opcionalmente actualizar el estado del nodo en el sidebar
+        }}
       />
     );
   }

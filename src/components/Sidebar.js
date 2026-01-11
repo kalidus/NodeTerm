@@ -1525,6 +1525,7 @@ const Sidebar = React.memo(({
     const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
     const isFileConnection = node.data && (node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp');
     const isPassword = node.data && node.data.type === 'password';
+    const isSSHTunnel = node.data && node.data.type === 'ssh-tunnel';
     // Icono según tema seleccionado para la sidebar
     let icon = null;
     const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['nord'].icons;
@@ -1564,6 +1565,32 @@ const Sidebar = React.memo(({
       }) : '🖥️'; // Icono VNC o fallback
     } else if (isPassword) {
       icon = <span className="pi pi-key" style={{ color: '#ffc107', fontSize: `${connectionIconSize}px` }} />;
+    } else if (isSSHTunnel) {
+      // Icono para túneles SSH con indicador de estado
+      const tunnelStatus = node.data?.tunnelStatus || 'stopped';
+      const statusColors = {
+        active: '#a6e3a1',
+        connecting: '#89b4fa',
+        error: '#f38ba8',
+        stopped: '#6c7086'
+      };
+      icon = (
+        <span style={{ position: 'relative', display: 'inline-flex' }}>
+          <span className="pi pi-share-alt" style={{ color: statusColors[tunnelStatus] || '#89b4fa', fontSize: `${connectionIconSize}px` }} />
+          {tunnelStatus === 'active' && (
+            <span style={{
+              position: 'absolute',
+              bottom: '-2px',
+              right: '-2px',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: '#a6e3a1',
+              border: '1px solid #1e1e2e'
+            }} />
+          )}
+        </span>
+      );
     } else if (isFileConnection) {
       // Icono para conexiones de archivos (SFTP/FTP/SCP) usando el tema
       const protocol = node.data?.protocol || node.data?.type || 'sftp';
@@ -1853,6 +1880,8 @@ const Sidebar = React.memo(({
             onOpenVncConnection(node, nodes);
           } else if (isFileConnection && sidebarCallbacksRef?.current?.openFileConnection) {
             sidebarCallbacksRef.current.openFileConnection(node, nodes);
+          } else if (isSSHTunnel && sidebarCallbacksRef?.current?.openSSHTunnel) {
+            sidebarCallbacksRef.current.openSSHTunnel(node, nodes);
           }
         }}
         style={{ 
@@ -1863,7 +1892,7 @@ const Sidebar = React.memo(({
           gap: '6px'
         }}
         title={title}
-        data-connection-type={isSSH ? 'ssh' : (isRDP ? 'rdp' : (isVNC ? 'vnc' : null))}
+        data-connection-type={isSSH ? 'ssh' : (isRDP ? 'rdp' : (isVNC ? 'vnc' : (isSSHTunnel ? 'ssh-tunnel' : null)))}
         data-node-type={isFolder ? 'folder' : 'connection'}
       >
         <span style={{ 

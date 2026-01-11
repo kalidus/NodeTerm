@@ -1066,6 +1066,7 @@ const App = () => {
     showFileConnectionDialog, setShowFileConnectionDialog,
     showProtocolSelectionDialog, setShowProtocolSelectionDialog,
     showNetworkToolsDialog, setShowNetworkToolsDialog,
+    showSSHTunnelDialog, setShowSSHTunnelDialog,
     // Estados de formularios SSH
     sshName, setSSHName,
     sshHost, setSSHHost,
@@ -1121,9 +1122,10 @@ const App = () => {
     // Funciones de utilidad
     resetSSHForm, resetRDPForm, resetFolderForm,
     resetEditSSHForm, resetEditFolderForm,
-    openSSHDialog, openRDPDialog, openFolderDialog,
+    resetSSHTunnelForm,
+    openSSHDialog, openRDPDialog, openFolderDialog, openSSHTunnelDialog,
     closeSSHDialogWithReset, closeRDPDialogWithReset, closeFolderDialogWithReset,
-    closeEditSSHDialogWithReset, closeEditFolderDialogWithReset
+    closeEditSSHDialogWithReset, closeEditFolderDialogWithReset, closeSSHTunnelDialogWithReset
   } = useDialogManagement();
 
 
@@ -1205,6 +1207,7 @@ const App = () => {
     createNewFolder,
     createNewSSH,
     createNewRdp,
+    createNewSSHTunnel,
     saveEditSSH,
     saveEditFolder,
     openEditSSHDialog,
@@ -1273,6 +1276,9 @@ const App = () => {
     editFolderNode, setEditFolderNode,
     editFolderName, setEditFolderName,
     closeFolderDialogWithReset,
+    // Estados SSH Tunnel
+    setShowSSHTunnelDialog,
+    closeSSHTunnelDialogWithReset,
     // Utilidades
     nodes, setNodes,
     findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser,
@@ -1831,6 +1837,9 @@ const App = () => {
     };
     sidebarCallbacksRef.current.editFileConnection = (node) => {
       openEditFileConnectionDialog(node);
+    };
+    sidebarCallbacksRef.current.openSSHTunnel = (node, nodes) => {
+      onOpenSSHTunnel(node, nodes);
     };
     sidebarCallbacksRef.current.deleteNode = (nodeKey, nodeLabel) => {
       // Detectar si la carpeta tiene hijos
@@ -2482,6 +2491,9 @@ const App = () => {
         setShowProtocolSelectionDialog={setShowProtocolSelectionDialog}
         showNetworkToolsDialog={showNetworkToolsDialog}
         setShowNetworkToolsDialog={setShowNetworkToolsDialog}
+        showSSHTunnelDialog={showSSHTunnelDialog}
+        setShowSSHTunnelDialog={setShowSSHTunnelDialog}
+        createNewSSHTunnel={createNewSSHTunnel}
 
         // Estados de formularios SSH
         sshName={sshName}

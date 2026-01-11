@@ -134,7 +134,8 @@ contextBridge.exposeInMainWorld('electron', {
         // 'cleanup-temp-file', // DESHABILITADO
         /^recording:.*$/,
         /^mcp:.*$/,
-        /^network-tools:.*$/
+        /^network-tools:.*$/,
+        /^ssh-tunnel:.*$/
       ];
       if (validChannels.some(regex => {
         if (typeof regex === 'string') {
@@ -165,7 +166,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^anythingllm:.*$/,
         /^updater-event$/,
         /^network-tools:.*$/,
-        /^system:.*$/ // Eventos de suspensión/reanudación del sistema
+        /^system:.*$/, // Eventos de suspensión/reanudación del sistema
+        /^ssh-tunnel:.*$/ // Eventos de túneles SSH
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         // Deliberately strip event as it includes `sender`
@@ -195,7 +197,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^rdp:.*$/,
         /^updater-event$/,
         /^network-tools:.*$/,
-        /^system:.*$/ // Eventos de suspensión/reanudación del sistema
+        /^system:.*$/, // Eventos de suspensión/reanudación del sistema
+        /^ssh-tunnel:.*$/ // Eventos de túneles SSH
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         ipcRenderer.off(channel, func);
@@ -203,7 +206,8 @@ contextBridge.exposeInMainWorld('electron', {
     },
     removeListener: (channel, func) => {
       const validChannels = [
-        /^updater-event$/
+        /^updater-event$/,
+        /^ssh-tunnel:.*$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         ipcRenderer.removeListener(channel, func);
