@@ -7,7 +7,7 @@
  */
 
 const { ipcMain } = require('electron');
-const { saveGuacdInactivityTimeout } = require('../utils/file-utils');
+const { saveGuacdInactivityTimeout, loadGuacdInactivityTimeout } = require('../utils/file-utils');
 
 /**
  * Registra todos los handlers IPC de Guacamole
@@ -44,10 +44,23 @@ function registerGuacamoleHandlers({
         return { success: false, error: 'Invalid timeout value' };
       }
       
+      // Verificar si el valor realmente cambió antes de guardar
+      const currentValue = typeof guacdInactivityTimeoutMs === 'number' ? guacdInactivityTimeoutMs : null;
+      const savedValue = await loadGuacdInactivityTimeout();
+      
+      // Si el valor es el mismo que el actual o el guardado, no hacer nada
+      if (currentValue === parsed && (savedValue === null || savedValue === parsed)) {
+        // Solo actualizar el servicio si está activo, pero no guardar
+        if (guacdService && typeof guacdService.setInactivityTimeout === 'function') {
+          guacdService.setInactivityTimeout(parsed);
+        }
+        return { success: true, value: parsed, saved: false };
+      }
+      
       // Actualizar la variable global
       guacdInactivityTimeoutMs = parsed;
       
-      // Persistir el valor para que se cargue al reiniciar la app
+      // Persistir el valor solo si realmente cambió
       try {
         await saveGuacdInactivityTimeout(parsed);
         const timeoutMinutes = Math.round(parsed / 60000);
