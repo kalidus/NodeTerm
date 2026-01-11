@@ -3287,10 +3287,11 @@ export function ProtocolSelectionDialog({
       header={headerTemplate}
       visible={visible}
       onHide={onHide}
-      style={{ width: '70vw', maxWidth: '850px' }}
+      style={{ width: '70vw', maxWidth: '95vw', minWidth: '600px', height: 'auto', maxHeight: '90vh' }}
       modal
+      resizable
       className="protocol-selection-dialog-new"
-      contentStyle={{ padding: '0', overflow: 'hidden' }}
+      contentStyle={{ padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: '1', minHeight: '0' }}
     >
       <div className="protocol-selection-layout">
         {/* Panel izquierdo: Categorías */}
