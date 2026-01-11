@@ -13,6 +13,7 @@ import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 import { themes } from '../themes';
 import { getRecents, toggleFavorite, onUpdate, getRecentPasswords } from '../utils/connectionStore';
+import { iconThemes } from '../themes/icon-themes';
 
 const HomeTab = ({
   onCreateSSHConnection,
@@ -41,6 +42,7 @@ const HomeTab = ({
   const [recentPasswords, setRecentPasswords] = useState([]); // Estado para passwords recientes
   const [showAIChat, setShowAIChat] = useState(false); // Estado para mostrar/ocultar chat de IA
   const [recentContainerHeight, setRecentContainerHeight] = useState(400); // Altura del contenedor de recientes
+  const [iconThemeKey, setIconThemeKey] = useState(0); // Para forzar re-render cuando cambia el tema de iconos
   const recentContainerRef = useRef(null);
   const recentResizeRafRef = useRef(0);
   const lastRecentMeasuredHeightRef = useRef(0);
@@ -84,6 +86,22 @@ const HomeTab = ({
     };
     window.addEventListener('theme-changed', onThemeChanged);
     return () => window.removeEventListener('theme-changed', onThemeChanged);
+  }, []);
+
+  // Escuchar cambios en el tema de iconos de la Sidebar
+  useEffect(() => {
+    const handleIconThemeChange = () => {
+      // Forzar re-render cuando cambia el tema de iconos
+      setIconThemeKey(prev => prev + 1);
+    };
+    
+    window.addEventListener('storage', handleIconThemeChange);
+    window.addEventListener('icon-theme-changed', handleIconThemeChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleIconThemeChange);
+      window.removeEventListener('icon-theme-changed', handleIconThemeChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -174,6 +192,33 @@ const HomeTab = ({
   };
 
   // Funciones auxiliares para tipos de conexión
+  // Obtener iconos SVG del tema (igual que la Sidebar)
+  const getConnectionTypeIconSVG = (type) => {
+    // Usar el mismo tema de iconos que la Sidebar
+    const iconTheme = localStorage.getItem('iconThemeSidebar') || 'nord';
+    const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['nord'].icons;
+    
+    switch (type) {
+      case 'ssh':
+        return themeIcons.ssh;
+      case 'rdp':
+      case 'rdp-guacamole':
+        return themeIcons.rdp;
+      case 'vnc':
+      case 'vnc-guacamole':
+        return themeIcons.vnc;
+      case 'sftp':
+      case 'explorer':
+        return themeIcons.sftp;
+      case 'ftp':
+        return themeIcons.ftp || themeIcons.sftp;
+      case 'scp':
+        return themeIcons.scp || themeIcons.sftp;
+      default:
+        return null;
+    }
+  };
+
   const getConnectionTypeIcon = (type) => {
     switch (type) {
       case 'ssh':
@@ -901,10 +946,27 @@ const HomeTab = ({
                       }}
                       >
                         {/* Icono del tipo de conexión */}
-                        <i className={getConnectionTypeIcon(recentConn.type)} style={{
-                          color: getConnectionTypeColor(recentConn.type),
-                          fontSize: '0.6rem'
-                        }} />
+                        {(() => {
+                          const iconSVG = getConnectionTypeIconSVG(recentConn.type);
+                          if (iconSVG) {
+                            return React.cloneElement(iconSVG, {
+                              width: 12,
+                              height: 12,
+                              style: {
+                                ...iconSVG.props?.style,
+                                width: '12px',
+                                height: '12px',
+                                flexShrink: 0
+                              }
+                            });
+                          }
+                          return (
+                            <i className={getConnectionTypeIcon(recentConn.type)} style={{
+                              color: getConnectionTypeColor(recentConn.type),
+                              fontSize: '0.6rem'
+                            }} />
+                          );
+                        })()}
                         
                         {/* Nombre de la conexión */}
                         <span 

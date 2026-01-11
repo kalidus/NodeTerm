@@ -125,23 +125,31 @@
 }
 
 .favorite-tile__icon-badge i {
-  font-size: calc(18px * var(--fav-scale));
+  font-size: calc(22px * var(--fav-scale));
   color: var(--fav-icon-color);
 }
 
 .favorite-tile__icon-badge svg {
-  width: calc(18px * var(--fav-scale));
-  height: calc(18px * var(--fav-scale));
+  width: calc(22px * var(--fav-scale));
+  height: calc(22px * var(--fav-scale));
   flex-shrink: 0;
 }
 
-.favorite-tile__icon-badge svg path,
-.favorite-tile__icon-badge svg rect,
-.favorite-tile__icon-badge svg circle,
-.favorite-tile__icon-badge svg ellipse,
-.favorite-tile__icon-badge svg polyline {
-  stroke: var(--fav-icon-color) !important;
-  fill: var(--fav-icon-color) !important;
+/* Respetar los colores originales de los SVG del tema de iconos */
+.favorite-tile__icon-badge svg path[stroke],
+.favorite-tile__icon-badge svg rect[stroke],
+.favorite-tile__icon-badge svg circle[stroke],
+.favorite-tile__icon-badge svg ellipse[stroke],
+.favorite-tile__icon-badge svg polyline[stroke] {
+  /* No sobrescribir stroke si ya existe */
+}
+
+.favorite-tile__icon-badge svg path[fill],
+.favorite-tile__icon-badge svg rect[fill],
+.favorite-tile__icon-badge svg circle[fill],
+.favorite-tile__icon-badge svg ellipse[fill],
+.favorite-tile__icon-badge svg polyline[fill] {
+  /* No sobrescribir fill si ya existe */
 }
 
 /* Contenido central */
