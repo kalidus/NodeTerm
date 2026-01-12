@@ -1062,16 +1062,6 @@ const NodeTermStatus = ({
 									return Math.round(baseIconSizePx * 1.3);
 								})(), '#22c55e')}
 							</button>
-							<span style={{
-								fontSize: compactBar.labelFontSize,
-								fontFamily: compactBar.labelFontFamily,
-								fontWeight: '500',
-								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-								textAlign: 'center',
-								lineHeight: compactBar.labelLineHeight
-							}}>
-								{t('homeTab.new')}
-							</span>
 						</div>
 
 						{/* Botón Crear Grupo */}
@@ -1125,16 +1115,6 @@ const NodeTermStatus = ({
 									return Math.round(baseIconSizePx * 1.3);
 								})(), '#ff9800')}
 							</button>
-							<span style={{
-								fontSize: compactBar.labelFontSize,
-								fontFamily: compactBar.labelFontFamily,
-								fontWeight: '500',
-								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-								textAlign: 'center',
-								lineHeight: compactBar.labelLineHeight
-							}}>
-								{t('homeTab.group')}
-							</span>
 						</div>
 
 						{/* Separador vertical decorativo */}
@@ -1206,16 +1186,6 @@ const NodeTermStatus = ({
 									>
 										{getActionBarIcon(actionBarIconTheme, 'conexiones', conexionesIconSize, conexionesColor)}
 									</button>
-									<span style={{
-										fontSize: compactBar.labelFontSize,
-										fontFamily: compactBar.labelFontFamily,
-										fontWeight: '500',
-										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-										textAlign: 'center',
-										lineHeight: compactBar.labelLineHeight
-									}}>
-										{t('homeTab.sessions')}
-									</span>
 								</div>
 							);
 						})()}
@@ -1277,16 +1247,6 @@ const NodeTermStatus = ({
 									>
 										{getActionBarIcon(actionBarIconTheme, 'contraseñas', passwordsIconSize, passwordsColor)}
 									</button>
-									<span style={{
-										fontSize: compactBar.labelFontSize,
-										fontFamily: compactBar.labelFontFamily,
-										fontWeight: '500',
-										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-										textAlign: 'center',
-										lineHeight: compactBar.labelLineHeight
-									}}>
-										{t('homeTab.secrets')}
-									</span>
 								</div>
 							);
 						})()}
@@ -1346,16 +1306,6 @@ const NodeTermStatus = ({
 									>
 										{getActionBarIcon(actionBarIconTheme, 'nettools', netToolsIconSize, netToolsColor)}
 									</button>
-									<span style={{
-										fontSize: compactBar.labelFontSize,
-										fontFamily: compactBar.labelFontFamily,
-										fontWeight: '500',
-										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-									textAlign: 'center',
-									lineHeight: compactBar.labelLineHeight
-								}}>
-									{t('homeTab.tools')}
-								</span>
 								</div>
 							);
 						})()}
@@ -1444,20 +1394,6 @@ const NodeTermStatus = ({
 										>
 											{getDistroIcon(terminal)}
 										</button>
-										<span style={{
-											fontSize: compactBar.labelFontSize,
-											fontFamily: compactBar.labelFontFamily,
-											fontWeight: '500',
-											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-											textAlign: 'center',
-											lineHeight: compactBar.labelLineHeight,
-											maxWidth: `${compactBar.labelMaxWidth}px`,
-											overflow: 'hidden',
-											textOverflow: 'ellipsis',
-											whiteSpace: 'nowrap'
-										}}>
-											{terminal.label}
-										</span>
 									</div>
 								))}
 
@@ -1577,15 +1513,6 @@ const NodeTermStatus = ({
 												)}
 											</div>
 										</button>
-										<span style={{
-											fontSize: compactBar.labelFontSize,
-											fontWeight: '500',
-											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-											textAlign: 'center',
-											lineHeight: compactBar.labelLineHeight
-										}}>
-											Ubuntu
-										</span>
 										
 										{/* Menú desplegable de distribuciones Ubuntu - Renderizado con Portal */}
 										{ubuntuMenuOpen && ubuntuDistributions.length > 1 && typeof document !== 'undefined' && document.body && (() => {
@@ -1821,15 +1748,6 @@ const NodeTermStatus = ({
 												)}
 											</div>
 										</button>
-										<span style={{
-											fontSize: compactBar.labelFontSize,
-											fontWeight: '500',
-											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-											textAlign: 'center',
-											lineHeight: compactBar.labelLineHeight
-										}}>
-											Docker
-										</span>
 										
 										{/* Menú desplegable de contenedores Docker - Renderizado con Portal */}
 										{dockerMenuOpen && dockerContainers.length > 1 && typeof document !== 'undefined' && document.body && (() => {
@@ -2046,19 +1964,6 @@ const NodeTermStatus = ({
 											>
 												<i className="pi pi-desktop" style={{ color: '#8b5cf6', fontSize: compactBar.serviceIconSize }} />
 											</div>
-											<span style={{
-												fontSize: compactBar.labelFontSize,
-												fontWeight: '500',
-												color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-												textAlign: 'center',
-												lineHeight: compactBar.labelLineHeight,
-												maxWidth: `${compactBar.labelMaxWidth}px`,
-												overflow: 'hidden',
-												textOverflow: 'ellipsis',
-												whiteSpace: 'nowrap'
-											}}>
-												NodeTerm
-											</span>
 										</div>
 									)}
 
@@ -2117,19 +2022,6 @@ const NodeTermStatus = ({
 													</div>
 												);
 											})()}
-											<span style={{
-												fontSize: compactBar.labelFontSize,
-												fontWeight: '500',
-												color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-												textAlign: 'center',
-												lineHeight: compactBar.labelLineHeight,
-												maxWidth: `${compactBar.labelMaxWidth}px`,
-												overflow: 'hidden',
-												textOverflow: 'ellipsis',
-												whiteSpace: 'nowrap'
-											}}>
-												AnythingLLM
-											</span>
 										</div>
 									)}
 
@@ -2188,19 +2080,6 @@ const NodeTermStatus = ({
 													</div>
 												);
 											})()}
-											<span style={{
-												fontSize: compactBar.labelFontSize,
-												fontWeight: '500',
-												color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-												textAlign: 'center',
-												lineHeight: compactBar.labelLineHeight,
-												maxWidth: `${compactBar.labelMaxWidth}px`,
-												overflow: 'hidden',
-												textOverflow: 'ellipsis',
-												whiteSpace: 'nowrap'
-											}}>
-												OpenWebUI
-											</span>
 										</div>
 									)}
 								</div>
@@ -2293,16 +2172,6 @@ const NodeTermStatus = ({
 									>
 										{getActionBarIcon(actionBarIconTheme, 'config', configIconSize, configColor)}
 									</button>
-									<span style={{
-										fontSize: compactBar.labelFontSize,
-										fontFamily: compactBar.labelFontFamily,
-										fontWeight: '500',
-										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-										textAlign: 'center',
-										lineHeight: '1.0'
-									}}>
-										Config
-									</span>
 								</div>
 							);
 						})()}
@@ -2372,16 +2241,6 @@ const NodeTermStatus = ({
 									>
 										{getActionBarIcon(actionBarIconTheme, 'terminal', terminalIconSize, terminalColor)}
 									</button>
-									<span style={{
-										fontSize: compactBar.labelFontSize,
-										fontFamily: compactBar.labelFontFamily,
-										fontWeight: '500',
-										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-										textAlign: 'center',
-										lineHeight: '1.0'
-									}}>
-										Terminal
-									</span>
 								</div>
 							);
 						})()}
@@ -2450,16 +2309,6 @@ const NodeTermStatus = ({
 									>
 										{getActionBarIcon(actionBarIconTheme, 'statusbar', statusIconSize, statusColor)}
 									</button>
-									<span style={{
-										fontSize: compactBar.labelFontSize,
-										fontFamily: compactBar.labelFontFamily,
-										fontWeight: '500',
-										color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-										textAlign: 'center',
-										lineHeight: '1.0'
-									}}>
-										StatusBar
-									</span>
 								</div>
 							);
 						})()}
@@ -2575,16 +2424,6 @@ const NodeTermStatus = ({
 										>
 											{getActionBarIcon(actionBarIconTheme, 'audit', auditIconSize, auditColor)}
 										</button>
-										<span style={{
-											fontSize: compactBar.labelFontSize,
-											fontFamily: compactBar.labelFontFamily,
-											fontWeight: '500',
-											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-											textAlign: 'center',
-											lineHeight: compactBar.labelLineHeight
-										}}>
-											Audit
-										</span>
 									</div>
 								);
 							})()}
@@ -2646,20 +2485,6 @@ const NodeTermStatus = ({
 										>
 											<i className={vaultState.unlocked ? 'pi pi-unlock' : 'pi pi-lock'} style={{ color: vaultColor, fontSize: compactBar.serviceIconSize }} />
 										</button>
-										<span style={{
-											fontSize: compactBar.labelFontSize,
-											fontFamily: compactBar.labelFontFamily,
-											fontWeight: '500',
-											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-											textAlign: 'center',
-											lineHeight: compactBar.labelLineHeight,
-											maxWidth: `${compactBar.labelMaxWidth}px`,
-											overflow: 'hidden',
-											textOverflow: 'ellipsis',
-											whiteSpace: 'nowrap'
-										}}>
-											Vault
-										</span>
 									</div>
 								);
 							})()}
@@ -2722,20 +2547,6 @@ const NodeTermStatus = ({
 										>
 											<i className="pi pi-cloud" style={{ color: ncColor, fontSize: compactBar.serviceIconSize }} />
 										</button>
-										<span style={{
-											fontSize: compactBar.labelFontSize,
-											fontFamily: compactBar.labelFontFamily,
-											fontWeight: '500',
-											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-											textAlign: 'center',
-											lineHeight: compactBar.labelLineHeight,
-											maxWidth: `${compactBar.labelMaxWidth}px`,
-											overflow: 'hidden',
-											textOverflow: 'ellipsis',
-											whiteSpace: 'nowrap'
-										}}>
-											Cloud
-										</span>
 									</div>
 								);
 							})()}
@@ -2787,20 +2598,6 @@ const NodeTermStatus = ({
 												<i className="pi pi-window-maximize" style={{ color: guacdColor, fontSize: compactBar.serviceIconSize }} />
 											)}
 										</button>
-										<span style={{
-											fontSize: compactBar.labelFontSize,
-											fontFamily: compactBar.labelFontFamily,
-											fontWeight: '500',
-											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-											textAlign: 'center',
-											lineHeight: compactBar.labelLineHeight,
-											maxWidth: `${compactBar.labelMaxWidth}px`,
-											overflow: 'hidden',
-											textOverflow: 'ellipsis',
-											whiteSpace: 'nowrap'
-										}}>
-											RDP
-										</span>
 									</div>
 								);
 							})()}
@@ -2847,20 +2644,6 @@ const NodeTermStatus = ({
 										>
 											<i className="pi pi-desktop" style={{ color: ollamaColor, fontSize: compactBar.serviceIconSize }} />
 										</button>
-										<span style={{
-											fontSize: compactBar.labelFontSize,
-											fontFamily: compactBar.labelFontFamily,
-											fontWeight: '500',
-											color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-											textAlign: 'center',
-											lineHeight: compactBar.labelLineHeight,
-											maxWidth: `${compactBar.labelMaxWidth}px`,
-											overflow: 'hidden',
-											textOverflow: 'ellipsis',
-											whiteSpace: 'nowrap'
-										}}>
-											IA
-										</span>
 									</div>
 								);
 							})()}
