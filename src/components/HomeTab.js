@@ -114,6 +114,33 @@ const HomeTab = ({
     };
   }, []);
 
+  // Escuchar cambios en la fuente de HomeTab
+  useEffect(() => {
+    const handleHomeTabFontChange = () => {
+      try {
+        const newFont = localStorage.getItem('homeTabFont') || localStorage.getItem('sidebarFont') || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+        const newSize = localStorage.getItem('homeTabFontSize');
+        const parsedSize = newSize ? parseInt(newSize, 10) : null;
+        setHomeTabFont(newFont);
+        setHomeTabFontSize(parsedSize);
+      } catch {}
+    };
+    
+    // Escuchar evento personalizado y cambios en localStorage
+    window.addEventListener('home-tab-font-changed', handleHomeTabFontChange);
+    window.addEventListener('sidebar-font-changed', handleHomeTabFontChange);
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'homeTabFont' || e.key === 'homeTabFontSize' || e.key === 'sidebarFont') {
+        handleHomeTabFontChange();
+      }
+    });
+    
+    return () => {
+      window.removeEventListener('home-tab-font-changed', handleHomeTabFontChange);
+      window.removeEventListener('sidebar-font-changed', handleHomeTabFontChange);
+    };
+  }, []);
+
   // Escuchar cambios en la visibilidad del terminal local
   useEffect(() => {
     const handleTerminalVisibilityChange = () => {
@@ -782,13 +809,13 @@ const HomeTab = ({
               backdropFilter: 'none',
               WebkitBackdropFilter: 'none',
               border: 'none',
-              borderRadius: '16px',
+              borderRadius: '0',
               boxShadow: 'none',
-              padding: '1.5rem',
-              marginBottom: '1rem',
+              padding: '0.5rem 1rem',
+              marginBottom: '0.5rem',
               display: 'flex',
               flexDirection: 'row',
-              gap: '1.5rem',
+              gap: '0.5rem',
               position: 'relative',
               alignItems: 'stretch',
               flex: 1,
@@ -800,7 +827,7 @@ const HomeTab = ({
               <div style={{
                 display: 'flex',
                 flexDirection: 'column',
-                flex: '2 1 0',
+                flex: '2.2 1 0',
                 minWidth: 0,
                 position: 'relative',
                 overflow: 'hidden',
@@ -865,12 +892,9 @@ const HomeTab = ({
                 )}
               </div>
 
-              {/* Separador decorativo vertical */}
+              {/* Espaciador entre secciones */}
               <div style={{
-                width: '1px',
-                height: '100%',
-                background: 'linear-gradient(180deg, transparent, rgba(255,255,255,0.2), transparent)',
-                borderRadius: '1px',
+                width: '0.75rem',
                 flexShrink: 0
               }} />
 
@@ -890,7 +914,7 @@ const HomeTab = ({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
-                  marginBottom: '0.5rem',
+                  marginBottom: '0.75rem',
                   flexShrink: 0
                 }}>
                   {/* Icono con efecto visual mejorado */}
@@ -898,30 +922,19 @@ const HomeTab = ({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '6px',
-                    background: 'linear-gradient(135deg, rgba(79, 195, 247, 0.2) 0%, rgba(79, 195, 247, 0.1) 100%)',
-                    border: '1px solid rgba(79, 195, 247, 0.3)',
-                    boxShadow: '0 1px 4px rgba(79, 195, 247, 0.15)',
+                    width: '22px',
+                    height: '22px',
+                    borderRadius: '5px',
+                    background: 'linear-gradient(135deg, rgba(79, 195, 247, 0.12) 0%, rgba(79, 195, 247, 0.08) 100%)',
+                    border: '1px solid rgba(79, 195, 247, 0.2)',
+                    boxShadow: '0 1px 3px rgba(79, 195, 247, 0.1)',
                     position: 'relative'
                   }}>
                     <i className="pi pi-history" style={{ 
                       color: '#4fc3f7', 
-                      fontSize: '0.9rem',
-                      filter: 'drop-shadow(0 0 2px rgba(79, 195, 247, 0.4))'
-                    }} />
-                    {/* Efecto de brillo sutil */}
-                    <div style={{
-                      position: 'absolute',
-                      top: '12%',
-                      left: '35%',
-                      width: '4px',
-                      height: '4px',
-                      borderRadius: '50%',
-                      background: 'rgba(255, 255, 255, 0.6)',
-                      filter: 'blur(1px)',
-                      animation: 'twinkle 4s infinite'
+                      fontSize: '0.85rem',
+                      filter: 'drop-shadow(0 0 1px rgba(79, 195, 247, 0.3))',
+                      opacity: 0.9
                     }} />
                   </div>
                   
@@ -941,145 +954,305 @@ const HomeTab = ({
                 {/* Línea decorativa con gradiente azul */}
                 <div style={{
                   height: '1px',
-                  background: 'linear-gradient(90deg, transparent, rgba(79, 195, 247, 0.3), transparent)',
+                  background: 'linear-gradient(90deg, rgba(79, 195, 247, 0.1), rgba(79, 195, 247, 0.15), rgba(79, 195, 247, 0.1))',
                   borderRadius: '1px',
-                  marginBottom: '0.5rem',
-                  flexShrink: 0
+                  marginBottom: '0.75rem',
+                  flexShrink: 0,
+                  opacity: 0.6
                 }} />
                 {/* Lista de conexiones recientes */}
                 <div 
-                  style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto', flex: 1, height: '100%', minHeight: 0 }}>
+                  className="home-hide-scrollbar"
+                  style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '0.35rem', 
+                    overflowY: 'auto', 
+                    flex: 1, 
+                    height: '100%', 
+                    minHeight: 0,
+                    paddingRight: '4px'
+                  }}>
                   {recentConnections.length > 0 ? (
-                    recentConnections.map(recentConn => (
+                    recentConnections.map(recentConn => {
+                      const typeColor = getConnectionTypeColor(recentConn.type);
+                      const protocolLabel =
+                        recentConn.type === 'rdp-guacamole' || recentConn.type === 'rdp' ? 'RDP' :
+                        recentConn.type === 'vnc-guacamole' || recentConn.type === 'vnc' ? 'VNC' :
+                        recentConn.type === 'explorer' ? 'SFTP' :
+                        recentConn.type === 'sftp' ? 'SFTP' :
+                        recentConn.type === 'ftp' ? 'FTP' :
+                        recentConn.type === 'scp' ? 'SCP' :
+                        recentConn.type === 'group' ? 'GRUPO' : 'SSH';
+                      const hostLabel = recentConn.host || recentConn.hostname || '—';
+                      const r = parseInt(typeColor.slice(1,3), 16);
+                      const g = parseInt(typeColor.slice(3,5), 16);
+                      const b = parseInt(typeColor.slice(5,7), 16);
+                      
+                      return (
                       <div key={recentConn.id} style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.25rem',
+                        gap: '6px',
                         color: themeColors.textSecondary,
-                        fontSize: homeTabFontSize ? `${homeTabFontSize * 0.65}px` : '0.65rem',
                         fontFamily: homeTabFont,
                         background: themeColors.itemBackground,
-                        padding: '0.2rem 0.35rem',
-                        borderRadius: '5px',
-                        border: '1px solid transparent',
+                        padding: '5px 6px',
+                        paddingRight: '45px',
+                        borderRadius: '6px',
+                        border: `1px solid ${themeColors.borderColor}`,
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+                        transform: 'translateX(0)',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                        minHeight: '42px',
+                        position: 'relative'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.background = themeColors.hoverBackground;
                         e.currentTarget.style.border = `1px solid ${themeColors.borderColor}`;
+                        e.currentTarget.style.transform = 'translateX(3px)';
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.18)';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = themeColors.itemBackground;
-                        e.currentTarget.style.border = '1px solid transparent';
+                        e.currentTarget.style.border = `1px solid ${themeColors.borderColor}`;
+                        e.currentTarget.style.transform = 'translateX(0)';
+                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12)';
                       }}
                       >
-                        {/* Icono del tipo de conexión */}
-                        {(() => {
-                          const iconSVG = getConnectionTypeIconSVG(recentConn.type);
-                          if (iconSVG) {
-                            return React.cloneElement(iconSVG, {
-                              width: 12,
-                              height: 12,
-                              style: {
-                                ...iconSVG.props?.style,
-                                width: '12px',
-                                height: '12px',
-                                flexShrink: 0
-                              }
-                            });
-                          }
-                          return (
-                            <i className={getConnectionTypeIcon(recentConn.type)} style={{
-                              color: getConnectionTypeColor(recentConn.type),
-                              fontSize: '0.6rem'
-                            }} />
-                          );
-                        })()}
+                        {/* Icono en badge */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '6px',
+                          background: `rgba(${r}, ${g}, ${b}, 0.08)`,
+                          border: `1px solid rgba(${r}, ${g}, ${b}, 0.25)`,
+                          flexShrink: 0,
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.12)'
+                        }}>
+                          {(() => {
+                            const iconSVG = getConnectionTypeIconSVG(recentConn.type);
+                            if (iconSVG) {
+                              return React.cloneElement(iconSVG, {
+                                width: 24,
+                                height: 24,
+                                style: {
+                                  ...iconSVG.props?.style,
+                                  width: '24px',
+                                  height: '24px',
+                                  flexShrink: 0
+                                }
+                              });
+                            }
+                            return (
+                              <i className={getConnectionTypeIcon(recentConn.type)} style={{
+                                color: typeColor,
+                                fontSize: '24px'
+                              }} />
+                            );
+                          })()}
+                        </div>
                         
-                        {/* Nombre de la conexión */}
-                        <span 
-                          style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        {/* Contenido: Nombre + Host */}
+                        <div 
+                          style={{ 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            gap: '1px',
+                            flex: 1, 
+                            minWidth: 0,
+                            paddingRight: '45px',
+                            justifyContent: 'center',
+                            cursor: 'pointer'
+                          }}
                           onClick={() => handleConnectToHistory(recentConn)}
                         >
-                          {recentConn.name}
-                        </span>
+                          <div style={{ 
+                            color: 'rgba(255,255,255,0.96)', 
+                            fontWeight: '600',
+                            fontSize: homeTabFontSize ? `${homeTabFontSize * 0.8}px` : '10px',
+                            fontFamily: homeTabFont,
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis', 
+                            whiteSpace: 'nowrap',
+                            lineHeight: '1.2'
+                          }}>
+                            {recentConn.name}
+                          </div>
+                          <div style={{ 
+                            color: 'rgba(255,255,255,0.55)', 
+                            fontWeight: '500',
+                            fontSize: homeTabFontSize ? `${homeTabFontSize * 0.68}px` : '8.5px',
+                            fontFamily: homeTabFont,
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis', 
+                            whiteSpace: 'nowrap',
+                            lineHeight: '1.2'
+                          }}>
+                            {hostLabel}
+                          </div>
+                        </div>
 
-                        {/* Botones interactivos */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }} onClick={(e) => e.stopPropagation()}>
+                        {/* Chip del protocolo en esquina superior derecha */}
+                        <div style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '4px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          height: '13px',
+                          padding: '0 4px',
+                          borderRadius: '3px',
+                          fontSize: homeTabFontSize ? `${homeTabFontSize * 0.56}px` : '7px',
+                          fontFamily: homeTabFont,
+                          fontWeight: '700',
+                          letterSpacing: '0.2px',
+                          textTransform: 'uppercase',
+                          flexShrink: 0,
+                          background: `rgba(${r}, ${g}, ${b}, 0.18)`,
+                          border: `1px solid rgba(${r}, ${g}, ${b}, 0.45)`,
+                          color: typeColor,
+                          backdropFilter: 'blur(8px)',
+                          zIndex: 2
+                        }}>
+                          {protocolLabel}
+                        </div>
+
+                        {/* Botones de acción a la derecha del todo */}
+                        <div style={{ 
+                          position: 'absolute',
+                          right: '6px',
+                          bottom: '5px',
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '2px',
+                          zIndex: 3
+                        }} onClick={(e) => e.stopPropagation()}>
                           {/* Botón de favorito */}
-                          <span
+                          <button
                             title={recentConn.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
                             style={{
-                              width: '16px',
-                              height: '16px',
-                              borderRadius: '50%',
+                              width: '15px',
+                              height: '15px',
+                              borderRadius: '3px',
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              color: themeColors.textPrimary,
-                              background: 'rgba(255,255,255,0.08)',
-                              border: `1px solid ${themeColors.borderColor}`,
-                              transition: 'all .15s ease',
-                              cursor: 'pointer'
+                              color: 'rgba(255, 215, 0, 0.85)',
+                              background: 'rgba(255, 215, 0, 0.08)',
+                              border: '1px solid rgba(255, 215, 0, 0.2)',
+                              transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+                              cursor: 'pointer',
+                              padding: 0,
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
                             }}
-                            onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground; e.style.color = themeColors.textPrimary; }}
-                            onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
+                            onMouseEnter={(el) => { 
+                              const e = el.currentTarget; 
+                              e.style.background = 'rgba(255, 215, 0, 0.18)'; 
+                              e.style.borderColor = 'rgba(255, 215, 0, 0.4)';
+                              e.style.color = '#FFD700';
+                              e.style.transform = 'scale(1.06)';
+                              e.style.boxShadow = '0 2px 3px rgba(255, 215, 0, 0.12)';
+                            }}
+                            onMouseLeave={(el) => { 
+                              const e = el.currentTarget; 
+                              e.style.background = 'rgba(255, 215, 0, 0.08)'; 
+                              e.style.borderColor = 'rgba(255, 215, 0, 0.2)';
+                              e.style.color = 'rgba(255, 215, 0, 0.85)';
+                              e.style.transform = 'scale(1)';
+                              e.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)';
+                            }}
                             onClick={() => handleToggleFavorite(recentConn)}
                           >
-                            <i className={recentConn.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '8px' }} />
-                          </span>
+                            <i className={recentConn.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '7px' }} />
+                          </button>
 
                           {/* Botón de editar */}
                           {onEditConnection && (
-                            <span
+                            <button
                               title="Editar"
                               style={{
-                                width: '16px',
-                                height: '16px',
-                                borderRadius: '50%',
+                                width: '15px',
+                                height: '15px',
+                                borderRadius: '3px',
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                color: themeColors.textPrimary,
-                                background: 'rgba(255,255,255,0.08)',
-                                border: `1px solid ${themeColors.borderColor}`,
-                                transition: 'all .15s ease',
-                                cursor: 'pointer'
+                                color: 'rgba(255,255,255,0.7)',
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1px solid rgba(255,255,255,0.12)',
+                                transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+                                cursor: 'pointer',
+                                padding: 0,
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
                               }}
-                              onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground; e.style.color = themeColors.textPrimary; }}
-                              onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
+                              onMouseEnter={(el) => { 
+                                const e = el.currentTarget; 
+                                e.style.background = 'rgba(255,255,255,0.12)'; 
+                                e.style.borderColor = 'rgba(255,255,255,0.25)';
+                                e.style.color = 'rgba(255,255,255,0.95)';
+                                e.style.transform = 'scale(1.06)';
+                                e.style.boxShadow = '0 2px 3px rgba(0,0,0,0.12)';
+                              }}
+                              onMouseLeave={(el) => { 
+                                const e = el.currentTarget; 
+                                e.style.background = 'rgba(255,255,255,0.05)'; 
+                                e.style.borderColor = 'rgba(255,255,255,0.12)';
+                                e.style.color = 'rgba(255,255,255,0.7)';
+                                e.style.transform = 'scale(1)';
+                                e.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)';
+                              }}
                               onClick={() => onEditConnection(recentConn)}
                             >
-                              <i className="pi pi-pencil" style={{ fontSize: '8px' }} />
-                            </span>
+                              <i className="pi pi-pencil" style={{ fontSize: '7px' }} />
+                            </button>
                           )}
 
                           {/* Botón de conectar */}
-                          <span
+                          <button
                             title="Conectar"
                             style={{
-                              width: '16px',
-                              height: '16px',
-                              borderRadius: '50%',
+                              width: '15px',
+                              height: '15px',
+                              borderRadius: '3px',
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              color: themeColors.textPrimary,
-                              background: 'rgba(255,255,255,0.08)',
-                              border: `1px solid ${themeColors.borderColor}`,
-                              transition: 'all .15s ease',
-                              cursor: 'pointer'
+                              color: typeColor,
+                              background: `rgba(${r}, ${g}, ${b}, 0.1)`,
+                              border: `1px solid rgba(${r}, ${g}, ${b}, 0.3)`,
+                              transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+                              cursor: 'pointer',
+                              padding: 0,
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
                             }}
-                            onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground; e.style.color = themeColors.textPrimary; }}
-                            onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
+                            onMouseEnter={(el) => { 
+                              const e = el.currentTarget; 
+                              e.style.background = `rgba(${r}, ${g}, ${b}, 0.2)`; 
+                              e.style.borderColor = `rgba(${r}, ${g}, ${b}, 0.5)`;
+                              e.style.transform = 'scale(1.06)';
+                              e.style.boxShadow = `0 2px 3px rgba(${r}, ${g}, ${b}, 0.15)`;
+                            }}
+                            onMouseLeave={(el) => { 
+                              const e = el.currentTarget; 
+                              e.style.background = `rgba(${r}, ${g}, ${b}, 0.1)`; 
+                              e.style.borderColor = `rgba(${r}, ${g}, ${b}, 0.3)`;
+                              e.style.transform = 'scale(1)';
+                              e.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)';
+                            }}
                             onClick={() => handleConnectToHistory(recentConn)}
                           >
-                            <i className="pi pi-external-link" style={{ fontSize: '8px' }} />
-                          </span>
+                            <i className="pi pi-external-link" style={{ fontSize: '7px' }} />
+                          </button>
                         </div>
                       </div>
-                    ))
+                    );
+                    })
                   ) : (
                     <div style={{
                       display: 'flex',

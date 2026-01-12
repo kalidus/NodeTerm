@@ -440,18 +440,18 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 					e.currentTarget.style.setProperty('--fav-border', themeColors.borderColor || 'rgba(255,255,255,0.10)');
 				}}
 			>
-				{/* Icono grande en badge a la izquierda */}
+				{/* Icono badge a la izquierda */}
 				<div className="favorite-tile__icon-badge">
 					{(() => {
 						const iconSVG = getConnectionTypeIconSVG(connection.type);
 						if (iconSVG) {
 							return React.cloneElement(iconSVG, {
-								width: 22,
-								height: 22,
+								width: 24,
+								height: 24,
 								style: {
 									...iconSVG.props?.style,
-									width: '22px',
-									height: '22px'
+									width: '24px',
+									height: '24px'
 								}
 							});
 						}
@@ -479,28 +479,29 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 						>
 							{hostLabel}
 						</span>
-						{/* Botones de acción al final de la línea del host */}
-						<div className="favorite-tile__actions" onClick={(e) => e.stopPropagation()}>
-							<button
-								className="favorite-tile__btn-favorite"
-								title={connection.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-								onClick={() => { toggleFavorite(connection); loadConnectionHistory(); }}
-								aria-label={connection.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-							>
-								<i className={connection.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} />
-							</button>
-							{onEdit && (
-								<button
-									className="favorite-tile__btn-menu"
-									title="Editar"
-									onClick={() => onEdit(connection)}
-									aria-label="Editar conexión"
-								>
-									<i className="pi pi-pencil" />
-								</button>
-							)}
-						</div>
 					</div>
+				</div>
+				
+				{/* Botones de acción a la derecha del todo */}
+				<div className="favorite-tile__actions" onClick={(e) => e.stopPropagation()}>
+					<button
+						className="favorite-tile__btn-favorite"
+						title={connection.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+						onClick={() => { toggleFavorite(connection); loadConnectionHistory(); }}
+						aria-label={connection.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+					>
+						<i className={connection.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} />
+					</button>
+					{onEdit && (
+						<button
+							className="favorite-tile__btn-menu"
+							title="Editar"
+							onClick={() => onEdit(connection)}
+							aria-label="Editar conexión"
+						>
+							<i className="pi pi-pencil" />
+						</button>
+					)}
 				</div>
 				
 				{/* Chip protocolo en esquina superior derecha */}
@@ -513,7 +514,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 
 	return (
 		<div style={{ 
-			padding: '0.25rem 0.5rem 0.25rem 0.5rem', 
+			padding: '0', 
 			flex: 1,
 			height: '100%',
 			minHeight: 0,
@@ -527,7 +528,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 				<div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', minHeight: 0, background: 'transparent !important', backgroundColor: 'transparent !important' }}>
 					{/* Título mejorado con mejor separación visual */}
 					<div style={{ 
-						marginBottom: '0.5rem',
+						marginBottom: '0.75rem',
 						padding: 0,
 						position: 'relative',
 						flexShrink: 0
@@ -538,30 +539,19 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 								display: 'flex',
 								alignItems: 'center',
 								justifyContent: 'center',
-								width: '24px',
-								height: '24px',
-								borderRadius: '6px',
-								background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 193, 7, 0.1) 100%)',
-								border: '1px solid rgba(255, 215, 0, 0.3)',
-								boxShadow: '0 1px 4px rgba(255, 215, 0, 0.15)',
+								width: '22px',
+								height: '22px',
+								borderRadius: '5px',
+								background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.12) 0%, rgba(255, 193, 7, 0.08) 100%)',
+								border: '1px solid rgba(255, 215, 0, 0.2)',
+								boxShadow: '0 1px 3px rgba(255, 215, 0, 0.1)',
 								position: 'relative'
 							}}>
 								<i className="pi pi-star-fill" style={{ 
 									color: '#FFD700', 
-									fontSize: '0.9rem',
-									filter: 'drop-shadow(0 0 2px rgba(255, 215, 0, 0.4))'
-								}} />
-								{/* Efecto de brillo sutil */}
-								<div style={{
-									position: 'absolute',
-									top: '12%',
-									left: '35%',
-									width: '4px',
-									height: '4px',
-									borderRadius: '50%',
-									background: 'rgba(255, 255, 255, 0.6)',
-									filter: 'blur(1px)',
-									animation: 'twinkle 4s infinite'
+									fontSize: '0.85rem',
+									filter: 'drop-shadow(0 0 1px rgba(255, 215, 0, 0.3))',
+									opacity: 0.9
 								}} />
 							</div>
 							
@@ -607,9 +597,10 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 						{/* Línea decorativa con gradiente */}
 						<div style={{
 							height: '1px',
-							background: 'linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.3), transparent)',
+							background: 'linear-gradient(90deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.1))',
 							borderRadius: '1px',
-							marginTop: '0.3rem'
+							marginTop: '0.3rem',
+							opacity: 0.6
 						}} />
 					</div>
 					
