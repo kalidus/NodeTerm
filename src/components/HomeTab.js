@@ -1021,29 +1021,25 @@ const HomeTab = ({
                         e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12)';
                       }}
                       >
-                        {/* Icono en badge */}
+                        {/* Icono sin recuadro */}
                         <div style={{
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          width: '32px',
-                          height: '32px',
-                          borderRadius: '6px',
-                          background: `rgba(${r}, ${g}, ${b}, 0.08)`,
-                          border: `1px solid rgba(${r}, ${g}, ${b}, 0.25)`,
-                          flexShrink: 0,
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.12)'
+                          width: 'auto',
+                          height: 'auto',
+                          flexShrink: 0
                         }}>
                           {(() => {
                             const iconSVG = getConnectionTypeIconSVG(recentConn.type);
                             if (iconSVG) {
                               return React.cloneElement(iconSVG, {
-                                width: 24,
-                                height: 24,
+                                width: 28,
+                                height: 28,
                                 style: {
                                   ...iconSVG.props?.style,
-                                  width: '24px',
-                                  height: '24px',
+                                  width: '28px',
+                                  height: '28px',
                                   flexShrink: 0
                                 }
                               });
@@ -1051,7 +1047,7 @@ const HomeTab = ({
                             return (
                               <i className={getConnectionTypeIcon(recentConn.type)} style={{
                                 color: typeColor,
-                                fontSize: '24px'
+                                fontSize: '28px'
                               }} />
                             );
                           })()}
