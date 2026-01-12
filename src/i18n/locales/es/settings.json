@@ -92,7 +92,10 @@
       "selectIconTheme": "Seleccionar tema",
       "localTerminal": "Terminal Local",
       "showLocalTerminal": "Mostrar terminal local al iniciar",
-      "showLocalTerminalDescription": "Controla si el terminal local se muestra u oculta al abrir la página de inicio"
+      "showLocalTerminalDescription": "Controla si el terminal local se muestra u oculta al abrir la página de inicio",
+      "statusBar": "Barra de Estado",
+      "showStatusBar": "Mostrar barra de estado al iniciar",
+      "showStatusBarDescription": "Controla si la barra de estado se muestra u oculta al abrir la página de inicio"
     }
   },
   "rdp": {

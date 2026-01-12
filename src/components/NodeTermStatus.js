@@ -128,6 +128,8 @@ const NodeTermStatus = ({
 		} catch {}
 
 		// Estado Guacd (IPC)
+		// 🚀 OPTIMIZACIÓN: Retrasar la primera llamada para no bloquear el arranque
+		// Esperar un poco para que la ventana esté lista y Guacamole pueda inicializarse
 		let intervalId = null;
 		const fetchGuacd = async () => {
 			try {
@@ -137,7 +139,10 @@ const NodeTermStatus = ({
 				}
 			} catch {}
 		};
-		fetchGuacd();
+		// Retrasar la primera llamada 2 segundos para dar tiempo a que la ventana esté lista
+		setTimeout(() => {
+			fetchGuacd();
+		}, 2000);
 		intervalId = setInterval(fetchGuacd, 10000); // Reducido de 5000ms a 10000ms para ahorrar CPU/RAM
 
 		// Estado Ollama

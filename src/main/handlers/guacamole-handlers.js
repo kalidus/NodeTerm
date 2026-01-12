@@ -103,8 +103,13 @@ function registerGuacamoleHandlers({
       const currentServer = getGuacamoleServer ? getGuacamoleServer() : guacamoleServer;
       const currentReadyAt = getGuacamoleServerReadyAt ? getGuacamoleServerReadyAt() : guacamoleServerReadyAt;
       
-      // Logging solo cuando hay un problema real y no se ha logueado antes
-      if (!currentServer && !guacamoleStatusWarningLogged) {
+      // Verificar si la inicialización está en progreso o ya completada
+      const isInitializing = isGuacamoleInitializing ? isGuacamoleInitializing() : false;
+      const isInitialized = isGuacamoleInitialized ? isGuacamoleInitialized() : false;
+      
+      // Solo mostrar warning si NO está inicializando y NO está inicializado (problema real)
+      // Durante el arranque, es normal que el servidor aún no esté listo
+      if (!currentServer && !isInitializing && !isInitialized && !guacamoleStatusWarningLogged) {
         console.warn('⚠️ [guacamole:get-status] guacamoleServer es null. guacdStatus:', guacdStatus);
         guacamoleStatusWarningLogged = true;
       } else if (currentServer) {

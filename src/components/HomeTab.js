@@ -59,7 +59,7 @@ const HomeTab = ({
   const [statusBarVisible, setStatusBarVisible] = useState(() => {
     // Cargar preferencia desde localStorage, por defecto visible
     try {
-      const saved = localStorage.getItem('homeTab_statusBarVisible');
+      const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE);
       return saved !== null ? saved === 'true' : true;
     } catch {
       return true;
@@ -561,7 +561,7 @@ const HomeTab = ({
       const newValue = !prev;
       // Guardar preferencia en localStorage
       try {
-        localStorage.setItem('homeTab_statusBarVisible', newValue.toString());
+        localStorage.setItem(STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE, newValue.toString());
       } catch (e) {
         console.error('Error guardando preferencia de status bar:', e);
       }
@@ -583,7 +583,7 @@ const HomeTab = ({
   // Escuchar cambios de storage para statusBarVisible desde SettingsDialog
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === 'homeTab_statusBarVisible') {
+      if (e.key === STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE) {
         const newValue = e.newValue === 'true';
         setStatusBarVisible(newValue);
       }

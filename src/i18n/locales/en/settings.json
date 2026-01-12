@@ -235,7 +235,10 @@
       "selectIconTheme": "Select theme",
       "localTerminal": "Local Terminal",
       "showLocalTerminal": "Show local terminal on startup",
-      "showLocalTerminalDescription": "Controls whether the local terminal is shown or hidden when opening the home page"
+      "showLocalTerminalDescription": "Controls whether the local terminal is shown or hidden when opening the home page",
+      "statusBar": "Status Bar",
+      "showStatusBar": "Show status bar on startup",
+      "showStatusBarDescription": "Controls whether the status bar is shown or hidden when opening the home page"
     }
   },
   "rdp": {
