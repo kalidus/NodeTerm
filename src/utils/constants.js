@@ -5,7 +5,8 @@ export const STORAGE_KEYS = {
   LOCK_HOME_BUTTON: 'lock_home_button',
   HOME_TAB_ICON: 'home_tab_icon',
   SIDEBAR_START_COLLAPSED: 'sidebar_start_collapsed',
-  DEFAULT_LOCAL_TERMINAL: 'nodeterm_default_local_terminal'
+  DEFAULT_LOCAL_TERMINAL: 'nodeterm_default_local_terminal',
+  HOME_TAB_LOCAL_TERMINAL_VISIBLE: 'homeTab_localTerminalVisible'
 };
 
 // Constantes de grupos

@@ -89,7 +89,10 @@
       "preview": "Vista Previa",
       "iconTheme": "Tema de Iconos",
       "iconThemeDescription": "Selecciona el estilo de los iconos de la barra de acciones",
-      "selectIconTheme": "Seleccionar tema"
+      "selectIconTheme": "Seleccionar tema",
+      "localTerminal": "Terminal Local",
+      "showLocalTerminal": "Mostrar terminal local al iniciar",
+      "showLocalTerminalDescription": "Controla si el terminal local se muestra u oculta al abrir la página de inicio"
     }
   },
   "rdp": {
