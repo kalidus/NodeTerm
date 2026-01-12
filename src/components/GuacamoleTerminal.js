@@ -1141,6 +1141,36 @@ const GuacamoleTerminal = forwardRef(({
         }
     }, [connectionState, isActive]);
 
+    // ✅ MEMORY LEAK FIX: Cleanup general cuando el componente se desmonta
+    useEffect(() => {
+        return () => {
+            // Limpiar keep-alive timer
+            if (keepAliveTimerRef.current) {
+                clearInterval(keepAliveTimerRef.current);
+                keepAliveTimerRef.current = null;
+            }
+            // Limpiar initial resize timer
+            if (initialResizeTimerRef.current) {
+                clearTimeout(initialResizeTimerRef.current);
+                initialResizeTimerRef.current = null;
+            }
+            // Limpiar resize controller
+            if (resizeControllerRef.current) {
+                resizeControllerRef.current.destroy();
+                resizeControllerRef.current = null;
+            }
+            // Desconectar cliente Guacamole
+            if (guacamoleClientRef.current) {
+                try {
+                    guacamoleClientRef.current.disconnect();
+                } catch (e) {
+                    // Ignorar errores al desconectar
+                }
+                guacamoleClientRef.current = null;
+            }
+        };
+    }, []); // Solo ejecutar al desmontar
+
     // Mantener ref sincronizado con la última actividad
     useEffect(() => {
         lastActivityTimeRef.current = lastActivityTime;

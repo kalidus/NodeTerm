@@ -9,6 +9,48 @@ const fs = require('fs');
 const path = require('path');
 
 /**
+ * Valida y sanitiza paths remotos para prevenir path traversal
+ * @param {string} userPath - Path proporcionado por el usuario
+ * @param {string} basePath - Path base permitido (opcional, por defecto '/')
+ * @returns {string} - Path sanitizado o null si es inválido
+ */
+function sanitizeRemotePath(userPath, basePath = '/') {
+  if (!userPath || typeof userPath !== 'string') {
+    return basePath;
+  }
+  
+  // Normalizar el path: eliminar espacios, normalizar separadores
+  let normalized = userPath.trim().replace(/\\/g, '/');
+  
+  // Detectar intentos de path traversal
+  if (normalized.includes('../') || normalized.includes('..\\') || normalized.startsWith('..')) {
+    console.warn(`[SECURITY] Path traversal detectado y bloqueado: ${userPath}`);
+    return basePath;
+  }
+  
+  // Detectar rutas absolutas sospechosas (permitir / pero no // o más)
+  if (normalized.startsWith('//')) {
+    console.warn(`[SECURITY] Ruta absoluta sospechosa bloqueada: ${userPath}`);
+    return basePath;
+  }
+  
+  // Si el path está vacío o solo tiene espacios, usar basePath
+  if (!normalized || normalized === '') {
+    return basePath;
+  }
+  
+  // Asegurar que empiece con /
+  if (!normalized.startsWith('/')) {
+    normalized = '/' + normalized;
+  }
+  
+  // Normalizar múltiples slashes
+  normalized = normalized.replace(/\/+/g, '/');
+  
+  return normalized;
+}
+
+/**
  * Convierte información de archivo de SFTP a formato estándar
  */
 function formatSftpFile(item) {
@@ -103,7 +145,8 @@ async function getHomeDirectory(config) {
  */
 async function listFiles(config, filePath) {
   const { protocol, host, port, username, password, useBastionWallix, bastionHost, bastionUser } = config;
-  const safePath = filePath || '/';
+  // ✅ SEGURIDAD: Sanitizar path para prevenir path traversal
+  const safePath = sanitizeRemotePath(filePath, '/');
 
   if (protocol === 'sftp' || protocol === 'scp') {
     const sftp = new SftpClient();
@@ -166,6 +209,8 @@ async function listFiles(config, filePath) {
  */
 async function checkDirectory(config, dirPath) {
   const { protocol, host, port, username, password, useBastionWallix, bastionHost, bastionUser } = config;
+  // ✅ SEGURIDAD: Sanitizar path para prevenir path traversal
+  const safeDirPath = sanitizeRemotePath(dirPath, '/');
 
   if (protocol === 'sftp' || protocol === 'scp') {
     const sftp = new SftpClient();
@@ -195,7 +240,7 @@ async function checkDirectory(config, dirPath) {
         };
       }
       await sftp.connect(connectConfig);
-      const stats = await sftp.stat(dirPath);
+      const stats = await sftp.stat(safeDirPath);
       await sftp.end();
       return { success: true, exists: stats.isDirectory };
     } catch (err) {
@@ -211,7 +256,7 @@ async function checkDirectory(config, dirPath) {
         password: password,
         secure: false,
       });
-      await client.cd(dirPath);
+      await client.cd(safeDirPath);
       await client.close();
       return { success: true, exists: true };
     } catch (err) {
@@ -234,7 +279,8 @@ async function downloadFile(config, remotePath, localPath) {
     return { success: false, error: 'localPath inválido o vacío' };
   }
 
-  const safeRemotePath = remotePath.trim();
+  // ✅ SEGURIDAD: Sanitizar paths para prevenir path traversal
+  const safeRemotePath = sanitizeRemotePath(remotePath, '/');
   const safeLocalPath = localPath.trim();
 
   // Crear directorio local si no existe
@@ -311,7 +357,8 @@ async function uploadFile(config, localPath, remotePath) {
   }
 
   const safeLocalPath = localPath.trim();
-  const safeRemotePath = remotePath.trim();
+  // ✅ SEGURIDAD: Sanitizar path remoto para prevenir path traversal
+  const safeRemotePath = sanitizeRemotePath(remotePath, '/');
 
   if (!fs.existsSync(safeLocalPath)) {
     return { success: false, error: 'El archivo local no existe' };
@@ -376,6 +423,8 @@ async function uploadFile(config, localPath, remotePath) {
  */
 async function deleteFile(config, remotePath, isDirectory) {
   const { protocol, host, port, username, password, useBastionWallix, bastionHost, bastionUser } = config;
+  // ✅ SEGURIDAD: Sanitizar path para prevenir path traversal
+  const safeRemotePath = sanitizeRemotePath(remotePath, '/');
 
   if (protocol === 'sftp' || protocol === 'scp') {
     const sftp = new SftpClient();
@@ -407,12 +456,12 @@ async function deleteFile(config, remotePath, isDirectory) {
       await sftp.connect(connectConfig);
       if (isDirectory) {
         try {
-          await sftp.rmdir(remotePath, true);
+          await sftp.rmdir(safeRemotePath, true);
         } catch (rmdirErr) {
-          await sftp.rmdir(remotePath);
+          await sftp.rmdir(safeRemotePath);
         }
       } else {
-        await sftp.delete(remotePath);
+        await sftp.delete(safeRemotePath);
       }
       await sftp.end();
       return { success: true };
@@ -430,9 +479,9 @@ async function deleteFile(config, remotePath, isDirectory) {
         secure: false,
       });
       if (isDirectory) {
-        await client.removeDir(remotePath);
+        await client.removeDir(safeRemotePath);
       } else {
-        await client.remove(remotePath);
+        await client.remove(safeRemotePath);
       }
       await client.close();
       return { success: true };
@@ -448,6 +497,8 @@ async function deleteFile(config, remotePath, isDirectory) {
  */
 async function createDirectory(config, remotePath) {
   const { protocol, host, port, username, password, useBastionWallix, bastionHost, bastionUser } = config;
+  // ✅ SEGURIDAD: Sanitizar path para prevenir path traversal
+  const safeRemotePath = sanitizeRemotePath(remotePath, '/');
 
   if (protocol === 'sftp' || protocol === 'scp') {
     const sftp = new SftpClient();
@@ -477,7 +528,7 @@ async function createDirectory(config, remotePath) {
         };
       }
       await sftp.connect(connectConfig);
-      await sftp.mkdir(remotePath, true); // true = recursive
+      await sftp.mkdir(safeRemotePath, true); // true = recursive
       await sftp.end();
       return { success: true };
     } catch (err) {
@@ -493,7 +544,7 @@ async function createDirectory(config, remotePath) {
         password: password,
         secure: false,
       });
-      await client.ensureDir(remotePath);
+      await client.ensureDir(safeRemotePath);
       await client.close();
       return { success: true };
     } catch (err) {
@@ -508,6 +559,9 @@ async function createDirectory(config, remotePath) {
  */
 async function renameFile(config, oldPath, newPath) {
   const { protocol, host, port, username, password, useBastionWallix, bastionHost, bastionUser } = config;
+  // ✅ SEGURIDAD: Sanitizar paths para prevenir path traversal
+  const safeOldPath = sanitizeRemotePath(oldPath, '/');
+  const safeNewPath = sanitizeRemotePath(newPath, '/');
 
   if (protocol === 'sftp' || protocol === 'scp') {
     const sftp = new SftpClient();
@@ -537,7 +591,7 @@ async function renameFile(config, oldPath, newPath) {
         };
       }
       await sftp.connect(connectConfig);
-      await sftp.rename(oldPath, newPath);
+      await sftp.rename(safeOldPath, safeNewPath);
       await sftp.end();
       return { success: true };
     } catch (err) {
@@ -553,7 +607,7 @@ async function renameFile(config, oldPath, newPath) {
         password: password,
         secure: false,
       });
-      await client.rename(oldPath, newPath);
+      await client.rename(safeOldPath, safeNewPath);
       await client.close();
       return { success: true };
     } catch (err) {
