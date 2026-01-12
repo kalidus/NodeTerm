@@ -778,14 +778,12 @@ const HomeTab = ({
 
             {/* Card única para Favoritos y Recientes */}
             <div style={{
-              background: `linear-gradient(135deg,
-                rgba(16, 20, 28, 0.7) 0%,
-                rgba(16, 20, 28, 0.5) 100%)`,
-              backdropFilter: 'blur(12px) saturate(140%)',
-              WebkitBackdropFilter: 'blur(12px) saturate(140%)',
-              border: `1px solid ${themeColors.cardBorder || 'rgba(255,255,255,0.15)'}`,
+              background: 'transparent',
+              backdropFilter: 'none',
+              WebkitBackdropFilter: 'none',
+              border: 'none',
               borderRadius: '16px',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
+              boxShadow: 'none',
               padding: '1.5rem',
               marginBottom: '1rem',
               display: 'flex',
