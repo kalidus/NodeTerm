@@ -450,7 +450,8 @@ const connectionThrottle = {
 };
 
 // Función para limpiar conexiones SSH huérfanas cada 60 segundos
-setInterval(() => {
+// ✅ MEMORY LEAK FIX: Guardar referencia del intervalo para poder limpiarlo
+let orphanCleanupInterval = setInterval(() => {
   const activeKeys = new Set(Object.values(sshConnections).map(conn => conn.cacheKey));
   
   for (const [poolKey, poolConnection] of Object.entries(sshConnectionPool)) {
@@ -3137,6 +3138,12 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
 // Limpieza robusta también en before-quit
 app.on('before-quit', async () => {
   isAppQuitting = true;
+  
+  // ✅ MEMORY LEAK FIX: Limpiar intervalo de limpieza de conexiones huérfanas
+  if (orphanCleanupInterval) {
+    clearInterval(orphanCleanupInterval);
+    orphanCleanupInterval = null;
+  }
   
   Object.values(sshConnections).forEach(conn => {
     if (conn.statsTimeout) {

@@ -8,6 +8,19 @@ const SftpClient = require('ssh2-sftp-client');
 const fs = require('fs');
 
 /**
+ * Escapa caracteres especiales de shell para prevenir command injection
+ * @param {string} path - Ruta a escapar
+ * @returns {string} - Ruta escapada de forma segura
+ */
+function escapeShellPath(path) {
+  if (typeof path !== 'string') {
+    return '';
+  }
+  // Escapar caracteres especiales: ", `, $, \, !, ;, |, &, <, >
+  return path.replace(/(["`$\\!;|&<>])/g, '\\$1');
+}
+
+/**
  * Parsea la salida del comando ls -la en formato de objetos
  */
 function parseLsOutput(output) {
@@ -127,7 +140,9 @@ function registerSSHHandlers(dependencies = {}) {
           const stream = existingConn.stream;
           shouldCloseConnection = false;
           // Ejecutar el comando en el stream interactivo
-          const command = `ls -la --color=never "${safePath}"\n`;
+          // ✅ SEGURIDAD: Escapar el path para prevenir command injection
+          const escapedPath = escapeShellPath(safePath);
+          const command = `ls -la --color=never "${escapedPath}"\n`;
           let output = '';
           // Listener temporal para capturar la salida
           const onData = (data) => {
@@ -182,7 +197,9 @@ function registerSSHHandlers(dependencies = {}) {
         ssh = new SSH2Promise(sshConfig);
         await ssh.connect();
         shouldCloseConnection = true;
-        const lsOutput = await ssh.exec(`ls -la --color=never "${safePath}"`);
+        // ✅ SEGURIDAD: Escapar el path para prevenir command injection
+        const escapedPath = escapeShellPath(safePath);
+        const lsOutput = await ssh.exec(`ls -la --color=never "${escapedPath}"`);
         // Eliminar códigos ANSI por si acaso
         const cleanOutput = lsOutput.replace(/\x1b\[[0-9;]*m/g, '');
         if (shouldCloseConnection && ssh) {
@@ -205,7 +222,9 @@ function registerSSHHandlers(dependencies = {}) {
           return { success: false, error: 'No se encontró una conexión bastión activa para este tabId. Abre primero una terminal.' };
         }
         const stream = existingConn.stream;
-        const command = `[ -d "${path}" ] && echo exists || echo notfound\n`;
+        // ✅ SEGURIDAD: Escapar el path para prevenir command injection
+        const escapedPath = escapeShellPath(path);
+        const command = `[ -d "${escapedPath}" ] && echo exists || echo notfound\n`;
         let output = '';
         const onData = (data) => {
           output += data.toString('utf-8');
@@ -228,7 +247,9 @@ function registerSSHHandlers(dependencies = {}) {
         // SSH directo
         const ssh = new SSH2Promise(sshConfig);
         await ssh.connect();
-        const result = await ssh.exec(`[ -d "${path}" ] && echo exists || echo notfound`);
+        // ✅ SEGURIDAD: Escapar el path para prevenir command injection
+        const escapedPath = escapeShellPath(path);
+        const result = await ssh.exec(`[ -d "${escapedPath}" ] && echo exists || echo notfound`);
         await ssh.close();
         if (result.includes('exists')) {
           return { success: true, exists: true };
