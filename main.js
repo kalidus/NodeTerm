@@ -866,6 +866,38 @@ function createWindow() {
     initializeGuacamoleServices().catch((error) => {
       console.error('❌ [POST-SHOW] Error en inicialización de Guacamole:', error);
     });
+    
+    // 🚀 OPTIMIZACIÓN: Registrar handlers de túnel SSH después de que la ventana sea visible
+    // Estos handlers no son críticos para el arranque y pueden esperar
+    try {
+      const { registerSSHTunnelHandlers } = require('./src/main/handlers');
+      // Recrear dependencias aquí ya que getHandlerDependencies está en otro scope
+      const handlerDependencies = { 
+        mainWindow, 
+        findSSHConnection,
+        disconnectAllGuacamoleConnections,
+        guacdService: getGuacdService(),
+        guacamoleServer,
+        guacamoleServerReadyAt,
+        sendToRenderer,
+        guacdInactivityTimeoutMs,
+        anythingLLMService: getAnythingLLMService(),
+        openWebUIService: getOpenWebUIService(),
+        packageJson,
+        sshConnections,
+        cleanupOrphanedConnections,
+        isAppQuitting,
+        getGuacamoleServer: () => guacamoleServer,
+        getGuacamoleServerReadyAt: () => guacamoleServerReadyAt,
+        getOrCreateGuacamoleSecretKey: getOrCreateGuacamoleSecretKey,
+        isGuacamoleInitializing: () => guacamoleInitializing,
+        isGuacamoleInitialized: () => guacamoleInitialized
+      };
+      registerSSHTunnelHandlers(handlerDependencies);
+      console.log('✅ [SSH Tunnel Handlers] Registrados después de ready-to-show');
+    } catch (error) {
+      console.error('❌ [POST-SHOW] Error registrando handlers de túnel SSH:', error);
+    }
   }
 
   // Open the DevTools in development mode
@@ -992,7 +1024,8 @@ function createWindow() {
     }
   });
     
-    registerAllHandlers({ 
+    // Preparar dependencias para los handlers (función helper para reutilizar)
+    const getHandlerDependencies = () => ({ 
       mainWindow, 
       findSSHConnection,
       disconnectAllGuacamoleConnections,
@@ -1013,6 +1046,9 @@ function createWindow() {
       isGuacamoleInitializing: () => guacamoleInitializing,
       isGuacamoleInitialized: () => guacamoleInitialized
     });
+    
+    // 🚀 OPTIMIZACIÓN: Registrar handlers principales (sin túnel SSH)
+    registerAllHandlers(getHandlerDependencies());
     
     // Handlers registrados exitosamente
     // Nota: get-user-home ya está registrado en registerSystemHandlers()

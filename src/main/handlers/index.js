@@ -103,7 +103,15 @@ function registerSecondaryHandlers(dependencies) {
   // Handlers de herramientas de red
   getNetworkToolsHandlers().registerNetworkToolsHandlers();
   
-  // Handlers de túneles SSH
+  // 🚀 OPTIMIZACIÓN: Handlers de túneles SSH se registran DESPUÉS de ready-to-show
+  // Ver registerSSHTunnelHandlers() que se llama desde main.js
+}
+
+/**
+ * 🚀 OPTIMIZACIÓN: Registra handlers de túneles SSH después de que la ventana sea visible
+ * Estos handlers no son críticos para el arranque y pueden esperar
+ */
+function registerSSHTunnelHandlers(dependencies) {
   getSSHTunnelHandlers().registerSSHTunnelHandlers(dependencies);
 }
 
@@ -141,6 +149,7 @@ module.exports = {
   registerAllHandlers,
   registerCriticalHandlers,
   registerSecondaryHandlers,
+  registerSSHTunnelHandlers, // 🚀 Nueva función para registrar handlers de túnel SSH después de ready-to-show
   // Getters para acceso individual a handlers (lazy loading)
   getAppHandlers,
   getSystemHandlers,

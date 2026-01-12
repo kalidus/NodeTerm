@@ -3,7 +3,8 @@ import { createRoot } from 'react-dom/client';
 import App from './components/App';
 import { fontLoader } from './utils/fontLoader';
 
-// PrimeReact
+// PrimeReact - Los CSS se cargan normalmente (webpack los optimiza)
+// 🚀 OPTIMIZACIÓN: Estos imports son necesarios pero webpack los procesa eficientemente
 import "primereact/resources/themes/lara-light-indigo/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
@@ -72,7 +73,8 @@ applyEarlyBootTheme();
 // Habilitar el modo "ripple" para los componentes de PrimeReact
 PrimeReact.ripple = true;
 
-// Función para inicializar temas globalmente antes de renderizar la app
+// 🚀 OPTIMIZACIÓN: Función para inicializar temas globalmente DIFERIDA después del render
+// Esto evita bloquear el render inicial con múltiples accesos a localStorage
 const initializeGlobalThemes = () => {
   try {
     // Inicialización global de temas
@@ -154,18 +156,27 @@ const initializeGlobalThemes = () => {
   }
 };
 
-// Ejecutar inicialización global
-initializeGlobalThemes();
-
 const container = document.getElementById('root');
 const root = createRoot(container);
 
-// Render React
+// 🚀 OPTIMIZACIÓN: Render React INMEDIATAMENTE sin esperar inicializaciones pesadas
+// Esto permite que la ventana se muestre lo antes posible
 root.render(<App />);
 
-// NO ocultar splash aquí - se ocultará cuando el tema esté completamente aplicado
-// Solo marcar que React está renderizado
+// Marcar que React está renderizado inmediatamente
 requestAnimationFrame(() => {
   document.documentElement.classList.add('app-ready');
-  // El boot-splash se ocultará desde App.js cuando el tema esté listo
 });
+
+// 🚀 OPTIMIZACIÓN: Diferir inicializaciones pesadas DESPUÉS del render
+// Esto permite que la ventana sea visible antes de ejecutar múltiples accesos a localStorage
+// Usar requestIdleCallback si está disponible, sino setTimeout con delay mínimo
+if (window.requestIdleCallback) {
+  requestIdleCallback(() => {
+    initializeGlobalThemes();
+  }, { timeout: 100 });
+} else {
+  setTimeout(() => {
+    initializeGlobalThemes();
+  }, 0);
+}
