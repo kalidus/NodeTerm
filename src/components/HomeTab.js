@@ -14,6 +14,7 @@ import { themeManager } from '../utils/themeManager';
 import { themes } from '../themes';
 import { getRecents, toggleFavorite, onUpdate, getRecentPasswords } from '../utils/connectionStore';
 import { iconThemes } from '../themes/icon-themes';
+import { STORAGE_KEYS } from '../utils/constants';
 
 const HomeTab = ({
   onCreateSSHConnection,
@@ -34,7 +35,16 @@ const HomeTab = ({
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal'); // Estado normal para tamaño correcto
-  const [terminalHidden, setTerminalHidden] = useState(false); // Terminal visible por defecto
+  const [terminalHidden, setTerminalHidden] = useState(() => {
+    // Leer configuración desde localStorage, por defecto visible (terminalHidden = false)
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE);
+      const isVisible = saved !== null ? saved === 'true' : true; // Por defecto true (visible)
+      return !isVisible; // terminalHidden es el inverso de isVisible
+    } catch {
+      return false; // Por defecto visible
+    }
+  });
   const [manualPaneSize, setManualPaneSize] = useState(null); // Tamaño manual del panel superior
   const [isTerminalTransitioning, setIsTerminalTransitioning] = useState(false);
   const [favType, setFavType] = useState('all'); // Nuevo estado para filtros
@@ -101,6 +111,27 @@ const HomeTab = ({
     return () => {
       window.removeEventListener('storage', handleIconThemeChange);
       window.removeEventListener('icon-theme-changed', handleIconThemeChange);
+    };
+  }, []);
+
+  // Escuchar cambios en la visibilidad del terminal local
+  useEffect(() => {
+    const handleTerminalVisibilityChange = () => {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE);
+        const isVisible = saved !== null ? saved === 'true' : true;
+        setTerminalHidden(!isVisible);
+      } catch {
+        setTerminalHidden(false);
+      }
+    };
+
+    window.addEventListener('home-tab-local-terminal-visibility-changed', handleTerminalVisibilityChange);
+    window.addEventListener('storage', handleTerminalVisibilityChange);
+    
+    return () => {
+      window.removeEventListener('home-tab-local-terminal-visibility-changed', handleTerminalVisibilityChange);
+      window.removeEventListener('storage', handleTerminalVisibilityChange);
     };
   }, []);
 

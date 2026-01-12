@@ -278,6 +278,16 @@ const SettingsDialog = ({
     }
   });
 
+  // Configuración para mostrar/ocultar terminal local al iniciar
+  const [localTerminalVisible, setLocalTerminalVisible] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE);
+      return saved !== null ? saved === 'true' : true; // Por defecto true (visible)
+    } catch {
+      return true;
+    }
+  });
+
   // RDP settings (persisted in localStorage)
   // Ahora en MINUTOS para los umbrales de inactividad/actividad
   const [rdpIdleMinutes, setRdpIdleMinutes] = useState(() => {
@@ -1158,6 +1168,14 @@ const SettingsDialog = ({
       }));
     } catch {}
   }, [actionBarIconTheme]);
+
+  // Persistir configuración de visibilidad del terminal local
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, String(localTerminalVisible));
+      window.dispatchEvent(new CustomEvent('home-tab-local-terminal-visibility-changed'));
+    } catch {}
+  }, [localTerminalVisible]);
 
   // Cargar ruta de grabaciones
   useEffect(() => {
@@ -4279,6 +4297,57 @@ const SettingsDialog = ({
                                 <span>{option.label}</span>
                               </div>
                             ) : t('appearance.homePage.selectIconTheme')}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Terminal Local */}
+                      <div style={{
+                        background: 'rgba(0, 0, 0, 0.08)',
+                        borderRadius: '10px',
+                        padding: '0.875rem 1rem',
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        marginTop: '1rem'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          marginBottom: '0.75rem'
+                        }}>
+                          <i className="pi pi-terminal" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
+                          <span style={{
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                            color: 'var(--ui-dialog-text)'
+                          }}>{t('appearance.homePage.localTerminal')}</span>
+                        </div>
+                        
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.25rem',
+                            flex: 1
+                          }}>
+                            <span style={{ 
+                              fontSize: '0.8125rem', 
+                              color: 'var(--ui-dialog-text)',
+                              fontWeight: 500
+                            }}>{t('appearance.homePage.showLocalTerminal')}</span>
+                            <span style={{ 
+                              fontSize: '0.75rem', 
+                              color: 'var(--text-color-secondary)' 
+                            }}>{t('appearance.homePage.showLocalTerminalDescription')}</span>
+                          </div>
+                          <Checkbox
+                            inputId="local-terminal-visible"
+                            checked={localTerminalVisible}
+                            onChange={(e) => setLocalTerminalVisible(e.checked)}
                           />
                         </div>
                       </div>
