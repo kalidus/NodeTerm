@@ -467,7 +467,10 @@ let orphanCleanupInterval = setInterval(() => {
           }
           poolConnection.close();
         } catch (e) {
-          // console.warn(`Error closing orphaned connection: ${e.message}`);
+          // ✅ BUG FIX: Loggear errores en modo desarrollo para debugging
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`[SSH Pool] Error closing orphaned connection ${poolKey}:`, e.message);
+          }
         }
         delete sshConnectionPool[poolKey];
       }
@@ -519,22 +522,32 @@ async function getOrCreateGuacamoleSecretKey() {
   return newKey;
 }
 
+// ✅ BUG FIX: Promise para sincronizar inicializaciones concurrentes
+let guacamoleInitPromise = null;
+
 /**
  * Inicializa servicios de Guacamole de forma asíncrona
  */
 async function initializeGuacamoleServices() {
-  // Evitar inicialización múltiple
-  if (guacamoleInitializing || guacamoleInitialized) {
-    console.log('✅ Servicios Guacamole ya inicializados o en proceso, omitiendo...');
+  // ✅ BUG FIX: Si ya hay una inicialización en curso, esperar a que termine
+  if (guacamoleInitPromise) {
+    console.log('✅ Servicios Guacamole ya inicializándose, esperando...');
+    return await guacamoleInitPromise;
+  }
+  
+  // Si ya está inicializado, retornar inmediatamente
+  if (guacamoleInitialized) {
+    console.log('✅ Servicios Guacamole ya inicializados, omitiendo...');
     return;
   }
   
-  guacamoleInitializing = true;
-  
-  // 🚀 OPTIMIZACIÓN: Aplicar parche de GuacdClient justo antes de inicializar
-  ensureGuacdClientPatched();
-  
-  try {
+  // Crear nueva promesa de inicialización
+  guacamoleInitPromise = (async () => {
+    try {
+      guacamoleInitializing = true;
+      
+      // 🚀 OPTIMIZACIÓN: Aplicar parche de GuacdClient justo antes de inicializar
+      ensureGuacdClientPatched();
     console.log('🚀 Inicializando servicios Guacamole...');
     // Cargar método preferido persistido antes de inicializar
     try {
@@ -732,20 +745,28 @@ async function initializeGuacamoleServices() {
       console.error('❌ Error en conexión Guacamole:', error);
     });
 
-    guacamoleServerReadyAt = Date.now();
-    guacamoleInitialized = true;
-    guacamoleInitializing = false; // Reset flag después de inicialización exitosa
-    console.log('✅ Servicios Guacamole inicializados correctamente');
-    console.log(`🌐 Servidor WebSocket: localhost:${websocketOptions.port}`);
-    console.log(`🔧 GuacD: ${guacdOptions.host}:${guacdOptions.port}`);
-    if (DEBUG_GUACAMOLE) {
-      console.log(`📊 [initializeGuacamoleServices] guacamoleServer asignado:`, !!guacamoleServer);
+      guacamoleServerReadyAt = Date.now();
+      guacamoleInitialized = true;
+      guacamoleInitializing = false; // Reset flag después de inicialización exitosa
+      console.log('✅ Servicios Guacamole inicializados correctamente');
+      console.log(`🌐 Servidor WebSocket: localhost:${websocketOptions.port}`);
+      console.log(`🔧 GuacD: ${guacdOptions.host}:${guacdOptions.port}`);
+      if (DEBUG_GUACAMOLE) {
+        console.log(`📊 [initializeGuacamoleServices] guacamoleServer asignado:`, !!guacamoleServer);
+      }
+      
+      return true; // Éxito
+    } catch (error) {
+      console.error('❌ Error inicializando servicios Guacamole:', error);
+      guacamoleInitializing = false; // Reset flag en caso de error
+      throw error; // Re-lanzar para que la promesa falle
+    } finally {
+      // Limpiar la promesa después de completar (éxito o error)
+      guacamoleInitPromise = null;
     }
-    
-  } catch (error) {
-    console.error('❌ Error inicializando servicios Guacamole:', error);
-    guacamoleInitializing = false; // Reset flag en caso de error
-  }
+  })();
+  
+  return await guacamoleInitPromise;
 }
 
 // === Preferencias Guacd (persistencia en userData) ===

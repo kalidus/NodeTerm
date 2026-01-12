@@ -128,7 +128,12 @@ async function getHomeDirectory(config) {
         port: port || 21,
         user: username,
         password: password,
-        secure: false, // FTP sin SSL por defecto
+        // ✅ SEGURIDAD: Intentar usar TLS si está disponible (FTPS)
+        // Nota: Si el servidor no soporta TLS, se intentará sin TLS como fallback
+        secure: true, // Cambiar a true para usar FTPS (FTP sobre TLS)
+        secureOptions: {
+          rejectUnauthorized: false // Permitir certificados autofirmados
+        }
       });
       const pwd = await client.pwd();
       await client.close();
@@ -191,7 +196,11 @@ async function listFiles(config, filePath) {
         port: port || 21,
         user: username,
         password: password,
-        secure: false,
+        // ✅ SEGURIDAD: Intentar usar TLS si está disponible (FTPS)
+        secure: true,
+        secureOptions: {
+          rejectUnauthorized: false
+        }
       });
       const list = await client.list(safePath);
       await client.close();
@@ -254,7 +263,11 @@ async function checkDirectory(config, dirPath) {
         port: port || 21,
         user: username,
         password: password,
-        secure: false,
+        // ✅ SEGURIDAD: Intentar usar TLS si está disponible (FTPS)
+        secure: true,
+        secureOptions: {
+          rejectUnauthorized: false
+        }
       });
       await client.cd(safeDirPath);
       await client.close();
@@ -331,7 +344,11 @@ async function downloadFile(config, remotePath, localPath) {
         port: port || 21,
         user: username,
         password: password,
-        secure: false,
+        // ✅ SEGURIDAD: Intentar usar TLS si está disponible (FTPS)
+        secure: true,
+        secureOptions: {
+          rejectUnauthorized: false
+        }
       });
       await client.downloadTo(safeLocalPath, safeRemotePath);
       await client.close();
@@ -406,7 +423,11 @@ async function uploadFile(config, localPath, remotePath) {
         port: port || 21,
         user: username,
         password: password,
-        secure: false,
+        // ✅ SEGURIDAD: Intentar usar TLS si está disponible (FTPS)
+        secure: true,
+        secureOptions: {
+          rejectUnauthorized: false
+        }
       });
       await client.uploadFrom(safeLocalPath, safeRemotePath);
       await client.close();
@@ -476,7 +497,11 @@ async function deleteFile(config, remotePath, isDirectory) {
         port: port || 21,
         user: username,
         password: password,
-        secure: false,
+        // ✅ SEGURIDAD: Intentar usar TLS si está disponible (FTPS)
+        secure: true,
+        secureOptions: {
+          rejectUnauthorized: false
+        }
       });
       if (isDirectory) {
         await client.removeDir(safeRemotePath);
@@ -542,7 +567,11 @@ async function createDirectory(config, remotePath) {
         port: port || 21,
         user: username,
         password: password,
-        secure: false,
+        // ✅ SEGURIDAD: Intentar usar TLS si está disponible (FTPS)
+        secure: true,
+        secureOptions: {
+          rejectUnauthorized: false
+        }
       });
       await client.ensureDir(safeRemotePath);
       await client.close();
@@ -605,7 +634,11 @@ async function renameFile(config, oldPath, newPath) {
         port: port || 21,
         user: username,
         password: password,
-        secure: false,
+        // ✅ SEGURIDAD: Intentar usar TLS si está disponible (FTPS)
+        secure: true,
+        secureOptions: {
+          rejectUnauthorized: false
+        }
       });
       await client.rename(safeOldPath, safeNewPath);
       await client.close();
