@@ -446,12 +446,12 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 						const iconSVG = getConnectionTypeIconSVG(connection.type);
 						if (iconSVG) {
 							return React.cloneElement(iconSVG, {
-								width: 24,
-								height: 24,
+								width: 28,
+								height: 28,
 								style: {
 									...iconSVG.props?.style,
-									width: '24px',
-									height: '24px'
+									width: '28px',
+									height: '28px'
 								}
 							});
 						}
