@@ -229,8 +229,12 @@ class SecureStorage {
    */
   resetTimeout() {
     this.clearTimeout();
+    // ✅ BUG FIX: Guardar referencia a 'this' para evitar problemas de contexto
+    const self = this;
     this.timeoutId = setTimeout(() => {
-      this.masterKeyCache = null;
+      if (self) {
+        self.masterKeyCache = null;
+      }
     }, this.sessionTimeout);
   }
 

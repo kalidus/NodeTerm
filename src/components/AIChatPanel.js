@@ -2583,9 +2583,16 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
 
   // Función para procesar bloques de código después del renderizado
   const processCodeBlocksAfterRender = (htmlContent) => {
+    // ✅ SEGURIDAD: Sanitizar HTML antes de manipularlo
+    const sanitizedContent = DOMPurify.sanitize(htmlContent, {
+      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'span', 'div'],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'id'],
+      ALLOW_DATA_ATTR: false
+    });
+    
     // Crear un elemento temporal para manipular el HTML
     const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlContent;
+    tempDiv.innerHTML = sanitizedContent;
     
     // Buscar todos los bloques de código
     const codeBlocks = tempDiv.querySelectorAll('pre code');
@@ -2609,12 +2616,20 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
       langSpan.className = 'ai-code-lang';
       langSpan.textContent = language.toUpperCase();
       
-      // Crear el botón de copiar con onclick inline
+      // Crear el botón de copiar (usar addEventListener en lugar de onclick inline para seguridad)
       const copyBtn = document.createElement('button');
       copyBtn.className = 'ai-copy-btn';
       copyBtn.setAttribute('data-code-id', codeId);
-      copyBtn.innerHTML = '<i class="pi pi-copy"></i> Copiar';
-      copyBtn.setAttribute('onclick', `window.copyCode('${codeId}')`);
+      // ✅ SEGURIDAD: Usar textContent y addEventListener en lugar de innerHTML y onclick
+      const icon = document.createElement('i');
+      icon.className = 'pi pi-copy';
+      copyBtn.appendChild(icon);
+      copyBtn.appendChild(document.createTextNode(' Copiar'));
+      copyBtn.addEventListener('click', () => {
+        if (window.copyCode && typeof window.copyCode === 'function') {
+          window.copyCode(codeId);
+        }
+      });
       
       // Ensamblar el header
       header.appendChild(langSpan);
@@ -2657,8 +2672,15 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
     if (!html) return '';
 
     try {
+      // ✅ SEGURIDAD: Sanitizar HTML antes de manipularlo
+      const sanitizedHtml = DOMPurify.sanitize(html, {
+        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'span', 'div'],
+        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'id'],
+        ALLOW_DATA_ATTR: false
+      });
+      
       const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = html;
+      tempDiv.innerHTML = sanitizedHtml;
 
       const anchors = tempDiv.querySelectorAll('a');
       anchors.forEach((anchor) => {
