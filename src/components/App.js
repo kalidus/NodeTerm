@@ -98,48 +98,68 @@ const App = () => {
   const [needsUnlock, setNeedsUnlock] = useState(false);
   const [masterKey, setMasterKey] = useState(null);
 
-  // Cargar tema de pestañas al inicializar la aplicación
+  // 🚀 OPTIMIZACIÓN: Cargar tema de pestañas de forma diferida para no bloquear el render inicial
   useEffect(() => {
     // Función para inicializar todos los temas de forma robusta
     const initializeAllThemes = async () => {
       try {
         // Inicializando temas
         
-        // 1. Cargar tema de tabs
+        // 1. Cargar tema de tabs (ligero, puede ejecutarse inmediatamente)
         loadSavedTabTheme();
         
-        // 2. Importar y aplicar temas UI y status bar
-        const { themeManager } = await import('../utils/themeManager');
-        const { statusBarThemeManager } = await import('../utils/statusBarThemeManager');
-        
-        // 3. Aplicar temas con verificación
-        themeManager.loadSavedTheme();
-        statusBarThemeManager.loadSavedTheme();
-        
-        // 4. Verificar que los temas se aplicaron correctamente
-        setTimeout(() => {
-          const rootStyles = getComputedStyle(document.documentElement);
-          const dialogBg = rootStyles.getPropertyValue('--ui-dialog-bg');
-          const sidebarBg = rootStyles.getPropertyValue('--ui-sidebar-bg');
+        // 🚀 OPTIMIZACIÓN: Diferir importaciones pesadas usando requestIdleCallback
+        // Esto permite que la UI se renderice primero
+        const loadThemes = async () => {
+          // 2. Importar y aplicar temas UI y status bar
+          const { themeManager } = await import('../utils/themeManager');
+          const { statusBarThemeManager } = await import('../utils/statusBarThemeManager');
           
-          // Si los temas no se aplicaron correctamente, forzar re-aplicación
-          if (!dialogBg || dialogBg === 'initial' || dialogBg === '' || 
-              !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
-            themeManager.applyTheme('Nord');
-            statusBarThemeManager.applyTheme('Night Owl');
-          }
+          // 3. Aplicar temas con verificación
+          themeManager.loadSavedTheme();
+          statusBarThemeManager.loadSavedTheme();
           
-          // 5. Ocultar boot-splash cuando el tema esté completamente aplicado
-          // Esperar un frame adicional para asegurar que todo está renderizado
-          requestAnimationFrame(() => {
+          // 4. Verificar que los temas se aplicaron correctamente
+          setTimeout(() => {
+            const rootStyles = getComputedStyle(document.documentElement);
+            const dialogBg = rootStyles.getPropertyValue('--ui-dialog-bg');
+            const sidebarBg = rootStyles.getPropertyValue('--ui-sidebar-bg');
+            
+            // Si los temas no se aplicaron correctamente, forzar re-aplicación
+            if (!dialogBg || dialogBg === 'initial' || dialogBg === '' || 
+                !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
+              themeManager.applyTheme('Nord');
+              statusBarThemeManager.applyTheme('Night Owl');
+            }
+            
+            // 5. Ocultar boot-splash cuando el tema esté completamente aplicado
+            // Esperar un frame adicional para asegurar que todo está renderizado
             requestAnimationFrame(() => {
-              const splash = document.getElementById('boot-splash');
-              if (splash) {
-                splash.classList.add('hidden');
-              }
+              requestAnimationFrame(() => {
+                const splash = document.getElementById('boot-splash');
+                if (splash) {
+                  splash.classList.add('hidden');
+                }
+              });
             });
-          });
-        }, 200);
+          }, 200);
+        };
+        
+        // Diferir carga pesada usando requestIdleCallback si está disponible
+        if (window.requestIdleCallback) {
+          requestIdleCallback(() => {
+            loadThemes().catch(err => {
+              console.error('[THEME] Error cargando temas:', err);
+            });
+          }, { timeout: 300 });
+        } else {
+          // Fallback: usar setTimeout con delay mínimo
+          setTimeout(() => {
+            loadThemes().catch(err => {
+              console.error('[THEME] Error cargando temas:', err);
+            });
+          }, 50);
+        }
         
       } catch (error) {
         console.error('[THEME] Error inicializando temas:', error);
@@ -153,7 +173,7 @@ const App = () => {
       }
     };
     
-    // Ejecutar inicialización
+    // Ejecutar inicialización (solo carga ligera inmediatamente)
     initializeAllThemes();
   }, []);
 
