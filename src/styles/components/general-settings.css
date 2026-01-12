@@ -1,13 +1,36 @@
-/* --- Component: General Settings - PREMIUM DESIGN WITH 2 COLUMNS --- */
+/* --- Component: General Settings - COMPACT PROFESSIONAL DESIGN --- */
 
 /* ========================================
-   VARIABLES Y UTILIDADES
+   VARIABLES GLOBALES DE DISEÑO COMPACTO
+   Basado en mejores prácticas de UI (VS Code, Discord, Slack)
    ======================================== */
 
 :root {
-  /* Usar variables del tema en lugar de gradientes fijos */
+  /* Glassmorphism */
   --general-glass-bg: rgba(255, 255, 255, 0.08);
   --general-glass-border: rgba(255, 255, 255, 0.15);
+  
+  /* Tamaños de fuente compactos (estándar industria) */
+  --settings-font-title: 0.875rem;      /* 14px - títulos de sección */
+  --settings-font-label: 0.8125rem;     /* 13px - labels */
+  --settings-font-description: 0.75rem; /* 12px - descripciones */
+  --settings-font-mini: 0.6875rem;      /* 11px - mini labels */
+  --settings-font-input: 0.75rem;       /* 12px - inputs/dropdowns */
+  
+  /* Espaciado compacto */
+  --settings-padding: 1.25rem;
+  --settings-gap: 0.75rem;
+  
+  /* Border-radius profesional */
+  --settings-radius-section: 10px;
+  --settings-radius-card: 8px;
+  --settings-radius-input: 6px;
+  --settings-radius-icon: 6px;
+  
+  /* Tamaños de iconos */
+  --settings-icon-section: 28px;
+  --settings-icon-setting: 24px;
+  --settings-icon-header: 1.75rem;
 }
 
 /* ========================================
@@ -15,7 +38,7 @@
    ======================================== */
 
 .general-settings-container {
-  padding: 1rem 1.5rem 1.5rem 1.5rem;
+  padding: var(--settings-padding);
   display: flex !important;
   flex-direction: column !important;
   width: 100%;
@@ -102,12 +125,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 8px;
+  width: var(--settings-icon-header);
+  height: var(--settings-icon-header);
+  border-radius: var(--settings-radius-icon);
   background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
   color: white;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.25);
   padding: 0;
   flex-shrink: 0;
@@ -120,7 +143,7 @@
 }
 
 .general-header-icon.protocol-dialog-header-icon i {
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   color: white;
 }
 
@@ -132,17 +155,16 @@
 .general-header {
   margin: 0 0 0.25rem 0;
   color: var(--ui-dialog-text);
-  font-size: 1rem;
+  font-size: var(--settings-font-title);
   font-weight: 600;
   letter-spacing: -0.01em;
   line-height: 1.3;
-  /* Asegurar que sea exactamente igual a security-header */
 }
 
 .general-description {
   margin: 0;
   color: var(--text-color-secondary);
-  font-size: 0.8125rem;
+  font-size: var(--settings-font-description);
   line-height: 1.4;
   opacity: 0.75;
   text-align: left;
@@ -153,19 +175,19 @@
    ======================================== */
 
 .general-settings-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   /* Usar color del tema con transparencia para efecto glassmorphism */
   background: var(--ui-content-bg);
   opacity: 0.95;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--ui-content-border);
-  border-radius: 20px;
+  border-radius: var(--settings-radius-section);
   padding: 0;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.15),
+    0 4px 16px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 var(--ui-button-primary);
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
 }
@@ -219,11 +241,11 @@
 
 /* Header de sección */
 .general-section-header {
-  padding: 1rem 1.25rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.625rem;
   background: rgba(255, 255, 255, 0.02);
 }
 
@@ -231,46 +253,45 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: var(--settings-icon-section);
+  height: var(--settings-icon-section);
+  border-radius: var(--settings-radius-icon);
   flex-shrink: 0;
   background: var(--ui-button-primary);
   padding: 0;
   box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.2),
+    0 2px 6px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .general-section-icon i {
   color: var(--ui-button-primary-text);
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
 .general-section-icon:hover {
   transform: scale(1.05);
   box-shadow: 
-    0 6px 20px rgba(0, 0, 0, 0.25),
-    0 0 0 3px rgba(0, 0, 0, 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .general-section-title {
   margin: 0;
   color: var(--ui-dialog-text) !important;
-  font-size: 0.9375rem;
+  font-size: var(--settings-font-title);
   font-weight: 600;
   letter-spacing: 0.02px;
 }
 
 /* Contenedor de opciones */
 .general-settings-options {
-  padding: 1rem 1.25rem;
+  padding: 0.875rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 /* ========================================
@@ -281,7 +302,7 @@
   background: transparent;
   border: none;
   border-radius: 0;
-  padding: 0.75rem 0;
+  padding: 0.5rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   transition: all 0.2s ease;
   position: relative;
@@ -311,14 +332,14 @@
 .general-setting-content {
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
+  gap: 0.625rem;
 }
 
 /* Iconos de configuración */
 .general-setting-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
+  width: var(--settings-icon-setting);
+  height: var(--settings-icon-setting);
+  border-radius: var(--settings-radius-icon);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -326,7 +347,7 @@
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
-  align-self: center; /* Mantener el icono centrado verticalmente */
+  align-self: center;
 }
 
 .general-setting-icon.lock {
@@ -345,7 +366,7 @@
 
 .general-setting-icon i {
   color: var(--ui-button-primary-text);
-  font-size: 0.7rem;
+  font-size: 0.625rem;
   position: relative;
   z-index: 1;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
@@ -387,7 +408,7 @@
   display: block;
   color: var(--ui-dialog-text) !important;
   font-weight: 600;
-  font-size: 0.9375rem;
+  font-size: var(--settings-font-label);
   margin: 0;
   cursor: pointer;
   letter-spacing: 0.02px;
@@ -397,7 +418,7 @@
 .general-setting-description {
   margin: 0;
   color: var(--text-color-secondary);
-  font-size: 0.8125rem;
+  font-size: var(--settings-font-description);
   line-height: 1.3;
   opacity: 0.75;
 }
@@ -451,7 +472,7 @@ body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
    ======================================== */
 
 .general-icon-selector-section {
-  padding: 1rem 1.25rem;
+  padding: 0.875rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.02);
 }
@@ -465,14 +486,14 @@ body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.875rem;
   width: 100%;
 }
 
 .general-selector-info-group {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.625rem;
   flex: 1;
   min-width: 0;
 }
@@ -481,20 +502,20 @@ body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
+  width: var(--settings-icon-setting);
+  height: var(--settings-icon-setting);
+  border-radius: var(--settings-radius-icon);
   background: var(--ui-button-primary);
   padding: 0;
   box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.2),
+    0 2px 6px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
   flex-shrink: 0;
 }
 
 .general-selector-icon-compact i {
   color: var(--ui-button-primary-text);
-  font-size: 0.7rem;
+  font-size: 0.625rem;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
@@ -509,7 +530,7 @@ body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
 .general-selector-title-compact {
   color: var(--ui-dialog-text) !important;
   font-weight: 600;
-  font-size: 0.9375rem;
+  font-size: var(--settings-font-label);
   letter-spacing: 0.02px;
   line-height: 1.3;
   white-space: nowrap;
@@ -520,7 +541,7 @@ body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
 .general-selector-description-compact {
   color: var(--text-color-secondary);
   opacity: 0.75;
-  font-size: 0.8125rem;
+  font-size: var(--settings-font-description);
   line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
@@ -546,27 +567,27 @@ body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: var(--settings-icon-section);
+  height: var(--settings-icon-section);
+  border-radius: var(--settings-radius-icon);
   background: var(--ui-button-primary);
-  padding: 0.5rem;
+  padding: 0;
   box-shadow: 
-    0 3px 12px rgba(0, 0, 0, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
   flex-shrink: 0;
 }
 
 .general-selector-icon i {
   color: var(--ui-button-primary-text);
-  font-size: 1rem;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  font-size: 0.75rem;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
 .general-selector-title span {
   color: var(--ui-dialog-text) !important;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: var(--settings-font-label);
   letter-spacing: 0.1px;
 }
 
@@ -574,46 +595,46 @@ body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
   margin: 0;
   color: var(--text-color-secondary);
   opacity: 0.85;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  margin-left: 2.75rem;
+  font-size: var(--settings-font-description);
+  line-height: 1.4;
+  margin-left: 2.25rem;
 }
 
 .general-current-selection {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding: 1rem 1.25rem;
+  gap: 0.875rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  transition: all 0.3s ease;
+  border-radius: var(--settings-radius-card);
+  transition: all 0.2s ease;
 }
 
 .general-current-selection:hover {
   background: var(--ui-content-bg);
   border-color: var(--ui-button-primary);
-  transform: translateX(4px);
+  transform: translateX(2px);
 }
 
 .general-current-label {
   color: var(--text-color-secondary);
   opacity: 0.9;
-  font-size: 0.875rem;
+  font-size: var(--settings-font-description);
   font-weight: 500;
 }
 
 .general-current-icon-display {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 1rem;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
   background: var(--ui-content-bg);
   border: 1px solid var(--ui-content-border);
-  border-radius: 8px;
-  border-left: 3px solid var(--ui-button-primary);
-  transition: all 0.3s ease;
+  border-radius: var(--settings-radius-input);
+  border-left: 2px solid var(--ui-button-primary);
+  transition: all 0.2s ease;
 }
 
 .general-current-icon-display:hover {
@@ -623,7 +644,7 @@ body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
 
 .general-icon-name {
   color: var(--ui-dialog-text) !important;
-  font-size: 0.875rem;
+  font-size: var(--settings-font-description);
   font-weight: 500;
 }
 
