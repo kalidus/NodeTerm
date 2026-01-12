@@ -827,7 +827,7 @@ const HomeTab = ({
               <div style={{
                 display: 'flex',
                 flexDirection: 'column',
-                flex: '2.2 1 0',
+                flex: '2.42 1 0',
                 minWidth: 0,
                 position: 'relative',
                 overflow: 'hidden',
