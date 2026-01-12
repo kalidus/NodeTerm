@@ -1853,6 +1853,35 @@ const SettingsDialog = ({
                       </div>
                     </div>
                   </div>
+
+                  {defaultLocalTerminal !== undefined && handleDefaultTerminalChange && (
+                    <div className="general-setting-card">
+                      <div className="general-setting-content">
+                        <div className="general-setting-icon">
+                          <i className="pi pi-terminal"></i>
+                        </div>
+                        <div className="general-setting-info">
+                          <label htmlFor="default-terminal" className="general-setting-label">
+                            Terminal por Defecto
+                          </label>
+                          <p className="general-setting-description">
+                            Selecciona el terminal que se abrirá por defecto al crear una nueva pestaña local
+                          </p>
+                        </div>
+                        <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                          <Dropdown
+                            id="default-terminal"
+                            value={defaultLocalTerminal}
+                            options={defaultTerminalOptions.length > 0 ? defaultTerminalOptions : [{ label: 'PowerShell', value: 'powershell' }]}
+                            onChange={(e) => handleDefaultTerminalChange(e.value)}
+                            placeholder="Seleccionar terminal"
+                            style={{ minWidth: '200px' }}
+                            disabled={defaultTerminalOptions.length === 0}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
