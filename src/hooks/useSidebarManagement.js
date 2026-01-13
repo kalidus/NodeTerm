@@ -272,12 +272,45 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         items.push({
           label: 'Abrir en Split',
           icon: 'pi pi-window-maximize',
-          command: () => openInSplit(node, sshTabsFiltered[0], 'vertical'),
           items: sshTabsFiltered.map(tab => {
             const termCount = countTerminalsInTab(tab);
+            const isFirstSplit = tab.type === 'terminal';
+            const isThirdSplit = tab.type === 'split' && termCount === 2;
+            const isFourthSplit = tab.type === 'split' && termCount === 3;
+            
+            // Si es el 3er split (ya hay 2 terminales) o 4to split (ya hay 3 terminales), abrir automáticamente sin preguntar
+            if (isThirdSplit || isFourthSplit) {
+              return {
+                label: `${tab.label} (${termCount}/4)`,
+                icon: 'pi pi-window-maximize',
+                command: () => openInSplit(node, tab, 'vertical')
+              };
+            }
+            
+            // Si es el primer split (pestaña tipo 'terminal'), mostrar opciones vertical/horizontal
+            if (isFirstSplit) {
+              return {
+                label: `${tab.label}`,
+                icon: 'pi pi-desktop',
+                items: [
+                  {
+                    label: 'Dividir vertical',
+                    icon: 'pi pi-arrows-v',
+                    command: () => openInSplit(node, tab, 'vertical')
+                  },
+                  {
+                    label: 'Dividir horizontal',
+                    icon: 'pi pi-arrows-h',
+                    command: () => openInSplit(node, tab, 'horizontal')
+                  }
+                ]
+              };
+            }
+            
+            // Para otros casos (split existente con 1 terminal), mostrar opciones
             return {
-              label: `${tab.label}${termCount > 1 ? ` (${termCount}/4)` : ''}`,
-              icon: tab.type === 'split' ? 'pi pi-window-maximize' : 'pi pi-desktop',
+              label: `${tab.label} (${termCount}/4)`,
+              icon: 'pi pi-window-maximize',
               items: [
                 {
                   label: 'Dividir vertical',
