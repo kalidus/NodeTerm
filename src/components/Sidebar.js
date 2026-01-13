@@ -7,6 +7,7 @@ import { uiThemes, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 import { FolderDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
+import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { sessionActionIconThemes, getDefaultSessionActionIconTheme } from '../themes/session-action-icons';
 import ImportDialog from './ImportDialog';
 import PasswordManagerSidebar from './PasswordManagerSidebar';
@@ -1530,16 +1531,23 @@ const Sidebar = React.memo(({
     let icon = null;
     const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['nord'].icons;
     if (isSSH) {
-      const sshIcon = themeIcons.ssh;
-      icon = sshIcon ? React.cloneElement(sshIcon, {
-        width: connectionIconSize,
-        height: connectionIconSize,
-        style: { 
-          ...sshIcon.props.style,
-          width: `${connectionIconSize}px`,
-          height: `${connectionIconSize}px`
-        }
-      }) : sshIcon;
+      // Verificar si tiene icono personalizado
+      if (node.data?.customIcon && SSHIconPresets[node.data.customIcon.toUpperCase()]) {
+        const preset = SSHIconPresets[node.data.customIcon.toUpperCase()];
+        icon = <SSHIconRenderer preset={preset} pixelSize={connectionIconSize} />;
+      } else {
+        // Usar icono del tema (comportamiento por defecto)
+        const sshIcon = themeIcons.ssh;
+        icon = sshIcon ? React.cloneElement(sshIcon, {
+          width: connectionIconSize,
+          height: connectionIconSize,
+          style: { 
+            ...sshIcon.props.style,
+            width: `${connectionIconSize}px`,
+            height: `${connectionIconSize}px`
+          }
+        }) : sshIcon;
+      }
     } else if (isRDP) {
       const rdpIcon = themeIcons.rdp;
       icon = rdpIcon ? React.cloneElement(rdpIcon, {

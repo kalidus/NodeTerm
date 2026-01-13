@@ -12,6 +12,7 @@ import { InputTextarea } from 'primereact/inputtextarea';
 import { FileUpload } from 'primereact/fileupload';
 import { Message } from 'primereact/message';
 import { FolderIconSelectorModal, FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
+import { SSHIconSelectorModal, SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { iconThemes } from '../themes/icon-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
@@ -570,12 +571,31 @@ export function EditSSHConnectionDialog({
   sshTargetFolder, setSSHTargetFolder,
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
   sshDescription = '', setSSHDescription = () => {},
+  sshIcon = null, setSSHIcon = () => {},
   foldersOptions = [],
   onSSHConfirm,
-  sshLoading = false
+  sshLoading = false,
+  iconTheme = 'material'
 }) {
   // Hook de internacionalización
   const { t } = useTranslation('dialogs');
+  
+  // Estado para el modal del selector de iconos
+  const [showIconSelector, setShowIconSelector] = useState(false);
+  
+  // Obtener el preset del icono actual
+  const currentIconPreset = useMemo(() => {
+    if (sshIcon && sshIcon !== 'default' && SSHIconPresets[sshIcon.toUpperCase()]) {
+      return SSHIconPresets[sshIcon.toUpperCase()];
+    }
+    return null;
+  }, [sshIcon]);
+  
+  // Obtener el icono SSH del tema actual
+  const themeSSHIcon = useMemo(() => {
+    const theme = iconThemes[iconTheme] || iconThemes['material'];
+    return theme?.icons?.ssh || null;
+  }, [iconTheme]);
   
   // Precargar datos cuando se abre el diálogo
   useEffect(() => {
@@ -592,57 +612,108 @@ export function EditSSHConnectionDialog({
       if (setSSHDescription && typeof setSSHDescription === 'function') {
         setSSHDescription(editNodeData.data?.description || '');
       }
+      if (setSSHIcon && typeof setSSHIcon === 'function') {
+        setSSHIcon(editNodeData.data?.customIcon || null);
+      }
     }
-  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHDescription]);
+  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHDescription, setSSHIcon]);
+
+  // Handler para seleccionar icono
+  const handleIconSelect = useCallback((iconId) => {
+    if (setSSHIcon && typeof setSSHIcon === 'function') {
+      setSSHIcon(iconId);
+    }
+  }, [setSSHIcon]);
 
   const headerTemplate = (
     <div className="protocol-dialog-header-custom">
-      <div className="protocol-dialog-header-icon" style={{ background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', boxShadow: '0 2px 8px rgba(255, 152, 0, 0.3)' }}>
-        <i className="pi pi-terminal"></i>
-      </div>
+      <button 
+        type="button"
+        onClick={() => setShowIconSelector(true)} 
+        className="protocol-dialog-header-icon-button"
+        title="Haz clic para cambiar el icono"
+        style={{ 
+          background: 'none', 
+          border: 'none', 
+          padding: 0, 
+          cursor: 'pointer',
+          borderRadius: '12px',
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+        }}
+      >
+        {currentIconPreset ? (
+          <SSHIconRenderer preset={currentIconPreset} size="medium" />
+        ) : (
+          <div className="protocol-dialog-header-icon" style={{ background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', boxShadow: '0 2px 8px rgba(255, 152, 0, 0.3)' }}>
+            {themeSSHIcon ? (
+              React.cloneElement(themeSSHIcon, {
+                width: 28,
+                height: 28,
+                style: { 
+                  ...themeSSHIcon.props.style,
+                  width: '28px',
+                  height: '28px'
+                }
+              })
+            ) : (
+              <i className="pi pi-terminal"></i>
+            )}
+          </div>
+        )}
+      </button>
       <span className="protocol-dialog-header-title">{t('ssh.title.edit')}</span>
     </div>
   );
 
   return (
-    <Dialog
-      header={headerTemplate}
-      visible={visible}
-      style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
-      modal
-      resizable={true}
-      onHide={onHide}
-      contentStyle={{ padding: '0', overflow: 'hidden', background: 'var(--ui-dialog-bg)', color: 'var(--ui-dialog-text)' }}
-      className="edit-ssh-connection-dialog protocol-selection-dialog-new"
-    >
-      <div style={{ marginTop: '10px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <EnhancedSSHForm
-          activeTabIndex={0}
-          sshName={sshName}
-          setSSHName={setSSHName}
-          sshHost={sshHost}
-          setSSHHost={setSSHHost}
-          sshUser={sshUser}
-          setSSHUser={setSSHUser}
-          sshPassword={sshPassword}
-          setSSHPassword={setSSHPassword}
-          sshPort={sshPort}
-          setSSHPort={setSSHPort}
-          sshRemoteFolder={sshRemoteFolder}
-          setSSHRemoteFolder={setSSHRemoteFolder}
-          sshTargetFolder={sshTargetFolder}
-          setSSHTargetFolder={setSSHTargetFolder}
-          sshAutoCopyPassword={sshAutoCopyPassword}
-          setSSHAutoCopyPassword={setSSHAutoCopyPassword}
-          sshDescription={sshDescription}
-          setSSHDescription={setSSHDescription}
-          foldersOptions={foldersOptions}
-          onSSHConfirm={onSSHConfirm}
-          onHide={onHide}
-          sshLoading={sshLoading}
-        />
-      </div>
-    </Dialog>
+    <>
+      <Dialog
+        header={headerTemplate}
+        visible={visible}
+        style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
+        modal
+        resizable={true}
+        onHide={onHide}
+        contentStyle={{ padding: '0', overflow: 'hidden', background: 'var(--ui-dialog-bg)', color: 'var(--ui-dialog-text)' }}
+        className="edit-ssh-connection-dialog protocol-selection-dialog-new"
+      >
+        <div style={{ marginTop: '10px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <EnhancedSSHForm
+            activeTabIndex={0}
+            sshName={sshName}
+            setSSHName={setSSHName}
+            sshHost={sshHost}
+            setSSHHost={setSSHHost}
+            sshUser={sshUser}
+            setSSHUser={setSSHUser}
+            sshPassword={sshPassword}
+            setSSHPassword={setSSHPassword}
+            sshPort={sshPort}
+            setSSHPort={setSSHPort}
+            sshRemoteFolder={sshRemoteFolder}
+            setSSHRemoteFolder={setSSHRemoteFolder}
+            sshTargetFolder={sshTargetFolder}
+            setSSHTargetFolder={setSSHTargetFolder}
+            sshAutoCopyPassword={sshAutoCopyPassword}
+            setSSHAutoCopyPassword={setSSHAutoCopyPassword}
+            sshDescription={sshDescription}
+            setSSHDescription={setSSHDescription}
+            foldersOptions={foldersOptions}
+            onSSHConfirm={onSSHConfirm}
+            onHide={onHide}
+            sshLoading={sshLoading}
+          />
+        </div>
+      </Dialog>
+      
+      {/* Modal selector de iconos SSH */}
+      <SSHIconSelectorModal
+        visible={showIconSelector}
+        onHide={() => setShowIconSelector(false)}
+        selectedIconId={sshIcon}
+        onSelectIcon={handleIconSelect}
+      />
+    </>
   );
 }
 

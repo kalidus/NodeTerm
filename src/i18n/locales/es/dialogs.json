@@ -62,6 +62,23 @@
       "hidePassword": "Ocultar contraseña",
       "selectFolder": "Seleccionar carpeta",
       "selectPrivateKey": "Seleccionar archivo de clave privada"
+    },
+    "icon": {
+      "title": "Selecciona el icono de la conexión SSH",
+      "themeIcon": "Icono del tema",
+      "themeIconDescription": "Usa el icono del tema seleccionado",
+      "useThemeIcon": "Usar icono del tema",
+      "close": "Cerrar",
+      "clickToChange": "Haz clic para cambiar el icono",
+      "categories": {
+        "general": "General",
+        "os": "Sistemas Operativos",
+        "cloud": "Cloud/Hosting",
+        "containers": "Contenedores",
+        "databases": "Bases de Datos",
+        "services": "Servicios",
+        "devops": "DevOps"
+      }
     }
   },
   "rdp": {

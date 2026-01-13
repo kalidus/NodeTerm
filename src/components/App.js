@@ -1108,6 +1108,7 @@ const App = () => {
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHDescription, setEditSSHDescription,
+    editSSHIcon, setEditSSHIcon,
     // Estados de formularios RDP
     rdpName, setRdpName,
     rdpServer, setRdpServer,
@@ -1272,6 +1273,7 @@ const App = () => {
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHDescription, setEditSSHDescription,
+    editSSHIcon, setEditSSHIcon,
     closeEditSSHDialogWithReset,
     // Estados RDP
     rdpName, setRdpName,
@@ -2212,6 +2214,7 @@ const App = () => {
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHDescription, setEditSSHDescription,
+    editSSHIcon, setEditSSHIcon,
     
     // Estados para modo edición
     editSSHNode, setEditSSHNode,
@@ -2247,7 +2250,7 @@ const App = () => {
     editSSHName, setEditSSHName, editSSHHost, setEditSSHHost, editSSHUser, setEditSSHUser,
     editSSHPassword, setEditSSHPassword, editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort, editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
-    editSSHDescription, setEditSSHDescription,
+    editSSHDescription, setEditSSHDescription, editSSHIcon, setEditSSHIcon,
     editSSHNode, setEditSSHNode,
     rdpNodeData, setRdpNodeData, editingRdpNode, setEditingRdpNode,
     
@@ -2570,6 +2573,8 @@ const App = () => {
         setEditSSHAutoCopyPassword={setEditSSHAutoCopyPassword}
         editSSHDescription={editSSHDescription}
         setEditSSHDescription={setEditSSHDescription}
+        editSSHIcon={editSSHIcon}
+        setEditSSHIcon={setEditSSHIcon}
         
         // Estados para modo edición
         editSSHNode={editSSHNode}

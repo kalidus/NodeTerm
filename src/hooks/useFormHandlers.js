@@ -32,6 +32,7 @@ export const useFormHandlers = ({
   editSSHRemoteFolder, setEditSSHRemoteFolder,
   editSSHPort, setEditSSHPort,
   editSSHAutoCopyPassword, editSSHDescription, setEditSSHDescription,
+  editSSHIcon, setEditSSHIcon,
   closeEditSSHDialogWithReset,
   
   // Estados de formularios RDP
@@ -643,7 +644,9 @@ export const useFormHandlers = ({
         // Opción de copiar password automáticamente
         autoCopyPassword: editSSHAutoCopyPassword || false,
         // Descripción de la conexión
-        description: editSSHDescription || ''
+        description: editSSHDescription || '',
+        // Icono personalizado
+        customIcon: editSSHIcon || null
       };
       nodeToEdit.droppable = false; // Asegurar que las sesiones SSH no sean droppable
       
@@ -665,6 +668,7 @@ export const useFormHandlers = ({
     setEditSSHRemoteFolder('');
     setEditSSHPort(22);
     setEditSSHDescription('');
+    if (setEditSSHIcon) setEditSSHIcon(null);
     
     toast.current.show({
       severity: 'success',
@@ -672,7 +676,7 @@ export const useFormHandlers = ({
       detail: `Sesión SSH actualizada`,
       life: 3000
     });
-  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHDescription, editSSHNode, nodes, setNodes, findNodeByKey, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, toast]);
+  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHDescription, editSSHIcon, editSSHNode, nodes, setNodes, findNodeByKey, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, toast]);
 
   /**
    * Guardar edición de carpeta
@@ -732,9 +736,11 @@ export const useFormHandlers = ({
     setEditSSHRemoteFolder(node.data?.remoteFolder || '');
     setEditSSHPort(node.data?.port || 22);
     setEditSSHDescription(node.data?.description || '');
+    // Cargar icono personalizado si existe
+    if (setEditSSHIcon) setEditSSHIcon(node.data?.customIcon || null);
     // Usar el diálogo unificado en modo edición SSH
     setShowUnifiedConnectionDialog(true);
-  }, [setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setShowUnifiedConnectionDialog]);
+  }, [setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, setShowUnifiedConnectionDialog]);
 
   /**
    * Abrir diálogo de selección de protocolo para nueva conexión (limpia todos los estados de edición)
