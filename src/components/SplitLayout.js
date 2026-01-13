@@ -544,23 +544,46 @@ const SplitLayout = ({
     }
     
     if (terminalCount === 2) {
-      // 2 terminales: split vertical redimensionable
-      return (
-        <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex' }} data-grid-container>
-          <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
-            {renderTerminal(terminalsArray[0], 0)}
+      // 2 terminales: respetar orientación (vertical u horizontal)
+      const isHorizontal = orientation === 'horizontal';
+      
+      if (isHorizontal) {
+        // Split horizontal: uno arriba, otro abajo
+        return (
+          <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }} data-grid-container>
+            <div style={{ width: '100%', height: `${horizontalSplit}%`, position: 'relative', overflow: 'hidden' }}>
+              {renderTerminal(terminalsArray[0], 0)}
+            </div>
+            <div
+              style={{ ...splitterStyle(false), width: '100%', height: '8px', top: `${horizontalSplit}%`, marginTop: '-4px' }}
+              onMouseDown={handleMouseDown('h')}
+              onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+            />
+            <div style={{ width: '100%', height: `${100 - horizontalSplit}%`, position: 'relative', overflow: 'hidden' }}>
+              {renderTerminal(terminalsArray[1], 1)}
+            </div>
           </div>
-          <div
-            style={{ ...splitterStyle(true), width: '8px', height: '100%', left: `${verticalSplit}%`, marginLeft: '-4px' }}
-            onMouseDown={handleMouseDown('v-top')}
-            onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
-          />
-          <div style={{ width: `${100 - verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
-            {renderTerminal(terminalsArray[1], 1)}
+        );
+      } else {
+        // Split vertical: uno a la izquierda, otro a la derecha
+        return (
+          <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex' }} data-grid-container>
+            <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
+              {renderTerminal(terminalsArray[0], 0)}
+            </div>
+            <div
+              style={{ ...splitterStyle(true), width: '8px', height: '100%', left: `${verticalSplit}%`, marginLeft: '-4px' }}
+              onMouseDown={handleMouseDown('v-top')}
+              onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+            />
+            <div style={{ width: `${100 - verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
+              {renderTerminal(terminalsArray[1], 1)}
+            </div>
           </div>
-        </div>
-      );
+        );
+      }
     }
     
     if (terminalCount === 3) {
