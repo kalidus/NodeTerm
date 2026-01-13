@@ -528,30 +528,43 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 				<div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', minHeight: 0, background: 'transparent !important', backgroundColor: 'transparent !important' }}>
 					{/* Título mejorado con mejor separación visual */}
 					<div style={{ 
-						marginBottom: '0.75rem',
+						marginBottom: '0.875rem',
 						padding: 0,
 						position: 'relative',
 						flexShrink: 0
 					}}>
-						<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+						<div style={{ 
+							display: 'flex', 
+							alignItems: 'center', 
+							gap: '0.625rem', 
+							marginBottom: '0.625rem',
+							padding: '0.5rem 0.75rem',
+							background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.06) 0%, rgba(255, 193, 7, 0.03) 100%)',
+							borderRadius: '10px',
+							border: '1px solid rgba(255, 215, 0, 0.12)',
+							backdropFilter: 'blur(4px)',
+							WebkitBackdropFilter: 'blur(4px)',
+							boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
+						}}>
 							{/* Icono con efecto visual mejorado */}
 							<div style={{
 								display: 'flex',
 								alignItems: 'center',
 								justifyContent: 'center',
-								width: '22px',
-								height: '22px',
-								borderRadius: '5px',
-								background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.12) 0%, rgba(255, 193, 7, 0.08) 100%)',
-								border: '1px solid rgba(255, 215, 0, 0.2)',
-								boxShadow: '0 1px 3px rgba(255, 215, 0, 0.1)',
-								position: 'relative'
+								width: '28px',
+								height: '28px',
+								borderRadius: '8px',
+								background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 193, 7, 0.15) 100%)',
+								border: '1px solid rgba(255, 215, 0, 0.3)',
+								boxShadow: '0 2px 6px rgba(255, 215, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+								position: 'relative',
+								transition: 'all 0.2s ease'
 							}}>
 								<i className="pi pi-star-fill" style={{ 
 									color: '#FFD700', 
-									fontSize: '0.85rem',
-									filter: 'drop-shadow(0 0 1px rgba(255, 215, 0, 0.3))',
-									opacity: 0.9
+									fontSize: '0.95rem',
+									filter: 'drop-shadow(0 0 2px rgba(255, 215, 0, 0.4))',
+									opacity: 1
 								}} />
 							</div>
 							
@@ -559,11 +572,12 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 							<h3 style={{ 
 								margin: 0, 
 								color: themeColors.textPrimary || 'var(--text-color)', 
-								fontSize: homeTabFontSize ? `${homeTabFontSize * 0.9}px` : '0.9rem',
+								fontSize: homeTabFontSize ? `${homeTabFontSize * 0.95}px` : '0.95rem',
 								fontFamily: homeTabFont,
-								fontWeight: '700',
-								letterSpacing: '0.1px',
-								textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+								fontWeight: '600',
+								letterSpacing: '0.02em',
+								textShadow: '0 1px 2px rgba(0,0,0,0.15)',
+								flex: 1
 							}}>
 								Conexiones Favoritas
 							</h3>
@@ -573,17 +587,19 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 								display: 'inline-flex',
 								alignItems: 'center',
 								justifyContent: 'center',
-								minWidth: '16px',
-								height: '16px',
-								padding: '0 4px',
-								borderRadius: '8px',
-								background: 'linear-gradient(135deg, #9c27b0 0%, #673ab7 100%)',
-								border: '1px solid rgba(156, 39, 176, 0.3)',
-								boxShadow: '0 1px 2px rgba(156, 39, 176, 0.2)',
+								minWidth: '20px',
+								height: '20px',
+								padding: '0 6px',
+								borderRadius: '10px',
+								background: 'linear-gradient(135deg, rgba(156, 39, 176, 0.9) 0%, rgba(103, 58, 183, 0.9) 100%)',
+								border: '1px solid rgba(156, 39, 176, 0.4)',
+								boxShadow: '0 2px 4px rgba(156, 39, 176, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
 								color: '#ffffff',
-								fontSize: '9px',
-								fontWeight: '600',
-								letterSpacing: '0.1px'
+								fontSize: '10px',
+								fontWeight: '700',
+								letterSpacing: '0.05em',
+								backdropFilter: 'blur(4px)',
+								WebkitBackdropFilter: 'blur(4px)'
 							}}>
 								{filteredFavorites.length}
 							</div>
@@ -594,13 +610,19 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 							</div>
 						</div>
 						
-						{/* Línea decorativa con gradiente */}
+						{/* Línea decorativa con gradiente mejorada */}
 						<div style={{
-							height: '1px',
-							background: 'linear-gradient(90deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.1))',
-							borderRadius: '1px',
-							marginTop: '0.3rem',
-							opacity: 0.6
+							height: '1.5px',
+							background: `linear-gradient(90deg, 
+								transparent 0%, 
+								rgba(255, 215, 0, 0.2) 20%, 
+								rgba(255, 215, 0, 0.3) 50%, 
+								rgba(255, 215, 0, 0.2) 80%, 
+								transparent 100%)`,
+							borderRadius: '2px',
+							marginTop: '0.5rem',
+							opacity: 0.7,
+							boxShadow: '0 1px 2px rgba(255, 215, 0, 0.1)'
 						}} />
 					</div>
 					

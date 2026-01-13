@@ -913,28 +913,36 @@ const HomeTab = ({
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
-                  marginBottom: '0.75rem',
-                  flexShrink: 0
+                  gap: '0.625rem',
+                  marginBottom: '0.875rem',
+                  flexShrink: 0,
+                  padding: '0.5rem 0.75rem',
+                  background: 'linear-gradient(135deg, rgba(79, 195, 247, 0.06) 0%, rgba(79, 195, 247, 0.03) 100%)',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(79, 195, 247, 0.12)',
+                  backdropFilter: 'blur(4px)',
+                  WebkitBackdropFilter: 'blur(4px)',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
                 }}>
                   {/* Icono con efecto visual mejorado */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '22px',
-                    height: '22px',
-                    borderRadius: '5px',
-                    background: 'linear-gradient(135deg, rgba(79, 195, 247, 0.12) 0%, rgba(79, 195, 247, 0.08) 100%)',
-                    border: '1px solid rgba(79, 195, 247, 0.2)',
-                    boxShadow: '0 1px 3px rgba(79, 195, 247, 0.1)',
-                    position: 'relative'
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, rgba(79, 195, 247, 0.2) 0%, rgba(79, 195, 247, 0.15) 100%)',
+                    border: '1px solid rgba(79, 195, 247, 0.3)',
+                    boxShadow: '0 2px 6px rgba(79, 195, 247, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                    position: 'relative',
+                    transition: 'all 0.2s ease'
                   }}>
                     <i className="pi pi-history" style={{ 
                       color: '#4fc3f7', 
-                      fontSize: '0.85rem',
-                      filter: 'drop-shadow(0 0 1px rgba(79, 195, 247, 0.3))',
-                      opacity: 0.9
+                      fontSize: '0.95rem',
+                      filter: 'drop-shadow(0 0 2px rgba(79, 195, 247, 0.4))',
+                      opacity: 1
                     }} />
                   </div>
                   
@@ -942,23 +950,30 @@ const HomeTab = ({
                   <h3 style={{ 
                     margin: 0, 
                     color: themeColors.textPrimary, 
-                    fontSize: homeTabFontSize ? `${homeTabFontSize * 0.9}px` : '0.9rem',
+                    fontSize: homeTabFontSize ? `${homeTabFontSize * 0.95}px` : '0.95rem',
                     fontFamily: homeTabFont,
-                    fontWeight: '700',
-                    letterSpacing: '0.1px',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                    fontWeight: '600',
+                    letterSpacing: '0.02em',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.15)',
+                    flex: 1
                   }}>
                     Sesiones Recientes
                   </h3>
                 </div>
-                {/* Línea decorativa con gradiente azul */}
+                {/* Línea decorativa con gradiente azul mejorada */}
                 <div style={{
-                  height: '1px',
-                  background: 'linear-gradient(90deg, rgba(79, 195, 247, 0.1), rgba(79, 195, 247, 0.15), rgba(79, 195, 247, 0.1))',
-                  borderRadius: '1px',
+                  height: '1.5px',
+                  background: `linear-gradient(90deg, 
+                    transparent 0%, 
+                    rgba(79, 195, 247, 0.2) 20%, 
+                    rgba(79, 195, 247, 0.3) 50%, 
+                    rgba(79, 195, 247, 0.2) 80%, 
+                    transparent 100%)`,
+                  borderRadius: '2px',
                   marginBottom: '0.75rem',
                   flexShrink: 0,
-                  opacity: 0.6
+                  opacity: 0.7,
+                  boxShadow: '0 1px 2px rgba(79, 195, 247, 0.1)'
                 }} />
                 {/* Lista de conexiones recientes */}
                 <div 
