@@ -92,6 +92,8 @@ const DialogsManager = ({
   setEditSSHAutoCopyPassword,
   editSSHDescription,
   setEditSSHDescription,
+  editSSHIcon,
+  setEditSSHIcon,
   
   // Estados de formularios RDP
   rdpName,
@@ -598,9 +600,12 @@ const DialogsManager = ({
         setSSHAutoCopyPassword={editSSHNode ? setEditSSHAutoCopyPassword : setSSHAutoCopyPassword}
         sshDescription={editSSHNode ? editSSHDescription : sshDescription}
         setSSHDescription={editSSHNode ? setEditSSHDescription : setSSHDescription}
+        sshIcon={editSSHIcon}
+        setSSHIcon={setEditSSHIcon}
         foldersOptions={getAllFolders(nodes)}
         onSSHConfirm={editSSHNode ? saveEditSSH : createNewSSH}
         sshLoading={false}
+        iconTheme={iconTheme}
       />
 
       {/* Diálogo: Editar Conexión RDP */}

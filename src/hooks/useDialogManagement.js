@@ -60,6 +60,7 @@ export const useDialogManagement = () => {
   const [editSSHPort, setEditSSHPort] = useState(22);
   const [editSSHAutoCopyPassword, setEditSSHAutoCopyPassword] = useState(false);
   const [editSSHDescription, setEditSSHDescription] = useState('');
+  const [editSSHIcon, setEditSSHIcon] = useState(null);
 
   // ============ ESTADOS DE FORMULARIOS RDP ============
   
@@ -169,6 +170,7 @@ export const useDialogManagement = () => {
     setEditSSHPort(22);
     setEditSSHAutoCopyPassword(false);
     setEditSSHDescription('');
+    setEditSSHIcon(null);
   };
 
   // Resetear todos los campos Edit Folder
@@ -318,6 +320,7 @@ export const useDialogManagement = () => {
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHDescription, setEditSSHDescription,
+    editSSHIcon, setEditSSHIcon,
 
     // Estados de formularios RDP
     rdpName, setRdpName,

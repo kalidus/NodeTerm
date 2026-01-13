@@ -906,6 +906,42 @@
   font-size: 1.1rem;
 }
 
+/* Botón clickeable del icono del header para seleccionar icono personalizado */
+.protocol-dialog-header-icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 12px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  flex-shrink: 0;
+}
+
+.protocol-dialog-header-icon-button:hover {
+  transform: scale(1.08);
+  filter: brightness(1.1);
+}
+
+.protocol-dialog-header-icon-button:active {
+  transform: scale(0.95);
+}
+
+.protocol-dialog-header-icon-button:focus {
+  outline: 2px solid var(--ui-button-primary, #FF9800);
+  outline-offset: 2px;
+}
+
+.protocol-dialog-header-icon-button .protocol-dialog-header-icon {
+  transition: box-shadow 0.2s ease;
+}
+
+.protocol-dialog-header-icon-button:hover .protocol-dialog-header-icon {
+  box-shadow: 0 4px 16px rgba(255, 152, 0, 0.4);
+}
+
 .protocol-dialog-header-title {
   font-size: 1rem;
   font-weight: 600;

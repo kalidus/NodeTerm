@@ -62,6 +62,23 @@
       "hidePassword": "Hide password",
       "selectFolder": "Select folder",
       "selectPrivateKey": "Select private key file"
+    },
+    "icon": {
+      "title": "Select SSH connection icon",
+      "themeIcon": "Theme Icon",
+      "themeIconDescription": "Use the selected theme icon",
+      "useThemeIcon": "Use theme icon",
+      "close": "Close",
+      "clickToChange": "Click to change icon",
+      "categories": {
+        "general": "General",
+        "os": "Operating Systems",
+        "cloud": "Cloud/Hosting",
+        "containers": "Containers",
+        "databases": "Databases",
+        "services": "Services",
+        "devops": "DevOps"
+      }
     }
   },
   "rdp": {
