@@ -126,25 +126,40 @@ function getSolidSplitterColor(theme, splitterColor) {
 }
 
 const SplitLayout = ({ 
-  leftTerminal, 
-  rightTerminal, 
+  // Nuevo sistema: árbol de splits anidados
+  first, // Primer nodo (puede ser terminal o split)
+  second, // Segundo nodo (puede ser terminal o split)
+  orientation = 'vertical',
+  
+  // Legacy: compatibilidad con sistema anterior
+  terminals = [],
+  leftTerminal,
+  rightTerminal,
+  
+  // Props comunes
   fontFamily,
   fontSize, 
   theme, 
   onContextMenu, 
   sshStatsByTabId,
   terminalRefs,
-  orientation = 'vertical',
   statusBarIconTheme = 'classic',
-  externalPaneSize = null, // Nuevo prop para controlar el tamaño externamente
-  onManualResize = null, // Callback para notificar redimensionamiento manual
-  onPaneSizeChange = null, // Callback para notificar cambio de tamaño durante redimensionamiento
-  splitterColor, // <-- nuevo prop
-  onCloseLeft = null, // Callback para cerrar panel izquierdo
-  onCloseRight = null // Callback para cerrar panel derecho
+  externalPaneSize = null,
+  onManualResize = null,
+  onPaneSizeChange = null,
+  splitterColor,
+  onCloseLeft = null,
+  onCloseRight = null,
+  onClosePanel = null,
+  path = [] // Path en el árbol para identificar este nodo
 }) => {
   const leftTerminalRef = useRef(null);
   const rightTerminalRef = useRef(null);
+  
+  // Determinar qué sistema usar
+  const isNestedSystem = first || second;
+  const isArraySystem = terminals && terminals.length > 0;
+  const isLegacySystem = leftTerminal && rightTerminal;
   
   // Asegurar que siempre haya un color de separador válido desde el inicio
   // Usar transparencia para que el separador sea visible sobre cualquier fondo
@@ -213,6 +228,13 @@ const SplitLayout = ({
   // Forzar fit de los terminales después de que se monten
   useEffect(() => {
     const timer = setTimeout(() => {
+      // Fit todos los terminales en terminalRefs
+      if (terminalRefs && terminalRefs.current) {
+        Object.values(terminalRefs.current).forEach(ref => {
+          if (ref?.fit) ref.fit();
+        });
+      }
+      // Sistema legacy
       if (leftTerminalRef.current?.fit) {
         leftTerminalRef.current.fit();
       }
@@ -222,21 +244,520 @@ const SplitLayout = ({
     }, 200);
     
     return () => clearTimeout(timer);
-  }, [leftTerminal.key, rightTerminal.key]);
+  }, [first, second, leftTerminal, rightTerminal, terminalRefs]);
 
   // Asegurar que los terminales se inicialicen correctamente
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Forzar focus en el terminal izquierdo para asegurar que se inicialice
-      if (leftTerminalRef.current?.focus) {
+      // Focus en el primer terminal disponible
+      if (terminalRefs && terminalRefs.current) {
+        const firstRef = Object.values(terminalRefs.current)[0];
+        if (firstRef?.focus) {
+          firstRef.focus();
+        }
+      }
+      // Sistema legacy
+      else if (leftTerminalRef.current?.focus) {
         leftTerminalRef.current.focus();
       }
     }, 300);
     
     return () => clearTimeout(timer);
-  }, [leftTerminal.key]);
+  }, [first, second, leftTerminal, terminalRefs]);
 
-  // Configuración del gutter específica para terminales
+  // Función recursiva para renderizar un nodo del árbol (terminal o split)
+  const renderNode = useCallback((node, nodePath, nodeOrientation = 'vertical') => {
+    if (!node) return null;
+    
+    // Si es un terminal, renderizarlo
+    if (node.type === 'terminal') {
+      if (node.content) {
+        return node.content;
+      }
+      
+      return (
+        <div style={{ 
+          width: '100%', 
+          height: '100%', 
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Botón para cerrar este terminal (solo si onClosePanel existe) */}
+          {onClosePanel && (
+            <button
+              style={{
+                position: 'absolute',
+                top: '4px',
+                right: '4px',
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                background: 'rgba(220, 53, 69, 0.8)',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                zIndex: 1000,
+                transition: 'all 0.2s ease',
+                opacity: 0.7
+              }}
+              onClick={() => onClosePanel(nodePath)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '1';
+                e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '0.7';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+              title="Cerrar terminal"
+            >
+              ×
+            </button>
+          )}
+          
+          <TerminalComponent
+            ref={el => {
+              if (terminalRefs) {
+                terminalRefs.current[node.key] = el;
+              }
+            }}
+            key={node.key}
+            tabId={node.key}
+            sshConfig={node.sshConfig || {}}
+            fontFamily={fontFamily}
+            fontSize={fontSize}
+            theme={theme}
+            onContextMenu={onContextMenu}
+            active={true}
+            stats={sshStatsByTabId?.[node.key] || {}}
+            hideStatusBar={true}
+            statusBarIconTheme={statusBarIconTheme}
+          />
+        </div>
+      );
+    }
+    
+    // Si es un split, renderizarlo recursivamente
+    if (node.type === 'split') {
+      return (
+        <SplitLayout
+          first={node.first}
+          second={node.second}
+          orientation={node.orientation || 'vertical'}
+          fontFamily={fontFamily}
+          fontSize={fontSize}
+          theme={theme}
+          onContextMenu={onContextMenu}
+          sshStatsByTabId={sshStatsByTabId}
+          terminalRefs={terminalRefs}
+          statusBarIconTheme={statusBarIconTheme}
+          splitterColor={splitterColor}
+          onClosePanel={onClosePanel}
+          path={nodePath}
+        />
+      );
+    }
+    
+    return null;
+  }, [fontFamily, fontSize, theme, onContextMenu, sshStatsByTabId, statusBarIconTheme, terminalRefs, splitterColor, onClosePanel]);
+
+  // Convertir árbol anidado a array plano para grid 2x2
+  const terminalsArray = React.useMemo(() => {
+    if (isNestedSystem) {
+      const extractTerminals = (node, result = []) => {
+        if (!node) return result;
+        if (node.type === 'terminal') {
+          result.push(node);
+        } else if (node.type === 'split') {
+          extractTerminals(node.first, result);
+          extractTerminals(node.second, result);
+        }
+        return result;
+      };
+      return extractTerminals({ type: 'split', first, second });
+    }
+    if (isArraySystem) {
+      return terminals;
+    }
+    if (isLegacySystem) {
+      return [leftTerminal, rightTerminal];
+    }
+    return [];
+  }, [isNestedSystem, first, second, isArraySystem, terminals, isLegacySystem, leftTerminal, rightTerminal]);
+
+  // NUEVO SISTEMA: Grid 2x2 inteligente con splitters redimensionables
+  if (terminalsArray.length > 0 && terminalsArray.length <= 4) {
+    const terminalCount = terminalsArray.length;
+    const visibleLineColor = getSolidSplitterColor(theme, splitterColor);
+    
+    const [verticalSplit, setVerticalSplit] = useState(50); // % para división vertical (T1/T2)
+    const [horizontalSplit, setHorizontalSplit] = useState(50); // % para división horizontal (arriba/abajo)
+    const [verticalSplitBottom, setVerticalSplitBottom] = useState(50); // % para división vertical inferior (T3/T4)
+    const [isDragging, setIsDragging] = useState(null); // 'v-top', 'h', 'v-bottom'
+    
+    const handleMouseDown = (splitterType) => (e) => {
+      e.preventDefault();
+      setIsDragging(splitterType);
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = splitterType === 'h' ? 'row-resize' : 'col-resize';
+    };
+    
+    const handleMouseMove = useCallback((e) => {
+      if (!isDragging) return;
+      
+      const container = document.querySelector('[data-grid-container]');
+      if (!container) return;
+      
+      const rect = container.getBoundingClientRect();
+      
+      if (isDragging === 'h') {
+        const newSplit = ((e.clientY - rect.top) / rect.height) * 100;
+        setHorizontalSplit(Math.max(20, Math.min(80, newSplit)));
+      } else if (isDragging === 'v-top') {
+        const newSplit = ((e.clientX - rect.left) / rect.width) * 100;
+        setVerticalSplit(Math.max(20, Math.min(80, newSplit)));
+      } else if (isDragging === 'v-bottom') {
+        const newSplit = ((e.clientX - rect.left) / rect.width) * 100;
+        setVerticalSplitBottom(Math.max(20, Math.min(80, newSplit)));
+      }
+    }, [isDragging]);
+    
+    const handleMouseUp = useCallback(() => {
+      setIsDragging(null);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    }, []);
+    
+    useEffect(() => {
+      if (isDragging) {
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('mouseup', handleMouseUp);
+        };
+      }
+    }, [isDragging, handleMouseMove, handleMouseUp]);
+    
+    const splitterStyle = (isVertical) => ({
+      position: 'absolute',
+      background: 'transparent',
+      backgroundImage: isVertical
+        ? `linear-gradient(to right, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`
+        : `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: '100% 100%',
+      cursor: isVertical ? 'col-resize' : 'row-resize',
+      zIndex: 10,
+      transition: 'filter 0.15s ease'
+    });
+
+    const renderTerminal = (terminal, index) => {
+      if (!terminal) return null;
+      
+      if (terminal.content) {
+        return terminal.content;
+      }
+      
+      return (
+        <>
+          {/* Botón para cerrar este terminal (solo si hay más de 1) */}
+          {terminalCount > 1 && onClosePanel && (
+            <button
+              style={{
+                position: 'absolute',
+                top: '4px',
+                right: '4px',
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                background: 'rgba(220, 53, 69, 0.8)',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                zIndex: 1000,
+                transition: 'all 0.2s ease',
+                opacity: 0.7
+              }}
+              onClick={() => {
+                if (isNestedSystem) {
+                  onClosePanel([...path, index]);
+                } else {
+                  onClosePanel(index);
+                }
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '1';
+                e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '0.7';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+              title="Cerrar terminal"
+            >
+              ×
+            </button>
+          )}
+          
+          <TerminalComponent
+            ref={el => {
+              if (terminalRefs) {
+                terminalRefs.current[terminal.key] = el;
+              }
+            }}
+            key={terminal.key}
+            tabId={terminal.key}
+            sshConfig={terminal.sshConfig || {}}
+            fontFamily={fontFamily}
+            fontSize={fontSize}
+            theme={theme}
+            onContextMenu={onContextMenu}
+            active={true}
+            stats={sshStatsByTabId?.[terminal.key] || {}}
+            hideStatusBar={true}
+            statusBarIconTheme={statusBarIconTheme}
+          />
+        </>
+      );
+    };
+
+    // Renderizado con splitters redimensionables
+    if (terminalCount === 1) {
+      // 1 terminal: ocupa todo
+      return (
+        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+          {renderTerminal(terminalsArray[0], 0)}
+        </div>
+      );
+    }
+    
+    if (terminalCount === 2) {
+      // 2 terminales: split vertical redimensionable
+      return (
+        <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex' }} data-grid-container>
+          <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
+            {renderTerminal(terminalsArray[0], 0)}
+          </div>
+          <div
+            style={{ ...splitterStyle(true), width: '8px', height: '100%', left: `${verticalSplit}%`, marginLeft: '-4px' }}
+            onMouseDown={handleMouseDown('v-top')}
+            onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+          />
+          <div style={{ width: `${100 - verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
+            {renderTerminal(terminalsArray[1], 1)}
+          </div>
+        </div>
+      );
+    }
+    
+    if (terminalCount === 3) {
+      // 3 terminales: 2 arriba (split vertical) + 1 abajo (toda la fila)
+      return (
+        <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }} data-grid-container>
+          {/* Fila superior: T1 y T2 */}
+          <div style={{ width: '100%', height: `${horizontalSplit}%`, position: 'relative', display: 'flex' }}>
+            <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
+              {renderTerminal(terminalsArray[0], 0)}
+            </div>
+            <div
+              style={{ ...splitterStyle(true), width: '8px', height: '100%', left: `${verticalSplit}%`, marginLeft: '-4px' }}
+              onMouseDown={handleMouseDown('v-top')}
+              onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+            />
+            <div style={{ width: `${100 - verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
+              {renderTerminal(terminalsArray[1], 1)}
+            </div>
+          </div>
+          {/* Splitter horizontal */}
+          <div
+            style={{ ...splitterStyle(false), width: '100%', height: '8px', top: `${horizontalSplit}%`, marginTop: '-4px' }}
+            onMouseDown={handleMouseDown('h')}
+            onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+          />
+          {/* Fila inferior: T3 */}
+          <div style={{ width: '100%', height: `${100 - horizontalSplit}%`, position: 'relative', overflow: 'hidden' }}>
+            {renderTerminal(terminalsArray[2], 2)}
+          </div>
+        </div>
+      );
+    }
+    
+    if (terminalCount === 4) {
+      // 4 terminales: Grid 2x2 completo redimensionable
+      return (
+        <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }} data-grid-container>
+          {/* Fila superior: T1 y T2 */}
+          <div style={{ width: '100%', height: `${horizontalSplit}%`, position: 'relative', display: 'flex' }}>
+            <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
+              {renderTerminal(terminalsArray[0], 0)}
+            </div>
+            <div
+              style={{ ...splitterStyle(true), width: '8px', height: '100%', left: `${verticalSplit}%`, marginLeft: '-4px' }}
+              onMouseDown={handleMouseDown('v-top')}
+              onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+            />
+            <div style={{ width: `${100 - verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
+              {renderTerminal(terminalsArray[1], 1)}
+            </div>
+          </div>
+          {/* Splitter horizontal */}
+          <div
+            style={{ ...splitterStyle(false), width: '100%', height: '8px', top: `${horizontalSplit}%`, marginTop: '-4px' }}
+            onMouseDown={handleMouseDown('h')}
+            onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+          />
+          {/* Fila inferior: T3 y T4 */}
+          <div style={{ width: '100%', height: `${100 - horizontalSplit}%`, position: 'relative', display: 'flex' }}>
+            <div style={{ width: `${verticalSplitBottom}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
+              {renderTerminal(terminalsArray[2], 2)}
+            </div>
+            <div
+              style={{ ...splitterStyle(true), width: '8px', height: '100%', left: `${verticalSplitBottom}%`, marginLeft: '-4px' }}
+              onMouseDown={handleMouseDown('v-bottom')}
+              onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+            />
+            <div style={{ width: `${100 - verticalSplitBottom}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
+              {renderTerminal(terminalsArray[3], 3)}
+            </div>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  // Sistema antiguo de splits anidados (para casos edge o legacy que no se convirtieron)
+  if (isNestedSystem) {
+    const [leftSize, setLeftSize] = useState(50);
+    const [isDragging, setIsDragging] = useState(false);
+    const isVertical = orientation === 'vertical';
+    
+    const containerStyle = {
+      display: 'flex',
+      flexDirection: isVertical ? 'row' : 'column',
+      width: '100%',
+      height: '100%',
+      overflow: 'hidden',
+      background: theme?.background || '#2d2d2d'
+    };
+    
+    const firstPaneStyle = {
+      width: isVertical ? `${leftSize}%` : '100%',
+      height: isVertical ? '100%' : `${leftSize}%`,
+      overflow: 'hidden',
+      minWidth: isVertical ? '100px' : 'auto',
+      minHeight: isVertical ? 'auto' : '100px',
+      display: 'flex',
+      flexDirection: 'column'
+    };
+    
+    const secondPaneStyle = {
+      width: isVertical ? `${100 - leftSize}%` : '100%',
+      height: isVertical ? '100%' : `${100 - leftSize}%`,
+      overflow: 'hidden',
+      minWidth: isVertical ? '100px' : 'auto',
+      minHeight: isVertical ? 'auto' : '100px',
+      display: 'flex',
+      flexDirection: 'column'
+    };
+    
+    const visibleLineColor = getSolidSplitterColor(theme, splitterColor);
+    
+    const gutterStyle = {
+      width: isVertical ? '8px' : '100%',
+      height: isVertical ? '100%' : '8px',
+      cursor: isVertical ? 'col-resize' : 'row-resize',
+      flexShrink: 0,
+      position: 'relative',
+      zIndex: 10,
+      transition: 'filter 0.15s ease',
+      userSelect: 'none',
+      background: 'transparent',
+      backgroundImage: isVertical 
+        ? `linear-gradient(to right, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 1px), transparent calc(50% + 1px))`
+        : `linear-gradient(to bottom, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 1px), transparent calc(50% + 1px))`,
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: '100% 100%'
+    };
+    
+    const handleMouseDown = (e) => {
+      e.preventDefault();
+      setIsDragging(true);
+      document.body.style.cursor = isVertical ? 'col-resize' : 'row-resize';
+      document.body.style.userSelect = 'none';
+    };
+    
+    const handleMouseMove = useCallback((e) => {
+      if (!isDragging) return;
+      
+      const container = e.currentTarget.closest('[data-split-container]');
+      if (!container) return;
+      
+      const rect = container.getBoundingClientRect();
+      const newSize = isVertical
+        ? ((e.clientX - rect.left) / rect.width) * 100
+        : ((e.clientY - rect.top) / rect.height) * 100;
+      
+      setLeftSize(Math.max(10, Math.min(90, newSize)));
+    }, [isDragging, isVertical]);
+    
+    const handleMouseUp = useCallback(() => {
+      setIsDragging(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }, []);
+    
+    useEffect(() => {
+      if (isDragging) {
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('mouseup', handleMouseUp);
+        };
+      }
+    }, [isDragging, handleMouseMove, handleMouseUp]);
+    
+    return (
+      <div style={containerStyle} data-split-container="true">
+        <div style={firstPaneStyle}>
+          {renderNode(first, [...path, 'first'], orientation)}
+        </div>
+        
+        <div 
+          style={gutterStyle}
+          onMouseDown={handleMouseDown}
+          onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+          title="Arrastra para redimensionar"
+        />
+        
+        <div style={secondPaneStyle}>
+          {renderNode(second, [...path, 'second'], orientation)}
+        </div>
+      </div>
+    );
+  }
+
+  // CÓDIGO LEGACY: Sistema original de 2 paneles con leftTerminal/rightTerminal
+  // Se mantiene para compatibilidad durante la transición
   const gutterStyle = {
     transition: 'none',
     background: 'transparent',

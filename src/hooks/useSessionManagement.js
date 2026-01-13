@@ -47,15 +47,41 @@ export const useSessionManagement = (toast, {
   useEffect(() => {
     if (!window.electron) return;
 
+    // Función helper para obtener todos los terminales de un árbol de splits
+    const getAllTerminalsFromTree = (node, result = []) => {
+      if (!node) return result;
+      if (node.type === 'terminal' && node.key) {
+        result.push(node.key);
+      } else if (node.type === 'split') {
+        getAllTerminalsFromTree(node.first, result);
+        getAllTerminalsFromTree(node.second, result);
+      }
+      return result;
+    };
+
     // Obtener todos los tabIds actuales de terminales SSH (incluyendo splits)
     const currentTerminalTabs = [];
     sshTabs.forEach(tab => {
       if (tab.type === 'terminal') {
         currentTerminalTabs.push(tab.key);
       } else if (tab.type === 'split') {
-        // Agregar ambos terminales del split
-        if (tab.leftTerminal) currentTerminalTabs.push(tab.leftTerminal.key);
-        if (tab.rightTerminal) currentTerminalTabs.push(tab.rightTerminal.key);
+        // Nuevo sistema: árbol de splits anidados
+        if (tab.first || tab.second) {
+          getAllTerminalsFromTree(tab, currentTerminalTabs);
+        }
+        // Sistema de array: agregar todos los terminales del array
+        else if (tab.terminals && Array.isArray(tab.terminals)) {
+          tab.terminals.forEach(terminal => {
+            if (terminal && terminal.key) {
+              currentTerminalTabs.push(terminal.key);
+            }
+          });
+        }
+        // Sistema legacy: agregar leftTerminal y rightTerminal
+        else {
+          if (tab.leftTerminal) currentTerminalTabs.push(tab.leftTerminal.key);
+          if (tab.rightTerminal) currentTerminalTabs.push(tab.rightTerminal.key);
+        }
       }
     });
     
@@ -262,15 +288,41 @@ export const useSessionManagement = (toast, {
     cleanupTerminalRef(tabKey);
   }, [cleanupTerminalRef]);
 
-  // Función para desconectar sesión split
-  const disconnectSplitSession = useCallback((splitTab) => {
-    if (splitTab.leftTerminal) {
-      disconnectSSHSession(splitTab.leftTerminal.key);
-    }
-    if (splitTab.rightTerminal) {
-      disconnectSSHSession(splitTab.rightTerminal.key);
+  // Función helper para desconectar todos los terminales de un árbol
+  const disconnectTree = useCallback((node) => {
+    if (!node) return;
+    if (node.type === 'terminal' && node.key) {
+      disconnectSSHSession(node.key);
+    } else if (node.type === 'split') {
+      disconnectTree(node.first);
+      disconnectTree(node.second);
     }
   }, [disconnectSSHSession]);
+
+  // Función para desconectar sesión split
+  const disconnectSplitSession = useCallback((splitTab) => {
+    // Nuevo sistema: árbol de splits anidados
+    if (splitTab.first || splitTab.second) {
+      disconnectTree(splitTab);
+    }
+    // Sistema de array: desconectar todos los terminales
+    else if (splitTab.terminals && Array.isArray(splitTab.terminals)) {
+      splitTab.terminals.forEach(terminal => {
+        if (terminal && terminal.key) {
+          disconnectSSHSession(terminal.key);
+        }
+      });
+    }
+    // Sistema legacy: desconectar leftTerminal y rightTerminal
+    else {
+      if (splitTab.leftTerminal) {
+        disconnectSSHSession(splitTab.leftTerminal.key);
+      }
+      if (splitTab.rightTerminal) {
+        disconnectSSHSession(splitTab.rightTerminal.key);
+      }
+    }
+  }, [disconnectSSHSession, disconnectTree]);
 
   // Función para desconectar sesión RDP-Guacamole
   const disconnectRDPSession = useCallback((tabKey) => {
