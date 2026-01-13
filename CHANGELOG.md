@@ -25,6 +25,11 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - **Profiler de Arranque**: Sistema de medición de tiempos de carga para identificar cuellos de botella
 - **Optimización de Desarrollo**: electron-reloader solo se carga en modo desarrollo
 
+### 🖥️ Mejoras de Terminales SSH - Splits
+- **Selección de Orientación en Primer Split**: Al hacer el primer split de un terminal SSH, se muestra opciones para elegir entre división vertical u horizontal
+- **Fix de Split Horizontal**: Corrección del problema donde el split horizontal no funcionaba correctamente y siempre se abría como vertical
+- **Apertura Automática en Splits Subsecuentes**: El 3er y 4to split se abren automáticamente sin pedir orientación para una experiencia más fluida
+
 ## [1.6.1] - 2025-11-19
 
 ### 🐛 Correcciones de Bugs
@@ -87,6 +92,9 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - **Status Bar Standalone**: Barra de estado independiente para terminales locales
 - **Switch de Terminales**: Cambio fluido entre diferentes tipos de terminales
 - **Auto-detección de Comandos**: Detección inteligente de tipo de comando (Linux/Windows)
+- **Splits de Terminales SSH Mejorados**: 
+  - Selección de orientación (vertical/horizontal) al hacer el primer split
+  - Apertura automática sin preguntar en el 3er y 4to split
 
 ### 🔄 Sistema de Actualización Automática
 - **Actualizaciones desde GitHub Releases**: Sistema completo de actualización automática
@@ -160,6 +168,7 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - **Fix de Cygwin**: Correcciones en la integración con Cygwin
 - **Fix de Switch**: Mejoras en el cambio entre tipos de terminales
 - **Fix de Delay de Inicio**: Corrección de problemas de retraso al iniciar
+- **Fix de Split Horizontal**: Corrección del problema donde el split horizontal en terminales SSH no funcionaba y siempre se abría como vertical
 
 #### 🐳 Correcciones de Docker
 - **Fix de Docker**: Correcciones en la integración con Docker

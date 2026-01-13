@@ -77,6 +77,10 @@ Esta es una **versión patch** que incluye mejoras y correcciones generales. Est
 - **Status Bar Standalone**: Barra de estado independiente para terminales locales
 - **Switch de Terminales**: Cambio fluido entre diferentes tipos de terminales
 - **Auto-detección de Comandos**: Detección inteligente de tipo de comando (Linux/Windows)
+- **Splits de Terminales SSH Mejorados**: 
+  - **Selección de Orientación en Primer Split**: Al hacer el primer split de un terminal SSH, se muestra opciones para elegir entre división vertical u horizontal
+  - **Fix de Split Horizontal**: Corrección del problema donde el split horizontal no funcionaba correctamente
+  - **Apertura Automática en Splits Subsecuentes**: El 3er y 4to split se abren automáticamente sin pedir orientación para una experiencia más fluida
 
 ### 🎥 Sistema de Auditoría y Grabación de Sesiones
 - **Grabación de Sesiones SSH**: Captura completa de entrada/salida en tiempo real
@@ -175,6 +179,7 @@ Esta es una **versión patch** que incluye mejoras y correcciones generales. Est
 - **Fix de Cygwin**: Correcciones en la integración con Cygwin
 - **Fix de Switch**: Mejoras en el cambio entre tipos de terminales
 - **Fix de Delay de Inicio**: Corrección de problemas de retraso al iniciar
+- **Fix de Split Horizontal**: Corrección del problema donde el split horizontal en terminales SSH no funcionaba y siempre se abría como vertical
 
 ### 🐳 Correcciones de Docker
 - **Fix de Docker**: Correcciones en la integración con Docker
