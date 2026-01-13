@@ -10,7 +10,8 @@ export const useSplitManagement = ({
   setSshTabs,
   homeTabs,
   fileExplorerTabs,
-  toast
+  toast,
+  disconnectSSHSession = null // Función opcional para desconectar sesiones SSH
 }) => {
   // Función helper para contar terminales en un árbol de splits
   const countTerminals = useCallback((node) => {
@@ -176,8 +177,53 @@ export const useSplitManagement = ({
     });
   }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, sshTabs, setSshTabs, homeTabs, fileExplorerTabs, setActiveTabIndex, toast, countTerminals, getAllTerminals]);
 
+  // Función helper para encontrar el terminal que se va a cerrar
+  const findTerminalToClose = useCallback((node, nodePath) => {
+    if (!node || !nodePath || nodePath.length === 0) return null;
+    
+    if (nodePath.length === 1) {
+      const direction = nodePath[0];
+      if (node.type === 'split') {
+        // Retornar el terminal que se va a cerrar
+        const terminalToClose = direction === 'first' ? node.first : node.second;
+        if (terminalToClose && terminalToClose.type === 'terminal') {
+          return terminalToClose;
+        }
+        // Si es un split anidado, buscar recursivamente
+        if (terminalToClose && terminalToClose.type === 'split') {
+          // En este caso, necesitamos encontrar todos los terminales en ese sub-árbol
+          // pero por ahora, retornamos null y manejaremos la desconexión después
+          return null;
+        }
+      }
+      return null;
+    }
+    
+    // Navegar más profundo
+    const [next, ...rest] = nodePath;
+    if (node.type === 'split') {
+      if (next === 'first') {
+        return findTerminalToClose(node.first, rest);
+      } else if (next === 'second') {
+        return findTerminalToClose(node.second, rest);
+      }
+    }
+    
+    return null;
+  }, []);
+
   // Función para cerrar un panel del split (sistema de árbol anidado)
   const handleCloseSplitPanel = useCallback((splitTabKey, path) => {
+    // Primero, encontrar el terminal que se va a cerrar para desconectarlo
+    const tab = sshTabs.find(t => t.key === splitTabKey && t.type === 'split');
+    if (tab && disconnectSSHSession) {
+      const terminalToClose = findTerminalToClose(tab, path);
+      if (terminalToClose && terminalToClose.key) {
+        // Desconectar solo el terminal que se está cerrando
+        disconnectSSHSession(terminalToClose.key);
+      }
+    }
+    
     // Función helper para remover un nodo del árbol
     const removeNode = (node, nodePath) => {
       if (!node) return null;
@@ -235,14 +281,15 @@ export const useSplitManagement = ({
           // Si el resultado es un solo terminal, convertir a pestaña normal
           if (newTree && newTree.type === 'terminal') {
             // Cuando queda un solo terminal, el tab debe convertirse en ese terminal
-            // El key del tab debe ser el key del terminal que queda
+            // IMPORTANTE: Usar el key del terminal que queda para preservar la sesión SSH
+            // La sesión SSH está asociada con el key del terminal, no con el key del tab
             return {
               ...newTree,
+              // El key del terminal se mantiene (newTree.key) para preservar la sesión SSH
               type: 'terminal',
               // Preservar propiedades importantes del tab original
               createdAt: tab.createdAt,
               groupId: tab.groupId,
-              // El key del terminal se mantiene (newTree.key)
             };
           }
           
@@ -281,7 +328,7 @@ export const useSplitManagement = ({
       detail: 'Terminal cerrado exitosamente',
       life: 2000
     });
-  }, [setSshTabs, toast, countTerminals, getAllTerminals]);
+  }, [setSshTabs, toast, countTerminals, getAllTerminals, sshTabs, disconnectSSHSession, findTerminalToClose]);
 
   return {
     openInSplit,

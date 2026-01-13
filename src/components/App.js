@@ -949,7 +949,8 @@ const App = () => {
     setSshTabs,
     homeTabs,
     fileExplorerTabs,
-    toast
+    toast,
+    disconnectSSHSession
   });
 
   // Usar el hook de drag & drop
