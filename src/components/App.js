@@ -935,17 +935,48 @@ const App = () => {
     };
   }, [localFontFamily, localFontSize]);
 
+  // Split management hook - debe estar antes de useDragAndDrop
+  const {
+    openInSplit,
+    handleCloseSplitPanel
+  } = useSplitManagement({
+    activeGroupId,
+    setActiveGroupId,
+    activeTabIndex,
+    setActiveTabIndex,
+    setGroupActiveIndices,
+    sshTabs,
+    setSshTabs,
+    homeTabs,
+    fileExplorerTabs,
+    toast
+  });
+
   // Usar el hook de drag & drop
   const {
     draggedTabIndex, dragOverTabIndex, dragStartTimer,
     handleTabDragStart, handleTabDragOver, handleTabDragLeave,
-    handleTabDrop, handleTabDragEnd
+    handleTabDrop, handleTabDragEnd,
+    draggedSSHNodeRef // Ref para almacenar nodo SSH arrastrado desde sidebar
   } = useDragAndDrop({
     getFilteredTabs,
     openTabOrder,
     setOpenTabOrder,
-    setActiveTabIndex
+    setActiveTabIndex,
+    openInSplit // Pasar función para crear splits desde drag & drop
   });
+
+  // Exponer el ref globalmente para que Sidebar pueda usarlo
+  useEffect(() => {
+    if (draggedSSHNodeRef) {
+      window.draggedSSHNodeRef = draggedSSHNodeRef;
+    }
+    return () => {
+      if (window.draggedSSHNodeRef === draggedSSHNodeRef) {
+        delete window.draggedSSHNodeRef;
+      }
+    };
+  }, [draggedSSHNodeRef]);
 
   // Usar el hook de gestión de sesiones
   const {
@@ -964,22 +995,6 @@ const App = () => {
     hideContextMenu
   });
 
-  // Split management hook
-  const {
-    openInSplit,
-    handleCloseSplitPanel
-  } = useSplitManagement({
-    activeGroupId,
-    setActiveGroupId,
-    activeTabIndex,
-    setActiveTabIndex,
-    setGroupActiveIndices,
-    sshTabs,
-    setSshTabs,
-    homeTabs,
-    fileExplorerTabs,
-    toast
-  });
 
   // Recording management hook
   const {
