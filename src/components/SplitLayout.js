@@ -367,6 +367,25 @@ const SplitLayout = ({
     return null;
   }, [fontFamily, fontSize, theme, onContextMenu, sshStatsByTabId, statusBarIconTheme, terminalRefs, splitterColor, onClosePanel]);
 
+  // Función helper para encontrar el path de un terminal en el árbol por su key
+  const findTerminalPath = useCallback((node, targetKey, currentPath = []) => {
+    if (!node) return null;
+    
+    if (node.type === 'terminal' && node.key === targetKey) {
+      return currentPath;
+    }
+    
+    if (node.type === 'split') {
+      const firstPath = findTerminalPath(node.first, targetKey, [...currentPath, 'first']);
+      if (firstPath) return firstPath;
+      
+      const secondPath = findTerminalPath(node.second, targetKey, [...currentPath, 'second']);
+      if (secondPath) return secondPath;
+    }
+    
+    return null;
+  }, []);
+
   // Convertir árbol anidado a array plano para grid 2x2
   const terminalsArray = React.useMemo(() => {
     if (isNestedSystem) {
@@ -490,9 +509,19 @@ const SplitLayout = ({
                 transition: 'all 0.2s ease',
                 opacity: 0.7
               }}
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation(); // Prevenir propagación del evento
                 if (isNestedSystem) {
-                  onClosePanel([...path, index]);
+                  // Encontrar el path real del terminal en el árbol por su key
+                  const rootNode = { type: 'split', first, second };
+                  const terminalPath = findTerminalPath(rootNode, terminal.key, path);
+                  if (terminalPath) {
+                    onClosePanel(terminalPath);
+                  } else {
+                    // Fallback: intentar usar 'first' o 'second' basado en el índice
+                    const fallbackPath = index === 0 ? [...path, 'first'] : [...path, 'second'];
+                    onClosePanel(fallbackPath);
+                  }
                 } else {
                   onClosePanel(index);
                 }

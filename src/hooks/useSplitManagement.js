@@ -180,6 +180,8 @@ export const useSplitManagement = ({
   const handleCloseSplitPanel = useCallback((splitTabKey, path) => {
     // Función helper para remover un nodo del árbol
     const removeNode = (node, nodePath) => {
+      if (!node) return null;
+      
       if (!nodePath || nodePath.length === 0) {
         // Este nodo debe ser removido, retornar null
         return null;
@@ -190,8 +192,11 @@ export const useSplitManagement = ({
         const direction = nodePath[0];
         if (node.type === 'split') {
           // Retornar el otro lado del split
-          return direction === 'first' ? node.second : node.first;
+          const result = direction === 'first' ? node.second : node.first;
+          return result;
         }
+        // Si no es split, no debería pasar, pero retornar null
+        return null;
       }
       
       // Navegar más profundo
@@ -199,11 +204,17 @@ export const useSplitManagement = ({
       if (node.type === 'split') {
         if (next === 'first') {
           const newFirst = removeNode(node.first, rest);
-          if (!newFirst) return node.second;
+          if (!newFirst) {
+            // Si el first fue removido completamente, retornar solo el second
+            return node.second;
+          }
           return { ...node, first: newFirst };
         } else if (next === 'second') {
           const newSecond = removeNode(node.second, rest);
-          if (!newSecond) return node.first;
+          if (!newSecond) {
+            // Si el second fue removido completamente, retornar solo el first
+            return node.first;
+          }
           return { ...node, second: newSecond };
         }
       }
@@ -216,11 +227,22 @@ export const useSplitManagement = ({
         if (tab.key === splitTabKey && tab.type === 'split') {
           const newTree = removeNode(tab, path);
           
+          // Si newTree es null, retornar el tab sin cambios
+          if (!newTree) {
+            return tab;
+          }
+          
           // Si el resultado es un solo terminal, convertir a pestaña normal
           if (newTree && newTree.type === 'terminal') {
+            // Cuando queda un solo terminal, el tab debe convertirse en ese terminal
+            // El key del tab debe ser el key del terminal que queda
             return {
               ...newTree,
-              type: 'terminal'
+              type: 'terminal',
+              // Preservar propiedades importantes del tab original
+              createdAt: tab.createdAt,
+              groupId: tab.groupId,
+              // El key del terminal se mantiene (newTree.key)
             };
           }
           
@@ -234,15 +256,18 @@ export const useSplitManagement = ({
               label: `Split (${termCount}): ${allTerms.map(t => t.label).slice(0, 3).join(' | ')}${termCount > 3 ? '...' : ''}`
             };
           }
+          
+          // Si llegamos aquí, newTree tiene un tipo inesperado, retornar el tab sin cambios
+          return tab;
         }
         
         // Compatibilidad legacy: manejar leftTerminal/rightTerminal
         if (tab.key === splitTabKey && tab.type === 'split' && tab.leftTerminal && tab.rightTerminal) {
           if (path === 'left' || (Array.isArray(path) && path[0] === 'first')) {
-            return { ...tab.rightTerminal, type: 'terminal' };
+            return { ...tab.rightTerminal, type: 'terminal', key: tab.key };
           }
           if (path === 'right' || (Array.isArray(path) && path[0] === 'second')) {
-            return { ...tab.leftTerminal, type: 'terminal' };
+            return { ...tab.leftTerminal, type: 'terminal', key: tab.key };
           }
         }
         
