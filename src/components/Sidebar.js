@@ -1531,8 +1531,8 @@ const Sidebar = React.memo(({
     let icon = null;
     const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['nord'].icons;
     if (isSSH) {
-      // Verificar si tiene icono personalizado
-      if (node.data?.customIcon && SSHIconPresets[node.data.customIcon.toUpperCase()]) {
+      // Verificar si tiene icono personalizado (ignorar 'default' para usar el icono del tema)
+      if (node.data?.customIcon && node.data.customIcon !== 'default' && SSHIconPresets[node.data.customIcon.toUpperCase()]) {
         const preset = SSHIconPresets[node.data.customIcon.toUpperCase()];
         icon = <SSHIconRenderer preset={preset} pixelSize={connectionIconSize} />;
       } else {

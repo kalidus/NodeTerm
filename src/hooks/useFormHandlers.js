@@ -645,8 +645,8 @@ export const useFormHandlers = ({
         autoCopyPassword: editSSHAutoCopyPassword || false,
         // Descripción de la conexión
         description: editSSHDescription || '',
-        // Icono personalizado
-        customIcon: editSSHIcon || null
+        // Icono personalizado (tratar 'default' como null para usar el icono del tema)
+        customIcon: editSSHIcon && editSSHIcon !== 'default' ? editSSHIcon : null
       };
       nodeToEdit.droppable = false; // Asegurar que las sesiones SSH no sean droppable
       
