@@ -1902,6 +1902,41 @@ const Sidebar = React.memo(({
         title={title}
         data-connection-type={isSSH ? 'ssh' : (isRDP ? 'rdp' : (isVNC ? 'vnc' : (isSSHTunnel ? 'ssh-tunnel' : null)))}
         data-node-type={isFolder ? 'folder' : 'connection'}
+        draggable={isSSH ? true : undefined}
+        onDragStart={(e) => {
+          // Evento nativo de drag para nodos SSH
+          if (isSSH) {
+            const sshNodeData = {
+              type: 'ssh-node',
+              key: node.key,
+              label: node.label,
+              data: node.data
+            };
+            
+            // Almacenar en ref global
+            if (window.draggedSSHNodeRef && window.draggedSSHNodeRef.current !== undefined) {
+              window.draggedSSHNodeRef.current = sshNodeData;
+              console.log('🔵 SSH node stored in ref:', sshNodeData);
+            }
+            
+            // También establecer en dataTransfer
+            try {
+              e.dataTransfer.effectAllowed = 'copy';
+              e.dataTransfer.setData('application/nodeterm-ssh-node', JSON.stringify(sshNodeData));
+              e.dataTransfer.setData('text/plain', `ssh:${node.key}`);
+              console.log('🔵 SSH node data set in dataTransfer');
+            } catch (err) {
+              console.warn('Error setting dataTransfer:', err);
+            }
+          }
+        }}
+        onDragEnd={() => {
+          // NO limpiar aquí - el drop puede ocurrir después del dragEnd
+          // Se limpiará en handleTabDrop después de procesar
+          if (window.draggedSSHNodeRef && isSSH) {
+            console.log('🔵 Drag ended, keeping SSH node in ref for drop');
+          }
+        }}
       >
         <span style={{ 
           minWidth: 20,
@@ -2677,7 +2712,38 @@ const Sidebar = React.memo(({
                     dragdropScope="files"
                     onDragDrop={onDragDrop}
                     onDragStart={e => {
-                      // if (e.node) setDraggedNodeKey(e.node.key); // This line was removed as per the edit hint
+                      // Establecer datos en dataTransfer y en almacenamiento global para permitir arrastrar nodos SSH a pestañas
+                      if (e.node && e.node.data && e.node.data.type === 'ssh') {
+                        const sshNodeData = {
+                          type: 'ssh-node',
+                          key: e.node.key,
+                          label: e.node.label,
+                          data: e.node.data
+                        };
+                        
+                        // Almacenar en ref global (más confiable que dataTransfer con PrimeReact)
+                        if (window.draggedSSHNodeRef && window.draggedSSHNodeRef.current !== undefined) {
+                          window.draggedSSHNodeRef.current = sshNodeData;
+                        }
+                        
+                        // También intentar establecer en dataTransfer (fallback)
+                        try {
+                          const nativeEvent = e.originalEvent || e.nativeEvent || e;
+                          if (nativeEvent && nativeEvent.dataTransfer) {
+                            nativeEvent.dataTransfer.effectAllowed = 'copy';
+                            nativeEvent.dataTransfer.setData('application/nodeterm-ssh-node', JSON.stringify(sshNodeData));
+                            nativeEvent.dataTransfer.setData('text/plain', `ssh:${e.node.key}`);
+                          }
+                        } catch (err) {
+                          console.warn('Error setting dataTransfer:', err);
+                        }
+                      }
+                    }}
+                    onDragEnd={() => {
+                      // Limpiar el nodo SSH arrastrado al finalizar el drag
+                      if (window.draggedSSHNodeRef) {
+                        window.draggedSSHNodeRef.current = null;
+                      }
                     }}
                     onDragEnd={() => {}}
                     className={`sidebar-tree tree-theme-${treeTheme}`}

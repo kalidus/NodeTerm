@@ -1005,6 +1005,50 @@ const MainContentArea = ({
   const FIXED_EXPANDED_SIZE = 18; // 18% - ancho inicial cuando se abre la app
   // Estado de tamaño actual del sidebar (en %), usado cuando está expandido
   const [sidebarSizePercent, setSidebarSizePercent] = React.useState(FIXED_EXPANDED_SIZE);
+
+  // Listener global para capturar drops de nodos SSH desde la sidebar sobre el área de contenido
+  React.useEffect(() => {
+    const handleGlobalDrop = (e) => {
+      // Solo procesar si hay un nodo SSH en el ref y no se procesó ya en el TabHeader
+      if (window.draggedSSHNodeRef && window.draggedSSHNodeRef.current && !e.defaultPrevented) {
+        console.log('🟡 Global drop detected, SSH node:', window.draggedSSHNodeRef.current);
+        
+        // Si el drop fue sobre el área de contenido (no sobre el header de la pestaña)
+        // usar la pestaña activa actual
+        const target = e.target;
+        const isOverTabHeader = target.closest('.p-tabview-nav-link') || target.closest('[role="tab"]');
+        
+        if (!isOverTabHeader && activeTabIndex !== null && tabHandlers.onTabDrop) {
+          // Dropear sobre la pestaña activa
+          console.log('🟡 Dropping on active tab:', activeTabIndex);
+          e.preventDefault();
+          e.stopPropagation();
+          tabHandlers.onTabDrop(e, activeTabIndex);
+        }
+      }
+    };
+
+    const handleGlobalDragOver = (e) => {
+      // Permitir drop si hay un nodo SSH y no está sobre el header
+      if (window.draggedSSHNodeRef && window.draggedSSHNodeRef.current) {
+        const target = e.target;
+        const isOverTabHeader = target.closest('.p-tabview-nav-link') || target.closest('[role="tab"]');
+        
+        if (!isOverTabHeader) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+        }
+      }
+    };
+
+    document.addEventListener('drop', handleGlobalDrop, true); // Usar capture phase
+    document.addEventListener('dragover', handleGlobalDragOver, true);
+
+    return () => {
+      document.removeEventListener('drop', handleGlobalDrop, true);
+      document.removeEventListener('dragover', handleGlobalDragOver, true);
+    };
+  }, [tabHandlers, activeTabIndex]);
   
 
   // Función personalizada para manejar toggle del sidebar
