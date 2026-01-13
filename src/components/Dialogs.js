@@ -585,6 +585,7 @@ export function EditSSHConnectionDialog({
   
   // Obtener el preset del icono actual
   const currentIconPreset = useMemo(() => {
+    // Ignorar 'default' y null para usar el icono del tema
     if (sshIcon && sshIcon !== 'default' && SSHIconPresets[sshIcon.toUpperCase()]) {
       return SSHIconPresets[sshIcon.toUpperCase()];
     }
@@ -621,7 +622,8 @@ export function EditSSHConnectionDialog({
   // Handler para seleccionar icono
   const handleIconSelect = useCallback((iconId) => {
     if (setSSHIcon && typeof setSSHIcon === 'function') {
-      setSSHIcon(iconId);
+      // Convertir 'default' a null para usar el icono del tema
+      setSSHIcon(iconId === 'default' ? null : iconId);
     }
   }, [setSSHIcon]);
 
