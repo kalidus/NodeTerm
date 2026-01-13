@@ -1253,6 +1253,12 @@ const TabContentRenderer = React.memo(({
   if (tab.type === 'split') {
     return (
       <SplitLayout
+        // Nuevo sistema: árbol de splits anidados
+        first={tab.first}
+        second={tab.second}
+        orientation={tab.orientation || 'vertical'}
+        // Legacy: compatibilidad con sistemas anteriores
+        terminals={tab.terminals}
         leftTerminal={tab.leftTerminal}
         rightTerminal={tab.rightTerminal}
         fontFamily={fontFamily}
@@ -1261,11 +1267,14 @@ const TabContentRenderer = React.memo(({
         onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey, showTerminalContextMenu)}
         sshStatsByTabId={sshStatsByTabId}
         terminalRefs={terminalRefs}
-        orientation={tab.orientation || 'vertical'}
         statusBarIconTheme={statusBarIconTheme}
         splitterColor={terminalTheme.theme?.background || '#2d2d2d'}
+        // Nuevo sistema: callback con path en el árbol
+        onClosePanel={(path) => handleCloseSplitPanel(tab.key, path)}
+        // Legacy: callbacks antiguos
         onCloseLeft={() => handleCloseSplitPanel(tab.key, 'left')}
         onCloseRight={() => handleCloseSplitPanel(tab.key, 'right')}
+        path={[]}
       />
     );
   }

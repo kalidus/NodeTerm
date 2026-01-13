@@ -241,29 +241,57 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         }
       });
       
-      // Submenu para abrir en split solo si hay pestañas SSH abiertas
-      const sshTabsFiltered = getFilteredTabs().filter(tab => tab.type === 'terminal');
+      // Función helper para contar terminales en árbol
+      const countTerminalsInTab = (tab) => {
+        if (tab.type === 'terminal') return 1;
+        if (tab.type === 'split') {
+          const countInNode = (node) => {
+            if (!node) return 0;
+            if (node.type === 'terminal') return 1;
+            if (node.type === 'split') {
+              return countInNode(node.first) + countInNode(node.second);
+            }
+            return 0;
+          };
+          return countInNode(tab);
+        }
+        return 0;
+      };
+
+      // Submenu simplificado para abrir en split - filtrar pestañas con menos de 4 terminales
+      const sshTabsFiltered = getFilteredTabs().filter(tab => {
+        if (tab.type === 'terminal') return true;
+        if (tab.type === 'split') {
+          const count = countTerminalsInTab(tab);
+          return count < 4;
+        }
+        return false;
+      });
+      
       if (sshTabsFiltered.length > 0) {
         items.push({
           label: 'Abrir en Split',
           icon: 'pi pi-window-maximize',
-          command: () => openInSplit(node, sshTabsFiltered[0], 'vertical'), // Clic directo: vertical con primera pestaña
-          items: sshTabsFiltered.map(tab => ({
-            label: tab.label,
-            icon: 'pi pi-desktop',
-            items: [
-              {
-                label: 'Split vertical',
-                icon: 'pi pi-arrows-v',
-                command: () => openInSplit(node, tab, 'vertical')
-              },
-              {
-                label: 'Split horizontal',
-                icon: 'pi pi-arrows-h',
-                command: () => openInSplit(node, tab, 'horizontal')
-              }
-            ]
-          }))
+          command: () => openInSplit(node, sshTabsFiltered[0], 'vertical'),
+          items: sshTabsFiltered.map(tab => {
+            const termCount = countTerminalsInTab(tab);
+            return {
+              label: `${tab.label}${termCount > 1 ? ` (${termCount}/4)` : ''}`,
+              icon: tab.type === 'split' ? 'pi pi-window-maximize' : 'pi pi-desktop',
+              items: [
+                {
+                  label: 'Dividir vertical',
+                  icon: 'pi pi-arrows-v',
+                  command: () => openInSplit(node, tab, 'vertical')
+                },
+                {
+                  label: 'Dividir horizontal',
+                  icon: 'pi pi-arrows-h',
+                  command: () => openInSplit(node, tab, 'horizontal')
+                }
+              ]
+            };
+          })
         });
       }
 
