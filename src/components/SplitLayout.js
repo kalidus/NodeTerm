@@ -849,7 +849,7 @@ const SplitLayout = ({
     const secondaryPaneStyle = {
       width: isVertical ? `calc(100% - ${primaryPaneSize}px)` : '100%',
       height: isVertical ? '100%' : `calc(100% - ${primaryPaneSize}px)`,
-      minHeight: isVertical ? 'auto' : '40px',
+      minHeight: isVertical ? 'auto' : '0px', // Permitir que el terminal se oculte completamente
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
@@ -868,22 +868,52 @@ const SplitLayout = ({
     const dragRafRef = useRef(0);
     const latestDragSizeRef = useRef(internalPaneSize);
     
+    // Sincronizar internalPaneSize con externalPaneSize cuando cambia (pero no durante el drag)
+    useEffect(() => {
+      if (!isDragging && externalPaneSize !== null) {
+        setInternalPaneSize(externalPaneSize);
+        latestDragSizeRef.current = externalPaneSize;
+      }
+    }, [externalPaneSize, isDragging]);
+    
     // Durante el redimensionamiento, usar internalPaneSize, sino usar externalPaneSize si está disponible
     const finalPrimaryPaneSize = isDragging ? internalPaneSize : (externalPaneSize !== null ? externalPaneSize : internalPaneSize);
+    
+    // Calcular altura del contenedor para ocultar terminal cuando sea muy pequeño
+    const getContainerHeight = () => {
+      if (typeof window !== 'undefined') {
+        const container = document.querySelector('[data-split-container]');
+        if (container) {
+          const rect = container.getBoundingClientRect();
+          return rect.height;
+        }
+        return window.innerHeight;
+      }
+      return 800;
+    };
+    
+    const containerHeight = getContainerHeight();
+    const terminalHeight = containerHeight - finalPrimaryPaneSize;
+    const shouldHideTerminal = terminalHeight < 5; // Ocultar si tiene menos de 5px
     
     // Actualizar los estilos con el tamaño final
     const finalPrimaryPaneStyle = {
       ...primaryPaneStyle,
       height: `${finalPrimaryPaneSize}px`,
       position: 'relative',
+      // Ocultar completamente cuando el tamaño es 0 (maximized)
+      display: finalPrimaryPaneSize <= 0 ? 'none' : 'flex',
       // Desactivar transiciones durante el drag para evitar "lag" visual
       transition: isDragging ? 'none' : (externalPaneSize !== null ? 'all 0.1s ease' : 'none')
     };
     
     const finalSecondaryPaneStyle = {
       ...secondaryPaneStyle,
-      height: `calc(100% - ${finalPrimaryPaneSize}px)`,
-      transition: isDragging ? 'none' : (externalPaneSize !== null ? 'all 0.1s ease' : 'none')
+      height: finalPrimaryPaneSize <= 0 ? '100%' : `calc(100% - ${finalPrimaryPaneSize}px)`,
+      transition: isDragging ? 'none' : (externalPaneSize !== null ? 'all 0.1s ease' : 'none'),
+      // Ocultar completamente el terminal cuando su altura es muy pequeña
+      display: shouldHideTerminal ? 'none' : 'flex',
+      minHeight: '0px' // Permitir que el terminal se oculte completamente
     };
 
     // Handlers de resize horizontal
@@ -908,8 +938,17 @@ const SplitLayout = ({
       const delta = e.clientY - dragStart.y;
       const newSize = Math.round(dragStart.size + delta);
       
-      const minSize = 100;
-      const maxSize = window.innerHeight - 100;
+      // Obtener la altura real del contenedor
+      const container = document.querySelector('[data-split-container]');
+      let containerHeight = window.innerHeight;
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        containerHeight = rect.height;
+      }
+      
+      // Sin límites - permitir desde 0 hasta el 100% de la altura del contenedor
+      const minSize = 0; // Sin límite mínimo
+      const maxSize = containerHeight; // Permitir el 100% del contenedor
       
       const clampedSize = Math.max(minSize, Math.min(maxSize, newSize));
       // Guardar y aplicar el tamaño a 1 update por frame (más suave)
@@ -985,7 +1024,7 @@ const SplitLayout = ({
     };
 
     return (
-      <div style={containerStyle}>
+      <div style={containerStyle} data-split-container="true">
         <div style={finalPrimaryPaneStyle}>
           {leftTerminal.content ? (
             leftTerminal.content
@@ -1009,14 +1048,16 @@ const SplitLayout = ({
             />
           )}
           
-          {/* Handle de resize horizontal */}
-          <div 
-            style={horizontalHandleStyle}
-            onMouseDown={handleMouseDown}
-            onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
-            title="Arrastra para redimensionar"
-          />
+          {/* Handle de resize horizontal - mostrar solo si el panel no está oculto y hay espacio para redimensionar */}
+          {finalPrimaryPaneSize > 0 && finalPrimaryPaneSize < (containerHeight - 5) && (
+            <div 
+              style={horizontalHandleStyle}
+              onMouseDown={handleMouseDown}
+              onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+              title="Arrastra para redimensionar"
+            />
+          )}
         </div>
         
         <div style={finalSecondaryPaneStyle}>

@@ -527,17 +527,27 @@ const HomeTab = ({
   };
 
   // Funciones para controlar el estado del terminal
-  const handleMinimizeTerminal = () => {
-    const newState = terminalState === 'minimized' ? 'normal' : 'minimized';
-    // console.log('🔽 Cambiando estado del terminal:', terminalState, '->', newState);
-    setTerminalState(newState);
-  };
+  const handleMinimizeTerminal = React.useCallback(() => {
+    setTerminalState(prevState => {
+      const newState = prevState === 'minimized' ? 'normal' : 'minimized';
+      // Limpiar tamaño manual cuando se cambia el estado programáticamente
+      if (newState !== 'normal') {
+        setManualPaneSize(null);
+      }
+      return newState;
+    });
+  }, []);
 
-  const handleMaximizeTerminal = () => {
-    const newState = terminalState === 'maximized' ? 'normal' : 'maximized';
-    // console.log('🔼 Cambiando estado del terminal:', terminalState, '->', newState);
-    setTerminalState(newState);
-  };
+  const handleMaximizeTerminal = React.useCallback(() => {
+    setTerminalState(prevState => {
+      const newState = prevState === 'maximized' ? 'normal' : 'maximized';
+      // Limpiar tamaño manual cuando se cambia el estado programáticamente
+      if (newState !== 'normal') {
+        setManualPaneSize(null);
+      }
+      return newState;
+    });
+  }, []);
 
   // Función para resetear a modo manual cuando el usuario redimensiona
   const handleManualResize = () => {
@@ -550,7 +560,11 @@ const HomeTab = ({
   
   // Callback para cuando el usuario redimensiona manualmente
   const handlePaneSizeChange = (newSize) => {
-    setManualPaneSize(newSize);
+    // Permitir guardar cualquier tamaño, incluso si es casi el 100% de la altura
+    const statusBarHeight = statusBarVisible ? 40 : 0;
+    const availableHeight = window.innerHeight - statusBarHeight;
+    const clampedSize = Math.min(newSize, availableHeight);
+    setManualPaneSize(clampedSize);
     setTerminalState('normal');
   };
 
@@ -637,17 +651,22 @@ const HomeTab = ({
       return window.innerHeight - 20; // Ocupar casi toda la pantalla, dejando un pequeño margen
     }
 
-    // Si hay un tamaño manual guardado, usarlo
-    if (manualPaneSize !== null) {
-      return manualPaneSize;
+    const containerHeight = window.innerHeight;
+    const statusBarHeight = statusBarVisible ? 40 : 0;
+    const availableHeight = containerHeight - statusBarHeight;
+
+    // Si hay un tamaño manual guardado y estamos en modo normal, usarlo
+    // No limitar el tamaño manual - permitir hasta el 100%
+    if (manualPaneSize !== null && terminalState === 'normal') {
+      return Math.min(manualPaneSize, availableHeight);
     }
 
-    const containerHeight = window.innerHeight;
     let size;
 
     switch (terminalState) {
       case 'minimized':
-        size = Math.max(containerHeight - 40, 100);
+        // Cuando está minimizado, el panel superior ocupa casi todo, dejando solo 40px para el terminal
+        size = Math.max(availableHeight - 40, availableHeight * 0.95);
         break;
       case 'maximized':
         size = 0;
@@ -655,8 +674,6 @@ const HomeTab = ({
       default:
         // Para 'normal', la terminal ocupa un poco menos de la mitad (45%)
         // Esto significa que el panel superior ocupa 55% de la altura disponible
-        const statusBarHeight = statusBarVisible ? 40 : 0;
-        const availableHeight = containerHeight - statusBarHeight;
         // Usar 55% de la altura disponible para el panel superior (terminal ocupa 45%)
         size = Math.max(availableHeight * 0.55, 400);
         break;
@@ -1334,6 +1351,73 @@ const HomeTab = ({
           overflow: 'auto'
         }}>
           {topPanel}
+        </div>
+        <StandaloneStatusBar visible={statusBarVisible} />
+      </div>
+    );
+  }
+
+  // Cuando el terminal está maximizado, renderizar SOLO el terminal ocupando todo el espacio
+  if (terminalState === 'maximized') {
+    return (
+      <div style={{
+        height: '100%',
+        width: '100%',
+        position: 'relative',
+        background: localTerminalBg,
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          height: statusBarVisible ? 'calc(100% - 40px)' : '100%',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
+          {bottomPanel}
+        </div>
+        <StandaloneStatusBar visible={statusBarVisible} />
+      </div>
+    );
+  }
+
+  // Cuando el terminal está minimizado, renderizar SOLO el panel superior ocupando casi todo el espacio
+  if (terminalState === 'minimized') {
+    return (
+      <div style={{
+        height: '100%',
+        width: '100%',
+        position: 'relative',
+        background: dashboardBg,
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          height: statusBarVisible ? 'calc(100% - 40px)' : '100%',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            flex: '1 1 auto',
+            minHeight: 0,
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {topPanel}
+          </div>
+          <div style={{
+            height: '40px',
+            minHeight: '40px',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            background: localTerminalBg
+          }}>
+            {bottomPanel}
+          </div>
         </div>
         <StandaloneStatusBar visible={statusBarVisible} />
       </div>
