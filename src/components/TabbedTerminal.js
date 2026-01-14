@@ -1117,6 +1117,34 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         }
     }, [activeTabKey, tabs]);
 
+    // Efecto para redimensionar terminales cuando cambia el estado (minimized/maximized/normal)
+    useEffect(() => {
+        const activeTab = tabs.find(tab => tab.active);
+        if (activeTab && terminalState) {
+            const forceResize = () => {
+                const terminalRef = terminalRefs.current[activeTab.id];
+                if (terminalRef && terminalRef.fit) {
+                    try {
+                        terminalRef.fit();
+                    } catch (error) {
+                        // Silently handle errors
+                    }
+                }
+            };
+            
+            // Redimensionar cuando cambia el estado del terminal
+            // Usar requestAnimationFrame para asegurar que el layout se haya actualizado
+            requestAnimationFrame(() => {
+                forceResize();
+                setTimeout(forceResize, 0);
+                setTimeout(forceResize, 50);
+                setTimeout(forceResize, 100);
+                setTimeout(forceResize, 200);
+                setTimeout(forceResize, 400);
+            });
+        }
+    }, [terminalState, tabs]);
+
     // Opciones para el selector de tipo de terminal (dinámicas basadas en SO y distribuciones disponibles)
     const getTerminalOptions = () => {
         const platform = window.electron?.platform || 'unknown';
@@ -1969,9 +1997,21 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center'
+                                justifyContent: 'center',
+                                position: 'relative',
+                                zIndex: 10001,
+                                pointerEvents: 'auto'
                             }}
-                            onClick={onMinimize}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                if (onMinimize) {
+                                    onMinimize();
+                                }
+                            }}
+                            onMouseDown={(e) => {
+                                e.stopPropagation();
+                            }}
                             title="Minimizar terminal"
                         >
                             <div style={{
@@ -1989,9 +2029,21 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center'
+                                justifyContent: 'center',
+                                position: 'relative',
+                                zIndex: 10001,
+                                pointerEvents: 'auto'
                             }}
-                            onClick={onMaximize}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                if (onMaximize) {
+                                    onMaximize();
+                                }
+                            }}
+                            onMouseDown={(e) => {
+                                e.stopPropagation();
+                            }}
                             title={terminalState === 'maximized' ? "Restaurar terminal" : "Maximizar terminal"}
                         >
                             {terminalState === 'maximized' ? (
