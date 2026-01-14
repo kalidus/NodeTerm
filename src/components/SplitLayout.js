@@ -1100,46 +1100,37 @@ const SplitLayout = ({
         {/* Handle de resize horizontal - FUERA del panel primario para evitar problemas de overflow */}
         {(() => {
           const shouldShow = finalPrimaryPaneSize > 0;
-          console.log('🔍 Handle render check:', {
-            finalPrimaryPaneSize,
-            containerHeight,
-            shouldShow,
-            isLegacySystem
-          });
           return shouldShow;
         })() && (
           <div 
             style={{
               position: 'absolute',
-              top: `${finalPrimaryPaneSize - 6}px`, // Posicionar justo en el borde del panel primario
+              top: `${finalPrimaryPaneSize - 4}px`, // Posicionar justo en el borde del panel primario
               left: 0,
               width: '100%',
-              height: '12px', // Altura aumentada para que sea más fácil de clickear
-              background: 'rgba(128, 128, 128, 0.15)', // Fondo visible para debugging
+              height: '8px', // Área de click más pequeña pero aún fácil de usar
+              background: 'transparent', // Sin fondo por defecto
               cursor: 'row-resize',
               zIndex: 10000, // Muy alto para asegurar que esté por encima
               userSelect: 'none',
               pointerEvents: 'auto', // Asegurar que capture eventos
-              border: '1px solid rgba(255, 255, 255, 0.1)' // Borde visible para debugging
+              // Línea visual sutil en el centro
+              backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 0.5px), var(--ui-tab-border, ${visibleHorizontalColor}) calc(50% - 0.5px), var(--ui-tab-border, ${visibleHorizontalColor}) calc(50% + 0.5px), transparent calc(50% + 0.5px))`,
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: '100% 100%'
             }}
             onMouseDown={(e) => {
-              console.log('🖱️ Handle MOUSEDOWN detectado!');
               e.stopPropagation();
               e.preventDefault();
               handleMouseDown(e);
             }}
             onMouseEnter={(e) => { 
-              console.log('🖱️ Mouse ENTER handle');
-              e.currentTarget.style.filter = 'brightness(1.5)';
-              e.currentTarget.style.backgroundColor = 'rgba(128, 128, 128, 0.4)';
+              e.currentTarget.style.filter = 'brightness(1.3)';
+              e.currentTarget.style.backgroundColor = 'rgba(128, 128, 128, 0.1)';
             }}
             onMouseLeave={(e) => { 
               e.currentTarget.style.filter = 'brightness(1)';
-              e.currentTarget.style.backgroundColor = 'rgba(128, 128, 128, 0.15)';
-            }}
-            onClick={(e) => {
-              console.log('🖱️ Handle CLICK detectado!');
-              e.stopPropagation();
+              e.currentTarget.style.backgroundColor = 'transparent';
             }}
             title="Arrastra para redimensionar"
           />
