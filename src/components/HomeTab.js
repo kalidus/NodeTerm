@@ -560,12 +560,19 @@ const HomeTab = ({
   
   // Callback para cuando el usuario redimensiona manualmente
   const handlePaneSizeChange = (newSize) => {
-    // Permitir guardar cualquier tamaño, incluso si es casi el 100% de la altura
+    // Permitir guardar cualquier tamaño, incluso si es el 100% de la altura
     const statusBarHeight = statusBarVisible ? 40 : 0;
     const availableHeight = window.innerHeight - statusBarHeight;
+    // NO limitar - permitir hasta el 100% del espacio disponible
     const clampedSize = Math.min(newSize, availableHeight);
     setManualPaneSize(clampedSize);
     setTerminalState('normal');
+    console.log('📐 HomeTab: handlePaneSizeChange:', {
+      newSize,
+      clampedSize,
+      availableHeight,
+      percentage: ((clampedSize / availableHeight) * 100).toFixed(2) + '%'
+    });
   };
 
   // Función para toggle de visibilidad del terminal
@@ -1430,10 +1437,15 @@ const HomeTab = ({
       width: '100%',
       position: 'relative'
     }}>
-      <div style={{
-        height: statusBarVisible ? 'calc(100% - 40px)' : '100%',
-        width: '100%'
-      }}>
+      <div 
+        style={{
+          height: statusBarVisible ? 'calc(100% - 40px)' : '100%',
+          width: '100%',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+        data-split-container-wrapper="true"
+      >
         <SplitLayout
           key={`home-split-${themeVersion}`}
           leftTerminal={{ key: 'home_top', content: topPanel }}

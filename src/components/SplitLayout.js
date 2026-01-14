@@ -411,7 +411,8 @@ const SplitLayout = ({
   }, [isNestedSystem, first, second, isArraySystem, terminals, isLegacySystem, leftTerminal, rightTerminal]);
 
   // NUEVO SISTEMA: Grid 2x2 inteligente con splitters redimensionables
-  if (terminalsArray.length > 0 && terminalsArray.length <= 4) {
+  // NO ejecutar si estamos usando el sistema legacy (leftTerminal/rightTerminal)
+  if (terminalsArray.length > 0 && terminalsArray.length <= 4 && !isLegacySystem) {
     const terminalCount = terminalsArray.length;
     const visibleLineColor = getSolidSplitterColor(theme, splitterColor);
     
@@ -810,6 +811,15 @@ const SplitLayout = ({
 
   // CÓDIGO LEGACY: Sistema original de 2 paneles con leftTerminal/rightTerminal
   // Se mantiene para compatibilidad durante la transición
+  if (isLegacySystem) {
+    console.log('🔍 SplitLayout: Sistema LEGACY detectado', {
+      leftTerminal: !!leftTerminal,
+      rightTerminal: !!rightTerminal,
+      orientation,
+      externalPaneSize
+    });
+  }
+  
   const gutterStyle = {
     transition: 'none',
     background: 'transparent',
@@ -882,6 +892,13 @@ const SplitLayout = ({
     // Calcular altura del contenedor para ocultar terminal cuando sea muy pequeño
     const getContainerHeight = () => {
       if (typeof window !== 'undefined') {
+        // Primero intentar el wrapper (que tiene la altura correcta con status bar descontada)
+        const wrapper = document.querySelector('[data-split-container-wrapper]');
+        if (wrapper) {
+          const rect = wrapper.getBoundingClientRect();
+          return rect.height;
+        }
+        // Fallback: usar el contenedor del split
         const container = document.querySelector('[data-split-container]');
         if (container) {
           const rect = container.getBoundingClientRect();
@@ -918,7 +935,9 @@ const SplitLayout = ({
 
     // Handlers de resize horizontal
     const handleMouseDown = useCallback((e) => {
+      console.log('🖱️ SplitLayout: handleMouseDown INICIADO');
       e.preventDefault();
+      e.stopPropagation();
       setIsDragging(true);
       setDragStart({
         x: e.clientX,
@@ -926,6 +945,7 @@ const SplitLayout = ({
         size: finalPrimaryPaneSize
       });
       latestDragSizeRef.current = finalPrimaryPaneSize;
+      console.log('🖱️ SplitLayout: isDragging = true, tamaño inicial:', finalPrimaryPaneSize);
       
       if (externalPaneSize !== null && onManualResize) {
         onManualResize();
@@ -938,19 +958,40 @@ const SplitLayout = ({
       const delta = e.clientY - dragStart.y;
       const newSize = Math.round(dragStart.size + delta);
       
-      // Obtener la altura real del contenedor
+      // Obtener la altura real del contenedor - primero intentar el wrapper, luego el contenedor
+      const wrapper = document.querySelector('[data-split-container-wrapper]');
       const container = document.querySelector('[data-split-container]');
       let containerHeight = window.innerHeight;
-      if (container) {
+      
+      if (wrapper) {
+        // El wrapper ya tiene descontada la status bar si está visible
+        const rect = wrapper.getBoundingClientRect();
+        containerHeight = rect.height;
+      } else if (container) {
+        // Fallback: usar el contenedor del split
         const rect = container.getBoundingClientRect();
         containerHeight = rect.height;
       }
       
       // Sin límites - permitir desde 0 hasta el 100% de la altura del contenedor
       const minSize = 0; // Sin límite mínimo
+      // Permitir el 100% del contenedor (el terminal se ocultará automáticamente cuando sea muy pequeño)
       const maxSize = containerHeight; // Permitir el 100% del contenedor
       
       const clampedSize = Math.max(minSize, Math.min(maxSize, newSize));
+      
+      // Log para debugging - mostrar siempre para ver qué está pasando
+      console.log('🔧 SplitLayout drag:', {
+        newSize,
+        clampedSize,
+        containerHeight,
+        maxSize,
+        delta,
+        terminalHeight: containerHeight - clampedSize,
+        percentage: ((clampedSize / containerHeight) * 100).toFixed(2) + '%',
+        wrapper: !!wrapper,
+        container: !!container
+      });
       // Guardar y aplicar el tamaño a 1 update por frame (más suave)
       latestDragSizeRef.current = clampedSize;
       if (dragRafRef.current) return;
@@ -1023,6 +1064,13 @@ const SplitLayout = ({
       transition: 'filter 0.2s ease'
     };
 
+    console.log('🔍 SplitLayout: Renderizando sistema legacy', {
+      finalPrimaryPaneSize,
+      containerHeight,
+      shouldHideTerminal,
+      isDragging
+    });
+
     return (
       <div style={containerStyle} data-split-container="true">
         <div style={finalPrimaryPaneStyle}>
@@ -1047,18 +1095,55 @@ const SplitLayout = ({
               statusBarIconTheme={statusBarIconTheme}
             />
           )}
-          
-          {/* Handle de resize horizontal - mostrar solo si el panel no está oculto y hay espacio para redimensionar */}
-          {finalPrimaryPaneSize > 0 && finalPrimaryPaneSize < (containerHeight - 5) && (
-            <div 
-              style={horizontalHandleStyle}
-              onMouseDown={handleMouseDown}
-              onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
-              title="Arrastra para redimensionar"
-            />
-          )}
         </div>
+        
+        {/* Handle de resize horizontal - FUERA del panel primario para evitar problemas de overflow */}
+        {(() => {
+          const shouldShow = finalPrimaryPaneSize > 0;
+          console.log('🔍 Handle render check:', {
+            finalPrimaryPaneSize,
+            containerHeight,
+            shouldShow,
+            isLegacySystem
+          });
+          return shouldShow;
+        })() && (
+          <div 
+            style={{
+              position: 'absolute',
+              top: `${finalPrimaryPaneSize - 6}px`, // Posicionar justo en el borde del panel primario
+              left: 0,
+              width: '100%',
+              height: '12px', // Altura aumentada para que sea más fácil de clickear
+              background: 'rgba(128, 128, 128, 0.15)', // Fondo visible para debugging
+              cursor: 'row-resize',
+              zIndex: 10000, // Muy alto para asegurar que esté por encima
+              userSelect: 'none',
+              pointerEvents: 'auto', // Asegurar que capture eventos
+              border: '1px solid rgba(255, 255, 255, 0.1)' // Borde visible para debugging
+            }}
+            onMouseDown={(e) => {
+              console.log('🖱️ Handle MOUSEDOWN detectado!');
+              e.stopPropagation();
+              e.preventDefault();
+              handleMouseDown(e);
+            }}
+            onMouseEnter={(e) => { 
+              console.log('🖱️ Mouse ENTER handle');
+              e.currentTarget.style.filter = 'brightness(1.5)';
+              e.currentTarget.style.backgroundColor = 'rgba(128, 128, 128, 0.4)';
+            }}
+            onMouseLeave={(e) => { 
+              e.currentTarget.style.filter = 'brightness(1)';
+              e.currentTarget.style.backgroundColor = 'rgba(128, 128, 128, 0.15)';
+            }}
+            onClick={(e) => {
+              console.log('🖱️ Handle CLICK detectado!');
+              e.stopPropagation();
+            }}
+            title="Arrastra para redimensionar"
+          />
+        )}
         
         <div style={finalSecondaryPaneStyle}>
           {rightTerminal.content ? (
