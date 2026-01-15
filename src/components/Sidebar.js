@@ -1916,7 +1916,6 @@ const Sidebar = React.memo(({
             // Almacenar en ref global
             if (window.draggedSSHNodeRef && window.draggedSSHNodeRef.current !== undefined) {
               window.draggedSSHNodeRef.current = sshNodeData;
-              console.log('🔵 SSH node stored in ref:', sshNodeData);
             }
             
             // También establecer en dataTransfer
@@ -1924,7 +1923,6 @@ const Sidebar = React.memo(({
               e.dataTransfer.effectAllowed = 'copy';
               e.dataTransfer.setData('application/nodeterm-ssh-node', JSON.stringify(sshNodeData));
               e.dataTransfer.setData('text/plain', `ssh:${node.key}`);
-              console.log('🔵 SSH node data set in dataTransfer');
             } catch (err) {
               console.warn('Error setting dataTransfer:', err);
             }
@@ -1933,9 +1931,6 @@ const Sidebar = React.memo(({
         onDragEnd={() => {
           // NO limpiar aquí - el drop puede ocurrir después del dragEnd
           // Se limpiará en handleTabDrop después de procesar
-          if (window.draggedSSHNodeRef && isSSH) {
-            console.log('🔵 Drag ended, keeping SSH node in ref for drop');
-          }
         }}
       >
         <span style={{ 

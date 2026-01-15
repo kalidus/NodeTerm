@@ -92,22 +92,17 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
     
     if (!getFilteredTabs) return;
     
-    console.log('🟢 Tab drop event:', { dropIndex, draggedTabIndex, types: e.dataTransfer.types });
-    
     // Verificar si se está arrastrando un nodo SSH desde la sidebar
     // Primero intentar desde el almacenamiento global (más confiable con PrimeReact)
     let sshNodeData = draggedSSHNodeRef.current;
-    console.log('🟢 SSH node from ref:', sshNodeData);
     
     // Si no está en el ref, intentar desde dataTransfer (fallback)
     if (!sshNodeData) {
       try {
         if (e.dataTransfer.types && e.dataTransfer.types.includes('application/nodeterm-ssh-node')) {
           sshNodeData = JSON.parse(e.dataTransfer.getData('application/nodeterm-ssh-node'));
-          console.log('🟢 SSH node from dataTransfer:', sshNodeData);
         } else if (e.dataTransfer.types && e.dataTransfer.types.includes('text/plain')) {
           const textData = e.dataTransfer.getData('text/plain');
-          console.log('🟢 Text data:', textData);
           if (textData && textData.startsWith('ssh:')) {
             // Formato alternativo: ssh:key - no tenemos el nodo completo, necesitamos el ref
             // Si llegamos aquí, el ref debería tener el dato
@@ -122,15 +117,7 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
     // NO limpiar el ref aquí - se limpiará después de procesar el drop
     
     // Si es un nodo SSH, intentar abrir en split
-    console.log('🟢 Checking SSH node:', { 
-      hasSSHNodeData: !!sshNodeData, 
-      nodeType: sshNodeData?.type, 
-      hasOpenInSplit: !!openInSplit,
-      sshNodeData 
-    });
-    
     if (sshNodeData && sshNodeData.type === 'ssh-node') {
-      console.log('🟢 SSH node detected, openInSplit available:', !!openInSplit);
       
       if (!openInSplit) {
         console.error('🟢 openInSplit is not available!');
@@ -155,7 +142,6 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
       
       // Solo permitir drop sobre pestañas de terminal o split
       if (dropTab.type === 'terminal' || dropTab.type === 'split') {
-        console.log('🟢 Opening SSH in split:', { sshNode: sshNodeData, dropTab });
         // Crear un objeto nodo compatible con openInSplit
         const sshNode = {
           key: sshNodeData.key,
@@ -169,7 +155,6 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
         // Llamar a openInSplit
         try {
           openInSplit(sshNode, dropTab, orientation);
-          console.log('🟢 openInSplit called successfully');
         } catch (err) {
           console.error('🟢 Error calling openInSplit:', err);
         }
