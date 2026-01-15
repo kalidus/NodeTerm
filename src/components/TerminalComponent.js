@@ -82,15 +82,9 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     useEffect(() => {
         if (!tabId) return;
 
-        console.log(`🔧 [${tabId}] TerminalComponent montándose`, {
-            hasDisconnectTimer: !!(window.__sshDisconnectTimers && window.__sshDisconnectTimers[tabId]),
-            sshConfig: sshConfig?.host || 'local'
-        });
-
         // Cancelar timer de desconexión pendiente si existe
         // Esto evita desconectar la sesión SSH cuando el componente se remonta rápidamente
         if (window.__sshDisconnectTimers && window.__sshDisconnectTimers[tabId]) {
-            console.log(`✅ [${tabId}] Cancelando timer de desconexión - componente remontado rápidamente`);
             clearTimeout(window.__sshDisconnectTimers[tabId]);
             delete window.__sshDisconnectTimers[tabId];
         }
@@ -164,8 +158,6 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 
                 // Solo restaurar si fue guardado recientemente (menos de 3 segundos)
                 if (timeSinceSaved < 3000) {
-                    console.log(`📥 [${tabId}] Restaurando buffer: ${savedBuffer.lines.length} líneas (${timeSinceSaved}ms ago)`);
-                    
                     // Restaurar cada línea
                     savedBuffer.lines.forEach(line => {
                         term.current.write(line + '\r\n');
@@ -174,11 +166,9 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     // Limpiar el buffer guardado después de restaurar
                     delete window.__terminalBuffers[tabId];
                 } else {
-                    console.log(`⏰ [${tabId}] Buffer muy antiguo (${timeSinceSaved}ms), descartando`);
                     delete window.__terminalBuffers[tabId];
                 }
             } catch (error) {
-                console.warn(`⚠️ [${tabId}] Error restaurando buffer:`, error);
                 if (window.__terminalBuffers) {
                     delete window.__terminalBuffers[tabId];
                 }
@@ -271,16 +261,13 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             const checkExistingConnection = async () => {
                 try {
                     const hasConnection = await window.electron.ipcRenderer.invoke('ssh:check-connection', tabId);
-                    console.log(`🔍 [${tabId}] Verificando conexión SSH existente: ${hasConnection ? 'EXISTE' : 'NO EXISTE'}`);
                     
                     if (!hasConnection) {
                         // Solo conectar si no existe una conexión activa
-                        console.log(`🔌 [${tabId}] Iniciando nueva conexión SSH a ${sshConfig.host}`);
                         window.electron.ipcRenderer.send('ssh:connect', { tabId, config: sshConfig });
                     } else {
                         // Si ya existe, solo enviar el evento ready localmente
                         // para que el terminal se configure correctamente
-                        console.log(`♻️ [${tabId}] Reutilizando conexión SSH existente a ${sshConfig.host}`);
                         setTimeout(() => {
                             window.electron.ipcRenderer.send('ssh:resize', {
                                 tabId,
@@ -290,7 +277,6 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                         }, 100);
                     }
                 } catch (error) {
-                    console.error(`❌ [${tabId}] Error checking SSH connection:`, error);
                     // En caso de error, intentar conectar de todas formas
                     window.electron.ipcRenderer.send('ssh:connect', { tabId, config: sshConfig });
                 }
@@ -339,7 +325,6 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
 
             // Cleanup on component unmount
             return () => {
-                console.log(`🔴 [${tabId}] TerminalComponent desmontándose`);
                 resizeObserver.disconnect();
                 cleanupContextMenu();
                 
@@ -365,10 +350,8 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                             cursorY: term.current.buffer.active.cursorY,
                             timestamp: Date.now()
                         };
-                        
-                        console.log(`💾 [${tabId}] Buffer preservado: ${lines.length} líneas`);
                     } catch (error) {
-                        console.warn(`⚠️ [${tabId}] Error preservando buffer:`, error);
+                        // Silenciar error de preservación de buffer
                     }
                 }
                 
@@ -376,7 +359,6 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 // se desmonta temporalmente (ej: al convertir un terminal en split)
                 // Si el componente se vuelve a montar rápidamente, no se desconectará
                 const disconnectTimer = setTimeout(() => {
-                    console.log(`⏱️ [${tabId}] Timer expirado - desconectando SSH`);
                     window.electron.ipcRenderer.send('ssh:disconnect', tabId);
                     // Limpiar el timer del registro después de ejecutar
                     if (window.__sshDisconnectTimers) {
@@ -387,8 +369,6 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                         delete window.__terminalBuffers[tabId];
                     }
                 }, 2000); // Aumentado a 2000ms para dar más margen en splits complejos
-                
-                console.log(`⏰ [${tabId}] Timer de desconexión programado (2000ms)`);
                 
                 // Guardar el timer en una variable global para poder cancelarlo si se remonta
                 if (!window.__sshDisconnectTimers) window.__sshDisconnectTimers = {};
