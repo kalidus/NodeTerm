@@ -18,11 +18,20 @@ const EditableField = ({
   onKeyDown,
   fieldKey,
   inputRefs,
-  isPassword = false
+  isPassword = false,
+  onCopy = null,
+  copyValue = null
 }) => {
   const inputRef = (el) => {
     if (el && fieldKey) {
       inputRefs.current[fieldKey] = el;
+    }
+  };
+
+  const handleCopy = (e) => {
+    e.stopPropagation();
+    if (onCopy && copyValue) {
+      onCopy(copyValue, label);
     }
   };
 
@@ -61,9 +70,25 @@ const EditableField = ({
   return (
     <div className="detail-row" onClick={onEdit} style={{ cursor: 'pointer' }}>
       <div className="detail-label">{label}</div>
-      <div className="detail-value editable-value">
-        {value || <span style={{ opacity: 0.5 }}>Click para editar</span>}
-        <i className="pi pi-pencil" style={{ marginLeft: '8px', fontSize: '10px', opacity: 0.5 }}></i>
+      <div className="detail-value editable-value" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <span style={{ flex: 1 }}>{value || <span style={{ opacity: 0.5 }}>Click para editar</span>}</span>
+        {onCopy && copyValue && (
+          <i 
+            className="pi pi-copy" 
+            style={{ 
+              fontSize: '10px', 
+              opacity: 0.5,
+              cursor: 'pointer',
+              padding: '2px',
+              transition: 'opacity 0.2s'
+            }}
+            onClick={handleCopy}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = '0.5'}
+            title="Copiar"
+          ></i>
+        )}
+        <i className="pi pi-pencil" style={{ fontSize: '10px', opacity: 0.5 }}></i>
       </div>
     </div>
   );
@@ -222,6 +247,51 @@ const ConnectionDetailsPanel = ({
       cancelEdit();
     }
   }, [saveEdit, cancelEdit]);
+
+  // Función para copiar al portapapeles
+  const copyToClipboard = useCallback(async (text, fieldName) => {
+    if (!text) return;
+    
+    try {
+      if (window.electron && window.electron.clipboard) {
+        // Electron
+        window.electron.clipboard.writeText(text);
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        // Navegador moderno
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback para navegadores antiguos
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      
+      // Mostrar notificación (si hay un sistema de toast disponible)
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'success',
+          summary: 'Copiado',
+          detail: `${fieldName} copiado al portapapeles`,
+          life: 2000
+        });
+      }
+    } catch (err) {
+      console.error('Error copiando al portapapeles:', err);
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudo copiar al portapapeles',
+          life: 2000
+        });
+      }
+    }
+  }, []);
 
   // AHORA SÍ PODEMOS HACER RETORNOS CONDICIONALES
   if (!selectedNode) {
@@ -472,6 +542,8 @@ const ConnectionDetailsPanel = ({
               onKeyDown={handleKeyDown}
               fieldKey="connection-hostname"
               inputRefs={inputRefs}
+              onCopy={copyToClipboard}
+              copyValue={data?.useBastionWallix ? data?.targetServer : (data?.host || data?.hostname || data?.server || '')}
             />
             <EditableField
               label="Username"
@@ -485,6 +557,8 @@ const ConnectionDetailsPanel = ({
               onKeyDown={handleKeyDown}
               fieldKey="connection-username"
               inputRefs={inputRefs}
+              onCopy={copyToClipboard}
+              copyValue={data?.user || data?.username || ''}
             />
             <EditableField
               label="Password"
@@ -499,6 +573,8 @@ const ConnectionDetailsPanel = ({
               fieldKey="connection-password"
               inputRefs={inputRefs}
               isPassword={true}
+              onCopy={copyToClipboard}
+              copyValue={data?.password || ''}
             />
             {isRDP && (
               <EditableField
