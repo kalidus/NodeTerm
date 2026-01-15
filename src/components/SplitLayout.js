@@ -468,7 +468,7 @@ const SplitLayout = ({
     
     const splitterStyle = (isVertical) => ({
       position: 'absolute',
-      background: 'transparent',
+      backgroundColor: 'transparent',
       backgroundImage: isVertical
         ? `linear-gradient(to right, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`
         : `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
@@ -594,7 +594,7 @@ const SplitLayout = ({
                 height: '8px', 
                 flexShrink: 0,
                 position: 'relative',
-                background: theme?.background || '#2d2d2d', // Fondo sólido del tema para evitar transparencia
+                backgroundColor: theme?.background || '#2d2d2d', // Fondo sólido del tema para evitar transparencia
                 backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
                 backgroundRepeat: 'no-repeat',
                 backgroundSize: '100% 100%',
@@ -680,7 +680,7 @@ const SplitLayout = ({
               height: '8px', 
               flexShrink: 0,
               position: 'relative',
-              background: theme?.background || '#2d2d2d', // Fondo sólido del tema para evitar transparencia
+              backgroundColor: theme?.background || '#2d2d2d', // Fondo sólido del tema para evitar transparencia
               backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
               backgroundRepeat: 'no-repeat',
               backgroundSize: '100% 100%',
@@ -737,12 +737,12 @@ const SplitLayout = ({
           </div>
           {/* Splitter horizontal */}
           <div
-            style={{ 
-              width: '100%', 
-              height: '8px', 
+            style={{
+              width: '100%',
+              height: '8px',
               flexShrink: 0,
               position: 'relative',
-              background: theme?.background || '#2d2d2d', // Fondo sólido del tema para evitar transparencia
+              backgroundColor: theme?.background || '#2d2d2d', // Fondo sólido del tema para evitar transparencia
               backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
               backgroundRepeat: 'no-repeat',
               backgroundSize: '100% 100%',
@@ -837,7 +837,7 @@ const SplitLayout = ({
       zIndex: 1000,
       transition: 'filter 0.15s ease',
       userSelect: 'none',
-      background: isVertical ? 'transparent' : (theme?.background || '#2d2d2d'), // Fondo sólido para separadores horizontales
+      backgroundColor: isVertical ? 'transparent' : (theme?.background || '#2d2d2d'), // Fondo sólido para separadores horizontales
       backgroundImage: isVertical 
         ? `linear-gradient(to right, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`
         : `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
@@ -1149,7 +1149,7 @@ const SplitLayout = ({
       left: 0,
       width: '100%',
       height: '8px',
-      background: 'transparent',
+      backgroundColor: 'transparent',
       backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleHorizontalColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleHorizontalColor}) calc(50% + 1px), transparent calc(50% + 1px))`,
       backgroundRepeat: 'no-repeat',
       backgroundSize: '100% 100%',
@@ -1204,7 +1204,7 @@ const SplitLayout = ({
               left: 0,
               width: '100%',
               height: '8px', // Área de click más pequeña pero aún fácil de usar
-              background: theme?.background || '#2d2d2d', // Fondo sólido del tema para evitar transparencia
+              backgroundColor: theme?.background || '#2d2d2d', // Fondo sólido del tema para evitar transparencia
               cursor: 'row-resize',
               zIndex: 10000, // Muy alto para asegurar que esté por encima
               userSelect: 'none',
@@ -1379,7 +1379,7 @@ const SplitLayout = ({
             zIndex: 1000,
             transition: 'filter 0.15s ease',
             userSelect: 'none',
-            background: 'transparent',
+            backgroundColor: 'transparent',
             backgroundImage: `linear-gradient(to right, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
             backgroundRepeat: 'no-repeat',
             backgroundSize: '100% 100%',
