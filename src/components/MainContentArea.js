@@ -1011,8 +1011,6 @@ const MainContentArea = ({
     const handleGlobalDrop = (e) => {
       // Solo procesar si hay un nodo SSH en el ref y no se procesó ya en el TabHeader
       if (window.draggedSSHNodeRef && window.draggedSSHNodeRef.current && !e.defaultPrevented) {
-        console.log('🟡 Global drop detected, SSH node:', window.draggedSSHNodeRef.current);
-        
         // Si el drop fue sobre el área de contenido (no sobre el header de la pestaña)
         // usar la pestaña activa actual
         const target = e.target;
@@ -1020,7 +1018,6 @@ const MainContentArea = ({
         
         if (!isOverTabHeader && activeTabIndex !== null && tabHandlers.onTabDrop) {
           // Dropear sobre la pestaña activa
-          console.log('🟡 Dropping on active tab:', activeTabIndex);
           e.preventDefault();
           e.stopPropagation();
           tabHandlers.onTabDrop(e, activeTabIndex);

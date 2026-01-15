@@ -362,7 +362,6 @@ export const useConnectionManagement = ({
           metadata: recordingMetadata
         }).then(result => {
           if (result.success) {
-            console.log(`📹 Grabación automática iniciada: ${result.recordingId}`);
             // Guardar ID de grabación en la pestaña para referencia
             newTab.recordingId = result.recordingId;
           } else {
