@@ -414,7 +414,8 @@ const SplitLayout = ({
   // NO ejecutar si estamos usando el sistema legacy (leftTerminal/rightTerminal)
   if (terminalsArray.length > 0 && terminalsArray.length <= 4 && !isLegacySystem) {
     const terminalCount = terminalsArray.length;
-    const visibleLineColor = getSolidSplitterColor(theme, splitterColor);
+    // Usar el mismo color que el scroll para consistencia visual
+    const visibleLineColor = 'var(--ui-sidebar-border, #3e3e42)';
     
     const [verticalSplit, setVerticalSplit] = useState(50); // % para división vertical (T1/T2)
     const [horizontalSplit, setHorizontalSplit] = useState(50); // % para división horizontal (arriba/abajo)
@@ -473,9 +474,12 @@ const SplitLayout = ({
         : `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
       backgroundRepeat: 'no-repeat',
       backgroundSize: '100% 100%',
+      backgroundPosition: 'center',
       cursor: isVertical ? 'col-resize' : 'row-resize',
-      zIndex: 10,
-      transition: 'filter 0.15s ease'
+      zIndex: 1000, // z-index alto para todos los separadores
+      transition: 'filter 0.15s ease',
+      pointerEvents: 'auto', // Asegurar que capture eventos del mouse
+      opacity: 0.6 // Misma opacidad que el scroll
     });
 
     const renderTerminal = (terminal, index) => {
@@ -581,16 +585,37 @@ const SplitLayout = ({
         // Split horizontal: uno arriba, otro abajo
         return (
           <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }} data-grid-container>
-            <div style={{ width: '100%', height: `${horizontalSplit}%`, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ width: '100%', height: `calc(${horizontalSplit}% - 4px)`, position: 'relative', overflow: 'hidden' }}>
               {renderTerminal(terminalsArray[0], 0)}
             </div>
             <div
-              style={{ ...splitterStyle(false), width: '100%', height: '8px', top: `${horizontalSplit}%`, marginTop: '-4px' }}
+              style={{ 
+                width: '100%', 
+                height: '8px', 
+                flexShrink: 0,
+                position: 'relative',
+                background: 'transparent',
+                backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
+                backgroundRepeat: 'no-repeat',
+                backgroundSize: '100% 100%',
+                backgroundPosition: 'center',
+                cursor: 'row-resize',
+                zIndex: 1000,
+                transition: 'filter 0.15s ease',
+                pointerEvents: 'auto',
+                opacity: 0.6 // Misma opacidad que el scroll
+              }}
               onMouseDown={handleMouseDown('h')}
-              onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+              onMouseEnter={(e) => { 
+                e.currentTarget.style.opacity = '0.8';
+                e.currentTarget.style.filter = 'brightness(1.15)'; 
+              }}
+              onMouseLeave={(e) => { 
+                e.currentTarget.style.opacity = '0.6';
+                e.currentTarget.style.filter = 'brightness(1)'; 
+              }}
             />
-            <div style={{ width: '100%', height: `${100 - horizontalSplit}%`, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ width: '100%', height: `calc(${100 - horizontalSplit}% - 4px)`, position: 'relative', overflow: 'hidden' }}>
               {renderTerminal(terminalsArray[1], 1)}
             </div>
           </div>
@@ -605,8 +630,14 @@ const SplitLayout = ({
             <div
               style={{ ...splitterStyle(true), width: '8px', height: '100%', left: `${verticalSplit}%`, marginLeft: '-4px' }}
               onMouseDown={handleMouseDown('v-top')}
-              onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+              onMouseEnter={(e) => { 
+                e.currentTarget.style.opacity = '0.8';
+                e.currentTarget.style.filter = 'brightness(1.15)'; 
+              }}
+              onMouseLeave={(e) => { 
+                e.currentTarget.style.opacity = '0.6';
+                e.currentTarget.style.filter = 'brightness(1)'; 
+              }}
             />
             <div style={{ width: `${100 - verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
               {renderTerminal(terminalsArray[1], 1)}
@@ -621,15 +652,21 @@ const SplitLayout = ({
       return (
         <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }} data-grid-container>
           {/* Fila superior: T1 y T2 */}
-          <div style={{ width: '100%', height: `${horizontalSplit}%`, position: 'relative', display: 'flex' }}>
+          <div style={{ width: '100%', height: `calc(${horizontalSplit}% - 4px)`, position: 'relative', display: 'flex' }}>
             <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
               {renderTerminal(terminalsArray[0], 0)}
             </div>
             <div
               style={{ ...splitterStyle(true), width: '8px', height: '100%', left: `${verticalSplit}%`, marginLeft: '-4px' }}
               onMouseDown={handleMouseDown('v-top')}
-              onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+              onMouseEnter={(e) => { 
+                e.currentTarget.style.opacity = '0.8';
+                e.currentTarget.style.filter = 'brightness(1.15)'; 
+              }}
+              onMouseLeave={(e) => { 
+                e.currentTarget.style.opacity = '0.6';
+                e.currentTarget.style.filter = 'brightness(1)'; 
+              }}
             />
             <div style={{ width: `${100 - verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
               {renderTerminal(terminalsArray[1], 1)}
@@ -637,13 +674,27 @@ const SplitLayout = ({
           </div>
           {/* Splitter horizontal */}
           <div
-            style={{ ...splitterStyle(false), width: '100%', height: '8px', top: `${horizontalSplit}%`, marginTop: '-4px' }}
+            style={{ 
+              width: '100%', 
+              height: '8px', 
+              flexShrink: 0,
+              position: 'relative',
+              background: 'transparent',
+              backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: '100% 100%',
+              backgroundPosition: 'center',
+              cursor: 'row-resize',
+              zIndex: 1000,
+              transition: 'filter 0.15s ease',
+              pointerEvents: 'auto'
+            }}
             onMouseDown={handleMouseDown('h')}
             onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
           />
           {/* Fila inferior: T3 */}
-          <div style={{ width: '100%', height: `${100 - horizontalSplit}%`, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ width: '100%', height: `calc(${100 - horizontalSplit}% - 4px)`, position: 'relative', overflow: 'hidden' }}>
             {renderTerminal(terminalsArray[2], 2)}
           </div>
         </div>
@@ -655,15 +706,21 @@ const SplitLayout = ({
       return (
         <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }} data-grid-container>
           {/* Fila superior: T1 y T2 */}
-          <div style={{ width: '100%', height: `${horizontalSplit}%`, position: 'relative', display: 'flex' }}>
+          <div style={{ width: '100%', height: `calc(${horizontalSplit}% - 4px)`, position: 'relative', display: 'flex' }}>
             <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
               {renderTerminal(terminalsArray[0], 0)}
             </div>
             <div
               style={{ ...splitterStyle(true), width: '8px', height: '100%', left: `${verticalSplit}%`, marginLeft: '-4px' }}
               onMouseDown={handleMouseDown('v-top')}
-              onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+              onMouseEnter={(e) => { 
+                e.currentTarget.style.opacity = '0.8';
+                e.currentTarget.style.filter = 'brightness(1.15)'; 
+              }}
+              onMouseLeave={(e) => { 
+                e.currentTarget.style.opacity = '0.6';
+                e.currentTarget.style.filter = 'brightness(1)'; 
+              }}
             />
             <div style={{ width: `${100 - verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
               {renderTerminal(terminalsArray[1], 1)}
@@ -671,21 +728,41 @@ const SplitLayout = ({
           </div>
           {/* Splitter horizontal */}
           <div
-            style={{ ...splitterStyle(false), width: '100%', height: '8px', top: `${horizontalSplit}%`, marginTop: '-4px' }}
+            style={{ 
+              width: '100%', 
+              height: '8px', 
+              flexShrink: 0,
+              position: 'relative',
+              background: 'transparent',
+              backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: '100% 100%',
+              backgroundPosition: 'center',
+              cursor: 'row-resize',
+              zIndex: 1000,
+              transition: 'filter 0.15s ease',
+              pointerEvents: 'auto'
+            }}
             onMouseDown={handleMouseDown('h')}
             onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
           />
           {/* Fila inferior: T3 y T4 */}
-          <div style={{ width: '100%', height: `${100 - horizontalSplit}%`, position: 'relative', display: 'flex' }}>
+          <div style={{ width: '100%', height: `calc(${100 - horizontalSplit}% - 4px)`, position: 'relative', display: 'flex' }}>
             <div style={{ width: `${verticalSplitBottom}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
               {renderTerminal(terminalsArray[2], 2)}
             </div>
             <div
               style={{ ...splitterStyle(true), width: '8px', height: '100%', left: `${verticalSplitBottom}%`, marginLeft: '-4px' }}
               onMouseDown={handleMouseDown('v-bottom')}
-              onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+              onMouseEnter={(e) => { 
+                e.currentTarget.style.opacity = '0.8';
+                e.currentTarget.style.filter = 'brightness(1.15)'; 
+              }}
+              onMouseLeave={(e) => { 
+                e.currentTarget.style.opacity = '0.6';
+                e.currentTarget.style.filter = 'brightness(1)'; 
+              }}
             />
             <div style={{ width: `${100 - verticalSplitBottom}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
               {renderTerminal(terminalsArray[3], 3)}
@@ -731,7 +808,8 @@ const SplitLayout = ({
       flexDirection: 'column'
     };
     
-    const visibleLineColor = getSolidSplitterColor(theme, splitterColor);
+    // Usar el mismo color que el scroll para consistencia visual
+    const visibleLineColor = 'var(--ui-sidebar-border, #3e3e42)';
     
     const gutterStyle = {
       width: isVertical ? '8px' : '100%',
@@ -739,15 +817,16 @@ const SplitLayout = ({
       cursor: isVertical ? 'col-resize' : 'row-resize',
       flexShrink: 0,
       position: 'relative',
-      zIndex: 10,
+      zIndex: 1000,
       transition: 'filter 0.15s ease',
       userSelect: 'none',
       background: 'transparent',
       backgroundImage: isVertical 
-        ? `linear-gradient(to right, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 1px), transparent calc(50% + 1px))`
-        : `linear-gradient(to bottom, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 1px), transparent calc(50% + 1px))`,
+        ? `linear-gradient(to right, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`
+        : `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
       backgroundRepeat: 'no-repeat',
-      backgroundSize: '100% 100%'
+      backgroundSize: '100% 100%',
+      opacity: 0.6 // Misma opacidad que el scroll
     };
     
     const handleMouseDown = (e) => {
@@ -797,8 +876,14 @@ const SplitLayout = ({
         <div 
           style={gutterStyle}
           onMouseDown={handleMouseDown}
-          onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+          onMouseEnter={(e) => { 
+            e.currentTarget.style.opacity = '0.8';
+            e.currentTarget.style.filter = 'brightness(1.15)'; 
+          }}
+          onMouseLeave={(e) => { 
+            e.currentTarget.style.opacity = '0.6';
+            e.currentTarget.style.filter = 'brightness(1)'; 
+          }}
           title="Arrastra para redimensionar"
         />
         
@@ -1033,19 +1118,8 @@ const SplitLayout = ({
       }
     }, [isDragging, handleMouseMove, handleMouseUp]);
 
-    // Calcular color del separador horizontal con buen contraste
-    const horizontalBaseColor = getSolidSplitterColor(theme, splitterColor);
-    const bgForHorizontal = theme?.background || '#2d2d2d';
-    const bgH = parseColorToRgb(bgForHorizontal);
-    const lineH = parseColorToRgb(horizontalBaseColor);
-    let visibleHorizontalColor = horizontalBaseColor;
-    if (bgH && lineH) {
-      const diff = Math.abs(perceivedBrightness(bgH) - perceivedBrightness(lineH));
-      if (diff < 40) {
-        const isBgDark = perceivedBrightness(bgH) < 128;
-        visibleHorizontalColor = adjustRgbBrightness(lineH, isBgDark ? 0.6 : -0.6);
-      }
-    }
+    // Usar el mismo color que el scroll para consistencia visual
+    const visibleHorizontalColor = 'var(--ui-sidebar-border, #3e3e42)';
 
     // Estilo del handle horizontal (área de 8px con línea central de 2px)
     const horizontalHandleStyle = {
@@ -1115,9 +1189,10 @@ const SplitLayout = ({
               userSelect: 'none',
               pointerEvents: 'auto', // Asegurar que capture eventos
               // Línea visual sutil en el centro
-              backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 0.5px), var(--ui-tab-border, ${visibleHorizontalColor}) calc(50% - 0.5px), var(--ui-tab-border, ${visibleHorizontalColor}) calc(50% + 0.5px), transparent calc(50% + 0.5px))`,
+              backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleHorizontalColor} calc(50% - 1px), ${visibleHorizontalColor} calc(50% + 1px), transparent calc(50% + 1px))`,
               backgroundRepeat: 'no-repeat',
-              backgroundSize: '100% 100%'
+              backgroundSize: '100% 100%',
+              opacity: 0.6 // Misma opacidad que el scroll
             }}
             onMouseDown={(e) => {
               e.stopPropagation();
@@ -1125,12 +1200,12 @@ const SplitLayout = ({
               handleMouseDown(e);
             }}
             onMouseEnter={(e) => { 
+              e.currentTarget.style.opacity = '0.8';
               e.currentTarget.style.filter = 'brightness(1.3)';
-              e.currentTarget.style.backgroundColor = 'rgba(128, 128, 128, 0.1)';
             }}
             onMouseLeave={(e) => { 
+              e.currentTarget.style.opacity = '0.6';
               e.currentTarget.style.filter = 'brightness(1)';
-              e.currentTarget.style.backgroundColor = 'transparent';
             }}
             title="Arrastra para redimensionar"
           />
@@ -1167,19 +1242,8 @@ const SplitLayout = ({
   if (orientation === 'vertical') {
     const [leftSize, setLeftSize] = useState(30); // 30% más pequeño
     const [isDragging, setIsDragging] = useState(false);
-    const verticalSplitterColor = getSolidSplitterColor(theme, splitterColor);
-    const bgForContrast = theme?.background || '#2d2d2d';
-    const bgRgb = parseColorToRgb(bgForContrast);
-    const lineRgb = parseColorToRgb(verticalSplitterColor);
-    let visibleLineColor = verticalSplitterColor;
-    if (bgRgb && lineRgb) {
-      const diff = Math.abs(perceivedBrightness(bgRgb) - perceivedBrightness(lineRgb));
-      if (diff < 40) {
-        // Mantener tono del tema pero ajustar brillo para buen contraste
-        const isBgDark = perceivedBrightness(bgRgb) < 128;
-        visibleLineColor = adjustRgbBrightness(lineRgb, isBgDark ? 0.6 : -0.6);
-      }
-    }
+    // Usar el mismo color que el scroll para consistencia visual
+    const visibleLineColor = 'var(--ui-sidebar-border, #3e3e42)';
     const gutterRef = useRef(null);
     const lineRef = useRef(null);
 
@@ -1293,18 +1357,25 @@ const SplitLayout = ({
             cursor: 'col-resize',
             flexShrink: 0,
             position: 'relative',
-            zIndex: 10,
+            zIndex: 1000,
             transition: 'filter 0.15s ease',
             userSelect: 'none',
             background: 'transparent',
-            backgroundImage: `linear-gradient(to right, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 1px), transparent calc(50% + 1px))`,
+            backgroundImage: `linear-gradient(to right, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
             backgroundRepeat: 'no-repeat',
-            backgroundSize: '100% 100%'
+            backgroundSize: '100% 100%',
+            opacity: 0.6 // Misma opacidad que el scroll
           }}
           ref={gutterRef}
           onMouseDown={handleMouseDown}
-          onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+          onMouseEnter={(e) => { 
+            e.currentTarget.style.opacity = '0.8';
+            e.currentTarget.style.filter = 'brightness(1.15)'; 
+          }}
+          onMouseLeave={(e) => { 
+            e.currentTarget.style.opacity = '0.6';
+            e.currentTarget.style.filter = 'brightness(1)'; 
+          }}
           title="Arrastra para redimensionar"
         >
           {/* línea se dibuja con backgroundImage */}
