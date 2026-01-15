@@ -1417,6 +1417,14 @@ setInterval(() => {
 
 // IPC handlers para clipboard - Ya están definidos más adelante en el archivo
 
+// IPC handler to check if an SSH connection already exists
+ipcMain.handle('ssh:check-connection', async (event, tabId) => {
+  // Verificar si existe una conexión SSH activa para este tabId
+  return sshConnections[tabId] !== undefined && 
+         sshConnections[tabId].stream !== undefined &&
+         !sshConnections[tabId].stream.destroyed;
+});
+
 // IPC handler to establish an SSH connection
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   // Mostrar mensaje de conexión al inicio

@@ -282,6 +282,12 @@ export const useSessionManagement = (toast, {
 
   // Función para desconectar una sesión SSH
   const disconnectSSHSession = useCallback((tabKey) => {
+    // Cancelar cualquier timer de desconexión pendiente
+    if (window.__sshDisconnectTimers && window.__sshDisconnectTimers[tabKey]) {
+      clearTimeout(window.__sshDisconnectTimers[tabKey]);
+      delete window.__sshDisconnectTimers[tabKey];
+    }
+    
     if (window.electron && window.electron.ipcRenderer) {
       window.electron.ipcRenderer.send('ssh:disconnect', tabKey);
     }

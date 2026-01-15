@@ -82,6 +82,13 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     useEffect(() => {
         if (!tabId) return;
 
+        // Cancelar timer de desconexión pendiente si existe
+        // Esto evita desconectar la sesión SSH cuando el componente se remonta rápidamente
+        if (window.__sshDisconnectTimers && window.__sshDisconnectTimers[tabId]) {
+            clearTimeout(window.__sshDisconnectTimers[tabId]);
+            delete window.__sshDisconnectTimers[tabId];
+        }
+
         // Detectar si es terminal local (inicio) de forma robusta
         const isLocalTerminal = !sshConfig || Object.keys(sshConfig).length === 0 || (!sshConfig.host && !sshConfig.username);
         let defaultFont = fontFamily || 'monospace';
@@ -223,8 +230,33 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             
             // --- End of Clipboard Handling ---
             
-            // Connect via IPC (el mensaje de conexión se mostrará desde main.js)
-            window.electron.ipcRenderer.send('ssh:connect', { tabId, config: sshConfig });
+            // Verificar si ya existe una conexión SSH activa para este tabId
+            // Esto evita reconectar cuando un terminal se convierte en parte de un split
+            const checkExistingConnection = async () => {
+                try {
+                    const hasConnection = await window.electron.ipcRenderer.invoke('ssh:check-connection', tabId);
+                    if (!hasConnection) {
+                        // Solo conectar si no existe una conexión activa
+                        window.electron.ipcRenderer.send('ssh:connect', { tabId, config: sshConfig });
+                    } else {
+                        // Si ya existe, solo enviar el evento ready localmente
+                        // para que el terminal se configure correctamente
+                        setTimeout(() => {
+                            window.electron.ipcRenderer.send('ssh:resize', {
+                                tabId,
+                                cols: term.current.cols,
+                                rows: term.current.rows
+                            });
+                        }, 100);
+                    }
+                } catch (error) {
+                    console.error('Error checking SSH connection:', error);
+                    // En caso de error, intentar conectar de todas formas
+                    window.electron.ipcRenderer.send('ssh:connect', { tabId, config: sshConfig });
+                }
+            };
+            
+            checkExistingConnection();
 
             // After the SSH connection is ready, send an initial resize so programs like vim/htop get the correct size
             const onReady = () => {
@@ -269,7 +301,22 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             return () => {
                 resizeObserver.disconnect();
                 cleanupContextMenu();
-                window.electron.ipcRenderer.send('ssh:disconnect', tabId);
+                
+                // Delay para desconectar SSH: evita desconexión innecesaria cuando el componente
+                // se desmonta temporalmente (ej: al convertir un terminal en split)
+                // Si el componente se vuelve a montar rápidamente, no se desconectará
+                const disconnectTimer = setTimeout(() => {
+                    window.electron.ipcRenderer.send('ssh:disconnect', tabId);
+                    // Limpiar el timer del registro después de ejecutar
+                    if (window.__sshDisconnectTimers) {
+                        delete window.__sshDisconnectTimers[tabId];
+                    }
+                }, 500); // 500ms de gracia
+                
+                // Guardar el timer en una variable global para poder cancelarlo si se remonta
+                if (!window.__sshDisconnectTimers) window.__sshDisconnectTimers = {};
+                window.__sshDisconnectTimers[tabId] = disconnectTimer;
+                
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();
                 if (onReadyUnsubscribe) onReadyUnsubscribe();
