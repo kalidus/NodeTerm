@@ -40,6 +40,14 @@ export const useSplitManagement = ({
   // Función para abrir una sesión en split con otra pestaña existente
   // Sistema de splits anidados - cada panel se puede dividir horizontal o verticalmente
   const openInSplit = useCallback((sshNode, existingTab, orientation = 'vertical', targetPath = null) => {
+    console.log('🔀 openInSplit iniciando', {
+      newNode: sshNode.label,
+      existingTab: existingTab.key,
+      existingType: existingTab.type,
+      orientation,
+      targetPath
+    });
+    
     // Si no estamos en el grupo Home, cambiar a Home primero
     if (activeGroupId !== null) {
       const currentGroupKey = activeGroupId || 'no-group';
@@ -71,6 +79,11 @@ export const useSplitManagement = ({
       sshConfig: sshConfig,
       type: 'terminal'
     };
+    
+    console.log('🆕 Nuevo terminal creado', {
+      key: newTerminal.key,
+      label: newTerminal.label
+    });
 
     // Verificar límite de 4 terminales
     const tab = sshTabs.find(t => t.key === existingTab.key);
@@ -119,11 +132,23 @@ export const useSplitManagement = ({
     setSshTabs(prevTabs => {
       const updatedTabs = prevTabs.map(tab => {
         if (tab.key === existingTab.key) {
+          console.log('🔄 Actualizando tab', {
+            tabKey: tab.key,
+            currentType: tab.type,
+            willBeSplit: true
+          });
+          
           // Si ya es un split, dividir el nodo especificado
           if (tab.type === 'split') {
+            console.log('📊 Tab ya es split, dividiendo nodo específico', { targetPath });
             const newSplitTree = splitNode(tab, targetPath, newTerminal, orientation);
             const termCount = countTerminals(newSplitTree);
             const allTerms = getAllTerminals(newSplitTree);
+            
+            console.log('✅ Split anidado creado', {
+              terminalCount: termCount,
+              terminals: allTerms.map(t => t.key)
+            });
             
             return {
               ...tab,
@@ -140,6 +165,11 @@ export const useSplitManagement = ({
             sshConfig: tab.sshConfig,
             type: 'terminal'
           };
+          
+          console.log('➡️ Convirtiendo tab normal a split', {
+            existingTerminal: existingTerminal.key,
+            newTerminal: newTerminal.key
+          });
           
           return {
             ...tab,
@@ -214,12 +244,23 @@ export const useSplitManagement = ({
 
   // Función para cerrar un panel del split (sistema de árbol anidado)
   const handleCloseSplitPanel = useCallback((splitTabKey, path) => {
+    console.log('❌ handleCloseSplitPanel iniciando', {
+      splitTabKey,
+      path
+    });
+    
     // Primero, encontrar el terminal que se va a cerrar para desconectarlo
     const tab = sshTabs.find(t => t.key === splitTabKey && t.type === 'split');
     if (tab && disconnectSSHSession) {
       const terminalToClose = findTerminalToClose(tab, path);
+      console.log('🔍 Terminal a cerrar encontrado', {
+        terminalKey: terminalToClose?.key,
+        terminalLabel: terminalToClose?.label
+      });
+      
       if (terminalToClose && terminalToClose.key) {
         // Desconectar solo el terminal que se está cerrando
+        console.log('🔌 Desconectando terminal', terminalToClose.key);
         disconnectSSHSession(terminalToClose.key);
       }
     }
@@ -271,15 +312,26 @@ export const useSplitManagement = ({
     setSshTabs(prevTabs => {
       return prevTabs.map(tab => {
         if (tab.key === splitTabKey && tab.type === 'split') {
+          console.log('🔧 Procesando cierre en tab split', {
+            tabKey: tab.key,
+            path
+          });
+          
           const newTree = removeNode(tab, path);
           
           // Si newTree es null, retornar el tab sin cambios
           if (!newTree) {
+            console.warn('⚠️ newTree es null, manteniendo tab sin cambios');
             return tab;
           }
           
           // Si el resultado es un solo terminal, convertir a pestaña normal
           if (newTree && newTree.type === 'terminal') {
+            console.log('➡️ Convirtiendo split a terminal normal', {
+              terminalKey: newTree.key,
+              terminalLabel: newTree.label
+            });
+            
             // Cuando queda un solo terminal, el tab debe convertirse en ese terminal
             // IMPORTANTE: Usar el key del terminal que queda para preservar la sesión SSH
             // La sesión SSH está asociada con el key del terminal, no con el key del tab
@@ -297,6 +349,12 @@ export const useSplitManagement = ({
           if (newTree && newTree.type === 'split') {
             const termCount = countTerminals(newTree);
             const allTerms = getAllTerminals(newTree);
+            
+            console.log('📊 Actualizando split restante', {
+              terminalCount: termCount,
+              terminals: allTerms.map(t => t.key)
+            });
+            
             return {
               ...tab,
               ...newTree,
@@ -305,6 +363,7 @@ export const useSplitManagement = ({
           }
           
           // Si llegamos aquí, newTree tiene un tipo inesperado, retornar el tab sin cambios
+          console.warn('⚠️ newTree tiene tipo inesperado', newTree);
           return tab;
         }
         
