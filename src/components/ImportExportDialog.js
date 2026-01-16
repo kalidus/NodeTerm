@@ -20,11 +20,13 @@ import { useTranslation } from '../i18n/hooks/useTranslation';
 const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) => {
   const { t } = useTranslation('common');
   const fileUploadRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Estados del archivo
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileData, setFileData] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
+  const [loadingFile, setLoadingFile] = useState(false);
 
   // Estados de importación
   const [importing, setImporting] = useState(false);
@@ -46,15 +48,121 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
   const [needsPassword, setNeedsPassword] = useState(false);
 
   /**
+   * Maneja la selección de archivo desde input nativo
+   */
+  const handleNativeFileSelect = async (e) => {
+    console.log('[ImportExportDialog] handleNativeFileSelect llamado:', e);
+    const file = e.target?.files?.[0];
+    console.log('[ImportExportDialog] Archivo del input nativo:', file);
+    if (file) {
+      // Pasar el evento completo para que handleFileSelect pueda procesarlo
+      await handleFileSelect(e);
+    } else {
+      console.error('[ImportExportDialog] No se encontró archivo en input nativo');
+      showToast?.({
+        severity: 'error',
+        summary: t('import.error') || 'Error',
+        detail: t('import.noFileSelected') || 'No se pudo obtener el archivo seleccionado',
+        life: 3000
+      });
+    }
+  };
+
+  /**
+   * Abre el selector de archivo nativo como fallback
+   */
+  const handleChooseFile = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.nodeterm,.json';
+    input.onchange = handleNativeFileSelect;
+    input.click();
+  };
+
+  /**
    * Maneja la selección de archivo
    */
   const handleFileSelect = async (event) => {
-    const file = event.files[0];
-    if (!file) return;
+    console.log('[ImportExportDialog] handleFileSelect llamado:', event);
+    console.log('[ImportExportDialog] Estructura del evento:', {
+      hasFiles: !!event.files,
+      filesLength: event.files?.length,
+      hasTarget: !!event.target,
+      hasTargetFiles: !!event.target?.files,
+      targetFilesLength: event.target?.files?.length,
+      keys: Object.keys(event || {}),
+      isFile: event instanceof File
+    });
+    
+    // Intentar obtener el archivo de diferentes formas
+    let file = null;
+    
+    // Forma 1: event.files[0] (PrimeReact FileUpload)
+    if (event.files && event.files.length > 0) {
+      file = event.files[0];
+      console.log('[ImportExportDialog] Archivo encontrado en event.files[0]');
+    }
+    // Forma 2: event.target.files[0] (input nativo)
+    else if (event.target && event.target.files && event.target.files.length > 0) {
+      file = event.target.files[0];
+      console.log('[ImportExportDialog] Archivo encontrado en event.target.files[0]');
+    }
+    // Forma 3: El evento ES el archivo
+    else if (event instanceof File) {
+      file = event;
+      console.log('[ImportExportDialog] El evento es directamente un File');
+    }
+    // Forma 4: Buscar en propiedades del objeto
+    else if (event && typeof event === 'object') {
+      // Buscar cualquier propiedad que sea un File
+      for (const key in event) {
+        if (event[key] instanceof File) {
+          file = event[key];
+          console.log(`[ImportExportDialog] Archivo encontrado en event.${key}`);
+          break;
+        }
+        // O si hay un array de files
+        if (Array.isArray(event[key]) && event[key].length > 0 && event[key][0] instanceof File) {
+          file = event[key][0];
+          console.log(`[ImportExportDialog] Archivo encontrado en event.${key}[0]`);
+          break;
+        }
+      }
+    }
+    
+    if (!file) {
+      console.warn('[ImportExportDialog] No se encontró archivo en el evento. Estructura completa:', JSON.stringify(event, null, 2));
+      showToast?.({
+        severity: 'error',
+        summary: t('import.error') || 'Error',
+        detail: t('import.noFileSelected') || 'No se pudo obtener el archivo seleccionado',
+        life: 3000
+      });
+      return;
+    }
+
+    // Validar que el archivo tenga nombre
+    if (!file.name || typeof file.name !== 'string') {
+      console.error('[ImportExportDialog] Archivo sin nombre válido:', file);
+      showToast?.({
+        severity: 'error',
+        summary: t('import.error') || 'Error',
+        detail: t('import.invalidFile') || 'Archivo inválido: no se pudo obtener el nombre del archivo',
+        life: 3000
+      });
+      return;
+    }
+
+    console.log('[ImportExportDialog] Archivo seleccionado:', {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
 
     try {
       // Validar extensión
-      if (!file.name.toLowerCase().endsWith('.nodeterm') && !file.name.toLowerCase().endsWith('.json')) {
+      const fileName = file.name.toLowerCase();
+      if (!fileName.endsWith('.nodeterm') && !fileName.endsWith('.json')) {
         showToast?.({
           severity: 'error',
           summary: t('import.error') || 'Error',
@@ -64,11 +172,34 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
         return;
       }
 
+      // Mostrar indicador de carga
+      setLoadingFile(true);
+      
       // Leer archivo
       const reader = new FileReader();
+      
+      reader.onerror = (error) => {
+        console.error('[ImportExportDialog] Error al leer archivo:', error);
+        setLoadingFile(false);
+        showToast?.({
+          severity: 'error',
+          summary: t('import.error') || 'Error',
+          detail: t('import.fileReadError') || 'Error al leer el archivo',
+          life: 3000
+        });
+      };
+      
       reader.onload = async (e) => {
+        setLoadingFile(false);
         try {
+          console.log('[ImportExportDialog] Archivo leído, tamaño:', e.target.result?.length);
           const content = JSON.parse(e.target.result);
+          console.log('[ImportExportDialog] JSON parseado correctamente:', {
+            version: content.version,
+            encrypted: content.encrypted,
+            hasData: !!content.data
+          });
+          
           setFileData(content);
           setSelectedFile(file);
           setIsEncrypted(content.encrypted || false);
@@ -76,8 +207,44 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
 
           // Obtener preview si no está encriptado
           if (!content.encrypted) {
-            const preview = await exportImportService.getExportPreview(content);
-            setFilePreview(preview);
+            try {
+              const preview = await exportImportService.getExportPreview(content);
+              setFilePreview(preview);
+              console.log('[ImportExportDialog] Preview generado:', preview);
+              
+              // Asegurar que al menos una categoría esté seleccionada si hay datos
+              if (preview.stats) {
+                const hasData = preview.stats.connections > 0 || 
+                               preview.stats.passwords > 0 || 
+                               preview.stats.conversations > 0 || 
+                               preview.stats.configItems > 0;
+                
+                if (hasData) {
+                  // Si no hay ninguna categoría seleccionada, seleccionar las que tienen datos
+                  const currentSelection = Object.values(categories).some(v => v === true);
+                  if (!currentSelection) {
+                    setCategories({
+                      connections: preview.stats.connections > 0,
+                      passwords: preview.stats.passwords > 0,
+                      conversations: preview.stats.conversations > 0,
+                      config: preview.stats.configItems > 0,
+                      recordings: (preview.stats.recordings || 0) > 0
+                    });
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('[ImportExportDialog] Error al generar preview:', error);
+              // Aún así, permitir importar si hay datos
+              setFilePreview({
+                encrypted: false,
+                version: content.version,
+                exportedAt: content.exportedAt,
+                appVersion: content.appVersion,
+                dataSize: content.dataSize || 0,
+                stats: null // Preview falló, pero permitir importar
+              });
+            }
           } else {
             setFilePreview({
               encrypted: true,
@@ -89,15 +256,18 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
           }
 
         } catch (error) {
-          console.error('[ImportExportDialog] Error al leer archivo:', error);
+          console.error('[ImportExportDialog] Error al procesar archivo:', error);
+          setLoadingFile(false);
           showToast?.({
             severity: 'error',
             summary: t('import.error') || 'Error',
-            detail: t('import.invalidFile') || 'Archivo inválido o corrupto',
-            life: 3000
+            detail: error.message || t('import.invalidFile') || 'Archivo inválido o corrupto',
+            life: 5000
           });
         }
       };
+      
+      // Leer el archivo como texto
       reader.readAsText(file);
 
     } catch (error) {
@@ -263,8 +433,12 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
     setDecryptPassword('');
     setNeedsPassword(false);
     setIsEncrypted(false);
+    setLoadingFile(false);
     if (fileUploadRef.current) {
       fileUploadRef.current.clear();
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -272,7 +446,7 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
    * Cierra el diálogo
    */
   const handleClose = () => {
-    if (!importing) {
+    if (!importing && !loadingFile) {
       handleClearFile();
       setCategories({
         connections: true,
@@ -284,6 +458,7 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
       setImportMode('merge');
       setProgress(0);
       setImporting(false);
+      setLoadingFile(false);
       onHide();
     }
   };
@@ -357,6 +532,15 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
                   <span><strong>{filePreview.stats.configItems}</strong> {t('import.configItems') || 'configs'}</span>
                 </div>
               </div>
+              
+              {/* Advertencia sobre master key */}
+              {(filePreview.stats.passwords > 0 || filePreview.stats.connections > 0) && (
+                <Message
+                  severity="info"
+                  text={t('import.masterKeyNote') || '🔑 Nota: Los datos encriptados (contraseñas/conexiones) se importan tal cual. Necesitarás la misma Master Key del sistema origen para desencriptarlos. Si no tienes la Master Key, esos datos no serán accesibles.'}
+                  style={{ marginTop: '10px' }}
+                />
+              )}
             </>
           )}
         </div>
@@ -368,6 +552,29 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
    * Footer del diálogo
    */
   const renderFooter = () => {
+    // Calcular si el botón debe estar deshabilitado
+    // El botón se habilita si:
+    // - No está importando
+    // - Hay datos del archivo
+    // - Si está encriptado, ya se desencriptó (needsPassword = false)
+    // - Hay al menos una categoría seleccionada (o el preview falló pero hay datos)
+    const hasValidSelection = isValidSelection();
+    const isButtonDisabled = importing || !fileData || (isEncrypted && needsPassword) || (!hasValidSelection && filePreview?.stats);
+    
+    // Debug: Log del estado del botón
+    if (fileData && !importing) {
+      console.log('[ImportExportDialog] Estado del botón:', {
+        importing,
+        hasFileData: !!fileData,
+        isEncrypted,
+        needsPassword,
+        hasValidSelection,
+        filePreview: filePreview ? 'existe' : 'null',
+        stats: filePreview?.stats,
+        isButtonDisabled
+      });
+    }
+    
     return (
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
         <Button
@@ -381,7 +588,7 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
           label={t('import.import') || 'Importar'}
           icon="pi pi-upload"
           onClick={handleImportConfirm}
-          disabled={importing || !fileData || needsPassword || !isValidSelection()}
+          disabled={isButtonDisabled}
           loading={importing}
         />
       </div>
@@ -411,17 +618,33 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
         {/* Selección de archivo */}
         {!selectedFile && (
           <div style={{ marginBottom: '20px' }}>
-            <FileUpload
-              ref={fileUploadRef}
-              mode="basic"
+            {/* Input file nativo oculto como fallback */}
+            <input
+              ref={fileInputRef}
+              type="file"
               accept=".nodeterm,.json"
-              maxFileSize={50000000}
-              onSelect={handleFileSelect}
-              auto
-              chooseLabel={t('import.chooseFile') || '📁 Seleccionar archivo .nodeterm'}
-              className="p-button-outlined"
-              disabled={importing}
+              onChange={handleNativeFileSelect}
+              style={{ display: 'none' }}
             />
+            
+            {/* Botón personalizado que abre el selector nativo */}
+            <Button
+              label={loadingFile ? (t('import.loading') || 'Cargando...') : (t('import.chooseFile') || '📁 Seleccionar archivo .nodeterm')}
+              icon="pi pi-upload"
+              onClick={handleChooseFile}
+              className="p-button-outlined"
+              disabled={importing || loadingFile}
+              style={{ width: '100%' }}
+            />
+            
+            {loadingFile && (
+              <div style={{ marginTop: '10px', textAlign: 'center' }}>
+                <i className="pi pi-spin pi-spinner" style={{ fontSize: '1.5rem', color: 'var(--primary-color)' }}></i>
+                <div style={{ marginTop: '5px', fontSize: '13px', color: 'var(--text-color-secondary)' }}>
+                  {t('import.readingFile') || 'Leyendo archivo...'}
+                </div>
+              </div>
+            )}
             <small style={{ display: 'block', marginTop: '8px', color: 'var(--text-color-secondary)', fontSize: '12px' }}>
               {t('import.supportedFormats') || 'Formatos soportados: .nodeterm, .json (máx. 50 MB)'}
             </small>

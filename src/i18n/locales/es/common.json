@@ -219,7 +219,12 @@
     "selectAtLeastOne": "Selecciona al menos una categoría para importar",
     "reloadRequired": "¿Recargar la aplicación para aplicar los cambios?",
     "errorMessage": "Error al importar los datos",
-    "clearFile": "Limpiar archivo"
+    "clearFile": "Limpiar archivo",
+    "masterKeyNote": "🔑 Nota: Los datos encriptados (contraseñas/conexiones) se importan tal cual. Necesitarás la misma Master Key del sistema origen para desencriptarlos. Si no tienes la Master Key, esos datos no serán accesibles.",
+    "loading": "Cargando...",
+    "readingFile": "Leyendo archivo...",
+    "fileReadError": "Error al leer el archivo. Verifica que el archivo no esté corrupto.",
+    "noFileSelected": "No se pudo obtener el archivo seleccionado. Intenta seleccionarlo de nuevo."
   },
   "common": {
     "yes": "Sí",
