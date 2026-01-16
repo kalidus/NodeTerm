@@ -4,7 +4,7 @@ import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { sessionActionIconThemes } from '../themes/session-action-icons';
 
-const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed, onShowImportDialog, sessionActionIconTheme = 'modern' }) => {
+const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed, onShowImportDialog, onShowExportDialog, onShowImportExportDialog, sessionActionIconTheme = 'modern' }) => {
   const { t } = useTranslation('common');
   if (collapsed) {
     return (
@@ -44,7 +44,7 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed,
   const handleAppMenuClick = (event) => {
     // Handle app menu click
     // Usar el menú unificado
-    const menuStructure = createAppMenu(onShowImportDialog, t);
+    const menuStructure = createAppMenu(onShowImportDialog, onShowExportDialog, onShowImportExportDialog, t);
     createContextMenu(event, menuStructure, 'app-context-menu-unified');
   };
   

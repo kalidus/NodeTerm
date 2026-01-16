@@ -44,6 +44,8 @@ import { FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 const SettingsDialog = lazy(() => import('./SettingsDialog'));
 const SyncSettingsDialog = lazy(() => import('./SyncSettingsDialog'));
 const ImportDialog = lazy(() => import('./ImportDialog'));
+const ExportDialog = lazy(() => import('./ExportDialog'));
+const ImportExportDialog = lazy(() => import('./ImportExportDialog'));
 const RdpSessionTab = lazy(() => import('./RdpSessionTab'));
 const GuacamoleTab = lazy(() => import('./GuacamoleTab'));
 const GuacamoleTerminal = lazy(() => import('./GuacamoleTerminal'));
@@ -91,6 +93,8 @@ import {
 const App = () => {
   const toast = useRef(null);
   const [showImportDialog, setShowImportDialog] = React.useState(false);
+  const [showExportDialog, setShowExportDialog] = React.useState(false);
+  const [showImportExportDialog, setShowImportExportDialog] = React.useState(false);
   const [importPreset, setImportPreset] = React.useState(null);
 
   // === SISTEMA DE ENCRIPTACIÓN ===
@@ -2249,7 +2253,12 @@ const App = () => {
     treeTheme,
     
     // Tema de iconos de acción
-    sessionActionIconTheme
+    sessionActionIconTheme,
+    
+    // Callbacks para diálogos de importar/exportar
+    onShowImportDialog: setShowImportDialog,
+    onShowExportDialog: setShowExportDialog,
+    onShowImportExportDialog: setShowImportExportDialog
   }), [
     nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
@@ -2272,7 +2281,10 @@ const App = () => {
     
     // Dependencias de encriptación
     masterKey, secureStorage,
-    isAIChatActive, handleToggleLocalTerminalForAIChat
+    isAIChatActive, handleToggleLocalTerminalForAIChat,
+    
+    // Dependencias de diálogos
+    setShowImportDialog, setShowExportDialog, setShowImportExportDialog
   ]);
 
   // === PROPS MEMOIZADAS PARA TABHEADER ===
@@ -2358,6 +2370,8 @@ const App = () => {
         onOpenRdpConnection={onOpenRdpConnection}
         onOpenVncConnection={onOpenVncConnection}
         onShowImportDialog={setShowImportDialog}
+        onShowExportDialog={setShowExportDialog}
+        onShowImportExportDialog={setShowImportExportDialog}
         masterKey={masterKey}
         secureStorage={secureStorage}
         onOpenImportWithSource={(source) => {
@@ -2826,6 +2840,31 @@ const App = () => {
             return list;
           })()}
           defaultTargetFolderKey={null}
+        />
+
+        <ExportDialog
+          visible={showExportDialog}
+          onHide={() => setShowExportDialog(false)}
+          showToast={(message) => toast.current?.show(message)}
+        />
+
+        <ImportExportDialog
+          visible={showImportExportDialog}
+          onHide={() => setShowImportExportDialog(false)}
+          showToast={(message) => toast.current?.show(message)}
+          onImportComplete={(result) => {
+            console.log('[App.js] Importación completada:', result);
+            // Recargar nodos si es necesario
+            const treeData = localStorage.getItem('basicapp2_tree_data');
+            if (treeData) {
+              try {
+                const parsed = JSON.parse(treeData);
+                setNodes(parsed);
+              } catch (error) {
+                console.error('Error al recargar nodos:', error);
+              }
+            }
+          }}
         />
       </Suspense>
       

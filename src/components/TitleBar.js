@@ -8,7 +8,7 @@ import { iconThemes } from '../themes/icon-themes';
 import { toggleFavorite, helpers } from '../utils/connectionStore';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
-const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onOpenVncConnection, onShowImportDialog, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog, expandedKeys, masterKey, secureStorage }) => {
+const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onOpenVncConnection, onShowImportDialog, onShowExportDialog, onShowImportExportDialog, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog, expandedKeys, masterKey, secureStorage }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
   
@@ -598,7 +598,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   // Función para manejar el menú de aplicación del TitleBar
   const handleAppMenuClick = (event) => {
     console.log('handleAppMenuClick TitleBar ejecutado - menú unificado');
-    const menuStructure = createAppMenu(onShowImportDialog, t);
+    const menuStructure = createAppMenu(onShowImportDialog, onShowExportDialog, onShowImportExportDialog, t);
     createContextMenu(event, menuStructure, 'app-context-menu-unified');
     return;
 

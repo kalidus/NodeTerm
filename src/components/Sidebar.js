@@ -129,7 +129,12 @@ const Sidebar = React.memo(({
   treeTheme = 'default',
   
   // Tema de iconos de acción
-  sessionActionIconTheme = 'modern'
+  sessionActionIconTheme = 'modern',
+  
+  // Callbacks para diálogos de importar/exportar
+  onShowImportDialog,
+  onShowExportDialog,
+  onShowImportExportDialog
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
@@ -538,7 +543,11 @@ const Sidebar = React.memo(({
   
   // Función para manejar el menú de aplicación (unificada)
   const handleAppMenuClick = (event) => {
-    const menuStructure = createAppMenu(setShowImportDialog, t);
+    // Usar los callbacks pasados como props, o el estado local como fallback
+    const importCallback = onShowImportDialog || setShowImportDialog;
+    const exportCallback = onShowExportDialog || (() => console.warn('onShowExportDialog no disponible'));
+    const importExportCallback = onShowImportExportDialog || (() => console.warn('onShowImportExportDialog no disponible'));
+    const menuStructure = createAppMenu(importCallback, exportCallback, importExportCallback, t);
     createContextMenu(event, menuStructure, 'app-context-menu-sidebar');
   };
   
@@ -2772,7 +2781,9 @@ const Sidebar = React.memo(({
                 allExpanded={allExpanded}
                 toggleExpandAll={toggleExpandAll}
                 collapsed={sidebarCollapsed}
-                onShowImportDialog={setShowImportDialog}
+                onShowImportDialog={onShowImportDialog || setShowImportDialog}
+                onShowExportDialog={onShowExportDialog}
+                onShowImportExportDialog={onShowImportExportDialog}
                 sessionActionIconTheme={sessionActionIconTheme}
               />
             </>
