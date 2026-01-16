@@ -1,0 +1,598 @@
+/**
+ * ImportExportDialog - Diálogo para importar archivos .nodeterm exportados
+ * Muestra preview de los datos y permite elegir opciones de importación
+ */
+
+import React, { useState, useRef } from 'react';
+import { Dialog } from 'primereact/dialog';
+import { Button } from 'primereact/button';
+import { FileUpload } from 'primereact/fileupload';
+import { Checkbox } from 'primereact/checkbox';
+import { Password } from 'primereact/password';
+import { ProgressBar } from 'primereact/progressbar';
+import { Message } from 'primereact/message';
+import { RadioButton } from 'primereact/radiobutton';
+import { Card } from 'primereact/card';
+import { confirmDialog } from 'primereact/confirmdialog';
+import exportImportService from '../services/ExportImportService';
+import { useTranslation } from '../i18n/hooks/useTranslation';
+
+const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) => {
+  const { t } = useTranslation('common');
+  const fileUploadRef = useRef(null);
+
+  // Estados del archivo
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [fileData, setFileData] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
+
+  // Estados de importación
+  const [importing, setImporting] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [importMode, setImportMode] = useState('merge'); // 'merge' o 'replace'
+  
+  // Estados de categorías
+  const [categories, setCategories] = useState({
+    connections: true,
+    passwords: true,
+    conversations: true,
+    config: true,
+    recordings: true
+  });
+
+  // Estados de encriptación
+  const [isEncrypted, setIsEncrypted] = useState(false);
+  const [decryptPassword, setDecryptPassword] = useState('');
+  const [needsPassword, setNeedsPassword] = useState(false);
+
+  /**
+   * Maneja la selección de archivo
+   */
+  const handleFileSelect = async (event) => {
+    const file = event.files[0];
+    if (!file) return;
+
+    try {
+      // Validar extensión
+      if (!file.name.toLowerCase().endsWith('.nodeterm') && !file.name.toLowerCase().endsWith('.json')) {
+        showToast?.({
+          severity: 'error',
+          summary: t('import.error') || 'Error',
+          detail: t('import.invalidFileType') || 'Solo se permiten archivos .nodeterm o .json',
+          life: 3000
+        });
+        return;
+      }
+
+      // Leer archivo
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const content = JSON.parse(e.target.result);
+          setFileData(content);
+          setSelectedFile(file);
+          setIsEncrypted(content.encrypted || false);
+          setNeedsPassword(content.encrypted || false);
+
+          // Obtener preview si no está encriptado
+          if (!content.encrypted) {
+            const preview = await exportImportService.getExportPreview(content);
+            setFilePreview(preview);
+          } else {
+            setFilePreview({
+              encrypted: true,
+              version: content.version,
+              exportedAt: content.exportedAt,
+              appVersion: content.appVersion,
+              dataSize: content.dataSize
+            });
+          }
+
+        } catch (error) {
+          console.error('[ImportExportDialog] Error al leer archivo:', error);
+          showToast?.({
+            severity: 'error',
+            summary: t('import.error') || 'Error',
+            detail: t('import.invalidFile') || 'Archivo inválido o corrupto',
+            life: 3000
+          });
+        }
+      };
+      reader.readAsText(file);
+
+    } catch (error) {
+      console.error('[ImportExportDialog] Error al procesar archivo:', error);
+      showToast?.({
+        severity: 'error',
+        summary: t('import.error') || 'Error',
+        detail: error.message,
+        life: 3000
+      });
+    }
+  };
+
+  /**
+   * Desencripta el preview con la contraseña proporcionada
+   */
+  const handleDecryptPreview = async () => {
+    if (!decryptPassword) {
+      showToast?.({
+        severity: 'warn',
+        summary: t('import.warning') || 'Advertencia',
+        detail: t('import.enterPassword') || 'Ingresa la contraseña',
+        life: 3000
+      });
+      return;
+    }
+
+    try {
+      const decryptedData = await exportImportService.decryptData(fileData.data, decryptPassword);
+      const preview = await exportImportService.getExportPreview({
+        ...fileData,
+        data: decryptedData,
+        encrypted: false
+      });
+      setFilePreview(preview);
+      setNeedsPassword(false);
+
+      showToast?.({
+        severity: 'success',
+        summary: t('import.success') || 'Éxito',
+        detail: t('import.decrypted') || 'Archivo desencriptado correctamente',
+        life: 3000
+      });
+    } catch (error) {
+      showToast?.({
+        severity: 'error',
+        summary: t('import.error') || 'Error',
+        detail: error.message || t('import.wrongPassword') || 'Contraseña incorrecta',
+        life: 3000
+      });
+    }
+  };
+
+  /**
+   * Maneja el cambio de categorías
+   */
+  const handleCategoryChange = (key) => {
+    setCategories(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  /**
+   * Valida selección de categorías
+   */
+  const isValidSelection = () => {
+    return Object.values(categories).some(v => v === true);
+  };
+
+  /**
+   * Confirma y ejecuta la importación
+   */
+  const handleImportConfirm = () => {
+    if (!fileData) return;
+
+    const message = importMode === 'replace' 
+      ? (t('import.confirmReplace') || '⚠️ Se REEMPLAZARÁN todos los datos existentes. Esta acción NO se puede deshacer. ¿Continuar?')
+      : (t('import.confirmMerge') || '¿Fusionar estos datos con los existentes?');
+
+    confirmDialog({
+      message: message,
+      header: t('import.confirmation') || 'Confirmación',
+      icon: importMode === 'replace' ? 'pi pi-exclamation-triangle' : 'pi pi-question-circle',
+      acceptLabel: t('common.yes') || 'Sí',
+      rejectLabel: t('common.no') || 'No',
+      accept: () => handleImport(),
+      acceptClassName: importMode === 'replace' ? 'p-button-danger' : 'p-button-primary'
+    });
+  };
+
+  /**
+   * Ejecuta la importación
+   */
+  const handleImport = async () => {
+    if (!isValidSelection()) {
+      showToast?.({
+        severity: 'warn',
+        summary: t('import.warning') || 'Advertencia',
+        detail: t('import.selectAtLeastOne') || 'Selecciona al menos una categoría para importar',
+        life: 3000
+      });
+      return;
+    }
+
+    setImporting(true);
+    setProgress(10);
+
+    try {
+      // Preparar opciones
+      const selectedCategories = Object.keys(categories).filter(k => categories[k]);
+      
+      setProgress(30);
+
+      // Importar
+      const result = await exportImportService.importAllData(fileData, {
+        merge: importMode === 'merge',
+        replace: importMode === 'replace',
+        categories: selectedCategories,
+        decryptPassword: isEncrypted ? decryptPassword : null
+      });
+
+      setProgress(80);
+
+      showToast?.({
+        severity: 'success',
+        summary: t('import.success') || 'Importación exitosa',
+        detail: `${t('import.imported') || 'Importado'}: ${result.stats.connections} conexiones, ${result.stats.passwords} contraseñas, ${result.stats.conversations} conversaciones`,
+        life: 5000
+      });
+
+      setProgress(100);
+
+      // Notificar al componente padre
+      onImportComplete?.(result);
+
+      // Recargar página después de un momento para aplicar cambios
+      setTimeout(() => {
+        if (window.confirm(t('import.reloadRequired') || '¿Recargar la aplicación para aplicar los cambios?')) {
+          window.location.reload();
+        } else {
+          handleClose();
+        }
+      }, 1500);
+
+    } catch (error) {
+      console.error('[ImportExportDialog] Error al importar:', error);
+      showToast?.({
+        severity: 'error',
+        summary: t('import.error') || 'Error',
+        detail: error.message || t('import.errorMessage') || 'Error al importar los datos',
+        life: 5000
+      });
+      setProgress(0);
+      setImporting(false);
+    }
+  };
+
+  /**
+   * Limpia el archivo seleccionado
+   */
+  const handleClearFile = () => {
+    setSelectedFile(null);
+    setFileData(null);
+    setFilePreview(null);
+    setDecryptPassword('');
+    setNeedsPassword(false);
+    setIsEncrypted(false);
+    if (fileUploadRef.current) {
+      fileUploadRef.current.clear();
+    }
+  };
+
+  /**
+   * Cierra el diálogo
+   */
+  const handleClose = () => {
+    if (!importing) {
+      handleClearFile();
+      setCategories({
+        connections: true,
+        passwords: true,
+        conversations: true,
+        config: true,
+        recordings: true
+      });
+      setImportMode('merge');
+      setProgress(0);
+      setImporting(false);
+      onHide();
+    }
+  };
+
+  /**
+   * Renderiza el preview del archivo
+   */
+  const renderPreview = () => {
+    if (!filePreview) return null;
+
+    return (
+      <Card className="import-preview-card" style={{ marginBottom: '20px', background: 'var(--surface-card)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--surface-border)', paddingBottom: '10px' }}>
+            <span style={{ fontWeight: '600', fontSize: '14px' }}>
+              {t('import.fileInfo') || '📄 Información del archivo'}
+            </span>
+            {!needsPassword && (
+              <Button
+                icon="pi pi-times"
+                className="p-button-text p-button-sm"
+                onClick={handleClearFile}
+                tooltip={t('import.clearFile') || 'Limpiar archivo'}
+              />
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px' }}>
+            <div>
+              <strong>{t('import.version') || 'Versión'}:</strong> {filePreview.version}
+            </div>
+            <div>
+              <strong>{t('import.exportedAt') || 'Exportado'}:</strong> {new Date(filePreview.exportedAt).toLocaleString()}
+            </div>
+            <div>
+              <strong>{t('import.appVersion') || 'App'}:</strong> {filePreview.appVersion}
+            </div>
+            <div>
+              <strong>{t('import.size') || 'Tamaño'}:</strong> {(filePreview.dataSize / 1024).toFixed(1)} KB
+            </div>
+          </div>
+
+          {filePreview.encrypted && needsPassword && (
+            <Message
+              severity="warn"
+              text={t('import.encryptedFile') || '🔒 Archivo encriptado - Ingresa la contraseña para ver el contenido'}
+              style={{ marginTop: '10px' }}
+            />
+          )}
+
+          {!needsPassword && filePreview.stats && (
+            <>
+              <div style={{ borderTop: '1px solid var(--surface-border)', paddingTop: '10px', marginTop: '5px' }}>
+                <strong style={{ fontSize: '13px' }}>{t('import.content') || '📦 Contenido'}:</strong>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', fontSize: '13px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="pi pi-sitemap" style={{ color: 'var(--primary-color)' }}></i>
+                  <span><strong>{filePreview.stats.connections}</strong> {t('import.connections') || 'conexiones'}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="pi pi-lock" style={{ color: 'var(--primary-color)' }}></i>
+                  <span><strong>{filePreview.stats.passwords}</strong> {t('import.passwords') || 'contraseñas'}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="pi pi-comments" style={{ color: 'var(--primary-color)' }}></i>
+                  <span><strong>{filePreview.stats.conversations}</strong> {t('import.conversations') || 'conversaciones'}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="pi pi-cog" style={{ color: 'var(--primary-color)' }}></i>
+                  <span><strong>{filePreview.stats.configItems}</strong> {t('import.configItems') || 'configs'}</span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </Card>
+    );
+  };
+
+  /**
+   * Footer del diálogo
+   */
+  const renderFooter = () => {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+        <Button
+          label={t('common.cancel') || 'Cancelar'}
+          icon="pi pi-times"
+          onClick={handleClose}
+          className="p-button-text"
+          disabled={importing}
+        />
+        <Button
+          label={t('import.import') || 'Importar'}
+          icon="pi pi-upload"
+          onClick={handleImportConfirm}
+          disabled={importing || !fileData || needsPassword || !isValidSelection()}
+          loading={importing}
+        />
+      </div>
+    );
+  };
+
+  return (
+    <Dialog
+      visible={visible}
+      onHide={handleClose}
+      header={
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <i className="pi pi-upload" style={{ fontSize: '1.2rem' }}></i>
+          <span>{t('import.title') || 'Importar Datos de NodeTerm'}</span>
+        </div>
+      }
+      footer={renderFooter()}
+      style={{ width: '600px', maxHeight: '90vh' }}
+      modal
+      draggable={false}
+      resizable={false}
+      closable={!importing}
+      className="import-export-dialog"
+    >
+      <div style={{ padding: '10px 0', maxHeight: 'calc(90vh - 200px)', overflowY: 'auto' }}>
+
+        {/* Selección de archivo */}
+        {!selectedFile && (
+          <div style={{ marginBottom: '20px' }}>
+            <FileUpload
+              ref={fileUploadRef}
+              mode="basic"
+              accept=".nodeterm,.json"
+              maxFileSize={50000000}
+              onSelect={handleFileSelect}
+              auto
+              chooseLabel={t('import.chooseFile') || '📁 Seleccionar archivo .nodeterm'}
+              className="p-button-outlined"
+              disabled={importing}
+            />
+            <small style={{ display: 'block', marginTop: '8px', color: 'var(--text-color-secondary)', fontSize: '12px' }}>
+              {t('import.supportedFormats') || 'Formatos soportados: .nodeterm, .json (máx. 50 MB)'}
+            </small>
+          </div>
+        )}
+
+        {/* Preview del archivo */}
+        {selectedFile && renderPreview()}
+
+        {/* Contraseña de desencriptación */}
+        {isEncrypted && needsPassword && (
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+              {t('import.enterPassword') || '🔑 Contraseña de desencriptación'}
+            </label>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <Password
+                value={decryptPassword}
+                onChange={(e) => setDecryptPassword(e.target.value)}
+                disabled={importing}
+                feedback={false}
+                toggleMask
+                style={{ flex: 1 }}
+                inputStyle={{ width: '100%' }}
+                placeholder={t('import.passwordPlaceholder') || 'Ingresa la contraseña'}
+                onKeyPress={(e) => e.key === 'Enter' && handleDecryptPreview()}
+              />
+              <Button
+                label={t('import.decrypt') || 'Desencriptar'}
+                icon="pi pi-unlock"
+                onClick={handleDecryptPreview}
+                disabled={!decryptPassword}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Opciones de importación - Solo mostrar si hay archivo y no necesita contraseña */}
+        {selectedFile && !needsPassword && (
+          <>
+            {/* Modo de importación */}
+            <div style={{ marginBottom: '20px' }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600' }}>
+                {t('import.importMode') || '🔄 Modo de importación'}
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div className="p-field-radiobutton" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <RadioButton
+                    inputId="mode-merge"
+                    value="merge"
+                    checked={importMode === 'merge'}
+                    onChange={(e) => setImportMode(e.value)}
+                    disabled={importing}
+                  />
+                  <label htmlFor="mode-merge" style={{ margin: 0, cursor: 'pointer' }}>
+                    <strong>{t('import.merge') || 'Fusionar con datos existentes'}</strong>
+                    <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+                      {t('import.mergeDesc') || 'Los datos nuevos se añaden sin eliminar los existentes'}
+                    </div>
+                  </label>
+                </div>
+                <div className="p-field-radiobutton" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <RadioButton
+                    inputId="mode-replace"
+                    value="replace"
+                    checked={importMode === 'replace'}
+                    onChange={(e) => setImportMode(e.value)}
+                    disabled={importing}
+                  />
+                  <label htmlFor="mode-replace" style={{ margin: 0, cursor: 'pointer' }}>
+                    <strong style={{ color: 'var(--red-500)' }}>{t('import.replace') || '⚠️ Reemplazar datos existentes'}</strong>
+                    <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+                      {t('import.replaceDesc') || 'Se eliminarán TODOS los datos actuales (se crea backup automático)'}
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Selección de categorías */}
+            <div style={{ marginBottom: '20px' }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600' }}>
+                {t('import.selectCategories') || '📦 Seleccionar categorías a importar'}
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Checkbox
+                    inputId="cat-connections"
+                    checked={categories.connections}
+                    onChange={() => handleCategoryChange('connections')}
+                    disabled={importing}
+                  />
+                  <label htmlFor="cat-connections" style={{ margin: 0, cursor: 'pointer' }}>
+                    <strong>{t('import.connections') || 'Conexiones'}</strong> ({filePreview?.stats?.connections || 0})
+                  </label>
+                </div>
+                <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Checkbox
+                    inputId="cat-passwords"
+                    checked={categories.passwords}
+                    onChange={() => handleCategoryChange('passwords')}
+                    disabled={importing}
+                  />
+                  <label htmlFor="cat-passwords" style={{ margin: 0, cursor: 'pointer' }}>
+                    <strong>{t('import.passwords') || 'Contraseñas'}</strong> ({filePreview?.stats?.passwords || 0})
+                  </label>
+                </div>
+                <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Checkbox
+                    inputId="cat-conversations"
+                    checked={categories.conversations}
+                    onChange={() => handleCategoryChange('conversations')}
+                    disabled={importing}
+                  />
+                  <label htmlFor="cat-conversations" style={{ margin: 0, cursor: 'pointer' }}>
+                    <strong>{t('import.conversations') || 'Conversaciones'}</strong> ({filePreview?.stats?.conversations || 0})
+                  </label>
+                </div>
+                <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Checkbox
+                    inputId="cat-config"
+                    checked={categories.config}
+                    onChange={() => handleCategoryChange('config')}
+                    disabled={importing}
+                  />
+                  <label htmlFor="cat-config" style={{ margin: 0, cursor: 'pointer' }}>
+                    <strong>{t('import.config') || 'Configuraciones'}</strong> ({filePreview?.stats?.configItems || 0})
+                  </label>
+                </div>
+                {filePreview?.stats?.recordings > 0 && (
+                  <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Checkbox
+                      inputId="cat-recordings"
+                      checked={categories.recordings}
+                      onChange={() => handleCategoryChange('recordings')}
+                      disabled={importing}
+                    />
+                    <label htmlFor="cat-recordings" style={{ margin: 0, cursor: 'pointer' }}>
+                      <strong>{t('import.recordings') || 'Grabaciones'}</strong> ({filePreview?.stats?.recordings || 0})
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Advertencia para modo replace */}
+            {importMode === 'replace' && (
+              <Message
+                severity="warn"
+                text={t('import.replaceWarning') || '⚠️ ADVERTENCIA: Se creará un backup automático antes de reemplazar los datos. Podrás restaurarlo si es necesario.'}
+                style={{ marginBottom: '15px' }}
+              />
+            )}
+          </>
+        )}
+
+        {/* Barra de progreso */}
+        {importing && (
+          <div style={{ marginTop: '20px' }}>
+            <ProgressBar value={progress} showValue={false} style={{ height: '6px' }} />
+            <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '13px', color: 'var(--text-color-secondary)' }}>
+              {progress < 30 && (t('import.validating') || 'Validando archivo...')}
+              {progress >= 30 && progress < 80 && (t('import.importing') || 'Importando datos...')}
+              {progress >= 80 && progress < 100 && (t('import.finalizing') || 'Finalizando...')}
+              {progress >= 100 && (t('import.completed') || '✓ Completado')}
+            </div>
+          </div>
+        )}
+      </div>
+    </Dialog>
+  );
+};
+
+export default ImportExportDialog;

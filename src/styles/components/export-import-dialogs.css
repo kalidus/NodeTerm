@@ -1,0 +1,220 @@
+/**
+ * Estilos para los diálogos de Exportar e Importar datos de NodeTerm
+ */
+
+/* === Diálogo de Exportación === */
+.export-dialog .p-dialog-content {
+  padding: 1.5rem;
+}
+
+.export-dialog .p-field-checkbox label {
+  flex: 1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.export-dialog .p-field-checkbox:hover {
+  background-color: var(--surface-hover, rgba(0, 0, 0, 0.04));
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin: -4px -8px;
+}
+
+.export-dialog .p-checkbox {
+  flex-shrink: 0;
+}
+
+.export-dialog .p-password input {
+  width: 100%;
+}
+
+.export-dialog .p-progressbar {
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.export-dialog .p-message {
+  border-radius: 6px;
+}
+
+/* === Diálogo de Importación === */
+.import-export-dialog .p-dialog-content {
+  padding: 1.5rem;
+}
+
+.import-export-dialog .import-preview-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease;
+}
+
+.import-export-dialog .import-preview-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.import-export-dialog .p-card-body {
+  padding: 1rem;
+}
+
+.import-export-dialog .p-field-checkbox label,
+.import-export-dialog .p-field-radiobutton label {
+  flex: 1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.import-export-dialog .p-field-checkbox:hover,
+.import-export-dialog .p-field-radiobutton:hover {
+  background-color: var(--surface-hover, rgba(0, 0, 0, 0.04));
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin: -4px -8px;
+}
+
+.import-export-dialog .p-checkbox,
+.import-export-dialog .p-radiobutton {
+  flex-shrink: 0;
+}
+
+.import-export-dialog .p-password input {
+  width: 100%;
+}
+
+.import-export-dialog .p-progressbar {
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.import-export-dialog .p-message {
+  border-radius: 6px;
+}
+
+.import-export-dialog .p-fileupload-choose {
+  width: 100%;
+}
+
+/* === Animaciones === */
+@keyframes fadeInSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.export-dialog .p-message,
+.import-export-dialog .p-message {
+  animation: fadeInSlideDown 0.3s ease-out;
+}
+
+.export-dialog .p-progressbar,
+.import-export-dialog .p-progressbar {
+  animation: fadeInSlideDown 0.3s ease-out;
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+  .export-dialog,
+  .import-export-dialog {
+    width: 95% !important;
+    max-width: 95% !important;
+  }
+
+  .export-dialog .p-dialog-content,
+  .import-export-dialog .p-dialog-content {
+    padding: 1rem;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+}
+
+/* === Mejoras visuales === */
+.export-dialog .p-checkbox:focus,
+.import-export-dialog .p-checkbox:focus,
+.import-export-dialog .p-radiobutton:focus {
+  box-shadow: 0 0 0 0.2rem var(--primary-color-alpha, rgba(33, 150, 243, 0.25));
+}
+
+.export-dialog h4,
+.import-export-dialog h4 {
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.export-dialog small,
+.import-export-dialog small {
+  color: var(--text-color-secondary);
+}
+
+/* === Estilos para el card de preview === */
+.import-preview-card .p-card-content > div {
+  line-height: 1.6;
+}
+
+.import-preview-card strong {
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+/* === Hover en botones === */
+.export-dialog .p-button:hover:not(:disabled),
+.import-export-dialog .p-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+.export-dialog .p-button:active:not(:disabled),
+.import-export-dialog .p-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* === Inputs y passwords === */
+.export-dialog .p-inputtext,
+.export-dialog .p-password input,
+.import-export-dialog .p-inputtext,
+.import-export-dialog .p-password input {
+  border-radius: 6px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.export-dialog .p-inputtext:focus,
+.export-dialog .p-password input:focus,
+.import-export-dialog .p-inputtext:focus,
+.import-export-dialog .p-password input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem var(--primary-color-alpha, rgba(33, 150, 243, 0.25));
+}
+
+/* === Separadores visuales === */
+.export-dialog > div:not(:last-child),
+.import-export-dialog > div:not(:last-child) {
+  position: relative;
+}
+
+/* === Estado disabled === */
+.export-dialog .p-checkbox.p-disabled,
+.export-dialog .p-inputtext:disabled,
+.import-export-dialog .p-checkbox.p-disabled,
+.import-export-dialog .p-radiobutton.p-disabled,
+.import-export-dialog .p-inputtext:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* === Mejora de contraste para temas oscuros === */
+@media (prefers-color-scheme: dark) {
+  .export-dialog .p-message,
+  .import-export-dialog .p-message {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .import-preview-card {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}

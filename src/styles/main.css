@@ -28,6 +28,7 @@
 @import './components/security-settings.css';
 @import './components/general-settings.css';
 @import './components/terminal-settings.css';
+@import './components/export-import-dialogs.css';
 @import './components/status-bar-settings.css';
 @import './components/settings-sidebar.css';
 @import './components/theme-selector.css';

@@ -3,7 +3,7 @@
  * Se usa tanto en Sidebar como en SidebarFooter
  */
 
-export const createAppMenu = (onShowImportDialog, t) => {
+export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImportExportDialog, t) => {
   // Si no se pasa t, usar valores por defecto en español (fallback)
   const getText = (key) => {
     if (t) return t(key);
@@ -11,6 +11,9 @@ export const createAppMenu = (onShowImportDialog, t) => {
     const fallbacks = {
       'appMenu.file': 'Archivo',
       'appMenu.import': 'Importar',
+      'appMenu.importMremote': 'Importar mRemoteNG/KeePass',
+      'appMenu.importNodeterm': 'Importar NodeTerm (.nodeterm)',
+      'appMenu.export': 'Exportar',
       'appMenu.view': 'Ver',
       'appMenu.reload': 'Recargar',
       'appMenu.forceReload': 'Forzar recarga',
@@ -35,9 +38,27 @@ export const createAppMenu = (onShowImportDialog, t) => {
       icon: 'pi pi-file',
       submenu: [
         {
-          label: getText('appMenu.import'),
+          label: getText('appMenu.export'),
+          icon: 'pi pi-download',
+          command: () => {
+            console.log('🔍 [Menu] Exportar clickeado');
+            onShowExportDialog && onShowExportDialog(true);
+          }
+        },
+        { separator: true },
+        {
+          label: getText('appMenu.importNodeterm'),
+          icon: 'pi pi-file-import',
+          command: () => {
+            console.log('🔍 [Menu] Importar NodeTerm clickeado');
+            onShowImportExportDialog && onShowImportExportDialog(true);
+          }
+        },
+        {
+          label: getText('appMenu.importMremote'),
           icon: 'pi pi-file-excel',
           command: () => {
+            console.log('🔍 [Menu] Importar mRemoteNG clickeado');
             onShowImportDialog && onShowImportDialog(true);
           }
         }
