@@ -29,6 +29,20 @@ class ExportImportService {
   }
 
   /**
+   * Obtiene todas las claves de localStorage (para debugging)
+   */
+  getAllStorageKeys() {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        keys.push(key);
+      }
+    }
+    return keys;
+  }
+
+  /**
    * Exporta todos los datos seleccionados
    * @param {Object} options - Opciones de exportación
    * @param {boolean} options.connections - Incluir conexiones
@@ -68,19 +82,43 @@ class ExportImportService {
     try {
       // === 1. CONEXIONES ===
       if (connections) {
+        const treeData = this.safeGetItem('basicapp2_tree_data');
+        const encryptedConnections = this.safeGetItem('connections_encrypted');
+        const importSources = this.safeGetItem('IMPORT_SOURCES');
+        const favorites = this.safeGetItem('nodeterm_favorite_connections');
+        
+        console.log('[ExportImportService] Exportando conexiones:', {
+          hasTreeData: !!treeData,
+          treeDataLength: Array.isArray(treeData) ? treeData.length : 'N/A',
+          hasEncrypted: !!encryptedConnections,
+          hasImportSources: !!importSources,
+          hasFavorites: !!favorites,
+          allKeys: this.getAllStorageKeys().filter(k => k.includes('tree') || k.includes('connection') || k.includes('basicapp'))
+        });
+        
         exportData.data.connections = {
-          tree: this.safeGetItem('basicapp2_tree_data'),
-          encrypted: this.safeGetItem('connections_encrypted'),
-          importSources: this.safeGetItem('IMPORT_SOURCES'),
-          favorites: this.safeGetItem('nodeterm_favorite_connections')
+          tree: treeData,
+          encrypted: encryptedConnections,
+          importSources: importSources,
+          favorites: favorites
         };
       }
 
       // === 2. CONTRASEÑAS ===
       if (passwords) {
+        const encryptedPasswords = this.safeGetItem('passwords_encrypted');
+        const passwordNodes = this.safeGetItem('passwordManagerNodes');
+        
+        console.log('[ExportImportService] Exportando contraseñas:', {
+          hasEncrypted: !!encryptedPasswords,
+          hasNodes: !!passwordNodes,
+          nodesLength: Array.isArray(passwordNodes) ? passwordNodes.length : 'N/A',
+          allKeys: this.getAllStorageKeys().filter(k => k.includes('password'))
+        });
+        
         exportData.data.passwords = {
-          encrypted: this.safeGetItem('passwords_encrypted'),
-          nodes: this.safeGetItem('passwordManagerNodes'), // Fallback sin encriptar
+          encrypted: encryptedPasswords,
+          nodes: passwordNodes, // Fallback sin encriptar
           expandedKeys: this.safeGetItem('passwords_expanded_keys'),
           allExpanded: this.safeGetItem('passwords_all_expanded'),
           count: this.safeGetItem('passwords_count')
@@ -93,6 +131,13 @@ class ExportImportService {
         const conversationData = {};
         conversationKeys.forEach(key => {
           conversationData[key] = this.safeGetItem(key);
+        });
+        
+        console.log('[ExportImportService] Exportando conversaciones:', {
+          conversationKeysCount: conversationKeys.length,
+          conversationKeys: conversationKeys,
+          hasIndex: !!this.safeGetItem('ai_conversations_index'),
+          allKeys: this.getAllStorageKeys().filter(k => k.includes('conversation') || k.includes('ai_'))
         });
         
         exportData.data.conversations = {
@@ -455,18 +500,77 @@ class ExportImportService {
   }
 
   /**
-   * Crea un backup completo del localStorage actual
+   * Crea un backup selectivo del localStorage (solo claves relevantes para evitar QuotaExceededError)
    */
   async createBackup(backupKey) {
+    // Solo hacer backup de las claves relevantes de NodeTerm, no todo el localStorage
+    const relevantKeys = [
+      'basicapp2_tree_data',
+      'connections_encrypted',
+      'passwords_encrypted',
+      'passwordManagerNodes',
+      'IMPORT_SOURCES',
+      'nodeterm_favorite_connections',
+      'ai_clients_enabled',
+      'selectedMcpServers',
+      'nodeterm_default_local_terminal',
+      'ai_conversations_index',
+      // Añadir todas las claves de conversaciones
+      ...this.getKeysWithPrefix('conversation_'),
+      // Añadir todas las claves de configuraciones relevantes
+      'sidebarFont',
+      'sidebarFontSize',
+      'homeTabFont',
+      'homeTabFontSize',
+      'iconThemeSidebar',
+      'actionBarIconTheme',
+      'sessionActionIconTheme',
+      'treeTheme'
+    ];
+    
     const backup = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && !key.startsWith('nodeterm_backup_')) {
-        backup[key] = localStorage.getItem(key);
+    let totalSize = 0;
+    const maxSize = 4 * 1024 * 1024; // 4MB máximo para evitar QuotaExceededError
+    
+    for (const key of relevantKeys) {
+      try {
+        const value = localStorage.getItem(key);
+        if (value) {
+          const size = value.length;
+          if (totalSize + size > maxSize) {
+            console.warn(`[ExportImportService] Backup excedería límite, omitiendo clave: ${key}`);
+            break;
+          }
+          backup[key] = value;
+          totalSize += size;
+        }
+      } catch (error) {
+        console.warn(`[ExportImportService] Error al obtener ${key} para backup:`, error);
       }
     }
-    localStorage.setItem(backupKey, JSON.stringify(backup));
-    console.log(`[ExportImportService] Backup creado: ${backupKey}`);
+    
+    try {
+      const backupString = JSON.stringify(backup);
+      if (backupString.length > maxSize) {
+        console.warn('[ExportImportService] Backup demasiado grande, creando backup mínimo');
+        // Backup mínimo solo con las claves más críticas
+        const minimalBackup = {
+          'basicapp2_tree_data': backup['basicapp2_tree_data'],
+          'passwords_encrypted': backup['passwords_encrypted'],
+          'passwordManagerNodes': backup['passwordManagerNodes']
+        };
+        localStorage.setItem(backupKey, JSON.stringify(minimalBackup));
+      } else {
+        localStorage.setItem(backupKey, JSON.stringify(backup));
+      }
+      console.log(`[ExportImportService] Backup creado: ${backupKey} (${(totalSize / 1024).toFixed(1)} KB)`);
+    } catch (error) {
+      if (error.name === 'QuotaExceededError') {
+        console.error('[ExportImportService] Error: localStorage lleno, no se puede crear backup');
+        throw new Error('El almacenamiento local está lleno. Por favor, limpia algunos datos antes de importar.');
+      }
+      throw error;
+    }
   }
 
   /**
@@ -649,20 +753,34 @@ class ExportImportService {
    * Cuenta conexiones importadas
    */
   countImportedConnections(connectionsData) {
+    if (!connectionsData || typeof connectionsData !== 'object') {
+      return 0;
+    }
+    
     let count = 0;
-    if (connectionsData.tree) {
+    
+    // Intentar contar desde tree (datos sin encriptar)
+    if (connectionsData.tree && Array.isArray(connectionsData.tree)) {
       const countNodes = (nodes) => {
+        if (!Array.isArray(nodes)) return;
         nodes.forEach(node => {
-          if (node.data && (node.data.type === 'ssh' || node.data.type === 'rdp' || node.data.type === 'rdp-guacamole' || node.data.type === 'vnc')) {
+          if (node && node.data && (node.data.type === 'ssh' || node.data.type === 'rdp' || node.data.type === 'rdp-guacamole' || node.data.type === 'vnc' || node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp')) {
             count++;
           }
-          if (node.children) {
+          if (node.children && Array.isArray(node.children)) {
             countNodes(node.children);
           }
         });
       };
       countNodes(connectionsData.tree);
     }
+    
+    // Si no hay tree pero hay datos encriptados, indicar que hay datos pero no podemos contarlos
+    if (count === 0 && connectionsData.encrypted) {
+      // No podemos contar sin desencriptar, pero sabemos que hay datos
+      return -1; // -1 indica "hay datos encriptados pero no podemos contar"
+    }
+    
     return count;
   }
 
@@ -670,20 +788,34 @@ class ExportImportService {
    * Cuenta contraseñas importadas
    */
   countImportedPasswords(passwordsData) {
+    if (!passwordsData || typeof passwordsData !== 'object') {
+      return 0;
+    }
+    
     let count = 0;
-    if (passwordsData.nodes) {
+    
+    // Intentar contar desde nodes (datos sin encriptar)
+    if (passwordsData.nodes && Array.isArray(passwordsData.nodes)) {
       const countNodes = (nodes) => {
+        if (!Array.isArray(nodes)) return;
         nodes.forEach(node => {
-          if (node.data && node.data.type === 'password') {
+          if (node && node.data && node.data.type === 'password') {
             count++;
           }
-          if (node.children) {
+          if (node.children && Array.isArray(node.children)) {
             countNodes(node.children);
           }
         });
       };
       countNodes(passwordsData.nodes);
     }
+    
+    // Si no hay nodes pero hay datos encriptados, indicar que hay datos pero no podemos contarlos
+    if (count === 0 && passwordsData.encrypted) {
+      // No podemos contar sin desencriptar, pero sabemos que hay datos
+      return -1; // -1 indica "hay datos encriptados pero no podemos contar"
+    }
+    
     return count;
   }
 
@@ -707,6 +839,20 @@ class ExportImportService {
       }
 
       // Analizar datos
+      const connectionsCount = this.countImportedConnections(dataToAnalyze.connections || {});
+      const passwordsCount = this.countImportedPasswords(dataToAnalyze.passwords || {});
+      
+      console.log('[ExportImportService] Preview stats:', {
+        connectionsCount,
+        passwordsCount,
+        hasConnectionsData: !!dataToAnalyze.connections,
+        hasPasswordsData: !!dataToAnalyze.passwords,
+        connectionsTree: dataToAnalyze.connections?.tree ? 'existe' : 'null',
+        passwordsNodes: dataToAnalyze.passwords?.nodes ? 'existe' : 'null',
+        passwordsEncrypted: !!dataToAnalyze.passwords?.encrypted,
+        connectionsEncrypted: !!dataToAnalyze.connections?.encrypted
+      });
+      
       const preview = {
         encrypted: false,
         version: exportData.version,
@@ -714,11 +860,14 @@ class ExportImportService {
         appVersion: exportData.appVersion,
         dataSize: exportData.dataSize,
         stats: {
-          connections: this.countImportedConnections(dataToAnalyze.connections || {}),
-          passwords: this.countImportedPasswords(dataToAnalyze.passwords || {}),
+          connections: connectionsCount >= 0 ? connectionsCount : 0, // Si es -1, mostrar 0 pero con nota
+          passwords: passwordsCount >= 0 ? passwordsCount : 0,
           conversations: Object.keys(dataToAnalyze.conversations?.conversations || {}).length,
           configItems: Object.keys(dataToAnalyze.config || {}).filter(k => dataToAnalyze.config[k] !== null).length,
-          recordings: Object.keys(dataToAnalyze.recordings || {}).length
+          recordings: Object.keys(dataToAnalyze.recordings || {}).length,
+          // Flags para indicar si hay datos encriptados
+          hasEncryptedConnections: connectionsCount === -1,
+          hasEncryptedPasswords: passwordsCount === -1
         }
       };
 

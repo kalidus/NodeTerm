@@ -46,6 +46,8 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
   const [isEncrypted, setIsEncrypted] = useState(false);
   const [decryptPassword, setDecryptPassword] = useState('');
   const [needsPassword, setNeedsPassword] = useState(false);
+  const [needsMasterKey, setNeedsMasterKey] = useState(false);
+  const [masterKey, setMasterKey] = useState('');
 
   /**
    * Maneja la selección de archivo desde input nativo
@@ -204,6 +206,18 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
           setSelectedFile(file);
           setIsEncrypted(content.encrypted || false);
           setNeedsPassword(content.encrypted || false);
+          
+          // Detectar si hay datos encriptados dentro del archivo (passwords_encrypted, connections_encrypted)
+          // incluso si el archivo completo no está encriptado
+          const hasEncryptedData = !!(content.data?.passwords?.encrypted || content.data?.connections?.encrypted);
+          setNeedsMasterKey(hasEncryptedData && !content.encrypted);
+          
+          console.log('[ImportExportDialog] Detección de datos encriptados:', {
+            fileEncrypted: content.encrypted,
+            hasEncryptedPasswords: !!content.data?.passwords?.encrypted,
+            hasEncryptedConnections: !!content.data?.connections?.encrypted,
+            needsMasterKey: hasEncryptedData && !content.encrypted
+          });
 
           // Obtener preview si no está encriptado
           if (!content.encrypted) {
@@ -282,7 +296,7 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
   };
 
   /**
-   * Desencripta el preview con la contraseña proporcionada
+   * Desencripta el preview con la contraseña proporcionada (para archivo completo encriptado)
    */
   const handleDecryptPreview = async () => {
     if (!decryptPassword) {
@@ -316,6 +330,115 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
         severity: 'error',
         summary: t('import.error') || 'Error',
         detail: error.message || t('import.wrongPassword') || 'Contraseña incorrecta',
+        life: 3000
+      });
+    }
+  };
+
+  /**
+   * Desencripta datos internos con master key para ver el preview completo
+   */
+  const handleDecryptWithMasterKey = async () => {
+    if (!masterKey) {
+      showToast?.({
+        severity: 'warn',
+        summary: t('import.warning') || 'Advertencia',
+        detail: t('import.enterMasterKey') || 'Ingresa la Master Key',
+        life: 3000
+      });
+      return;
+    }
+
+    try {
+      // Necesitamos SecureStorage para desencriptar
+      const { default: SecureStorage } = await import('../services/SecureStorage');
+      const secureStorage = new SecureStorage();
+      
+      // Desencriptar datos internos si están encriptados
+      let decryptedData = { ...fileData.data };
+      
+      if (fileData.data.passwords?.encrypted) {
+        try {
+          // Los datos encriptados pueden estar como string JSON o ya parseados
+          const encryptedPasswords = typeof fileData.data.passwords.encrypted === 'string' 
+            ? JSON.parse(fileData.data.passwords.encrypted)
+            : fileData.data.passwords.encrypted;
+          
+          const decryptedPasswords = await secureStorage.decryptData(encryptedPasswords, masterKey);
+          
+          decryptedData.passwords = {
+            ...fileData.data.passwords,
+            nodes: decryptedPasswords,
+            encrypted: null // Limpiar para que el preview pueda contar
+          };
+        } catch (error) {
+          console.error('[ImportExportDialog] Error desencriptando contraseñas:', error);
+          throw new Error('Master Key incorrecta o datos corruptos en contraseñas');
+        }
+      }
+      
+      if (fileData.data.connections?.encrypted) {
+        try {
+          // Los datos encriptados pueden estar como string JSON o ya parseados
+          const encryptedConnections = typeof fileData.data.connections.encrypted === 'string'
+            ? JSON.parse(fileData.data.connections.encrypted)
+            : fileData.data.connections.encrypted;
+          
+          const decryptedConnections = await secureStorage.decryptData(encryptedConnections, masterKey);
+          
+          decryptedData.connections = {
+            ...fileData.data.connections,
+            tree: decryptedConnections,
+            encrypted: null // Limpiar para que el preview pueda contar
+          };
+        } catch (error) {
+          console.error('[ImportExportDialog] Error desencriptando conexiones:', error);
+          throw new Error('Master Key incorrecta o datos corruptos en conexiones');
+        }
+      }
+      
+      // Generar preview con datos desencriptados
+      const preview = await exportImportService.getExportPreview({
+        ...fileData,
+        data: decryptedData,
+        encrypted: false
+      });
+      
+      setFilePreview(preview);
+      setNeedsMasterKey(false);
+      
+      // Asegurar que al menos una categoría esté seleccionada si hay datos
+      if (preview.stats) {
+        const hasData = preview.stats.connections > 0 || 
+                       preview.stats.passwords > 0 || 
+                       preview.stats.conversations > 0 || 
+                       preview.stats.configItems > 0;
+        
+        if (hasData) {
+          const currentSelection = Object.values(categories).some(v => v === true);
+          if (!currentSelection) {
+            setCategories({
+              connections: preview.stats.connections > 0,
+              passwords: preview.stats.passwords > 0,
+              conversations: preview.stats.conversations > 0,
+              config: preview.stats.configItems > 0,
+              recordings: (preview.stats.recordings || 0) > 0
+            });
+          }
+        }
+      }
+
+      showToast?.({
+        severity: 'success',
+        summary: t('import.success') || 'Éxito',
+        detail: t('import.decryptedWithMasterKey') || 'Datos desencriptados correctamente con Master Key',
+        life: 3000
+      });
+    } catch (error) {
+      showToast?.({
+        severity: 'error',
+        summary: t('import.error') || 'Error',
+        detail: error.message || t('import.wrongMasterKey') || 'Master Key incorrecta',
         life: 3000
       });
     }
@@ -431,7 +554,9 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
     setFileData(null);
     setFilePreview(null);
     setDecryptPassword('');
+    setMasterKey('');
     setNeedsPassword(false);
+    setNeedsMasterKey(false);
     setIsEncrypted(false);
     setLoadingFile(false);
     if (fileUploadRef.current) {
@@ -559,7 +684,7 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
     // - Si está encriptado, ya se desencriptó (needsPassword = false)
     // - Hay al menos una categoría seleccionada (o el preview falló pero hay datos)
     const hasValidSelection = isValidSelection();
-    const isButtonDisabled = importing || !fileData || (isEncrypted && needsPassword) || (!hasValidSelection && filePreview?.stats);
+    const isButtonDisabled = importing || !fileData || (isEncrypted && needsPassword) || (needsMasterKey && !filePreview?.stats) || (!hasValidSelection && filePreview?.stats);
     
     // Debug: Log del estado del botón
     if (fileData && !importing) {
@@ -654,7 +779,7 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
         {/* Preview del archivo */}
         {selectedFile && renderPreview()}
 
-        {/* Contraseña de desencriptación */}
+        {/* Contraseña de desencriptación (archivo completo encriptado) */}
         {isEncrypted && needsPassword && (
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
@@ -682,8 +807,44 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
           </div>
         )}
 
-        {/* Opciones de importación - Solo mostrar si hay archivo y no necesita contraseña */}
-        {selectedFile && !needsPassword && (
+        {/* Master Key para desencriptar datos internos */}
+        {needsMasterKey && !needsPassword && (
+          <div style={{ marginBottom: '20px' }}>
+            <Message
+              severity="info"
+              text={t('import.masterKeyRequired') || '🔒 Este archivo contiene datos encriptados (contraseñas/conexiones). Ingresa la Master Key para ver el contenido completo y poder importar.'}
+              style={{ marginBottom: '15px' }}
+            />
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+              {t('import.enterMasterKey') || '🔑 Master Key'}
+            </label>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <Password
+                value={masterKey}
+                onChange={(e) => setMasterKey(e.target.value)}
+                disabled={importing}
+                feedback={false}
+                toggleMask
+                style={{ flex: 1 }}
+                inputStyle={{ width: '100%' }}
+                placeholder={t('import.masterKeyPlaceholder') || 'Ingresa la Master Key del sistema origen'}
+                onKeyPress={(e) => e.key === 'Enter' && handleDecryptWithMasterKey()}
+              />
+              <Button
+                label={t('import.decrypt') || 'Desencriptar'}
+                icon="pi pi-unlock"
+                onClick={handleDecryptWithMasterKey}
+                disabled={!masterKey || importing}
+              />
+            </div>
+            <small style={{ display: 'block', marginTop: '8px', fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+              {t('import.masterKeyNote') || 'La Master Key es la misma que usaste en el sistema donde exportaste los datos.'}
+            </small>
+          </div>
+        )}
+
+        {/* Opciones de importación - Solo mostrar si hay archivo y no necesita contraseña/master key */}
+        {selectedFile && !needsPassword && !needsMasterKey && (
           <>
             {/* Modo de importación */}
             <div style={{ marginBottom: '20px' }}>
