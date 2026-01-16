@@ -43,6 +43,30 @@ class ExportImportService {
   }
 
   /**
+   * Obtiene configuración de temas de tabs
+   */
+  getTabThemeConfig() {
+    const tabThemeKeys = this.getKeysWithPrefix('tab_theme_');
+    const config = {};
+    tabThemeKeys.forEach(key => {
+      config[key] = this.safeGetItem(key);
+    });
+    // También incluir claves específicas conocidas
+    const knownTabKeys = [
+      'tab_theme_default',
+      'tab_theme_active',
+      'tab_theme_hover'
+    ];
+    knownTabKeys.forEach(key => {
+      const value = this.safeGetItem(key);
+      if (value !== null) {
+        config[key] = value;
+      }
+    });
+    return config;
+  }
+
+  /**
    * Exporta todos los datos seleccionados
    * @param {Object} options - Opciones de exportación
    * @param {boolean} options.connections - Incluir conexiones
@@ -150,7 +174,7 @@ class ExportImportService {
 
       // === 4. CONFIGURACIONES ===
       if (config) {
-        exportData.data.config = {
+        const configData = {
           // Clientes de IA
           aiClientsEnabled: this.safeGetItem('ai_clients_enabled'),
           selectedMcpServers: this.safeGetItem('selectedMcpServers'),
@@ -159,29 +183,47 @@ class ExportImportService {
           defaultTerminal: this.safeGetItem('nodeterm_default_local_terminal'),
           scrollbackLines: this.safeGetItem('nodeterm_scrollback_lines'),
           
-          // Fuentes y temas
-          sidebarFont: this.safeGetItem('sidebarFont'),
-          sidebarFontSize: this.safeGetItem('sidebarFontSize'),
-          homeTabFont: this.safeGetItem('homeTabFont'),
-          homeTabFontSize: this.safeGetItem('homeTabFontSize'),
+          // === TEMAS PRINCIPALES ===
+          ui_theme: this.safeGetItem('ui_theme'),
+          iconTheme: this.safeGetItem('iconTheme'),
           iconThemeSidebar: this.safeGetItem('iconThemeSidebar'),
           actionBarIconTheme: this.safeGetItem('actionBarIconTheme'),
           sessionActionIconTheme: this.safeGetItem('sessionActionIconTheme'),
           treeTheme: this.safeGetItem('treeTheme'),
           
-          // Docker
+          // === TEMAS DE TERMINAL ===
+          localLinuxTerminalTheme: this.safeGetItem('localLinuxTerminalTheme'),
+          localPowerShellTheme: this.safeGetItem('localPowerShellTheme'),
           localDockerTerminalTheme: this.safeGetItem('localDockerTerminalTheme'),
+          
+          // === FUENTES ===
+          sidebarFont: this.safeGetItem('sidebarFont'),
+          sidebarFontSize: this.safeGetItem('sidebarFontSize'),
+          homeTabFont: this.safeGetItem('homeTabFont'),
+          homeTabFontSize: this.safeGetItem('homeTabFontSize'),
+          explorerFont: this.safeGetItem('explorerFont'),
+          explorerFontSize: this.safeGetItem('explorerFontSize'),
+          explorerColorTheme: this.safeGetItem('explorerColorTheme'),
+          
+          // Fuentes de terminal
+          basicapp_local_terminal_font_family: this.safeGetItem('basicapp_local_terminal_font_family'),
+          basicapp_local_terminal_font_size: this.safeGetItem('basicapp_local_terminal_font_size'),
+          nodeterm_linux_font_size: this.safeGetItem('nodeterm_linux_font_size'),
           nodeterm_docker_font_family: this.safeGetItem('nodeterm_docker_font_family'),
           nodeterm_docker_font_size: this.safeGetItem('nodeterm_docker_font_size'),
           
-          // Terminal local
-          basicapp_local_terminal_font_family: this.safeGetItem('basicapp_local_terminal_font_family'),
-          basicapp_local_terminal_font_size: this.safeGetItem('basicapp_local_terminal_font_size'),
-          
-          // UI
+          // === CONFIGURACIONES DE UI ===
+          use_primary_colors_titlebar: this.safeGetItem('use_primary_colors_titlebar'),
+          nodeterm_ui_anim_speed: this.safeGetItem('nodeterm_ui_anim_speed'),
+          nodeterm_ui_reduced_motion: this.safeGetItem('nodeterm_ui_reduced_motion'),
+          nodeterm_themes_per_row: this.safeGetItem('nodeterm_themes_per_row'),
           connectionDetailsPanelHeight: this.safeGetItem('connectionDetailsPanelHeight'),
           lock_home_button: this.safeGetItem('lock_home_button'),
           nodeterm_fav_type: this.safeGetItem('nodeterm_fav_type'),
+          
+          // === CONFIGURACIONES DE TABS ===
+          // Buscar todas las claves relacionadas con temas de tabs
+          ...this.getTabThemeConfig(),
           
           // Auditoría
           audit_auto_recording: this.safeGetItem('audit_auto_recording'),
@@ -189,8 +231,33 @@ class ExportImportService {
           audit_encrypt_recordings: this.safeGetItem('audit_encrypt_recordings'),
           
           // Idioma
-          nodeterm_language: this.safeGetItem('nodeterm_language')
+          nodeterm_language: this.safeGetItem('nodeterm_language'),
+          
+          // Home Tab Icon
+          home_tab_icon: this.safeGetItem('home_tab_icon'),
+          
+          // Status Bar
+          statusBarIconTheme: this.safeGetItem('statusBarIconTheme'),
+          statusBarPollingInterval: this.safeGetItem('statusBarPollingInterval')
         };
+        
+        console.log('[ExportImportService] Exportando configuraciones:', {
+          totalKeys: Object.keys(configData).length,
+          themes: {
+            ui_theme: configData.ui_theme,
+            iconTheme: configData.iconTheme,
+            iconThemeSidebar: configData.iconThemeSidebar,
+            localLinuxTerminalTheme: configData.localLinuxTerminalTheme,
+            localPowerShellTheme: configData.localPowerShellTheme
+          },
+          fonts: {
+            sidebarFont: configData.sidebarFont,
+            homeTabFont: configData.homeTabFont,
+            explorerFont: configData.explorerFont
+          }
+        });
+        
+        exportData.data.config = configData;
       }
 
       // === 5. GRABACIONES (solo metadata) ===
