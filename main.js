@@ -94,7 +94,7 @@ logTiming('Inicio del proceso main.js');
 logTiming('Polyfill DOMMatrix cargado');
 
 // Declarar variables
-let alternativePtyConfig, SafeWindowsTerminal, registerAllHandlers;
+let alternativePtyConfig, SafeWindowsTerminal, registerAllHandlers, cleanupTunnels;
 
 // Importar utilidades centralizadas (fuera del try-catch para acceso global)
 const { parseDfOutput, parseNetDev, getGuacdPrefPath, sendToRenderer, cleanupOrphanedConnections } = require('./src/main/utils');
@@ -119,7 +119,7 @@ try {
 
   // Importar manejadores centralizados
   ({ registerAllHandlers } = require('./src/main/handlers'));
-  const { cleanupTunnels } = require('./src/main/handlers/ssh-tunnel-handlers');
+  ({ cleanupTunnels } = require('./src/main/handlers/ssh-tunnel-handlers'));
 } catch (err) {
   console.error('[MAIN] ERROR EN IMPORTACIONES:', err);
   console.error('[MAIN] Stack trace:', err.stack);
