@@ -114,7 +114,7 @@
 }
 
 .terminal-mini-label {
-  font-size: 0.7rem;
+  font-size: 0.8125rem;
   color: var(--text-color-secondary);
   font-weight: 600;
   text-transform: uppercase;
@@ -342,7 +342,7 @@
 .terminal-theme-name {
   color: var(--ui-dialog-text);
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   letter-spacing: -0.01em;
   white-space: nowrap;
 }
@@ -371,7 +371,7 @@
 }
 
 .terminal-theme-selector .terminal-selector-label {
-  font-size: 0.6rem;
+  font-size: 0.75rem;
   color: var(--text-color-secondary);
   font-weight: 600;
   text-transform: uppercase;
@@ -542,29 +542,29 @@
    ======================================== */
 
 .terminal-settings-container .p-dropdown {
-  height: 32px;
-  font-size: 0.75rem;
+  height: 38px;
+  font-size: 0.875rem;
   border-radius: 6px;
 }
 
 .terminal-settings-container .p-dropdown .p-dropdown-label {
-  padding: 0.375rem 0.5rem;
-  font-size: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
 }
 
 .terminal-settings-container .p-dropdown .p-dropdown-trigger {
-  width: 1.75rem;
+  width: 2rem;
 }
 
 .terminal-settings-container .p-inputnumber {
-  height: 32px;
+  height: 38px;
   width: 100%;
   max-width: 100%;
 }
 
 .terminal-settings-container .p-inputnumber input {
-  font-size: 0.75rem;
-  padding: 0.375rem 0.5rem;
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
   border-radius: 6px;
   width: 100%;
   max-width: 100%;
@@ -572,7 +572,7 @@
 }
 
 .terminal-settings-container .p-inputnumber-button {
-  width: 1.5rem;
+  width: 2rem;
   flex-shrink: 0;
 }
 
@@ -701,7 +701,7 @@
   
   .terminal-preview-window {
     padding: 0.75rem;
-    font-size: 12px;
+    font-size: 14px;
   }
 }
 

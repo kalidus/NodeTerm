@@ -200,7 +200,7 @@ input, textarea, select {
 
 .compact-dropdown .p-dropdown-label {
   padding: 4px 6px;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 /* Hacer los selectores más pequeños y compactos */
@@ -214,68 +214,68 @@ input, textarea, select {
   padding: 4px 6px;
 }
 
-/* Estilos para los campos de entrada compactos */
+/* Estilos para los campos de entrada con mejor legibilidad */
 .compact-input .p-inputtext {
-  padding: 4px 6px;
-  font-size: 12px;
-  min-height: 32px;
-  height: 32px;
+  padding: 8px 12px;
+  font-size: 14px;
+  min-height: 40px;
+  height: 40px;
 }
 
-/* Hacer las opciones más compactas */
+/* Opciones con mejor tamaño */
 .field-checkbox .p-checkbox {
-  margin-right: 6px;
+  margin-right: 8px;
 }
 
 .field-checkbox label {
-  font-size: 11px;
-  line-height: 1.2;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
-/* Reducir el espaciado entre elementos */
+/* Espaciado adecuado entre elementos */
 .field {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .field-checkbox {
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 } 
 
-/* === Unified Connection Dialog: compact form controls (32px) === */
+/* === Unified Connection Dialog: form controls con mejor usabilidad === */
 .unified-connection-dialog .p-inputtext {
-  padding: 4px 6px;
-  font-size: 12px;
-  height: 32px;
-  min-height: 32px;
+  padding: 8px 12px;
+  font-size: 14px;
+  height: 40px;
+  min-height: 40px;
 }
 
 .unified-connection-dialog .p-dropdown {
-  min-height: 32px;
-  height: 32px;
+  min-height: 40px;
+  height: 40px;
 }
 
 .unified-connection-dialog .p-dropdown .p-dropdown-label.p-inputtext {
-  padding: 4px 6px;
-  font-size: 12px;
-  line-height: 24px;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .unified-connection-dialog .p-dropdown .p-dropdown-trigger {
-  padding: 0 8px;
+  padding: 0 12px;
 }
 
 .unified-connection-dialog .field-checkbox label {
-  font-size: 11px;
-  line-height: 1.2;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 .unified-connection-dialog .p-checkbox .p-checkbox-box {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
 }
 
 .unified-connection-dialog .p-checkbox .p-checkbox-box .p-checkbox-icon {
-  font-size: 11px;
+  font-size: 14px;
 }
 
 /* Mejor alineación vertical entre checkbox y etiqueta */
@@ -283,12 +283,12 @@ input, textarea, select {
   display: flex;
   align-items: center;
   justify-content: space-between; /* texto a la izquierda, checkbox a la derecha */
-  gap: 8px;
-  margin-bottom: 4px;
-  padding: 4px 12px; /* más padding horizontal para más separación de los bordes */
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 8px 16px; /* más padding para mejor clickabilidad */
   background: transparent !important; /* sin fondo, igual que el resto */
-  border-radius: 4px;
-  min-height: 24px; /* altura mínima para alineación consistente */
+  border-radius: 6px;
+  min-height: 36px; /* altura mínima para alineación consistente */
 }
 
 .unified-connection-dialog .field-checkbox .p-checkbox {
@@ -308,19 +308,19 @@ input, textarea, select {
   line-height: 1.3;
 }
 
-/* Hacer checkboxes redondos y más pequeños */
+/* Hacer checkboxes redondos con tamaño adecuado */
 .unified-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box {
-  width: 12px !important;
-  height: 12px !important;
+  width: 18px !important;
+  height: 18px !important;
   border-radius: 50% !important; /* redondo */
-  border: 1.5px solid var(--surface-border) !important;
+  border: 2px solid var(--surface-border) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
 }
 
 .unified-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box .p-checkbox-icon {
-  font-size: 8px !important;
+  font-size: 14px !important;
 }
 
 /* añadir margen a las columnas de checkboxes */
@@ -371,7 +371,7 @@ div[style*="borderTop"] .advanced-fieldset .p-fieldset-legend {
   background: transparent !important;
   color: var(--ui-dialog-text, var(--text-color)) !important;
   padding: 0 !important;
-  margin: 0 0 6px 0 !important;
+  margin: 0 0 8px 0 !important;
   border: none !important;
   display: flex !important;
   align-items: center !important;
@@ -381,7 +381,7 @@ div[style*="borderTop"] .advanced-fieldset .p-fieldset-legend {
 }
 
 .unified-connection-dialog .advanced-fieldset .p-fieldset-legend-text {
-  font-size: 11px !important;
+  font-size: 14px !important;
   font-weight: 600 !important;
   order: 1; /* texto primero */
   flex: 1;
@@ -526,17 +526,17 @@ div[style*="borderTop"] .advanced-fieldset .p-fieldset-legend {
 .unified-connection-dialog .advanced-fieldset h4,
 .unified-connection-dialog .advanced-fieldset .p-fieldset-content h4,
 .unified-connection-dialog .p-fieldset-content > div > div h4 {
-  font-size: 11px !important; /* más grande */
+  font-size: 13px !important; /* tamaño legible */
   font-weight: 600 !important;
-  margin: 4px 0 2px 0 !important; /* espaciado reducido */
+  margin: 8px 0 4px 0 !important; /* espaciado adecuado */
   padding: 0 !important;
   color: var(--text-color-secondary) !important;
   border-bottom: none !important; /* sin línea */
   text-transform: uppercase !important;
-  letter-spacing: 0.3px !important;
+  letter-spacing: 0.5px !important;
   background: transparent !important;
   height: auto !important;
-  line-height: 1.2 !important;
+  line-height: 1.3 !important;
 }
 
 /* Contenedor de checkboxes compacto sin espaciado extra */
@@ -557,15 +557,15 @@ div[style*="borderTop"] .advanced-fieldset .p-fieldset-legend {
 .unified-connection-dialog .advanced-fieldset .p-fieldset-content .field-checkbox,
 .unified-connection-dialog .p-fieldset-content > div > div .field-checkbox {
   margin: 0 !important; /* sin margen para pegarlas como las opciones normales */
-  padding: 2px 12px !important; /* padding vertical reducido */
-  min-height: 20px !important; /* altura reducida */
-  max-height: 20px !important; /* altura máxima fija */
+  padding: 6px 16px !important; /* padding adecuado */
+  min-height: 32px !important; /* altura adecuada */
+  max-height: 32px !important; /* altura máxima fija */
   background: transparent !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  gap: 8px !important;
-  border-radius: 4px;
+  gap: 12px !important;
+  border-radius: 6px;
 }
 
 .unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox {
@@ -587,25 +587,25 @@ div[style*="borderTop"] .advanced-fieldset .p-fieldset-legend {
 
 /* Checkboxes (círculos) IGUALES a las opciones normales */
 .unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box {
-  width: 12px !important;
-  height: 12px !important;
+  width: 18px !important;
+  height: 18px !important;
   border-radius: 50% !important;
-  border: 1.5px solid var(--surface-border) !important;
+  border: 2px solid var(--surface-border) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
 }
 
 .unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .p-checkbox-icon {
-  font-size: 8px !important;
+  font-size: 14px !important;
 }
 
 /* Labels de opciones avanzadas IGUALES a las opciones normales */
 .unified-connection-dialog .advanced-fieldset .field-checkbox label,
 .unified-connection-dialog .advanced-fieldset .p-fieldset-content .field-checkbox label,
 .unified-connection-dialog .p-fieldset-content > div > div .field-checkbox label {
-  font-size: 10px !important; /* mismo tamaño que las opciones normales */
-  line-height: 1.2 !important;
+  font-size: 14px !important; /* tamaño legible */
+  line-height: 1.4 !important;
   margin: 0 !important;
   padding: 0 !important;
   color: var(--text-color) !important; /* usa la variable del tema */
@@ -650,7 +650,7 @@ div[style*="borderTop"] .advanced-fieldset .p-fieldset-legend {
 
 .unified-connection-dialog .p-tabview .p-tabview-nav .p-tabview-nav-link {
   padding: 4px 10px !important;
-  font-size: 12px !important;
+  font-size: 14px !important;
   font-weight: 500 !important;
   min-height: 28px !important;
 }
@@ -667,7 +667,7 @@ div[style*="borderTop"] .advanced-fieldset .p-fieldset-legend {
 }
 
 .unified-connection-dialog .p-card .p-card-title {
-  font-size: 12px !important;
+  font-size: 14px !important;
   font-weight: 600 !important;
   line-height: 1.2 !important;
   margin: 0 !important;

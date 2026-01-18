@@ -135,7 +135,7 @@
 }
 
 .menu-shortcut {
-  font-size: 12px !important;
+  font-size: 14px !important;
   color: var(--ui-text-secondary, #888) !important;
   font-weight: normal !important;
 }
