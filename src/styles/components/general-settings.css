@@ -10,27 +10,27 @@
   --general-glass-bg: rgba(255, 255, 255, 0.08);
   --general-glass-border: rgba(255, 255, 255, 0.15);
   
-  /* Tamaños de fuente MÁS compactos (estilo VS Code) */
-  --settings-font-title: 0.8125rem;     /* 13px - títulos de sección */
-  --settings-font-label: 0.75rem;       /* 12px - labels */
-  --settings-font-description: 0.6875rem; /* 11px - descripciones */
-  --settings-font-mini: 0.625rem;       /* 10px - mini labels */
-  --settings-font-input: 0.6875rem;     /* 11px - inputs/dropdowns */
+  /* Tamaños de fuente legibles y profesionales */
+  --settings-font-title: 1rem;          /* 16px - títulos de sección */
+  --settings-font-label: 0.875rem;      /* 14px - labels */
+  --settings-font-description: 0.8125rem; /* 13px - descripciones */
+  --settings-font-mini: 0.75rem;        /* 12px - mini labels */
+  --settings-font-input: 0.875rem;      /* 14px - inputs/dropdowns */
   
-  /* Espaciado más compacto */
-  --settings-padding: 1rem;
-  --settings-gap: 0.5rem;
+  /* Espaciado adecuado */
+  --settings-padding: 1.5rem;
+  --settings-gap: 0.75rem;
   
   /* Border-radius profesional */
-  --settings-radius-section: 8px;
-  --settings-radius-card: 6px;
-  --settings-radius-input: 4px;
-  --settings-radius-icon: 5px;
+  --settings-radius-section: 10px;
+  --settings-radius-card: 8px;
+  --settings-radius-input: 6px;
+  --settings-radius-icon: 6px;
   
-  /* Tamaños de iconos más pequeños */
-  --settings-icon-section: 24px;
-  --settings-icon-setting: 20px;
-  --settings-icon-header: 1.5rem;
+  /* Tamaños de iconos adecuados */
+  --settings-icon-section: 32px;
+  --settings-icon-setting: 24px;
+  --settings-icon-header: 2rem;
 }
 
 /* ========================================
@@ -367,7 +367,7 @@
 
 .general-setting-icon i {
   color: var(--ui-button-primary-text);
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   position: relative;
   z-index: 1;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
@@ -441,8 +441,8 @@
   border-radius: 6px;
   transition: all 0.3s ease;
   border-width: 2px;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 
 .general-setting-control .p-checkbox .p-checkbox-box.p-highlight,
@@ -516,7 +516,7 @@ body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
 
 .general-selector-icon-compact i {
   color: var(--ui-button-primary-text);
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
@@ -873,13 +873,13 @@ body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
   padding: var(--settings-padding) !important;
 }
 
-/* Dropdowns más compactos */
+/* Dropdowns con tamaño adecuado */
 .general-settings-container .p-dropdown,
 .security-settings-container .p-dropdown,
 .terminal-settings-container .p-dropdown,
 .statusbar-settings-container .p-dropdown {
-  min-height: 28px !important;
-  height: 28px !important;
+  min-height: 38px !important;
+  height: 38px !important;
   font-size: var(--settings-font-input) !important;
 }
 
@@ -887,45 +887,45 @@ body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
 .security-settings-container .p-dropdown .p-dropdown-label,
 .terminal-settings-container .p-dropdown .p-dropdown-label,
 .statusbar-settings-container .p-dropdown .p-dropdown-label {
-  padding: 0.25rem 0.5rem !important;
+  padding: 0.5rem 0.75rem !important;
   font-size: var(--settings-font-input) !important;
-  line-height: 1.3 !important;
+  line-height: 1.4 !important;
 }
 
 .general-settings-container .p-dropdown .p-dropdown-trigger,
 .security-settings-container .p-dropdown .p-dropdown-trigger,
 .terminal-settings-container .p-dropdown .p-dropdown-trigger,
 .statusbar-settings-container .p-dropdown .p-dropdown-trigger {
-  padding: 0 0.375rem !important;
-  width: 1.5rem !important;
+  padding: 0 0.625rem !important;
+  width: 2rem !important;
 }
 
-/* Inputs más compactos */
+/* Inputs con tamaño adecuado */
 .general-settings-container .p-inputtext,
 .security-settings-container .p-inputtext,
 .terminal-settings-container .p-inputtext,
 .statusbar-settings-container .p-inputtext {
-  padding: 0.25rem 0.5rem !important;
+  padding: 0.5rem 0.75rem !important;
   font-size: var(--settings-font-input) !important;
-  min-height: 28px !important;
-  height: 28px !important;
+  min-height: 38px !important;
+  height: 38px !important;
 }
 
-/* Checkboxes más compactos */
+/* Checkboxes con tamaño adecuado */
 .general-settings-container .p-checkbox .p-checkbox-box,
 .security-settings-container .p-checkbox .p-checkbox-box,
 .terminal-settings-container .p-checkbox .p-checkbox-box,
 .statusbar-settings-container .p-checkbox .p-checkbox-box {
-  width: 16px !important;
-  height: 16px !important;
+  width: 20px !important;
+  height: 20px !important;
 }
 
-/* Botones más compactos */
+/* Botones con tamaño adecuado */
 .general-settings-container .p-button,
 .security-settings-container .p-button,
 .terminal-settings-container .p-button,
 .statusbar-settings-container .p-button {
-  padding: 0.375rem 0.75rem !important;
+  padding: 0.625rem 1rem !important;
   font-size: var(--settings-font-label) !important;
-  min-height: 28px !important;
+  min-height: 38px !important;
 }

@@ -483,7 +483,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 13px;
   color: var(--ui-sidebar-text);
 }
 
@@ -666,14 +666,14 @@
 
 /* Títulos de las Cards más grandes y con más espacio */
 .unified-connection-dialog .p-card .p-card-title {
-  font-size: 1.1rem !important;
+  font-size: 1.25rem !important;
   font-weight: 600 !important;
-  margin-bottom: 1.2rem !important;
+  margin-bottom: 1.5rem !important;
   color: var(--text-color) !important;
 }
 
 .unified-connection-dialog .p-card .p-card-body {
-  padding: 1rem; /* Añadir un padding consistente al cuerpo de la Card */
+  padding: 1.5rem; /* Añadir un padding generoso al cuerpo de la Card */
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -692,17 +692,17 @@
 }
 
 .unified-connection-dialog .formgrid.grid {
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
 }
 
 .unified-connection-dialog .field {
-  margin-bottom: 0.8rem;
+  margin-bottom: 1rem;
 }
 
 .unified-connection-dialog .field label {
   display: block;
-  margin-bottom: 0.3rem;
-  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
   font-weight: 500;
   color: var(--text-color-secondary);
 }
@@ -720,7 +720,7 @@
 
 .unified-connection-dialog .field-checkbox label {
   margin-left: 0.5rem;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   cursor: pointer;
 }
 
@@ -1054,15 +1054,15 @@
 .protocol-option-card {
   display: flex;
   align-items: flex-start;
-  gap: 0.875rem;
-  padding: 1rem 1.125rem;
+  gap: 1.25rem;
+  padding: 1.5rem 1.75rem;
   background: linear-gradient(135deg, 
     rgba(255, 255, 255, 0.08) 0%, 
     rgba(255, 255, 255, 0.03) 100%) !important;
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 14px;
+  border-radius: 16px;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
@@ -1256,15 +1256,15 @@
 
 /* Ícono del protocolo - Profesional y refinado */
 .protocol-option-icon {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  border-radius: 11px;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.15rem;
+  font-size: 1.5rem;
   box-shadow: 
     0 4px 12px rgba(0, 0, 0, 0.15),
     0 2px 6px rgba(0, 0, 0, 0.1),
@@ -1364,14 +1364,14 @@
   z-index: 1;
 }
 
-/* Contenido del protocolo - Compacto */
+/* Contenido del protocolo - Espacioso */
 .protocol-option-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
   min-width: 0;
-  padding-right: 0.5rem;
+  padding-right: 1rem;
 }
 
 /* Header con título y badges */
@@ -1395,10 +1395,10 @@
 .protocol-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.25rem 0.6rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 14px;
+  font-size: 0.85rem;
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
@@ -1409,7 +1409,7 @@
 }
 
 .protocol-badge-text {
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   letter-spacing: 0.01em;
 }
 
@@ -1456,7 +1456,7 @@
 .protocol-option-title {
   margin: 0;
   color: var(--ui-dialog-text) !important;
-  font-size: 1rem;
+  font-size: 1.15rem;
   font-weight: 650;
   line-height: 1.3;
   letter-spacing: -0.015em;
@@ -1475,7 +1475,7 @@
   margin: 0;
   color: var(--ui-dialog-text) !important;
   opacity: 0.8;
-  font-size: 0.8125rem;
+  font-size: 0.95rem;
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -1504,27 +1504,27 @@
 .protocol-advantage-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.175rem 0.45rem;
+  padding: 0.3rem 0.7rem;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
+  border-radius: 8px;
   color: var(--ui-dialog-text) !important;
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   line-height: 1.4;
   opacity: 0.85;
   white-space: nowrap;
   transition: all 0.25s ease;
   position: relative;
-  padding-left: 1.35rem;
+  padding-left: 1.7rem;
 }
 
 .protocol-advantage-badge::before {
   content: '✓';
   position: absolute;
-  left: 0.4rem;
+  left: 0.5rem;
   color: #4CAF50;
   font-weight: 700;
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   line-height: 1;
 }
 
@@ -1549,10 +1549,10 @@
 
 /* Botón de acción - Opción 3: Pill/Cápsula */
 .protocol-option-button {
-  min-width: 125px;
-  height: 32px;
-  font-size: 0.85rem;
-  padding: 0.5rem 1.5rem;
+  min-width: 140px;
+  height: 40px;
+  font-size: 0.95rem;
+  padding: 0.75rem 1.75rem;
   border-radius: 999px;
   font-weight: 600;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2105,8 +2105,8 @@
 .protocol-card-content {
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.875rem;
+  gap: 1rem;
+  padding: 1.25rem;
   height: 100%;
   flex: 1;
   box-sizing: border-box;
@@ -2122,9 +2122,9 @@
 }
 
 .protocol-card-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2164,7 +2164,7 @@
 
 .protocol-card-icon i {
   color: white;
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
   position: relative;
   z-index: 1;
@@ -2196,7 +2196,7 @@
   margin: 0;
   color: var(--ui-dialog-text) !important;
   font-weight: 600;
-  font-size: 0.9375rem;
+  font-size: 1.05rem;
   letter-spacing: -0.01em;
   line-height: 1.25;
 }
@@ -2211,10 +2211,10 @@
 .protocol-card-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 10px;
-  font-size: 0.7rem;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
@@ -2222,7 +2222,7 @@
 }
 
 .protocol-card-badge i {
-  font-size: 0.7rem;
+  font-size: 0.8rem;
 }
 
 .protocol-card-badge-recommended {
@@ -2246,8 +2246,8 @@
   margin: 0;
   color: var(--ui-dialog-text) !important;
   opacity: 0.7;
-  font-size: 0.75rem;
-  line-height: 1.4;
+  font-size: 0.875rem;
+  line-height: 1.5;
   word-wrap: break-word;
   overflow-wrap: break-word;
   flex: 1;
@@ -2261,9 +2261,9 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   background: var(--ui-content-bg) !important;
   border: 1px solid var(--ui-button-primary) !important;
   color: var(--ui-button-primary) !important;
@@ -2280,7 +2280,7 @@
 }
 
 .protocol-card-arrow i {
-  font-size: 0.85rem;
+  font-size: 1rem;
   font-weight: 600;
 }
 
@@ -2525,7 +2525,7 @@
 .edit-rdp-connection-dialog .advanced-fieldset h4,
 .edit-rdp-connection-dialog .advanced-fieldset .p-fieldset-content h4,
 .edit-rdp-connection-dialog .p-fieldset-content > div > div h4 {
-  font-size: 11px !important;
+  font-size: 14px !important;
   font-weight: 600 !important;
   margin: 4px 0 2px 0 !important;
   padding: 0 !important;
@@ -2839,7 +2839,7 @@
 .new-rdp-connection-dialog .advanced-fieldset h4,
 .new-rdp-connection-dialog .advanced-fieldset .p-fieldset-content h4,
 .new-rdp-connection-dialog .p-fieldset-content > div > div h4 {
-  font-size: 11px !important;
+  font-size: 14px !important;
   font-weight: 600 !important;
   margin: 4px 0 2px 0 !important;
   padding: 0 !important;
