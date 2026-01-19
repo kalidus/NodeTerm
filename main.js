@@ -3058,12 +3058,64 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
   
   // Comportamiento normal: enviar datos al stream
   if (conn && conn.stream && !conn.stream.destroyed) {
-    // Grabar input si hay grabación activa
-    if (getSessionRecorder().isRecording(tabId)) {
-      getSessionRecorder().recordInput(tabId, data);
-    }
+    // OPTIMIZACIÓN: Para conexiones Wallix/Bastion, usar buffering para reducir lag
+    const isWallixConnection = conn.config?.useBastionWallix || conn.ssh?._isWallixConnection;
     
-    conn.stream.write(data);
+    if (isWallixConnection) {
+      // Inicializar buffer de escritura si no existe
+      if (!conn._writeBuffer) {
+        conn._writeBuffer = '';
+        conn._writeBufferTimeout = null;
+      }
+      
+      // Acumular datos en el buffer
+      conn._writeBuffer += data;
+      
+      // Cancelar timeout previo si existe
+      if (conn._writeBufferTimeout) {
+        clearTimeout(conn._writeBufferTimeout);
+      }
+      
+      // Función para flush del buffer
+      const flushBuffer = () => {
+        if (conn._writeBuffer && conn.stream && !conn.stream.destroyed) {
+          const bufferedData = conn._writeBuffer;
+          conn._writeBuffer = '';
+          conn._writeBufferTimeout = null;
+          
+          // Grabar input de forma asíncrona (no bloqueante)
+          if (getSessionRecorder().isRecording(tabId)) {
+            setImmediate(() => {
+              getSessionRecorder().recordInput(tabId, bufferedData);
+            });
+          }
+          
+          // Escribir al stream
+          conn.stream.write(bufferedData);
+        }
+      };
+      
+      // Flush inmediato para caracteres especiales (Enter, Ctrl+C, etc.)
+      const hasSpecialChar = data.includes('\r') || data.includes('\n') || 
+                             data.includes('\x03') || data.includes('\x04') ||
+                             data.includes('\x1b'); // ESC
+      
+      if (hasSpecialChar || conn._writeBuffer.length >= 8) {
+        // Flush inmediato para comandos o buffers largos
+        flushBuffer();
+      } else {
+        // Para caracteres normales, hacer micro-batching con timeout corto
+        conn._writeBufferTimeout = setTimeout(flushBuffer, 5);
+      }
+    } else {
+      // SSH directo: comportamiento original sin buffering
+      // Grabar input si hay grabación activa
+      if (getSessionRecorder().isRecording(tabId)) {
+        getSessionRecorder().recordInput(tabId, data);
+      }
+      
+      conn.stream.write(data);
+    }
   }
 });
 
@@ -3095,6 +3147,22 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
       if (conn.statsTimeout) {
         clearTimeout(conn.statsTimeout);
         conn.statsTimeout = null;
+      }
+      
+      // Limpiar buffer de escritura pendiente (Wallix)
+      if (conn._writeBufferTimeout) {
+        clearTimeout(conn._writeBufferTimeout);
+        conn._writeBufferTimeout = null;
+      }
+      
+      // Flush buffer pendiente antes de cerrar
+      if (conn._writeBuffer && conn.stream && !conn.stream.destroyed) {
+        try {
+          conn.stream.write(conn._writeBuffer);
+        } catch (e) {
+          // Ignorar errores al escribir durante el cierre
+        }
+        conn._writeBuffer = '';
       }
       
       // Para conexiones Wallix, solo necesitamos cerrar el stream principal
