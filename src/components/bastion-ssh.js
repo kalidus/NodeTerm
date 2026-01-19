@@ -67,11 +67,13 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
       readyTimeout: 10000,
       algorithms: {
         kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-        cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
+        // Priorizar cifrados más rápidos primero
+        cipher: ['aes128-ctr', 'aes128-gcm', 'aes192-ctr', 'aes256-ctr', 'aes256-gcm'],
         serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
         hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
       },
-      hostVerifier: () => true // Aceptar cualquier host key para Wallix
+      hostVerifier: () => true, // Aceptar cualquier host key para Wallix
+      compress: false // Sin compresión para mejor rendimiento
     };
     
     // Si hay password, usarlo. Si no, permitir autenticación interactiva
@@ -88,7 +90,11 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
   // Los comandos de estadísticas van por conexión SSH separada
   
   conn.on('ready', () => {
-    conn.shell({ term: 'xterm-256color' }, (err, stream) => {
+    conn.shell({ 
+      term: 'xterm-256color',
+      // Optimizaciones para reducir latencia en Wallix
+      allowHalfOpen: false
+    }, (err, stream) => {
       if (err) {
         if (onError) onError(err);
         conn.end();
@@ -96,6 +102,16 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
       }
       
       shellStream = stream;
+      
+      // Optimizar el stream para escritura más rápida
+      if (stream.setEncoding) {
+        stream.setEncoding('utf-8');
+      }
+      
+      // Desactivar buffering en el stream (escritura inmediata)
+      if (stream.setNoDelay) {
+        stream.setNoDelay(true);
+      }
       
       if (onShellReady) onShellReady(stream);
       
@@ -150,12 +166,13 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
     keepaliveCountMax: 3,
     algorithms: {
       kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-      cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
+      // Priorizar cifrados más rápidos primero para reducir latencia
+      cipher: ['aes128-ctr', 'aes128-gcm', 'aes192-ctr', 'aes256-ctr', 'aes256-gcm'],
       serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
       hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
     },
     hostVerifier: () => true, // Aceptar cualquier host key para Wallix
-    compress: false,
+    compress: false, // Sin compresión para reducir latencia
     debug: false
   };
   
