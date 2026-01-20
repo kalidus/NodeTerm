@@ -451,6 +451,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     const [dragOverTabIndex, setDragOverTabIndex] = useState(null);
     const [dragStartTimer, setDragStartTimer] = useState(null);
     const terminalRefs = useRef({});
+    const createNewTabRef = useRef(null);
     const pendingCommands = useRef({}); // Cola de comandos pendientes por terminal
     const terminalReadyFlags = useRef({}); // Flags de terminals listos
 
@@ -672,6 +673,20 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             } else {
                 console.error('❌ window.electron no disponible');
             }
+        },
+        addTerminalTab: (terminalType, distroInfo = null) => {
+            let override = terminalType;
+            if (terminalType === 'docker' && distroInfo?.containerName) {
+                override = 'docker-' + distroInfo.containerName;
+            } else if ((terminalType === 'ubuntu' || terminalType === 'wsl') && distroInfo?.name) {
+                override = distroInfo.name.startsWith('wsl-') ? distroInfo.name : 'wsl-' + distroInfo.name;
+            } else if ((terminalType === 'ubuntu' || terminalType === 'wsl') && distroInfo) {
+                const n = distroInfo.name || distroInfo.label;
+                override = n ? 'wsl-' + n : 'wsl';
+            } else if (terminalType === 'ubuntu' || terminalType === 'wsl') {
+                override = 'wsl';
+            }
+            createNewTabRef.current?.(override);
         }
     }), [tabs, selectedTerminalType]); // Agregar tabs y selectedTerminalType como dependencias
 
@@ -1434,6 +1449,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             }
         }, 500);
     };
+    createNewTabRef.current = createNewTab;
 
     // Función para cambiar de pestaña activa
     const switchTab = (tabId) => {

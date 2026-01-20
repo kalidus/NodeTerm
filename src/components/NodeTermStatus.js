@@ -4,7 +4,7 @@ import { getVersionInfo } from '../version-info';
 import SyncManager from '../utils/SyncManager';
 import SecureStorage from '../services/SecureStorage';
 import { aiService } from '../services/AIService';
-import { FaUbuntu, FaLinux, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
+import { FaWindows, FaUbuntu, FaLinux, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian, SiDocker } from 'react-icons/si';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { getActionBarIcon, actionBarIconColors } from '../themes/action-bar-icon-themes';
@@ -16,6 +16,7 @@ const NodeTermStatus = ({
 	themeColors = {}, 
 	horizontal = false, 
 	compact = false,
+	variant, // 'rightColumn' = columna derecha en HomeTab
 	onCreateSSHConnection,
 	onCreateFolder,
 	onOpenFileExplorer,
@@ -374,7 +375,7 @@ const NodeTermStatus = ({
 
 	// 🚀 OPTIMIZACIÓN: Detectar distribuciones WSL DIFERIDO
 	useEffect(() => {
-		if (!horizontal || !compact) return;
+		if ((!horizontal || !compact) && variant !== 'rightColumn') return;
 		const timer = setTimeout(() => {
 			const detectWSLDistributions = async () => {
 				try {
@@ -395,11 +396,11 @@ const NodeTermStatus = ({
 			detectWSLDistributions();
 		}, 900); // Diferir 900ms
 		return () => clearTimeout(timer);
-	}, [horizontal, compact]);
+	}, [horizontal, compact, variant]);
 
 	// 🚀 OPTIMIZACIÓN: Detectar disponibilidad de Cygwin DIFERIDO
 	useEffect(() => {
-		if (!horizontal || !compact) return;
+		if ((!horizontal || !compact) && variant !== 'rightColumn') return;
 		const timer = setTimeout(() => {
 			const detectCygwin = async () => {
 				if (window.electron && window.electron.platform === 'win32') {
@@ -420,11 +421,11 @@ const NodeTermStatus = ({
 			detectCygwin();
 		}, 1000); // Diferir 1000ms
 		return () => clearTimeout(timer);
-	}, [horizontal, compact]);
+	}, [horizontal, compact, variant]);
 
 	// 🚀 OPTIMIZACIÓN: Detectar contenedores Docker DIFERIDO
 	useEffect(() => {
-		if (!horizontal || !compact) return;
+		if ((!horizontal || !compact) && variant !== 'rightColumn') return;
 		let mounted = true;
 		const timer = setTimeout(() => {
 			const detectDocker = async () => {
@@ -444,7 +445,7 @@ const NodeTermStatus = ({
 			detectDocker();
 		}, 1100); // Diferir 1100ms
 		return () => { mounted = false; clearTimeout(timer); };
-	}, [horizontal, compact]);
+	}, [horizontal, compact, variant]);
 
 	// Cerrar menú Docker al hacer clic fuera
 	useEffect(() => {
@@ -659,7 +660,7 @@ const NodeTermStatus = ({
 
 	// Generar lista de terminales disponibles
 	useEffect(() => {
-		if (!horizontal || !compact) return;
+		if ((!horizontal || !compact) && variant !== 'rightColumn') return;
 		const platform = window.electron?.platform || 'unknown';
 		const terminals = [];
 
@@ -745,7 +746,7 @@ const NodeTermStatus = ({
 		}
 
 		setAvailableTerminals(terminals);
-	}, [wslDistributions, cygwinAvailable, horizontal, compact]);
+	}, [wslDistributions, cygwinAvailable, horizontal, compact, variant]);
 
 	const getRelativeTime = (date) => {
 		try {
@@ -921,6 +922,119 @@ const NodeTermStatus = ({
 			window.removeEventListener('resize', throttledAdjustScale);
 		};
 	}, [horizontal, compact, availableTerminals.length, dockerContainers.length, ubuntuDistributions.length]);
+
+	// Layout columna derecha (variant rightColumn) - sustituye barra superior en HomeTab
+	if (variant === 'rightColumn') {
+		const colBg = themeColors.cardBackground || 'rgba(16, 20, 28, 0.95)';
+		const cardStyle = (color) => ({
+			background: themeColors.itemBackground || 'rgba(255,255,255,0.05)',
+			border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+			borderRadius: '10px',
+			padding: '0.75rem',
+			display: 'flex',
+			flexDirection: 'column',
+			alignItems: 'center',
+			justifyContent: 'center',
+			gap: '0.4rem',
+			cursor: 'pointer',
+			transition: 'all 0.2s ease',
+			minHeight: '72px'
+		});
+		const btnStyle = (color) => ({
+			width: '100%',
+			display: 'flex',
+			alignItems: 'center',
+			gap: '0.5rem',
+			padding: '0.5rem 0.75rem',
+			borderRadius: '8px',
+			background: themeColors.itemBackground || 'rgba(255,255,255,0.05)',
+			border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+			color: themeColors.textPrimary || 'rgba(255,255,255,0.9)',
+			cursor: 'pointer',
+			transition: 'all 0.2s ease',
+			fontFamily: homeTabFont,
+			fontSize: homeTabFontSize ? `${homeTabFontSize * 0.7}px` : '0.8rem'
+		});
+		const firstWsl = wslDistributions && wslDistributions[0];
+		const firstDocker = dockerContainers && dockerContainers[0];
+
+		return (
+			<div style={{
+				width: '260px',
+				minWidth: '260px',
+				flexShrink: 0,
+				background: colBg,
+				borderLeft: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}`,
+				padding: '1rem',
+				display: 'flex',
+				flexDirection: 'column',
+				gap: '1.25rem',
+				overflowY: 'auto'
+			}}>
+				{/* ACCIONES RÁPIDAS */}
+				<div>
+					<div style={{ color: themeColors.textSecondary || 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '0.5rem' }}>ACCIONES RÁPIDAS</div>
+					<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+						<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-connection-dialog', { detail: { protocol: 'ssh' } }))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<i className="pi pi-plus" style={{ color: '#22c55e', fontSize: '1rem' }} /><span>Nueva Conexión SSH</span>
+						</button>
+						<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-connection-dialog', { detail: { protocol: 'rdp' } }))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<i className="pi pi-desktop" style={{ color: '#4fc3f7', fontSize: '1rem' }} /><span>Nueva Conexión RDP</span>
+						</button>
+						{onOpenFileExplorer && (
+							<button style={btnStyle()} onClick={onOpenFileExplorer} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+								<i className="pi pi-folder-open" style={{ color: '#4fc3f7', fontSize: '1rem' }} /><span>Explorador de Archivos</span>
+							</button>
+						)}
+						<button style={btnStyle()} onClick={onToggleAIChat} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<i className="pi pi-comments" style={{ color: '#8b5cf6', fontSize: '1rem' }} /><span>Chat IA</span>
+						</button>
+					</div>
+				</div>
+
+				{/* SERVICIOS */}
+				<div>
+					<div style={{ color: themeColors.textSecondary || 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '0.5rem' }}>SERVICIOS</div>
+					<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+						<button style={cardStyle()} onClick={() => { onOpenSettings?.(); try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'rdp' } })); } catch (e) {} }} title={`Guacd: ${guacdState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<i className={guacdState.method === 'docker' ? 'pi pi-box' : 'pi pi-window-maximize'} style={{ color: guacdState.isRunning ? '#22c55e' : '#ef4444', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Guacd</span>
+						</button>
+						<button style={cardStyle()} title={`Ollama: ${ollamaState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<i className="pi pi-bolt" style={{ color: ollamaState.isRunning ? '#22c55e' : '#ef4444', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Ollama</span>
+						</button>
+						<button style={cardStyle()} onClick={() => { onOpenSettings?.(); try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'sync' } })); } catch (e) {} }} title={`Nextcloud: ${syncState.configured ? (syncState.connectivity === 'ok' ? 'Conectado' : 'Configurado') : 'No configurado'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<i className="pi pi-cloud" style={{ color: syncState.configured ? (syncState.connectivity === 'error' ? '#ef4444' : '#60a5fa') : '#9ca3af', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Nextcloud</span>
+						</button>
+						<button style={cardStyle()} onClick={() => { onOpenSettings?.(); try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'security' } })); } catch (e) {} }} title={`Vault: ${!vaultState.configured ? 'No configurado' : (vaultState.unlocked ? 'Desbloqueado' : 'Bloqueado')}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<i className={vaultState.unlocked ? 'pi pi-unlock' : 'pi pi-lock'} style={{ color: !vaultState.configured ? '#9ca3af' : '#f59e0b', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Vault</span>
+						</button>
+					</div>
+				</div>
+
+				{/* TERMINALES LOCALES */}
+				<div>
+					<div style={{ color: themeColors.textSecondary || 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '0.5rem' }}>TERMINALES LOCALES</div>
+					<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+						<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: 'powershell' } }))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<FaWindows style={{ color: '#0078d4', fontSize: '1rem' }} /><span>PowerShell</span>
+						</button>
+						<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: firstWsl?.category === 'ubuntu' ? 'ubuntu' : 'wsl', distroInfo: firstWsl ? { name: firstWsl.name, label: firstWsl.label, category: firstWsl.category, executable: firstWsl.executable, icon: firstWsl.icon } : null } }))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<FaUbuntu style={{ color: '#e95420', fontSize: '1rem' }} /><span>Ubuntu (WSL)</span>
+						</button>
+						<button style={{ ...btnStyle(), ...(!firstDocker ? { opacity: 0.5, cursor: 'not-allowed' } : {}) }} disabled={!firstDocker} onClick={() => firstDocker && window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: 'docker', distroInfo: { containerName: firstDocker.name, containerId: firstDocker.id, shortId: firstDocker.shortId } } }))} onMouseEnter={e => { if (firstDocker) e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }} title={!firstDocker ? 'No hay contenedores Docker' : `Docker: ${firstDocker.name}`}>
+							<SiDocker style={{ color: '#2496ed', fontSize: '1rem' }} /><span>Docker</span>
+						</button>
+					</div>
+				</div>
+
+				{/* Toggles terminal y status bar */}
+				<div style={{ marginTop: 'auto', display: 'flex', gap: '0.35rem', paddingTop: '0.5rem', borderTop: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}` }}>
+					{onToggleTerminalVisibility && <button style={{ ...btnStyle(), padding: '0.35rem', flex: 1 }} onClick={onToggleTerminalVisibility} title="Mostrar/ocultar terminal" onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}><i className="pi pi-window-minimize" style={{ fontSize: '0.9rem' }} /></button>}
+					{onToggleStatusBar && <button style={{ ...btnStyle(), padding: '0.35rem', flex: 1 }} onClick={onToggleStatusBar} title="Mostrar/ocultar barra de estado" onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}><i className="pi pi-bars" style={{ fontSize: '0.9rem' }} /></button>}
+				</div>
+			</div>
+		);
+	}
 
 	// Layout horizontal compacto - LAYOUT 3: BARRA SUPERIOR CENTRADA
 	if (horizontal && compact) {

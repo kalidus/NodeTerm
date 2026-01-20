@@ -649,6 +649,26 @@ const HomeTab = ({
     };
   }, []);
 
+  // Escuchar evento para añadir terminal al TabbedTerminal desde la columna derecha
+  useEffect(() => {
+    const handleAddTerminal = (e) => {
+      const { terminalType, distroInfo } = e?.detail || {};
+      if (!terminalType) return;
+      if (terminalHidden) {
+        setTerminalHidden(false);
+      }
+      setTimeout(() => {
+        try {
+          tabbedTerminalRef.current?.addTerminalTab?.(terminalType, distroInfo);
+        } catch (err) {
+          console.warn('[HomeTab] addTerminalTab:', err);
+        }
+      }, terminalHidden ? 120 : 50);
+    };
+    window.addEventListener('home-tab-add-terminal', handleAddTerminal);
+    return () => window.removeEventListener('home-tab-add-terminal', handleAddTerminal);
+  }, [terminalHidden]);
+
 
 
   // Determinar el tamaño del panel superior
@@ -712,14 +732,17 @@ const HomeTab = ({
       transition: 'opacity 0.1s ease, visibility 0.1s ease'
     }}>
       <div className="home-page-scroll" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {/* Layout principal sin QuickAccessSidebar */}
+        {/* Layout principal: área central + columna derecha */}
         <div style={{
           display: 'flex',
+          flexDirection: 'row',
           flex: 1,
           minHeight: 0,
           overflow: 'hidden',
           height: '100%'
         }}>
+          {/* Área central (Chat IA o Favoritos+Recientes) */}
+          <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {/* Mostrar Chat de IA o contenido normal */}
           {showAIChat ? (
             // Panel de Chat de IA
@@ -747,9 +770,9 @@ const HomeTab = ({
               </div>
             </div>
           ) : (
-            // Contenido normal de la página de inicio
+            // Contenido normal de la página de inicio (Favoritos + Recientes)
             <>
-          {/* Columna central: Layout reorganizado con tarjetas arriba y favoritos abajo */}
+          {/* Columna central: Favoritos y Recientes */}
           <div style={{
             flex: 1,
             padding: '1rem',
@@ -759,74 +782,6 @@ const HomeTab = ({
             overflow: 'hidden',
             height: '100%'
           }}>
-            {/* Cards de Estado de NodeTerm - Acciones/Terminales y Servicios/KPIs */}
-            <div style={{
-              position: 'relative',
-              marginBottom: '1rem',
-              flexShrink: 0
-            }}>
-              <NodeTermStatus
-                sshConnectionsCount={sshConnectionsCount}
-                foldersCount={foldersCount}
-                rdpConnectionsCount={rdpConnectionsCount}
-                themeColors={themeColors}
-                horizontal={true}
-                compact={true}
-                onCreateSSHConnection={onCreateSSHConnection}
-                onCreateFolder={onCreateFolder}
-                onOpenFileExplorer={onOpenFileExplorer}
-                onOpenSettings={onOpenSettings}
-                onToggleTerminalVisibility={handleToggleTerminalVisibility}
-                onToggleAIChat={handleToggleAIChat}
-                onToggleStatusBar={handleToggleStatusBar}
-                showAIChat={showAIChat}
-                statusBarVisible={statusBarVisible}
-              />
-              
-              {/* Overlay de transición para Estado de NodeTerm */}
-              {isTerminalTransitioning && (
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: 'rgba(0, 0, 0, 0.6)',
-                  backdropFilter: 'blur(4px)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '12px',
-                  zIndex: 10,
-                  pointerEvents: 'none'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    color: 'white'
-                  }}>
-                    <div style={{
-                      width: '32px',
-                      height: '32px',
-                      border: '3px solid rgba(255,255,255,0.3)',
-                      borderTop: '3px solid #00BCD4',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite'
-                    }} />
-                    <div style={{
-                      fontSize: '0.9rem',
-                      fontWeight: '500',
-                      textAlign: 'center'
-                    }}>
-                      Actualizando terminal...
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Card única para Favoritos y Recientes */}
             <div style={{
               background: 'transparent',
@@ -1308,6 +1263,21 @@ const HomeTab = ({
           </div>
           </>
           )}
+          </div>
+          <NodeTermStatus
+            variant="rightColumn"
+            sshConnectionsCount={sshConnectionsCount}
+            foldersCount={foldersCount}
+            rdpConnectionsCount={rdpConnectionsCount}
+            themeColors={themeColors}
+            onOpenFileExplorer={onOpenFileExplorer}
+            onOpenSettings={onOpenSettings}
+            onToggleTerminalVisibility={handleToggleTerminalVisibility}
+            onToggleAIChat={handleToggleAIChat}
+            onToggleStatusBar={handleToggleStatusBar}
+            showAIChat={showAIChat}
+            statusBarVisible={statusBarVisible}
+          />
         </div>
       </div>
     </div>
