@@ -8,6 +8,7 @@ import { FaWindows, FaUbuntu, FaLinux, FaRedhat, FaCentos, FaFedora } from 'reac
 import { SiDebian, SiDocker } from 'react-icons/si';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { getActionBarIcon, actionBarIconColors } from '../themes/action-bar-icon-themes';
+import { STORAGE_KEYS } from '../utils/constants';
 
 const NodeTermStatus = ({ 
 	sshConnectionsCount = 0, 
@@ -76,6 +77,17 @@ const NodeTermStatus = ({
 	const barContainerRef = useRef(null);
 	const dockerButtonRef = useRef(null);
 	const ubuntuButtonRef = useRef(null);
+
+	const defaultSections = { acciones: false, servicios: false, terminales: false, toggles: false };
+	const [rightColumnSectionsCollapsed, setRightColumnSectionsCollapsed] = useState(() => {
+		try {
+			const s = localStorage.getItem(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_SECTIONS);
+			if (!s) return defaultSections;
+			return { ...defaultSections, ...JSON.parse(s) };
+		} catch {
+			return defaultSections;
+		}
+	});
 
 	useEffect(() => {
 		// Inicializar managers
@@ -959,6 +971,42 @@ const NodeTermStatus = ({
 		const firstWsl = wslDistributions && wslDistributions[0];
 		const firstDocker = dockerContainers && dockerContainers[0];
 
+		const toggleSection = (k) => {
+			setRightColumnSectionsCollapsed(prev => {
+				const next = { ...prev, [k]: !prev[k] };
+				try { localStorage.setItem(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_SECTIONS, JSON.stringify(next)); } catch (e) {}
+				return next;
+			});
+		};
+		const sc = rightColumnSectionsCollapsed;
+		const SectionHeader = ({ id, label }) => (
+			<button
+				type="button"
+				onClick={() => toggleSection(id)}
+				style={{
+					width: '100%',
+					display: 'flex',
+					alignItems: 'center',
+					gap: '0.35rem',
+					cursor: 'pointer',
+					padding: '0.2rem 0',
+					marginBottom: sc[id] ? 0 : '0.5rem',
+					background: 'none',
+					border: 'none',
+					color: themeColors.textSecondary || 'rgba(255,255,255,0.6)',
+					fontSize: '0.65rem',
+					fontWeight: 700,
+					letterSpacing: '0.08em',
+					textAlign: 'left'
+				}}
+				onMouseEnter={e => { e.currentTarget.style.color = themeColors.textPrimary || 'rgba(255,255,255,0.85)'; }}
+				onMouseLeave={e => { e.currentTarget.style.color = themeColors.textSecondary || 'rgba(255,255,255,0.6)'; }}
+			>
+				<i className={sc[id] ? 'pi pi-chevron-right' : 'pi pi-chevron-down'} style={{ fontSize: '0.6rem', flexShrink: 0 }} />
+				<span>{label}</span>
+			</button>
+		);
+
 		return (
 			<div style={{
 				width: '260px',
@@ -1006,7 +1054,8 @@ const NodeTermStatus = ({
 				)}
 				{/* ACCIONES RÁPIDAS */}
 				<div>
-					<div style={{ color: themeColors.textSecondary || 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '0.5rem' }}>ACCIONES RÁPIDAS</div>
+					<SectionHeader id="acciones" label="ACCIONES RÁPIDAS" />
+					{!sc.acciones && (
 					<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
 						<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-connection-dialog', { detail: { protocol: 'ssh' } }))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
 							<i className="pi pi-plus" style={{ color: '#22c55e', fontSize: '1rem' }} /><span>Nueva Conexión SSH</span>
@@ -1023,11 +1072,13 @@ const NodeTermStatus = ({
 							<i className="pi pi-comments" style={{ color: '#8b5cf6', fontSize: '1rem' }} /><span>Chat IA</span>
 						</button>
 					</div>
+					)}
 				</div>
 
 				{/* SERVICIOS */}
 				<div>
-					<div style={{ color: themeColors.textSecondary || 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '0.5rem' }}>SERVICIOS</div>
+					<SectionHeader id="servicios" label="SERVICIOS" />
+					{!sc.servicios && (
 					<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
 						<button style={cardStyle()} onClick={() => { onOpenSettings?.(); try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'rdp' } })); } catch (e) {} }} title={`Guacd: ${guacdState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
 							<i className={guacdState.method === 'docker' ? 'pi pi-box' : 'pi pi-window-maximize'} style={{ color: guacdState.isRunning ? '#22c55e' : '#ef4444', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Guacd</span>
@@ -1042,11 +1093,13 @@ const NodeTermStatus = ({
 							<i className={vaultState.unlocked ? 'pi pi-unlock' : 'pi pi-lock'} style={{ color: !vaultState.configured ? '#9ca3af' : '#f59e0b', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Vault</span>
 						</button>
 					</div>
+					)}
 				</div>
 
 				{/* TERMINALES LOCALES */}
 				<div>
-					<div style={{ color: themeColors.textSecondary || 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '0.5rem' }}>TERMINALES LOCALES</div>
+					<SectionHeader id="terminales" label="TERMINALES LOCALES" />
+					{!sc.terminales && (
 					<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
 						<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: 'powershell' } }))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
 							<FaWindows style={{ color: '#0078d4', fontSize: '1rem' }} /><span>PowerShell</span>
@@ -1058,12 +1111,18 @@ const NodeTermStatus = ({
 							<SiDocker style={{ color: '#2496ed', fontSize: '1rem' }} /><span>Docker</span>
 						</button>
 					</div>
+					)}
 				</div>
 
 				{/* Toggles terminal y status bar */}
-				<div style={{ marginTop: 'auto', display: 'flex', gap: '0.35rem', paddingTop: '0.5rem', borderTop: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}` }}>
-					{onToggleTerminalVisibility && <button style={{ ...btnStyle(), padding: '0.35rem', flex: 1 }} onClick={onToggleTerminalVisibility} title="Mostrar/ocultar terminal" onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}><i className="pi pi-window-minimize" style={{ fontSize: '0.9rem' }} /></button>}
-					{onToggleStatusBar && <button style={{ ...btnStyle(), padding: '0.35rem', flex: 1 }} onClick={onToggleStatusBar} title="Mostrar/ocultar barra de estado" onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}><i className="pi pi-bars" style={{ fontSize: '0.9rem' }} /></button>}
+				<div style={{ marginTop: 'auto', paddingTop: '0.5rem', borderTop: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}` }}>
+					<SectionHeader id="toggles" label="OPCIONES" />
+					{!sc.toggles && (
+					<div style={{ display: 'flex', gap: '0.35rem' }}>
+						{onToggleTerminalVisibility && <button style={{ ...btnStyle(), padding: '0.35rem', flex: 1 }} onClick={onToggleTerminalVisibility} title="Mostrar/ocultar terminal" onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}><i className="pi pi-window-minimize" style={{ fontSize: '0.9rem' }} /></button>}
+						{onToggleStatusBar && <button style={{ ...btnStyle(), padding: '0.35rem', flex: 1 }} onClick={onToggleStatusBar} title="Mostrar/ocultar barra de estado" onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}><i className="pi pi-bars" style={{ fontSize: '0.9rem' }} /></button>}
+					</div>
+					)}
 				</div>
 			</div>
 		);

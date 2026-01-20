@@ -8,7 +8,8 @@ export const STORAGE_KEYS = {
   DEFAULT_LOCAL_TERMINAL: 'nodeterm_default_local_terminal',
   HOME_TAB_LOCAL_TERMINAL_VISIBLE: 'homeTab_localTerminalVisible',
   HOME_TAB_STATUS_BAR_VISIBLE: 'homeTab_statusBarVisible',
-  HOME_TAB_RIGHT_COLUMN_COLLAPSED: 'homeTab_rightColumnCollapsed'
+  HOME_TAB_RIGHT_COLUMN_COLLAPSED: 'homeTab_rightColumnCollapsed',
+  HOME_TAB_RIGHT_COLUMN_SECTIONS: 'homeTab_rightColumn_sections'
 };
 
 // Constantes de grupos
