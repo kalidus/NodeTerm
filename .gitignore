@@ -4,6 +4,7 @@ node_modules/
 # Producción y Build
 /dist
 /build
+.cold-cache
 
 # Archivos de entorno
 .env
