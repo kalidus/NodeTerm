@@ -77,6 +77,31 @@ const NodeTermStatus = ({
 	const barContainerRef = useRef(null);
 	const dockerButtonRef = useRef(null);
 	const ubuntuButtonRef = useRef(null);
+	
+	// 🚀 CACHÉ PERSISTENTE: Usar sessionStorage para que persista entre montajes/desmontajes
+	const CACHE_KEYS = {
+		WSL: 'nodeterm_terminals_cache_wsl',
+		CYGWIN: 'nodeterm_terminals_cache_cygwin',
+		DOCKER: 'nodeterm_terminals_cache_docker'
+	};
+	
+	// Helpers para manejar la caché en sessionStorage
+	const getCachedData = (key) => {
+		try {
+			const cached = sessionStorage.getItem(key);
+			return cached ? JSON.parse(cached) : null;
+		} catch {
+			return null;
+		}
+	};
+	
+	const setCachedData = (key, data) => {
+		try {
+			sessionStorage.setItem(key, JSON.stringify(data));
+		} catch {
+			// Silenciar errores de almacenamiento
+		}
+	};
 
 	const defaultSections = { acciones: false, servicios: false, terminales: false, toggles: false };
 	const [rightColumnSectionsCollapsed, setRightColumnSectionsCollapsed] = useState(() => {
@@ -386,23 +411,35 @@ const NodeTermStatus = ({
 		};
 	}, []);
 
-	// 🚀 OPTIMIZACIÓN: Detectar distribuciones WSL DIFERIDO
+	// 🚀 OPTIMIZACIÓN CON CACHÉ PERSISTENTE: Detectar distribuciones WSL DIFERIDO
 	useEffect(() => {
 		if ((!horizontal || !compact) && variant !== 'rightColumn') return;
+		
+		// 🚀 Verificar caché en sessionStorage primero
+		const cachedWSL = getCachedData(CACHE_KEYS.WSL);
+		if (cachedWSL !== null) {
+			setWSLDistributions(cachedWSL);
+			return;
+		}
+		
 		const timer = setTimeout(() => {
 			const detectWSLDistributions = async () => {
 				try {
 					if (window.electron && window.electron.ipcRenderer) {
 						const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
 						if (Array.isArray(distributions)) {
+							setCachedData(CACHE_KEYS.WSL, distributions); // 🚀 Guardar en caché persistente
 							setWSLDistributions(distributions);
 						} else {
+							setCachedData(CACHE_KEYS.WSL, []); // 🚀 Guardar en caché persistente
 							setWSLDistributions([]);
 						}
 					} else {
+						setCachedData(CACHE_KEYS.WSL, []); // 🚀 Guardar en caché persistente
 						setWSLDistributions([]);
 					}
 				} catch (error) {
+					setCachedData(CACHE_KEYS.WSL, []); // 🚀 Guardar en caché persistente
 					setWSLDistributions([]);
 				}
 			};
@@ -411,23 +448,35 @@ const NodeTermStatus = ({
 		return () => clearTimeout(timer);
 	}, [horizontal, compact, variant]);
 
-	// 🚀 OPTIMIZACIÓN: Detectar disponibilidad de Cygwin DIFERIDO
+	// 🚀 OPTIMIZACIÓN CON CACHÉ PERSISTENTE: Detectar disponibilidad de Cygwin DIFERIDO
 	useEffect(() => {
 		if ((!horizontal || !compact) && variant !== 'rightColumn') return;
+		
+		// 🚀 Verificar caché en sessionStorage primero
+		const cachedCygwin = getCachedData(CACHE_KEYS.CYGWIN);
+		if (cachedCygwin !== null) {
+			setCygwinAvailable(cachedCygwin);
+			return;
+		}
+		
 		const timer = setTimeout(() => {
 			const detectCygwin = async () => {
 				if (window.electron && window.electron.platform === 'win32') {
 					try {
 						const result = await window.electronAPI.invoke('cygwin:detect');
 						if (result && typeof result.available === 'boolean') {
+							setCachedData(CACHE_KEYS.CYGWIN, result.available); // 🚀 Guardar en caché persistente
 							setCygwinAvailable(result.available);
 						} else {
+							setCachedData(CACHE_KEYS.CYGWIN, false); // 🚀 Guardar en caché persistente
 							setCygwinAvailable(false);
 						}
 					} catch (error) {
+						setCachedData(CACHE_KEYS.CYGWIN, false); // 🚀 Guardar en caché persistente
 						setCygwinAvailable(false);
 					}
 				} else {
+					setCachedData(CACHE_KEYS.CYGWIN, false); // 🚀 Guardar en caché persistente
 					setCygwinAvailable(false);
 				}
 			};
@@ -436,9 +485,17 @@ const NodeTermStatus = ({
 		return () => clearTimeout(timer);
 	}, [horizontal, compact, variant]);
 
-	// 🚀 OPTIMIZACIÓN: Detectar contenedores Docker DIFERIDO
+	// 🚀 OPTIMIZACIÓN CON CACHÉ PERSISTENTE: Detectar contenedores Docker DIFERIDO
 	useEffect(() => {
 		if ((!horizontal || !compact) && variant !== 'rightColumn') return;
+		
+		// 🚀 Verificar caché en sessionStorage primero
+		const cachedDocker = getCachedData(CACHE_KEYS.DOCKER);
+		if (cachedDocker !== null) {
+			setDockerContainers(cachedDocker);
+			return;
+		}
+		
 		let mounted = true;
 		const timer = setTimeout(() => {
 			const detectDocker = async () => {
@@ -446,12 +503,15 @@ const NodeTermStatus = ({
 					if (window.electron && window.electronAPI && mounted) {
 						const result = await window.electronAPI.invoke('docker:list');
 						if (mounted && result && result.success && Array.isArray(result.containers)) {
+							setCachedData(CACHE_KEYS.DOCKER, result.containers); // 🚀 Guardar en caché persistente
 							setDockerContainers(result.containers);
 						} else {
+							setCachedData(CACHE_KEYS.DOCKER, []); // 🚀 Guardar en caché persistente
 							setDockerContainers([]);
 						}
 					}
 				} catch (error) {
+					setCachedData(CACHE_KEYS.DOCKER, []); // 🚀 Guardar en caché persistente
 					setDockerContainers([]);
 				}
 			};
@@ -976,32 +1036,135 @@ const NodeTermStatus = ({
 			});
 		};
 		const sc = rightColumnSectionsCollapsed;
-		const SectionHeader = ({ id, label }) => (
-			<button
-				type="button"
-				onClick={() => toggleSection(id)}
-				style={{
-					width: '100%',
-					display: 'flex',
-					alignItems: 'center',
-					gap: '0.35rem',
-					cursor: 'pointer',
-					padding: '0.2rem 0',
-					marginBottom: sc[id] ? 0 : '0.5rem',
-					background: 'none',
-					border: 'none',
-					color: themeColors.textSecondary || 'rgba(255,255,255,0.6)',
-					fontSize: '0.65rem',
-					fontWeight: 700,
-					letterSpacing: '0.08em',
-					textAlign: 'left'
-				}}
-				onMouseEnter={e => { e.currentTarget.style.color = themeColors.textPrimary || 'rgba(255,255,255,0.85)'; }}
-				onMouseLeave={e => { e.currentTarget.style.color = themeColors.textSecondary || 'rgba(255,255,255,0.6)'; }}
-			>
-				<i className={sc[id] ? 'pi pi-chevron-right' : 'pi pi-chevron-down'} style={{ fontSize: '0.6rem', flexShrink: 0 }} />
-				<span>{label}</span>
-			</button>
+		
+		// 🚀 Función para refrescar manualmente la caché de terminales
+		const refreshTerminalsCache = async () => {
+			// 🚀 Limpiar caché de sessionStorage
+			try {
+				sessionStorage.removeItem(CACHE_KEYS.WSL);
+				sessionStorage.removeItem(CACHE_KEYS.CYGWIN);
+				sessionStorage.removeItem(CACHE_KEYS.DOCKER);
+			} catch {
+				// Silenciar errores
+			}
+			
+			// Recargar WSL
+			try {
+				if (window.electron && window.electron.ipcRenderer) {
+					const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
+					if (Array.isArray(distributions)) {
+						setCachedData(CACHE_KEYS.WSL, distributions);
+						setWSLDistributions(distributions);
+					} else {
+						setCachedData(CACHE_KEYS.WSL, []);
+						setWSLDistributions([]);
+					}
+				}
+			} catch (error) {
+				setCachedData(CACHE_KEYS.WSL, []);
+				setWSLDistributions([]);
+			}
+			
+			// Recargar Cygwin
+			if (window.electron && window.electron.platform === 'win32') {
+				try {
+					const result = await window.electronAPI.invoke('cygwin:detect');
+					if (result && typeof result.available === 'boolean') {
+						setCachedData(CACHE_KEYS.CYGWIN, result.available);
+						setCygwinAvailable(result.available);
+					} else {
+						setCachedData(CACHE_KEYS.CYGWIN, false);
+						setCygwinAvailable(false);
+					}
+				} catch (error) {
+					setCachedData(CACHE_KEYS.CYGWIN, false);
+					setCygwinAvailable(false);
+				}
+			}
+			
+			// Recargar Docker
+			try {
+				if (window.electron && window.electronAPI) {
+					const result = await window.electronAPI.invoke('docker:list');
+					if (result && result.success && Array.isArray(result.containers)) {
+						setCachedData(CACHE_KEYS.DOCKER, result.containers);
+						setDockerContainers(result.containers);
+					} else {
+						setCachedData(CACHE_KEYS.DOCKER, []);
+						setDockerContainers([]);
+					}
+				}
+			} catch (error) {
+				setCachedData(CACHE_KEYS.DOCKER, []);
+				setDockerContainers([]);
+			}
+		};
+		
+		const SectionHeader = ({ id, label, onRefresh }) => (
+			<div style={{ 
+				width: '100%', 
+				display: 'flex', 
+				alignItems: 'center', 
+				justifyContent: 'space-between',
+				marginBottom: sc[id] ? 0 : '0.5rem'
+			}}>
+				<button
+					type="button"
+					onClick={() => toggleSection(id)}
+					style={{
+						flex: 1,
+						display: 'flex',
+						alignItems: 'center',
+						gap: '0.35rem',
+						cursor: 'pointer',
+						padding: '0.2rem 0',
+						background: 'none',
+						border: 'none',
+						color: themeColors.textSecondary || 'rgba(255,255,255,0.6)',
+						fontSize: '0.65rem',
+						fontWeight: 700,
+						letterSpacing: '0.08em',
+						textAlign: 'left'
+					}}
+					onMouseEnter={e => { e.currentTarget.style.color = themeColors.textPrimary || 'rgba(255,255,255,0.85)'; }}
+					onMouseLeave={e => { e.currentTarget.style.color = themeColors.textSecondary || 'rgba(255,255,255,0.6)'; }}
+				>
+					<i className={sc[id] ? 'pi pi-chevron-right' : 'pi pi-chevron-down'} style={{ fontSize: '0.6rem', flexShrink: 0 }} />
+					<span>{label}</span>
+				</button>
+				{onRefresh && !sc[id] && (
+					<button
+						type="button"
+						onClick={(e) => {
+							e.stopPropagation();
+							onRefresh();
+						}}
+						title="Refrescar lista de terminales"
+						style={{
+							background: 'none',
+							border: 'none',
+							cursor: 'pointer',
+							padding: '0.2rem 0.4rem',
+							color: themeColors.textSecondary || 'rgba(255,255,255,0.5)',
+							fontSize: '0.65rem',
+							display: 'flex',
+							alignItems: 'center',
+							borderRadius: '4px',
+							transition: 'all 0.2s ease'
+						}}
+						onMouseEnter={e => { 
+							e.currentTarget.style.color = themeColors.primaryColor || '#4fc3f7';
+							e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+						}}
+						onMouseLeave={e => { 
+							e.currentTarget.style.color = themeColors.textSecondary || 'rgba(255,255,255,0.5)';
+							e.currentTarget.style.background = 'none';
+						}}
+					>
+						<i className="pi pi-refresh" />
+					</button>
+				)}
+			</div>
 		);
 
 		return (
@@ -1074,7 +1237,7 @@ const NodeTermStatus = ({
 
 				{/* TERMINALES LOCALES - después de Acciones rápidas, usa availableTerminals + ubuntuDistributions + dockerContainers */}
 				<div>
-					<SectionHeader id="terminales" label="TERMINALES LOCALES" />
+					<SectionHeader id="terminales" label="TERMINALES LOCALES" onRefresh={refreshTerminalsCache} />
 					{!sc.terminales && (() => {
 						const items = [];
 						// 1) De availableTerminals: PowerShell, WSL, Cygwin, otras distros (Kali etc.)
