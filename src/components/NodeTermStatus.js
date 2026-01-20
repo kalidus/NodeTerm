@@ -968,9 +968,6 @@ const NodeTermStatus = ({
 			fontFamily: homeTabFont,
 			fontSize: homeTabFontSize ? `${homeTabFontSize * 0.7}px` : '0.8rem'
 		});
-		const firstWsl = wslDistributions && wslDistributions[0];
-		const firstDocker = dockerContainers && dockerContainers[0];
-
 		const toggleSection = (k) => {
 			setRightColumnSectionsCollapsed(prev => {
 				const next = { ...prev, [k]: !prev[k] };
@@ -1075,6 +1072,54 @@ const NodeTermStatus = ({
 					)}
 				</div>
 
+				{/* TERMINALES LOCALES - después de Acciones rápidas, usa availableTerminals + ubuntuDistributions + dockerContainers */}
+				<div>
+					<SectionHeader id="terminales" label="TERMINALES LOCALES" />
+					{!sc.terminales && (() => {
+						const items = [];
+						// 1) De availableTerminals: PowerShell, WSL, Cygwin, otras distros (Kali etc.)
+						availableTerminals.forEach(t => {
+							let terminalType = t.value;
+							let distroInfo = t.distroInfo || null;
+							if (t.value === 'linux-terminal') { terminalType = 'linux-terminal'; distroInfo = null; }
+							else if (t.value.startsWith('wsl-') && t.distroInfo) { terminalType = t.distroInfo.category === 'ubuntu' ? 'ubuntu' : 'wsl'; distroInfo = t.distroInfo; }
+							items.push({ label: t.label, terminalType, distroInfo, icon: t.icon, color: t.color || '#4fc3f7', isDocker: false });
+						});
+						// 2) Distribuciones Ubuntu (no están en availableTerminals)
+						(ubuntuDistributions || []).forEach(d => {
+							const raw = d.distroInfo || d;
+							items.push({ label: d.label, terminalType: raw?.category === 'ubuntu' ? 'ubuntu' : 'wsl', distroInfo: raw, icon: 'ubuntu', color: d.color || '#e95420', isDocker: false });
+						});
+						// 3) Contenedores Docker
+						(dockerContainers || []).forEach(c => {
+							items.push({ label: `🐳 ${c.name}`, terminalType: 'docker', distroInfo: { containerName: c.name, containerId: c.id, shortId: c.shortId }, icon: 'docker', color: '#2496ed', isDocker: true });
+						});
+						const dispatch = (terminalType, distroInfo) => window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType, distroInfo } }));
+						const TermIcon = ({ it }) => {
+							if (it.icon === 'docker' || it.isDocker) return <SiDocker style={{ color: it.color, fontSize: '1rem' }} />;
+							if (it.terminalType === 'powershell') return <FaWindows style={{ color: it.color, fontSize: '1rem' }} />;
+							if (it.terminalType === 'ubuntu' || (it.distroInfo && (it.distroInfo.category === 'ubuntu' || (it.distroInfo.name || '').toLowerCase().includes('ubuntu')))) return <FaUbuntu style={{ color: it.color, fontSize: '1rem' }} />;
+							if (it.terminalType === 'wsl') return <FaLinux style={{ color: it.color, fontSize: '1rem' }} />;
+							if (it.terminalType === 'cygwin') return <i className="pi pi-code" style={{ color: it.color, fontSize: '1rem' }} />;
+							if (it.terminalType === 'linux-terminal') return <i className="pi pi-desktop" style={{ color: it.color, fontSize: '1rem' }} />;
+							return <i className={it.icon || 'pi pi-terminal'} style={{ color: it.color, fontSize: '1rem' }} />;
+						};
+						return (
+						<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+							{items.length === 0 ? (
+								<div style={{ fontSize: '0.75rem', color: themeColors.textSecondary, fontStyle: 'italic', padding: '0.25rem 0' }}>No hay terminales detectados</div>
+							) : (
+								items.map((it, idx) => (
+									<button key={idx} style={btnStyle()} onClick={() => dispatch(it.terminalType, it.distroInfo)} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+										<TermIcon it={it} /><span>{it.label}</span>
+									</button>
+								))
+							)}
+						</div>
+						);
+					})()}
+				</div>
+
 				{/* SERVICIOS */}
 				<div>
 					<SectionHeader id="servicios" label="SERVICIOS" />
@@ -1091,24 +1136,6 @@ const NodeTermStatus = ({
 						</button>
 						<button style={cardStyle()} onClick={() => { onOpenSettings?.(); try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'security' } })); } catch (e) {} }} title={`Vault: ${!vaultState.configured ? 'No configurado' : (vaultState.unlocked ? 'Desbloqueado' : 'Bloqueado')}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
 							<i className={vaultState.unlocked ? 'pi pi-unlock' : 'pi pi-lock'} style={{ color: !vaultState.configured ? '#9ca3af' : '#f59e0b', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Vault</span>
-						</button>
-					</div>
-					)}
-				</div>
-
-				{/* TERMINALES LOCALES */}
-				<div>
-					<SectionHeader id="terminales" label="TERMINALES LOCALES" />
-					{!sc.terminales && (
-					<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-						<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: 'powershell' } }))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-							<FaWindows style={{ color: '#0078d4', fontSize: '1rem' }} /><span>PowerShell</span>
-						</button>
-						<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: firstWsl?.category === 'ubuntu' ? 'ubuntu' : 'wsl', distroInfo: firstWsl ? { name: firstWsl.name, label: firstWsl.label, category: firstWsl.category, executable: firstWsl.executable, icon: firstWsl.icon } : null } }))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-							<FaUbuntu style={{ color: '#e95420', fontSize: '1rem' }} /><span>Ubuntu (WSL)</span>
-						</button>
-						<button style={{ ...btnStyle(), ...(!firstDocker ? { opacity: 0.5, cursor: 'not-allowed' } : {}) }} disabled={!firstDocker} onClick={() => firstDocker && window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: 'docker', distroInfo: { containerName: firstDocker.name, containerId: firstDocker.id, shortId: firstDocker.shortId } } }))} onMouseEnter={e => { if (firstDocker) e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }} title={!firstDocker ? 'No hay contenedores Docker' : `Docker: ${firstDocker.name}`}>
-							<SiDocker style={{ color: '#2496ed', fontSize: '1rem' }} /><span>Docker</span>
 						</button>
 					</div>
 					)}
