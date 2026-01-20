@@ -301,6 +301,234 @@
   display: inline-block;
 }
 
+/* === CONNECTION HISTORY (RECIENTES + PINNED) - Mitad de pantalla cada una === */
+.connection-history-root {
+  padding: 0 0 1rem 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 0.5rem;
+}
+
+.connection-history-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.connection-history-filter-tab {
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.connection-history-filter-tab:hover {
+  opacity: 0.9;
+}
+
+.connection-history-filter-tab.active {
+  font-weight: 600;
+}
+
+/* Cada sección (RECIENTES, PINNED) ocupa ~50% de la altura */
+.connection-history-section {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.connection-history-section-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+  flex-shrink: 0;
+}
+
+.connection-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.connection-history-empty {
+  font-size: 0.8rem;
+  font-style: italic;
+  padding: 0.5rem 0;
+}
+
+/* Tarjeta unificada (PINNED y RECIENTES) */
+.connection-card {
+  --cc-scale: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  padding-right: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--cc-border);
+  background: var(--cc-bg);
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 52px;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+.connection-card:hover {
+  background: var(--cc-bg-hover);
+  border-color: rgba(255,255,255,0.16);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+
+.connection-card--active {
+  border-color: #b8e986;
+  box-shadow: 0 0 0 1px rgba(184, 233, 134, 0.3);
+}
+
+.connection-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--cc-accent);
+}
+
+.connection-card__icon i {
+  font-size: 28px;
+}
+
+.connection-card__icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.connection-card__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.connection-card__name-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.connection-card__name {
+  font-family: var(--cc-font, inherit);
+  font-size: var(--cc-name-size);
+  font-weight: 600;
+  color: rgba(255,255,255,0.96);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connection-card__star {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+}
+
+.connection-card__host {
+  font-family: var(--cc-font, inherit);
+  font-size: var(--cc-host-size);
+  color: rgba(255,255,255,0.55);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connection-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.connection-card__chip {
+  font-family: var(--cc-font, inherit);
+  font-size: var(--cc-meta-size);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--cc-chip-bg);
+  border: 1px solid var(--cc-chip-border);
+  color: var(--cc-chip-color);
+}
+
+.connection-card__status {
+  font-family: var(--cc-font, inherit);
+  font-size: var(--cc-meta-size);
+  color: rgba(255,255,255,0.6);
+  white-space: nowrap;
+}
+
+.connection-card__actions {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.connection-card:hover .connection-card__actions {
+  opacity: 1;
+}
+
+.connection-card__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.connection-card__btn:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+}
+
+.connection-card__btn--star {
+  color: rgba(255, 215, 0, 0.9);
+}
+
+.connection-card__btn--star:hover {
+  color: #FFD700;
+  background: rgba(255, 215, 0, 0.15);
+}
+
 
 /* Animaciones para las barras de progreso */
 .p-progressbar .p-progressbar-value {
