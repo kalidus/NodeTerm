@@ -65,7 +65,15 @@ const HomeTab = ({
       return true;
     }
   }); // Estado para mostrar/ocultar status bar
-  
+
+  const [rightColumnCollapsed, setRightColumnCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_COLLAPSED) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
   // Configuración de tipografía de HomeTab
   const [homeTabFont, setHomeTabFont] = useState(() => {
     try {
@@ -614,6 +622,16 @@ const HomeTab = ({
         console.error('Error guardando preferencia de status bar:', e);
       }
       return newValue;
+    });
+  };
+
+  const handleToggleRightColumn = () => {
+    setRightColumnCollapsed(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_COLLAPSED, next.toString());
+      } catch (e) {}
+      return next;
     });
   };
 
@@ -1264,20 +1282,66 @@ const HomeTab = ({
           </>
           )}
           </div>
-          <NodeTermStatus
-            variant="rightColumn"
-            sshConnectionsCount={sshConnectionsCount}
-            foldersCount={foldersCount}
-            rdpConnectionsCount={rdpConnectionsCount}
-            themeColors={themeColors}
-            onOpenFileExplorer={onOpenFileExplorer}
-            onOpenSettings={onOpenSettings}
-            onToggleTerminalVisibility={handleToggleTerminalVisibility}
-            onToggleAIChat={handleToggleAIChat}
-            onToggleStatusBar={handleToggleStatusBar}
-            showAIChat={showAIChat}
-            statusBarVisible={statusBarVisible}
-          />
+          {rightColumnCollapsed ? (
+            <div
+              style={{
+                width: '40px',
+                minWidth: '40px',
+                flexShrink: 0,
+                background: themeColors.cardBackground || 'rgba(16, 20, 28, 0.95)',
+                borderLeft: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}`,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                paddingTop: '1rem'
+              }}
+            >
+              <button
+                onClick={handleToggleRightColumn}
+                title="Expandir columna"
+                style={{
+                  background: themeColors.itemBackground || 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+                  borderRadius: '6px',
+                  width: '28px',
+                  height: '28px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.color = themeColors.textPrimary || 'rgba(255,255,255,0.9)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)';
+                  e.currentTarget.style.color = themeColors.textSecondary || 'rgba(255,255,255,0.7)';
+                }}
+              >
+                <i className="pi pi-chevron-left" style={{ fontSize: '0.9rem' }} />
+              </button>
+            </div>
+          ) : (
+            <NodeTermStatus
+              variant="rightColumn"
+              sshConnectionsCount={sshConnectionsCount}
+              foldersCount={foldersCount}
+              rdpConnectionsCount={rdpConnectionsCount}
+              themeColors={themeColors}
+              onOpenFileExplorer={onOpenFileExplorer}
+              onOpenSettings={onOpenSettings}
+              onToggleTerminalVisibility={handleToggleTerminalVisibility}
+              onToggleAIChat={handleToggleAIChat}
+              onToggleStatusBar={handleToggleStatusBar}
+              onCollapse={handleToggleRightColumn}
+              showAIChat={showAIChat}
+              statusBarVisible={statusBarVisible}
+            />
+          )}
         </div>
       </div>
     </div>

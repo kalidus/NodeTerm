@@ -24,6 +24,7 @@ const NodeTermStatus = ({
 	onToggleTerminalVisibility,
 	onToggleAIChat,
 	onToggleStatusBar,
+	onCollapse, // colapsar columna derecha (solo variant rightColumn)
 	showAIChat = false,
 	statusBarVisible = true
 }) => {
@@ -971,6 +972,38 @@ const NodeTermStatus = ({
 				gap: '1.25rem',
 				overflowY: 'auto'
 			}}>
+				{/* Botón colapsar - arriba del todo */}
+				{onCollapse && (
+					<div style={{ flexShrink: 0, marginBottom: '0.25rem' }}>
+						<button
+							onClick={onCollapse}
+							title="Colapsar columna"
+							style={{
+								width: '100%',
+								height: '32px',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								background: themeColors.itemBackground || 'rgba(255,255,255,0.05)',
+								border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+								borderRadius: '6px',
+								cursor: 'pointer',
+								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+								transition: 'all 0.2s ease'
+							}}
+							onMouseEnter={e => {
+								e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)';
+								e.currentTarget.style.color = themeColors.textPrimary || 'rgba(255,255,255,0.9)';
+							}}
+							onMouseLeave={e => {
+								e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)';
+								e.currentTarget.style.color = themeColors.textSecondary || 'rgba(255,255,255,0.7)';
+							}}
+						>
+							<i className="pi pi-chevron-right" style={{ fontSize: '1rem' }} />
+						</button>
+					</div>
+				)}
 				{/* ACCIONES RÁPIDAS */}
 				<div>
 					<div style={{ color: themeColors.textSecondary || 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '0.5rem' }}>ACCIONES RÁPIDAS</div>
