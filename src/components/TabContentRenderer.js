@@ -77,6 +77,7 @@ const TabContentRenderer = React.memo(({
   if (tab.type === 'home') {
     return (
       <HomeTab
+        isActiveTab={isActiveTab}
         onCreateSSHConnection={onCreateSSHConnection}
         onCreateFolder={() => openFolderDialog(null)}
         onCreateRdpConnection={onOpenRdpConnection}
@@ -244,8 +245,8 @@ const TabContentRenderer = React.memo(({
           await navigator.clipboard.writeText(text);
         }
         
-        // Registrar como password reciente cuando se copia la contraseña
-        if (fieldName === 'Contraseña' && secretType === 'password') {
+        // Registrar como reciente cuando se copia (para cualquier tipo de secreto)
+        if (fieldName === 'Contraseña' || fieldName === 'Seed Phrase' || fieldName === 'Private Key' || fieldName === 'API Key') {
           try {
             recordRecentPassword({
               id: p.id,
@@ -255,11 +256,11 @@ const TabContentRenderer = React.memo(({
               url: p.url,
               group: p.group,
               notes: p.notes,
-              type: p.type || 'web',
-              icon: p.icon || 'pi-globe'
+              type: secretType || p.type || 'password',
+              icon: p.icon || 'pi-key'
             }, 5);
           } catch (e) {
-            console.warn('Error registrando password reciente:', e);
+            console.warn('Error registrando secreto reciente:', e);
           }
         }
         
@@ -743,8 +744,8 @@ const TabContentRenderer = React.memo(({
           await navigator.clipboard.writeText(text);
         }
         
-        // Registrar como password reciente cuando se copia la contraseña
-        if (fieldName === 'Contraseña' && passwordData) {
+        // Registrar como reciente cuando se copia (para cualquier tipo de secreto)
+        if ((fieldName === 'Contraseña' || fieldName === 'Seed Phrase' || fieldName === 'Private Key' || fieldName === 'API Key') && passwordData) {
           try {
             recordRecentPassword({
               id: passwordData.id,
@@ -754,11 +755,11 @@ const TabContentRenderer = React.memo(({
               url: passwordData.url,
               group: passwordData.group,
               notes: passwordData.notes,
-              type: passwordData.type || 'web',
-              icon: passwordData.icon || 'pi-globe'
+              type: passwordData.type || 'password',
+              icon: passwordData.icon || 'pi-key'
             }, 5);
           } catch (e) {
-            console.warn('Error registrando password reciente:', e);
+            console.warn('Error registrando secreto reciente:', e);
           }
         }
         

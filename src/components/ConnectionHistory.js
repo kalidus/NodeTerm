@@ -28,6 +28,14 @@ function defaultPort(type) {
 
 function buildHostLabel(conn) {
 	if (conn.type === 'group') return conn.name || '—';
+	
+	// Para secretos (passwords, wallets, etc.), mostrar URL o username
+	if (['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'].includes(conn.type)) {
+		if (conn.url) return conn.url;
+		if (conn.username) return conn.username;
+		return conn.group || '—';
+	}
+	
 	const user = conn.username || conn.user || '';
 	const host = conn.host || conn.hostname || '';
 	const port = conn.port != null && conn.port !== '' ? Number(conn.port) : null;
@@ -71,7 +79,12 @@ const ConnectionHistory = ({
 		loadConnectionHistory();
 		const off = onUpdate(loadConnectionHistory);
 		return () => off && off();
-	}, []);
+	}, [loadConnectionHistory]);
+
+	// Sincronizar favoritos cuando cambian los recientes (para actualizar lastConnected)
+	useEffect(() => {
+		loadConnectionHistory();
+	}, [recentConnections, loadConnectionHistory]);
 
 	useEffect(() => {
 		const h = () => {
@@ -93,11 +106,21 @@ const ConnectionHistory = ({
 	const loadConnectionHistory = useCallback(() => {
 		try {
 			const favs = getFavorites();
-			setFavoriteConnections(favs.map(c => ({ ...c, isFavorite: true })));
+			// Sincronizar lastConnected de favoritos con recientes
+			const recentById = new Map(recentConnections.map(r => [r.id, r]));
+			const syncedFavs = favs.map(fav => {
+				const recent = recentById.get(fav.id);
+				if (recent && recent.lastConnected) {
+					// Si existe en recientes, usar su lastConnected (más actualizado)
+					return { ...fav, lastConnected: recent.lastConnected, isFavorite: true };
+				}
+				return { ...fav, isFavorite: true };
+			});
+			setFavoriteConnections(syncedFavs);
 		} catch (e) {
 			console.error('Error cargando favoritos:', e);
 		}
-	}, []);
+	}, [recentConnections]);
 
 	const getConnectionTypeIcon = (type) => {
 		switch (type) {
@@ -111,6 +134,11 @@ const ConnectionHistory = ({
 			case 'ftp': return 'pi pi-cloud-upload';
 			case 'scp': return 'pi pi-copy';
 			case 'group': return 'pi pi-th-large';
+			case 'password':
+			case 'secret':
+			case 'crypto_wallet':
+			case 'api_key':
+			case 'secure_note': return 'pi pi-key';
 			default: return 'pi pi-circle';
 		}
 	};
@@ -144,6 +172,11 @@ const ConnectionHistory = ({
 			case 'ftp': return '#4CAF50';
 			case 'scp': return '#9C27B0';
 			case 'group': return '#9c27b0';
+			case 'password':
+			case 'secret': return '#E91E63';
+			case 'crypto_wallet': return '#FF9800';
+			case 'api_key': return '#9C27B0';
+			case 'secure_note': return '#607D8B';
 			default: return '#9E9E9E';
 		}
 	};
@@ -159,6 +192,11 @@ const ConnectionHistory = ({
 			case 'ftp': return 'FTP';
 			case 'scp': return 'SCP';
 			case 'group': return 'GRUPO';
+			case 'password':
+			case 'secret': return 'PASSWORD';
+			case 'crypto_wallet': return 'WALLET';
+			case 'api_key': return 'API KEY';
+			case 'secure_note': return 'NOTE';
 			default: return 'SSH';
 		}
 	};
@@ -168,6 +206,7 @@ const ConnectionHistory = ({
 		if (filter === 'vnc-guacamole') return items.filter(c => c.type === 'vnc-guacamole' || c.type === 'vnc');
 		if (filter === 'rdp-guacamole') return items.filter(c => c.type === 'rdp-guacamole' || c.type === 'rdp');
 		if (filter === 'sftp') return items.filter(c => ['sftp', 'explorer', 'ftp', 'scp'].includes(c.type));
+		if (filter === 'secret') return items.filter(c => ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'].includes(c.type));
 		return items.filter(c => c.type === filter);
 	};
 
@@ -176,9 +215,8 @@ const ConnectionHistory = ({
 		localStorage.setItem('nodeterm_fav_type', key);
 	};
 
-	const favIds = new Set(favoriteConnections.map(f => f.id));
 	const filteredPinned = applyTypeFilter(favoriteConnections, typeFilter);
-	const filteredRecents = applyTypeFilter(recentConnections, typeFilter).filter(r => !favIds.has(r.id));
+	const filteredRecents = applyTypeFilter(recentConnections, typeFilter);
 
 	const activeKey = (c) => {
 		if (c.type === 'group') return `group:${c.id}`;
@@ -280,6 +318,7 @@ const ConnectionHistory = ({
 		{ key: 'rdp-guacamole', label: 'RDP' },
 		{ key: 'vnc-guacamole', label: 'VNC' },
 		{ key: 'sftp', label: 'SFTP' },
+		{ key: 'secret', label: 'Secretos' },
 	];
 
 	return (

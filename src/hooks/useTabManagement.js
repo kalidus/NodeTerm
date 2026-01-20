@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import connectionStore from '../utils/connectionStore';
 
 export const useTabManagement = (toast, {
   cleanupTabDistro: externalCleanupTabDistro,
@@ -119,6 +120,18 @@ export const useTabManagement = (toast, {
       });
       return;
     }
+
+    // Registrar grupo como reciente para que aparezca en la sección Recientes del HomeTab
+    try {
+      connectionStore.recordRecent({
+        type: 'group',
+        id: groupConnection.id,
+        name: groupConnection.name,
+        color: groupConnection.color,
+        sessions: groupConnection.sessions,
+        createdAt: groupConnection.createdAt
+      }, 200);
+    } catch (e) { /* noop */ }
 
     // Verificar si ya existe un grupo con el mismo nombre
     const existingGroup = tabGroups.find(group => group.name === groupConnection.name);
