@@ -349,6 +349,20 @@ const DialogsManager = ({
     };
   }, []);
 
+  // Escuchar evento para abrir directamente SSH o RDP (desde columna derecha HomeTab)
+  useEffect(() => {
+    const handleOpenConnectionDialog = (e) => {
+      const protocol = e?.detail?.protocol;
+      if (protocol === 'ssh') {
+        setShowNewSSHDialog(true);
+      } else if (protocol === 'rdp') {
+        setShowNewRDPDialog(true);
+      }
+    };
+    window.addEventListener('open-connection-dialog', handleOpenConnectionDialog);
+    return () => window.removeEventListener('open-connection-dialog', handleOpenConnectionDialog);
+  }, []);
+
   // Limpiar categoría inicial cuando se cierra el diálogo
   useEffect(() => {
     if (!showProtocolSelectionDialog) {
