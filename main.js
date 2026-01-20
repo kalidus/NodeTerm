@@ -780,52 +780,13 @@ const {
 
 // Handlers de Guacamole movidos a src/main/handlers/guacamole-handlers.js
 
-// Popup de arranque: lista de pasos actualizable vía executeJavaScript (como hacen muchas apps)
-const SPLASH_HTML = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:linear-gradient(180deg,#1b2330 0%,#0e1116 50%);color:#e3f2fd;font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px}
-.h{display:flex;align-items:center;gap:12px}
-.s{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.25);border-top-color:#79b8ff;animation:r 720ms linear infinite}
-@keyframes r{to{transform:rotate(360deg)}}
-.b{font-weight:600;font-size:20px;opacity:.95}
-ul{list-style:none;padding:0;text-align:left;min-width:240px}
-ul li{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:14px;opacity:.9}
-ul li .i{width:18px;text-align:center;font-size:16px;color:#79b8ff}
-ul li.done .i{color:#7ee787}
-</style></head><body>
-<div class="h"><div class="s"></div><span class="b">NodeTerm</span></div>
-<ul>
-<li id="step1"><span class="i">○</span><span class="l">Iniciando NodeTerm...</span></li>
-<li id="step2"><span class="i">○</span><span class="l">Preparando ventana...</span></li>
-<li id="step3"><span class="i">○</span><span class="l">Cargando interfaz...</span></li>
-<li id="step4"><span class="i">○</span><span class="l">Iniciando sesión...</span></li>
-</ul>
-</body></html>`;
+// Popup de arranque: splash.html (loadFile más fiable que data: en Windows/Electron)
+const SPLASH_PATH = path.join(__dirname, 'splash.html');
 
 function createWindow() {
   logTiming('createWindow() iniciado');
-  mainWindow = new BrowserWindow({
-    width: 1600,
-    height: 1000,
-    minWidth: 1400,
-    minHeight: 600,
-    title: 'NodeTerm',
-    frame: false, // Oculta la barra de título nativa para usar una personalizada
-    show: false, // mostrar solo cuando esté lista para evitar parpadeos
-    backgroundColor: '#0e1116', // fondo inicial oscuro consistente con splash
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      webviewTag: true,
-      preload: path.join(__dirname, 'preload.js'),
-      // 🛡️ PROTECCIÓN: Configuración para manejar mejor respuestas largas de IA
-      v8CacheOptions: 'code', // Optimizar caché de código compilado
-      enableBlinkFeatures: 'PreciseMemoryInfo' // Habilitar info de memoria precisa
-    }
-  });
-  logTiming('BrowserWindow creado');
 
-  // 🚀 SPLASH NATIVO: show:true desde el principio (Chromium no pinta bien ventanas ocultas → ready-to-show no dispara)
+  // 🚀 SPLASH PRIMERO: antes que la main para no ver ni un frame en negro
   let splashWindow = null;
   const closeSplash = () => {
     try {
@@ -849,15 +810,37 @@ function createWindow() {
       x, y, width: W, height: H,
       frame: false,
       transparent: false,
-      backgroundColor: '#0e1116',
+      backgroundColor: '#1b2330',
       show: true,
       resizable: false,
+      alwaysOnTop: true,
       webPreferences: { contextIsolation: true, nodeIntegration: false }
     });
-    splashWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(SPLASH_HTML));
+    splashWindow.loadFile(SPLASH_PATH);
+    splashWindow.focus();
   } catch (e) {
     console.warn('[SPLASH] No se pudo crear ventana de splash:', e?.message);
   }
+
+  mainWindow = new BrowserWindow({
+    width: 1600,
+    height: 1000,
+    minWidth: 1400,
+    minHeight: 600,
+    title: 'NodeTerm',
+    frame: false,
+    show: false,
+    backgroundColor: '#0e1116',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      webviewTag: true,
+      preload: path.join(__dirname, 'preload.js'),
+      v8CacheOptions: 'code',
+      enableBlinkFeatures: 'PreciseMemoryInfo'
+    }
+  });
+  logTiming('BrowserWindow creado');
 
   // 🚀 OPTIMIZACIÓN: Precalentamiento de guacd DIFERIDO hasta después de ready-to-show
   // Se ejecutará en initializeServicesAfterShow() para no bloquear el arranque
@@ -903,6 +886,12 @@ function createWindow() {
 
   // Cargar la ventana esperando a que webpack termine
   (async () => {
+    // Esperar a que el splash haya pintado antes de actualizar pasos (evita pantalla en negro)
+    await new Promise((resolve) => {
+      if (!splashWindow || splashWindow.isDestroyed()) { resolve(); return; }
+      splashWindow.webContents.once('did-finish-load', resolve);
+      setTimeout(resolve, 400);
+    });
     setSplashStep(splashWindow, 1, true, 'Iniciando NodeTerm');
     setSplashStep(splashWindow, 2, false, process.env.NODE_ENV === 'development' ? 'Esperando compilación...' : 'Preparando ventana...');
 
@@ -935,8 +924,9 @@ function createWindow() {
   // Mostrar ventana cuando esté lista para mostrar
   mainWindow.once('ready-to-show', () => {
     logTiming('🎯 ready-to-show - VENTANA VISIBLE');
+    if (splashWindow && !splashWindow.isDestroyed()) { try { splashWindow.setAlwaysOnTop(false); } catch (_) {} }
     if (mainWindow) mainWindow.show();
-    closeSplash(); // Quitar splash nativo; la main ya tiene contenido
+    closeSplash();
 
     // 🚀 OPTIMIZACIÓN: Inicializar servicios pesados DESPUÉS de mostrar la ventana
     setTimeout(() => {
