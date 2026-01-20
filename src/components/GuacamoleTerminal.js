@@ -1154,9 +1154,9 @@ const GuacamoleTerminal = forwardRef(({
                 clearTimeout(initialResizeTimerRef.current);
                 initialResizeTimerRef.current = null;
             }
-            // Limpiar resize controller
+            // Limpiar resize controller (ResizeController tiene stop(), no destroy())
             if (resizeControllerRef.current) {
-                resizeControllerRef.current.destroy();
+                try { resizeControllerRef.current.stop(); } catch {}
                 resizeControllerRef.current = null;
             }
             // Desconectar cliente Guacamole
