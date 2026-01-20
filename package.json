@@ -27,6 +27,7 @@
       "binaries/**",
       "main.js",
       "preload.js",
+      "splash.html",
       "system-stats-worker.js",
       "package.json",
       "src/main/**",

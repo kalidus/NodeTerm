@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: linear-gradient(180deg, #1b2330 0%, #0e1116 50%);
+      color: #e3f2fd;
+      font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+    }
+    .h { display: flex; align-items: center; gap: 12px; }
+    .s {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.25);
+      border-top-color: #79b8ff;
+      animation: r 720ms linear infinite;
+    }
+    @keyframes r { to { transform: rotate(360deg); } }
+    .b { font-weight: 600; font-size: 20px; opacity: .95; }
+    ul { list-style: none; padding: 0; text-align: left; min-width: 240px; }
+    ul li { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 14px; opacity: .9; }
+    ul li .i { width: 18px; text-align: center; font-size: 16px; color: #79b8ff; }
+    ul li.done .i { color: #7ee787; }
+  </style>
+</head>
+<body>
+  <div class="h"><div class="s"></div><span class="b">NodeTerm</span></div>
+  <ul>
+    <li id="step1"><span class="i">○</span><span class="l">Iniciando NodeTerm...</span></li>
+    <li id="step2"><span class="i">○</span><span class="l">Preparando ventana...</span></li>
+    <li id="step3"><span class="i">○</span><span class="l">Cargando interfaz...</span></li>
+    <li id="step4"><span class="i">○</span><span class="l">Iniciando sesión...</span></li>
+  </ul>
+</body>
+</html>
