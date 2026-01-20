@@ -12,10 +12,11 @@ import StandaloneStatusBar from './StandaloneStatusBar';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 import { themes } from '../themes';
-import { getRecents, onUpdate, getRecentPasswords } from '../utils/connectionStore';
+import { getRecents, onUpdate, getRecentPasswords, subscribeRecents } from '../utils/connectionStore';
 import { STORAGE_KEYS } from '../utils/constants';
 
 const HomeTab = ({
+  isActiveTab = true,
   onCreateSSHConnection,
   onCreateFolder,
   onOpenFileExplorer,
@@ -190,25 +191,41 @@ const HomeTab = ({
     }
   }, []);
 
-  // Cargar conexiones recientes y passwords recientes
-  useEffect(() => {
-    loadRecentConnections();
-    loadRecentPasswords();
-    const off = onUpdate(() => {
-      loadRecentConnections();
-      loadRecentPasswords();
-    });
-    return () => off && off();
-  }, [loadRecentConnections]);
-
-  const loadRecentPasswords = () => {
+  const loadRecentPasswords = React.useCallback(() => {
     try {
       const passwords = getRecentPasswords(5); // Limitar a 5 passwords recientes
       setRecentPasswords(passwords);
     } catch (error) {
       console.error('Error cargando passwords recientes:', error);
     }
-  };
+  }, []);
+
+  // Cargar conexiones recientes y passwords recientes + escuchar cambios
+  useEffect(() => {
+    loadRecentConnections();
+    loadRecentPasswords();
+    const off1 = onUpdate(() => {
+      loadRecentConnections();
+      loadRecentPasswords();
+    });
+    // Respaldo: suscripción directa que se ejecuta en el mismo tick que recordRecent (por si el evento falla en Electron)
+    const off2 = subscribeRecents(() => {
+      loadRecentConnections();
+      loadRecentPasswords();
+    });
+    return () => {
+      off1 && off1();
+      off2 && off2();
+    };
+  }, [loadRecentConnections, loadRecentPasswords]);
+
+  // Refrescar recientes al volver a la pestaña Inicio (por si se perdió un evento o se conectó desde otro grupo)
+  useEffect(() => {
+    if (isActiveTab) {
+      loadRecentConnections();
+      loadRecentPasswords();
+    }
+  }, [isActiveTab, loadRecentConnections, loadRecentPasswords]);
 
   // Funciones auxiliares para tipos de passwords
   const getPasswordTypeIcon = (type) => {

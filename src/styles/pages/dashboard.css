@@ -380,7 +380,7 @@
   gap: 10px;
   width: 100%;
   padding: 10px 12px;
-  padding-right: 36px;
+  padding-right: 68px;
   border-radius: 8px;
   border: 1px solid var(--cc-border);
   background: var(--cc-bg);
@@ -482,6 +482,8 @@
   font-size: var(--cc-meta-size);
   color: rgba(255,255,255,0.6);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .connection-card__actions {

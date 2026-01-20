@@ -1678,23 +1678,21 @@ const App = () => {
         noteContent: info.noteContent || info.data?.noteContent || ''
       };
       
-      // Registrar como password reciente solo si es tipo password
-      if (secretType === 'password') {
-        try {
-          recordRecentPassword({
-            id: info.key,
-            name: info.label,
-            username: passwordData.username,
-            password: passwordData.password,
-            url: passwordData.url,
-            group: passwordData.group,
-            notes: passwordData.notes,
-            type: secretType,
-            icon: info.data?.icon || 'pi-globe'
-          }, 5);
-        } catch (e) {
-          console.warn('Error registrando password reciente:', e);
-        }
+      // Registrar como reciente para TODOS los tipos de secretos (password, wallet, api_key, etc.)
+      try {
+        recordRecentPassword({
+          id: info.key,
+          name: info.label,
+          username: passwordData.username,
+          password: passwordData.password,
+          url: passwordData.url,
+          group: passwordData.group,
+          notes: passwordData.notes,
+          type: secretType, // password, crypto_wallet, api_key, secure_note
+          icon: info.data?.icon || 'pi-key'
+        }, 5);
+      } catch (e) {
+        console.warn('Error registrando secreto reciente:', e);
       }
       
       // Determinar icono según tipo para la etiqueta de la pestaña

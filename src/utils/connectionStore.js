@@ -12,6 +12,9 @@ const DEFAULT_RECENTS_LIMIT = 200;
 // Single event name for updates (favorites or recents)
 const UPDATED_EVENT = 'connections-updated';
 
+// Suscriptores directos para recents (respaldo al evento, por si falla en algún entorno)
+const recentsListeners = new Set();
+
 function safeParse(json, fallback) {
   try {
     if (!json) return fallback;
@@ -29,6 +32,12 @@ function saveList(key, list) {
   localStorage.setItem(key, JSON.stringify(list));
   // Notify listeners in UI
   window.dispatchEvent(new CustomEvent(UPDATED_EVENT, { detail: { key } }));
+  // Notificación directa para recents (respaldo, misma ejecución síncrona)
+  if (key === RECENTS_KEY) {
+    recentsListeners.forEach((fn) => {
+      try { fn(); } catch (e) { /* noop */ }
+    });
+  }
 }
 
 function normalizePort(type, port) {
@@ -56,10 +65,6 @@ function toSerializable(connection) {
   if (type === 'sftp' || type === 'ftp' || type === 'scp') {
     type = connection.type;
   }
-  const host = connection.hostname || connection.host || '';
-  const username = connection.username || connection.user || '';
-  const port = normalizePort(type, connection.port);
-  const id = connection.id || buildId({ type, host, username, port });
   
   // Si es un grupo, usar estructura especial
   if (type === 'group') {
@@ -74,6 +79,28 @@ function toSerializable(connection) {
     };
   }
   
+  // Si es un secreto (password, wallet, api_key, etc.), usar estructura especial
+  if (['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'].includes(type)) {
+    return {
+      id: connection.id || `secret_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: type,
+      name: connection.name || connection.label || 'Secreto',
+      username: connection.username || '',
+      password: connection.password || '',
+      url: connection.url || '',
+      group: connection.group || '',
+      notes: connection.notes || '',
+      icon: connection.icon || 'pi-key',
+      lastConnected: new Date().toISOString(),
+      lastAccessed: connection.lastAccessed || new Date().toISOString()
+    };
+  }
+  
+  const host = connection.hostname || connection.host || '';
+  const username = connection.username || connection.user || '';
+  const port = normalizePort(type, connection.port);
+  const id = connection.id || buildId({ type, host, username, port });
+  
   return {
     id,
     type,
@@ -81,6 +108,8 @@ function toSerializable(connection) {
     host,
     username,
     port,
+    // Timestamp de última conexión (se actualiza cada vez que se registra como reciente)
+    lastConnected: new Date().toISOString(),
     // Guardar credenciales y configuración importante
     password: connection.password || '',
     clientType: connection.clientType || (type === 'rdp-guacamole' || type === 'vnc-guacamole' ? 'guacamole' : 'native'),
@@ -348,16 +377,25 @@ export function recordRecentPassword(passwordData, limit = 5) {
     url: passwordData.url || '',
     group: passwordData.group || '',
     notes: passwordData.notes || '',
-    type: passwordData.type || 'web', // web, dev, cloud, db, etc.
+    type: passwordData.type || 'password', // password, crypto_wallet, api_key, secure_note, etc.
     lastAccessed: new Date().toISOString(),
-    icon: passwordData.icon || 'pi-globe'
+    lastConnected: new Date().toISOString(), // Para sincronizar con recientes generales
+    icon: passwordData.icon || 'pi-key'
   };
   
+  console.log('🔐 [recordRecentPassword] Registrando secreto:', passwordRecord.type, passwordRecord.name);
+  
+  // Guardar en RECENT_PASSWORDS_KEY (para compatibilidad con código existente)
   const list = loadList(RECENT_PASSWORDS_KEY);
   const filtered = list.filter(item => item.id !== passwordRecord.id);
   const updated = [passwordRecord, ...filtered];
   const trimmed = updated.slice(0, Math.max(1, limit));
   saveList(RECENT_PASSWORDS_KEY, trimmed);
+  
+  // TAMBIÉN guardar en RECENTS_KEY para que aparezca en la lista unificada de recientes
+  console.log('🔐 [recordRecentPassword] Registrando en lista unificada de recientes');
+  recordRecent(passwordRecord, DEFAULT_RECENTS_LIMIT);
+  
   return trimmed;
 }
 
@@ -384,6 +422,12 @@ export function onUpdate(handler) {
   const listener = (e) => handler(e?.detail);
   window.addEventListener(UPDATED_EVENT, listener);
   return () => window.removeEventListener(UPDATED_EVENT, listener);
+}
+
+/** Suscripción directa a cambios en recents (se invoca en el mismo tick que saveList). Respaldo al evento por si falla. */
+export function subscribeRecents(fn) {
+  recentsListeners.add(fn);
+  return () => recentsListeners.delete(fn);
 }
 
 export const helpers = {
