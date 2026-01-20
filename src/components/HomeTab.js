@@ -12,8 +12,7 @@ import StandaloneStatusBar from './StandaloneStatusBar';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 import { themes } from '../themes';
-import { getRecents, toggleFavorite, onUpdate, getRecentPasswords } from '../utils/connectionStore';
-import { iconThemes } from '../themes/icon-themes';
+import { getRecents, onUpdate, getRecentPasswords } from '../utils/connectionStore';
 import { STORAGE_KEYS } from '../utils/constants';
 
 const HomeTab = ({
@@ -51,11 +50,7 @@ const HomeTab = ({
   const [recentConnections, setRecentConnections] = useState([]); // Estado para conexiones recientes
   const [recentPasswords, setRecentPasswords] = useState([]); // Estado para passwords recientes
   const [showAIChat, setShowAIChat] = useState(false); // Estado para mostrar/ocultar chat de IA
-  const [recentContainerHeight, setRecentContainerHeight] = useState(400); // Altura del contenedor de recientes
   const [iconThemeKey, setIconThemeKey] = useState(0); // Para forzar re-render cuando cambia el tema de iconos
-  const recentContainerRef = useRef(null);
-  const recentResizeRafRef = useRef(0);
-  const lastRecentMeasuredHeightRef = useRef(0);
   const [statusBarVisible, setStatusBarVisible] = useState(() => {
     // Cargar preferencia desde localStorage, por defecto visible
     try {
@@ -184,57 +179,15 @@ const HomeTab = ({
     };
   }, []);
 
-  // Calcular número dinámico de recientes basado en la altura disponible
-  const calculateRecentLimit = React.useCallback(() => {
-    if (recentContainerHeight < 100) return 5; // Mínimo muy bajo para espacios pequeños
-    // Altura del header: título (~30px) + línea decorativa (1px) + márgenes (0.5rem + 0.5rem = ~16px) = ~47px
-    // Redondeamos a 50px para dar un poco de margen
-    const headerHeight = 50; 
-    // Altura de cada item: padding vertical (0.2rem * 2 = ~6px) + contenido (~18px) + gap (0.25rem = ~4px) = ~28px
-    const itemHeight = 28; 
-    const availableHeight = recentContainerHeight - headerHeight;
-    // Calcular cuántos items caben, permitiendo que crezca dinámicamente
-    const itemsCount = Math.floor(availableHeight / itemHeight);
-    // Mínimo 5 items, pero permitir que crezca tanto como el espacio lo permita
-    return Math.max(5, itemsCount);
-  }, [recentContainerHeight]);
+  const RECENTS_LIMIT = 50;
 
   const loadRecentConnections = React.useCallback(() => {
     try {
-      const limit = calculateRecentLimit();
-      const recents = getRecents(limit); // Número dinámico de conexiones recientes
+      const recents = getRecents(RECENTS_LIMIT);
       setRecentConnections(recents);
     } catch (error) {
       console.error('Error cargando conexiones recientes:', error);
     }
-  }, [calculateRecentLimit]);
-
-  // Observar cambios en el tamaño del contenedor de recientes
-  useEffect(() => {
-    if (!recentContainerRef.current) return;
-    
-    const resizeObserver = new ResizeObserver(entries => {
-      for (let entry of entries) {
-        const height = entry.contentRect.height;
-        if (height > 0) {
-          // Throttle a 1 update por frame para evitar jank al mover el splitter
-          const rounded = Math.round(height);
-          if (Math.abs(rounded - (lastRecentMeasuredHeightRef.current || 0)) < 3) return;
-          lastRecentMeasuredHeightRef.current = rounded;
-          if (recentResizeRafRef.current) cancelAnimationFrame(recentResizeRafRef.current);
-          recentResizeRafRef.current = requestAnimationFrame(() => {
-            setRecentContainerHeight(rounded);
-          });
-        }
-      }
-    });
-    
-    resizeObserver.observe(recentContainerRef.current);
-    
-    return () => {
-      if (recentResizeRafRef.current) cancelAnimationFrame(recentResizeRafRef.current);
-      resizeObserver.disconnect();
-    };
   }, []);
 
   // Cargar conexiones recientes y passwords recientes
@@ -255,77 +208,6 @@ const HomeTab = ({
     } catch (error) {
       console.error('Error cargando passwords recientes:', error);
     }
-  };
-
-  // Funciones auxiliares para tipos de conexión
-  // Obtener iconos SVG del tema (igual que la Sidebar)
-  const getConnectionTypeIconSVG = (type) => {
-    // Usar el mismo tema de iconos que la Sidebar
-    const iconTheme = localStorage.getItem('iconThemeSidebar') || 'nord';
-    const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['nord'].icons;
-    
-    switch (type) {
-      case 'ssh':
-        return themeIcons.ssh;
-      case 'rdp':
-      case 'rdp-guacamole':
-        return themeIcons.rdp;
-      case 'vnc':
-      case 'vnc-guacamole':
-        return themeIcons.vnc;
-      case 'sftp':
-      case 'explorer':
-        return themeIcons.sftp;
-      case 'ftp':
-        return themeIcons.ftp || themeIcons.sftp;
-      case 'scp':
-        return themeIcons.scp || themeIcons.sftp;
-      default:
-        return null;
-    }
-  };
-
-  const getConnectionTypeIcon = (type) => {
-    switch (type) {
-      case 'ssh':
-        return 'pi pi-server';
-      case 'rdp-guacamole':
-      case 'rdp':
-        return 'pi pi-desktop';
-      case 'vnc-guacamole':
-      case 'vnc':
-        return 'pi pi-desktop';
-      case 'explorer':
-        return 'pi pi-folder-open';
-      case 'group':
-        return 'pi pi-th-large';
-      default:
-        return 'pi pi-circle';
-    }
-  };
-
-  const getConnectionTypeColor = (type) => {
-    switch (type) {
-      case 'ssh':
-        return '#4fc3f7';
-      case 'rdp-guacamole':
-      case 'rdp':
-        return '#ff6b35';
-      case 'vnc-guacamole':
-      case 'vnc':
-        return '#00ff00';
-      case 'explorer':
-        return '#FFB300';
-      case 'group':
-        return '#9c27b0';
-      default:
-        return '#9E9E9E';
-    }
-  };
-
-  const handleToggleFavorite = (connection) => {
-    toggleFavorite(connection);
-    loadRecentConnections(); // Recargar para actualizar el estado
   };
 
   // Funciones auxiliares para tipos de passwords
@@ -800,483 +682,44 @@ const HomeTab = ({
             overflow: 'hidden',
             height: '100%'
           }}>
-            {/* Card única para Favoritos y Recientes */}
+            {/* PINNED + RECIENTES en una sola columna (estilo imagen) */}
             <div style={{
-              background: 'transparent',
-              backdropFilter: 'none',
-              WebkitBackdropFilter: 'none',
-              border: 'none',
-              borderRadius: '0',
-              boxShadow: 'none',
-              padding: '0.5rem 1rem',
-              marginBottom: '0.5rem',
               display: 'flex',
-              flexDirection: 'row',
-              gap: '0.5rem',
-              position: 'relative',
-              alignItems: 'stretch',
+              flexDirection: 'column',
               flex: 1,
               minHeight: 0,
               overflow: 'hidden',
-              height: '100%'
+              position: 'relative',
+              padding: '0.5rem 1rem'
             }}>
-              {/* Sección de Favoritos */}
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                flex: '2.42 1 0',
-                minWidth: 0,
-                position: 'relative',
-                overflow: 'hidden',
-                minHeight: 0,
-                height: '100%'
-              }}>
-                <ConnectionHistory 
-                  onConnectToHistory={handleConnectToHistory}
-                  layout="two-columns"
-                  recentsLimit={10}
-                  activeIds={new Set()}
-                  templateColumns="3fr 2fr"
-                  favoritesColumns={3}
-                  recentsColumns={1}
-                  onEdit={onEditConnection}
-                  sshConnectionsCount={sshConnectionsCount}
-                  foldersCount={foldersCount}
-                  rdpConnectionsCount={rdpConnectionsCount}
-                  themeColors={themeColors}
-                />
-                
-                {/* Overlay de transición para favoritos */}
-                {isTerminalTransitioning && (
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0, 0, 0, 0.6)',
-                    backdropFilter: 'blur(4px)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '12px',
-                    zIndex: 10
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '1rem',
-                      color: 'white'
-                    }}>
-                      <div style={{
-                        width: '32px',
-                        height: '32px',
-                        border: '3px solid rgba(255,255,255,0.3)',
-                        borderTop: '3px solid #00BCD4',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite'
-                      }} />
-                      <div style={{
-                        fontSize: '0.9rem',
-                        fontWeight: '500',
-                        textAlign: 'center'
-                      }}>
-                        Actualizando terminal...
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Espaciador entre secciones */}
-              <div style={{
-                width: '0.75rem',
-                flexShrink: 0
-              }} />
-
-              {/* Sección de Conexiones Recientes */}
-              <div 
-                ref={recentContainerRef}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  flex: '1 1 0',
-                  minWidth: 0,
-                  minHeight: 0,
-                  overflow: 'hidden',
-                  height: '100%'
-                }}>
+              <ConnectionHistory
+                onConnectToHistory={handleConnectToHistory}
+                recentConnections={recentConnections}
+                activeIds={new Set()}
+                onEdit={onEditConnection}
+                themeColors={themeColors}
+              />
+              {isTerminalTransitioning && (
                 <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.6)',
+                  backdropFilter: 'blur(4px)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.625rem',
-                  marginBottom: '0.875rem',
-                  flexShrink: 0,
-                  padding: '0.5rem 0.75rem',
-                  background: 'linear-gradient(135deg, rgba(79, 195, 247, 0.06) 0%, rgba(79, 195, 247, 0.03) 100%)',
-                  borderRadius: '10px',
-                  border: '1px solid rgba(79, 195, 247, 0.12)',
-                  backdropFilter: 'blur(4px)',
-                  WebkitBackdropFilter: 'blur(4px)',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
+                  justifyContent: 'center',
+                  borderRadius: '12px',
+                  zIndex: 10
                 }}>
-                  {/* Icono con efecto visual mejorado */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, rgba(79, 195, 247, 0.2) 0%, rgba(79, 195, 247, 0.15) 100%)',
-                    border: '1px solid rgba(79, 195, 247, 0.3)',
-                    boxShadow: '0 2px 6px rgba(79, 195, 247, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-                    position: 'relative',
-                    transition: 'all 0.2s ease'
-                  }}>
-                    <i className="pi pi-history" style={{ 
-                      color: '#4fc3f7', 
-                      fontSize: '0.95rem',
-                      filter: 'drop-shadow(0 0 2px rgba(79, 195, 247, 0.4))',
-                      opacity: 1
-                    }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', color: 'white' }}>
+                    <div style={{ width: 32, height: 32, border: '3px solid rgba(255,255,255,0.3)', borderTop: '3px solid #00BCD4', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>Actualizando terminal...</div>
                   </div>
-                  
-                  {/* Título con mejor tipografía */}
-                  <h3 style={{ 
-                    margin: 0, 
-                    color: themeColors.textPrimary, 
-                    fontSize: homeTabFontSize ? `${homeTabFontSize * 0.95}px` : '0.95rem',
-                    fontFamily: homeTabFont,
-                    fontWeight: '600',
-                    letterSpacing: '0.02em',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.15)',
-                    flex: 1
-                  }}>
-                    Sesiones Recientes
-                  </h3>
                 </div>
-                {/* Línea decorativa con gradiente azul mejorada */}
-                <div style={{
-                  height: '1.5px',
-                  background: `linear-gradient(90deg, 
-                    transparent 0%, 
-                    rgba(79, 195, 247, 0.2) 20%, 
-                    rgba(79, 195, 247, 0.3) 50%, 
-                    rgba(79, 195, 247, 0.2) 80%, 
-                    transparent 100%)`,
-                  borderRadius: '2px',
-                  marginBottom: '0.75rem',
-                  flexShrink: 0,
-                  opacity: 0.7,
-                  boxShadow: '0 1px 2px rgba(79, 195, 247, 0.1)'
-                }} />
-                {/* Lista de conexiones recientes */}
-                <div 
-                  className="home-hide-scrollbar"
-                  style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    gap: '0.35rem', 
-                    overflowY: 'auto', 
-                    flex: 1, 
-                    height: '100%', 
-                    minHeight: 0,
-                    paddingRight: '4px'
-                  }}>
-                  {recentConnections.length > 0 ? (
-                    recentConnections.map(recentConn => {
-                      const typeColor = getConnectionTypeColor(recentConn.type);
-                      const protocolLabel =
-                        recentConn.type === 'rdp-guacamole' || recentConn.type === 'rdp' ? 'RDP' :
-                        recentConn.type === 'vnc-guacamole' || recentConn.type === 'vnc' ? 'VNC' :
-                        recentConn.type === 'explorer' ? 'SFTP' :
-                        recentConn.type === 'sftp' ? 'SFTP' :
-                        recentConn.type === 'ftp' ? 'FTP' :
-                        recentConn.type === 'scp' ? 'SCP' :
-                        recentConn.type === 'group' ? 'GRUPO' : 'SSH';
-                      const hostLabel = recentConn.host || recentConn.hostname || '—';
-                      const r = parseInt(typeColor.slice(1,3), 16);
-                      const g = parseInt(typeColor.slice(3,5), 16);
-                      const b = parseInt(typeColor.slice(5,7), 16);
-                      
-                      return (
-                      <div key={recentConn.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        color: themeColors.textSecondary,
-                        fontFamily: homeTabFont,
-                        background: themeColors.itemBackground,
-                        padding: '5px 6px',
-                        paddingRight: '45px',
-                        borderRadius: '6px',
-                        border: `1px solid ${themeColors.borderColor}`,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-                        transform: 'translateX(0)',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-                        minHeight: '42px',
-                        position: 'relative'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = themeColors.hoverBackground;
-                        e.currentTarget.style.border = `1px solid ${themeColors.borderColor}`;
-                        e.currentTarget.style.transform = 'translateX(3px)';
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.18)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = themeColors.itemBackground;
-                        e.currentTarget.style.border = `1px solid ${themeColors.borderColor}`;
-                        e.currentTarget.style.transform = 'translateX(0)';
-                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12)';
-                      }}
-                      >
-                        {/* Icono sin recuadro */}
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 'auto',
-                          height: 'auto',
-                          flexShrink: 0
-                        }}>
-                          {(() => {
-                            const iconSVG = getConnectionTypeIconSVG(recentConn.type);
-                            if (iconSVG) {
-                              return React.cloneElement(iconSVG, {
-                                width: 28,
-                                height: 28,
-                                style: {
-                                  ...iconSVG.props?.style,
-                                  width: '28px',
-                                  height: '28px',
-                                  flexShrink: 0
-                                }
-                              });
-                            }
-                            return (
-                              <i className={getConnectionTypeIcon(recentConn.type)} style={{
-                                color: typeColor,
-                                fontSize: '28px'
-                              }} />
-                            );
-                          })()}
-                        </div>
-                        
-                        {/* Contenido: Nombre + Host */}
-                        <div 
-                          style={{ 
-                            display: 'flex', 
-                            flexDirection: 'column', 
-                            gap: '1px',
-                            flex: 1, 
-                            minWidth: 0,
-                            paddingRight: '45px',
-                            justifyContent: 'center',
-                            cursor: 'pointer'
-                          }}
-                          onClick={() => handleConnectToHistory(recentConn)}
-                        >
-                          <div style={{ 
-                            color: 'rgba(255,255,255,0.96)', 
-                            fontWeight: '600',
-                            fontSize: homeTabFontSize ? `${homeTabFontSize * 0.8}px` : '10px',
-                            fontFamily: homeTabFont,
-                            overflow: 'hidden', 
-                            textOverflow: 'ellipsis', 
-                            whiteSpace: 'nowrap',
-                            lineHeight: '1.2'
-                          }}>
-                            {recentConn.name}
-                          </div>
-                          <div style={{ 
-                            color: 'rgba(255,255,255,0.55)', 
-                            fontWeight: '500',
-                            fontSize: homeTabFontSize ? `${homeTabFontSize * 0.68}px` : '8.5px',
-                            fontFamily: homeTabFont,
-                            overflow: 'hidden', 
-                            textOverflow: 'ellipsis', 
-                            whiteSpace: 'nowrap',
-                            lineHeight: '1.2'
-                          }}>
-                            {hostLabel}
-                          </div>
-                        </div>
-
-                        {/* Chip del protocolo en esquina superior derecha */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '4px',
-                          right: '4px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          height: '13px',
-                          padding: '0 4px',
-                          borderRadius: '3px',
-                          fontSize: homeTabFontSize ? `${homeTabFontSize * 0.56}px` : '7px',
-                          fontFamily: homeTabFont,
-                          fontWeight: '700',
-                          letterSpacing: '0.2px',
-                          textTransform: 'uppercase',
-                          flexShrink: 0,
-                          background: `rgba(${r}, ${g}, ${b}, 0.18)`,
-                          border: `1px solid rgba(${r}, ${g}, ${b}, 0.45)`,
-                          color: typeColor,
-                          backdropFilter: 'blur(8px)',
-                          zIndex: 2
-                        }}>
-                          {protocolLabel}
-                        </div>
-
-                        {/* Botones de acción a la derecha del todo */}
-                        <div style={{ 
-                          position: 'absolute',
-                          right: '6px',
-                          bottom: '5px',
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '2px',
-                          zIndex: 3
-                        }} onClick={(e) => e.stopPropagation()}>
-                          {/* Botón de favorito */}
-                          <button
-                            title={recentConn.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-                            style={{
-                              width: '15px',
-                              height: '15px',
-                              borderRadius: '3px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'rgba(255, 215, 0, 0.85)',
-                              background: 'rgba(255, 215, 0, 0.08)',
-                              border: '1px solid rgba(255, 215, 0, 0.2)',
-                              transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-                              cursor: 'pointer',
-                              padding: 0,
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
-                            }}
-                            onMouseEnter={(el) => { 
-                              const e = el.currentTarget; 
-                              e.style.background = 'rgba(255, 215, 0, 0.18)'; 
-                              e.style.borderColor = 'rgba(255, 215, 0, 0.4)';
-                              e.style.color = '#FFD700';
-                              e.style.transform = 'scale(1.06)';
-                              e.style.boxShadow = '0 2px 3px rgba(255, 215, 0, 0.12)';
-                            }}
-                            onMouseLeave={(el) => { 
-                              const e = el.currentTarget; 
-                              e.style.background = 'rgba(255, 215, 0, 0.08)'; 
-                              e.style.borderColor = 'rgba(255, 215, 0, 0.2)';
-                              e.style.color = 'rgba(255, 215, 0, 0.85)';
-                              e.style.transform = 'scale(1)';
-                              e.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)';
-                            }}
-                            onClick={() => handleToggleFavorite(recentConn)}
-                          >
-                            <i className={recentConn.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '7px' }} />
-                          </button>
-
-                          {/* Botón de editar */}
-                          {onEditConnection && (
-                            <button
-                              title="Editar"
-                              style={{
-                                width: '15px',
-                                height: '15px',
-                                borderRadius: '3px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'rgba(255,255,255,0.7)',
-                                background: 'rgba(255,255,255,0.05)',
-                                border: '1px solid rgba(255,255,255,0.12)',
-                                transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-                                cursor: 'pointer',
-                                padding: 0,
-                                boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
-                              }}
-                              onMouseEnter={(el) => { 
-                                const e = el.currentTarget; 
-                                e.style.background = 'rgba(255,255,255,0.12)'; 
-                                e.style.borderColor = 'rgba(255,255,255,0.25)';
-                                e.style.color = 'rgba(255,255,255,0.95)';
-                                e.style.transform = 'scale(1.06)';
-                                e.style.boxShadow = '0 2px 3px rgba(0,0,0,0.12)';
-                              }}
-                              onMouseLeave={(el) => { 
-                                const e = el.currentTarget; 
-                                e.style.background = 'rgba(255,255,255,0.05)'; 
-                                e.style.borderColor = 'rgba(255,255,255,0.12)';
-                                e.style.color = 'rgba(255,255,255,0.7)';
-                                e.style.transform = 'scale(1)';
-                                e.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)';
-                              }}
-                              onClick={() => onEditConnection(recentConn)}
-                            >
-                              <i className="pi pi-pencil" style={{ fontSize: '7px' }} />
-                            </button>
-                          )}
-
-                          {/* Botón de conectar */}
-                          <button
-                            title="Conectar"
-                            style={{
-                              width: '15px',
-                              height: '15px',
-                              borderRadius: '3px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: typeColor,
-                              background: `rgba(${r}, ${g}, ${b}, 0.1)`,
-                              border: `1px solid rgba(${r}, ${g}, ${b}, 0.3)`,
-                              transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-                              cursor: 'pointer',
-                              padding: 0,
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
-                            }}
-                            onMouseEnter={(el) => { 
-                              const e = el.currentTarget; 
-                              e.style.background = `rgba(${r}, ${g}, ${b}, 0.2)`; 
-                              e.style.borderColor = `rgba(${r}, ${g}, ${b}, 0.5)`;
-                              e.style.transform = 'scale(1.06)';
-                              e.style.boxShadow = `0 2px 3px rgba(${r}, ${g}, ${b}, 0.15)`;
-                            }}
-                            onMouseLeave={(el) => { 
-                              const e = el.currentTarget; 
-                              e.style.background = `rgba(${r}, ${g}, ${b}, 0.1)`; 
-                              e.style.borderColor = `rgba(${r}, ${g}, ${b}, 0.3)`;
-                              e.style.transform = 'scale(1)';
-                              e.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)';
-                            }}
-                            onClick={() => handleConnectToHistory(recentConn)}
-                          >
-                            <i className="pi pi-external-link" style={{ fontSize: '7px' }} />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                    })
-                  ) : (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '0.75rem',
-                      color: themeColors.textSecondary,
-                      fontSize: homeTabFontSize ? `${homeTabFontSize * 0.75}px` : '0.75rem',
-                      fontFamily: homeTabFont,
-                      fontStyle: 'italic'
-                    }}>
-                      No hay sesiones recientes
-                    </div>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
           </div>
           </>
