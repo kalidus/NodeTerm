@@ -142,7 +142,7 @@ if (process.env.NODE_ENV === 'development') {
   } catch (_) {}
 }
 
-const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor, screen } = require('electron');
 logTiming('Electron cargado');
 const path = require('path');
 const url = require('url');
@@ -780,6 +780,28 @@ const {
 
 // Handlers de Guacamole movidos a src/main/handlers/guacamole-handlers.js
 
+// Popup de arranque: lista de pasos actualizable vía executeJavaScript (como hacen muchas apps)
+const SPLASH_HTML = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:linear-gradient(180deg,#1b2330 0%,#0e1116 50%);color:#e3f2fd;font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px}
+.h{display:flex;align-items:center;gap:12px}
+.s{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.25);border-top-color:#79b8ff;animation:r 720ms linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}
+.b{font-weight:600;font-size:20px;opacity:.95}
+ul{list-style:none;padding:0;text-align:left;min-width:240px}
+ul li{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:14px;opacity:.9}
+ul li .i{width:18px;text-align:center;font-size:16px;color:#79b8ff}
+ul li.done .i{color:#7ee787}
+</style></head><body>
+<div class="h"><div class="s"></div><span class="b">NodeTerm</span></div>
+<ul>
+<li id="step1"><span class="i">○</span><span class="l">Iniciando NodeTerm...</span></li>
+<li id="step2"><span class="i">○</span><span class="l">Preparando ventana...</span></li>
+<li id="step3"><span class="i">○</span><span class="l">Cargando interfaz...</span></li>
+<li id="step4"><span class="i">○</span><span class="l">Iniciando sesión...</span></li>
+</ul>
+</body></html>`;
+
 function createWindow() {
   logTiming('createWindow() iniciado');
   mainWindow = new BrowserWindow({
@@ -802,6 +824,40 @@ function createWindow() {
     }
   });
   logTiming('BrowserWindow creado');
+
+  // 🚀 SPLASH NATIVO: show:true desde el principio (Chromium no pinta bien ventanas ocultas → ready-to-show no dispara)
+  let splashWindow = null;
+  const closeSplash = () => {
+    try {
+      if (splashWindow && !splashWindow.isDestroyed()) { splashWindow.close(); splashWindow = null; }
+    } catch (_) {}
+  };
+  const setSplashStep = (sw, stepIndex, done, text) => {
+    if (!sw || sw.isDestroyed()) return;
+    const icon = done ? '✓' : '○';
+    sw.webContents.executeJavaScript(
+      `(function(){ var e=document.getElementById('step${stepIndex}'); if(e){ e.innerHTML='<span class="i">${icon}</span><span class="l">'+${JSON.stringify(text)}+'</span>'; e.classList.toggle('done',${!!done}); } })();`
+    ).catch(() => {});
+  };
+  try {
+    const d = screen.getPrimaryDisplay();
+    const r = d.workArea || d.bounds;
+    const W = 420, H = 320;
+    const x = Math.round(r.x + (r.width - W) / 2);
+    const y = Math.round(r.y + (r.height - H) / 2);
+    splashWindow = new BrowserWindow({
+      x, y, width: W, height: H,
+      frame: false,
+      transparent: false,
+      backgroundColor: '#0e1116',
+      show: true,
+      resizable: false,
+      webPreferences: { contextIsolation: true, nodeIntegration: false }
+    });
+    splashWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(SPLASH_HTML));
+  } catch (e) {
+    console.warn('[SPLASH] No se pudo crear ventana de splash:', e?.message);
+  }
 
   // 🚀 OPTIMIZACIÓN: Precalentamiento de guacd DIFERIDO hasta después de ready-to-show
   // Se ejecutará en initializeServicesAfterShow() para no bloquear el arranque
@@ -847,8 +903,14 @@ function createWindow() {
 
   // Cargar la ventana esperando a que webpack termine
   (async () => {
+    setSplashStep(splashWindow, 1, true, 'Iniciando NodeTerm');
+    setSplashStep(splashWindow, 2, false, process.env.NODE_ENV === 'development' ? 'Esperando compilación...' : 'Preparando ventana...');
+
     await waitForWebpackBuild();
-    
+
+    setSplashStep(splashWindow, 2, true, 'Preparando ventana');
+    setSplashStep(splashWindow, 3, false, 'Cargando interfaz...');
+
     const urlToLoad = url.format({
       pathname: path.join(__dirname, 'dist', 'index.html'),
       protocol: 'file:',
@@ -861,7 +923,7 @@ function createWindow() {
       logTiming('loadURL completado');
     } catch (error) {
       console.error('❌ Error cargando ventana:', error.message);
-      // Si falla, intentar recargar después de un momento
+      closeSplash();
       setTimeout(() => {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.reload();
@@ -874,12 +936,12 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     logTiming('🎯 ready-to-show - VENTANA VISIBLE');
     if (mainWindow) mainWindow.show();
-    
+    closeSplash(); // Quitar splash nativo; la main ya tiene contenido
+
     // 🚀 OPTIMIZACIÓN: Inicializar servicios pesados DESPUÉS de mostrar la ventana
-    // Esto asegura que la UI aparezca lo más rápido posible
     setTimeout(() => {
       initializeServicesAfterShow();
-    }, 100); // Pequeño delay para asegurar que la UI se pinte primero
+    }, 100);
   });
   
   // 🚀 OPTIMIZACIÓN: Función para inicializar servicios pesados después del arranque
@@ -929,6 +991,7 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+    closeSplash();
   });
 
   // 🛡️ PROTECCIÓN: Capturar errores de renderer para evitar crashes silenciosos
@@ -980,6 +1043,8 @@ function createWindow() {
   // Esto permite que la ventana se muestre más rápido
   mainWindow.webContents.once('did-finish-load', () => {
     logTiming('did-finish-load - HTML/JS cargado');
+    setSplashStep(splashWindow, 3, true, 'Cargando interfaz');
+    setSplashStep(splashWindow, 4, true, 'Listo');
     // Diferir configuración de servicios para no bloquear el render inicial
     setImmediate(() => {
       try {

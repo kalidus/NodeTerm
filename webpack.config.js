@@ -8,6 +8,11 @@ module.exports = {
   mode: 'development',
   entry: './src/index.js',
   target: 'electron-renderer',
+  // 🚀 OPTIMIZACIÓN: Cache en disco para que la 2.ª y siguientes compilaciones sean mucho más rápidas
+  cache: {
+    type: 'filesystem',
+    buildDependencies: { config: [__filename] }
+  },
   node: {
     __dirname: false,
     __filename: false
@@ -203,6 +208,6 @@ module.exports = {
     'utf-8-validate': 'commonjs utf-8-validate',
     'bufferutil': 'commonjs bufferutil'
   },
-  // Desactivar source maps en producción para reducir bundle size (~30-50% menos)
-  devtool: process.env.NODE_ENV === 'production' ? false : 'source-map'
+  // Desactivar source maps en producción. En dev: eval-cheap-module evita .map en disco → menos I/O en la 1.ª carga
+  devtool: process.env.NODE_ENV === 'production' ? false : 'eval-cheap-module-source-map'
 }; 
