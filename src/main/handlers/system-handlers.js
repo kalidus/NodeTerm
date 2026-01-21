@@ -39,7 +39,8 @@ function hashFileSync(path) {
 }
 
 /**
- * Registra todos los handlers del sistema
+ * 🚀 CRÍTICO: Registra handlers del sistema que son necesarios para la UI inicial
+ * Solo incluye Clipboard y Dialog que son esenciales para el funcionamiento básico
  */
 function registerSystemHandlers() {
   
@@ -73,7 +74,21 @@ function registerSystemHandlers() {
     };
     return await dialog.showOpenDialog(win, safeOptions);
   });
+}
 
+/**
+ * 🚀 REGISTRO INMEDIATO, EJECUCIÓN ON-DEMAND
+ * 
+ * Registra handlers de monitoreo del sistema (Import, File drop, System memory, GPU)
+ * 
+ * IMPORTANTE:
+ * - El REGISTRO es inmediato y ligero (solo definir IPC handlers)
+ * - La EJECUCIÓN es on-demand y solo ocurre cuando el frontend los llama
+ * - La detección de GPU, aunque se registra aquí, solo se ejecuta cuando se solicita
+ * - Esto evita errores "No handler registered" sin ralentizar el arranque
+ */
+function registerSystemMonitoringHandlers() {
+  
   // === IMPORT HANDLERS ===
   
   // Handler para obtener información de archivo
@@ -672,5 +687,6 @@ function registerSystemHandlers() {
 }
 
 module.exports = {
-  registerSystemHandlers
+  registerSystemHandlers,
+  registerSystemMonitoringHandlers
 };
