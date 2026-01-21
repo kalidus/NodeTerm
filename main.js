@@ -223,37 +223,8 @@ function ensureRecordingHandlersRegistered() {
   registerRecordingHandlers();
 }
 
-// Helper para obtener directorio de grabaciones (misma lógica que recording-handlers.js)
-async function getRecordingsDirectory() {
-  try {
-    const fsPromises = require('fs').promises;
-    const userDataPath = app.getPath('userData');
-    const configPath = path.join(userDataPath, 'recording-config.json');
-    
-    try {
-      const configContent = await fsPromises.readFile(configPath, 'utf-8');
-      const config = JSON.parse(configContent);
-      
-      if (config.customPath && config.customPath.trim()) {
-        try {
-          await fsPromises.access(config.customPath);
-          return config.customPath;
-        } catch {
-          console.warn(`⚠️ Ruta personalizada de grabaciones no existe: ${config.customPath}, usando ruta por defecto`);
-        }
-      }
-    } catch {
-      // Config no existe, usar ruta por defecto
-    }
-    
-    const defaultPath = path.join(userDataPath, 'recordings');
-    return defaultPath;
-  } catch (error) {
-    console.error('Error obteniendo directorio de grabaciones:', error);
-    const userDataPath = app.getPath('userData');
-    return path.join(userDataPath, 'recordings');
-  }
-}
+// Helper para obtener directorio de grabaciones (ahora en módulo separado)
+const { getRecordingsDirectory } = require('./src/main/utils/recording-utils');
 // 🚀 OPTIMIZACIÓN: Servicios AnythingLLM y OpenWebUI ahora usan lazy loading
 // Ver getAnythingLLMService() y getOpenWebUIService() arriba
 
@@ -325,72 +296,12 @@ let guacamoleInitialized = false;
 // Logs detallados (debug) para Guacamole/guacd
 const DEBUG_GUACAMOLE = process.env.NODETERM_DEBUG_GUACAMOLE === '1';
 
-// Sistema de throttling para conexiones SSH
-const connectionThrottle = {
-  pending: new Map(), // Conexiones en proceso por cacheKey
-  lastAttempt: new Map(), // Último intento por cacheKey
-  minInterval: 2000, // Mínimo 2 segundos entre intentos al mismo servidor
-  
-  async throttle(cacheKey, connectionFn) {
-    // Si ya hay una conexión pendiente para este servidor, esperar
-    if (this.pending.has(cacheKey)) {
-      return await this.pending.get(cacheKey);
-    }
-    
-    // Verificar intervalo mínimo
-    const lastAttempt = this.lastAttempt.get(cacheKey) || 0;
-    const now = Date.now();
-    const timeSinceLastAttempt = now - lastAttempt;
-    
-    if (timeSinceLastAttempt < this.minInterval) {
-      const waitTime = this.minInterval - timeSinceLastAttempt;
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-    }
-    
-    // Crear la conexión
-    this.lastAttempt.set(cacheKey, Date.now());
-    const connectionPromise = connectionFn();
-    this.pending.set(cacheKey, connectionPromise);
-    
-    try {
-      const result = await connectionPromise;
-      return result;
-    } finally {
-      this.pending.delete(cacheKey);
-    }
-  }
-};
+// Sistema de throttling para conexiones SSH (ahora en módulo separado)
+const connectionThrottle = require('./src/main/utils/connection-throttle');
 
-// Función para limpiar conexiones SSH huérfanas cada 60 segundos
-// ✅ MEMORY LEAK FIX: Guardar referencia del intervalo para poder limpiarlo
-let orphanCleanupInterval = setInterval(() => {
-  const activeKeys = new Set(Object.values(sshConnections).map(conn => conn.cacheKey));
-  
-  for (const [poolKey, poolConnection] of Object.entries(sshConnectionPool)) {
-    if (!activeKeys.has(poolKey)) {
-      // Verificar si la conexión es realmente antigua (más de 5 minutos sin uso)
-      const connectionAge = Date.now() - (poolConnection._lastUsed || poolConnection._createdAt || 0);
-      if (connectionAge > 5 * 60 * 1000) { // 5 minutos
-        try {
-          // Limpiar listeners antes de cerrar
-          if (poolConnection.ssh) {
-            poolConnection.ssh.removeAllListeners();
-          }
-          poolConnection.close();
-        } catch (e) {
-          // ✅ BUG FIX: Loggear errores en modo desarrollo para debugging
-          if (process.env.NODE_ENV === 'development') {
-            console.warn(`[SSH Pool] Error closing orphaned connection ${poolKey}:`, e.message);
-          }
-        }
-        delete sshConnectionPool[poolKey];
-      }
-    } else {
-      // Marcar como usado recientemente
-      poolConnection._lastUsed = Date.now();
-    }
-  }
-}, 60000); // Cambiar a 60 segundos para dar más tiempo
+// Limpieza automática de conexiones SSH huérfanas (ahora en servicio separado)
+const ConnectionPoolCleaner = require('./src/main/services/ConnectionPoolCleaner');
+ConnectionPoolCleaner.startOrphanCleanup(sshConnectionPool, sshConnections);
 
 // Helper function to parse 'df -P' command output
 // Funciones de parsing movidas a main/utils/parsing-utils.js
@@ -1005,6 +916,7 @@ function createWindow() {
         WSL.setMainWindow(mainWindow);
         PowerShell.setDependencies({
           mainWindow,
+          getPty,
           alternativePtyConfig,
           SafeWindowsTerminal,
           isAppQuitting
@@ -2038,7 +1950,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           if (autoRecordingEnabled) {
             // Guardar archivo en disco
             const fsPromises = require('fs').promises;
-            const recordingsDir = await getRecordingsDirectory();
+            const recordingsDir = await getRecordingsDirectory(app.getPath('userData'));
             
             // Crear directorio si no existe
             await fsPromises.mkdir(recordingsDir, { recursive: true });
@@ -3730,255 +3642,11 @@ function getPty() {
   return _pty;
 }
 
-let powershellProcesses = {}; // Cambiar a objeto para múltiples procesos
-// wslProcesses ahora se maneja en WSLService.js
-
-// Función getLinuxShell movida a src/main/services/WSLService.js
-
 // Start PowerShell session
 ipcMain.on('powershell:start', (event, { cols, rows }) => {
   const tabId = 'default'; // Fallback para compatibilidad
   PowerShell.PowerShellHandlers.start(tabId, { cols, rows });
 });
-
-// Start terminal session with tab ID (PowerShell on Windows, native shell on Linux/macOS)
-function startPowerShellSession(tabId, { cols, rows }) {
-  // No iniciar nuevos procesos si la app está cerrando
-  if (isAppQuitting) {
-    console.log(`Evitando iniciar PowerShell para ${tabId} - aplicación cerrando`);
-    return;
-  }
-  
-  try {
-    // Verificar si ya hay un proceso activo
-    if (powershellProcesses[tabId]) {
-      const platform = os.platform();
-      const shellName = platform === 'win32' ? 'PowerShell' : 'Terminal';
-      console.log(`${shellName} ya existe para ${tabId}, reutilizando proceso existente`);
-      
-      // Simular mensaje de bienvenida y refrescar prompt para procesos reutilizados
-      if (mainWindow && mainWindow.webContents) {
-        const welcomeMsg = `\r\n\x1b[32m=== Sesión ${shellName} reutilizada ===\x1b[0m\r\n`;
-        mainWindow.webContents.send(`powershell:data:${tabId}`, welcomeMsg);
-      }
-      
-      // Refrescar prompt para mostrar estado actual
-      setTimeout(() => {
-        if (powershellProcesses[tabId]) {
-          try {
-            powershellProcesses[tabId].write('\r');
-          } catch (e) {
-            console.log(`Error refrescando prompt para ${tabId}:`, e.message);
-          }
-        }
-      }, 300);
-      
-      return;
-    }
-
-    // Determine shell and arguments based on OS
-    let shell, args;
-    const platform = os.platform();
-    
-    if (platform === 'win32') {
-      // Usar Windows PowerShell directamente para mayor estabilidad
-      shell = 'powershell.exe';
-      args = ['-NoExit'];
-    } else if (platform === 'linux' || platform === 'darwin') {
-      // For Linux and macOS, detect the best available shell
-      shell = getLinuxShell();
-      args = []; // Most Linux shells don't need special args for interactive mode
-    } else {
-      // Fallback to PowerShell Core for other platforms
-      shell = 'pwsh';
-      args = ['-NoExit'];
-    }
-
-    // Spawn PowerShell process con configuración ultra-conservative
-    const spawnOptions = {
-      name: 'xterm-256color',
-      cols: cols || 120,
-      rows: rows || 30,
-      cwd: os.homedir(),
-      env: {
-        ...process.env,
-        TERM: 'xterm-256color',
-        COLORTERM: 'truecolor'
-      },
-      windowsHide: false
-    };
-    
-    // Platform-specific configurations
-    if (os.platform() === 'win32') {
-      spawnOptions.useConpty = false;              // Deshabilitar ConPTY completamente
-      spawnOptions.conptyLegacy = false;           // No usar ConPTY legacy
-      spawnOptions.experimentalUseConpty = false;  // Deshabilitar experimental
-      spawnOptions.backend = 'winpty';             // Forzar uso de WinPTY
-    } else if (os.platform() === 'linux' || os.platform() === 'darwin') {
-      // Linux/macOS specific configurations for better compatibility
-      spawnOptions.windowsHide = undefined;        // Not applicable on Unix
-      spawnOptions.env = {
-        ...process.env,
-        TERM: 'xterm-256color',
-        COLORTERM: 'truecolor',
-        LANG: process.env.LANG || 'en_US.UTF-8',   // Ensure proper locale
-        LC_ALL: process.env.LC_ALL || 'en_US.UTF-8'
-      };
-    }
-    
-    // Intentar crear el proceso con manejo de errores robusto
-    let spawnSuccess = false;
-    let lastError = null;
-    
-    // Intentar con diferentes configuraciones hasta que una funcione
-    const configsToTry = [
-      // Configuración principal
-      spawnOptions,
-      // Configuración conservadora
-      { ...alternativePtyConfig.conservative, cwd: os.homedir() },
-      // Configuración con WinPTY
-      { ...alternativePtyConfig.winpty, cwd: os.homedir() },
-      // Configuración mínima
-      { ...alternativePtyConfig.minimal, cwd: os.homedir() }
-    ];
-    
-    for (let i = 0; i < configsToTry.length && !spawnSuccess; i++) {
-      try {
-        // línea eliminada: console.log(`Intentando configuración ${i + 1}/${configsToTry.length} para PowerShell ${tabId}...`);
-        powershellProcesses[tabId] = getPty().spawn(shell, args, configsToTry[i]);
-        spawnSuccess = true;
-        // línea eliminada: console.log(`Configuración ${i + 1} exitosa para PowerShell ${tabId}`);
-      } catch (spawnError) {
-        lastError = spawnError;
-        console.warn(`Configuración ${i + 1} falló para PowerShell ${tabId}:`, spawnError.message);
-        
-        // Limpiar proceso parcialmente creado
-        if (powershellProcesses[tabId]) {
-          try {
-            powershellProcesses[tabId].kill();
-          } catch (e) {
-            // Ignorar errores de limpieza
-          }
-          delete powershellProcesses[tabId];
-        }
-      }
-    }
-    
-    if (!spawnSuccess) {
-      // Último recurso: usar SafeWindowsTerminal para Windows
-      if (os.platform() === 'win32') {
-        try {
-          console.log(`Intentando SafeWindowsTerminal como último recurso para ${tabId}...`);
-          const safeTerminal = new SafeWindowsTerminal(shell, args, {
-            cwd: os.homedir(),
-            env: process.env,
-            windowsHide: false
-          });
-          
-          powershellProcesses[tabId] = safeTerminal.spawn();
-          spawnSuccess = true;
-          // línea eliminada: console.log(`SafeWindowsTerminal exitoso para ${tabId}`);
-        } catch (safeError) {
-          console.error(`SafeWindowsTerminal también falló para ${tabId}:`, safeError.message);
-        }
-      }
-      
-      if (!spawnSuccess) {
-        throw new Error(`No se pudo iniciar PowerShell para ${tabId} después de probar todas las configuraciones: ${lastError?.message || 'Error desconocido'}`);
-      }
-    }
-
-    // Handle PowerShell output
-    powershellProcesses[tabId].onData((data) => {
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(`powershell:data:${tabId}`, data);
-      }
-    });
-    
-
-
-    // Handle PowerShell exit
-    powershellProcesses[tabId].onExit((exitCode, signal) => {
-      
-      // Extraer el código de salida real
-      let actualExitCode = exitCode;
-      if (typeof exitCode === 'object' && exitCode !== null) {
-        // Si es un objeto con propiedad exitCode, usar ese valor
-        if (exitCode.exitCode !== undefined) {
-          actualExitCode = exitCode.exitCode;
-        } else {
-          // Si es otro tipo de objeto, intentar convertirlo
-          actualExitCode = parseInt(JSON.stringify(exitCode), 10) || 0;
-        }
-      } else if (typeof exitCode === 'string') {
-        // Si es string, intentar parsearlo
-        actualExitCode = parseInt(exitCode, 10) || 0;
-      } else if (typeof exitCode === 'number') {
-        actualExitCode = exitCode;
-      } else {
-        actualExitCode = 0;
-      }
-      
-      // Limpiar el proceso actual
-      delete powershellProcesses[tabId];
-      
-      // Determinar si es una terminación que requiere reinicio automático
-      // Solo reiniciar para códigos específicos de fallo de ConPTY, no para terminaciones normales
-      const needsRestart = actualExitCode === -1073741510; // Solo fallo de ConPTY
-      
-      if (needsRestart) {
-        // Para fallos específicos como ConPTY, reiniciar automáticamente
-        console.log(`PowerShell ${tabId} falló con código ${actualExitCode}, reiniciando en 1 segundo...`);
-        setTimeout(() => {
-          if (!isAppQuitting && mainWindow && mainWindow.webContents) {
-            console.log(`Reiniciando PowerShell ${tabId} después de fallo...`);
-            // Usar las dimensiones originales o por defecto
-            const originalCols = cols || 120;
-            const originalRows = rows || 30;
-            startPowerShellSession(tabId, { cols: originalCols, rows: originalRows });
-          }
-        }, 1000);
-      } else {
-        // Para terminaciones normales (código 0) o errores (código 1), no reiniciar automáticamente
-        if (actualExitCode === 0) {
-          console.log(`PowerShell ${tabId} terminó normalmente (código ${actualExitCode})`);
-        } else {
-          console.log(`PowerShell ${tabId} terminó con error (código ${actualExitCode})`);
-          if (mainWindow && mainWindow.webContents) {
-            const exitCodeStr = typeof exitCode === 'object' ? JSON.stringify(exitCode) : String(exitCode);
-            mainWindow.webContents.send(`powershell:error:${tabId}`, `PowerShell process exited with code ${exitCodeStr}`);
-          }
-        }
-      }
-    });
-    
-    // Agregar manejador de errores del proceso
-    if (powershellProcesses[tabId] && powershellProcesses[tabId].pty) {
-      powershellProcesses[tabId].on('error', (error) => {
-        if (error.message && error.message.includes('AttachConsole failed')) {
-          console.warn(`Error AttachConsole en PowerShell ${tabId}:`, error.message);
-        } else {
-          console.error(`Error en proceso PowerShell ${tabId}:`, error);
-        }
-      });
-    }
-
-    // Send ready signal
-    // setTimeout(() => {
-    //   if (mainWindow && mainWindow.webContents) {
-    //     mainWindow.webContents.send(`powershell:ready:${tabId}`);
-    //   }
-    // }, 500);
-
-    // línea eliminada: console.log(`PowerShell ${tabId} iniciado exitosamente`);
-
-  } catch (error) {
-    console.error(`Error starting PowerShell for tab ${tabId}:`, error);
-    if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send(`powershell:error:${tabId}`, `Failed to start PowerShell: ${error.message}`);
-    }
-  }
-}
 
 // Start PowerShell session with specific tab ID - Global listener with auto-registration
 ipcMain.on(/^powershell:start:(.+)$/, (event, { cols, rows }) => {
@@ -3992,17 +3660,6 @@ ipcMain.on(/^powershell:start:(.+)$/, (event, { cols, rows }) => {
   
   PowerShell.PowerShellHandlers.start(tabId, { cols, rows });
 });
-
-// Using only tab-specific PowerShell handlers for better control
-
-// Funciones de manejo para PowerShell
-// Función handlePowerShellStart movida a src/main/services/PowerShellService.js
-
-// Función handlePowerShellData movida a src/main/services/PowerShellService.js
-
-// Función handlePowerShellResize movida a src/main/services/PowerShellService.js
-
-// Función handlePowerShellStop movida a src/main/services/PowerShellService.js
 
 // === WSL Terminal Support ===
 
@@ -4046,8 +3703,8 @@ ipcMain.on('wsl:stop', () => {
 // Store active WSL distribution processes (specific distributions)
 const wslDistroProcesses = {};
 
-// Store active Ubuntu processes (for backward compatibility)
-const ubuntuProcesses = {};
+// Ubuntu Process Manager (ahora en servicio separado)
+const UbuntuProcessManager = require('./src/main/services/UbuntuProcessManager');
 
 // Función detectUbuntuAvailability movida a src/main/services/WSLService.js
 
@@ -4240,116 +3897,19 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
     }
 }
 
-// Función original para Ubuntu (para compatibilidad)
+// Función para Ubuntu (ahora usa UbuntuProcessManager)
 function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
-  // No iniciar nuevos procesos si la app está cerrando
-  if (isAppQuitting) {
-    console.log(`Evitando iniciar Ubuntu para ${tabId} - aplicación cerrando`);
-    return;
+  // Inicializar UbuntuProcessManager si no está inicializado
+  if (!UbuntuProcessManager._initialized) {
+    UbuntuProcessManager.initialize({
+      mainWindow,
+      getPty,
+      isAppQuitting
+    });
+    UbuntuProcessManager._initialized = true;
   }
   
-  try {
-    // Kill existing process if any
-    if (ubuntuProcesses[tabId]) {
-      try {
-        ubuntuProcesses[tabId].kill();
-      } catch (e) {
-        console.error(`Error killing existing Ubuntu process for tab ${tabId}:`, e);
-      }
-    }
-
-    // Determine shell and arguments for Ubuntu
-    let shell, args;
-    const platform = os.platform();
-    
-    if (platform === 'win32') {
-      // Usar el ejecutable específico de la versión de Ubuntu
-      if (ubuntuInfo && ubuntuInfo.executable) {
-        shell = ubuntuInfo.executable;
-        console.log(`🎯 Usando ejecutable específico: ${shell} para ${ubuntuInfo.label || 'Ubuntu'}`);
-      } else {
-        // Fallback a ubuntu.exe genérico
-        shell = 'ubuntu.exe';
-        console.log('⚠️ Sin info específica, usando ubuntu.exe genérico');
-      }
-      args = []; // Ubuntu funciona mejor sin argumentos
-    } else {
-      // For non-Windows platforms, use bash directly
-      shell = '/bin/bash';
-      args = ['--login'];
-    }
-
-    // Spawn Ubuntu process con configuración simplificada
-    const spawnOptions = {
-      name: 'xterm-256color',
-      cols: cols || 120,
-      rows: rows || 30,
-      cwd: os.homedir(),
-      env: {
-        ...process.env,
-        TERM: 'xterm-256color',
-        COLORTERM: 'truecolor'
-      },
-      windowsHide: false
-    };
-    
-    // Platform-specific configurations
-    if (os.platform() === 'win32') {
-      spawnOptions.useConpty = false;              // Deshabilitar ConPTY completamente
-      spawnOptions.conptyLegacy = false;           // No usar ConPTY legacy
-      spawnOptions.experimentalUseConpty = false;  // Deshabilitar experimental
-      spawnOptions.backend = 'winpty';             // Forzar uso de WinPTY
-    }
-    
-    ubuntuProcesses[tabId] = getPty().spawn(shell, args, spawnOptions);
-
-    // Handle Ubuntu output
-    ubuntuProcesses[tabId].onData((data) => {
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(`ubuntu:data:${tabId}`, data);
-      }
-    });
-
-    // Handle Ubuntu exit
-    ubuntuProcesses[tabId].onExit((exitCode, signal) => {
-      
-      // Extraer el código de salida real
-      let actualExitCode = exitCode;
-      if (typeof exitCode === 'object' && exitCode !== null) {
-        if (exitCode.exitCode !== undefined) {
-          actualExitCode = exitCode.exitCode;
-        } else {
-          actualExitCode = parseInt(JSON.stringify(exitCode), 10) || 0;
-        }
-      } else if (typeof exitCode === 'string') {
-        actualExitCode = parseInt(exitCode, 10) || 0;
-      }
-      
-      if (actualExitCode !== 0 && signal !== 'SIGTERM' && signal !== 'SIGKILL') {
-        // Silenciar el mensaje de error de proceso cerrado inesperadamente
-        // No enviar mensaje de error al frontend para evitar mostrar errores al usuario
-        // if (mainWindow && mainWindow.webContents) {
-        //   mainWindow.webContents.send(`ubuntu:error:${tabId}`, 
-        //     `Ubuntu session ended unexpectedly (code: ${actualExitCode})`);
-        // }
-      }
-      
-      // Cleanup
-      delete ubuntuProcesses[tabId];
-    });
-
-    // Send ready signal
-    if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send(`ubuntu:ready:${tabId}`);
-    }
-
-  } catch (error) {
-    console.error(`Error starting Ubuntu session for tab ${tabId}:`, error);
-    if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send(`ubuntu:error:${tabId}`, 
-        `Failed to start Ubuntu: ${error.message}`);
-    }
-  }
+  return UbuntuProcessManager.startUbuntuSession(tabId, { cols, rows, ubuntuInfo });
 }
 
 // Funciones de manejo para distribuciones WSL genéricas
@@ -4380,18 +3940,9 @@ function handleUbuntuData(tabId, data) {
         mainWindow.webContents.send(`ubuntu:error:${tabId}`, `Write error: ${error.message}`);
       }
     }
-  } else if (ubuntuProcesses[tabId]) {
-    // Fallback al sistema legacy de Ubuntu
-    try {
-      ubuntuProcesses[tabId].write(data);
-    } catch (error) {
-      console.error(`Error writing to Ubuntu ${tabId}:`, error);
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(`ubuntu:error:${tabId}`, `Write error: ${error.message}`);
-      }
-    }
   } else {
-    console.warn(`No Ubuntu process found for ${tabId}`);
+    // Fallback al UbuntuProcessManager
+    UbuntuProcessManager.writeToUbuntu(tabId, data);
   }
 }
 
@@ -4413,13 +3964,9 @@ function handleUbuntuResize(tabId, { cols, rows }) {
     } catch (error) {
       console.error(`Error resizing Ubuntu ${tabId}:`, error);
     }
-  } else if (ubuntuProcesses[tabId]) {
-    // Fallback al sistema legacy de Ubuntu
-    try {
-      ubuntuProcesses[tabId].resize(cols, rows);
-    } catch (error) {
-      console.error(`Error resizing Ubuntu ${tabId}:`, error);
-    }
+  } else {
+    // Fallback al UbuntuProcessManager
+    UbuntuProcessManager.resizeUbuntu(tabId, { cols, rows });
   }
 }
 
@@ -4467,46 +4014,7 @@ function handleWSLDistroStop(tabId) {
 }
 
 function handleUbuntuStop(tabId) {
-  if (ubuntuProcesses[tabId]) {
-    try {
-      const process = ubuntuProcesses[tabId];
-      
-      // Remover listeners antes de terminar el proceso
-      process.removeAllListeners();
-      
-      // En Windows, usar destroy() para forzar terminación
-      if (os.platform() === 'win32') {
-        try {
-          process.kill(); // Intento graceful primero
-        } catch (e) {
-          // Si kill() falla, usar destroy()
-          try {
-            process.destroy();
-          } catch (destroyError) {
-            console.warn(`Error con destroy() en Ubuntu ${tabId}:`, destroyError.message);
-          }
-        }
-      } else {
-        // En sistemas POSIX, usar SIGTERM
-        process.kill('SIGTERM');
-        
-        // Dar tiempo para que termine graciosamente
-        setTimeout(() => {
-          if (ubuntuProcesses[tabId]) {
-            try {
-              ubuntuProcesses[tabId].kill('SIGKILL');
-            } catch (e) {
-              // Ignorar errores de terminación forzada
-            }
-          }
-        }, 1000);
-      }
-      
-      delete ubuntuProcesses[tabId];
-    } catch (error) {
-      console.error(`Error stopping Ubuntu ${tabId}:`, error);
-    }
-  }
+  UbuntuProcessManager.stopUbuntu(tabId);
 }
 
 // Función de detección alternativa más simple
@@ -4689,83 +4197,21 @@ ipcMain.on('register-tab-events', (event, tabId) => {
 app.on('before-quit', (event) => {
   isAppQuitting = true;
   
-  // Cleanup all PowerShell processes
-  Object.keys(powershellProcesses).forEach(tabId => {
-    try {
-      const process = powershellProcesses[tabId];
-      if (process) {
-        process.removeAllListeners();
-        
-        // En Windows, usar destroy() para forzar terminación
-        if (os.platform() === 'win32') {
-          try {
-            process.kill(); // Intento graceful primero
-          } catch (e) {
-            // Si kill() falla, usar destroy()
-            try {
-              process.destroy();
-            } catch (destroyError) {
-              console.warn(`Error con destroy() en PowerShell ${tabId} on quit:`, destroyError.message);
-            }
-          }
-        } else {
-          process.kill('SIGTERM');
-          // Terminación forzada después de 500ms en sistemas POSIX
-          setTimeout(() => {
-            if (powershellProcesses[tabId]) {
-              try {
-                powershellProcesses[tabId].kill('SIGKILL');
-              } catch (e) {
-                // Ignorar errores
-              }
-            }
-          }, 500);
-        }
-      }
-    } catch (error) {
-      console.error(`Error cleaning up PowerShell ${tabId} on quit:`, error);
-    }
-  });
+  // Cleanup all PowerShell processes (ahora manejado por PowerShellProcessManager)
+  try {
+    PowerShell.cleanup();
+  } catch (error) {
+    console.error('Error cleaning up PowerShell processes on quit:', error);
+  }
   
   // WSL processes cleanup is now handled by WSLService.js
   
-  // Cleanup all Ubuntu processes
-  Object.keys(ubuntuProcesses).forEach(tabId => {
-    try {
-      const process = ubuntuProcesses[tabId];
-      if (process) {
-        process.removeAllListeners();
-        
-        // En Windows, usar destroy() para forzar terminación
-        if (os.platform() === 'win32') {
-          try {
-            process.kill(); // Intento graceful primero
-          } catch (e) {
-            // Si kill() falla, usar destroy()
-            try {
-              process.destroy();
-            } catch (destroyError) {
-              console.warn(`Error con destroy() en Ubuntu ${tabId} on quit:`, destroyError.message);
-            }
-          }
-        } else {
-          process.kill('SIGTERM');
-          // Terminación forzada después de 500ms en sistemas POSIX
-          setTimeout(() => {
-            if (ubuntuProcesses[tabId]) {
-              try {
-                ubuntuProcesses[tabId].kill('SIGKILL');
-              } catch (e) {
-                // Ignorar errores
-              }
-            }
-          }, 500);
-        }
-      }
-    } catch (error) {
-      console.error(`Error cleaning up Ubuntu ${tabId} on quit:`, error);
-    }
-  });
+  // Cleanup all Ubuntu processes (ahora manejado por UbuntuProcessManager)
+  try {
+    UbuntuProcessManager.cleanup();
+  } catch (error) {
+    console.error('Error cleaning up Ubuntu processes on quit:', error);
+  }
 });
 
 // Sticky stats para main.js también
