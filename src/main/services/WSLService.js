@@ -363,26 +363,32 @@ const WSLHandlers = {
   stop: (tabId) => {
     if (wslProcesses[tabId]) {
       try {
-        console.log(`Stopping WSL process for tab ${tabId}`);
         const process = wslProcesses[tabId];
+        const pid = process.pid;
         
         // Remover listeners antes de terminar el proceso
         process.removeAllListeners();
         
-        // En Windows, usar destroy() para forzar terminación
+        // En Windows, usar taskkill directamente para evitar errores de AttachConsole
         if (os.platform() === 'win32') {
           try {
-            process.kill(); // Intento graceful primero
-          } catch (e) {
-            // Si kill() falla, usar destroy()
-            try {
-              process.destroy();
-            } catch (destroyError) {
-              console.warn(`Error con destroy() en WSL ${tabId}:`, destroyError.message);
-            }
+            const { execSync } = require('child_process');
+            // Usar taskkill directamente sin llamar a destroy() para evitar
+            // el error "AttachConsole failed" de node-pty
+            execSync(`taskkill /F /PID ${pid} /T`, { 
+              stdio: 'ignore',
+              windowsHide: true
+            });
+          } catch (killError) {
+            // El proceso probablemente ya terminó
           }
         } else {
-          process.kill();
+          // En otros sistemas, usar kill() normalmente
+          try {
+            process.kill();
+          } catch (killError) {
+            // Ignorar errores de kill
+          }
         }
         
         delete wslProcesses[tabId];

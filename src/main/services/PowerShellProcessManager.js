@@ -287,7 +287,32 @@ function resizePowerShell(tabId, { cols, rows }) {
 function stopPowerShell(tabId) {
   if (powershellProcesses[tabId]) {
     try {
-      powershellProcesses[tabId].kill();
+      const process = powershellProcesses[tabId];
+      const pid = process.pid;
+      
+      process.removeAllListeners();
+      
+      // En Windows, usar taskkill directamente para evitar errores de AttachConsole
+      if (os.platform() === 'win32') {
+        try {
+          const { execSync } = require('child_process');
+          // Usar taskkill directamente sin llamar a destroy() para evitar
+          // el error "AttachConsole failed" de node-pty
+          execSync(`taskkill /F /PID ${pid} /T`, { 
+            stdio: 'ignore',
+            windowsHide: true
+          });
+        } catch (killError) {
+          // El proceso probablemente ya terminó
+        }
+      } else {
+        try {
+          process.kill();
+        } catch (killError) {
+          // Ignorar errores de kill
+        }
+      }
+      
       delete powershellProcesses[tabId];
     } catch (error) {
       console.error(`Error stopping PowerShell ${tabId}:`, error);

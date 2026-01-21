@@ -174,35 +174,42 @@ function stopUbuntu(tabId) {
   if (ubuntuProcesses[tabId]) {
     try {
       const process = ubuntuProcesses[tabId];
+      const pid = process.pid;
       
       // Remover listeners antes de terminar el proceso
       process.removeAllListeners();
       
-      // En Windows, usar destroy() para forzar terminación
+      // En Windows, usar taskkill directamente para evitar errores de AttachConsole
       if (os.platform() === 'win32') {
         try {
-          process.kill(); // Intento graceful primero
-        } catch (e) {
-          // Si kill() falla, usar destroy()
-          try {
-            process.destroy();
-          } catch (destroyError) {
-            console.warn(`Error con destroy() en Ubuntu ${tabId}:`, destroyError.message);
-          }
+          const { execSync } = require('child_process');
+          // Usar taskkill directamente sin llamar a destroy() para evitar
+          // el error "AttachConsole failed" de node-pty
+          execSync(`taskkill /F /PID ${pid} /T`, { 
+            stdio: 'ignore',
+            windowsHide: true
+          });
+        } catch (killError) {
+          // El proceso probablemente ya terminó
         }
       } else {
-        process.kill('SIGTERM');
-        
-        // Dar tiempo para que termine graciosamente
-        setTimeout(() => {
-          if (ubuntuProcesses[tabId]) {
-            try {
-              ubuntuProcesses[tabId].kill('SIGKILL');
-            } catch (e) {
-              // Ignorar errores de terminación forzada
+        // En otros sistemas, usar kill() con señales apropiadas
+        try {
+          process.kill('SIGTERM');
+          
+          // Dar tiempo para que termine graciosamente
+          setTimeout(() => {
+            if (ubuntuProcesses[tabId]) {
+              try {
+                ubuntuProcesses[tabId].kill('SIGKILL');
+              } catch (e) {
+                // Ignorar errores de terminación forzada
+              }
             }
-          }
-        }, 1000);
+          }, 1000);
+        } catch (killError) {
+          // Ignorar errores de kill
+        }
       }
       
       delete ubuntuProcesses[tabId];
