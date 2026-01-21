@@ -1,3 +1,19 @@
+// ============================================================================
+// 🎯 REFACTORIZACIONES RECIENTES
+// ============================================================================
+// ✅ SSHStatsService: Toda la lógica de procesamiento de estadísticas SSH
+//    (CPU, memoria, disco, red, etc.) movida a src/main/services/SSHStatsService.js
+//    - statsLoop() ahora es un wrapper delgado
+//    - wallixStatsLoop() se crea via createBastionStatsLoop()
+//    - Eliminadas ~500 líneas de código duplicado
+//
+// ✅ tab-events-handler: Registro dinámico de eventos IPC para pestañas
+//    movido a src/main/handlers/tab-events-handler.js
+//    - registerTabEvents() ahora se importa del módulo
+//    - Reducidas ~140 líneas de main.js
+//    - Mejor organización y mantenibilidad
+// ============================================================================
+
 // Startup profiler
 const { logTiming } = require('./src/main/utils/startup-profiler');
 logTiming('Inicio del proceso main.js');
@@ -21,6 +37,14 @@ let Docker = null;
 
 const { WSL, PowerShell, Cygwin } = require('./src/main/services');
 logTiming('Servicios WSL/PowerShell/Cygwin cargados');
+
+// Servicio de estadísticas SSH
+const sshStatsService = require('./src/main/services/SSHStatsService');
+logTiming('SSHStatsService cargado');
+
+// Handler de registro de eventos de pestañas
+const { registerTabEvents, isTabRegistered } = require('./src/main/handlers/tab-events-handler');
+logTiming('Tab events handler cargado');
 
 // Importar procesador de PDFs
 // const pdfProcessor = require('./src/services/PDFProcessor'); // DESHABILITADO: pdf-parse eliminado
@@ -1320,266 +1344,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPor favor, introduce el password:\r\nPassword: `);
     }
     
-    // Función de bucle de stats para Wallix/bastión
-    function wallixStatsLoop() {
-      const connObj = sshConnections[tabId];
-      if (activeStatsTabId !== tabId) {
-        if (connObj) {
-          connObj.statsTimeout = null;
-          connObj.statsLoopRunning = false;
-        }
-        return;
-      }
-      if (!connObj || !connObj.ssh || !connObj.stream) {
-        return;
-      }
-      if (connObj.statsLoopRunning) {
-        return;
-      }
-      
-      connObj.statsLoopRunning = true;
-
-      try {
-        // // console.log('[WallixStats] Lanzando bucle de stats para bastión', tabId);
-        
-        if (connObj.ssh.execCommand) {
-          const command = 'grep "cpu " /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "" && cat /etc/os-release';
-          connObj.ssh.execCommand(command, (err, result) => {
-            if (err || !result) {
-              // Enviar stats básicas en caso de error
-              const fallbackStats = {
-                cpu: '0.00',
-                mem: { total: 0, used: 0 },
-                disk: [],
-                uptime: 'Error',
-                network: { rx_speed: 0, tx_speed: 0 },
-                hostname: 'Bastión',
-                distro: 'linux',
-                ip: config.host
-              };
-              sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, fallbackStats);
-              
-              // Reintentar en 5 segundos
-              if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
-                sshConnections[tabId].statsLoopRunning = false;
-                sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
-              } else {
-                if (sshConnections[tabId]) sshConnections[tabId].statsLoopRunning = false;
-              }
-              return;
-            }
-            
-            const output = result.stdout;
-            // // console.log('[WallixStats] Output recibido, length:', output.length);
-            // // console.log('[WallixStats] Raw output preview:', JSON.stringify(output.substring(0, 300)));
-            
-            try {
-              const parts = output.trim().split('\n');
-              // // console.log('[WallixStats] Parts found:', parts.length);
-              // // console.log('[WallixStats] First 5 parts:', parts.slice(0, 5));
-              
-              // CPU - buscar línea que empiece con "cpu "
-              const cpuLineIndex = parts.findIndex(line => line.trim().startsWith('cpu '));
-              let cpuLoad = '0.00';
-              if (cpuLineIndex >= 0) {
-                const cpuLine = parts[cpuLineIndex];
-                const cpuTimes = cpuLine.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
-                // Usar estado persistente para bastión
-                const previousCpu = bastionStatsState[tabId]?.previousCpu;
-                if (cpuTimes.length >= 8) {
-                  const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
-                  if (previousCpu) {
-                    const prevIdle = previousCpu.idle + previousCpu.iowait;
-                    const currentIdle = currentCpu.idle + currentCpu.iowait;
-                    const prevTotal = Object.values(previousCpu).reduce((a, b) => a + b, 0);
-                    const currentTotal = Object.values(currentCpu).reduce((a, b) => a + b, 0);
-                    const totalDiff = currentTotal - prevTotal;
-                    const idleDiff = currentIdle - prevIdle;
-                    if (totalDiff > 0) {
-                      cpuLoad = ((totalDiff - idleDiff) * 100 / totalDiff).toFixed(2);
-                    }
-                  }
-                  // Guardar estado persistente para bastión
-                  if (!bastionStatsState[tabId]) bastionStatsState[tabId] = {};
-                  bastionStatsState[tabId].previousCpu = currentCpu;
-                }
-              }
-              
-              // Memoria
-              const memLine = parts.find(line => line.startsWith('Mem:')) || '';
-              const memParts = memLine.split(/\s+/);
-              const mem = {
-                total: parseInt(memParts[1], 10) || 0,
-                used: parseInt(memParts[2], 10) || 0,
-              };
-              
-              // Disco
-              const dfIndex = parts.findIndex(line => line.trim().startsWith('Filesystem'));
-              const disks = dfIndex >= 0 ? (function() {
-                const lines = parts.slice(dfIndex).filter(l => l.trim() !== '');
-                lines.shift(); // Remove header
-                return lines.map(line => {
-                  const p = line.trim().split(/\s+/);
-                  if (p.length >= 6) {
-                    const use = parseInt(p[p.length - 2], 10);
-                    const name = p[p.length - 1];
-                    if (name && name.startsWith('/') && !isNaN(use) && !name.startsWith('/sys') && !name.startsWith('/opt') && !name.startsWith('/run') && name !== '/boot/efi' && !name.startsWith('/dev') && !name.startsWith('/var')) {
-                      return { fs: name, use };
-                    }
-                  }
-                  return null;
-                }).filter(Boolean);
-              })() : [];
-              
-              // Uptime
-              const uptimeLine = parts.find(line => line.includes(' up '));
-              let uptime = 'N/A';
-              if (uptimeLine) {
-                const match = uptimeLine.match(/up (.*?),/);
-                if (match && match[1]) {
-                  uptime = match[1].trim();
-                }
-              }
-              
-              // Network
-              const netIndex = parts.findIndex(line => line.trim().includes('Inter-|   Receive'));
-              let network = { rx_speed: 0, tx_speed: 0 };
-              if (netIndex >= 0) {
-                const netLines = parts.slice(netIndex + 2, netIndex + 4);
-                let totalRx = 0, totalTx = 0;
-                netLines.forEach(line => {
-                  const p = line.trim().split(/\s+/);
-                  if (p.length >= 10) {
-                    totalRx += parseInt(p[1], 10) || 0;
-                    totalTx += parseInt(p[9], 10) || 0;
-                  }
-                });
-                // Usar estado persistente para bastión
-                const previousNet = bastionStatsState[tabId]?.previousNet;
-                const previousTime = bastionStatsState[tabId]?.previousTime;
-                const currentTime = Date.now();
-                if (previousNet && previousTime) {
-                  const timeDiff = (currentTime - previousTime) / 1000;
-                  const rxDiff = totalRx - previousNet.totalRx;
-                  const txDiff = totalTx - previousNet.totalTx;
-                  network.rx_speed = Math.max(0, rxDiff / timeDiff);
-                  network.tx_speed = Math.max(0, txDiff / timeDiff);
-                }
-                if (!bastionStatsState[tabId]) bastionStatsState[tabId] = {};
-                bastionStatsState[tabId].previousNet = { totalRx, totalTx };
-                bastionStatsState[tabId].previousTime = currentTime;
-              }
-              
-              // Hostname, IP y distro
-              let hostname = 'Bastión';
-              let finalDistroId = 'linux';
-              let ip = '';
-              // Buscar hostname real
-              const hostnameLineIndex = parts.findIndex(line => 
-                line && !line.includes('=') && !line.includes(':') && 
-                !line.includes('/') && !line.includes('$') && 
-                line.trim().length > 0 && line.trim().length < 50 &&
-                !line.includes('cpu') && !line.includes('Mem') && 
-                !line.includes('total') && !line.includes('Filesystem')
-              );
-              if (hostnameLineIndex >= 0 && hostnameLineIndex < parts.length - 5) {
-                hostname = parts[hostnameLineIndex].trim();
-              }
-              // Buscar IP real (línea después de hostname)
-              let ipLine = '';
-              if (hostnameLineIndex >= 0 && hostnameLineIndex < parts.length - 4) {
-                ipLine = parts[hostnameLineIndex + 1]?.trim() || '';
-              }
-              // Tomar la última IP válida (no 127.0.0.1, no vacía)
-              if (ipLine) {
-                const ipCandidates = ipLine.split(/\s+/).filter(s => s && s !== '127.0.0.1' && s !== '::1');
-                if (ipCandidates.length > 0) {
-                  ip = ipCandidates[ipCandidates.length - 1];
-                }
-              }
-              if (!ip) ip = config.host;
-              // Buscar distro y versionId en os-release (todo el output)
-              let versionId = '';
-              try {
-                const osReleaseLines = parts;
-                let idLine = osReleaseLines.find(line => line.trim().startsWith('ID='));
-                let idLikeLine = osReleaseLines.find(line => line.trim().startsWith('ID_LIKE='));
-                let versionIdLine = osReleaseLines.find(line => line.trim().startsWith('VERSION_ID='));
-                let rawDistro = '';
-                if (idLine) {
-                  const match = idLine.match(/^ID=("?)([^"\n]*)\1$/);
-                  if (match) rawDistro = match[2].toLowerCase();
-                }
-                if (["rhel", "redhat", "redhatenterpriseserver", "red hat enterprise linux"].includes(rawDistro)) {
-                  finalDistroId = "rhel";
-                } else if (rawDistro === 'linux' && idLikeLine) {
-                  const match = idLikeLine.match(/^ID_LIKE=("?)([^"\n]*)\1$/);
-                  const idLike = match ? match[2].toLowerCase() : '';
-                  if (idLike.includes('rhel') || idLike.includes('redhat')) {
-                    finalDistroId = "rhel";
-                  } else {
-                    finalDistroId = rawDistro;
-                  }
-                } else if (rawDistro) {
-                  finalDistroId = rawDistro;
-                }
-                if (versionIdLine) {
-                  const match = versionIdLine.match(/^VERSION_ID=("?)([^"\n]*)\1$/);
-                  if (match) versionId = match[2];
-                }
-              } catch (e) {}
-              const stats = {
-                cpu: cpuLoad,
-                mem,
-                disk: disks,
-                uptime,
-                network,
-                hostname,
-                distro: finalDistroId,
-                versionId,
-                ip
-              };
-              
-              sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
-              
-            } catch (parseErr) {
-              // Error parseando stats
-            }
-            
-            // Programar siguiente ejecución
-            if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
-              sshConnections[tabId].statsLoopRunning = false;
-              sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 2000);
-            } else {
-              if (sshConnections[tabId]) sshConnections[tabId].statsLoopRunning = false;
-            }
-          });
-          
-        } else {
-          // Fallback con stats básicas
-          const stats = {
-            cpu: '0.00',
-            mem: { total: 0, used: 0 },
-            disk: [],
-            uptime: 'N/A',
-            network: { rx_speed: 0, tx_speed: 0 },
-            hostname: 'Bastión',
-            distro: 'linux',
-            ip: config.host
-          };
-          sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
-        }
-        
-      } catch (e) {
-        // Reintentar en 5 segundos
-        if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
-          sshConnections[tabId].statsLoopRunning = false;
-          sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
-        } else {
-          if (sshConnections[tabId]) sshConnections[tabId].statsLoopRunning = false;
-        }
-      }
-    }
+    // ✅ REFACTORIZADO: Función de bucle de stats para Wallix/bastión ahora usa SSHStatsService
+    const wallixStatsLoop = sshStatsService.createBastionStatsLoop(tabId, config, bastionStatsState, sshConnections, event.sender);
     
     // Asignar la función wallixStatsLoop al objeto de conexión
     sshConnections[tabId].wallixStatsLoop = wallixStatsLoop;
@@ -2230,221 +1996,9 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
                   sshConnections[tabId]._pendingResize = null;
                 }
                 
-                // Crear función wallixStatsLoop si no existe
+                // ✅ REFACTORIZADO: Crear función wallixStatsLoop usando SSHStatsService
                 if (!conn.wallixStatsLoop) {
-                  function wallixStatsLoop() {
-                    const connObj = sshConnections[tabId];
-                    if (activeStatsTabId !== tabId) {
-                      if (connObj) {
-                        connObj.statsTimeout = null;
-                        connObj.statsLoopRunning = false;
-                      }
-                      return;
-                    }
-                    if (!connObj || !connObj.ssh || !connObj.stream) {
-                      return;
-                    }
-                    if (connObj.statsLoopRunning) {
-                      return;
-                    }
-                    
-                    connObj.statsLoopRunning = true;
-
-                    try {
-                      if (connObj.ssh.execCommand) {
-                        const command = 'grep "cpu " /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "" && cat /etc/os-release';
-                        connObj.ssh.execCommand(command, (err, result) => {
-                          if (err || !result) {
-                            const fallbackStats = {
-                              cpu: '0.00',
-                              mem: { total: 0, used: 0 },
-                              disk: [],
-                              uptime: 'Error',
-                              network: { rx_speed: 0, tx_speed: 0 },
-                              hostname: 'Bastión',
-                              distro: 'linux',
-                              ip: newConfig.host
-                            };
-                            sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, fallbackStats);
-                            
-                            if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
-                              sshConnections[tabId].statsLoopRunning = false;
-                              sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
-                            } else {
-                              if (sshConnections[tabId]) sshConnections[tabId].statsLoopRunning = false;
-                            }
-                            return;
-                          }
-                          
-                          const output = result.stdout;
-                          
-                          try {
-                            const parts = output.trim().split('\n');
-                            
-                            const cpuLineIndex = parts.findIndex(line => line.trim().startsWith('cpu '));
-                            let cpuLoad = '0.00';
-                            if (cpuLineIndex >= 0) {
-                              const cpuLine = parts[cpuLineIndex];
-                              const cpuTimes = cpuLine.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
-                              const previousCpu = bastionStatsState[tabId]?.previousCpu;
-                              if (cpuTimes.length >= 8) {
-                                const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
-                                if (previousCpu) {
-                                  const prevIdle = previousCpu.idle + previousCpu.iowait;
-                                  const currentIdle = currentCpu.idle + currentCpu.iowait;
-                                  const prevTotal = Object.values(previousCpu).reduce((a, b) => a + b, 0);
-                                  const currentTotal = Object.values(currentCpu).reduce((a, b) => a + b, 0);
-                                  const totalDiff = currentTotal - prevTotal;
-                                  const idleDiff = currentIdle - prevIdle;
-                                  if (totalDiff > 0) {
-                                    cpuLoad = ((1 - idleDiff / totalDiff) * 100).toFixed(2);
-                                  }
-                                }
-                                if (!bastionStatsState[tabId]) bastionStatsState[tabId] = {};
-                                bastionStatsState[tabId].previousCpu = currentCpu;
-                              }
-                            }
-                            
-                            const freeLineIndex = parts.findIndex(line => line.trim().startsWith('Mem:'));
-                            let mem = { total: 0, used: 0 };
-                            if (freeLineIndex >= 0) {
-                              const memParts = parts[freeLineIndex].trim().split(/\s+/);
-                              if (memParts.length >= 4) {
-                                mem.total = parseInt(memParts[1], 10);
-                                mem.used = parseInt(memParts[2], 10);
-                              }
-                            }
-                            
-                            const dfLines = parts.filter(line => line.trim() && !line.includes('Filesystem') && !line.includes('tmpfs') && !line.includes('devtmpfs'));
-                            const disks = dfLines.slice(0, 3).map(line => {
-                              const dfParts = line.trim().split(/\s+/);
-                              if (dfParts.length >= 5) {
-                                return {
-                                  mount: dfParts[5] || '/',
-                                  total: parseInt(dfParts[1], 10) * 1024,
-                                  used: parseInt(dfParts[2], 10) * 1024
-                                };
-                              }
-                              return null;
-                            }).filter(d => d !== null);
-                            
-                            const uptimeLine = parts.find(line => line.includes('up'));
-                            let uptime = 'N/A';
-                            if (uptimeLine) {
-                              uptime = uptimeLine.replace(/.*up\s+/, '').trim();
-                            }
-                            
-                            const netLineIndex = parts.findIndex(line => line.trim().startsWith('Inter-face') || line.trim().startsWith('face'));
-                            let network = { rx_speed: 0, tx_speed: 0 };
-                            if (netLineIndex >= 0 && netLineIndex + 1 < parts.length) {
-                              const netLine = parts[netLineIndex + 1];
-                              const netParts = netLine.trim().split(/\s+/);
-                              if (netParts.length >= 10) {
-                                const rx = parseInt(netParts[1], 10);
-                                const tx = parseInt(netParts[9], 10);
-                                const previousNet = bastionStatsState[tabId]?.previousNet;
-                                const previousTime = bastionStatsState[tabId]?.previousTime;
-                                const currentTime = Date.now();
-                                if (previousNet && previousTime) {
-                                  const timeDiff = (currentTime - previousTime) / 1000;
-                                  if (timeDiff > 0) {
-                                    network.rx_speed = Math.max(0, (rx - previousNet.rx) / timeDiff);
-                                    network.tx_speed = Math.max(0, (tx - previousNet.tx) / timeDiff);
-                                  }
-                                }
-                                if (!bastionStatsState[tabId]) bastionStatsState[tabId] = {};
-                                bastionStatsState[tabId].previousNet = { rx, tx };
-                                bastionStatsState[tabId].previousTime = currentTime;
-                              }
-                            }
-                            
-                            const hostnameLine = parts.find(line => line.trim() && !line.includes(':') && !line.includes('=') && !line.includes('Filesystem') && !line.includes('Mem:') && !line.includes('cpu ') && !line.includes('up') && !line.includes('Inter-face') && !line.includes('face'));
-                            const hostname = hostnameLine ? hostnameLine.trim() : 'Bastión';
-                            
-                            const ipLine = parts.find(line => /^\d+\.\d+\.\d+\.\d+/.test(line.trim()));
-                            const ip = ipLine ? ipLine.trim().split(/\s+/)[0] : newConfig.host;
-                            
-                            const osReleaseLines = parts.filter(line => line.includes('='));
-                            let finalDistroId = 'linux';
-                            let versionId = '';
-                            try {
-                              let idLine = osReleaseLines.find(line => line.trim().startsWith('ID='));
-                              let idLikeLine = osReleaseLines.find(line => line.trim().startsWith('ID_LIKE='));
-                              let versionIdLine = osReleaseLines.find(line => line.trim().startsWith('VERSION_ID='));
-                              let rawDistro = '';
-                              if (idLine) {
-                                const match = idLine.match(/^ID=("?)([^"\n]*)\1$/);
-                                if (match) rawDistro = match[2].toLowerCase();
-                              }
-                              if (["rhel", "redhat", "redhatenterpriseserver", "red hat enterprise linux"].includes(rawDistro)) {
-                                finalDistroId = "rhel";
-                              } else if (rawDistro === 'linux' && idLikeLine) {
-                                const match = idLikeLine.match(/^ID_LIKE=("?)([^"\n]*)\1$/);
-                                const idLike = match ? match[2].toLowerCase() : '';
-                                if (idLike.includes('rhel') || idLike.includes('redhat')) {
-                                  finalDistroId = "rhel";
-                                } else {
-                                  finalDistroId = rawDistro;
-                                }
-                              } else if (rawDistro) {
-                                finalDistroId = rawDistro;
-                              }
-                              if (versionIdLine) {
-                                const match = versionIdLine.match(/^VERSION_ID=("?)([^"\n]*)\1$/);
-                                if (match) versionId = match[2];
-                              }
-                            } catch (e) {}
-                            const stats = {
-                              cpu: cpuLoad,
-                              mem,
-                              disk: disks,
-                              uptime,
-                              network,
-                              hostname,
-                              distro: finalDistroId,
-                              versionId,
-                              ip
-                            };
-                            
-                            sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
-                            
-                          } catch (parseErr) {
-                            // Error parseando
-                          }
-                          
-                          if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
-                            sshConnections[tabId].statsLoopRunning = false;
-                            sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 2000);
-                          } else {
-                            if (sshConnections[tabId]) sshConnections[tabId].statsLoopRunning = false;
-                          }
-                        });
-                        
-                      } else {
-                        const stats = {
-                          cpu: '0.00',
-                          mem: { total: 0, used: 0 },
-                          disk: [],
-                          uptime: 'N/A',
-                          network: { rx_speed: 0, tx_speed: 0 },
-                          hostname: 'Bastión',
-                          distro: 'linux',
-                          ip: newConfig.host
-                        };
-                        sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
-                      }
-                      
-                    } catch (e) {
-                      if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
-                        sshConnections[tabId].statsLoopRunning = false;
-                        sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
-                      } else {
-                        if (sshConnections[tabId]) sshConnections[tabId].statsLoopRunning = false;
-                      }
-                    }
-                  }
-                  
-                  conn.wallixStatsLoop = wallixStatsLoop;
+                  conn.wallixStatsLoop = sshStatsService.createBastionStatsLoop(tabId, newConfig, bastionStatsState, sshConnections, event.sender);
                 }
                 
                 if (activeStatsTabId === tabId) {
@@ -2969,157 +2523,24 @@ async function findSSHConnection(tabId, sshConfig = null) {
 // Los handlers se registrarán después de crear la ventana principal
 
 // --- INICIO BLOQUE RESTAURACIÓN STATS ---
-// Función de statsLoop para conexiones directas (SSH2Promise)
+// ✅ REFACTORIZADO: Función de statsLoop ahora usa SSHStatsService
 async function statsLoop(tabId, realHostname, finalDistroId, host) {
-  const conn = sshConnections[tabId];
-  if (activeStatsTabId !== tabId) {
-    if (conn) {
-      conn.statsTimeout = null;
-    }
-    return;
-  }
-  if (!conn || !conn.ssh || !conn.stream || conn.stream.destroyed) {
-    return;
-  }
-  try {
-    // CPU
-    const cpuStatOutput = await conn.ssh.exec("grep 'cpu ' /proc/stat");
-    const cpuTimes = cpuStatOutput.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
-    let cpuLoad = '0.00';
-    const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
-    const previousCpu = conn.previousCpu;
-    if (previousCpu) {
-      const prevIdle = previousCpu.idle + previousCpu.iowait;
-      const currentIdle = currentCpu.idle + currentCpu.iowait;
-      const prevTotal = Object.values(previousCpu).reduce((a, b) => a + b, 0);
-      const currentTotal = Object.values(currentCpu).reduce((a, b) => a + b, 0);
-      const totalDiff = currentTotal - prevTotal;
-      const idleDiff = currentIdle - prevIdle;
-      if (totalDiff > 0) {
-        cpuLoad = ((totalDiff - idleDiff) * 100 / totalDiff).toFixed(2);
-      }
-    }
-    conn.previousCpu = currentCpu;
-    // Memoria, disco, uptime, red
-    const allStatsRes = await conn.ssh.exec("free -b && df -P && uptime && cat /proc/net/dev && hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo ''");
-    const parts = allStatsRes.trim().split('\n');
-    // Memoria
-    const memLine = parts.find(line => line.startsWith('Mem:')) || '';
-    const memParts = memLine.split(/\s+/);
-    const mem = {
-      total: parseInt(memParts[1], 10) || 0,
-      used: parseInt(memParts[2], 10) || 0,
-    };
-    // Disco
-    const dfIndex = parts.findIndex(line => line.trim().startsWith('Filesystem'));
-    const dfOutput = parts.slice(dfIndex).join('\n');
-    const disks = parseDfOutput(dfOutput);
-    // Uptime
-    const uptimeLine = parts.find(line => line.includes(' up '));
-    let uptime = '';
-    if (uptimeLine) {
-      const match = uptimeLine.match(/up (.*?),/);
-      if (match && match[1]) {
-        uptime = match[1].trim();
-      }
-    }
-    // Red
-    const netIndex = parts.findIndex(line => line.trim().includes('Inter-|   Receive'));
-    const netOutput = parts.slice(netIndex).join('\n');
-    const currentNet = parseNetDev(netOutput);
-    const previousNet = conn.previousNet;
-    const previousTime = conn.previousTime;
-    const currentTime = Date.now();
-    let network = { rx_speed: 0, tx_speed: 0 };
-    if (previousNet && previousTime) {
-      const timeDiff = (currentTime - previousTime) / 1000;
-      const rxDiff = currentNet.totalRx - previousNet.totalRx;
-      const txDiff = currentNet.totalTx - previousNet.totalTx;
-      network.rx_speed = Math.max(0, rxDiff / timeDiff);
-      network.tx_speed = Math.max(0, txDiff / timeDiff);
-    }
-    conn.previousNet = currentNet;
-    conn.previousTime = currentTime;
-    // Buscar IP real (última línea, tomar la última IP válida)
-    let ip = '';
-    if (parts.length > 0) {
-      const ipLine = parts[parts.length - 1].trim();
-      const ipCandidates = ipLine.split(/\s+/).filter(s => s && s !== '127.0.0.1' && s !== '::1');
-      if (ipCandidates.length > 0) {
-        ip = ipCandidates[ipCandidates.length - 1];
-      }
-    }
-    if (!ip) ip = host;
-    // Normalización de distro (RedHat) y obtención de versionId
-    let versionId = '';
-    try {
-      // Buscar ID, ID_LIKE y VERSION_ID en todo el output
-      const osReleaseLines = parts;
-      let idLine = osReleaseLines.find(line => line.trim().startsWith('ID='));
-      let idLikeLine = osReleaseLines.find(line => line.trim().startsWith('ID_LIKE='));
-      let versionIdLine = osReleaseLines.find(line => line.trim().startsWith('VERSION_ID='));
-      let rawDistro = '';
-      if (idLine) {
-        const match = idLine.match(/^ID=("?)([^"\n]*)\1$/);
-        if (match) rawDistro = match[2].toLowerCase();
-      }
-      if (["rhel", "redhat", "redhatenterpriseserver", "red hat enterprise linux"].includes(rawDistro)) {
-        finalDistroId = "rhel";
-      } else if (rawDistro === 'linux' && idLikeLine) {
-        const match = idLikeLine.match(/^ID_LIKE=("?)([^"\n]*)\1$/);
-        const idLike = match ? match[2].toLowerCase() : '';
-        if (idLike.includes('rhel') || idLike.includes('redhat')) {
-          finalDistroId = "rhel";
-        } else {
-          finalDistroId = rawDistro;
-        }
-      } else if (rawDistro) {
-        finalDistroId = rawDistro;
-      }
-      if (versionIdLine) {
-        const match = versionIdLine.match(/^VERSION_ID=("?)([^"\n]*)\1$/);
-        if (match) versionId = match[2];
-      }
-    } catch (e) {}
-    const stats = {
-      cpu: cpuLoad,
-      mem,
-      disk: disks,
-      uptime,
-      network,
-      hostname: realHostname,
-      distro: finalDistroId,
-      versionId,
-      ip
-    };
-    // Actualizar los valores en la conexión para que siempre estén correctos al reactivar la pestaña
-    conn.realHostname = realHostname;
-    conn.finalDistroId = finalDistroId;
-    sendToRenderer(mainWindow.webContents, `ssh-stats:update:${tabId}`, stats);
-  } catch (e) {
-    // Silenciar errores de stats
-  } finally {
-    const finalConn = sshConnections[tabId];
-    if (finalConn && finalConn.ssh && finalConn.stream && !finalConn.stream.destroyed) {
-      finalConn.statsTimeout = setTimeout(() => statsLoop(tabId, realHostname, finalDistroId, host), statusBarPollingIntervalMs);
-    }
-  }
+  return sshStatsService.startStatsLoop(tabId, sshConnections[tabId], realHostname, finalDistroId, host, mainWindow, sshConnections);
 }
 // --- FIN BLOQUE RESTAURACIÓN STATS ---
 
+// ✅ REFACTORIZADO: activeStatsTabId ahora se maneja en SSHStatsService
+// Variable local mantenida para compatibilidad con código existente
 let activeStatsTabId = null;
 
 ipcMain.on('ssh:set-active-stats-tab', (event, tabId) => {
   activeStatsTabId = tabId;
-  Object.entries(sshConnections).forEach(([id, conn]) => {
-    if (id !== String(tabId)) {
-      if (conn.statsTimeout) {
-        clearTimeout(conn.statsTimeout);
-        conn.statsTimeout = null;
-      }
-      conn.statsLoopRunning = false;
-    }
-  });
+  sshStatsService.setActiveStatsTab(tabId);
+  
+  // Detener loops inactivos
+  sshStatsService.stopInactiveStatsLoops(sshConnections, tabId);
+  
+  // Iniciar loop para la pestaña activa
   const conn = sshConnections[tabId];
   if (conn && !conn.statsTimeout && !conn.statsLoopRunning) {
     if (conn.config.useBastionWallix) {
@@ -3127,17 +2548,16 @@ ipcMain.on('ssh:set-active-stats-tab', (event, tabId) => {
         conn.wallixStatsLoop();
       }
     } else {
-      if (typeof statsLoop === 'function') {
-        statsLoop(tabId, conn.realHostname || 'unknown', conn.finalDistroId || 'linux', conn.config.host);
-      }
+      statsLoop(tabId, conn.realHostname || 'unknown', conn.finalDistroId || 'linux', conn.config.host);
     }
   }
 });
 
-let statusBarPollingIntervalMs = 3000; // Reducido de 5000ms a 3000ms por defecto
+// ✅ REFACTORIZADO: Intervalo de polling ahora se maneja en SSHStatsService
 ipcMain.on('statusbar:set-polling-interval', (event, intervalSec) => {
-  const sec = Math.max(1, Math.min(20, parseInt(intervalSec, 10) || 3)); // Cambio de 5 a 3
-  statusBarPollingIntervalMs = sec * 1000;
+  const sec = Math.max(1, Math.min(20, parseInt(intervalSec, 10) || 3));
+  const intervalMs = sec * 1000;
+  sshStatsService.setPollingInterval(intervalMs);
 });
 
 // Optimización: pausar estadísticas cuando la ventana pierda el foco
@@ -3317,9 +2737,9 @@ ipcMain.on(/^powershell:start:(.+)$/, (event, { cols, rows }) => {
   const channel = event.senderFrame ? event.channel : arguments[1];
   const tabId = channel.split(':')[2];
   
-  // Registrar eventos para este tab si no están registrados
-  if (!registeredTabEvents.has(tabId)) {
-    registerTabEvents(tabId);
+  // ✅ REFACTORIZADO: Registrar eventos para este tab si no están registrados
+  if (!isTabRegistered(tabId)) {
+    registerTabEventsWrapper(tabId);
   }
   
   PowerShell.PowerShellHandlers.start(tabId, { cols, rows });
@@ -3484,153 +2904,28 @@ function detectUbuntuSimple() {
   });
 }
 
-// Set para trackear tabs con eventos registrados
-const registeredTabEvents = new Set();
-
-// Sistema de registro dinámico para eventos de pestañas
-function registerTabEvents(tabId) {
-  registeredTabEvents.add(tabId);
-  // PowerShell events
-  ipcMain.removeAllListeners(`powershell:start:${tabId}`);
-  ipcMain.removeAllListeners(`powershell:data:${tabId}`);
-  ipcMain.removeAllListeners(`powershell:resize:${tabId}`);
-  ipcMain.removeAllListeners(`powershell:stop:${tabId}`);
-  
-  ipcMain.on(`powershell:start:${tabId}`, (event, data) => {
-    PowerShell.PowerShellHandlers.start(tabId, data);
+// ✅ REFACTORIZADO: Sistema de registro dinámico para eventos de pestañas movido a tab-events-handler.js
+// Wrapper local para mantener compatibilidad con código existente
+function registerTabEventsWrapper(tabId) {
+  registerTabEvents(tabId, {
+    PowerShell,
+    WSL,
+    Cygwin,
+    startUbuntuSession,
+    handleUbuntuData,
+    handleUbuntuResize,
+    handleUbuntuStop,
+    startWSLDistroSession,
+    handleWSLDistroData,
+    handleWSLDistroResize,
+    handleWSLDistroStop,
+    getDocker
   });
-  
-  ipcMain.on(`powershell:data:${tabId}`, (event, data) => {
-    PowerShell.PowerShellHandlers.data(tabId, data);
-  });
-  
-  ipcMain.on(`powershell:resize:${tabId}`, (event, data) => {
-    PowerShell.PowerShellHandlers.resize(tabId, data);
-  });
-  
-  ipcMain.on(`powershell:stop:${tabId}`, (event) => {
-    PowerShell.PowerShellHandlers.stop(tabId);
-  });
-  
-  // WSL events
-  ipcMain.removeAllListeners(`wsl:start:${tabId}`);
-  ipcMain.removeAllListeners(`wsl:data:${tabId}`);
-  ipcMain.removeAllListeners(`wsl:resize:${tabId}`);
-  ipcMain.removeAllListeners(`wsl:stop:${tabId}`);
-  
-  ipcMain.on(`wsl:start:${tabId}`, (event, data) => {
-    WSL.WSLHandlers.start(tabId, data);
-  });
-  
-  ipcMain.on(`wsl:data:${tabId}`, (event, data) => {
-    WSL.WSLHandlers.data(tabId, data);
-  });
-  
-  ipcMain.on(`wsl:resize:${tabId}`, (event, data) => {
-    WSL.WSLHandlers.resize(tabId, data);
-  });
-  
-  ipcMain.on(`wsl:stop:${tabId}`, (event) => {
-    WSL.WSLHandlers.stop(tabId);
-  });
-  
-  // Ubuntu events
-  ipcMain.removeAllListeners(`ubuntu:start:${tabId}`);
-  ipcMain.removeAllListeners(`ubuntu:data:${tabId}`);
-  ipcMain.removeAllListeners(`ubuntu:resize:${tabId}`);
-  ipcMain.removeAllListeners(`ubuntu:stop:${tabId}`);
-  
-  ipcMain.on(`ubuntu:start:${tabId}`, (event, data) => {
-    startUbuntuSession(tabId, data);
-  });
-  
-  ipcMain.on(`ubuntu:data:${tabId}`, (event, data) => {
-    handleUbuntuData(tabId, data);
-  });
-  
-  ipcMain.on(`ubuntu:resize:${tabId}`, (event, data) => {
-    handleUbuntuResize(tabId, data);
-  });
-  
-  ipcMain.on(`ubuntu:stop:${tabId}`, (event) => {
-    handleUbuntuStop(tabId);
-  });
-  
-  // WSL Distribution events (generic for all non-Ubuntu distributions)
-  ipcMain.removeAllListeners(`wsl-distro:start:${tabId}`);
-  ipcMain.removeAllListeners(`wsl-distro:data:${tabId}`);
-  ipcMain.removeAllListeners(`wsl-distro:resize:${tabId}`);
-  ipcMain.removeAllListeners(`wsl-distro:stop:${tabId}`);
-  
-  ipcMain.on(`wsl-distro:start:${tabId}`, (event, data) => {
-    startWSLDistroSession(tabId, data);
-  });
-  
-  ipcMain.on(`wsl-distro:data:${tabId}`, (event, data) => {
-    handleWSLDistroData(tabId, data);
-  });
-  
-  ipcMain.on(`wsl-distro:resize:${tabId}`, (event, data) => {
-    handleWSLDistroResize(tabId, data);
-  });
-  
-  ipcMain.on(`wsl-distro:stop:${tabId}`, (event) => {
-    handleWSLDistroStop(tabId);
-  });
-  
-  // Cygwin events
-  ipcMain.removeAllListeners(`cygwin:start:${tabId}`);
-  ipcMain.removeAllListeners(`cygwin:data:${tabId}`);
-  ipcMain.removeAllListeners(`cygwin:resize:${tabId}`);
-  ipcMain.removeAllListeners(`cygwin:stop:${tabId}`);
-  
-  ipcMain.on(`cygwin:start:${tabId}`, (event, data) => {
-    Cygwin.CygwinHandlers.start(tabId, data);
-  });
-  
-  ipcMain.on(`cygwin:data:${tabId}`, (event, data) => {
-    Cygwin.CygwinHandlers.data(tabId, data);
-  });
-  
-  ipcMain.on(`cygwin:resize:${tabId}`, (event, data) => {
-    Cygwin.CygwinHandlers.resize(tabId, data);
-  });
-  
-  ipcMain.on(`cygwin:stop:${tabId}`, (event) => {
-    Cygwin.CygwinHandlers.stop(tabId);
-  });
-
-  // Handlers para Docker (lazy loading)
-  const dockerSvc = getDocker();
-  if (dockerSvc && dockerSvc.DockerHandlers) {
-    ipcMain.removeAllListeners(`docker:start:${tabId}`);
-    ipcMain.removeAllListeners(`docker:data:${tabId}`);
-    ipcMain.removeAllListeners(`docker:resize:${tabId}`);
-    ipcMain.removeAllListeners(`docker:stop:${tabId}`);
-    
-    ipcMain.on(`docker:start:${tabId}`, (event, data) => {
-      dockerSvc.DockerHandlers.start(tabId, data.containerName, data);
-    });
-    
-    ipcMain.on(`docker:data:${tabId}`, (event, data) => {
-      dockerSvc.DockerHandlers.data(tabId, data);
-    });
-    
-    ipcMain.on(`docker:resize:${tabId}`, (event, data) => {
-      dockerSvc.DockerHandlers.resize(tabId, data);
-    });
-    
-    ipcMain.on(`docker:stop:${tabId}`, (event) => {
-      dockerSvc.DockerHandlers.stop(tabId);
-    });
-  }
 }
-
-
 
 // Evento para registrar nuevas pestañas
 ipcMain.on('register-tab-events', (event, tabId) => {
-  registerTabEvents(tabId);
+  registerTabEventsWrapper(tabId);
 });
 
 // Using dynamic tab registration instead of predefined tabs
