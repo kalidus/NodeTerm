@@ -780,8 +780,50 @@ const {
 
 // Handlers de Guacamole movidos a src/main/handlers/guacamole-handlers.js
 
-// Popup de arranque: splash.html (loadFile más fiable que data: en Windows/Electron)
-const SPLASH_PATH = path.join(__dirname, 'splash.html');
+// 🚀 OPTIMIZACIÓN: Splash inline para evitar I/O del disco en arranque frío
+// Esto elimina el delay de 13+ segundos al cargar desde disco en primer arranque
+const SPLASH_HTML = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: linear-gradient(180deg, #1b2330 0%, #0e1116 50%);
+      color: #e3f2fd;
+      font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+    }
+    .h { display: flex; align-items: center; gap: 12px; }
+    .s {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.25);
+      border-top-color: #79b8ff;
+      animation: r 720ms linear infinite;
+    }
+    @keyframes r { to { transform: rotate(360deg); } }
+    .b { font-weight: 600; font-size: 20px; opacity: .95; }
+    ul { list-style: none; padding: 0; text-align: left; min-width: 240px; }
+    ul li { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 14px; opacity: .9; }
+    ul li .i { width: 18px; text-align: center; font-size: 16px; color: #79b8ff; }
+    ul li.done .i { color: #7ee787; }
+  </style>
+</head>
+<body>
+  <div class="h"><div class="s"></div><span class="b">NodeTerm</span></div>
+  <ul>
+    <li id="step1"><span class="i">○</span><span class="l">Iniciando NodeTerm...</span></li>
+    <li id="step2"><span class="i">○</span><span class="l">Preparando ventana...</span></li>
+    <li id="step3"><span class="i">○</span><span class="l">Cargando interfaz...</span></li>
+    <li id="step4"><span class="i">○</span><span class="l">Iniciando sesión...</span></li>
+  </ul>
+</body>
+</html>`;
 
 function createWindow() {
   logTiming('createWindow() iniciado');
@@ -816,7 +858,8 @@ function createWindow() {
       alwaysOnTop: true,
       webPreferences: { contextIsolation: true, nodeIntegration: false }
     });
-    splashWindow.loadFile(SPLASH_PATH);
+    // 🚀 OPTIMIZACIÓN: loadURL con data URI es instantáneo (no I/O de disco)
+    splashWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(SPLASH_HTML)}`);
     splashWindow.focus();
   } catch (e) {
     console.warn('[SPLASH] No se pudo crear ventana de splash:', e?.message);
@@ -886,19 +929,29 @@ function createWindow() {
 
   // Cargar la ventana esperando a que webpack termine
   (async () => {
-    // Esperar a que el splash haya pintado antes de actualizar pasos (evita pantalla en negro)
-    await new Promise((resolve) => {
+    // 🚀 OPTIMIZACIÓN: No bloquear la carga principal esperando al splash
+    // El splash se actualiza de forma asíncrona cuando esté listo
+    const splashReady = new Promise((resolve) => {
       if (!splashWindow || splashWindow.isDestroyed()) { resolve(); return; }
       splashWindow.webContents.once('did-finish-load', resolve);
-      setTimeout(resolve, 400);
+      // Fallback más largo por si el splash tarda (no bloquea la carga principal)
+      setTimeout(resolve, 2000);
     });
-    setSplashStep(splashWindow, 1, true, 'Iniciando NodeTerm');
-    setSplashStep(splashWindow, 2, false, process.env.NODE_ENV === 'development' ? 'Esperando compilación...' : 'Preparando ventana...');
 
+    // Actualizar splash de forma asíncrona (no bloquear)
+    splashReady.then(() => {
+      setSplashStep(splashWindow, 1, true, 'Iniciando NodeTerm');
+      setSplashStep(splashWindow, 2, false, process.env.NODE_ENV === 'development' ? 'Esperando compilación...' : 'Preparando ventana...');
+    });
+
+    // Continuar inmediatamente sin esperar al splash
     await waitForWebpackBuild();
 
-    setSplashStep(splashWindow, 2, true, 'Preparando ventana');
-    setSplashStep(splashWindow, 3, false, 'Cargando interfaz...');
+    // Actualizar splash cuando esté listo
+    splashReady.then(() => {
+      setSplashStep(splashWindow, 2, true, 'Preparando ventana');
+      setSplashStep(splashWindow, 3, false, 'Cargando interfaz...');
+    });
 
     const urlToLoad = url.format({
       pathname: path.join(__dirname, 'dist', 'index.html'),
