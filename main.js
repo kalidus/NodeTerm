@@ -7,11 +7,21 @@
 //    - wallixStatsLoop() se crea via createBastionStatsLoop()
 //    - Eliminadas ~500 líneas de código duplicado
 //
+// ✅ SSHAuthService: Toda la lógica de autenticación SSH centralizada
+//    en src/main/services/SSHAuthService.js
+//    - Autenticación manual con password
+//    - Keyboard-interactive authentication
+//    - Manejo de errores de autenticación
+//    - Reintentos y reconexión automática
+//    - Eliminadas ~300 líneas de código duplicado
+//
 // ✅ tab-events-handler: Registro dinámico de eventos IPC para pestañas
 //    movido a src/main/handlers/tab-events-handler.js
 //    - registerTabEvents() ahora se importa del módulo
 //    - Reducidas ~140 líneas de main.js
 //    - Mejor organización y mantenibilidad
+//
+// 📊 Total reducido: ~940 líneas de código
 // ============================================================================
 
 // Startup profiler
@@ -41,6 +51,10 @@ logTiming('Servicios WSL/PowerShell/Cygwin cargados');
 // Servicio de estadísticas SSH
 const sshStatsService = require('./src/main/services/SSHStatsService');
 logTiming('SSHStatsService cargado');
+
+// Servicio de autenticación SSH
+const sshAuthService = require('./src/main/services/SSHAuthService');
+logTiming('SSHAuthService cargado');
 
 // Handler de registro de eventos de pestañas
 const { registerTabEvents, isTabRegistered } = require('./src/main/handlers/tab-events-handler');
@@ -1286,22 +1300,9 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         delete sshConnections[tabId];
       },
       (err) => {
+        // ✅ REFACTORIZADO: Manejo de errores de autenticación con SSHAuthService
         const conn = sshConnections[tabId];
-        // Detectar errores de autenticación
-        const isAuthError = err.message && (
-          err.message.includes('authentication') ||
-          err.message.includes('Authentication failed') ||
-          err.message.includes('All configured authentication methods failed')
-        );
-        
-        if (isAuthError && conn) {
-          // Activar modo manual de password para reintento interactivo
-          conn.manualPasswordMode = true;
-          conn.manualPasswordBuffer = '';
-          sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nAutenticación fallida. Por favor, introduce el password:\r\nPassword: `);
-        } else {
-          sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
-        }
+        sshAuthService.handleAuthError(conn, event.sender, tabId, err);
       },
       (stream) => {
         if (sshConnections[tabId]) {
@@ -1333,15 +1334,15 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       statsTimeout: null,
       previousNet: null,
       previousTime: null,
-      statsLoopRunning: false,
-      // Si no hay password, activar modo manual inmediatamente
-      manualPasswordMode: !(config.password && config.password.trim()),
-      manualPasswordBuffer: ''
+      statsLoopRunning: false
     };
+    
+    // ✅ REFACTORIZADO: Inicializar estado de autenticación con SSHAuthService
+    sshAuthService.initializeAuthState(sshConnections[tabId], config.password && config.password.trim());
     
     // Si no hay password, mostrar prompt inmediatamente
     if (!(config.password && config.password.trim())) {
-      sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPor favor, introduce el password:\r\nPassword: `);
+      sshAuthService.enableManualPasswordMode(sshConnections[tabId], event.sender, tabId, 'Por favor, introduce el password');
     }
     
     // ✅ REFACTORIZADO: Función de bucle de stats para Wallix/bastión ahora usa SSHStatsService
@@ -1660,7 +1661,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         // Usar ssh2 Client directamente para permitir autenticación interactiva
         const ssh2Client = new (getSSH2Client())();
         
-        // Guardar referencia inicial para capturar entrada durante autenticación
+        // ✅ REFACTORIZADO: Crear conexión con estado de autenticación usando SSHAuthService
         sshConnections[tabId] = {
           ssh: ssh2Client,
           stream: null,
@@ -1670,186 +1671,46 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           previousCpu: null,
           statsTimeout: null,
           previousNet: null,
-          previousTime: null,
-          manualPasswordMode: true, // Activar modo manual de password
-          manualPasswordBuffer: ''
+          previousTime: null
         };
         
-        // Manejar autenticación interactiva
-        ssh2Client.on('keyboard-interactive', (name, instructions, instructionsLang, prompts, finish) => {
-          const conn = sshConnections[tabId];
-          if (conn) {
-            // Mostrar instrucciones y prompts en la terminal
-            if (instructions) {
-              sendToRenderer(event.sender, `ssh:data:${tabId}`, instructions + '\r\n');
-            }
-            
-            // Mostrar el primer prompt
-            if (prompts.length > 0 && prompts[0].prompt) {
-              sendToRenderer(event.sender, `ssh:data:${tabId}`, prompts[0].prompt);
-            } else if (prompts.length > 0) {
-              sendToRenderer(event.sender, `ssh:data:${tabId}`, 'Password: ');
-            }
-            
-            // Guardar callback para cuando el usuario escriba
-            conn.keyboardInteractiveFinish = finish;
-            conn.keyboardInteractivePrompts = prompts;
-            conn.keyboardInteractiveResponses = [];
-            conn._currentResponse = '';
-            
-            // NO llamar finish() aquí - esperar a que el usuario escriba
+        // Inicializar estado de autenticación
+        sshAuthService.initializeAuthState(sshConnections[tabId], false);
+        
+        // Configurar todos los listeners de SSH2 usando el servicio
+        sshAuthService.setupSSH2ClientListeners(
+          ssh2Client,
+          sshConnections[tabId],
+          tabId,
+          config,
+          event.sender,
+          {
+            onReady: (realHostname, finalDistroId) => {
+              // Inicializar statsLoop después de conectar
+              setTimeout(() => {
+                if (sshConnections[tabId] && sshConnections[tabId].ssh) {
+                  statsLoop(tabId, realHostname, finalDistroId, config.host);
+                }
+              }, 1000);
+            },
+            onError: null,
+            getSessionRecorder: () => getSessionRecorder()
           }
-        });
+        );
         
-        // Crear shell cuando la conexión esté lista
-        ssh2Client.on('ready', () => {
-          ssh2Client.shell({ term: 'xterm-256color', cols: 80, rows: 24 }, async (err, shellStream) => {
-            if (err) {
-              sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
-              ssh2Client.end();
-              return;
-            }
-            
-            const conn = sshConnections[tabId];
-            if (!conn) return;
-            
-            // Crear wrapper para exec compatible con statsLoop
-            // IMPORTANTE: Guardar el método original antes de reemplazarlo para evitar recursión
-            const originalExec = ssh2Client.exec.bind(ssh2Client);
-            
-            const execWrapper = (command) => {
-              return new Promise((resolve, reject) => {
-                // Usar el método original, no el wrapper
-                originalExec(command, (err, stream) => {
-                  if (err) {
-                    reject(err);
-                    return;
-                  }
-                  let output = '';
-                  stream.on('data', (data) => {
-                    output += data.toString('utf-8');
-                  });
-                  stream.on('close', (code) => {
-                    if (code === 0) {
-                      resolve(output);
-                    } else {
-                      reject(new Error(`Command failed with code ${code}`));
-                    }
-                  });
-                  stream.stderr.on('data', (data) => {
-                    output += data.toString('utf-8');
-                  });
-                });
-              });
-            };
-            
-            // Agregar método exec para compatibilidad con statsLoop
-            ssh2Client.exec = execWrapper;
-            
-            // Obtener hostname y distro para stats
-            let realHostname = 'unknown';
-            let osRelease = '';
-            try {
-              realHostname = (await execWrapper('hostname')).trim() || 'unknown';
-            } catch (e) {
-              console.warn('[SSH] Error obteniendo hostname:', e);
-            }
-            try {
-              osRelease = await execWrapper('cat /etc/os-release');
-            } catch (e) {
-              osRelease = 'ID=linux';
-            }
-            const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
-            const finalDistroId = distroId.replace(/"/g, '').toLowerCase();
-            
-            // Actualizar conexión
-            conn.ssh = ssh2Client;
-            conn.stream = shellStream;
-            conn.realHostname = realHostname;
-            conn.finalDistroId = finalDistroId;
-            conn.manualPasswordMode = false; // Desactivar modo manual
-            
-            // Configurar listeners del stream
-            shellStream.on('data', (data) => {
-              const dataStr = data.toString('utf-8');
-              if (getSessionRecorder().isRecording(tabId)) {
-                getSessionRecorder().recordOutput(tabId, dataStr);
-              }
-              sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
-            });
-            
-            shellStream.on('close', () => {
-              sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
-              if (sshConnections[tabId] && sshConnections[tabId].statsTimeout) {
-                clearTimeout(sshConnections[tabId].statsTimeout);
-              }
-              sendToRenderer(event.sender, 'ssh-connection-disconnected', {
-                originalKey: conn.originalKey || tabId,
-                tabId: tabId
-              });
-              delete sshConnections[tabId];
-              ssh2Client.end();
-            });
-            
-            shellStream.stderr?.on('data', (data) => {
-              sendToRenderer(event.sender, `ssh:data:${tabId}`, data.toString('utf-8'));
-            });
-            
-            sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\n✅ Conectado exitosamente.\r\n');
-            sendToRenderer(event.sender, `ssh:ready:${tabId}`);
-            sendToRenderer(event.sender, 'ssh-connection-ready', {
-              originalKey: conn.originalKey || tabId,
-              tabId: tabId
-            });
-            
-            // Inicializar statsLoop después de un breve delay (IMPORTANTE: para que la status bar funcione)
-            setTimeout(() => {
-              if (sshConnections[tabId] && sshConnections[tabId].ssh) {
-                statsLoop(tabId, realHostname, finalDistroId, config.host);
-              }
-            }, 1000);
-          });
-        });
-        
-        ssh2Client.on('error', (err) => {
-          const conn = sshConnections[tabId];
-          // Si es error de autenticación, activar modo manual para reintentar
-          if (err.message && (err.message.includes('authentication') || err.message.includes('Authentication failed') || err.message.includes('All configured authentication methods failed'))) {
-            if (conn) {
-              conn.manualPasswordMode = true;
-              conn.manualPasswordBuffer = '';
-            }
-            sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nAutenticación fallida. Por favor, introduce el password:\r\nPassword: `);
-            return;
-          }
-          sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
-        });
-        
-        // Conectar con autenticación interactiva
-        const connectConfig = {
-          host: config.host,
-          username: config.username,
-          port: config.port || 22,
-          tryKeyboard: true, // Permitir autenticación interactiva
-          readyTimeout: 30000,
-          keepaliveInterval: 60000
-        };
-        
+        // ✅ REFACTORIZADO: Crear configuración SSH con SSHAuthService
         // NO incluir password si falló antes - forzar autenticación interactiva
-        // Si no hay password configurado, no incluirlo
-        if (config.password && config.password.trim() && !isAuthError) {
-          connectConfig.password = config.password;
-        }
+        const includePassword = config.password && config.password.trim() && !isAuthError;
+        const connectConfig = sshAuthService.createInteractiveSSHConfig(config, includePassword);
         
         // Si no hay password configurado, activar modo manual inmediatamente
         if (!config.password || !config.password.trim()) {
-          const conn = sshConnections[tabId];
-          if (conn) {
-            conn.manualPasswordMode = true;
-            conn.manualPasswordBuffer = '';
-            // Mostrar prompt inmediatamente con mensaje claro
-            sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPor favor, introduce el password:\r\nPassword: `);
-          }
+          sshAuthService.enableManualPasswordMode(
+            sshConnections[tabId],
+            event.sender,
+            tabId,
+            'Por favor, introduce el password'
+          );
         }
         
         ssh2Client.connect(connectConfig);
@@ -1914,34 +1775,24 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
     return;
   }
   
-  // Si hay modo manual de password activo (cuando keyboard-interactive no funciona o password incorrecto)
+  // ✅ REFACTORIZADO: Procesar input manual de password con SSHAuthService
   if (conn.manualPasswordMode) {
-    // Acumular la entrada del usuario
-    if (!conn.manualPasswordBuffer) {
-      conn.manualPasswordBuffer = '';
-    }
+    const password = sshAuthService.processManualPasswordInput(conn, data, event.sender, tabId);
     
-    // Si el usuario presiona Enter, reconectar con el password
-    if (data.includes('\r') || data.includes('\n')) {
-      const password = (conn.manualPasswordBuffer + data.replace(/[\r\n]/g, '')).trim();
+    // Si processManualPasswordInput retorna un password, reconectar
+    if (password) {
+      // Cerrar conexión anterior si existe
+      if (conn.ssh && typeof conn.ssh.end === 'function') {
+        try {
+          conn.ssh.end();
+        } catch (e) {}
+      }
       
-      if (password) {
-        // Limpiar modo manual
-        conn.manualPasswordMode = false;
-        conn.manualPasswordBuffer = '';
-        
-        // Cerrar conexión anterior si existe
-        if (conn.ssh && typeof conn.ssh.end === 'function') {
-          try {
-            conn.ssh.end();
-          } catch (e) {}
-        }
-        
-        // Reconectar con el password proporcionado
-        const newConfig = { ...conn.config, password: password };
-        
-        // Si es conexión Bastion, usar createBastionShell
-        if (newConfig.useBastionWallix) {
+      // Reconectar con el password proporcionado
+      const newConfig = { ...conn.config, password: password };
+      
+      // Si es conexión Bastion, usar createBastionShell
+      if (newConfig.useBastionWallix) {
           const bastionConfig = {
             bastionHost: newConfig.bastionHost,
             port: 22,
@@ -1971,19 +1822,8 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
               delete sshConnections[tabId];
             },
             (err) => {
-              const isAuthError = err.message && (
-                err.message.includes('authentication') ||
-                err.message.includes('Authentication failed') ||
-                err.message.includes('All configured authentication methods failed')
-              );
-              
-              if (isAuthError) {
-                conn.manualPasswordMode = true;
-                conn.manualPasswordBuffer = '';
-                sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPassword incorrecto. Intenta de nuevo:\r\nPassword: `);
-              } else {
-                sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
-              }
+              // ✅ REFACTORIZADO: Manejo de errores de autenticación con SSHAuthService
+              sshAuthService.handleAuthError(conn, event.sender, tabId, err);
             },
             (stream) => {
               if (sshConnections[tabId]) {
@@ -2019,126 +1859,31 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
             tabId: tabId
           });
         } else {
-          // Conexión SSH directa
+          // ✅ REFACTORIZADO: Reconexión SSH directa usando SSHAuthService
           const ssh2Client = new (getSSH2Client())();
           
-          ssh2Client.on('ready', () => {
-            ssh2Client.shell({ term: 'xterm-256color', cols: 80, rows: 24 }, async (err, shellStream) => {
-              if (err) {
-                sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
-                ssh2Client.end();
-                // Activar modo manual de nuevo para reintentar
-                conn.manualPasswordMode = true;
-                conn.manualPasswordBuffer = '';
-                sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPassword incorrecto. Intenta de nuevo:\r\nPassword: `);
-                return;
-              }
-              
-              // Crear wrapper para exec compatible con statsLoop
-              // IMPORTANTE: Guardar el método original antes de reemplazarlo para evitar recursión
-              const originalExec = ssh2Client.exec.bind(ssh2Client);
-              
-              const execWrapper = (command) => {
-                return new Promise((resolve, reject) => {
-                  // Usar el método original, no el wrapper
-                  originalExec(command, (err, stream) => {
-                    if (err) {
-                      reject(err);
-                      return;
-                    }
-                    let output = '';
-                    stream.on('data', (data) => {
-                      output += data.toString('utf-8');
-                    });
-                    stream.on('close', (code) => {
-                      if (code === 0) {
-                        resolve(output);
-                      } else {
-                        reject(new Error(`Command failed with code ${code}`));
-                      }
-                    });
-                    stream.stderr.on('data', (data) => {
-                      output += data.toString('utf-8');
-                    });
-                  });
-                });
-              };
-              
-              // Agregar método exec para compatibilidad con statsLoop
-              ssh2Client.exec = execWrapper;
-              
-              // Obtener hostname y distro para stats
-              let realHostname = 'unknown';
-              let osRelease = '';
-              try {
-                realHostname = (await execWrapper('hostname')).trim() || 'unknown';
-              } catch (e) {
-                console.warn('[SSH] Error obteniendo hostname:', e);
-              }
-              try {
-                osRelease = await execWrapper('cat /etc/os-release');
-              } catch (e) {
-                osRelease = 'ID=linux';
-              }
-              const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
-              const finalDistroId = distroId.replace(/"/g, '').toLowerCase();
-              
-              // Actualizar conexión
-              conn.ssh = ssh2Client;
-              conn.stream = shellStream;
-              conn.realHostname = realHostname;
-              conn.finalDistroId = finalDistroId;
-              
-              // Configurar listeners del stream
-              shellStream.on('data', (data) => {
-                const dataStr = data.toString('utf-8');
-                if (getSessionRecorder().isRecording(tabId)) {
-                  getSessionRecorder().recordOutput(tabId, dataStr);
-                }
-                sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
-              });
-              
-              shellStream.on('close', () => {
-                sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
-                if (sshConnections[tabId] && sshConnections[tabId].statsTimeout) {
-                  clearTimeout(sshConnections[tabId].statsTimeout);
-                }
-                sendToRenderer(event.sender, 'ssh-connection-disconnected', {
-                  originalKey: conn.originalKey || tabId,
-                  tabId: tabId
-                });
-                delete sshConnections[tabId];
-                ssh2Client.end();
-              });
-              
-              shellStream.stderr?.on('data', (data) => {
-                sendToRenderer(event.sender, `ssh:data:${tabId}`, data.toString('utf-8'));
-              });
-              
-              sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\n✅ Conectado exitosamente.\r\n');
-              sendToRenderer(event.sender, `ssh:ready:${tabId}`);
-              sendToRenderer(event.sender, 'ssh-connection-ready', {
-                originalKey: conn.originalKey || tabId,
-                tabId: tabId
-              });
-              
-              // CRÍTICO: Inicializar statsLoop después de un breve delay para que la status bar funcione
-              setTimeout(() => {
-                if (sshConnections[tabId] && sshConnections[tabId].ssh) {
-                  statsLoop(tabId, realHostname, finalDistroId, conn.config.host);
-                }
-              }, 1000);
-            });
-          });
+          // Configurar listeners usando el servicio
+          sshAuthService.setupSSH2ClientListeners(
+            ssh2Client,
+            conn,
+            tabId,
+            newConfig,
+            event.sender,
+            {
+              onReady: (realHostname, finalDistroId) => {
+                // Inicializar statsLoop
+                setTimeout(() => {
+                  if (sshConnections[tabId] && sshConnections[tabId].ssh) {
+                    statsLoop(tabId, realHostname, finalDistroId, newConfig.host);
+                  }
+                }, 1000);
+              },
+              onError: null,
+              getSessionRecorder: () => getSessionRecorder()
+            }
+          );
           
-          ssh2Client.on('error', (err) => {
-            sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
-            // Activar modo manual de nuevo para reintentar
-            conn.manualPasswordMode = true;
-            conn.manualPasswordBuffer = '';
-            sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPassword incorrecto. Intenta de nuevo:\r\nPassword: `);
-          });
-          
+          // Conectar con password
           ssh2Client.connect({
             host: newConfig.host,
             username: newConfig.username,
@@ -2148,80 +1893,13 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
             keepaliveInterval: 60000
           });
         }
-      } else {
-        sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\nPassword vacío. Por favor, introduce el password:\r\nPassword: `);
       }
-    } else {
-      // Acumular caracteres (ocultar en terminal para password)
-      // Solo acumular si no es Enter (Enter se procesa arriba)
-      if (!data.includes('\r') && !data.includes('\n')) {
-        // Detectar backspace (\b o \x7f)
-        if (data === '\b' || data === '\x7f' || data.charCodeAt(0) === 8 || data.charCodeAt(0) === 127) {
-          // Eliminar último carácter del buffer si existe
-          if (conn.manualPasswordBuffer.length > 0) {
-            conn.manualPasswordBuffer = conn.manualPasswordBuffer.slice(0, -1);
-            // Enviar backspace + espacio + backspace para borrar visualmente el asterisco
-            sendToRenderer(event.sender, `ssh:data:${tabId}`, '\b \b');
-          } else {
-            // Si no hay caracteres, solo enviar el backspace sin efecto
-            sendToRenderer(event.sender, `ssh:data:${tabId}`, '\b');
-          }
-        } else {
-          // Carácter normal: acumular y mostrar asterisco
-          conn.manualPasswordBuffer += data;
-          // Mostrar asteriscos en lugar del password
-          sendToRenderer(event.sender, `ssh:data:${tabId}`, '*');
-        }
-      }
-    }
     return;
   }
   
-  // Si hay autenticación interactiva pendiente (keyboard-interactive)
-  if (conn && conn.keyboardInteractiveFinish && conn.keyboardInteractivePrompts) {
-    // Acumular la entrada del usuario
-    if (!conn._currentResponse) {
-      conn._currentResponse = '';
-    }
-    
-    // Si el usuario presiona Enter, procesar la respuesta
-    if (data.includes('\r') || data.includes('\n')) {
-      // Agregar la respuesta actual (sin el Enter)
-      const response = (conn._currentResponse + data.replace(/[\r\n]/g, '')).trim();
-      if (response) {
-        conn.keyboardInteractiveResponses.push(response);
-      } else if (conn.keyboardInteractiveResponses.length < conn.keyboardInteractivePrompts.length) {
-        // Respuesta vacía también cuenta
-        conn.keyboardInteractiveResponses.push('');
-      }
-      
-      conn._currentResponse = '';
-      
-      // Si tenemos todas las respuestas, enviarlas
-      if (conn.keyboardInteractiveResponses.length >= conn.keyboardInteractivePrompts.length) {
-        const responses = conn.keyboardInteractiveResponses.slice(0, conn.keyboardInteractivePrompts.length);
-        const finish = conn.keyboardInteractiveFinish;
-        
-        // Limpiar estado de autenticación interactiva antes de llamar finish
-        conn.keyboardInteractiveFinish = null;
-        conn.keyboardInteractivePrompts = null;
-        conn.keyboardInteractiveResponses = [];
-        conn._currentResponse = '';
-        
-        // Enviar las respuestas
-        finish(responses);
-      } else {
-        // Mostrar el siguiente prompt
-        const nextIndex = conn.keyboardInteractiveResponses.length;
-        if (nextIndex < conn.keyboardInteractivePrompts.length && conn.keyboardInteractivePrompts[nextIndex].prompt) {
-          sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\n' + conn.keyboardInteractivePrompts[nextIndex].prompt);
-        }
-      }
-    } else {
-      // Acumular caracteres (la entrada se mostrará en la terminal normalmente)
-      conn._currentResponse += data;
-    }
-    return;
+  // ✅ REFACTORIZADO: Procesar keyboard-interactive con SSHAuthService
+  if (sshAuthService.processKeyboardInteractiveInput(conn, data, event.sender, tabId)) {
+    return; // Input procesado por keyboard-interactive
   }
   
   // Comportamiento normal: enviar datos al stream
