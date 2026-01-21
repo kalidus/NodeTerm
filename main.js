@@ -1,13 +1,13 @@
 // ============================================================================
-// 🎯 REFACTORIZACIONES RECIENTES
+// 🎯 REFACTORIZACIONES COMPLETADAS
 // ============================================================================
-// ✅ SSHStatsService: Toda la lógica de procesamiento de estadísticas SSH
+// ✅ 1. SSHStatsService: Toda la lógica de procesamiento de estadísticas SSH
 //    (CPU, memoria, disco, red, etc.) movida a src/main/services/SSHStatsService.js
 //    - statsLoop() ahora es un wrapper delgado
 //    - wallixStatsLoop() se crea via createBastionStatsLoop()
 //    - Eliminadas ~500 líneas de código duplicado
 //
-// ✅ SSHAuthService: Toda la lógica de autenticación SSH centralizada
+// ✅ 2. SSHAuthService: Toda la lógica de autenticación SSH centralizada
 //    en src/main/services/SSHAuthService.js
 //    - Autenticación manual con password
 //    - Keyboard-interactive authentication
@@ -15,13 +15,30 @@
 //    - Reintentos y reconexión automática
 //    - Eliminadas ~300 líneas de código duplicado
 //
-// ✅ tab-events-handler: Registro dinámico de eventos IPC para pestañas
+// ✅ 3. SSHConnectionCleanupService: Limpieza de conexiones SSH centralizada
+//    en src/main/services/SSHConnectionCleanupService.js
+//    - Limpieza de timeouts y buffers
+//    - Cierre seguro de streams y conexiones
+//    - Manejo de conexiones compartidas
+//    - Eliminadas ~120 líneas de código duplicado
+//
+// ✅ 4. SSHWriteBufferService: Sistema de buffering Wallix/Bastion
+//    en src/main/services/SSHWriteBufferService.js
+//    - Micro-batching optimizado para reducir lag
+//    - Flush inteligente (inmediato para comandos, delayed para typing)
+//    - Eliminadas ~50 líneas de código inline
+//
+// ✅ 5. tab-events-handler: Registro dinámico de eventos IPC para pestañas
 //    movido a src/main/handlers/tab-events-handler.js
 //    - registerTabEvents() ahora se importa del módulo
 //    - Reducidas ~140 líneas de main.js
 //    - Mejor organización y mantenibilidad
 //
-// 📊 Total reducido: ~940 líneas de código
+// 📊 RESULTADO FINAL:
+//    • 5 refactorizaciones completadas
+//    • ~1110 líneas reducidas del main.js
+//    • 4 nuevos módulos/servicios creados
+//    • Mejor mantenibilidad y testabilidad
 // ============================================================================
 
 // Startup profiler
@@ -55,6 +72,14 @@ logTiming('SSHStatsService cargado');
 // Servicio de autenticación SSH
 const sshAuthService = require('./src/main/services/SSHAuthService');
 logTiming('SSHAuthService cargado');
+
+// Servicio de limpieza de conexiones SSH
+const sshCleanupService = require('./src/main/services/SSHConnectionCleanupService');
+logTiming('SSHConnectionCleanupService cargado');
+
+// Servicio de buffering de escritura SSH (Wallix)
+const sshWriteBufferService = require('./src/main/services/SSHWriteBufferService');
+logTiming('SSHWriteBufferService cargado');
 
 // Handler de registro de eventos de pestañas
 const { registerTabEvents, isTabRegistered } = require('./src/main/handlers/tab-events-handler');
@@ -1286,19 +1311,14 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         
         sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
       },
-      () => {
-        sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
-        if (sshConnections[tabId] && sshConnections[tabId].statsTimeout) {
-          clearTimeout(sshConnections[tabId].statsTimeout);
-        }
-        sendToRenderer(event.sender, 'ssh-connection-disconnected', {
-          originalKey: config.originalKey || tabId,
-          tabId: tabId
-        });
-        // Limpiar estado persistente de bastión al cerrar la pestaña
-        delete bastionStatsState[tabId];
-        delete sshConnections[tabId];
-      },
+      // ✅ REFACTORIZADO: Handler de cierre usando SSHConnectionCleanupService
+      sshCleanupService.createCloseHandler(
+        tabId,
+        { originalKey: config.originalKey || tabId },
+        sshConnections,
+        bastionStatsState,
+        event.sender
+      ),
       (err) => {
         // ✅ REFACTORIZADO: Manejo de errores de autenticación con SSHAuthService
         const conn = sshConnections[tabId];
@@ -1307,6 +1327,10 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       (stream) => {
         if (sshConnections[tabId]) {
           sshConnections[tabId].stream = stream;
+          
+          // ✅ FIX: Desactivar modo de password manual cuando el stream está listo
+          sshAuthService.disableManualPasswordMode(sshConnections[tabId]);
+          
           // Si hay un resize pendiente, aplicarlo ahora
           const pending = sshConnections[tabId]._pendingResize;
           if (pending && stream && !stream.destroyed && typeof stream.setWindow === 'function') {
@@ -1809,18 +1833,14 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
               }
               sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
             },
-            () => {
-              sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
-              if (sshConnections[tabId] && sshConnections[tabId].statsTimeout) {
-                clearTimeout(sshConnections[tabId].statsTimeout);
-              }
-              sendToRenderer(event.sender, 'ssh-connection-disconnected', {
-                originalKey: conn.originalKey || tabId,
-                tabId: tabId
-              });
-              delete bastionStatsState[tabId];
-              delete sshConnections[tabId];
-            },
+            // ✅ REFACTORIZADO: Handler de cierre usando SSHConnectionCleanupService
+            sshCleanupService.createCloseHandler(
+              tabId,
+              conn,
+              sshConnections,
+              bastionStatsState,
+              event.sender
+            ),
             (err) => {
               // ✅ REFACTORIZADO: Manejo de errores de autenticación con SSHAuthService
               sshAuthService.handleAuthError(conn, event.sender, tabId, err);
@@ -1828,6 +1848,10 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
             (stream) => {
               if (sshConnections[tabId]) {
                 sshConnections[tabId].stream = stream;
+                
+                // ✅ FIX: Desactivar modo de password manual cuando el stream está listo
+                sshAuthService.disableManualPasswordMode(sshConnections[tabId]);
+                
                 const pending = sshConnections[tabId]._pendingResize;
                 if (pending && stream && !stream.destroyed && typeof stream.setWindow === 'function') {
                   const safeRows = Math.max(1, Math.min(300, pending.rows || 24));
@@ -1851,6 +1875,9 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
           // Actualizar conexión
           conn.ssh = newBastionConn;
           conn.config = newConfig;
+          
+          // ✅ FIX: Desactivar modo de password manual después de conectar exitosamente
+          sshAuthService.disableManualPasswordMode(conn);
           
           sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\n✅ Conectado exitosamente.\r\n');
           sendToRenderer(event.sender, `ssh:ready:${tabId}`);
@@ -1902,60 +1929,19 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
     return; // Input procesado por keyboard-interactive
   }
   
-  // Comportamiento normal: enviar datos al stream
+  // ✅ REFACTORIZADO: Enviar datos al stream con buffering optimizado para Wallix
   if (conn && conn.stream && !conn.stream.destroyed) {
-    // OPTIMIZACIÓN: Para conexiones Wallix/Bastion, usar buffering para reducir lag
-    const isWallixConnection = conn.config?.useBastionWallix || conn.ssh?._isWallixConnection;
-    
-    if (isWallixConnection) {
-      // Inicializar buffer de escritura si no existe
-      if (!conn._writeBuffer) {
-        conn._writeBuffer = '';
-        conn._writeBufferTimeout = null;
-      }
-      
-      // Acumular datos en el buffer
-      conn._writeBuffer += data;
-      
-      // Cancelar timeout previo si existe
-      if (conn._writeBufferTimeout) {
-        clearTimeout(conn._writeBufferTimeout);
-      }
-      
-      // Función para flush del buffer
-      const flushBuffer = () => {
-        if (conn._writeBuffer && conn.stream && !conn.stream.destroyed) {
-          const bufferedData = conn._writeBuffer;
-          conn._writeBuffer = '';
-          conn._writeBufferTimeout = null;
-          
-          // Grabar input de forma asíncrona (no bloqueante)
-          if (getSessionRecorder().isRecording(tabId)) {
-            setImmediate(() => {
-              getSessionRecorder().recordInput(tabId, bufferedData);
-            });
-          }
-          
-          // Escribir al stream
-          conn.stream.write(bufferedData);
-        }
-      };
-      
-      // Flush inmediato para caracteres especiales (Enter, Ctrl+C, etc.)
-      const hasSpecialChar = data.includes('\r') || data.includes('\n') || 
-                             data.includes('\x03') || data.includes('\x04') ||
-                             data.includes('\x1b'); // ESC
-      
-      if (hasSpecialChar || conn._writeBuffer.length >= 8) {
-        // Flush inmediato para comandos o buffers largos
-        flushBuffer();
-      } else {
-        // Para caracteres normales, hacer micro-batching con timeout corto
-        conn._writeBufferTimeout = setTimeout(flushBuffer, 5);
-      }
-    } else {
-      // SSH directo: comportamiento original sin buffering
-      // Grabar input si hay grabación activa
+    // Intentar usar buffering (retorna true si aplica, false si no)
+    const buffered = sshWriteBufferService.writeWithBuffering(
+      conn,
+      data,
+      tabId,
+      getSessionRecorder
+    );
+
+    // Si no se usó buffering, usar comportamiento directo
+    if (!buffered) {
+      // SSH directo: sin buffering
       if (getSessionRecorder().isRecording(tabId)) {
         getSessionRecorder().recordInput(tabId, data);
       }
@@ -1984,90 +1970,18 @@ ipcMain.on('ssh:resize', (event, { tabId, rows, cols }) => {
     }
 });
 
-// IPC handler to terminate an SSH connection
+// ✅ REFACTORIZADO: Handler de desconexión SSH usando SSHConnectionCleanupService
 ipcMain.on('ssh:disconnect', (event, tabId) => {
   const conn = sshConnections[tabId];
   if (conn) {
-    try {
-      // Limpiar timeout de stats
-      if (conn.statsTimeout) {
-        clearTimeout(conn.statsTimeout);
-        conn.statsTimeout = null;
-      }
-      
-      // Limpiar buffer de escritura pendiente (Wallix)
-      if (conn._writeBufferTimeout) {
-        clearTimeout(conn._writeBufferTimeout);
-        conn._writeBufferTimeout = null;
-      }
-      
-      // Flush buffer pendiente antes de cerrar
-      if (conn._writeBuffer && conn.stream && !conn.stream.destroyed) {
-        try {
-          conn.stream.write(conn._writeBuffer);
-        } catch (e) {
-          // Ignorar errores al escribir durante el cierre
-        }
-        conn._writeBuffer = '';
-      }
-      
-      // Para conexiones Wallix, solo necesitamos cerrar el stream principal
-      if (conn.ssh && conn.ssh._isWallixConnection) {
-        // Cerrando conexión Wallix
-      }
-      
-      // Limpiar listeners del stream de forma más agresiva
-      if (conn.stream) {
-        try {
-          conn.stream.removeAllListeners();
-          if (!conn.stream.destroyed) {
-            conn.stream.destroy();
-          }
-        } catch (streamError) {
-          // Error destroying stream
-        }
-      }
-      
-      // Verificar si otras pestañas están usando la misma conexión SSH
-      const otherTabsUsingConnection = Object.values(sshConnections)
-        .filter(c => c !== conn && c.cacheKey === conn.cacheKey);
-      
-      // Solo cerrar la conexión SSH si no hay otras pestañas usándola
-      // (Para bastiones, cada terminal es independiente, así que siempre cerrar)
-      if (otherTabsUsingConnection.length === 0 && conn.ssh && conn.cacheKey) {
-        try {
-      // Enviar evento de desconexión
-      const disconnectOriginalKey = conn.originalKey || conn.cacheKey;
-      sendToRenderer(event.sender, 'ssh-connection-disconnected', { 
-        originalKey: disconnectOriginalKey
-      });
-      
-      // Limpiar listeners específicos de la conexión SSH de forma más selectiva
-      if (conn.ssh.ssh) {
-        // Solo remover listeners específicos en lugar de todos
-        conn.ssh.ssh.removeAllListeners('error');
-        conn.ssh.ssh.removeAllListeners('close');
-        conn.ssh.ssh.removeAllListeners('end');
-      }
-      
-      // Limpiar listeners del SSH2Promise también
-      conn.ssh.removeAllListeners('error');
-      conn.ssh.removeAllListeners('close');
-      conn.ssh.removeAllListeners('end');
-      
-      conn.ssh.close();
-      delete sshConnectionPool[conn.cacheKey];
-        } catch (closeError) {
-          // Error closing SSH connection
-        }
-      }
-      
-    } catch (error) {
-      // Error cleaning up SSH connection
-    } finally {
-      // Always delete the connection
-      delete sshConnections[tabId];
-    }
+    sshCleanupService.cleanupConnection(
+      tabId,
+      conn,
+      sshConnections,
+      sshConnectionPool,
+      bastionStatsState,
+      event.sender
+    );
   }
 });
 
@@ -2083,38 +1997,8 @@ app.on('before-quit', async () => {
     orphanCleanupInterval = null;
   }
   
-  Object.values(sshConnections).forEach(conn => {
-    if (conn.statsTimeout) {
-      clearTimeout(conn.statsTimeout);
-    }
-    if (conn.stream) {
-      try {
-        conn.stream.removeAllListeners();
-        if (!conn.stream.destroyed) {
-          conn.stream.destroy();
-        }
-      } catch (e) {
-        // Ignorar errores
-      }
-    }
-    if (conn.ssh) {
-      try {
-        if (conn.ssh.ssh) {
-          // Limpiar listeners específicos en lugar de todos en before-quit
-          conn.ssh.ssh.removeAllListeners('error');
-          conn.ssh.ssh.removeAllListeners('close');
-          conn.ssh.ssh.removeAllListeners('end');
-        }
-        // Limpiar listeners del SSH2Promise también
-        conn.ssh.removeAllListeners('error');
-        conn.ssh.removeAllListeners('close');
-        conn.ssh.removeAllListeners('end');
-        conn.ssh.close();
-      } catch (e) {
-        // Ignorar errores
-      }
-    }
-  });
+  // ✅ REFACTORIZADO: Limpiar todas las conexiones SSH con SSHConnectionCleanupService
+  sshCleanupService.cleanupAllConnections(sshConnections);
   
   // Limpiar también el pool de conexiones con mejor limpieza
   Object.values(sshConnectionPool).forEach(poolConn => {
