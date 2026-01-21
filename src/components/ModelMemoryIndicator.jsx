@@ -38,6 +38,7 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {}, onExpandedChan
         modelMemoryService.lastSystemMemory = systemMemory;
         
         // ✅ Obtener estadísticas del sistema (CPU, etc.)
+        // 🚀 OPTIMIZACIÓN: Con retry silencioso si el handler aún no está listo
         try {
           const sysStats = await window.electronAPI?.getSystemStats();
           if (sysStats) {
@@ -48,7 +49,7 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {}, onExpandedChan
             });
           }
         } catch (e) {
-          // Sistema stats no disponible
+          // Sistema stats no disponible (esperado durante arranque inicial)
           setSystemStats(null);
         }
         
@@ -73,8 +74,9 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {}, onExpandedChan
       }
     };
 
+    // Primera actualización inmediata, luego cada 10 segundos
     updateStats();
-    const interval = setInterval(updateStats, 10000); // Reducido de 5000ms a 10000ms para ahorrar CPU/RAM
+    const interval = setInterval(updateStats, 10000);
     return () => clearInterval(interval);
   }, [visible]);
 
