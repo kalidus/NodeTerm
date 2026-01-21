@@ -350,6 +350,7 @@ let guacamoleInitPromise = null;
 
 /**
  * Inicializa servicios de Guacamole de forma asíncrona
+ * ✅ OPTIMIZACIÓN: Refactorizada usando GuacamoleConfigService
  */
 async function initializeGuacamoleServices() {
   // ✅ BUG FIX: Si ya hay una inicialización en curso, esperar a que termine
@@ -364,6 +365,9 @@ async function initializeGuacamoleServices() {
     return;
   }
   
+  // Importar servicio de configuración
+  const GuacamoleConfigService = require('./src/main/services/GuacamoleConfigService');
+  
   // Crear nueva promesa de inicialización
   guacamoleInitPromise = (async () => {
     try {
@@ -371,220 +375,89 @@ async function initializeGuacamoleServices() {
       
       // 🚀 OPTIMIZACIÓN: Aplicar parche de GuacdClient justo antes de inicializar
       ensureGuacdClientPatched();
-    console.log('🚀 Inicializando servicios Guacamole...');
-    // Cargar método preferido persistido antes de inicializar
-    try {
-      const pref = await loadPreferredGuacdMethod();
-      if (pref) {
-        getGuacdService().setPreferredMethod(pref);
-      }
-    } catch {}
-    
-    // Inicializar GuacdService
-    const guacdReady = await getGuacdService().initialize();
-    
-    if (!guacdReady) {
-      console.warn('⚠️ No se pudo inicializar guacd. RDP Guacamole no estará disponible.');
-      guacamoleInitializing = false; // Reset flag en caso de error
-      return;
-    }
-
-    // Esperar a que guacd esté realmente accesible antes de continuar
-    // Esto evita race conditions donde Guacamole-lite se inicializa antes de que guacd esté listo
-    if (DEBUG_GUACAMOLE) {
-      console.log('⏳ [initializeGuacamoleServices] Esperando a que guacd esté accesible...');
-    }
-    const guacdStatus = getGuacdService().getStatus();
-    const maxWaitTime = 10000; // 10 segundos máximo
-    const checkInterval = 200; // Verificar cada 200ms
-    const startTime = Date.now();
-    let isReady = false;
-    
-    while (!isReady && (Date.now() - startTime) < maxWaitTime) {
+      console.log('🚀 Inicializando servicios Guacamole...');
+      
+      // Cargar método preferido persistido antes de inicializar
       try {
-        const isAvailable = await getGuacdService().isPortAvailable(guacdStatus.port);
-        if (!isAvailable) {
-          // Puerto ocupado = guacd está escuchando y accesible
-                isReady = true;
-                if (DEBUG_GUACAMOLE) {
-                  console.log(`✅ [initializeGuacamoleServices] guacd accesible en ${guacdStatus.host}:${guacdStatus.port}`);
-                }
-          break;
+        const pref = await loadPreferredGuacdMethod();
+        if (pref) {
+          getGuacdService().setPreferredMethod(pref);
         }
-      } catch (error) {
-        // Continuar esperando
+      } catch {}
+      
+      // Inicializar GuacdService
+      const guacdReady = await getGuacdService().initialize();
+      
+      if (!guacdReady) {
+        console.warn('⚠️ No se pudo inicializar guacd. RDP Guacamole no estará disponible.');
+        guacamoleInitializing = false;
+        return;
       }
-      await new Promise(resolve => setTimeout(resolve, checkInterval));
-    }
-    
-    if (!isReady) {
-      // Mantener warning (alto nivel)
-      console.warn('⚠️ [initializeGuacamoleServices] guacd no está accesible después de esperar, continuando de todas formas...');
-    }
 
-    // Configurar servidor Guacamole-lite
-    const websocketOptions = {
-      port: 8081 // Puerto para WebSocket de Guacamole
-    };
+      // Esperar a que guacd esté realmente accesible
+      const guacdStatus = getGuacdService().getStatus();
+      await GuacamoleConfigService.waitForGuacdReady(getGuacdService(), guacdStatus);
 
-    const guacdOptions = getGuacdService().getGuacdOptions();
-    
-    // ✅ SEGURIDAD: Obtener o crear clave secreta única por instalación
-    // En lugar de usar una clave hardcodeada, generamos una única por instalación
-    const crypto = require('crypto');
-    const SECRET_KEY = await getOrCreateGuacamoleSecretKey(); // 32 bytes exactos para AES-256-CBC
-    
-    // Desactivar watchdogs de inactividad para evitar cierres falsos
-    // 1) Watchdog de WebSocket (lado cliente en guacamole-lite): maxInactivityTime=0 → desactivado
-    // 2) Watchdog de guacd (lado backend guacd): variable de entorno
-    process.env.DISABLE_GUACD_WATCHDOG = '1';
+      // Configurar servidor Guacamole-lite
+      const websocketOptions = { port: 8081 };
+      const guacdOptions = getGuacdService().getGuacdOptions();
+      
+      // ✅ SEGURIDAD: Obtener o crear clave secreta única por instalación
+      const SECRET_KEY = await getOrCreateGuacamoleSecretKey();
+      
+      // Desactivar watchdogs de inactividad para evitar cierres falsos
+      process.env.DISABLE_GUACD_WATCHDOG = '1';
 
-    const clientOptions = {
-      crypt: {
-        cypher: 'AES-256-CBC',
-        key: SECRET_KEY // Clave de encriptación de 32 bytes
-      },
-      log: {
-        level: process.env.NODE_ENV === 'development' ? 'DEBUG' : 'NORMAL'
-      },
-      maxInactivityTime: 0 // Desactivar cierre por inactividad del WS
-    };
+      const clientOptions = {
+        crypt: {
+          cypher: 'AES-256-CBC',
+          key: SECRET_KEY
+        },
+        log: {
+          level: process.env.NODE_ENV === 'development' ? 'DEBUG' : 'NORMAL'
+        },
+        maxInactivityTime: 0
+      };
 
-    // Configurar watchdog de inactividad para guacd (lado backend) de forma configurable
-    // Prioridad: 1) Variable de entorno, 2) Valor persistido, 3) Valor por defecto (120 min)
-    const envTimeoutRaw = process.env.GUACD_INACTIVITY_TIMEOUT_MS;
-    if (typeof envTimeoutRaw === 'string' && envTimeoutRaw.trim() !== '') {
-      // Usar variable de entorno si está definida
-      const parsed = parseInt(envTimeoutRaw, 10);
-      if (!Number.isNaN(parsed) && parsed >= 0) {
-        guacdInactivityTimeoutMs = parsed;
-        console.log(`🕐 [Guacamole] Timeout de inactividad desde env: ${Math.round(guacdInactivityTimeoutMs / 60000)} minutos`);
-      }
-    } else {
-      // Cargar valor persistido (sincronizado con Umbral de actividad de sesión del frontend)
-      try {
-        const savedTimeout = await loadGuacdInactivityTimeout();
-        if (savedTimeout !== null && savedTimeout >= 0) {
-          guacdInactivityTimeoutMs = savedTimeout;
-          console.log(`🕐 [Guacamole] Timeout de inactividad cargado: ${Math.round(guacdInactivityTimeoutMs / 60000)} minutos`);
-        } else {
-          console.log(`🕐 [Guacamole] Timeout de inactividad por defecto: ${Math.round(guacdInactivityTimeoutMs / 60000)} minutos`);
-        }
-      } catch (e) {
-        console.log(`🕐 [Guacamole] Timeout de inactividad por defecto: ${Math.round(guacdInactivityTimeoutMs / 60000)} minutos`);
-      }
-    }
-    // Crear servidor Guacamole-lite
-    try {
+      // Configurar timeout de inactividad
+      guacdInactivityTimeoutMs = await GuacamoleConfigService.getConfiguredInactivityTimeout(
+        loadGuacdInactivityTimeout,
+        guacdInactivityTimeoutMs
+      );
+
+      // Crear servidor Guacamole-lite
       guacamoleServer = new (getGuacamoleLite())(websocketOptions, guacdOptions, clientOptions);
+      
       if (DEBUG_GUACAMOLE) {
         console.log('🌐 [initializeGuacamoleServices] Servidor Guacamole-lite creado:', !!guacamoleServer);
+        console.log('🌐 [initializeGuacamoleServices] Servidor tiene port:', guacamoleServer.port || 'no definido');
       }
-      if (guacamoleServer) {
-        if (DEBUG_GUACAMOLE) {
-          console.log('🌐 [initializeGuacamoleServices] Servidor tiene port:', guacamoleServer.port || 'no definido');
-        }
-      }
-    } catch (serverError) {
-      console.error('❌ [initializeGuacamoleServices] Error creando servidor Guacamole-lite:', serverError);
-      throw serverError;
-    }
-    
-    // Configurar eventos del servidor
-    guacamoleServer.on('open', (clientConnection) => {
-      try {
-        // Nueva conexión Guacamole abierta
-        activeGuacamoleConnections.add(clientConnection);
-
-        // Parche en runtime del watchdog de guacd (backup del parche global)
-        // Reemplaza el de 10s por uno configurable o lo desactiva completamente
-        try {
-          const guacdClient = clientConnection && clientConnection.guacdClient ? clientConnection.guacdClient : null;
-          if (guacdClient) {
-            // PASO 1: Desactivar SIEMPRE el watchdog original de 10s
-            if (guacdClient.activityCheckInterval) {
-              clearInterval(guacdClient.activityCheckInterval);
-              guacdClient.activityCheckInterval = null;
-              if (DEBUG_GUACAMOLE) {
-                console.log('🔧 [Guacamole] Watchdog original de 10s desactivado');
-              }
-            }
-
-            // PASO 2: Aplicar watchdog personalizado solo si está configurado (>0)
-            if (guacdInactivityTimeoutMs > 0) {
-              const timeoutMinutes = Math.round(guacdInactivityTimeoutMs / 60000);
-              console.log(`🕐 [Guacamole] Watchdog de inactividad configurado: ${timeoutMinutes} minutos`);
-              
-              guacdClient.activityCheckInterval = setInterval(() => {
-                try {
-                  const inactiveMs = Date.now() - guacdClient.lastActivity;
-                  if (inactiveMs > guacdInactivityTimeoutMs) {
-                    const inactiveMinutes = Math.round(inactiveMs / 60000);
-                    console.warn(`⏰ [Guacamole] Cerrando conexión por inactividad: ${inactiveMinutes} minutos sin actividad`);
-                    guacdClient.close(new Error(`guacd inactivo por ${inactiveMinutes} minutos`));
-                  }
-                } catch (e) {
-                  // Si ocurre un error al cerrar, evitar que detenga el loop
-                }
-              }, 30000); // Verificar cada 30 segundos en lugar de cada 1 segundo
-            } else {
-              console.log('🔓 [Guacamole] Watchdog de inactividad DESACTIVADO (timeout = 0)');
-            }
-
-            // PASO 3: Interceptar método send para actualizar lastActivity bidireccionalmente
-            // (backup del parche global en caso de que no se aplicara)
-            if (!guacdClient._sendPatched) {
-              const originalSend = guacdClient.send.bind(guacdClient);
-              guacdClient.send = function(data, afterOpened = false) {
-                this.lastActivity = Date.now();
-                return originalSend(data, afterOpened);
-              };
-              guacdClient._sendPatched = true;
-              if (DEBUG_GUACAMOLE) {
-                console.log('🔧 [Guacamole] Parche bidireccional de lastActivity aplicado');
-              }
-            }
-          } else {
-            console.warn('⚠️  No se encontró guacdClient para aplicar watchdog');
-          }
-        } catch (e) {
-          console.warn('⚠️  Error aplicando watchdog de guacd:', e?.message || e);
-        }
-      } catch (e) {
-        console.warn('No se pudo registrar conexión Guacamole:', e?.message || e);
-      }
-    });
-
-    guacamoleServer.on('close', (clientConnection) => {
-      try {
-        console.log('🔚 Conexión Guacamole cerrada:', clientConnection.connectionId);
-        activeGuacamoleConnections.delete(clientConnection);
-      } catch (e) {
-        // noop
-      }
-    });
-
-    guacamoleServer.on('error', (clientConnection, error) => {
-      console.error('❌ Error en conexión Guacamole:', error);
-    });
+      
+      // Configurar eventos del servidor usando el servicio
+      GuacamoleConfigService.setupGuacamoleServerEvents(
+        guacamoleServer, 
+        activeGuacamoleConnections, 
+        guacdInactivityTimeoutMs
+      );
 
       guacamoleServerReadyAt = Date.now();
       guacamoleInitialized = true;
-      guacamoleInitializing = false; // Reset flag después de inicialización exitosa
+      guacamoleInitializing = false;
+      
       console.log('✅ Servicios Guacamole inicializados correctamente');
       console.log(`🌐 Servidor WebSocket: localhost:${websocketOptions.port}`);
       console.log(`🔧 GuacD: ${guacdOptions.host}:${guacdOptions.port}`);
+      
       if (DEBUG_GUACAMOLE) {
         console.log(`📊 [initializeGuacamoleServices] guacamoleServer asignado:`, !!guacamoleServer);
       }
       
-      return true; // Éxito
+      return true;
     } catch (error) {
       console.error('❌ Error inicializando servicios Guacamole:', error);
-      guacamoleInitializing = false; // Reset flag en caso de error
-      throw error; // Re-lanzar para que la promesa falle
+      guacamoleInitializing = false;
+      throw error;
     } finally {
-      // Limpiar la promesa después de completar (éxito o error)
       guacamoleInitPromise = null;
     }
   })();
@@ -1017,55 +890,9 @@ function createWindow() {
 
 // Funciones de WSL movidas a main/services/WSLService.js
 
-// 🔗 IPC Handler para sincronizar conexiones SSH con el MCP (EN MEMORIA, SIN ARCHIVO)
-ipcMain.on('app:save-ssh-connections-for-mcp', async (event, connections) => {
-  try {
-    if (!Array.isArray(connections)) {
-      console.warn('[SSH MCP] ⚠️ Parámetro no es un array:', typeof connections);
-      return;
-    }
-    
-    // Guardar en memoria en el MCP Server
-    if (global.sshTerminalServer) {
-      global.sshTerminalServer.nodeTermConnections = connections;
-      // Solo loggear la primera vez o cuando cambia el número de conexiones
-      const prevCount = global.sshTerminalServer._lastConnectionCount || 0;
-      if (prevCount !== connections.length) {
-        console.log(`✅ [SSH MCP] ${connections.length} conexiones SSH sincronizadas en memoria`);
-        global.sshTerminalServer._lastConnectionCount = connections.length;
-      }
-    } else {
-      console.warn('⚠️ [SSH MCP] SSH Terminal Server no disponible aún');
-    }
-  } catch (error) {
-    console.error('[APP SSH] ❌ Error sincronizando conexiones:', error.message);
-  }
-});
-
-// 🔐 IPC Handler para sincronizar PASSWORDS con el MCP (KeepPass, Password Manager, etc.)
-ipcMain.on('app:save-passwords-for-mcp', async (event, passwords) => {
-  try {
-    if (!Array.isArray(passwords)) {
-      console.warn('[Password MCP] ⚠️ Parámetro no es un array:', typeof passwords);
-      return;
-    }
-    
-    // Guardar en memoria en el MCP Server
-    if (global.sshTerminalServer) {
-      global.sshTerminalServer.nodeTermPasswords = passwords;
-      // Solo loggear la primera vez o cuando cambia el número
-      const prevCount = global.sshTerminalServer._lastPasswordCount || 0;
-      if (prevCount !== passwords.length) {
-        console.log(`✅ [Password MCP] ${passwords.length} contraseñas sincronizadas en memoria`);
-        global.sshTerminalServer._lastPasswordCount = passwords.length;
-      }
-    } else {
-      console.warn('⚠️ [Password MCP] MCP Server no disponible aún');
-    }
-  } catch (error) {
-    console.error('[APP Password] ❌ Error sincronizando contraseñas:', error.message);
-  }
-});
+// ✅ OPTIMIZACIÓN: Manejadores MCP movidos a mcp-handlers.js
+const { registerMCPHandlers } = require('./src/main/handlers/mcp-handlers');
+registerMCPHandlers();
 
 // Cache para evitar logs repetidos de WSL
 let wslDetectionLogged = false;
@@ -3993,135 +3820,7 @@ app.on('before-quit', (event) => {
   }
 });
 
-// Sticky stats para main.js también
-let mainLastValidStats = {
-  cpu: { usage: 0, cores: 0, model: 'Iniciando...' },
-  memory: { used: 0, total: 0, percentage: 0 },
-  disks: [],
-  network: { download: 0, upload: 0 },
-  temperature: { cpu: 0, gpu: 0 }
-};
-
-// Sistema de estadísticas del sistema con datos reales
-async function getSystemStats() {
-  const platform = os.platform();
-  // Comenzar con los últimos valores válidos conocidos
-  const stats = {
-    cpu: { ...mainLastValidStats.cpu },
-    memory: { ...mainLastValidStats.memory },
-    disks: [...mainLastValidStats.disks],
-    network: { ...mainLastValidStats.network },
-    temperature: { ...mainLastValidStats.temperature }
-  };
-
-  // Memoria (siempre funciona con os nativo)
-  try {
-    const totalMem = os.totalmem();
-    const freeMem = os.freemem();
-    const usedMem = totalMem - freeMem;
-    
-    if (totalMem > 0) {
-      stats.memory.total = Math.round(totalMem / (1024 * 1024 * 1024) * 10) / 10;
-      stats.memory.used = Math.round(usedMem / (1024 * 1024 * 1024) * 10) / 10;
-      stats.memory.percentage = Math.round((usedMem / totalMem) * 100 * 10) / 10;
-    }
-  } catch (error) {
-    // Mantener valores anteriores si falla
-  }
-
-  // CPU con timeout individual
-  try {
-    const cpuData = await Promise.race([
-      getSystemInfo().currentLoad(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('CPU timeout')), 3000))
-    ]);
-    
-    if (cpuData && typeof cpuData.currentLoad === 'number') {
-      stats.cpu.usage = Math.round(cpuData.currentLoad * 10) / 10;
-      stats.cpu.cores = cpuData.cpus ? cpuData.cpus.length : os.cpus().length;
-      stats.cpu.model = os.cpus()[0]?.model || 'CPU';
-    }
-  } catch (error) {
-    // Mantener valores anteriores de CPU si falla
-  }
-
-  // Discos con timeout reducido
-  try {
-    const diskData = await Promise.race([
-      getSystemInfo().fsSize(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Disk timeout')), 2500)) // Reducido de 5000ms a 2500ms
-    ]);
-    
-    // Solo actualizar discos si obtenemos datos válidos y completos
-    if (diskData && diskData.length > 0) {
-      stats.disks = diskData.map(disk => ({
-        name: disk.fs,
-        used: Math.round(disk.used / (1024 * 1024 * 1024) * 10) / 10,
-        total: Math.round(disk.size / (1024 * 1024 * 1024) * 10) / 10,
-        percentage: Math.round((disk.used / disk.size) * 100),
-        isNetwork: false // Simplificado para main.js
-      }));
-    }
-    // Si falla o no hay datos, mantener la lista anterior de discos
-  } catch (error) {
-    // Mantener discos anteriores si falla
-  }
-
-  // Red diferencial (solo interfaces activas y físicas, Mbps)
-  try {
-    const netIfaces = await getSystemInfo().networkInterfaces();
-    const netStats = await getSystemInfo().networkStats();
-    const now = Date.now();
-    // Filtrar solo interfaces físicas y activas
-    const validIfaces = netIfaces.filter(i => i.operstate === 'up' && !i.virtual && !i.internal);
-    const validNames = validIfaces.map(i => i.iface);
-    const filteredStats = netStats.filter(s => validNames.includes(s.iface));
-    let rx = 0, tx = 0;
-    if (lastNetStats && lastNetTime) {
-      // Sumar la diferencia de bytes para todas las interfaces válidas
-      for (const stat of filteredStats) {
-        const prev = lastNetStats.find(s => s.iface === stat.iface);
-        if (prev) {
-          rx += Math.max(0, stat.rx_bytes - prev.rx_bytes);
-          tx += Math.max(0, stat.tx_bytes - prev.tx_bytes);
-        }
-      }
-      const dt = (now - lastNetTime) / 1000; // segundos
-      if (dt > 0) {
-        // Convertir a Mbps (1 byte = 8 bits, 1e6 bits = 1 Mbit)
-        stats.network.download = Math.round((rx * 8 / 1e6) / dt * 10) / 10;
-        stats.network.upload = Math.round((tx * 8 / 1e6) / dt * 10) / 10;
-      }
-    }
-    // Guardar para la próxima llamada
-    lastNetStats = filteredStats.map(s => ({ iface: s.iface, rx_bytes: s.rx_bytes, tx_bytes: s.tx_bytes }));
-    lastNetTime = now;
-  } catch (error) {}
-
-  // Temperatura con timeout individual  
-  try {
-    const tempData = await Promise.race([
-      getSystemInfo().cpuTemperature(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Temperature timeout')), 2000))
-    ]);
-    
-    if (tempData && typeof tempData.main === 'number' && tempData.main > 0) {
-      stats.temperature.cpu = tempData.main;
-    }
-    // Si falla o no hay datos, mantener temperatura anterior
-  } catch (error) {}
-
-  // Guardar los stats actuales como últimos válidos
-  mainLastValidStats = {
-    cpu: { ...stats.cpu },
-    memory: { ...stats.memory },
-    disks: [...stats.disks],
-    network: { ...stats.network },
-    temperature: { ...stats.temperature }
-  };
-
-  return stats;
-}
+// ✅ OPTIMIZACIÓN: getSystemStats() eliminada - ahora usa StatsWorkerService exclusivamente
 
 // Historial de conexiones (ahora en servicio separado)
 const ConnectionHistoryService = require('./src/main/services/ConnectionHistoryService');
@@ -4143,10 +3842,6 @@ ipcMain.handle('toggle-favorite-connection', async (event, connectionId) => {
 // Inicializar historial al inicio
 ConnectionHistoryService.loadConnectionHistory();
 
-// Variables estáticas para el cálculo diferencial de red
-let lastNetStats = null;
-let lastNetTime = null;
-
 // Sistema de estadísticas del sistema (ahora en servicio separado)
 const StatsWorkerService = require('./src/main/services/StatsWorkerService');
 StatsWorkerService.startStatsWorker();
@@ -4155,62 +3850,6 @@ ipcMain.handle('get-system-stats', async () => {
   return await StatsWorkerService.getSystemStats();
 });
 
-// Manejador para peticiones HTTP de Nextcloud con configuración SSL personalizada
-ipcMain.handle('nextcloud:http-request', async (event, { url, options, ignoreSSLErrors }) => {
-  try {
-    const https = require('https');
-    const http = require('http');
-    const { URL } = require('url');
-    
-    const urlObj = new URL(url);
-    const isHttps = urlObj.protocol === 'https:';
-    
-    // Configurar opciones para la petición
-    const requestOptions = {
-      hostname: urlObj.hostname,
-      port: urlObj.port || (isHttps ? 443 : 80),
-      path: urlObj.pathname + urlObj.search,
-      method: options.method || 'GET',
-      headers: options.headers || {},
-      ...(ignoreSSLErrors && isHttps && {
-        rejectUnauthorized: false,
-        requestCert: false,
-        agent: false
-      })
-    };
-
-    return new Promise((resolve, reject) => {
-      const client = isHttps ? https : http;
-      
-      const req = client.request(requestOptions, (res) => {
-        let data = '';
-        
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
-        
-        res.on('end', () => {
-          resolve({
-            status: res.statusCode,
-            statusText: res.statusMessage,
-            headers: res.headers,
-            data: data
-          });
-        });
-      });
-      
-      req.on('error', (error) => {
-        reject(error);
-      });
-      
-      // Si hay body, enviarlo
-      if (options.body) {
-        req.write(options.body);
-      }
-      
-      req.end();
-    });
-  } catch (error) {
-    throw error;
-  }
-});
+// ✅ OPTIMIZACIÓN: Manejadores de Nextcloud movidos a nextcloud-handlers.js
+const { registerNextcloudHandlers } = require('./src/main/handlers/nextcloud-handlers');
+registerNextcloudHandlers();
