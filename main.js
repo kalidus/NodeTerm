@@ -1,96 +1,10 @@
-// ============================================
-// 🔬 PROFILER DE ARRANQUE - Medir tiempos de carga
-// ============================================
-const _startupTime = Date.now();
-const _timings = [];
-function logTiming(label) {
-  const elapsed = Date.now() - _startupTime;
-  _timings.push({ label, elapsed });
-  console.log(`⏱️ [${elapsed}ms] ${label}`);
-}
+// Startup profiler
+const { logTiming } = require('./src/main/utils/startup-profiler');
 logTiming('Inicio del proceso main.js');
 
-// ============================================
-// POLYFILL DOMMatrix para jsdom en Node.js
-// Debe cargarse ANTES de cualquier módulo que use jsdom
-// ============================================
-(function() {
-  if (typeof global.DOMMatrix !== 'undefined') {
-    return; // Ya está definido
-  }
-
-  try {
-    // Intentar usar el polyfill de dommatrix si está disponible
-    const dommatrix = require('dommatrix');
-    // El paquete dommatrix exporta directamente una función constructor
-    if (typeof dommatrix === 'function') {
-      global.DOMMatrix = dommatrix;
-      global.DOMMatrixReadOnly = dommatrix;
-    } else if (dommatrix.DOMMatrix) {
-      global.DOMMatrix = dommatrix.DOMMatrix;
-      global.DOMMatrixReadOnly = dommatrix.DOMMatrixReadOnly || dommatrix.DOMMatrix;
-    } else {
-      // Intentar destructuración
-      const { DOMMatrix, DOMMatrixReadOnly } = dommatrix;
-      global.DOMMatrix = DOMMatrix;
-      global.DOMMatrixReadOnly = DOMMatrixReadOnly || DOMMatrix;
-    }
-  } catch (e) {
-    // Si no está disponible, crear un polyfill completo
-    class DOMMatrixPolyfill {
-      constructor(init) {
-        if (typeof init === 'string') {
-          const values = init.match(/matrix\(([^)]+)\)/);
-          if (values) {
-            const nums = values[1].split(',').map(Number);
-            this.a = nums[0] || 1;
-            this.b = nums[1] || 0;
-            this.c = nums[2] || 0;
-            this.d = nums[3] || 1;
-            this.e = nums[4] || 0;
-            this.f = nums[5] || 0;
-          } else {
-            this.a = 1; this.b = 0; this.c = 0; this.d = 1; this.e = 0; this.f = 0;
-          }
-        } else if (init && typeof init === 'object') {
-          this.a = init.a ?? 1;
-          this.b = init.b ?? 0;
-          this.c = init.c ?? 0;
-          this.d = init.d ?? 1;
-          this.e = init.e ?? 0;
-          this.f = init.f ?? 0;
-        } else {
-          this.a = 1; this.b = 0; this.c = 0; this.d = 1; this.e = 0; this.f = 0;
-        }
-      }
-      
-      // Métodos estándar de DOMMatrix
-      static fromMatrix(other) {
-        return new DOMMatrixPolyfill(other);
-      }
-      
-      static fromFloat32Array(array) {
-        if (array.length >= 6) {
-          return new DOMMatrixPolyfill({
-            a: array[0], b: array[1],
-            c: array[2], d: array[3],
-            e: array[4], f: array[5]
-          });
-        }
-        return new DOMMatrixPolyfill();
-      }
-    }
-    
-    global.DOMMatrix = DOMMatrixPolyfill;
-    global.DOMMatrixReadOnly = DOMMatrixPolyfill;
-  }
-  
-  // Asegurar que también esté en window si existe
-  if (typeof global.window !== 'undefined') {
-    global.window.DOMMatrix = global.DOMMatrix;
-    global.window.DOMMatrixReadOnly = global.DOMMatrixReadOnly;
-  }
-})();
+// DOMMatrix polyfill (debe cargarse ANTES de cualquier módulo que use jsdom)
+const { initializeDOMMatrixPolyfill } = require('./src/main/polyfills/dommatrix-polyfill');
+initializeDOMMatrixPolyfill();
 logTiming('Polyfill DOMMatrix cargado');
 
 // Declarar variables
@@ -4984,187 +4898,36 @@ async function getSystemStats() {
   return stats;
 }
 
-// Historial de conexiones
-let connectionHistory = {
-  recent: [],
-  favorites: []
-};
-
-// Cargar historial de conexiones
-function loadConnectionHistory() {
-  try {
-    const historyPath = path.join(os.homedir(), '.nodeterm', 'connection_history.json');
-    if (fs.existsSync(historyPath)) {
-      const data = fs.readFileSync(historyPath, 'utf8');
-      connectionHistory = JSON.parse(data);
-    }
-  } catch (error) {
-    console.error('Error cargando historial de conexiones:', error);
-  }
-}
-
-// Guardar historial de conexiones
-function saveConnectionHistory() {
-  try {
-    const historyDir = path.join(os.homedir(), '.nodeterm');
-    if (!fs.existsSync(historyDir)) {
-      fs.mkdirSync(historyDir, { recursive: true });
-    }
-    
-    const historyPath = path.join(historyDir, 'connection_history.json');
-    fs.writeFileSync(historyPath, JSON.stringify(connectionHistory, null, 2));
-  } catch (error) {
-    console.error('Error guardando historial de conexiones:', error);
-  }
-}
-
-// Agregar conexión al historial
-function addToConnectionHistory(connection) {
-  const historyItem = {
-    id: Date.now().toString(),
-    name: connection.name || `${connection.username}@${connection.host}`,
-    host: connection.host,
-    username: connection.username,
-    port: connection.port || 22,
-    lastConnected: new Date(),
-    status: 'success',
-    connectionTime: Math.random() * 3 + 0.5 // Simular tiempo de conexión
-  };
-  
-  // Remover entrada existente si ya existe
-  connectionHistory.recent = connectionHistory.recent.filter(
-    item => !(item.host === connection.host && item.username === connection.username && item.port === (connection.port || 22))
-  );
-  
-  // Agregar al inicio
-  connectionHistory.recent.unshift(historyItem);
-  
-  // Mantener solo las últimas 10 conexiones
-  connectionHistory.recent = connectionHistory.recent.slice(0, 10);
-  
-  saveConnectionHistory();
-}
+// Historial de conexiones (ahora en servicio separado)
+const ConnectionHistoryService = require('./src/main/services/ConnectionHistoryService');
 
 // Manejadores IPC para historial de conexiones
 ipcMain.handle('get-connection-history', async () => {
-  loadConnectionHistory();
-  return connectionHistory;
+  return ConnectionHistoryService.getConnectionHistory();
 });
 
 ipcMain.handle('add-connection-to-history', async (event, connection) => {
-  addToConnectionHistory(connection);
+  ConnectionHistoryService.addToConnectionHistory(connection);
   return true;
 });
 
 ipcMain.handle('toggle-favorite-connection', async (event, connectionId) => {
-  try {
-    loadConnectionHistory();
-    
-    // Buscar en recientes
-    const recentIndex = connectionHistory.recent.findIndex(conn => conn.id === connectionId);
-    if (recentIndex !== -1) {
-      const connection = connectionHistory.recent[recentIndex];
-      if (connection.isFavorite) {
-        // Quitar de favoritos
-        connection.isFavorite = false;
-        connectionHistory.favorites = connectionHistory.favorites.filter(fav => fav.id !== connectionId);
-      } else {
-        // Agregar a favoritos
-        connection.isFavorite = true;
-        connectionHistory.favorites.push({ ...connection });
-      }
-    }
-    
-    saveConnectionHistory();
-    return connectionHistory;
-  } catch (error) {
-    console.error('Error toggle favorite connection:', error);
-    return connectionHistory;
-  }
+  return ConnectionHistoryService.toggleFavoriteConnection(connectionId);
 });
 
 // Inicializar historial al inicio
-loadConnectionHistory();
+ConnectionHistoryService.loadConnectionHistory();
 
 // Variables estáticas para el cálculo diferencial de red
 let lastNetStats = null;
 let lastNetTime = null;
 
-// --- Worker persistente para stats ---
-let statsWorker = null;
-let statsWorkerReady = false;
-let statsWorkerQueue = [];
-
-function startStatsWorker() {
-  if (statsWorker) {
-    try { statsWorker.kill(); } catch {}
-    statsWorker = null;
-    statsWorkerReady = false;
-  }
-  statsWorker = fork(path.join(__dirname, 'system-stats-worker.js'));
-  statsWorkerReady = true;
-  statsWorker.on('exit', () => {
-    statsWorkerReady = false;
-    // Reiniciar automáticamente si muere
-    setTimeout(startStatsWorker, 1000);
-  });
-  statsWorker.on('message', (msg) => {
-    if (statsWorkerQueue.length > 0) {
-      const { resolve, timeout } = statsWorkerQueue.shift();
-      clearTimeout(timeout);
-      if (msg.type === 'stats') {
-        resolve(msg.data);
-      } else {
-        resolve({
-          cpu: { usage: 0, cores: 0, model: 'Error' },
-          memory: { used: 0, total: 0, percentage: 0 },
-          disks: [],
-          network: { download: 0, upload: 0 },
-          temperature: { cpu: 0, gpu: 0 }
-        });
-      }
-    }
-  });
-}
-
-startStatsWorker();
+// Sistema de estadísticas del sistema (ahora en servicio separado)
+const StatsWorkerService = require('./src/main/services/StatsWorkerService');
+StatsWorkerService.startStatsWorker();
 
 ipcMain.handle('get-system-stats', async () => {
-  return new Promise((resolve) => {
-    if (!statsWorkerReady) {
-      // Si el worker no está listo, devolver fallback
-      resolve({
-        cpu: { usage: 0, cores: 0, model: 'NoWorker' },
-        memory: { used: 0, total: 0, percentage: 0 },
-        disks: [],
-        network: { download: 0, upload: 0 },
-        temperature: { cpu: 0, gpu: 0 }
-      });
-      return;
-    }
-    const timeout = setTimeout(() => {
-      resolve({
-        cpu: { usage: 0, cores: 0, model: 'Timeout' },
-        memory: { used: 0, total: 0, percentage: 0 },
-        disks: [],
-        network: { download: 0, upload: 0 },
-        temperature: { cpu: 0, gpu: 0 }
-      });
-    }, 15000); // Aumentar de 7 a 15 segundos
-    statsWorkerQueue.push({ resolve, timeout });
-    try {
-      statsWorker.send('get-stats');
-    } catch (e) {
-      clearTimeout(timeout);
-      resolve({
-        cpu: { usage: 0, cores: 0, model: 'ErrorSend' },
-        memory: { used: 0, total: 0, percentage: 0 },
-        disks: [],
-        network: { download: 0, upload: 0 },
-        temperature: { cpu: 0, gpu: 0 }
-      });
-    }
-  });
+  return await StatsWorkerService.getSystemStats();
 });
 
 // Manejador para peticiones HTTP de Nextcloud con configuración SSL personalizada
