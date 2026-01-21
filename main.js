@@ -9,6 +9,7 @@ logTiming('Polyfill DOMMatrix cargado');
 
 // Declarar variables
 let alternativePtyConfig, SafeWindowsTerminal, registerAllHandlers, cleanupTunnels;
+let orphanCleanupInterval = null;
 
 // Importar utilidades centralizadas (fuera del try-catch para acceso global)
 const { parseDfOutput, parseNetDev, getGuacdPrefPath, sendToRenderer, cleanupOrphanedConnections } = require('./src/main/utils');
@@ -3096,7 +3097,7 @@ app.on('before-quit', async () => {
 // Funciones sendToRenderer y cleanupOrphanedConnections movidas a main/utils/connection-utils.js
 
 // Ejecutar limpieza cada 10 minutos
-setInterval(() => cleanupOrphanedConnections(sshConnectionPool, sshConnections), 10 * 60 * 1000);
+orphanCleanupInterval = setInterval(() => cleanupOrphanedConnections(sshConnectionPool, sshConnections), 10 * 60 * 1000);
 
 // Helper function to find SSH connection by host/username or by tabId
 async function findSSHConnection(tabId, sshConfig = null) {
