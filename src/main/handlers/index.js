@@ -96,8 +96,13 @@ function registerCriticalHandlers(dependencies) {
   // Handlers de aplicación (UI, versión, cierre) - CRÍTICOS
   getAppHandlers().registerAppHandlers(dependencies);
   
-  // Handlers del sistema - CRÍTICOS
+  // Handlers del sistema - CRÍTICOS (clipboard y dialog)
   getSystemHandlers().registerSystemHandlers();
+  
+  // 🚀 CRÍTICO: Registrar handlers de monitoreo INMEDIATAMENTE
+  // El REGISTRO es ligero (solo IPC), lo PESADO es la EJECUCIÓN (que es on-demand)
+  // Esto evita errores de "No handler registered" cuando el frontend los llama
+  getSystemHandlers().registerSystemMonitoringHandlers();
   
   // 🚀 CRÍTICO: System stats handler debe estar disponible INMEDIATAMENTE
   // porque TODOS los componentes del frontend lo llaman al cargar
