@@ -125,7 +125,7 @@ function getGuacamoleLite() {
 // Módulos que se usan inmediatamente (carga normal)
 const packageJson = require('./package.json');
 const { createBastionShell } = require('./src/components/bastion-ssh');
-const RdpManager = require('./src/utils/RdpManager');
+// RdpManager ahora se carga con lazy loading en src/main/handlers/rdp-handlers.js
 const { fork } = require('child_process');
 
 // 🚀 OPTIMIZACIÓN: Servicios con instanciación diferida
@@ -280,8 +280,8 @@ const motdCache = {};
 // Pool de conexiones SSH compartidas para evitar múltiples conexiones al mismo servidor
 const sshConnectionPool = {};
 
-// RDP Manager instance
-const rdpManager = new RdpManager();
+// 🚀 OPTIMIZACIÓN: RDP Manager movido a src/main/handlers/rdp-handlers.js
+// Se maneja completamente con lazy loading en ese módulo
 
 // Guacamole services - guacdService ahora usa lazy loading via getGuacdService()
 let guacamoleServer = null;
@@ -300,9 +300,8 @@ const DEBUG_GUACAMOLE = process.env.NODETERM_DEBUG_GUACAMOLE === '1';
 // Sistema de throttling para conexiones SSH (ahora en módulo separado)
 const connectionThrottle = require('./src/main/utils/connection-throttle');
 
-// Limpieza automática de conexiones SSH huérfanas (ahora en servicio separado)
+// 🚀 OPTIMIZACIÓN: Limpieza automática diferida - se inicia después de ready-to-show
 const ConnectionPoolCleaner = require('./src/main/services/ConnectionPoolCleaner');
-ConnectionPoolCleaner.startOrphanCleanup(sshConnectionPool, sshConnections);
 
 // Helper function to parse 'df -P' command output
 // Funciones de parsing movidas a main/utils/parsing-utils.js
@@ -678,9 +677,12 @@ function createWindow() {
     closeSplash();
 
     // 🚀 OPTIMIZACIÓN: Inicializar servicios pesados DESPUÉS de mostrar la ventana
-    setTimeout(() => {
-      initializeServicesAfterShow();
-    }, 100);
+    // Usar setImmediate para ejecutar en el siguiente tick del event loop
+    setImmediate(() => {
+      initializeServicesAfterShow().catch(err => {
+        console.error('❌ [POST-SHOW] Error en initializeServicesAfterShow:', err);
+      });
+    });
   });
   
   // 🚀 OPTIMIZACIÓN: Función para inicializar servicios pesados después del arranque
@@ -690,10 +692,11 @@ function createWindow() {
       console.error('❌ [POST-SHOW] Error en inicialización de Guacamole:', error);
     });
     
-    // 🚀 OPTIMIZACIÓN: Registrar handlers de túnel SSH después de que la ventana sea visible
+    // 🚀 OPTIMIZACIÓN: Registrar handlers SECUNDARIOS después de que la ventana sea visible
     // Estos handlers no son críticos para el arranque y pueden esperar
     try {
-      const { registerSSHTunnelHandlers } = require('./src/main/handlers');
+      const { registerSecondaryHandlers, registerSSHTunnelHandlers } = require('./src/main/handlers');
+      
       // Recrear dependencias aquí ya que getHandlerDependencies está en otro scope
       const handlerDependencies = { 
         mainWindow, 
@@ -708,6 +711,7 @@ function createWindow() {
         openWebUIService: getOpenWebUIService(),
         packageJson,
         sshConnections,
+        sshConnectionPool,
         cleanupOrphanedConnections,
         isAppQuitting,
         getGuacamoleServer: () => guacamoleServer,
@@ -716,10 +720,16 @@ function createWindow() {
         isGuacamoleInitializing: () => guacamoleInitializing,
         isGuacamoleInitialized: () => guacamoleInitialized
       };
+      
+      // Registrar handlers secundarios (System Services, RDP, MCP, Nextcloud, SSH, etc.)
+      registerSecondaryHandlers(handlerDependencies);
+      
+      // Registrar handlers de túnel SSH (último paso)
       registerSSHTunnelHandlers(handlerDependencies);
-      console.log('✅ [SSH Tunnel Handlers] Registrados después de ready-to-show');
+      console.log('✅ [POST-SHOW] Todos los handlers secundarios registrados');
     } catch (error) {
-      console.error('❌ [POST-SHOW] Error registrando handlers de túnel SSH:', error);
+      console.error('❌ [POST-SHOW] Error registrando handlers:', error);
+      console.error('❌ Stack:', error.stack);
     }
   }
 
@@ -865,6 +875,7 @@ function createWindow() {
       openWebUIService: getOpenWebUIService(),
       packageJson,
       sshConnections,
+      sshConnectionPool,
       cleanupOrphanedConnections,
       isAppQuitting,
       getGuacamoleServer: () => guacamoleServer,
@@ -891,8 +902,8 @@ function createWindow() {
 // Funciones de WSL movidas a main/services/WSLService.js
 
 // ✅ OPTIMIZACIÓN: Manejadores MCP movidos a mcp-handlers.js
-const { registerMCPHandlers } = require('./src/main/handlers/mcp-handlers');
-registerMCPHandlers();
+// Se registran automáticamente desde registerSecondaryHandlers() en handlers/index.js
+// NO es necesario registrarlos aquí para evitar duplicados
 
 // Cache para evitar logs repetidos de WSL
 let wslDetectionLogged = false;
@@ -3237,189 +3248,14 @@ ipcMain.handle('updater:clear-cache', async () => {
 });
 
 // === RDP Support ===
-// IPC handlers for RDP connections
-ipcMain.handle('rdp:connect', async (event, config) => {
-  try {
-    const connectionId = await rdpManager.connect(config);
-    
-    // Setup process handlers for events
-    const connection = rdpManager.activeConnections.get(connectionId);
-    if (connection) {
-      rdpManager.setupProcessHandlers(
-        connection.process,
-        connectionId,
-        (connectionId) => {
-          // On connect
-          sendToRenderer(event.sender, 'rdp:connected', { connectionId });
-        },
-        (connectionId, exitInfo) => {
-          // On disconnect
-          sendToRenderer(event.sender, 'rdp:disconnected', { connectionId, exitInfo });
-        },
-        (connectionId, error) => {
-          // On error
-          sendToRenderer(event.sender, 'rdp:error', { connectionId, error: error.message });
-        }
-      );
-    }
-    
-    return {
-      success: true,
-      connectionId: connectionId
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-});
+// ✅ OPTIMIZACIÓN: Handlers de RDP movidos a src/main/handlers/rdp-handlers.js
+// Se registran automáticamente desde registerSecondaryHandlers() en handlers/index.js
 
-ipcMain.handle('rdp:disconnect', async (event, connectionId) => {
-  return rdpManager.disconnect(connectionId);
-});
-
-ipcMain.handle('rdp:disconnect-all', async (event) => {
-  return rdpManager.disconnectAll();
-});
-
-ipcMain.handle('rdp:get-active-connections', async (event) => {
-  return rdpManager.getActiveConnections();
-});
-
-ipcMain.handle('rdp:get-presets', async (event) => {
-  return rdpManager.getPresets();
-});
-
-// Handler para crear pestañas de Guacamole movido a src/main/handlers/guacamole-handlers.js
-
-// Handler para mostrar ventana RDP si está minimizada
-ipcMain.handle('rdp:show-window', async (event, { server }) => {
-  try {
-    const { exec } = require('child_process');
-    const util = require('util');
-    const execAsync = util.promisify(exec);
-    
-    // En Windows, buscar ventanas de mstsc.exe
-    if (process.platform === 'win32') {
-      try {
-        // Probar primero con un comando simple para verificar si hay procesos mstsc
-        const { stdout: tasklistOutput } = await execAsync('tasklist /FI "IMAGENAME eq mstsc.exe" /FO CSV /NH');
-        
-        if (!tasklistOutput.includes('mstsc.exe')) {
-          return { success: false, message: 'No se encontraron procesos mstsc.exe activos' };
-        }
-        
-        // Crear un script PowerShell temporal
-        const fs = require('fs');
-        const path = require('path');
-        const tempDir = require('os').tmpdir();
-        const scriptPath = path.join(tempDir, 'restore_rdp.ps1');
-        
-        const scriptContent = `
-Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-
-public class Win32 {
-  [DllImport("user32.dll")]
-  [return: MarshalAs(UnmanagedType.Bool)]
-  public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-  
-  [DllImport("user32.dll")]
-  public static extern bool SetForegroundWindow(IntPtr hWnd);
-}
-"@
-
-try {
-  $processes = Get-Process mstsc -ErrorAction SilentlyContinue
-  Write-Host "Procesos encontrados: $($processes.Count)"
-  
-  if ($processes.Count -eq 0) {
-    Write-Host "ERROR: No se encontraron procesos mstsc.exe"
-    exit 1
-  }
-  
-  foreach ($process in $processes) {
-    Write-Host "Proceso ID: $($process.Id), Ventana: $($process.MainWindowHandle)"
-    
-    if ($process.MainWindowHandle -ne [IntPtr]::Zero) {
-      [Win32]::ShowWindow($process.MainWindowHandle, 9)
-      [Win32]::SetForegroundWindow($process.MainWindowHandle)
-      Write-Host "SUCCESS: Ventana restaurada para proceso $($process.Id)"
-      break
-    } else {
-      Write-Host "ERROR: Proceso $($process.Id) no tiene ventana válida"
-    }
-  }
-} catch {
-  Write-Host "ERROR: $($_.Exception.Message)"
-}
-        `;
-        
-        fs.writeFileSync(scriptPath, scriptContent);
-        
-        const { stdout: psOutput, stderr: psError } = await execAsync(`powershell -ExecutionPolicy Bypass -File "${scriptPath}"`);
-        
-        // Limpiar el archivo temporal
-        try {
-          fs.unlinkSync(scriptPath);
-        } catch (e) {
-          // Ignorar errores de limpieza
-        }
-        
-
-        
-        if (psOutput.includes('SUCCESS:')) {
-          return { success: true, message: 'Ventana RDP restaurada' };
-        } else {
-          return { success: false, message: `No se pudo restaurar la ventana RDP. Output: ${psOutput}` };
-        }
-      } catch (error) {
-        console.log('Error ejecutando PowerShell:', error);
-        return { success: false, error: error.message };
-      }
-    } else {
-      return { success: false, message: 'Función solo disponible en Windows' };
-    }
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
-
-// Handler para desconectar sesión RDP específica
-ipcMain.handle('rdp:disconnect-session', async (event, { server }) => {
-  try {
-    // Buscar y terminar procesos mstsc.exe que coincidan con el servidor
-    if (process.platform === 'win32') {
-      const { exec } = require('child_process');
-      const util = require('util');
-      const execAsync = util.promisify(exec);
-      
-      try {
-        // Terminar todos los procesos mstsc.exe
-        await execAsync('taskkill /F /IM mstsc.exe');
-        return { success: true, message: 'Sesiones RDP terminadas' };
-      } catch (error) {
-        // Si no hay procesos para terminar, no es un error
-        if (error.message.includes('not found')) {
-          return { success: true, message: 'No hay sesiones RDP activas' };
-        }
-        return { success: false, error: error.message };
-      }
-    } else {
-      return { success: false, message: 'Función solo disponible en Windows' };
-    }
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
-
-// Cleanup RDP connections on app quit
+// Cleanup on app quit
 app.on('before-quit', () => {
   // Disconnect all RDP connections
-  rdpManager.disconnectAll();
-  rdpManager.cleanupAllTempFiles();
+  const { getRdpHandlers } = require('./src/main/handlers');
+  getRdpHandlers().cleanupRdpConnections();
   
   // Cleanup Guacamole services
   if (_guacdService) {
@@ -3822,34 +3658,10 @@ app.on('before-quit', (event) => {
 
 // ✅ OPTIMIZACIÓN: getSystemStats() eliminada - ahora usa StatsWorkerService exclusivamente
 
-// Historial de conexiones (ahora en servicio separado)
-const ConnectionHistoryService = require('./src/main/services/ConnectionHistoryService');
-
-// Manejadores IPC para historial de conexiones
-ipcMain.handle('get-connection-history', async () => {
-  return ConnectionHistoryService.getConnectionHistory();
-});
-
-ipcMain.handle('add-connection-to-history', async (event, connection) => {
-  ConnectionHistoryService.addToConnectionHistory(connection);
-  return true;
-});
-
-ipcMain.handle('toggle-favorite-connection', async (event, connectionId) => {
-  return ConnectionHistoryService.toggleFavoriteConnection(connectionId);
-});
-
-// Inicializar historial al inicio
-ConnectionHistoryService.loadConnectionHistory();
-
-// Sistema de estadísticas del sistema (ahora en servicio separado)
-const StatsWorkerService = require('./src/main/services/StatsWorkerService');
-StatsWorkerService.startStatsWorker();
-
-ipcMain.handle('get-system-stats', async () => {
-  return await StatsWorkerService.getSystemStats();
-});
+// 🚀 OPTIMIZACIÓN: Servicios del sistema diferidos
+// Estos servicios y sus handlers se registran en system-services-handlers.js
+// Se inicializan después de ready-to-show para no bloquear el arranque
 
 // ✅ OPTIMIZACIÓN: Manejadores de Nextcloud movidos a nextcloud-handlers.js
-const { registerNextcloudHandlers } = require('./src/main/handlers/nextcloud-handlers');
-registerNextcloudHandlers();
+// Se registran automáticamente desde registerSecondaryHandlers() en handlers/index.js
+// NO es necesario registrarlos aquí para evitar ejecución prematura

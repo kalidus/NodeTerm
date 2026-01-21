@@ -12,11 +12,14 @@
 // 🚀 OPTIMIZACIÓN: Lazy loading de handlers para reducir tiempo de arranque
 let _appHandlers = null;
 let _systemHandlers = null;
+let _systemServicesHandlers = null;
+let _rdpHandlers = null;
 let _guacamoleHandlers = null;
 let _anythingLLMHandlers = null;
 let _openWebUIHandlers = null;
 let _sshHandlers = null;
 let _mcpHandlers = null;
+let _nextcloudHandlers = null;
 let _fileHandlers = null;
 let _networkToolsHandlers = null;
 let _sshTunnelHandlers = null;
@@ -29,6 +32,16 @@ function getAppHandlers() {
 function getSystemHandlers() {
   if (!_systemHandlers) _systemHandlers = require('./system-handlers');
   return _systemHandlers;
+}
+
+function getSystemServicesHandlers() {
+  if (!_systemServicesHandlers) _systemServicesHandlers = require('./system-services-handlers');
+  return _systemServicesHandlers;
+}
+
+function getRdpHandlers() {
+  if (!_rdpHandlers) _rdpHandlers = require('./rdp-handlers');
+  return _rdpHandlers;
 }
 
 function getGuacamoleHandlers() {
@@ -56,6 +69,11 @@ function getMCPHandlers() {
   return _mcpHandlers;
 }
 
+function getNextcloudHandlers() {
+  if (!_nextcloudHandlers) _nextcloudHandlers = require('./nextcloud-handlers');
+  return _nextcloudHandlers;
+}
+
 function getFileHandlers() {
   if (!_fileHandlers) _fileHandlers = require('./file-handlers');
   return _fileHandlers;
@@ -80,12 +98,38 @@ function registerCriticalHandlers(dependencies) {
   
   // Handlers del sistema - CRÍTICOS
   getSystemHandlers().registerSystemHandlers();
+  
+  // 🚀 CRÍTICO: System stats handler debe estar disponible INMEDIATAMENTE
+  // porque TODOS los componentes del frontend lo llaman al cargar
+  const { ipcMain } = require('electron');
+  ipcMain.handle('get-system-stats', async () => {
+    try {
+      const StatsWorkerService = require('../services/StatsWorkerService');
+      return await StatsWorkerService.getSystemStats();
+    } catch (error) {
+      // Devolver stats vacías si el worker aún no está listo
+      return {
+        cpu: { usage: 0, cores: 0 },
+        memory: { total: 0, used: 0, free: 0 },
+        disks: [],
+        network: { download: 0, upload: 0 },
+        hostname: '',
+        platform: process.platform
+      };
+    }
+  });
 }
 
 /**
  * Registra handlers SECUNDARIOS (pueden esperar)
  */
 function registerSecondaryHandlers(dependencies) {
+  // Handlers de servicios del sistema (historial, estadísticas)
+  getSystemServicesHandlers().registerSystemServicesHandlers(dependencies);
+  
+  // Handlers RDP (Remote Desktop Protocol)
+  getRdpHandlers().registerRdpHandlers(dependencies);
+  
   // Handlers de Guacamole
   getGuacamoleHandlers().registerGuacamoleHandlers(dependencies);
   getAnythingLLMHandlers().registerAnythingLLMHandlers(dependencies);
@@ -94,8 +138,9 @@ function registerSecondaryHandlers(dependencies) {
   // Handlers SSH
   getSSHHandlers()(dependencies);
   
-  // Handlers MCP
+  // Handlers MCP y Nextcloud (no críticos para el arranque)
   getMCPHandlers().registerMCPHandlers();
+  getNextcloudHandlers().registerNextcloudHandlers();
   
   // Handlers de archivos (SFTP/FTP/SCP)
   getFileHandlers().registerFileHandlers();
@@ -117,7 +162,8 @@ function registerSSHTunnelHandlers(dependencies) {
 
 /**
  * Registra todos los handlers del sistema
- * 🚀 OPTIMIZACIÓN: Registro progresivo para arranque más rápido
+ * 🚀 OPTIMIZACIÓN: Solo registra handlers CRÍTICOS
+ * Los handlers SECUNDARIOS se registran después de ready-to-show
  * 
  * @param {Object} dependencies - Dependencias necesarias para los handlers
  * @param {BrowserWindow} dependencies.mainWindow - Ventana principal
@@ -135,14 +181,10 @@ function registerSSHTunnelHandlers(dependencies) {
  * @param {Object} dependencies.isAppQuitting - Variable de estado de cierre
  */
 function registerAllHandlers(dependencies) {
-  // 🚀 FASE 1: Registrar handlers CRÍTICOS inmediatamente
+  // 🚀 Solo registrar handlers CRÍTICOS (necesarios para mostrar la UI)
   registerCriticalHandlers(dependencies);
-  
-  // 🚀 FASE 2: Registrar handlers SECUNDARIOS después de 50ms
-  // Esto permite que la UI se renderice mientras se registran los handlers menos urgentes
-  setTimeout(() => {
-    registerSecondaryHandlers(dependencies);
-  }, 50);
+  // ℹ️ Los handlers SECUNDARIOS se registran después de ready-to-show
+  // desde initializeServicesAfterShow() en main.js
 }
 
 module.exports = {
@@ -153,11 +195,14 @@ module.exports = {
   // Getters para acceso individual a handlers (lazy loading)
   getAppHandlers,
   getSystemHandlers,
+  getSystemServicesHandlers,
+  getRdpHandlers,
   getGuacamoleHandlers,
   getAnythingLLMHandlers,
   getOpenWebUIHandlers,
   getSSHHandlers,
   getMCPHandlers,
+  getNextcloudHandlers,
   getFileHandlers,
   getNetworkToolsHandlers,
   getSSHTunnelHandlers
