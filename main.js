@@ -420,7 +420,6 @@ const connectionThrottle = {
   async throttle(cacheKey, connectionFn) {
     // Si ya hay una conexión pendiente para este servidor, esperar
     if (this.pending.has(cacheKey)) {
-      // console.log(`Esperando conexión pendiente para ${cacheKey}...`);
       return await this.pending.get(cacheKey);
     }
     
@@ -431,7 +430,6 @@ const connectionThrottle = {
     
     if (timeSinceLastAttempt < this.minInterval) {
       const waitTime = this.minInterval - timeSinceLastAttempt;
-      // console.log(`Throttling conexión a ${cacheKey}, esperando ${waitTime}ms...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
     
@@ -459,7 +457,6 @@ let orphanCleanupInterval = setInterval(() => {
       // Verificar si la conexión es realmente antigua (más de 5 minutos sin uso)
       const connectionAge = Date.now() - (poolConnection._lastUsed || poolConnection._createdAt || 0);
       if (connectionAge > 5 * 60 * 1000) { // 5 minutos
-        // console.log(`Limpiando conexión SSH huérfana: ${poolKey} (sin uso por ${Math.round(connectionAge/1000)}s)`);
         try {
           // Limpiar listeners antes de cerrar
           if (poolConnection.ssh) {
@@ -1272,11 +1269,8 @@ ipcMain.handle('detect-wsl-distributions', async () => {
 
 // Mantener compatibilidad con el handler anterior para Ubuntu
 ipcMain.handle('detect-ubuntu-availability', async () => {
-  // console.log('🚀 Detectando distribuciones WSL (compatibilidad Ubuntu)...'); // Eliminado por limpieza de logs
-  
   try {
     const distributions = await WSL.detectAllWSLDistributions();
-    // console.log('✅ Detección completada:', distributions.length, 'distribuciones encontradas'); // Eliminado por limpieza de logs
     return distributions;
   } catch (error) {
     console.error('❌ Error en detección de distribuciones WSL:', error);
@@ -1553,13 +1547,10 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     
     if (timeSinceLastAttempt < connectionThrottle.minInterval) {
       const waitTime = connectionThrottle.minInterval - timeSinceLastAttempt;
-      // console.log(`Throttling conexión SSH directa a ${cacheKey}, esperando ${waitTime}ms...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
     
     connectionThrottle.lastAttempt.set(cacheKey, Date.now());
-  } else {
-    // console.log(`Conexión bastión - sin throttling (pooling habilitado)`);
   }
   
   // Para bastiones: cada terminal tiene su propia conexión independiente (no pooling)
@@ -1569,7 +1560,6 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
 
   if (config.useBastionWallix) {
     // BASTIÓN: Usar ssh2 puro para crear una conexión y shell independientes
-    // console.log(`Bastión ${cacheKey} - creando nueva conexión con ssh2 (bastion-ssh.js)`);
     const bastionConfig = {
       bastionHost: config.bastionHost,
       port: 22,
@@ -1676,16 +1666,13 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         return;
       }
       if (!connObj || !connObj.ssh || !connObj.stream) {
-        // console.log('[WallixStats] Conexión no disponible, saltando stats');
         return;
       }
       if (connObj.statsLoopRunning) {
-        // console.log(`[STATS] Ejecutando wallixStatsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
         return;
       }
       
       connObj.statsLoopRunning = true;
-      // console.log(`[STATS] Ejecutando wallixStatsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
 
       try {
         // // console.log('[WallixStats] Lanzando bucle de stats para bastión', tabId);
@@ -1694,7 +1681,6 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           const command = 'grep "cpu " /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "" && cat /etc/os-release';
           connObj.ssh.execCommand(command, (err, result) => {
             if (err || !result) {
-              // console.warn('[WallixStats] Error ejecutando comando:', err);
               // Enviar stats básicas en caso de error
               const fallbackStats = {
                 cpu: '0.00',
@@ -1889,11 +1875,10 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                 ip
               };
               
-              // // console.log('[WallixStats] Enviando stats:', JSON.stringify(stats, null, 2));
               sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
               
             } catch (parseErr) {
-              // console.warn('[WallixStats] Error parseando stats:', parseErr);
+              // Error parseando stats
             }
             
             // Programar siguiente ejecución
@@ -1906,7 +1891,6 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           });
           
         } else {
-          // console.warn('[WallixStats] execCommand no disponible en conexión bastión');
           // Fallback con stats básicas
           const stats = {
             cpu: '0.00',
@@ -1922,7 +1906,6 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         }
         
       } catch (e) {
-        // console.warn('[WallixStats] Error general:', e);
         // Reintentar en 5 segundos
         if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
           sshConnections[tabId].statsLoopRunning = false;
@@ -1950,9 +1933,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         await existingPoolConnection.exec('echo "test"');
         ssh = existingPoolConnection;
         isReusedConnection = true;
-        // console.log(`Reutilizando conexión del pool para terminal SSH directo ${cacheKey}`);
       } catch (testError) {
-        // console.log(`Conexión del pool no válida para terminal ${cacheKey}, creando nueva...`);
         try {
           existingPoolConnection.close();
         } catch (e) {}
@@ -1960,7 +1941,6 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       }
     }
     if (!ssh) {
-      // console.log(`Creando nueva conexión SSH directa para terminal ${cacheKey}`);
       const directConfig = {
         host: config.host,
         username: config.username,
@@ -1980,105 +1960,6 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     }
   }
 
-  // Eliminar función statsLoop y llamadas relacionadas
-  // const statsLoop = async (hostname, distro, ip) => {
-  //   // Verificación robusta de la conexión
-  //   const conn = sshConnections[tabId];
-  //   if (!conn || !conn.ssh || !conn.stream || conn.stream.destroyed) {
-  //     return; // Stop if connection is closed or invalid
-  //   }
-
-  //   try {
-  //     // --- Get CPU stats first
-  //     const cpuStatOutput = await ssh.exec("grep 'cpu ' /proc/stat");
-  //     const cpuTimes = cpuStatOutput.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
-  //     const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
-
-  //     let cpuLoad = '0.00';
-  //     const previousCpu = sshConnections[tabId].previousCpu;
-
-  //     if (previousCpu) {
-  //         const prevIdle = previousCpu.idle + previousCpu.iowait;
-  //         const currentIdle = currentCpu.idle + currentCpu.iowait;
-  //         const prevTotal = Object.values(previousCpu).reduce((a, b) => a + b, 0);
-  //         const currentTotal = Object.values(currentCpu).reduce((a, b) => a + b, 0);
-  //         const totalDiff = currentTotal - prevTotal;
-  //         const idleDiff = currentIdle - prevIdle;
-  //         if (totalDiff > 0) {
-  //             cpuLoad = ((totalDiff - idleDiff) * 100 / totalDiff).toFixed(2);
-  //         }
-  //     }
-  //     sshConnections[tabId].previousCpu = currentCpu;
-
-  //     // --- Get Memory, Disk, Uptime and Network stats ---
-  //     const allStatsRes = await ssh.exec("free -b && df -P && uptime && cat /proc/net/dev");
-  //     const parts = allStatsRes.trim().split('\n');
-
-  //     // Parse Memory
-  //     const memLine = parts.find(line => line.startsWith('Mem:'));
-  //     const memParts = memLine.split(/\s+/);
-  //     const mem = {
-  //         total: parseInt(memParts[1], 10),
-  //         used: parseInt(memParts[2], 10),
-  //     };
-
-  //     // Parse Disk
-  //     const dfIndex = parts.findIndex(line => line.trim().startsWith('Filesystem'));
-  //     const dfOutput = parts.slice(dfIndex).join('\n');
-  //     const disks = parseDfOutput(dfOutput);
-
-  //     // Parse Uptime
-  //     const uptimeLine = parts.find(line => line.includes(' up '));
-  //     let uptime = '';
-  //     if (uptimeLine) {
-  //       const match = uptimeLine.match(/up (.*?),/);
-  //       if (match && match[1]) {
-  //         uptime = match[1].trim();
-  //       }
-  //     }
-
-  //     // Parse Network
-  //     const netIndex = parts.findIndex(line => line.trim().includes('Inter-|   Receive'));
-  //     const netOutput = parts.slice(netIndex).join('\n');
-  //     const currentNet = parseNetDev(netOutput);
-  //     const previousNet = sshConnections[tabId].previousNet;
-  //     const previousTime = sshConnections[tabId].previousTime;
-  //     const currentTime = Date.now();
-  //     let network = { rx_speed: 0, tx_speed: 0 };
-
-  //     if (previousNet && previousTime) {
-  //         const timeDiff = (currentTime - previousTime) / 1000; // in seconds
-  //         const rxDiff = currentNet.totalRx - previousNet.totalRx;
-  //         const txDiff = currentNet.totalTx - previousNet.totalTx;
-
-  //         network.rx_speed = Math.max(0, rxDiff / timeDiff);
-  //         network.tx_speed = Math.max(0, txDiff / timeDiff);
-  //     }
-  //     sshConnections[tabId].previousNet = currentNet;
-  //     sshConnections[tabId].previousTime = currentTime;
-
-  //     const stats = { 
-  //         cpu: cpuLoad, 
-  //         mem, 
-  //         disk: disks, 
-  //         uptime, 
-  //         network, 
-  //         hostname: hostname,
-  //         distro: distro,
-  //         ip: ip
-  //     };
-  //     sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
-  //   } catch (e) {
-  //     // console.error(`Error fetching stats for ${tabId}:`, e.message);
-  //   } finally {
-  //     // Verificar nuevamente que la conexión siga válida antes de programar siguiente loop
-  //     const finalConn = sshConnections[tabId];
-  //     if (finalConn && finalConn.ssh && finalConn.stream && !finalConn.stream.destroyed) {
-  //       finalConn.statsTimeout = setTimeout(() => statsLoop(hostname, distro, ip), 2000);
-  //     }
-  //   }
-  // };
-
   try {
     // For subsequent connections, send the cached MOTD immediately.
     if (motdCache[cacheKey]) {
@@ -2088,34 +1969,16 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     // Conectar SSH si es necesario
     if (!isReusedConnection) {
       // Solo conectar si es una conexión nueva (no reutilizada del pool)
-      // console.log(`Conectando SSH para terminal ${cacheKey}...`);
-      
-      // Configurar límites de listeners ANTES de conectar (aumentado para evitar warnings)
       ssh.setMaxListeners(300);
       
-      // console.log(`Iniciando conexión SSH para ${cacheKey}...`);
-      // console.log(`Configuración: Host=${config.host}, Usuario=${config.username}, Puerto=${config.port || 22}`);
-      // if (config.useBastionWallix) {
-      //   console.log(`Bastión Wallix: Host=${config.bastionHost}, Usuario=${config.bastionUser}`);
-      // }
-      
       await ssh.connect();
-      // console.log(`Conectado exitosamente a terminal ${cacheKey}`);
-      
-      // SSH2Promise está conectado y listo para usar
-      // console.log('SSH2Promise conectado correctamente, procediendo a crear shell...');
       
       // Guardar en el pool solo para SSH directo (bastiones son independientes)
       if (!config.useBastionWallix) {
         ssh._createdAt = Date.now();
         ssh._lastUsed = Date.now();
         sshConnectionPool[cacheKey] = ssh;
-        // console.log(`Conexión SSH directa ${cacheKey} guardada en pool para reutilización`);
-      } else {
-        // console.log(`Conexión bastión ${cacheKey} - NO guardada en pool (independiente)`);
       }
-    } else {
-      // console.log(`Usando conexión SSH directa existente del pool para terminal ${cacheKey}`);
     }
     
     // Crear shell con reintentos
@@ -2132,13 +1995,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         
         // Si es una conexión Wallix, usar configuración específica para bastiones
         if (ssh._isWallixConnection && ssh._wallixTarget) {
-          // console.log(`Conexión Wallix detectada: ${config.bastionHost} -> ${ssh._wallixTarget.host}:${ssh._wallixTarget.port}`);
-          
           // Para bastiones Wallix, esperar un poco antes de crear shell
-          // console.log('Esperando estabilización de conexión Wallix...');
           await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // console.log('Creando shell usando SSH2Promise con configuración Wallix...');
           
           // Intentar con configuración específica para Wallix
           try {
@@ -2153,15 +2011,9 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
               }
             });
           } catch (shellError) {
-            // console.warn('Error con configuración Wallix, intentando configuración básica:', shellError.message);
             // Fallback con configuración mínima
             stream = await ssh.shell('xterm-256color');
           }
-          
-          // console.log('Shell de bastión Wallix creado exitosamente');
-          
-          // Para Wallix, verificar dónde estamos conectados
-          // console.log('Verificando estado de conexión Wallix...');
           
           // Enviar comando para verificar hostname
           stream.write('hostname\n');
@@ -2169,11 +2021,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           // Esperar un poco para procesar
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          // console.log('Para conexiones Wallix, el bastión maneja automáticamente la conexión al servidor destino');
-          
         } else {
           // Conexión SSH directa normal
-          // console.log('Creando shell SSH directo...');
           stream = await ssh.shell({ 
             term: 'xterm-256color',
             cols: 80,
@@ -2184,7 +2033,6 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         break;
       } catch (shellError) {
         shellAttempts++;
-        // console.warn(`Intento ${shellAttempts} de crear shell falló para ${cacheKey}:`, shellError?.message || shellError || 'Unknown error');
         
         if (shellAttempts >= maxShellAttempts) {
           throw new Error(`No se pudo crear shell después de ${maxShellAttempts} intentos: ${shellError?.message || shellError || 'Unknown error'}`);
@@ -2196,7 +2044,6 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     stream.setMaxListeners(0); // Sin límite para streams individuales
 
     const storedOriginalKey = config.originalKey || tabId;
-    // console.log('Guardando conexión SSH con originalKey:', storedOriginalKey, 'para tabId:', tabId);
     sshConnections[tabId] = { 
       ssh, 
       stream, 
@@ -2208,8 +2055,6 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       previousNet: null, 
       previousTime: null 
     };
-    // Log para depuración: mostrar todos los tabId activos
-    // console.log('[DEBUG] Conexiones SSH activas:', Object.keys(sshConnections));
 
     // Lanzar statsLoop para conexiones SSH directas (no bastion)
     if (!config.useBastionWallix) {
@@ -2317,7 +2162,6 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       
       // Enviar evento de desconexión
       const disconnectOriginalKey = conn?.originalKey || tabId;
-      // console.log('🔌 SSH desconectado - enviando evento para originalKey:', disconnectOriginalKey);
       sendToRenderer(event.sender, 'ssh-connection-disconnected', { 
         originalKey: disconnectOriginalKey,
         tabId: tabId 
@@ -2332,7 +2176,6 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     
     // Enviar evento de conexión exitosa
     const originalKey = config.originalKey || tabId;
-    // console.log('✅ SSH conectado - enviando evento para originalKey:', originalKey);
     sendToRenderer(event.sender, 'ssh-connection-ready', { 
       originalKey: originalKey,
       tabId: tabId 
@@ -2356,8 +2199,6 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     // statsLoop(tabId, realHostname, finalDistroId, config.host);
 
   } catch (err) {
-    // console.error(`Error en conexión SSH para ${tabId}:`, err);
-    
     // Detectar si es un error de autenticación
     const isAuthError = err && (
       (typeof err === 'string' && (
@@ -3240,7 +3081,7 @@ ipcMain.on('ssh:resize', (event, { tabId, rows, cols }) => {
                 conn.stream.setWindow(safeRows, safeCols);
                 conn._pendingResize = null; // Aplicado correctamente
             } catch (resizeError) {
-                // console.warn(`Error redimensionando terminal ${tabId}:`, resizeError?.message || resizeError || 'Unknown error');
+                // Error redimensionando terminal
             }
         }
     }
@@ -3275,7 +3116,7 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
       
       // Para conexiones Wallix, solo necesitamos cerrar el stream principal
       if (conn.ssh && conn.ssh._isWallixConnection) {
-        // console.log('Cerrando conexión Wallix');
+        // Cerrando conexión Wallix
       }
       
       // Limpiar listeners del stream de forma más agresiva
@@ -3286,7 +3127,7 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
             conn.stream.destroy();
           }
         } catch (streamError) {
-          // console.warn(`Error destroying stream: ${streamError?.message || streamError || 'Unknown error'}`);
+          // Error destroying stream
         }
       }
       
@@ -3298,11 +3139,8 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
       // (Para bastiones, cada terminal es independiente, así que siempre cerrar)
       if (otherTabsUsingConnection.length === 0 && conn.ssh && conn.cacheKey) {
         try {
-                // console.log(`Cerrando conexión SSH compartida para ${conn.cacheKey} (última pestaña)`);
-      
       // Enviar evento de desconexión
       const disconnectOriginalKey = conn.originalKey || conn.cacheKey;
-      // console.log('🔌 SSH cerrado - enviando evento para originalKey:', disconnectOriginalKey);
       sendToRenderer(event.sender, 'ssh-connection-disconnected', { 
         originalKey: disconnectOriginalKey
       });
@@ -3323,14 +3161,12 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
       conn.ssh.close();
       delete sshConnectionPool[conn.cacheKey];
         } catch (closeError) {
-          // console.warn(`Error closing SSH connection: ${closeError?.message || closeError || 'Unknown error'}`);
+          // Error closing SSH connection
         }
-      } else {
-        // console.log(`Manteniendo conexión SSH para ${conn.cacheKey} (${otherTabsUsingConnection.length} pestañas restantes)`);
       }
       
     } catch (error) {
-      // console.error(`Error cleaning up SSH connection ${tabId}:`, error);
+      // Error cleaning up SSH connection
     } finally {
       // Always delete the connection
       delete sshConnections[tabId];
@@ -3430,10 +3266,6 @@ app.on('before-quit', async () => {
 
 // Handlers del sistema (clipboard, dialog, import) movidos a main/handlers/system-handlers.js
 
-
-
-
-
 // Function to safely send to mainWindow
 // Funciones sendToRenderer y cleanupOrphanedConnections movidas a main/utils/connection-utils.js
 
@@ -3460,9 +3292,6 @@ async function findSSHConnection(tabId, sshConfig = null) {
             conn.config.host === sshConfig.host &&
             conn.config.username === sshConfig.username &&
             (conn.config.port || 22) === (sshConfig.port || 22)) {
-          // Aquí antes había un console.log(` incompleto que causaba error de sintaxis
-          // Si se desea loggear, usar una línea válida como:
-          // console.log('Conexión encontrada para bastion:', conn);
           return conn;
         }
       }
@@ -3484,7 +3313,6 @@ async function statsLoop(tabId, realHostname, finalDistroId, host) {
     }
     return;
   }
-  // Eliminar o comentar console.log(`[STATS] Ejecutando statsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
   if (!conn || !conn.ssh || !conn.stream || conn.stream.destroyed) {
     return;
   }
@@ -3602,8 +3430,6 @@ async function statsLoop(tabId, realHostname, finalDistroId, host) {
     // Actualizar los valores en la conexión para que siempre estén correctos al reactivar la pestaña
     conn.realHostname = realHostname;
     conn.finalDistroId = finalDistroId;
-    // LOG DEBUG: Enviar stats a cada tabId
-    // console.log('[DEBUG][BACKEND] Enviando stats a', `ssh-stats:update:${tabId}`, JSON.stringify(stats));
     sendToRenderer(mainWindow.webContents, `ssh-stats:update:${tabId}`, stats);
   } catch (e) {
     // Silenciar errores de stats
@@ -3979,171 +3805,6 @@ async function disconnectAllGuacamoleConnections() {
 // Handler guacamole:disconnect-all movido a src/main/handlers/guacamole-handlers.js
 
 // Handler guacamole:create-token movido a src/main/handlers/guacamole-handlers.js
-// ipcMain.handle('guacamole:create-token', async (event, config) => {
-  // try {
-  //   console.log('📋 [MAIN] CONFIG COMPLETO RECIBIDO:', config);
-    // // Si guacd está en modo mock, informar al usuario y rechazar
-    // try {
-    //   if (guacdService && getGuacdService().getStatus && getGuacdService().getStatus().method === 'mock') {
-    //     const message = 'RDP requiere Docker Desktop o WSL. Activa Docker Desktop o instala/activa WSL para utilizar RDP con Guacamole.';
-    //     console.warn('⚠️  [MAIN] Intento de crear token con guacd en modo mock. ' + message);
-    //     return { success: false, error: message };
-    //   }
-    // } catch {}
-    
-    // // Calcular resolución final: priorizar width/height, luego parsear resolution
-    // let finalWidth = config.width || 1024;
-    // let finalHeight = config.height || 768;
-    
-    // // Si no hay width/height específicos pero sí resolution, parsearla
-    // if (!config.width && !config.height && config.resolution) {
-    //   const [width, height] = config.resolution.split('x');
-    //   if (width && height) {
-    //     finalWidth = parseInt(width);
-    //     finalHeight = parseInt(height);
-    //     console.log(`🔄 [MAIN] Parseando resolution "${config.resolution}" → ${finalWidth}x${finalHeight}`);
-    //   }
-    // }
-
-    // // Normalizar profundidad de color
-    // let normalizedColorDepth = 32;
-    // try {
-    //   const candidateDepth = parseInt(config.colorDepth, 10);
-    //   const allowedDepths = [8, 16, 24, 32];
-    //   if (allowedDepths.includes(candidateDepth)) {
-    //     normalizedColorDepth = candidateDepth;
-    //   }
-    // } catch {}
-
-    // console.log('🔐 [MAIN] Creando token para configuración RDP:', {
-    //   hostname: config.hostname,
-    //   username: config.username,
-    //   password: config.password ? '***OCULTA***' : 'NO DEFINIDA',
-    //   port: config.port,
-    //   width: finalWidth,     // ← Mostrar resolución final calculada
-    //   height: finalHeight,   // ← Mostrar resolución final calculada
-    //   dpi: config.dpi,
-    //   colorDepth: normalizedColorDepth,
-    //   enableDrive: config.enableDrive,
-    //   enableWallpaper: config.enableWallpaper,
-    //   redirectClipboard: config.redirectClipboard,
-    //   security: config.security,
-    //   resolution: config.resolution, // ← Mostrar resolution original si existe
-    //   autoResize: config.autoResize  // ← Mostrar autoResize si existe
-    // });
-    
-    // if (!guacamoleServer) {
-    //   throw new Error('Servidor Guacamole no está inicializado');
-    // }
-
-    // const crypto = require('crypto');
-    // const CIPHER = 'AES-256-CBC';
-    // // La clave debe ser exactamente 32 bytes para AES-256-CBC
-    // const SECRET_KEY_RAW = 'NodeTermGuacamoleSecretKey2024!';
-    // const SECRET_KEY = crypto.createHash('sha256').update(SECRET_KEY_RAW).digest(); // 32 bytes exactos
-
-    // // Preparar campos de drive si el usuario lo activó
-    // let driveSettings = {};
-    // try {
-    //   if (config.enableDrive) {
-        // // Si llega una carpeta de host desde UI, resolverla según método actual
-        // let resolvedDrivePath = null;
-        // if (config.driveHostDir && typeof config.driveHostDir === 'string' && config.driveHostDir.trim().length > 0 && typeof getGuacdService().resolveDrivePath === 'function') {
-        //   resolvedDrivePath = getGuacdService().resolveDrivePath(config.driveHostDir);
-        // } else if (typeof getGuacdService().getDrivePathForCurrentMethod === 'function') {
-        //   resolvedDrivePath = getGuacdService().getDrivePathForCurrentMethod();
-        // }
-        // const drivePath = resolvedDrivePath;
-        // const driveName = getGuacdService().getDriveName ? getGuacdService().getDriveName() : 'NodeTerm Drive';
-        // if (typeof drivePath === 'string' && drivePath.trim().length > 0) {
-        //   driveSettings = {
-        //     'enable-drive': true,
-        //     'drive-path': drivePath,
-        //     'drive-name': driveName,
-        //     'create-drive-path': true
-        //   };
-        // } else {
-        //   // fallback: solo activar drive sin ruta explícita
-        //   driveSettings = {
-        //     'enable-drive': true,
-        //     'create-drive-path': true
-        //   };
-        // }
-      // }
-    // } catch (e) {
-      // // Si algo falla, no bloquear la conexión, sólo loguear
-      // console.warn('⚠️  [MAIN] No se pudo calcular drive-path para Guacamole:', e?.message || e);
-    // }
-
-    // const tokenObject = {
-    //   connection: {
-    //     type: "rdp",
-    //     settings: {
-    //       hostname: config.hostname,
-    //       username: config.username,
-    //       password: config.password,
-    //       port: config.port || 3389,
-    //       security: config.security || "any",
-    //       "ignore-cert": true,
-    //       // Drive redirection
-    //       ...driveSettings,
-    //       "enable-wallpaper": config.enableWallpaper || false,
-    //       width: finalWidth,
-    //       height: finalHeight,
-    //       dpi: config.dpi || 96,
-    //       "color-depth": normalizedColorDepth,
-          // // Características visuales opcionales (solo si están activadas)
-          // "enable-desktop-composition": config.enableDesktopComposition === true ? true : undefined,
-          // "enable-font-smoothing": config.enableFontSmoothing === true ? true : undefined,
-          // "enable-theming": config.enableTheming === true ? true : undefined,
-          // "enable-full-window-drag": config.enableFullWindowDrag === true ? true : undefined,
-          // "enable-menu-animations": config.enableMenuAnimations === true ? true : undefined,
-          // // Configuración específica para resize dinámico
-          // "resize-method": config.autoResize ? "display-update" : "reconnect",
-          // "enable-desktop-composition": config.autoResize ? true : false,
-          // "enable-full-window-drag": config.autoResize ? true : false,
-          // // Portapapeles: desactivar solo si el usuario lo deshabilitó
-          // "disable-clipboard": (config.redirectClipboard === false) ? true : undefined,
-          // // Compatibilidad Windows 11: desactivar GFX cuando se active la casilla
-          // "enable-gfx": (config.enableGfx === true) ? true : undefined,
-          // // Flags de prueba (enviar solo el activo si es true). Guacamole ignora claves con undefined.
-          // "disable-glyph-caching": config.disableGlyphCaching === true ? true : undefined,
-          // "disable-offscreen-caching": config.disableOffscreenCaching === true ? true : undefined,
-          // "disable-bitmap-caching": config.disableBitmapCaching === true ? true : undefined,
-          // "disable-copy-rect": config.disableCopyRect === true ? true : undefined
-        // }
-      // }
-    // };
-    
-    // console.log('📄 [MAIN] Token objeto final:', {
-    //   type: tokenObject.connection.type,
-    //   settings: {
-    //     ...tokenObject.connection.settings,
-    //     password: tokenObject.connection.settings.password ? '***OCULTA***' : 'NO DEFINIDA'
-    //   }
-    // });
-
-    // // Encriptar token usando Crypt de guacamole-lite para asegurar compatibilidad de formato
-    // const Crypt = require('guacamole-lite/lib/Crypt.js');
-    // const crypt = new Crypt(CIPHER, SECRET_KEY);
-    // const token = crypt.encrypt(tokenObject);
-    // // Añadir '&' al final para asegurar separación si el cliente añade más parámetros
-    // const websocketUrl = `ws://localhost:8081/?token=${encodeURIComponent(token)}&`;
-    
-    // console.log('🌐 [MAIN] URL WebSocket generada:', websocketUrl.substring(0, 50) + '...');
-    
-    // return {
-    //   success: true,
-    //   token: token,
-    //   websocketUrl: websocketUrl
-    // };
-  // } catch (error) {
-    // return {
-    //   success: false,
-    //   error: error.message
-    // };
-  // }
-// });
 
 // === Terminal Support ===
 // 🚀 OPTIMIZACIÓN: node-pty con lazy loading (módulo nativo muy pesado)
@@ -4324,7 +3985,6 @@ function startPowerShellSession(tabId, { cols, rows }) {
 
     // Handle PowerShell exit
     powershellProcesses[tabId].onExit((exitCode, signal) => {
-      //console.log(`PowerShell process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal, 'type:', typeof exitCode);
       
       // Extraer el código de salida real
       let actualExitCode = exitCode;
@@ -4344,8 +4004,6 @@ function startPowerShellSession(tabId, { cols, rows }) {
       } else {
         actualExitCode = 0;
       }
-      
-      //console.log(`PowerShell ${tabId} actual exit code:`, actualExitCode);
       
       // Limpiar el proceso actual
       delete powershellProcesses[tabId];
@@ -4575,9 +4233,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
         // Intentar cada configuración hasta que una funcione
         for (let i = 0; i < wslConfigurations.length && !spawnSuccess; i++) {
             try {
-                // console.log(`Intentando configuración ${i + 1}/${wslConfigurations.length} para WSL ${shell} ${tabId}...`); // Eliminado por limpieza de logs
                 wslDistroProcesses[tabId] = getPty().spawn(shell, args, wslConfigurations[i]);
-                // console.log(`Configuración ${i + 1} exitosa para WSL ${shell} ${tabId}`); // Eliminado por limpieza de logs
                 spawnSuccess = true;
             } catch (spawnError) {
                 console.warn(`Configuración ${i + 1} falló para WSL ${shell} ${tabId}:`, spawnError.message);
@@ -4606,7 +4262,6 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
             // Send ready only on first data reception
             if (!wslDistroProcesses[tabId]._hasReceivedData) {
                 wslDistroProcesses[tabId]._hasReceivedData = true;
-                // console.log(`WSL terminal ${shell} ready for ${tabId}`); // Eliminado por limpieza de logs
                 if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
                     const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
                     mainWindow.webContents.send(`${channelName}:ready:${tabId}`);
@@ -4621,8 +4276,6 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
 
         // Handle distribution exit  
         wslDistroProcesses[tabId].onExit((exitCode, signal) => {
-            // console.log(`WSL ${shell} (${tabId}) exited with code:`, exitCode, 'signal:', signal); // Eliminado por limpieza de logs
-            //console.log(`WSL ${shell} (${tabId}) exited with code:`, exitCode, 'signal:', signal);
 
             if (isAppQuitting) {
                 console.log(`App is closing, ignoring exit for ${tabId}`);
@@ -4651,7 +4304,6 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
                     }
                 }, 2000);
             } else if (exitCode !== 0 && exitCode !== null) {
-               // console.warn(`WSL distro process for tab ${tabId} exited unexpectedly`);
                 // Silenciar el mensaje de error de proceso cerrado inesperadamente
                 // const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
                 // mainWindow.webContents.send(`${channelName}:error:${tabId}`,
@@ -4663,7 +4315,6 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
         });
 
         // Ready will be sent when first data is received (see onData handler above)
-        // console.log(`WSL terminal ${shell} configured for ${tabId}, waiting for data...`); // Eliminado por limpieza de logs
 
     } catch (error) {
         console.error(`Error starting WSL distro session for tab ${tabId}:`, error);
@@ -4747,7 +4398,6 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
 
     // Handle Ubuntu exit
     ubuntuProcesses[tabId].onExit((exitCode, signal) => {
-      //console.log(`Ubuntu process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal);
       
       // Extraer el código de salida real
       let actualExitCode = exitCode;
@@ -4763,7 +4413,6 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
       
       if (actualExitCode !== 0 && signal !== 'SIGTERM' && signal !== 'SIGKILL') {
         // Silenciar el mensaje de error de proceso cerrado inesperadamente
-        // console.warn(`Ubuntu process for tab ${tabId} exited unexpectedly`);
         // No enviar mensaje de error al frontend para evitar mostrar errores al usuario
         // if (mainWindow && mainWindow.webContents) {
         //   mainWindow.webContents.send(`ubuntu:error:${tabId}`, 
@@ -4863,7 +4512,6 @@ function handleUbuntuResize(tabId, { cols, rows }) {
 function handleWSLDistroStop(tabId) {
   if (wslDistroProcesses[tabId]) {
     try {
-      // console.log(`Deteniendo proceso WSL distro para tab ${tabId}`); // Eliminado por limpieza de logs
       const process = wslDistroProcesses[tabId];
       
       // Remover listeners antes de terminar el proceso
@@ -4907,8 +4555,6 @@ function handleWSLDistroStop(tabId) {
 function handleUbuntuStop(tabId) {
   if (ubuntuProcesses[tabId]) {
     try {
-      // console.log(`Deteniendo proceso Ubuntu para tab ${tabId} (nuevo sistema)`); // Eliminado por limpieza de logs
-      // console.log(`Deteniendo proceso Ubuntu para tab ${tabId}`); // Eliminado por limpieza de logs
       const process = ubuntuProcesses[tabId];
       
       // Remover listeners antes de terminar el proceso
@@ -5120,7 +4766,6 @@ function registerTabEvents(tabId) {
 
 // Evento para registrar nuevas pestañas
 ipcMain.on('register-tab-events', (event, tabId) => {
-  // console.log(`Registering events for tab: ${tabId}`); // Eliminado por limpieza de logs
   registerTabEvents(tabId);
 });
 
