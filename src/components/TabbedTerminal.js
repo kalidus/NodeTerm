@@ -1285,7 +1285,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     };
 
     // Función para crear una nueva pestaña
-    const createNewTab = (terminalTypeOverride = null) => {
+    const createNewTab = async (terminalTypeOverride = null) => {
         // Usar siempre el terminal por defecto (configuración guardada). El dropdown sigue pudiendo pasar un override.
         const defaultTerminalType = getDefaultTerminalType();
         const terminalTypeToUse = terminalTypeOverride || defaultTerminalType || selectedTerminalType;
@@ -1329,26 +1329,32 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             title = 'RDP Session';
             terminalType = 'rdp-guacamole';
         } else if (terminalTypeToUse === 'cygwin') {
-            // Verificar si Cygwin está instalado antes de crear la pestaña
-            if (!cygwinAvailable) {
-                // Mostrar diálogo para instalar Cygwin
-                const install = window.confirm(
-                    '🐧 Cygwin no está instalado en la aplicación.\n\n' +
-                    '¿Deseas instalarlo ahora?\n\n' +
-                    'Esto descargará e instalará Cygwin portable (~150 MB).\n' +
-                    'Puede tomar 5-10 minutos.\n\n' +
-                    'Nota: Requiere conexión a internet.'
-                );
-                
-                if (install) {
-                    // Iniciar instalación de Cygwin
+            // Re-detectar Cygwin en tiempo real (evita pedir instalar si ya está empaquetado o recién instalado)
+            try {
+                const det = await window.electronAPI.invoke('cygwin:detect');
+                if (det?.available) {
+                    setCygwinAvailable(true);
+                    title = 'Cygwin';
+                    terminalType = 'cygwin';
+                } else {
+                    const vi = await window.electronAPI.invoke('get-version-info');
+                    if (vi?.isPackaged) {
+                        window.alert(
+                            'Cygwin viene incluido en NodeTerm.\n\n' +
+                            'No se ha encontrado; puede que la instalación esté dañada.\n\n' +
+                            'Prueba a reinstalar la aplicación.'
+                        );
+                        return;
+                    }
+                    // Desarrollo: ofrecer instalación (script create-cygwin-portable)
                     installCygwin();
+                    return;
                 }
-                return; // No crear la pestaña aún
+            } catch (e) {
+                console.error('Cygwin: error en detección o versión', e);
+                setCygwinAvailable(false);
+                return;
             }
-            
-            title = 'Cygwin';
-            terminalType = 'cygwin';
         } else if (terminalTypeToUse.startsWith('wsl-') || matchedDistro) {
             // Extraer información de la distribución WSL seleccionada (permite tanto "wsl-<name>" como "<name>")
             const selectedDistro = matchedDistro || findDistroByValue(terminalTypeToUse);

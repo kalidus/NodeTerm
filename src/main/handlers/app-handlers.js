@@ -100,7 +100,8 @@ function registerAppHandlers({
       nodeVersion: process.versions.node,
       chromeVersion: process.versions.chrome,
       platform: process.platform,
-      arch: process.arch
+      arch: process.arch,
+      isPackaged: app.isPackaged
     };
   });
 
