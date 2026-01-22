@@ -43,7 +43,8 @@ export const useConnectionManagement = ({
         bastionHost: fileNode.data?.bastionHost || '',
         bastionUser: fileNode.data?.bastionUser || '',
         targetServer: fileNode.data?.targetServer || '',
-        remoteFolder: fileNode.data?.remoteFolder || ''
+        remoteFolder: fileNode.data?.remoteFolder || '',
+        customIcon: fileNode.data?.customIcon || null
       }, 200);
     } catch (e) { /* noop */ }
 
@@ -128,7 +129,8 @@ export const useConnectionManagement = ({
         password: password,
         protocol: protocol,
         remoteFolder: node.data?.remoteFolder || '',
-        targetFolder: node.data?.targetFolder || ''
+        targetFolder: node.data?.targetFolder || '',
+        customIcon: node.data?.customIcon || null
       }, 200);
     } catch (e) { /* noop */ }
 
@@ -297,7 +299,8 @@ export const useConnectionManagement = ({
         bastionHost: isSidebarNode ? (nodeOrConn.data.bastionHost || '') : (nodeOrConn.bastionHost || matchedSidebarNode?.data?.bastionHost || ''),
         bastionUser: isSidebarNode ? (nodeOrConn.data.bastionUser || '') : (nodeOrConn.bastionUser || matchedSidebarNode?.data?.bastionUser || ''),
         targetServer: isSidebarNode ? (nodeOrConn.data.targetServer || '') : (nodeOrConn.targetServer || matchedSidebarNode?.data?.targetServer || ''),
-        remoteFolder: isSidebarNode ? (nodeOrConn.data.remoteFolder || '') : (nodeOrConn.remoteFolder || matchedSidebarNode?.data?.remoteFolder || '')
+        remoteFolder: isSidebarNode ? (nodeOrConn.data.remoteFolder || '') : (nodeOrConn.remoteFolder || matchedSidebarNode?.data?.remoteFolder || ''),
+        customIcon: isSidebarNode ? (nodeOrConn.data?.customIcon || null) : (nodeOrConn.customIcon || matchedSidebarNode?.data?.customIcon || null)
       }, 200);
     } catch (e) { /* noop */ }
 
@@ -524,6 +527,7 @@ export const useConnectionManagement = ({
         guacDisableCopyRect: baseRdp.guacDisableCopyRect || false,
         autoResize: baseRdp.autoResize !== false,
         guacDpi: baseRdp.guacDpi || 96,
+        customIcon: node.data?.customIcon || null,
         guacSecurity: baseRdp.guacSecurity || 'any',
         redirectFolders: baseRdp.redirectFolders !== false,
         redirectClipboard: baseRdp.redirectClipboard !== false,
@@ -532,7 +536,8 @@ export const useConnectionManagement = ({
         fullscreen: baseRdp.fullscreen || false,
         smartSizing: baseRdp.smartSizing !== false,
         span: baseRdp.span || false,
-        admin: baseRdp.admin || false
+        admin: baseRdp.admin || false,
+        customIcon: node.data?.customIcon || null
       }, 200);
     } catch (e) { /* noop */ }
     
@@ -835,7 +840,8 @@ export const useConnectionManagement = ({
         autoReconnect: baseVnc.autoReconnect !== false,
         autoResize: baseVnc.autoResize !== false,
         redirectClipboard: baseVnc.redirectClipboard !== false,
-        guacDpi: baseVnc.guacDpi || 96
+        guacDpi: baseVnc.guacDpi || 96,
+        customIcon: node.data?.customIcon || null
       }, 200);
     } catch (e) { /* noop */ }
     

@@ -32,6 +32,7 @@ const HomeTab = ({
   onCreateVncConnection,
   onEditConnection,
   onLoadGroup,
+  sidebarNodes = null,
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal'); // Estado normal para tamaño correcto
@@ -715,6 +716,7 @@ const HomeTab = ({
                 activeIds={new Set()}
                 onEdit={onEditConnection}
                 themeColors={themeColors}
+                sidebarNodes={sidebarNodes}
               />
               {isTerminalTransitioning && (
                 <div style={{

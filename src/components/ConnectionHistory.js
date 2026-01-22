@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getFavorites, toggleFavorite, onUpdate, isFavorite } from '../utils/connectionStore';
 import { iconThemes } from '../themes/icon-themes';
+import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 
 // Formatear "Hace 5m", "Hace 2 h", "Ayer", etc.
 function formatRelativeTime(iso) {
@@ -45,12 +46,53 @@ function buildHostLabel(conn) {
 	return part;
 }
 
+// Función helper para buscar un nodo en el árbol de la sidebar
+const findNodeInTree = (nodes, connection) => {
+	if (!nodes || !Array.isArray(nodes)) return null;
+	
+	for (const node of nodes) {
+		// Verificar si el nodo coincide con la conexión
+		if (node.data) {
+			const nodeType = node.data.type;
+			const connType = connection.type === 'rdp' ? 'rdp-guacamole' : 
+			                connection.type === 'vnc' ? 'vnc-guacamole' : 
+			                connection.type;
+			
+			if (nodeType === connType || 
+			    (nodeType === 'rdp' && connType === 'rdp-guacamole') ||
+			    (nodeType === 'vnc' && connType === 'vnc-guacamole')) {
+				const nodeHost = node.data?.host || node.data?.server || node.data?.targetServer || node.data?.hostname;
+				const nodeUser = node.data?.user || node.data?.username;
+				const nodePort = node.data?.port;
+				const connHost = connection.host || connection.hostname;
+				const connUser = connection.username || connection.user;
+				const connPort = connection.port;
+				
+				if (nodeHost === connHost && 
+				    nodeUser === connUser && 
+				    (nodePort == null || connPort == null || nodePort === connPort)) {
+					return node;
+				}
+			}
+		}
+		
+		// Buscar recursivamente en los hijos
+		if (node.children && Array.isArray(node.children)) {
+			const found = findNodeInTree(node.children, connection);
+			if (found) return found;
+		}
+	}
+	
+	return null;
+};
+
 const ConnectionHistory = ({
 	onConnectToHistory,
 	recentConnections = [],
 	activeIds = new Set(),
 	onEdit,
 	themeColors = {},
+	sidebarNodes = null, // Nodos de la sidebar para buscar iconos personalizados
 }) => {
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
 	const [typeFilter, setTypeFilter] = useState(() => {
@@ -143,7 +185,12 @@ const ConnectionHistory = ({
 		}
 	};
 
-	const getConnectionTypeIconSVG = (type) => {
+	const getConnectionTypeIconSVG = (type, customIcon = null) => {
+		// Si hay un icono personalizado y es válido, usarlo
+		if (customIcon && customIcon !== 'default' && SSHIconPresets[customIcon.toUpperCase()]) {
+			return null; // Retornar null para que se use SSHIconRenderer en su lugar
+		}
+		
 		const theme = localStorage.getItem('iconThemeSidebar') || 'nord';
 		const icons = (iconThemes[theme] || iconThemes['nord']).icons || {};
 		switch (type) {
@@ -271,7 +318,25 @@ const ConnectionHistory = ({
 			>
 				<div className="connection-card__icon">
 					{(() => {
-						const svg = getConnectionTypeIconSVG(connection.type);
+						// Verificar si hay icono personalizado guardado
+						let customIcon = connection.customIcon;
+						
+						// Si no hay icono personalizado guardado, buscar en los nodos de la sidebar
+						if ((!customIcon || customIcon === 'default') && sidebarNodes) {
+							const matchingNode = findNodeInTree(sidebarNodes, connection);
+							if (matchingNode && matchingNode.data?.customIcon) {
+								customIcon = matchingNode.data.customIcon;
+							}
+						}
+						
+						// Si hay icono personalizado válido, usarlo
+						if (customIcon && customIcon !== 'default' && SSHIconPresets[customIcon.toUpperCase()]) {
+							const preset = SSHIconPresets[customIcon.toUpperCase()];
+							return <SSHIconRenderer preset={preset} pixelSize={28} />;
+						}
+						
+						// Si no hay icono personalizado, usar el icono del tema
+						const svg = getConnectionTypeIconSVG(connection.type, customIcon);
 						if (svg) {
 							return React.cloneElement(svg, { width: 28, height: 28, style: { width: 28, height: 28 } });
 						}
