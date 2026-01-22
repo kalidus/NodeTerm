@@ -954,7 +954,8 @@ const App = () => {
     homeTabs,
     fileExplorerTabs,
     toast,
-    disconnectSSHSession
+    disconnectSSHSession,
+    getFilteredTabs
   });
 
   // Usar el hook de drag & drop
