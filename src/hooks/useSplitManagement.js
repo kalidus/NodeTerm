@@ -11,7 +11,8 @@ export const useSplitManagement = ({
   homeTabs,
   fileExplorerTabs,
   toast,
-  disconnectSSHSession = null // Función opcional para desconectar sesiones SSH
+  disconnectSSHSession = null, // Función opcional para desconectar sesiones SSH
+  getFilteredTabs = null // Función para obtener pestañas filtradas del grupo actual
 }) => {
   // Función helper para contar terminales en un árbol de splits
   const countTerminals = useCallback((node) => {
@@ -86,6 +87,19 @@ export const useSplitManagement = ({
       return;
     }
 
+    // Calcular el índice de la pestaña dentro del grupo actual ANTES de actualizar
+    // Esto asegura que el índice sea correcto para el grupo actual
+    const splitTabKey = existingTab.key;
+    let splitTabIndex = -1;
+    if (getFilteredTabs) {
+      const filteredTabs = getFilteredTabs();
+      splitTabIndex = filteredTabs.findIndex(tab => tab.key === splitTabKey);
+    } else {
+      // Fallback: usar todas las pestañas si getFilteredTabs no está disponible
+      const allTabs = [...homeTabs, ...sshTabs, ...fileExplorerTabs];
+      splitTabIndex = allTabs.findIndex(tab => tab.key === splitTabKey);
+    }
+
     // Función helper para dividir un nodo en el árbol de splits
     const splitNode = (node, path, newTerm, orient) => {
       if (!path || path.length === 0) {
@@ -153,19 +167,18 @@ export const useSplitManagement = ({
         return tab;
       });
       
-      // Buscar el índice real de la pestaña split
-      const splitTabKey = existingTab.key;
-      const allTabs = [...homeTabs, ...updatedTabs, ...fileExplorerTabs];
-      const splitTabIndex = allTabs.findIndex(tab => tab.key === splitTabKey);
-      if (splitTabIndex !== -1) {
-        setActiveTabIndex(splitTabIndex);
-        setGroupActiveIndices(prev => ({
-          ...prev,
-          'no-group': splitTabIndex
-        }));
-      }
       return updatedTabs;
     });
+
+    // Activar la pestaña split después de actualizar las pestañas
+    if (splitTabIndex !== -1) {
+      setActiveTabIndex(splitTabIndex);
+      const currentGroupKey = activeGroupId || 'no-group';
+      setGroupActiveIndices(prev => ({
+        ...prev,
+        [currentGroupKey]: splitTabIndex
+      }));
+    }
 
     const newTerminalCount = currentTerminalCount + 1;
     
@@ -175,7 +188,7 @@ export const useSplitManagement = ({
       detail: `Terminal ${sshNode.label} agregado (${newTerminalCount}/4 terminales)`,
       life: 3000
     });
-  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, sshTabs, setSshTabs, homeTabs, fileExplorerTabs, setActiveTabIndex, toast, countTerminals, getAllTerminals]);
+  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, sshTabs, setSshTabs, homeTabs, fileExplorerTabs, setActiveTabIndex, toast, countTerminals, getAllTerminals, getFilteredTabs]);
 
   // Función helper para encontrar el terminal que se va a cerrar
   const findTerminalToClose = useCallback((node, nodePath) => {
