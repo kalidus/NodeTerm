@@ -321,6 +321,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       'cygwin:detect',
       'cygwin:install',
       'docker:list',
+      'get-version-info',
       // Add more channels as needed
     ];
     if (validChannels.includes(channel)) {

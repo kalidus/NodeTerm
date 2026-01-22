@@ -259,7 +259,7 @@ cd ~
       if (!listenerReady) {
         // Almacenar en buffer durante los primeros 600ms
         outputBuffer.push(data);
-      } else if (mainWindow && mainWindow.webContents) {
+      } else if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         mainWindow.webContents.send(`cygwin:data:${tabId}`, data);
       }
     });
@@ -267,7 +267,7 @@ cd ~
     // Después de 600ms, liberar el buffer y permitir output directo
     setTimeout(() => {
       listenerReady = true;
-      if (outputBuffer.length > 0 && mainWindow && mainWindow.webContents) {
+      if (outputBuffer.length > 0 && mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         outputBuffer.forEach(data => {
           mainWindow.webContents.send(`cygwin:data:${tabId}`, data);
         });
@@ -282,7 +282,7 @@ cd ~
       console.log(`🔚 Cygwin ${tabId}: Terminado`);
       delete cygwinProcesses[tabId];
       
-      if (mainWindow && mainWindow.webContents) {
+      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         mainWindow.webContents.send(`cygwin:exit:${tabId}`, exitCode?.toString() || '0');
       }
     });
@@ -290,7 +290,7 @@ cd ~
     // Handle errors
     cygwinProcesses[tabId].on('error', (error) => {
         console.error(`❌ Cygwin ${tabId}: Error`);
-      if (mainWindow && mainWindow.webContents) {
+      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         mainWindow.webContents.send(`cygwin:error:${tabId}`, error.message);
       }
     });
@@ -299,7 +299,7 @@ cd ~
 
   } catch (error) {
     console.error(`❌ Cygwin ${tabId}: Error de inicio`);
-    if (mainWindow && mainWindow.webContents) {
+    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
       mainWindow.webContents.send(`cygwin:error:${tabId}`, 
         `No se pudo iniciar Cygwin: ${error.message}\n\n` +
         `Asegúrate de que la carpeta 'resources/cygwin64' existe en la aplicación.`
