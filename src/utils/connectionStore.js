@@ -149,6 +149,8 @@ function toSerializable(connection) {
     // Campos adicionales para conexiones de archivos (SFTP/FTP/SCP)
     protocol: connection.protocol || (type === 'sftp' || type === 'ftp' || type === 'scp' ? type : undefined),
     targetFolder: connection.targetFolder || '',
+    // Guardar icono personalizado si existe
+    customIcon: connection.customIcon || null,
     lastConnected: connection.lastConnected ? new Date(connection.lastConnected).toISOString() : new Date().toISOString()
   };
 }
@@ -209,6 +211,8 @@ function fromSidebarNode(node, typeOverride = null) {
     // Campos adicionales para conexiones de archivos (SFTP/FTP/SCP)
     protocol: node.data?.protocol || (isFileConnection ? node.data.type : undefined),
     targetFolder: node.data?.targetFolder || '',
+    // Incluir icono personalizado si existe
+    customIcon: node.data?.customIcon || null,
   };
   return toSerializable(base);
 }

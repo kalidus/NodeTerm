@@ -83,6 +83,7 @@ const TabContentRenderer = React.memo(({
         onCreateRdpConnection={onOpenRdpConnection}
         onCreateVncConnection={onOpenVncConnection}
         onLoadGroup={handleLoadGroupFromFavorites}
+        sidebarNodes={nodes}
         onEditConnection={(connection) => {
           // Intentar construir un nodo temporal según el tipo para reutilizar los editores existentes
           if (!connection) return;
