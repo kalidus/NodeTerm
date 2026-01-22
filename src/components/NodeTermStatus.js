@@ -30,6 +30,9 @@ const NodeTermStatus = ({
 	statusBarVisible = true
 }) => {
 	const { t, locale } = useTranslation('common');
+	const { t: tDialogs } = useTranslation('dialogs');
+	// Obtener la categoría de Gestión de Secretos para el diálogo
+	const secretsManagementCategory = tDialogs('protocolSelection.categories.secretsManagement');
 	const [syncState, setSyncState] = useState({ configured: false, enabled: false, lastSync: null, connectivity: 'unknown' });
 	const [guacdState, setGuacdState] = useState({ isRunning: false, method: 'unknown', host: '127.0.0.1', port: 4822 });
 	const [vaultState, setVaultState] = useState({ configured: false, unlocked: false });
@@ -1217,11 +1220,11 @@ const NodeTermStatus = ({
 					<SectionHeader id="acciones" label="ACCIONES RÁPIDAS" />
 					{!sc.acciones && (
 					<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-						<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-connection-dialog', { detail: { protocol: 'ssh' } }))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-							<i className="pi pi-plus" style={{ color: '#22c55e', fontSize: '1rem' }} /><span>Nueva Conexión SSH</span>
+						<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<i className="pi pi-plus" style={{ color: '#22c55e', fontSize: '1rem' }} /><span>Nueva Conexión</span>
 						</button>
-						<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-connection-dialog', { detail: { protocol: 'rdp' } }))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-							<i className="pi pi-desktop" style={{ color: '#4fc3f7', fontSize: '1rem' }} /><span>Nueva Conexión RDP</span>
+						<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog', { detail: { initialCategory: secretsManagementCategory } }))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<i className="pi pi-key" style={{ color: '#ffc107', fontSize: '1rem' }} /><span>Nuevo Secreto</span>
 						</button>
 						{onOpenFileExplorer && (
 							<button style={btnStyle()} onClick={onOpenFileExplorer} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
