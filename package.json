@@ -7,7 +7,7 @@
     "start:cold": "node -e \"try{require('fs').rmSync('.cold-cache',{recursive:true,force:true})}catch(e){}\" && electron . --user-data-dir=.cold-cache",
     "download-fonts": "node scripts/download-fonts.js",
     "build": "npm run download-fonts && webpack --mode production",
-    "dev": "cross-env NODE_OPTIONS=--no-deprecation concurrently \"webpack --watch --mode development\" \"wait-on dist/index.html -t 60000 && electron .\"",
+    "dev": "cross-env NODE_OPTIONS=--no-deprecation concurrently --kill-others \"webpack --watch --mode development\" \"wait-on dist/index.html -t 60000 && cross-env NODE_OPTIONS=--no-deprecation electron .\"",
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && npm prune --omit=optional --no-audit --no-fund && electron-builder",
     "dist:linux": "npm run build && electron-builder --linux",
