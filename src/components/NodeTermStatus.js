@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { getVersionInfo } from '../version-info';
 import SyncManager from '../utils/SyncManager';
@@ -107,7 +107,7 @@ const NodeTermStatus = ({
 		}
 	};
 
-	const defaultSections = { acciones: false, servicios: false, terminales: false, toggles: false };
+	const defaultSections = { acciones: false, servicios: false, terminales: false, toggles: false, ia: false };
 	const [rightColumnSectionsCollapsed, setRightColumnSectionsCollapsed] = useState(() => {
 		try {
 			const s = localStorage.getItem(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_SECTIONS);
@@ -316,8 +316,8 @@ const NodeTermStatus = ({
 				const config = e.detail.config;
 				setAiClientsState(prev => ({
 					nodeterm: config.nodeterm || false,
-					anythingllm: { enabled: config.anythingllm || false, running: prev.anythingllm.running },
-					openwebui: { enabled: config.openwebui || false, running: prev.openwebui.running }
+					anythingllm: { enabled: config.anythingllm || false, running: prev.anythingllm?.running || false },
+					openwebui: { enabled: config.openwebui || false, running: prev.openwebui?.running || false }
 				}));
 				// Verificar estado de servicios después de actualizar configuración
 				setTimeout(checkAIDockerServices, 500);
@@ -1000,6 +1000,26 @@ const NodeTermStatus = ({
 		};
 	}, [horizontal, compact, availableTerminals.length, dockerContainers.length, ubuntuDistributions.length]);
 
+	// Calcular si hay clientes de IA activos (fuera del bloque condicional para que siempre se calcule)
+	const hasActiveAIClients = useMemo(() => {
+		const result = aiClientsState.nodeterm || 
+			(aiClientsState.anythingllm && aiClientsState.anythingllm.enabled) ||
+			(aiClientsState.openwebui && aiClientsState.openwebui.enabled);
+		
+		// Debug: Log del estado de IA (temporal para depuración)
+		if (process.env.NODE_ENV === 'development') {
+			console.log('[NodeTermStatus] Calculando hasActiveAIClients:', {
+				nodeterm: aiClientsState.nodeterm,
+				anythingllm: aiClientsState.anythingllm,
+				openwebui: aiClientsState.openwebui,
+				result,
+				'variant': variant
+			});
+		}
+		
+		return result;
+	}, [aiClientsState.nodeterm, aiClientsState.anythingllm?.enabled, aiClientsState.openwebui?.enabled, variant]);
+	
 	// Layout columna derecha (variant rightColumn) - sustituye barra superior en HomeTab
 	if (variant === 'rightColumn') {
 		const colBg = themeColors.cardBackground || 'rgba(16, 20, 28, 0.95)';
@@ -1232,14 +1252,101 @@ const NodeTermStatus = ({
 								<i className="pi pi-th-large" style={{ color: '#4fc3f7', fontSize: '1rem' }} /><span>Nuevo grupo de pestañas</span>
 							</button>
 						)}
-						<button style={btnStyle()} onClick={onToggleAIChat} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-							<i className="pi pi-comments" style={{ color: '#8b5cf6', fontSize: '1rem' }} /><span>Chat IA</span>
-						</button>
-					</div>
+					<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+						<i className="pi pi-wrench" style={{ color: '#06b6d4', fontSize: '1rem' }} /><span>Herramientas</span>
+					</button>
+				</div>
+				)}
+			</div>
+
+			{/* SECCIÓN IA - solo visible si hay alguna configuración de IA activa */}
+			{hasActiveAIClients ? (
+				<div>
+					<SectionHeader id="ia" label="IA" />
+					{!sc.ia && (
+						<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+							{/* Chat IA NodeTerm */}
+							{aiClientsState.nodeterm && (
+								<button style={btnStyle()} onClick={onToggleAIChat} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+									<i className="pi pi-comments" style={{ color: '#8b5cf6', fontSize: '1rem' }} /><span>Chat IA</span>
+								</button>
+							)}
+							
+							{/* AnythingLLM */}
+							{aiClientsState.anythingllm && aiClientsState.anythingllm.enabled && (
+								<button 
+									style={btnStyle()} 
+									onClick={() => {
+										const newTab = {
+											key: `anythingllm-${Date.now()}`,
+											label: 'AnythingLLM',
+											type: 'anything-llm',
+											createdAt: Date.now(),
+											groupId: null
+										};
+										window.dispatchEvent(new CustomEvent('create-anythingllm-tab', {
+											detail: { tab: newTab }
+										}));
+									}} 
+									onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} 
+									onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}
+									title={aiClientsState.anythingllm.running ? 'AnythingLLM: En ejecución' : 'AnythingLLM: Detenido'}
+								>
+									<i className="pi pi-cloud" style={{ color: aiClientsState.anythingllm.running ? '#22c55e' : '#f59e0b', fontSize: '1rem' }} />
+									<span>AnythingLLM</span>
+									{aiClientsState.anythingllm.running && (
+										<span style={{ 
+											marginLeft: 'auto', 
+											width: '8px', 
+											height: '8px', 
+											borderRadius: '50%', 
+											background: '#22c55e',
+											boxShadow: '0 0 4px #22c55e'
+										}} />
+									)}
+								</button>
+							)}
+							
+							{/* OpenWebUI */}
+							{aiClientsState.openwebui && aiClientsState.openwebui.enabled && (
+								<button 
+									style={btnStyle()} 
+									onClick={() => {
+										const newTab = {
+											key: `openwebui-${Date.now()}`,
+											label: 'OpenWebUI',
+											type: 'openwebui',
+											createdAt: Date.now(),
+											groupId: null
+										};
+										window.dispatchEvent(new CustomEvent('create-openwebui-tab', {
+											detail: { tab: newTab }
+										}));
+									}} 
+									onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} 
+									onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}
+									title={aiClientsState.openwebui.running ? 'OpenWebUI: En ejecución' : 'OpenWebUI: Detenido'}
+								>
+									<i className="pi pi-globe" style={{ color: aiClientsState.openwebui.running ? '#3b82f6' : '#f59e0b', fontSize: '1rem' }} />
+									<span>OpenWebUI</span>
+									{aiClientsState.openwebui.running && (
+										<span style={{ 
+											marginLeft: 'auto', 
+											width: '8px', 
+											height: '8px', 
+											borderRadius: '50%', 
+											background: '#3b82f6',
+											boxShadow: '0 0 4px #3b82f6'
+										}} />
+									)}
+								</button>
+							)}
+						</div>
 					)}
 				</div>
+			) : null}
 
-				{/* TERMINALES LOCALES - después de Acciones rápidas, usa availableTerminals + ubuntuDistributions + dockerContainers */}
+			{/* TERMINALES LOCALES - después de Acciones rápidas, usa availableTerminals + ubuntuDistributions + dockerContainers */}
 				<div>
 					<SectionHeader id="terminales" label="TERMINALES LOCALES" onRefresh={refreshTerminalsCache} />
 					{!sc.terminales && (() => {
