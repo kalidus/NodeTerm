@@ -357,23 +357,28 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 cleanupContextMenu();
                 
                 // Preservar el buffer del terminal antes de desmontarlo
-                // CRÍTICO: Solo guardar el contenido VISIBLE (viewport) hasta el cursor
-                // NO guardar scrollback antiguo que causa espaciado enorme
+                // Guardar las últimas 500 líneas del buffer (o todo si hay menos)
+                // Esto asegura preservar suficiente historial sin el scrollback antiguo completo
                 if (term.current) {
                     try {
                         const buffer = term.current.buffer.active;
                         const lines = [];
                         
-                        // Guardar desde el viewport (lo que el usuario ve) hasta el cursor (fin del contenido)
-                        // Esto evita guardar scrollback antiguo (antes del viewport) que causa espaciado enorme
-                        const startLine = Math.max(buffer.baseY, buffer.viewportY);
-                        const endLine = Math.min(buffer.baseY + buffer.cursorY + 1, buffer.length);
+                        // Guardar las últimas 1500 líneas (historial extenso)
+                        const linesToSave = 1500;
+                        const startLine = Math.max(0, buffer.length - linesToSave);
+                        const endLine = buffer.length;
                         
                         for (let i = startLine; i < endLine; i++) {
                             const line = buffer.getLine(i);
                             if (line) {
                                 lines.push(line.translateToString(true));
                             }
+                        }
+                        
+                        // Eliminar líneas vacías al final para evitar espaciado extra
+                        while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
+                            lines.pop();
                         }
                         
                         if (!window.__terminalBuffers) window.__terminalBuffers = {};

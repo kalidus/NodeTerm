@@ -2339,7 +2339,9 @@ const App = () => {
     rdpTabs,
     findNodeByKey,
     // Recording props
-    setSshTabs
+    setSshTabs,
+    // Tab group props
+    setShowCreateGroupDialog
   }), [
     onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, onOpenVncConnection, handleLoadGroupFromFavorites,
     openEditRdpDialog, openEditSSHDialog, nodes, localFontFamily, localFontSize,
@@ -2347,7 +2349,7 @@ const App = () => {
     explorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
     handleTerminalContextMenu, showTerminalContextMenu, sshStatsByTabId,
     terminalRefs, statusBarIconTheme, handleCloseSplitPanel, rdpTabs, findNodeByKey,
-    setSshTabs
+    setSshTabs, setShowCreateGroupDialog
   ]);
 
   return (

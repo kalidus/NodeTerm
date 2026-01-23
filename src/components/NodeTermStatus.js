@@ -27,7 +27,8 @@ const NodeTermStatus = ({
 	onToggleStatusBar,
 	onCollapse, // colapsar columna derecha (solo variant rightColumn)
 	showAIChat = false,
-	statusBarVisible = true
+	statusBarVisible = true,
+	setShowCreateGroupDialog
 }) => {
 	const { t, locale } = useTranslation('common');
 	const { t: tDialogs } = useTranslation('dialogs');
@@ -1226,9 +1227,9 @@ const NodeTermStatus = ({
 						<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog', { detail: { initialCategory: secretsManagementCategory } }))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
 							<i className="pi pi-key" style={{ color: '#ffc107', fontSize: '1rem' }} /><span>Nuevo Secreto</span>
 						</button>
-						{onOpenFileExplorer && (
-							<button style={btnStyle()} onClick={onOpenFileExplorer} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-								<i className="pi pi-folder-open" style={{ color: '#4fc3f7', fontSize: '1rem' }} /><span>Explorador de Archivos</span>
+						{setShowCreateGroupDialog && (
+							<button style={btnStyle()} onClick={() => setShowCreateGroupDialog(true)} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+								<i className="pi pi-th-large" style={{ color: '#4fc3f7', fontSize: '1rem' }} /><span>Nuevo grupo de pestañas</span>
 							</button>
 						)}
 						<button style={btnStyle()} onClick={onToggleAIChat} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
