@@ -72,7 +72,9 @@ const TabContentRenderer = React.memo(({
   setGroupActiveIndices,
   setOpenTabOrder,
   activeGroupId,
-  activeTabIndex
+  activeTabIndex,
+  // Tab group props
+  setShowCreateGroupDialog
 }) => {
   if (tab.type === 'home') {
     return (
@@ -216,6 +218,7 @@ const TabContentRenderer = React.memo(({
             window.dispatchEvent(new CustomEvent('open-settings-dialog'));
           } catch (e) { /* noop */ }
         }}
+        setShowCreateGroupDialog={setShowCreateGroupDialog}
       />
     );
   }

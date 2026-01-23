@@ -33,6 +33,7 @@ const HomeTab = ({
   onEditConnection,
   onLoadGroup,
   sidebarNodes = null,
+  setShowCreateGroupDialog,
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal'); // Estado normal para tamaño correcto
@@ -802,6 +803,7 @@ const HomeTab = ({
               onCollapse={handleToggleRightColumn}
               showAIChat={showAIChat}
               statusBarVisible={statusBarVisible}
+              setShowCreateGroupDialog={setShowCreateGroupDialog}
             />
           )}
         </div>
