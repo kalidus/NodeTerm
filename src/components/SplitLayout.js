@@ -225,26 +225,10 @@ const SplitLayout = ({
     };
   }, []);
 
-  // Forzar fit de los terminales después de que se monten
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      // Fit todos los terminales en terminalRefs
-      if (terminalRefs && terminalRefs.current) {
-        Object.values(terminalRefs.current).forEach(ref => {
-          if (ref?.fit) ref.fit();
-        });
-      }
-      // Sistema legacy
-      if (leftTerminalRef.current?.fit) {
-        leftTerminalRef.current.fit();
-      }
-      if (rightTerminalRef.current?.fit) {
-        rightTerminalRef.current.fit();
-      }
-    }, 200);
-    
-    return () => clearTimeout(timer);
-  }, [first, second, leftTerminal, rightTerminal, terminalRefs]);
+  // IMPORTANTE: NO hacer fit() masivo de todos los terminales aquí
+  // El ResizeObserver de TerminalComponent ya maneja el resize automáticamente cuando el contenedor cambia de tamaño
+  // Hacer fit() de todos los terminales causa que los terminales existentes se desplacen cuando se hace split
+  // El fit() solo es necesario cuando se crea un nuevo terminal, y eso ya se hace en TerminalComponent (línea 151)
 
   // Asegurar que los terminales se inicialicen correctamente
   useEffect(() => {
