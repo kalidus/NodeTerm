@@ -37,7 +37,8 @@ function buildHostLabel(conn) {
 		return conn.group || '—';
 	}
 	
-	const user = conn.username || conn.user || '';
+	// En conexiones con bastión (Wallix), la cadena completa está en bastionUser
+	const user = conn.useBastionWallix ? (conn.bastionUser || conn.username || conn.user || '') : (conn.username || conn.user || '');
 	const host = conn.host || conn.hostname || '';
 	const port = conn.port != null && conn.port !== '' ? Number(conn.port) : null;
 	const def = defaultPort(conn.type);
