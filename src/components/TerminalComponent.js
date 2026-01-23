@@ -158,16 +158,18 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 
                 // Solo restaurar si fue guardado recientemente (menos de 3 segundos)
                 if (timeSinceSaved < 3000) {
-                    // Restaurar cada línea
-                    savedBuffer.lines.forEach(line => {
-                        term.current.write(line + '\r\n');
+                    // Restaurar cada línea con salto de línea entre ellas
+                    // NO agregar \r\n al final de la última línea para evitar prompt desplazado
+                    savedBuffer.lines.forEach((line, index) => {
+                        term.current.write(line);
+                        if (index < savedBuffer.lines.length - 1) {
+                            term.current.write('\r\n');
+                        }
                     });
-                    
-                    // Limpiar el buffer guardado después de restaurar
-                    delete window.__terminalBuffers[tabId];
-                } else {
-                    delete window.__terminalBuffers[tabId];
                 }
+                
+                // Siempre limpiar el buffer guardado
+                delete window.__terminalBuffers[tabId];
             } catch (error) {
                 if (window.__terminalBuffers) {
                     delete window.__terminalBuffers[tabId];
@@ -177,10 +179,34 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         
         term.current.focus();
         
-        // ResizeObserver robusto: fit en cada cambio de tamaño
+        // ResizeObserver con debounce para evitar desplazamientos al hacer split
+        // CRÍTICO: No hacer fit() inmediatamente cuando cambia el tamaño, esperar a que el DOM se estabilice
+        let resizeRaf = null;
+        let resizeTimeout = null;
         const resizeObserver = new ResizeObserver(() => {
-            if (fitAddon.current) {
-                try { fitAddon.current.fit(); } catch (e) {}
+            if (fitAddon.current && term.current) {
+                // Cancelar RAF y timeout anteriores si existen
+                if (resizeRaf) {
+                    cancelAnimationFrame(resizeRaf);
+                    resizeRaf = null;
+                }
+                if (resizeTimeout) {
+                    clearTimeout(resizeTimeout);
+                }
+                
+                // Usar RAF + timeout para asegurar que el DOM está completamente estable
+                // RAF para el siguiente frame, timeout adicional para splits complejos
+                resizeRaf = requestAnimationFrame(() => {
+                    resizeTimeout = setTimeout(() => {
+                        try {
+                            // Simplemente hacer fit sin tocar el scroll
+                            // xterm.js maneja el scroll automáticamente
+                            fitAddon.current.fit();
+                        } catch (e) {
+                            // Silenciar errores
+                        }
+                    }, 150); // Timeout de 150ms para dar tiempo al DOM en splits complejos
+                });
             }
         });
         if (terminalRef.current) resizeObserver.observe(terminalRef.current);
@@ -256,34 +282,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             
             // --- End of Clipboard Handling ---
             
-            // Verificar si ya existe una conexión SSH activa para este tabId
-            // Esto evita reconectar cuando un terminal se convierte en parte de un split
-            const checkExistingConnection = async () => {
-                try {
-                    const hasConnection = await window.electron.ipcRenderer.invoke('ssh:check-connection', tabId);
-                    
-                    if (!hasConnection) {
-                        // Solo conectar si no existe una conexión activa
-                        window.electron.ipcRenderer.send('ssh:connect', { tabId, config: sshConfig });
-                    } else {
-                        // Si ya existe, solo enviar el evento ready localmente
-                        // para que el terminal se configure correctamente
-                        setTimeout(() => {
-                            window.electron.ipcRenderer.send('ssh:resize', {
-                                tabId,
-                                cols: term.current.cols,
-                                rows: term.current.rows
-                            });
-                        }, 100);
-                    }
-                } catch (error) {
-                    // En caso de error, intentar conectar de todas formas
-                    window.electron.ipcRenderer.send('ssh:connect', { tabId, config: sshConfig });
-                }
-            };
-            
-            checkExistingConnection();
-
+            // IMPORTANTE: Registrar listeners ANTES de conectar para no perder datos iniciales
             // After the SSH connection is ready, send an initial resize so programs like vim/htop get the correct size
             const onReady = () => {
                 window.electron.ipcRenderer.send('ssh:resize', {
@@ -312,6 +311,35 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 term.current?.writeln(`\r\n\x1b[31mConnection Error: ${message}\x1b[0m`);
             };
             const onErrorUnsubscribe = window.electron.ipcRenderer.on(`ssh:error:${tabId}`, errorListener);
+            
+            // Ahora sí, verificar y conectar DESPUÉS de registrar los listeners
+            // Verificar si ya existe una conexión SSH activa para este tabId
+            // Esto evita reconectar cuando un terminal se convierte en parte de un split
+            const checkExistingConnection = async () => {
+                try {
+                    const hasConnection = await window.electron.ipcRenderer.invoke('ssh:check-connection', tabId);
+                    
+                    if (!hasConnection) {
+                        // Solo conectar si no existe una conexión activa
+                        window.electron.ipcRenderer.send('ssh:connect', { tabId, config: sshConfig });
+                    } else {
+                        // Si ya existe, solo enviar el evento ready localmente
+                        // para que el terminal se configure correctamente
+                        setTimeout(() => {
+                            window.electron.ipcRenderer.send('ssh:resize', {
+                                tabId,
+                                cols: term.current.cols,
+                                rows: term.current.rows
+                            });
+                        }, 100);
+                    }
+                } catch (error) {
+                    // En caso de error, intentar conectar de todas formas
+                    window.electron.ipcRenderer.send('ssh:connect', { tabId, config: sshConfig });
+                }
+            };
+            
+            checkExistingConnection();
 
             // Handle user input
             const dataHandler = term.current.onData(data => {
@@ -329,29 +357,36 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 cleanupContextMenu();
                 
                 // Preservar el buffer del terminal antes de desmontarlo
-                // Esto permite restaurar el contenido si el componente se remonta rápidamente
+                // CRÍTICO: Solo guardar el contenido VISIBLE (viewport) hasta el cursor
+                // NO guardar scrollback antiguo que causa espaciado enorme
                 if (term.current) {
                     try {
-                        // Guardar el buffer completo del terminal
                         const buffer = term.current.buffer.active;
                         const lines = [];
-                        for (let i = 0; i < buffer.length; i++) {
+                        
+                        // Guardar desde el viewport (lo que el usuario ve) hasta el cursor (fin del contenido)
+                        // Esto evita guardar scrollback antiguo (antes del viewport) que causa espaciado enorme
+                        const startLine = Math.max(buffer.baseY, buffer.viewportY);
+                        const endLine = Math.min(buffer.baseY + buffer.cursorY + 1, buffer.length);
+                        
+                        for (let i = startLine; i < endLine; i++) {
                             const line = buffer.getLine(i);
                             if (line) {
                                 lines.push(line.translateToString(true));
                             }
                         }
                         
-                        // Guardar el buffer en una variable global
                         if (!window.__terminalBuffers) window.__terminalBuffers = {};
                         window.__terminalBuffers[tabId] = {
                             lines,
-                            cursorX: term.current.buffer.active.cursorX,
-                            cursorY: term.current.buffer.active.cursorY,
+                            cursorX: buffer.cursorX,
+                            cursorY: buffer.cursorY,
+                            viewportY: buffer.viewportY,
+                            baseY: buffer.baseY,
                             timestamp: Date.now()
                         };
                     } catch (error) {
-                        // Silenciar error de preservación de buffer
+                        // Silenciar error
                     }
                 }
                 
@@ -373,6 +408,14 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 // Guardar el timer en una variable global para poder cancelarlo si se remonta
                 if (!window.__sshDisconnectTimers) window.__sshDisconnectTimers = {};
                 window.__sshDisconnectTimers[tabId] = disconnectTimer;
+                
+                // Limpiar RAF y timeout del ResizeObserver
+                if (resizeRaf) {
+                    cancelAnimationFrame(resizeRaf);
+                }
+                if (resizeTimeout) {
+                    clearTimeout(resizeTimeout);
+                }
                 
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();
