@@ -108,16 +108,26 @@ const TabContentRenderer = React.memo(({
           }
           if (connection.type === 'ssh' || connection.type === 'explorer') {
             // Reutilizar diálogo de edición SSH
+            // Incluir todos los campos de la conexión para que la edición muestre la información correcta
             const tempNode = {
               key: `temp_ssh_${Date.now()}`,
               label: connection.name || `${connection.username}@${connection.host}`,
               data: {
                 type: 'ssh',
-                host: connection.host,
-                user: connection.username,
-                password: connection.password,
+                host: connection.host || connection.hostname || '',
+                user: connection.username || connection.user || '',
+                username: connection.username || connection.user || '',
+                password: connection.password || '',
                 port: connection.port || 22,
-                remoteFolder: ''
+                remoteFolder: connection.remoteFolder || '',
+                // Campos para conexiones Wallix/Bastion
+                useBastionWallix: connection.useBastionWallix || false,
+                bastionHost: connection.bastionHost || '',
+                bastionUser: connection.bastionUser || '',
+                targetServer: connection.targetServer || '',
+                // Campos adicionales
+                description: connection.description || '',
+                customIcon: connection.customIcon || null
               }
             };
             openEditSSHDialog(tempNode);
