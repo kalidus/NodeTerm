@@ -220,12 +220,11 @@
     "buffer": "^6.0.3",
     "concurrently": "^8.2.2",
     "copy-webpack-plugin": "^13.0.0",
-    "wait-on": "^8.0.1",
     "cross-env": "^10.0.0",
-    "crypto-browserify": "^3.5.1",
+    "crypto-browserify": "^3.12.1",
     "css-loader": "^6.8.1",
     "electron": "^38.1.2",
-    "electron-builder": "^26.0.12",
+    "electron-builder": "^26.4.0",
     "electron-reloader": "^1.2.3",
     "html-webpack-plugin": "^5.6.3",
     "os-browserify": "^0.3.0",
@@ -236,6 +235,7 @@
     "style-loader": "^3.3.3",
     "url": "^0.11.4",
     "util": "^0.12.5",
+    "wait-on": "^8.0.1",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"
   },
@@ -243,6 +243,8 @@
     "dmg-license": "^1.0.11"
   },
   "overrides": {
-    "ssh2": "1.17.0"
+    "ssh2": "1.17.0",
+    "tar": "7.5.6",
+    "elliptic": "6.6.1"
   }
 }
