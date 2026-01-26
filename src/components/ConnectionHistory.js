@@ -29,14 +29,14 @@ function defaultPort(type) {
 
 function buildHostLabel(conn) {
 	if (conn.type === 'group') return conn.name || '—';
-	
+
 	// Para secretos (passwords, wallets, etc.), mostrar URL o username
 	if (['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'].includes(conn.type)) {
 		if (conn.url) return conn.url;
 		if (conn.username) return conn.username;
 		return conn.group || '—';
 	}
-	
+
 	// En conexiones con bastión (Wallix), la cadena completa está en bastionUser
 	const user = conn.useBastionWallix ? (conn.bastionUser || conn.username || conn.user || '') : (conn.username || conn.user || '');
 	const host = conn.host || conn.hostname || '';
@@ -50,40 +50,40 @@ function buildHostLabel(conn) {
 // Función helper para buscar un nodo en el árbol de la sidebar
 const findNodeInTree = (nodes, connection) => {
 	if (!nodes || !Array.isArray(nodes)) return null;
-	
+
 	for (const node of nodes) {
 		// Verificar si el nodo coincide con la conexión
 		if (node.data) {
 			const nodeType = node.data.type;
-			const connType = connection.type === 'rdp' ? 'rdp-guacamole' : 
-			                connection.type === 'vnc' ? 'vnc-guacamole' : 
-			                connection.type;
-			
-			if (nodeType === connType || 
-			    (nodeType === 'rdp' && connType === 'rdp-guacamole') ||
-			    (nodeType === 'vnc' && connType === 'vnc-guacamole')) {
+			const connType = connection.type === 'rdp' ? 'rdp-guacamole' :
+				connection.type === 'vnc' ? 'vnc-guacamole' :
+					connection.type;
+
+			if (nodeType === connType ||
+				(nodeType === 'rdp' && connType === 'rdp-guacamole') ||
+				(nodeType === 'vnc' && connType === 'vnc-guacamole')) {
 				const nodeHost = node.data?.host || node.data?.server || node.data?.targetServer || node.data?.hostname;
 				const nodeUser = node.data?.user || node.data?.username;
 				const nodePort = node.data?.port;
 				const connHost = connection.host || connection.hostname;
 				const connUser = connection.username || connection.user;
 				const connPort = connection.port;
-				
-				if (nodeHost === connHost && 
-				    nodeUser === connUser && 
-				    (nodePort == null || connPort == null || nodePort === connPort)) {
+
+				if (nodeHost === connHost &&
+					nodeUser === connUser &&
+					(nodePort == null || connPort == null || nodePort === connPort)) {
 					return node;
 				}
 			}
 		}
-		
+
 		// Buscar recursivamente en los hijos
 		if (node.children && Array.isArray(node.children)) {
 			const found = findNodeInTree(node.children, connection);
 			if (found) return found;
 		}
 	}
-	
+
 	return null;
 };
 
@@ -135,7 +135,7 @@ const ConnectionHistory = ({
 				setHomeTabFont(localStorage.getItem('homeTabFont') || localStorage.getItem('sidebarFont') || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif');
 				const s = localStorage.getItem('homeTabFontSize');
 				setHomeTabFontSize(s ? parseInt(s, 10) : null);
-			} catch {}
+			} catch { }
 		};
 		h();
 		window.addEventListener('home-tab-font-changed', h);
@@ -191,7 +191,7 @@ const ConnectionHistory = ({
 		if (customIcon && customIcon !== 'default' && SSHIconPresets[customIcon.toUpperCase()]) {
 			return null; // Retornar null para que se use SSHIconRenderer en su lugar
 		}
-		
+
 		const theme = localStorage.getItem('iconThemeSidebar') || 'nord';
 		const icons = (iconThemes[theme] || iconThemes['nord']).icons || {};
 		switch (type) {
@@ -271,108 +271,171 @@ const ConnectionHistory = ({
 		return `${c.type}:${c.host || ''}:${c.username || ''}:${c.port || ''}`;
 	};
 
-	const ConnectionCard = ({ connection, isPinned, onEditCard }) => {
-		const isActive = activeIds.has(activeKey(connection));
+	// ... (helper functions keep existing)
+
+	const ConnectionRow = ({ connection, isPinned, isActive, onConnect, onEdit, onToggleFav }) => {
 		const typeColor = getConnectionTypeColor(connection.type);
 		const protocolLabel = getProtocolLabel(connection.type);
 		const hostLabel = buildHostLabel(connection);
 		const lastConnected = connection.lastConnected;
 		const fav = isPinned || isFavorite(connection);
-		const statusStr = isActive ? (lastConnected ? `Conectado • ${formatRelativeTime(lastConnected)}` : 'Conectado') : formatRelativeTime(lastConnected);
-
-		const r = parseInt(typeColor.slice(1, 3), 16);
-		const g = parseInt(typeColor.slice(3, 5), 16);
-		const b = parseInt(typeColor.slice(5, 7), 16);
+		const timeStr = formatRelativeTime(lastConnected);
 
 		const handleStar = (e) => {
 			e.stopPropagation();
-			toggleFavorite(connection);
-			loadConnectionHistory();
+			onToggleFav(connection);
 		};
 
 		const handleEdit = (e) => {
 			e.stopPropagation();
-			onEditCard?.(connection);
+			onEdit?.(connection);
 		};
 
 		return (
-			<div
-				className={`connection-card ${isActive ? 'connection-card--active' : ''}`}
-				onClick={() => onConnectToHistory?.(connection)}
-				onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onConnectToHistory?.(connection); } }}
-				role="button"
-				tabIndex={0}
-				aria-label={`Conectar a ${connection.name}`}
-				style={{
-					'--cc-accent': typeColor,
-					'--cc-chip-bg': `rgba(${r},${g},${b},0.18)`,
-					'--cc-chip-border': `rgba(${r},${g},${b},0.45)`,
-					'--cc-chip-color': typeColor,
-					'--cc-bg': themeColors.itemBackground || 'rgba(12, 14, 20, 0.55)',
-					'--cc-bg-hover': themeColors.hoverBackground || 'rgba(16, 20, 28, 0.70)',
-					'--cc-border': themeColors.borderColor || 'rgba(255,255,255,0.10)',
-					'--cc-font': homeTabFont,
-					'--cc-name-size': homeTabFontSize ? `${homeTabFontSize * 0.9}px` : '0.9rem',
-					'--cc-host-size': homeTabFontSize ? `${homeTabFontSize * 0.72}px` : '0.75rem',
-					'--cc-meta-size': homeTabFontSize ? `${homeTabFontSize * 0.7}px` : '0.7rem',
-				}}
+			<tr
+				className={`connection-table-row ${isActive ? 'active-row' : ''}`}
+				onClick={() => onConnect?.(connection)}
 			>
-				<div className="connection-card__icon">
-					{(() => {
-						// Verificar si hay icono personalizado guardado
-						let customIcon = connection.customIcon;
-						
-						// Si no hay icono personalizado guardado, buscar en los nodos de la sidebar
-						if ((!customIcon || customIcon === 'default') && sidebarNodes) {
-							const matchingNode = findNodeInTree(sidebarNodes, connection);
-							if (matchingNode && matchingNode.data?.customIcon) {
-								customIcon = matchingNode.data.customIcon;
+				{/* Name & Icon */}
+				<td className="connection-cell cell-name">
+					<div className="cell-icon" style={{ color: typeColor }}>
+						{(() => {
+							let customIcon = connection.customIcon;
+							if ((!customIcon || customIcon === 'default') && sidebarNodes) {
+								const matchingNode = findNodeInTree(sidebarNodes, connection);
+								if (matchingNode && matchingNode.data?.customIcon) {
+									customIcon = matchingNode.data.customIcon;
+								}
 							}
-						}
-						
-						// Si hay icono personalizado válido, usarlo
-						if (customIcon && customIcon !== 'default' && SSHIconPresets[customIcon.toUpperCase()]) {
-							const preset = SSHIconPresets[customIcon.toUpperCase()];
-							return <SSHIconRenderer preset={preset} pixelSize={28} />;
-						}
-						
-						// Si no hay icono personalizado, usar el icono del tema
-						const svg = getConnectionTypeIconSVG(connection.type, customIcon);
-						if (svg) {
-							return React.cloneElement(svg, { width: 28, height: 28, style: { width: 28, height: 28 } });
-						}
-						return <i className={getConnectionTypeIcon(connection.type)} aria-hidden="true" />;
-					})()}
-				</div>
-				<div className="connection-card__body">
-					<div className="connection-card__name-row">
-						{isPinned && (
-							<i className="pi pi-star-fill connection-card__star" style={{ color: '#FFD700', marginRight: 6 }} aria-hidden="true" />
-						)}
-						<span className="connection-card__name" title={connection.name}>{connection.name}</span>
+							if (customIcon && customIcon !== 'default' && SSHIconPresets[customIcon.toUpperCase()]) {
+								const preset = SSHIconPresets[customIcon.toUpperCase()];
+								return <SSHIconRenderer preset={preset} pixelSize={20} />;
+							}
+							const svg = getConnectionTypeIconSVG(connection.type, customIcon);
+							if (svg) {
+								return React.cloneElement(svg, { width: 20, height: 20, style: { width: 20, height: 20 } });
+							}
+							return <i className={getConnectionTypeIcon(connection.type)} aria-hidden="true" />;
+						})()}
 					</div>
-					<div className="connection-card__host" title={hostLabel}>{hostLabel}</div>
-				</div>
-				<div className="connection-card__meta">
-					<span className="connection-card__chip">{protocolLabel}</span>
-					<span className="connection-card__status">{statusStr}</span>
-				</div>
-				<div className="connection-card__actions" onClick={(e) => e.stopPropagation()}>
-					{!isPinned && (
-						<button type="button" className="connection-card__btn connection-card__btn--star" title={fav ? 'Quitar de favoritos' : 'Agregar a favoritos'} onClick={handleStar} aria-label={fav ? 'Quitar de favoritos' : 'Agregar a favoritos'}>
-							<i className={fav ? 'pi pi-star-fill' : 'pi pi-star'} />
-						</button>
-					)}
-					{isPinned && (
-						<button type="button" className="connection-card__btn connection-card__btn--star" title="Quitar de favoritos" onClick={handleStar} aria-label="Quitar de favoritos">
-							<i className="pi pi-star-fill" />
-						</button>
-					)}
-					{onEditCard && (
-						<button type="button" className="connection-card__btn connection-card__btn--edit" title="Editar" onClick={handleEdit} aria-label="Editar">
+					<span title={connection.name}>{connection.name}</span>
+				</td>
+
+				{/* Host */}
+				<td className="connection-cell cell-host" title={hostLabel}>
+					{hostLabel}
+				</td>
+
+				{/* Protocol */}
+				<td className="connection-cell cell-protocol">
+					<span className="protocol-tag" style={{ color: typeColor, borderColor: typeColor }}>
+						{protocolLabel}
+					</span>
+				</td>
+
+				{/* Last Used */}
+				<td className="connection-cell cell-time">
+					{timeStr}
+				</td>
+
+				{/* Actions */}
+				<td className="connection-cell cell-actions" onClick={(e) => e.stopPropagation()}>
+					<button
+						className={`action-btn ${fav ? 'is-active' : ''}`}
+						onClick={handleStar}
+						title={fav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+					>
+						<i className={fav ? 'pi pi-star-fill' : 'pi pi-star'} />
+					</button>
+					{onEdit && (
+						<button
+							className="action-btn"
+							onClick={handleEdit}
+							title="Editar"
+						>
 							<i className="pi pi-pencil" />
 						</button>
 					)}
+				</td>
+			</tr>
+		);
+	};
+
+	const ConnectionTable = ({ connections, title, emptyMessage }) => {
+		if (connections.length === 0) {
+			return (
+				<div
+					className="connection-table-container"
+					style={{
+						'--ct-bg': themeColors.cardBackground || 'rgba(16, 20, 28, 0.6)',
+						'--ct-border': themeColors.borderColor || 'rgba(255,255,255,0.1)',
+						'--ct-header-bg': themeColors.itemBackground || 'rgba(20, 24, 32, 0.95)',
+						'--ct-text-primary': themeColors.textPrimary || '#ffffff',
+						'--ct-text-secondary': themeColors.textSecondary || 'rgba(255,255,255,0.6)',
+						'--ct-hover-bg': themeColors.hoverBackground || 'rgba(255,255,255,0.08)',
+						'--ct-row-border': themeColors.borderColor || 'rgba(255,255,255,0.05)',
+						'--ct-active-bg': themeColors.hoverBackground ? `${themeColors.hoverBackground}aa` : 'rgba(33, 150, 243, 0.15)',
+						'--ct-primary': themeColors.primaryColor || '#2196f3',
+						'--ct-tag-bg': themeColors.itemBackground || 'rgba(255,255,255,0.1)',
+					}}
+				>
+					<div className="connection-table-header">
+						<table>
+							<thead>
+								<tr>
+									<th style={{ paddingLeft: 12 }}>{title}</th>
+								</tr>
+							</thead>
+						</table>
+					</div>
+					<div className="connection-history-empty" style={{ padding: '1rem', textAlign: 'center', color: themeColors.textSecondary }}>
+						{emptyMessage}
+					</div>
+				</div>
+			);
+		}
+
+		return (
+			<div
+				className="connection-table-container"
+				style={{
+					'--ct-bg': themeColors.cardBackground || 'rgba(16, 20, 28, 0.6)',
+					'--ct-border': themeColors.borderColor || 'rgba(255,255,255,0.1)',
+					'--ct-header-bg': themeColors.itemBackground || 'rgba(20, 24, 32, 0.95)',
+					'--ct-text-primary': themeColors.textPrimary || '#ffffff',
+					'--ct-text-secondary': themeColors.textSecondary || 'rgba(255,255,255,0.6)',
+					'--ct-hover-bg': themeColors.hoverBackground || 'rgba(255,255,255,0.08)',
+					'--ct-row-border': themeColors.borderColor || 'rgba(255,255,255,0.05)',
+					'--ct-active-bg': themeColors.hoverBackground ? `${themeColors.hoverBackground}aa` : 'rgba(33, 150, 243, 0.15)',
+					'--ct-primary': themeColors.primaryColor || '#2196f3',
+					'--ct-tag-bg': themeColors.itemBackground || 'rgba(255,255,255,0.1)',
+				}}
+			>
+				<div className="connection-table-wrapper">
+					<table className="connection-table">
+						<thead className="connection-table-header">
+							<tr>
+								<th>{title}</th>
+								<th>Host</th>
+								<th>Protocolo</th>
+								<th>Uso</th>
+								<th style={{ textAlign: 'right' }}>Acciones</th>
+							</tr>
+						</thead>
+						<tbody className="connection-table-body">
+							{connections.map((c) => (
+								<ConnectionRow
+									key={c.id}
+									connection={c}
+									isPinned={isFavorite(c)}
+									isActive={activeIds.has(activeKey(c))}
+									onConnect={onConnectToHistory}
+									onEdit={onEdit}
+									onToggleFav={(conn) => { toggleFavorite(conn); loadConnectionHistory(); }}
+								/>
+							))}
+						</tbody>
+					</table>
 				</div>
 			</div>
 		);
@@ -389,7 +452,7 @@ const ConnectionHistory = ({
 
 	return (
 		<div className="connection-history-root" ref={scrollRef}>
-			{/* Filtros superiores */}
+			{/* Filters */}
 			<div className="connection-history-filters">
 				{filterTabs.map(({ key, label }) => (
 					<button
@@ -408,36 +471,22 @@ const ConnectionHistory = ({
 				))}
 			</div>
 
-			{/* ◷ RECIENTES (mitad superior) */}
-			<section className="connection-history-section">
-				<h3 className="connection-history-section-title">◷ RECIENTES</h3>
-				<div className="connection-history-list home-hide-scrollbar">
-					{filteredRecents.length > 0 ? (
-						filteredRecents.map((c) => (
-							<ConnectionCard key={c.id} connection={c} isPinned={false} onEditCard={onEdit} />
-						))
-					) : (
-						<div className="connection-history-empty" style={{ color: themeColors.textSecondary }}>
-							No hay sesiones recientes
-						</div>
-					)}
-				</div>
+			{/* RECIENTES TABLE */}
+			<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginBottom: '0.5rem' }}>
+				<ConnectionTable
+					connections={filteredRecents}
+					title="RECIENTES"
+					emptyMessage="No hay sesiones recientes"
+				/>
 			</section>
 
-			{/* ★ PINNED (mitad inferior) */}
-			<section className="connection-history-section">
-				<h3 className="connection-history-section-title">★ PINNED</h3>
-				<div className="connection-history-list home-hide-scrollbar">
-					{filteredPinned.length > 0 ? (
-						filteredPinned.map((c) => (
-							<ConnectionCard key={c.id} connection={c} isPinned onEditCard={onEdit} />
-						))
-					) : (
-						<div className="connection-history-empty" style={{ color: themeColors.textSecondary }}>
-							No hay favoritos. Marca conexiones con la estrella.
-						</div>
-					)}
-				</div>
+			{/* PINNED TABLE */}
+			<section className="connection-history-section" style={{ flex: 1, minHeight: 0 }}>
+				<ConnectionTable
+					connections={filteredPinned}
+					title="FAVORITOS (PINNED)"
+					emptyMessage="No hay favoritos guardados"
+				/>
 			</section>
 		</div>
 	);
