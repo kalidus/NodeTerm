@@ -405,7 +405,7 @@ const ConnectionHistory = ({
 			<div className="favorites-ribbon-section">
 				<div className="favorites-ribbon-header">
 					<i className="pi pi-star-fill" style={{ color: '#FFD700' }} />
-					<span>FAVORITOS {hasItems && '(Arrastrar para ordenar)'}</span>
+					<span>FAVORITOS</span>
 				</div>
 
 				{/* Navigation Buttons (Only if items exist) */}
@@ -569,11 +569,11 @@ const ConnectionHistory = ({
 			return (
 				<div className="connection-list-container">
 					<div className="connection-list-header">
-						<div className="connection-list-header-cell">{title}</div>
-						<div className="connection-list-header-cell"></div>
-						<div className="connection-list-header-cell"></div>
-						<div className="connection-list-header-cell"></div>
-						<div className="connection-list-header-cell"></div>
+						<div className="connection-list-header-cell"><i className="pi pi-tag" style={{ fontSize: '0.7rem', opacity: 0.8 }} />{title}</div>
+						<div className="connection-list-header-cell"><i className="pi pi-server" style={{ fontSize: '0.7rem', opacity: 0.8 }} />Host</div>
+						<div className="connection-list-header-cell"><i className="pi pi-shield" style={{ fontSize: '0.7rem', opacity: 0.8 }} />Protocolo</div>
+						<div className="connection-list-header-cell"><i className="pi pi-history" style={{ fontSize: '0.7rem', opacity: 0.8 }} />Uso</div>
+						<div className="connection-list-header-cell" style={{ textAlign: 'right' }}><i className="pi pi-cog" style={{ fontSize: '0.7rem', opacity: 0.8 }} />Acciones</div>
 					</div>
 					<div className="ribbon-empty" style={{
 						marginTop: '0.5rem',
@@ -595,11 +595,11 @@ const ConnectionHistory = ({
 		return (
 			<div className="connection-list-container">
 				<div className="connection-list-header">
-					<div className="connection-list-header-cell">{title}</div>
-					<div className="connection-list-header-cell">Host</div>
-					<div className="connection-list-header-cell">Protocolo</div>
-					<div className="connection-list-header-cell">Uso</div>
-					<div className="connection-list-header-cell" style={{ textAlign: 'right' }}>Acciones</div>
+					<div className="connection-list-header-cell"><i className="pi pi-tag" style={{ fontSize: '0.7rem', opacity: 0.8 }} />{title}</div>
+					<div className="connection-list-header-cell"><i className="pi pi-server" style={{ fontSize: '0.7rem', opacity: 0.8 }} />Host</div>
+					<div className="connection-list-header-cell"><i className="pi pi-shield" style={{ fontSize: '0.7rem', opacity: 0.8 }} />Protocolo</div>
+					<div className="connection-list-header-cell"><i className="pi pi-history" style={{ fontSize: '0.7rem', opacity: 0.8 }} />Uso</div>
+					<div className="connection-list-header-cell" style={{ textAlign: 'right' }}><i className="pi pi-cog" style={{ fontSize: '0.7rem', opacity: 0.8 }} />Acciones</div>
 				</div>
 				<div className="connection-list-body">
 					{connections.map((c) => (
@@ -650,10 +650,17 @@ const ConnectionHistory = ({
 			/>
 
 			{/* RECIENTES TABLE (Fills remaining space) */}
-			<section className="connection-history-section" style={{ flex: 1, minHeight: 0 }}>
+			<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginTop: '1.2rem' }}>
+				<div className="modern-section-header">
+					<div className="modern-header-title">
+						<i className="pi pi-history" style={{ color: '#4fc3f7' }} />
+						<span>RECIENTES</span>
+					</div>
+					<div className="modern-header-line"></div>
+				</div>
 				<ConnectionTable
 					connections={filteredRecents}
-					title="RECIENTES"
+					title="Nombre"
 					emptyMessage="No hay sesiones recientes"
 				/>
 			</section>

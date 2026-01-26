@@ -1478,23 +1478,67 @@
   display: none;
 }
 
+/* Modern Section Header (Recientes, etc) */
+.modern-section-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0.5rem 0.25rem 0.8rem 0.25rem;
+  flex-shrink: 0;
+}
+
+.modern-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.9));
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.modern-header-title i {
+  font-size: 1.1rem;
+  filter: drop-shadow(0 0 5px rgba(79, 195, 247, 0.4));
+}
+
+.modern-header-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent);
+  margin-top: 1px;
+}
+
 .connection-list-header {
   display: grid;
   grid-template-columns: minmax(200px, 1.5fr) minmax(150px, 1.5fr) 100px 120px 80px;
   gap: 1rem;
-  padding: 0 16px;
-  margin-bottom: 4px;
+  padding: 10px 16px;
+  margin-bottom: 6px;
   align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .connection-list-header-cell {
-  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
   font-weight: 600;
-  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.5));
-  opacity: 0.7;
+  color: #4fc3f7;
+  /* Color de acento para los labels */
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
+  opacity: 0.9;
   white-space: nowrap;
+}
+
+.connection-list-header-cell i {
+  font-size: 0.75rem;
+  opacity: 0.7;
 }
 
 /* Fila/Card de la lista (Glassy) */
@@ -1612,15 +1656,13 @@
   display: flex;
   justify-content: flex-end;
   gap: 4px;
-  opacity: 0;
-  /* Hidden by default */
-  transform: translateX(10px);
+  opacity: 0.6;
+  /* Visible por defecto pero sutil */
   transition: all 0.2s ease;
 }
 
 .connection-card-row:hover .col-actions {
   opacity: 1;
-  transform: translateX(0);
 }
 
 .glass-action-btn {
