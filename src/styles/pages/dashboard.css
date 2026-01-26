@@ -140,22 +140,7 @@
   flex-shrink: 0;
 }
 
-/* Respetar los colores originales de los SVG del tema de iconos */
-.favorite-tile__icon-badge svg path[stroke],
-.favorite-tile__icon-badge svg rect[stroke],
-.favorite-tile__icon-badge svg circle[stroke],
-.favorite-tile__icon-badge svg ellipse[stroke],
-.favorite-tile__icon-badge svg polyline[stroke] {
-  /* No sobrescribir stroke si ya existe */
-}
 
-.favorite-tile__icon-badge svg path[fill],
-.favorite-tile__icon-badge svg rect[fill],
-.favorite-tile__icon-badge svg circle[fill],
-.favorite-tile__icon-badge svg ellipse[fill],
-.favorite-tile__icon-badge svg polyline[fill] {
-  /* No sobrescribir fill si ya existe */
-}
 
 /* Contenido central */
 .favorite-tile__content {
