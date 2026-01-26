@@ -1191,3 +1191,254 @@
     transform: scale(1.2);
   }
 }
+
+/* === FAVORITES RIBBON (CAROUSEL) === */
+.favorites-ribbon-section {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  /* No permitir que se encoja demasiado, pero tampoco es fijo */
+  margin-bottom: 0.5rem;
+  /* Pequeño fade en los bordes para indicar scroll */
+  position: relative;
+}
+
+.favorites-ribbon-section::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 40px;
+  background: linear-gradient(to right, transparent, var(--ui-bg, rgba(11, 14, 20, 0)));
+  pointer-events: none;
+  opacity: 0;
+  /* JS podría activarlo, o dejarlo sutil */
+}
+
+.favorites-ribbon-header {
+  margin: 0 0 0.5rem 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.favorites-ribbon-track {
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 12px;
+  padding: 4px 4px 16px 4px;
+  /* Padding bottom extra para sombras */
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  /* Ocultar scrollbar pero permitir scroll */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE/Edge */
+}
+
+.favorites-ribbon-track::-webkit-scrollbar {
+  display: none;
+  /* Chrome/Safari */
+  width: 0;
+  height: 0;
+}
+
+/* NAVIGATION BUTTONS */
+.ribbon-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-40%);
+  /* Ajuste fino para centrar respecto a las cards */
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(30, 35, 45, 0.85);
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+  opacity: 0;
+  /* Oculto por defecto, visible en hover del container */
+  pointer-events: none;
+}
+
+.favorites-ribbon-section:hover .ribbon-nav-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ribbon-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-40%) scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.ribbon-nav-btn.prev {
+  left: -12px;
+}
+
+.ribbon-nav-btn.next {
+  right: -12px;
+}
+
+/* RIBBON CARD */
+.ribbon-card {
+  /* Variables locales para facilitar personalización */
+  --rc-width: 150px;
+  --rc-height: 130px;
+  --rc-bg: rgba(20, 24, 32, 0.6);
+  --rc-border: rgba(255, 255, 255, 0.08);
+  --rc-hover-bg: rgba(30, 35, 45, 0.8);
+  --rc-hover-border: rgba(255, 255, 255, 0.2);
+
+  flex: 0 0 var(--rc-width);
+  height: var(--rc-height);
+  border-radius: 12px;
+  background: var(--rc-bg);
+  border: 1px solid var(--rc-border);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.ribbon-card:hover {
+  transform: translateY(-4px);
+  background: var(--rc-hover-bg);
+  border-color: var(--rc-hover-border);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.25);
+}
+
+.ribbon-card:active {
+  transform: translateY(-2px);
+}
+
+/* Icon Container (Center) */
+.ribbon-card__icon {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  font-size: 2.5rem;
+  /* Icono grande */
+  color: var(--card-accent, #4fc3f7);
+  transition: transform 0.2s ease;
+}
+
+.ribbon-card:hover .ribbon-card__icon {
+  transform: scale(1.1);
+}
+
+/* Content (Bottom) */
+.ribbon-card__content {
+  width: 100%;
+  padding: 10px 12px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, transparent 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.ribbon-card__name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  line-height: 1.2;
+}
+
+.ribbon-card__host {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  margin-top: 2px;
+}
+
+/* Protocol Badge (Top Right) */
+.ribbon-card__badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+/* Fav/Pin Button (Top Left) */
+.ribbon-card__pin {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  /* Stealth by default */
+  color: #FFD700;
+  /* Siempre dorado porque son favoritos */
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  opacity: 0.6;
+  /* Sutil hasta hover */
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.ribbon-card:hover .ribbon-card__pin {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.ribbon-card__pin:hover {
+  transform: scale(1.1);
+  background: rgba(255, 215, 0, 0.2);
+}
+
+/* Empty State para el Ribbon */
+.ribbon-empty {
+  height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.02);
+}
