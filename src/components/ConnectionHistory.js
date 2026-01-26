@@ -447,20 +447,12 @@ const ConnectionHistory = ({
 
 		return (
 			<div className="favorites-ribbon-section">
-				<div className="favorites-ribbon-header">
-					<div className="favorites-ribbon-title">FAVORITES</div>
-
-					{/* Header Navigation Buttons */}
-					{hasItems && (
-						<div className="ribbon-header-actions">
-							<button className="header-nav-btn" onClick={() => scroll('left')}>
-								<i className="pi pi-chevron-left" />
-							</button>
-							<button className="header-nav-btn" onClick={() => scroll('right')}>
-								<i className="pi pi-chevron-right" />
-							</button>
-						</div>
-					)}
+				<div className="modern-section-header">
+					<div className="modern-header-title">
+						<i className="pi pi-star-fill" style={{ color: '#FFD700' }} />
+						<span>FAVORITOS</span>
+					</div>
+					<div className="modern-header-line"></div>
 				</div>
 
 				<div className="ribbon-container-relative">
