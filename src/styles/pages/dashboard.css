@@ -1192,38 +1192,60 @@
   }
 }
 
-/* === FAVORITES RIBBON (CAROUSEL) === */
+/* === FAVORITES RIBBON (CAROUSEL) - REDESIGN === */
 .favorites-ribbon-section {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  /* No permitir que se encoja demasiado, pero tampoco es fijo */
-  margin-bottom: 0.2rem;
-  /* Pequeño fade en los bordes para indicar scroll */
+  margin-bottom: 2rem;
   position: relative;
-}
-
-.favorites-ribbon-section::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 40px;
-  background: linear-gradient(to right, transparent, var(--ui-bg, rgba(11, 14, 20, 0)));
-  pointer-events: none;
-  opacity: 0;
-  /* JS podría activarlo, o dejarlo sutil */
+  gap: 1rem;
 }
 
 .favorites-ribbon-header {
-  margin: 0 0 0.5rem 0.25rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.9));
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: space-between;
+  padding: 0 0.5rem;
+}
+
+.favorites-ribbon-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.95));
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-family: 'Outfit', 'Inter', sans-serif;
+}
+
+.ribbon-header-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.header-nav-btn {
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.header-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.ribbon-container-relative {
+  position: relative;
+  width: 100%;
 }
 
 .favorites-ribbon-track {
@@ -1231,218 +1253,226 @@
   flex-direction: row;
   overflow-x: auto;
   overflow-y: hidden;
-  gap: 12px;
-  padding: 4px 4px 8px 4px;
-  /* Padding bottom extra para sombras */
+  gap: 16px;
+  padding: 12px 24px 16px 24px;
+  /* Increased padding */
   scroll-behavior: smooth;
   scroll-snap-type: x mandatory;
-  /* Ocultar scrollbar pero permitir scroll */
   scrollbar-width: none;
-  /* Firefox */
   -ms-overflow-style: none;
-  /* IE/Edge */
 }
 
 .favorites-ribbon-track::-webkit-scrollbar {
   display: none;
-  /* Chrome/Safari */
-  width: 0;
-  height: 0;
 }
 
-/* NAVIGATION BUTTONS */
-.ribbon-nav-btn {
+/* SIDE NAVIGATION BUTTONS */
+.ribbon-side-btn {
   position: absolute;
   top: 50%;
-  transform: translateY(-40%);
-  /* Ajuste fino para centrar respecto a las cards */
+  transform: translateY(-50%);
   z-index: 10;
-  width: 32px;
-  height: 32px;
+  width: 42px;
+  /* Slightly larger */
+  height: 42px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(30, 35, 45, 0.85);
+  background: rgba(15, 20, 30, 0.6);
   color: rgba(255, 255, 255, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(8px);
-  transition: all 0.2s ease;
-  opacity: 0;
-  /* Oculto por defecto, visible en hover del container */
-  pointer-events: none;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
 }
 
-.favorites-ribbon-section:hover .ribbon-nav-btn {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.ribbon-nav-btn:hover {
+.ribbon-side-btn:hover {
   background: rgba(255, 255, 255, 0.15);
-  transform: translateY(-40%) scale(1.1);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
-.ribbon-nav-btn.prev {
-  left: -12px;
+.ribbon-side-btn.prev {
+  left: 0px;
+  /* Moved inside padding area */
 }
 
-.ribbon-nav-btn.next {
-  right: -12px;
+.ribbon-side-btn.next {
+  right: 0px;
+  /* Moved inside padding area */
 }
 
-/* RIBBON CARD */
+/* RIBBON CARD REDESIGN */
 .ribbon-card {
-  /* Variables locales para facilitar personalización */
-  --rc-width: 150px;
-  --rc-height: 130px;
-  --rc-bg: var(--ui-tab-bg, rgba(20, 24, 32, 0.6));
-  --rc-border: var(--ui-sidebar-border, rgba(255, 255, 255, 0.08));
-  --rc-hover-bg: var(--ui-tab-hover-bg, rgba(30, 35, 45, 0.8));
-  --rc-hover-border: var(--ui-sidebar-border, rgba(255, 255, 255, 0.2));
+  --rc-width: 170px;
+  --rc-height: 180px;
+  --rc-bg: rgba(255, 255, 255, 0.05);
+  --rc-border: rgba(255, 255, 255, 0.1);
+  --rc-hover-bg: rgba(255, 255, 255, 0.12);
+  --rc-accent-color: #4fc3f7;
 
   flex: 0 0 var(--rc-width);
   height: var(--rc-height);
-  border-radius: 12px;
+  border-radius: 20px;
   background: var(--rc-bg);
   border: 1px solid var(--rc-border);
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  padding: 16px;
   cursor: pointer;
   scroll-snap-align: start;
-  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.1);
 }
 
 .ribbon-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-8px);
   background: var(--rc-hover-bg);
-  border-color: var(--rc-hover-border);
-  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.25);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.4);
 }
 
-.ribbon-card:active {
-  transform: translateY(-2px);
-}
-
-/* Icon Container (Center) */
-.ribbon-card__icon {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  font-size: 2.5rem;
-  /* Icono grande */
-  color: var(--card-accent, #4fc3f7);
-  transition: transform 0.2s ease;
-}
-
-.ribbon-card:hover .ribbon-card__icon {
-  transform: scale(1.1);
-}
-
-/* Content (Bottom) */
-.ribbon-card__content {
-  width: 100%;
-  padding: 10px 12px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, transparent 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.ribbon-card__name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--ui-sidebar-text, #fff);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  line-height: 1.2;
-}
-
-.ribbon-card__host {
-  font-size: 0.7rem;
-  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.5));
-  opacity: 0.7;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  margin-top: 2px;
-}
-
-/* Protocol Badge (Top Right) */
-.ribbon-card__badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(4px);
-}
-
-/* Fav/Pin Button (Top Left) */
+/* Star/Pin Button */
 .ribbon-card__pin {
   position: absolute;
-  top: 8px;
-  left: 8px;
+  top: 12px;
+  right: 12px;
+  /* Changed to match common UI patterns or image feel */
   width: 24px;
   height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  /* Stealth by default */
   color: #FFD700;
-  /* Siempre dorado porque son favoritos */
-  border: 1px solid rgba(255, 215, 0, 0.3);
-  opacity: 0.6;
-  /* Sutil hasta hover */
+  opacity: 0.4;
   transition: all 0.2s;
-  cursor: pointer;
+  z-index: 5;
 }
 
 .ribbon-card:hover .ribbon-card__pin {
   opacity: 1;
-  background: rgba(0, 0, 0, 0.4);
 }
 
-.ribbon-card__pin:hover {
-  transform: scale(1.1);
-  background: rgba(255, 215, 0, 0.2);
-}
-
-/* Empty State para el Ribbon */
-.ribbon-empty {
-  height: 130px;
+/* Icon Wrapper with Gradient */
+.ribbon-card__icon-wrapper {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px dashed var(--ui-sidebar-border, rgba(255, 255, 255, 0.1));
-  border-radius: 12px;
-  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.4));
-  opacity: 0.6;
-  background: var(--ui-tab-bg, rgba(255, 255, 255, 0.02));
+  margin-bottom: 1.5rem;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
+
+.ribbon-card__icon-wrapper i {
+  font-size: 1.8rem;
+  color: #fff;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.ribbon-card__icon-wrapper svg {
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* Content Area */
+.ribbon-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.ribbon-card__name {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
+}
+
+.ribbon-card__time {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 500;
+}
+
+/* ICON GRADIENTS */
+.icon-gradient-1 {
+  background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+}
+
+.icon-gradient-2 {
+  background: linear-gradient(135deg, #9d50bb 0%, #6e48aa 100%);
+}
+
+.icon-gradient-3 {
+  background: linear-gradient(135deg, #f80759 0%, #bc4e9c 100%);
+}
+
+.icon-gradient-4 {
+  background: linear-gradient(135deg, #02aab0 0%, #00cdac 100%);
+}
+
+.icon-gradient-5 {
+  background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
+}
+
+/* PAGINATION DOTS */
+.ribbon-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0.2rem;
+}
+
+.pagination-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  transition: all 0.3s ease;
+}
+
+.pagination-dot.active {
+  width: 20px;
+  /* Pill shape */
+  border-radius: 4px;
+  background: #4fc3f7;
+  box-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+}
+
+/* Empty State */
+.ribbon-empty {
+  width: 100%;
+  height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.02);
+}
+
 
 /* === RECIENTES REDESIGN (Glassy List) === */
 
