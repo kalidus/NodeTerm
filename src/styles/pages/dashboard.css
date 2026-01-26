@@ -5,7 +5,7 @@
 .rdp-manager-dialog .performance-fieldset .p-fieldset-legend {
   background: var(--ui-dialog-bg) !important;
   color: var(--ui-dialog-text) !important;
-  border: 1px solid var(--ui-dialog-border, rgba(255,255,255,0.08)) !important;
+  border: 1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.08)) !important;
   border-radius: var(--border-radius, 6px) !important;
   box-shadow: none !important;
 }
@@ -16,7 +16,8 @@
 }
 
 /* Forzar Prime a no aplicar fondo blanco en el wrapper si el tema lo hace */
-.performance-fieldset .p-fieldset-content, .performance-fieldset {
+.performance-fieldset .p-fieldset-content,
+.performance-fieldset {
   box-shadow: none !important;
 }
 
@@ -24,9 +25,11 @@
 .performance-fieldset .formgrid.grid {
   row-gap: 0.75rem;
 }
+
 .performance-fieldset .field-checkbox label {
   margin-left: 0.5rem;
 }
+
 /* Estilos para los componentes del Dashboard */
 
 /* Tarjetas de estadísticas del sistema */
@@ -37,7 +40,7 @@
 
 .system-stat-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 /* Tarjetas de historial de conexiones */
@@ -47,7 +50,7 @@
 
 .connection-history-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Tarjetas de acciones rápidas */
@@ -57,7 +60,7 @@
 
 .quick-action-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Herramientas del sistema */
@@ -81,7 +84,7 @@
   --fav-chip-color: #4fc3f7;
   --fav-bg: rgba(12, 14, 20, 0.55);
   --fav-bg-hover: rgba(16, 20, 28, 0.70);
-  --fav-border: rgba(255,255,255,0.10);
+  --fav-border: rgba(255, 255, 255, 0.10);
   position: relative;
   display: flex;
   flex-direction: row;
@@ -92,7 +95,7 @@
   border-radius: 6px;
   border: 1px solid var(--fav-border);
   background: var(--fav-bg);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.12), inset 0 0.5px 0 rgba(255,255,255,0.03);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), inset 0 0.5px 0 rgba(255, 255, 255, 0.03);
   cursor: pointer;
   overflow: hidden;
   min-height: calc(42px * var(--fav-scale));
@@ -104,7 +107,7 @@
   transform: translateX(3px);
   border-color: var(--fav-border);
   background: var(--fav-bg-hover);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.18), inset 0 0.5px 0 rgba(255,255,255,0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), inset 0 0.5px 0 rgba(255, 255, 255, 0.05);
 }
 
 .favorite-tile:focus-visible {
@@ -167,7 +170,7 @@
 }
 
 .favorite-tile__name {
-  color: rgba(255,255,255,0.96);
+  color: rgba(255, 255, 255, 0.96);
   font-weight: 600;
   font-size: var(--fav-name-font-size, calc(10px * var(--fav-scale)));
   font-family: var(--fav-font-family, inherit);
@@ -188,7 +191,7 @@
 }
 
 .favorite-tile__host {
-  color: rgba(255,255,255,0.55);
+  color: rgba(255, 255, 255, 0.55);
   font-size: var(--fav-host-font-size, calc(8.5px * var(--fav-scale)));
   font-family: var(--fav-font-family, inherit);
   font-weight: 500;
@@ -251,7 +254,7 @@
   font-size: calc(7px * var(--fav-scale));
   padding: 0;
   line-height: 1;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .favorite-tile__btn-favorite:hover {
@@ -276,23 +279,23 @@
   width: calc(15px * var(--fav-scale));
   height: calc(15px * var(--fav-scale));
   border-radius: 3px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.7);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: calc(7px * var(--fav-scale));
   padding: 0;
   line-height: 1;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .favorite-tile__btn-menu:hover {
-  background: rgba(255,255,255,0.12);
-  border-color: rgba(255,255,255,0.25);
-  color: rgba(255,255,255,0.95);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.95);
   transform: scale(1.06);
-  box-shadow: 0 2px 3px rgba(0,0,0,0.12);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.12);
 }
 
 .favorite-tile__btn-menu .pi-pencil {
@@ -351,7 +354,7 @@
   margin: 0 0 0.5rem 0;
   font-size: 0.85rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.9);
+  color: rgba(255, 255, 255, 0.9);
   flex-shrink: 0;
 }
 
@@ -388,13 +391,13 @@
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: 52px;
   position: relative;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 
 .connection-card:hover {
   background: var(--cc-bg-hover);
-  border-color: rgba(255,255,255,0.16);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
 }
 
 .connection-card--active {
@@ -437,7 +440,7 @@
   font-family: var(--cc-font, inherit);
   font-size: var(--cc-name-size);
   font-weight: 600;
-  color: rgba(255,255,255,0.96);
+  color: rgba(255, 255, 255, 0.96);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -451,7 +454,7 @@
 .connection-card__host {
   font-family: var(--cc-font, inherit);
   font-size: var(--cc-host-size);
-  color: rgba(255,255,255,0.55);
+  color: rgba(255, 255, 255, 0.55);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -480,7 +483,7 @@
 .connection-card__status {
   font-family: var(--cc-font, inherit);
   font-size: var(--cc-meta-size);
-  color: rgba(255,255,255,0.6);
+  color: rgba(255, 255, 255, 0.6);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -511,14 +514,14 @@
   padding: 0;
   border: none;
   border-radius: 4px;
-  background: rgba(255,255,255,0.06);
-  color: rgba(255,255,255,0.8);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .connection-card__btn:hover {
-  background: rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
 
@@ -557,11 +560,11 @@
   .system-stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .quick-actions-grid {
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
-  
+
   .system-tools-grid {
     grid-template-columns: 1fr;
   }
@@ -571,7 +574,7 @@
   .dashboard-header h1 {
     font-size: 2rem !important;
   }
-  
+
   .dashboard-header p {
     font-size: 1rem !important;
   }
@@ -583,6 +586,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -600,7 +604,7 @@
 
 .hover-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
 }
 
 /* Estilos para los badges */
@@ -633,6 +637,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .fade-in,
   .loading-pulse,
   .pulse {
@@ -675,9 +680,11 @@
   0% {
     box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7);
   }
+
   70% {
     box-shadow: 0 0 0 10px rgba(33, 150, 243, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(33, 150, 243, 0);
   }
@@ -734,7 +741,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
   pointer-events: none;
 }
 
@@ -771,7 +778,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 100%);
   opacity: 0;
   transition: opacity 0.2s ease;
   pointer-events: none;
@@ -794,10 +801,165 @@
   overflow: hidden;
 }
 
+
 .p-progressbar .p-progressbar-value {
   border-radius: 6px;
   transition: width 0.3s ease;
 }
+
+/* === OPTION 3: COMPACT LIST (TABLE VIEW) === */
+
+/* === OPTION 3: COMPACT LIST (TABLE VIEW) === */
+
+.connection-table-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--ct-bg, var(--surface-card, rgba(16, 20, 28, 0.6)));
+  border: 1px solid var(--ct-border, var(--surface-border, rgba(255, 255, 255, 0.1)));
+  border-radius: 8px;
+}
+
+.connection-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.85rem;
+}
+
+.connection-table-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--ct-header-bg, rgba(20, 24, 32, 0.95));
+  /* Fallback usually overridden */
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--ct-border, rgba(255, 255, 255, 0.1));
+}
+
+.connection-table-header th {
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--ct-text-secondary, rgba(255, 255, 255, 0.6));
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.connection-table-body tr {
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+  border-bottom: 1px solid var(--ct-row-border, rgba(255, 255, 255, 0.05));
+}
+
+.connection-table-body tr:last-child {
+  border-bottom: none;
+}
+
+.connection-table-body tr:hover {
+  background-color: var(--ct-hover-bg, rgba(255, 255, 255, 0.08));
+}
+
+.connection-table-body tr.active-row {
+  background-color: var(--ct-active-bg, rgba(33, 150, 243, 0.15));
+  border-left: 3px solid var(--ct-primary, #2196f3);
+}
+
+.connection-cell {
+  padding: 6px 12px;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ct-text-primary, rgba(255, 255, 255, 0.9));
+}
+
+.cell-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  max-width: 250px;
+}
+
+.cell-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  width: 20px;
+  text-align: center;
+}
+
+.cell-protocol {
+  width: 80px;
+}
+
+.protocol-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--ct-tag-bg, rgba(255, 255, 255, 0.1));
+  color: var(--ct-text-primary, rgba(255, 255, 255, 0.8));
+  border: 1px solid var(--ct-border, rgba(255, 255, 255, 0.1));
+}
+
+.cell-host {
+  color: var(--ct-text-secondary, rgba(255, 255, 255, 0.6));
+  max-width: 200px;
+}
+
+.cell-time {
+  color: var(--ct-text-secondary, rgba(255, 255, 255, 0.5));
+  font-size: 0.75rem;
+  width: 120px;
+}
+
+.cell-actions {
+  width: 80px;
+  text-align: right;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.connection-table-body tr:hover .cell-actions {
+  opacity: 1;
+}
+
+.action-btn {
+  background: transparent;
+  border: none;
+  color: var(--ct-text-secondary, rgba(255, 255, 255, 0.6));
+  cursor: pointer;
+  padding: 4px;
+  margin-left: 2px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  color: var(--ct-text-primary, #fff);
+  background: var(--ct-hover-bg, rgba(255, 255, 255, 0.1));
+}
+
+.action-btn.is-active {
+  color: #FFD700;
+}
+
+/* Scrollable body wrapper */
+.connection-table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 
 /* Badges personalizados */
 .p-badge {
@@ -818,9 +980,11 @@
   0% {
     opacity: 0.6;
   }
+
   50% {
     opacity: 1;
   }
+
   100% {
     opacity: 0.6;
   }
@@ -836,11 +1000,11 @@
     padding: 0.5rem 1rem;
     font-size: 0.9rem;
   }
-  
+
   .system-stat-card {
     margin-bottom: 1rem;
   }
-  
+
   .quick-action-card {
     margin-bottom: 1rem;
   }
@@ -852,11 +1016,11 @@
     overflow-x: auto;
     white-space: nowrap;
   }
-  
+
   .dashboard-tabs .p-tabview-nav li {
     display: inline-block;
   }
-  
+
   .dashboard-tabs .p-tabview-nav li .p-tabview-nav-link {
     padding: 0.5rem 0.75rem;
     font-size: 0.8rem;
@@ -868,11 +1032,11 @@
   .system-stat-card {
     min-height: 100px;
   }
-  
+
   .system-stat-card h3 {
     font-size: 1rem;
   }
-  
+
   .system-stat-card p {
     font-size: 0.8rem;
   }
@@ -882,19 +1046,19 @@
   .system-stat-card {
     min-height: 90px;
   }
-  
+
   .system-stat-card i {
     font-size: 2rem !important;
   }
-  
+
   .quick-action-card {
     padding: 0.75rem;
   }
-  
+
   .quick-action-card h4 {
     font-size: 0.9rem;
   }
-  
+
   .quick-action-card p {
     font-size: 0.75rem;
   }
@@ -996,15 +1160,18 @@
   flex-direction: column !important;
   gap: 16px !important;
   min-height: 500px !important;
-  background-image: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 100%) !important;
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 100%) !important;
 }
 
 /* === ANIMACIONES PARA MENSAJE DE FAVORITOS VACÍO === */
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4);
   }
+
   50% {
     transform: scale(1.05);
     box-shadow: 0 0 0 10px rgba(255, 215, 0, 0);
@@ -1012,10 +1179,13 @@
 }
 
 @keyframes twinkle {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.3;
     transform: scale(0.8);
   }
+
   50% {
     opacity: 1;
     transform: scale(1.2);
