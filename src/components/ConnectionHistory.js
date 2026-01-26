@@ -494,13 +494,14 @@ const ConnectionHistory = ({
 		};
 
 		return (
-			<tr
-				className={`connection-table-row ${isActive ? 'active-row' : ''}`}
+			<div
+				className={`connection-card-row ${isActive ? 'active-row' : ''}`}
 				onClick={() => onConnect?.(connection)}
+				style={{ '--row-accent': typeColor }}
 			>
 				{/* Name & Icon */}
-				<td className="connection-cell cell-name">
-					<div className="cell-icon" style={{ color: typeColor }}>
+				<div className="col-name">
+					<div className="icon-box" style={{ color: typeColor }}>
 						{(() => {
 							let customIcon = connection.customIcon;
 							if ((!customIcon || customIcon === 'default') && sidebarNodes) {
@@ -520,30 +521,30 @@ const ConnectionHistory = ({
 							return <i className={getConnectionTypeIcon(connection.type)} aria-hidden="true" />;
 						})()}
 					</div>
-					<span title={connection.name}>{connection.name}</span>
-				</td>
+					<div className="col-name-text" title={connection.name}>{connection.name}</div>
+				</div>
 
 				{/* Host */}
-				<td className="connection-cell cell-host" title={hostLabel}>
+				<div className="col-host" title={hostLabel}>
 					{hostLabel}
-				</td>
+				</div>
 
 				{/* Protocol */}
-				<td className="connection-cell cell-protocol">
-					<span className="protocol-tag" style={{ color: typeColor, borderColor: typeColor }}>
+				<div className="col-protocol">
+					<span className="glass-tag" style={{ color: typeColor, borderColor: typeColor }}>
 						{protocolLabel}
 					</span>
-				</td>
+				</div>
 
 				{/* Last Used */}
-				<td className="connection-cell cell-time">
+				<div className="col-time">
 					{timeStr}
-				</td>
+				</div>
 
 				{/* Actions */}
-				<td className="connection-cell cell-actions" onClick={(e) => e.stopPropagation()}>
+				<div className="col-actions" onClick={(e) => e.stopPropagation()}>
 					<button
-						className={`action-btn ${fav ? 'is-active' : ''}`}
+						className={`glass-action-btn ${fav ? 'fav-active' : ''}`}
 						onClick={handleStar}
 						title={fav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
 					>
@@ -551,93 +552,58 @@ const ConnectionHistory = ({
 					</button>
 					{onEdit && (
 						<button
-							className="action-btn"
+							className="glass-action-btn"
 							onClick={handleEdit}
 							title="Editar"
 						>
 							<i className="pi pi-pencil" />
 						</button>
 					)}
-				</td>
-			</tr>
+				</div>
+			</div>
 		);
 	};
 
 	const ConnectionTable = ({ connections, title, emptyMessage }) => {
 		if (connections.length === 0) {
 			return (
-				<div
-					className="connection-table-container"
-					style={{
-						'--ct-bg': themeColors.cardBackground || 'rgba(16, 20, 28, 0.6)',
-						'--ct-border': themeColors.borderColor || 'rgba(255,255,255,0.1)',
-						'--ct-header-bg': themeColors.itemBackground || 'rgba(20, 24, 32, 0.95)',
-						'--ct-text-primary': themeColors.textPrimary || '#ffffff',
-						'--ct-text-secondary': themeColors.textSecondary || 'rgba(255,255,255,0.6)',
-						'--ct-hover-bg': themeColors.hoverBackground || 'rgba(255,255,255,0.08)',
-						'--ct-row-border': themeColors.borderColor || 'rgba(255,255,255,0.05)',
-						'--ct-active-bg': themeColors.hoverBackground ? `${themeColors.hoverBackground}aa` : 'rgba(33, 150, 243, 0.15)',
-						'--ct-primary': themeColors.primaryColor || '#2196f3',
-						'--ct-tag-bg': themeColors.itemBackground || 'rgba(255,255,255,0.1)',
-					}}
-				>
-					<div className="connection-table-header">
-						<table>
-							<thead>
-								<tr>
-									<th style={{ paddingLeft: 12 }}>{title}</th>
-								</tr>
-							</thead>
-						</table>
+				<div className="connection-list-container">
+					<div className="connection-list-header">
+						<div className="connection-list-header-cell">{title}</div>
+						<div className="connection-list-header-cell"></div>
+						<div className="connection-list-header-cell"></div>
+						<div className="connection-list-header-cell"></div>
+						<div className="connection-list-header-cell"></div>
 					</div>
-					<div className="connection-history-empty" style={{ padding: '1rem', textAlign: 'center', color: themeColors.textSecondary }}>
-						{emptyMessage}
+					<div className="ribbon-empty" style={{ marginTop: '0.5rem', height: 'auto', minHeight: '100px', flexDirection: 'column', gap: '8px' }}>
+						<i className="pi pi-history" style={{ fontSize: '1.5rem', opacity: 0.5 }} />
+						<span>{emptyMessage}</span>
 					</div>
 				</div>
 			);
 		}
 
 		return (
-			<div
-				className="connection-table-container"
-				style={{
-					'--ct-bg': themeColors.cardBackground || 'rgba(16, 20, 28, 0.6)',
-					'--ct-border': themeColors.borderColor || 'rgba(255,255,255,0.1)',
-					'--ct-header-bg': themeColors.itemBackground || 'rgba(20, 24, 32, 0.95)',
-					'--ct-text-primary': themeColors.textPrimary || '#ffffff',
-					'--ct-text-secondary': themeColors.textSecondary || 'rgba(255,255,255,0.6)',
-					'--ct-hover-bg': themeColors.hoverBackground || 'rgba(255,255,255,0.08)',
-					'--ct-row-border': themeColors.borderColor || 'rgba(255,255,255,0.05)',
-					'--ct-active-bg': themeColors.hoverBackground ? `${themeColors.hoverBackground}aa` : 'rgba(33, 150, 243, 0.15)',
-					'--ct-primary': themeColors.primaryColor || '#2196f3',
-					'--ct-tag-bg': themeColors.itemBackground || 'rgba(255,255,255,0.1)',
-				}}
-			>
-				<div className="connection-table-wrapper">
-					<table className="connection-table">
-						<thead className="connection-table-header">
-							<tr>
-								<th>{title}</th>
-								<th>Host</th>
-								<th>Protocolo</th>
-								<th>Uso</th>
-								<th style={{ textAlign: 'right' }}>Acciones</th>
-							</tr>
-						</thead>
-						<tbody className="connection-table-body">
-							{connections.map((c) => (
-								<ConnectionRow
-									key={c.id}
-									connection={c}
-									isPinned={isFavorite(c)}
-									isActive={activeIds.has(activeKey(c))}
-									onConnect={onConnectToHistory}
-									onEdit={onEdit}
-									onToggleFav={(conn) => { toggleFavorite(conn); loadConnectionHistory(); }}
-								/>
-							))}
-						</tbody>
-					</table>
+			<div className="connection-list-container">
+				<div className="connection-list-header">
+					<div className="connection-list-header-cell">{title}</div>
+					<div className="connection-list-header-cell">Host</div>
+					<div className="connection-list-header-cell">Protocolo</div>
+					<div className="connection-list-header-cell">Uso</div>
+					<div className="connection-list-header-cell" style={{ textAlign: 'right' }}>Acciones</div>
+				</div>
+				<div className="connection-list-body">
+					{connections.map((c) => (
+						<ConnectionRow
+							key={c.id}
+							connection={c}
+							isPinned={isFavorite(c)}
+							isActive={activeIds.has(activeKey(c))}
+							onConnect={onConnectToHistory}
+							onEdit={onEdit}
+							onToggleFav={(conn) => { toggleFavorite(conn); loadConnectionHistory(); }}
+						/>
+					))}
 				</div>
 			</div>
 		);

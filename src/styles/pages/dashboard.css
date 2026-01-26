@@ -1442,3 +1442,215 @@
   font-size: 0.9rem;
   background: rgba(255, 255, 255, 0.02);
 }
+
+/* === RECIENTES REDESIGN (Glassy List) === */
+
+.connection-list-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0.5rem;
+  padding-right: 2px;
+  /* Slight buffer for scrollbar */
+}
+
+/* Header de la lista (Grid) */
+.connection-list-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+  flex: 1;
+  /* Ensure it takes available space */
+  min-height: 0;
+  /* Important for flex containers */
+
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.connection-list-body::-webkit-scrollbar {
+  display: none;
+}
+
+.connection-list-header {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.5fr) minmax(150px, 1.5fr) 100px 120px 80px;
+  gap: 1rem;
+  padding: 0 16px;
+  margin-bottom: 4px;
+  align-items: center;
+}
+
+.connection-list-header-cell {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+/* Fila/Card de la lista (Glassy) */
+.connection-card-row {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.5fr) minmax(150px, 1.5fr) 100px 120px 80px;
+  gap: 1rem;
+  align-items: center;
+  padding: 10px 16px;
+  border-radius: 12px;
+
+  /* Glassmorphism base */
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  /* Muy sutil */
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+/* Hover effect */
+.connection-card-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+  /* Más visible en hover */
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1;
+}
+
+/* Active state (highlight similar to favorites) */
+.connection-card-row.active-row {
+  border-color: rgba(79, 195, 247, 0.4);
+  background: rgba(79, 195, 247, 0.08);
+  box-shadow: 0 0 0 1px rgba(79, 195, 247, 0.15);
+}
+
+/* Cells styling */
+.col-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.col-name .icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+  color: #ccc;
+  font-size: 1.2rem;
+  transition: all 0.2s;
+}
+
+/* Heredar color del icono */
+.connection-card-row:hover .col-name .icon-box {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.col-name-text {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.col-host {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: monospace;
+  /* Optional, nice for IPs */
+}
+
+/* Protocol Tag */
+.col-protocol {
+  display: flex;
+  align-items: center;
+}
+
+.glass-tag {
+  display: inline-flex;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+.col-time {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8rem;
+}
+
+.col-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  opacity: 0;
+  /* Hidden by default */
+  transform: translateX(10px);
+  transition: all 0.2s ease;
+}
+
+.connection-card-row:hover .col-actions {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.glass-action-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.glass-action-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.glass-action-btn.fav-active {
+  color: #FFD700;
+  background: rgba(255, 215, 0, 0.1);
+  border-color: rgba(255, 215, 0, 0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1000px) {
+
+  .connection-list-header,
+  .connection-card-row {
+    grid-template-columns: minmax(150px, 1.5fr) minmax(120px, 1.5fr) 80px 100px 70px;
+    font-size: 0.9em;
+  }
+}
