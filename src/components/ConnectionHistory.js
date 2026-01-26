@@ -650,7 +650,7 @@ const ConnectionHistory = ({
 			/>
 
 			{/* RECIENTES TABLE (Fills remaining space) */}
-			<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginTop: '1.2rem' }}>
+			<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginTop: '0.2rem' }}>
 				<div className="modern-section-header">
 					<div className="modern-header-title">
 						<i className="pi pi-history" style={{ color: '#4fc3f7' }} />
