@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { getFavorites, toggleFavorite, onUpdate, isFavorite } from '../utils/connectionStore';
+import { getFavorites, toggleFavorite, onUpdate, isFavorite, reorderFavorites } from '../utils/connectionStore';
 import { iconThemes } from '../themes/icon-themes';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 
@@ -274,15 +274,17 @@ const ConnectionHistory = ({
 	};
 
 	// Componente interno para las tarjetas del Carrusel
-	const RibbonCard = ({ connection, onConnect, onEdit, onToggleFav, onDragStart, onDragOver, onDrop }) => {
+	const RibbonCard = ({ connection, onConnect, onEdit, onToggleFav, onDragStart, onDragOver, onDrop, index }) => {
 		const typeColor = getConnectionTypeColor(connection.type);
-		const protocolLabel = getProtocolLabel(connection.type);
 		const hostLabel = connection.host || connection.hostname || '—';
+		const timeStr = formatRelativeTime(connection.lastConnected);
+
+		// Map index to a gradient class
+		const gradientClass = `icon-gradient-${(index % 5) + 1}`;
 
 		const handleStar = (e) => {
 			e.stopPropagation();
-			e.preventDefault(); // Asegurar que no propage
-			console.log('Toggle Fav clicked for:', connection.name);
+			e.preventDefault();
 			onToggleFav(connection);
 		};
 
@@ -297,51 +299,44 @@ const ConnectionHistory = ({
 				onDragOver={(e) => onDragOver(e)}
 				onDrop={(e) => onDrop(e, connection)}
 			>
-				{/* Pin Button - Z-index alto para asegurar click */}
+				{/* Pin Button */}
 				<div
 					className="ribbon-card__pin"
 					onClick={handleStar}
 					onMouseDown={(e) => e.stopPropagation()}
 					title="Quitar de favoritos"
-					style={{ zIndex: 20 }}
 				>
 					<i className="pi pi-star-fill" style={{ fontSize: '0.7rem' }} />
 				</div>
 
-				{/* Protocol Badge */}
-				<div className="ribbon-card__badge" style={{ borderColor: typeColor, color: typeColor }}>
-					{protocolLabel}
-				</div>
-
-				{/* Icon */}
-				<div className="ribbon-card__icon">
-					{(() => {
-						let customIcon = connection.customIcon;
-						if ((!customIcon || customIcon === 'default') && sidebarNodes) {
-							const matchingNode = findNodeInTree(sidebarNodes, connection);
-							if (matchingNode && matchingNode.data?.customIcon) {
-								customIcon = matchingNode.data.customIcon;
+				{/* Icon with Gradient Background */}
+				<div className={`ribbon-card__icon-wrapper ${gradientClass}`}>
+					<div className="ribbon-card__icon">
+						{(() => {
+							let customIcon = connection.customIcon;
+							if ((!customIcon || customIcon === 'default') && sidebarNodes) {
+								const matchingNode = findNodeInTree(sidebarNodes, connection);
+								if (matchingNode && matchingNode.data?.customIcon) {
+									customIcon = matchingNode.data.customIcon;
+								}
 							}
-						}
-						// Si es un preset SVG
-						if (customIcon && customIcon !== 'default' && SSHIconPresets[customIcon.toUpperCase()]) {
-							const preset = SSHIconPresets[customIcon.toUpperCase()];
-							return <SSHIconRenderer preset={preset} pixelSize={48} />;
-						}
-						// Si es un SVG del tema de iconos
-						const svg = getConnectionTypeIconSVG(connection.type, customIcon);
-						if (svg) {
-							return React.cloneElement(svg, { width: 48, height: 48, style: { width: 48, height: 48 } });
-						}
-						// Fallback a icono de fuente
-						return <i className={getConnectionTypeIcon(connection.type)} aria-hidden="true" />;
-					})()}
+							if (customIcon && customIcon !== 'default' && SSHIconPresets[customIcon.toUpperCase()]) {
+								const preset = SSHIconPresets[customIcon.toUpperCase()];
+								return <SSHIconRenderer preset={preset} pixelSize={32} />;
+							}
+							const svg = getConnectionTypeIconSVG(connection.type, customIcon);
+							if (svg) {
+								return React.cloneElement(svg, { width: 32, height: 32, style: { width: 32, height: 32 } });
+							}
+							return <i className={getConnectionTypeIcon(connection.type)} aria-hidden="true" />;
+						})()}
+					</div>
 				</div>
 
 				{/* Content */}
 				<div className="ribbon-card__content">
-					<div className="ribbon-card__name">{connection.name}</div>
-					<div className="ribbon-card__host">{hostLabel}</div>
+					<div className="ribbon-card__name">{connection.name?.toUpperCase()}</div>
+					<div className="ribbon-card__time">{timeStr}</div>
 				</div>
 			</div>
 		);
@@ -350,21 +345,42 @@ const ConnectionHistory = ({
 	const FavoritesRibbon = ({ connections, fullList, onReorder }) => {
 		const trackRef = useRef(null);
 		const [draggedItem, setDraggedItem] = useState(null);
+		const [scrollPos, setScrollPos] = useState(0);
+		const [totalWidth, setTotalWidth] = useState(0);
+		const [visibleWidth, setVisibleWidth] = useState(0);
 
-		// Remove early return
-		// if (!connections || connections.length === 0) return null;
+		useEffect(() => {
+			const updateScrollRes = () => {
+				if (trackRef.current) {
+					setScrollPos(trackRef.current.scrollLeft);
+					setTotalWidth(trackRef.current.scrollWidth);
+					setVisibleWidth(trackRef.current.offsetWidth);
+				}
+			};
+
+			const track = trackRef.current;
+			if (track) {
+				track.addEventListener('scroll', updateScrollRes);
+				// Initial check
+				setTimeout(updateScrollRes, 100);
+			}
+			window.addEventListener('resize', updateScrollRes);
+			return () => {
+				track?.removeEventListener('scroll', updateScrollRes);
+				window.removeEventListener('resize', updateScrollRes);
+			};
+		}, [connections]);
 
 		const scroll = (direction) => {
 			if (trackRef.current) {
-				const scrollAmount = 300;
+				const scrollAmount = direction === 'left' ? -300 : 300;
 				trackRef.current.scrollBy({
-					left: direction === 'left' ? -scrollAmount : scrollAmount,
+					left: scrollAmount,
 					behavior: 'smooth'
 				});
 			}
 		};
 
-		// ... (drag handlers remain the same) ...
 		const handleDragStart = (e, item) => {
 			setDraggedItem(item);
 			e.dataTransfer.effectAllowed = 'move';
@@ -401,70 +417,89 @@ const ConnectionHistory = ({
 
 		const hasItems = connections && connections.length > 0;
 
+		// Calcular dots (simplificado: uno por cada 3 items o similar, o simplemente por item si no son muchos)
+		// Mejor: un dot fijo o proporcional. En la imagen hay 5 dots para 5+ items.
+		const dotsCount = Math.min(connections?.length || 0, 8);
+		const activeDotIndex = Math.round((scrollPos / (totalWidth - visibleWidth || 1)) * (dotsCount - 1)) || 0;
+
 		return (
 			<div className="favorites-ribbon-section">
 				<div className="favorites-ribbon-header">
-					<i className="pi pi-star-fill" style={{ color: '#FFD700' }} />
-					<span>FAVORITOS</span>
-				</div>
+					<div className="favorites-ribbon-title">FAVORITES</div>
 
-				{/* Navigation Buttons (Only if items exist) */}
-				{hasItems && (
-					<>
-						<button
-							className="ribbon-nav-btn prev"
-							onClick={() => scroll('left')}
-							aria-label="Anterior"
-						>
-							<i className="pi pi-chevron-left" />
-						</button>
-						<button
-							className="ribbon-nav-btn next"
-							onClick={() => scroll('right')}
-							aria-label="Siguiente"
-						>
-							<i className="pi pi-chevron-right" />
-						</button>
-					</>
-				)}
-
-				<div className="favorites-ribbon-track" ref={trackRef}>
-					{hasItems ? (
-						connections.map(c => (
-							<RibbonCard
-								key={c.id}
-								connection={c}
-								onConnect={onConnectToHistory}
-								onEdit={onEdit}
-								onToggleFav={(conn) => { toggleFavorite(conn); loadConnectionHistory(); }}
-								onDragStart={handleDragStart}
-								onDragOver={handleDragOver}
-								onDrop={handleDrop}
-							/>
-						))
-					) : (
-						/* Empty State Placeholder */
-						<div className="ribbon-empty" style={{
-							width: '100%',
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-							gap: '1rem',
-							minHeight: '130px',
-							color: themeColors.textSecondary || 'rgba(255,255,255,0.4)',
-							fontStyle: 'italic',
-							border: `1px dashed ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
-							borderRadius: '12px',
-							background: themeColors.itemBackground || 'rgba(255,255,255,0.02)'
-						}}>
-							<i className="pi pi-star" style={{ fontSize: '1.5rem', opacity: 0.5 }} />
-							<span>Usa el icono <i className="pi pi-star" /> en la lista para agregar favoritos</span>
+					{/* Header Navigation Buttons */}
+					{hasItems && (
+						<div className="ribbon-header-actions">
+							<button className="header-nav-btn" onClick={() => scroll('left')}>
+								<i className="pi pi-chevron-left" />
+							</button>
+							<button className="header-nav-btn" onClick={() => scroll('right')}>
+								<i className="pi pi-chevron-right" />
+							</button>
 						</div>
 					)}
 				</div>
+
+				<div className="ribbon-container-relative">
+					{/* Modern Circular Navigation Buttons (Side) */}
+					{hasItems && (
+						<>
+							<button
+								className="ribbon-side-btn prev"
+								onClick={() => scroll('left')}
+								aria-label="Anterior"
+							>
+								<i className="pi pi-chevron-left" />
+							</button>
+							<button
+								className="ribbon-side-btn next"
+								onClick={() => scroll('right')}
+								aria-label="Siguiente"
+							>
+								<i className="pi pi-chevron-right" />
+							</button>
+						</>
+					)}
+
+					<div className="favorites-ribbon-track" ref={trackRef}>
+						{hasItems ? (
+							connections.map((c, idx) => (
+								<RibbonCard
+									key={c.id}
+									connection={c}
+									index={idx}
+									onConnect={onConnectToHistory}
+									onEdit={onEdit}
+									onToggleFav={(conn) => { toggleFavorite(conn); loadConnectionHistory(); }}
+									onDragStart={handleDragStart}
+									onDragOver={handleDragOver}
+									onDrop={handleDrop}
+								/>
+							))
+						) : (
+							<div className="ribbon-empty">
+								<i className="pi pi-star" style={{ fontSize: '1.5rem', opacity: 0.5 }} />
+								<span>Usa el icono <i className="pi pi-star" /> en la lista para agregar favoritos</span>
+							</div>
+						)}
+					</div>
+				</div>
+
+				{/* Pagination Dots */}
+				{hasItems && connections.length > 1 && (
+					<div className="ribbon-pagination">
+						{Array.from({ length: dotsCount }).map((_, i) => (
+							<div
+								key={i}
+								className={`pagination-dot ${i === activeDotIndex ? 'active' : ''}`}
+							/>
+						))}
+					</div>
+				)}
 			</div>
 		);
 	};
+
 
 	const filterTabs = [
 		{ key: 'all', label: 'Todas' },
