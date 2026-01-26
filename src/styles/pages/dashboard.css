@@ -1220,7 +1220,7 @@
   margin: 0 0 0.5rem 0.25rem;
   font-size: 0.85rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.9));
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1299,10 +1299,10 @@
   /* Variables locales para facilitar personalización */
   --rc-width: 150px;
   --rc-height: 130px;
-  --rc-bg: rgba(20, 24, 32, 0.6);
-  --rc-border: rgba(255, 255, 255, 0.08);
-  --rc-hover-bg: rgba(30, 35, 45, 0.8);
-  --rc-hover-border: rgba(255, 255, 255, 0.2);
+  --rc-bg: var(--ui-tab-bg, rgba(20, 24, 32, 0.6));
+  --rc-border: var(--ui-sidebar-border, rgba(255, 255, 255, 0.08));
+  --rc-hover-bg: var(--ui-tab-hover-bg, rgba(30, 35, 45, 0.8));
+  --rc-hover-border: var(--ui-sidebar-border, rgba(255, 255, 255, 0.2));
 
   flex: 0 0 var(--rc-width);
   height: var(--rc-height);
@@ -1365,7 +1365,7 @@
 .ribbon-card__name {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--ui-sidebar-text, #fff);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1375,7 +1375,8 @@
 
 .ribbon-card__host {
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.5));
+  opacity: 0.7;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1436,11 +1437,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border: 1px dashed var(--ui-sidebar-border, rgba(255, 255, 255, 0.1));
   border-radius: 12px;
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 0.9rem;
-  background: rgba(255, 255, 255, 0.02);
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.4));
+  opacity: 0.6;
+  background: var(--ui-tab-bg, rgba(255, 255, 255, 0.02));
 }
 
 /* === RECIENTES REDESIGN (Glassy List) === */
@@ -1489,7 +1490,8 @@
 .connection-list-header-cell {
   font-size: 0.75rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.5));
+  opacity: 0.7;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   white-space: nowrap;
@@ -1505,8 +1507,8 @@
   border-radius: 12px;
 
   /* Glassmorphism base */
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--ui-tab-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.05));
   /* Muy sutil */
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
@@ -1518,9 +1520,9 @@
 
 /* Hover effect */
 .connection-card-row:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.08));
   /* Más visible en hover */
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--ui-sidebar-border, rgba(255, 255, 255, 0.15));
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1;
@@ -1548,7 +1550,7 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.05));
   flex-shrink: 0;
   color: #ccc;
   font-size: 1.2rem;
@@ -1557,13 +1559,13 @@
 
 /* Heredar color del icono */
 .connection-card-row:hover .col-name .icon-box {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.1));
   transform: scale(1.05);
 }
 
 .col-name-text {
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.95));
   font-size: 0.9rem;
   white-space: nowrap;
   overflow: hidden;
@@ -1571,7 +1573,8 @@
 }
 
 .col-host {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.6));
+  opacity: 0.8;
   font-size: 0.85rem;
   white-space: nowrap;
   overflow: hidden;
@@ -1593,14 +1596,15 @@
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.8);
+  background: var(--ui-tab-bg, rgba(0, 0, 0, 0.2));
+  border: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.1));
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.8));
   backdrop-filter: blur(4px);
 }
 
 .col-time {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.5));
+  opacity: 0.7;
   font-size: 0.8rem;
 }
 
@@ -1627,15 +1631,15 @@
   justify-content: center;
   border-radius: 6px;
   border: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.7);
+  background: var(--ui-tab-bg, rgba(255, 255, 255, 0.05));
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.7));
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .glass-action-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.15));
+  color: var(--ui-sidebar-text, #fff);
   transform: scale(1.1);
 }
 
