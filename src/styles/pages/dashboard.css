@@ -1328,17 +1328,62 @@
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
 }
 
-/* Status Dot */
-.ribbon-card__status-dot {
+/* Edit Button (replaces Status Dot) */
+.ribbon-card__edit {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: 12px;
+  left: 12px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: all 0.2s;
+  z-index: 5;
+  cursor: pointer;
+}
+
+.ribbon-card__edit:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.ribbon-card:hover .ribbon-card__edit {
+  opacity: 1;
+}
+
+/* Status Dot (Inline with text) */
+.ribbon-card__status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  margin-right: 6px;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.ribbon-card__status-dot.is-active {
+  background-color: #4CAF50;
+  box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
   width: 8px;
   height: 8px;
-  border-radius: 50%;
-  background-color: #4CAF50;
-  box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
-  z-index: 5;
+}
+
+.ribbon-card__time {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #9E9E9E;
+  margin-top: auto;
 }
 
 /* Star/Pin Button */
@@ -1433,6 +1478,18 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.ribbon-card__time {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 400;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  width: 100%;
+  text-align: center;
 }
 
 /* ICON GRADIENTS */

@@ -63,14 +63,14 @@ import { detectBlockedInputs } from '../utils/formDebugger';
 // import '../assets/form-fixes.css';
 import '../styles/layout/sidebar.css';
 import connectionStore, { recordRecent, toggleFavorite, addGroupToFavorites, removeGroupFromFavorites, isGroupFavorite, recordRecentPassword, helpers as connectionHelpers } from '../utils/connectionStore';
-import { 
-  getTabTypeAndIndex, 
-  moveTabToFirst, 
-  handleTerminalContextMenu, 
+import {
+  getTabTypeAndIndex,
+  moveTabToFirst,
+  handleTerminalContextMenu,
   hideContextMenu,
   createTerminalActionWrapper,
   handleUnblockForms,
-  handleGuacamoleCreateTab 
+  handleGuacamoleCreateTab
 } from '../utils/tabEventHandlers';
 import DistroIcon from './DistroIcon';
 import DialogsManager from './DialogsManager';
@@ -80,14 +80,14 @@ import OverflowMenu from './contextmenus/OverflowMenu';
 import TabHeader from './TabHeader';
 import TabContentRenderer from './TabContentRenderer';
 import MainContentArea from './MainContentArea';
-import { 
-  STORAGE_KEYS, 
-  GROUP_KEYS, 
-  THEME_DEFAULTS, 
-  TAB_INDEXES, 
+import {
+  STORAGE_KEYS,
+  GROUP_KEYS,
+  THEME_DEFAULTS,
+  TAB_INDEXES,
   EVENT_NAMES,
   TAB_TYPES,
-  CONNECTION_STATUS 
+  CONNECTION_STATUS
 } from '../utils/constants';
 
 const App = () => {
@@ -108,34 +108,34 @@ const App = () => {
     const initializeAllThemes = async () => {
       try {
         // Inicializando temas
-        
+
         // 1. Cargar tema de tabs (ligero, puede ejecutarse inmediatamente)
         loadSavedTabTheme();
-        
+
         // 🚀 OPTIMIZACIÓN: Diferir importaciones pesadas usando requestIdleCallback
         // Esto permite que la UI se renderice primero
         const loadThemes = async () => {
           // 2. Importar y aplicar temas UI y status bar
           const { themeManager } = await import('../utils/themeManager');
           const { statusBarThemeManager } = await import('../utils/statusBarThemeManager');
-          
+
           // 3. Aplicar temas con verificación
           themeManager.loadSavedTheme();
           statusBarThemeManager.loadSavedTheme();
-          
+
           // 4. Verificar que los temas se aplicaron correctamente
           setTimeout(() => {
             const rootStyles = getComputedStyle(document.documentElement);
             const dialogBg = rootStyles.getPropertyValue('--ui-dialog-bg');
             const sidebarBg = rootStyles.getPropertyValue('--ui-sidebar-bg');
-            
+
             // Si los temas no se aplicaron correctamente, forzar re-aplicación
-            if (!dialogBg || dialogBg === 'initial' || dialogBg === '' || 
-                !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
+            if (!dialogBg || dialogBg === 'initial' || dialogBg === '' ||
+              !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
               themeManager.applyTheme('Nord');
               statusBarThemeManager.applyTheme('Night Owl');
             }
-            
+
             // 5. Ocultar boot-splash cuando el tema esté completamente aplicado
             // Esperar un frame adicional para asegurar que todo está renderizado
             requestAnimationFrame(() => {
@@ -148,7 +148,7 @@ const App = () => {
             });
           }, 200);
         };
-        
+
         // Diferir carga pesada usando requestIdleCallback si está disponible
         if (window.requestIdleCallback) {
           requestIdleCallback(() => {
@@ -164,7 +164,7 @@ const App = () => {
             });
           }, 50);
         }
-        
+
       } catch (error) {
         console.error('[THEME] Error inicializando temas:', error);
         // En caso de error, ocultar splash después de un tiempo razonable
@@ -176,7 +176,7 @@ const App = () => {
         }, 1000);
       }
     };
-    
+
     // Ejecutar inicialización (solo carga ligera inmediatamente)
     initializeAllThemes();
   }, []);
@@ -201,7 +201,7 @@ const App = () => {
       if (secureStorage.hasSavedMasterKey()) {
         // Verificar si el usuario marcó "recordar contraseña"
         const rememberPassword = localStorage.getItem('nodeterm_remember_password') === 'true';
-        
+
         if (rememberPassword) {
           // Intentar auto-unlock
           try {
@@ -216,7 +216,7 @@ const App = () => {
             console.error('Error en auto-unlock:', err);
           }
         }
-        
+
         // Si no está recordado o falló, mostrar unlock dialog
         setNeedsUnlock(true);
       }
@@ -238,10 +238,10 @@ const App = () => {
         window.toast = { current: toast.current };
       }
     };
-    
+
     // Actualizar inmediatamente
     updateToast();
-    
+
     // Actualizar periódicamente hasta que toast esté disponible
     const interval = setInterval(() => {
       if (toast.current) {
@@ -249,10 +249,10 @@ const App = () => {
         clearInterval(interval);
       }
     }, 100);
-    
+
     // Limpiar después de 5 segundos si no se inicializa
     setTimeout(() => clearInterval(interval), 5000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -271,22 +271,22 @@ const App = () => {
             const decrypted = await secureStorage.decryptData(obj, masterKey);
             // Los passwords se guardan como árbol; contar de forma recursiva
             count = walk(decrypted);
-          } catch {}
+          } catch { }
         }
 
         // Fallback: datos sin cifrar
         if (!count) {
           const plain = localStorage.getItem('passwordManagerNodes');
           if (plain) {
-            try { count = walk(JSON.parse(plain)); } catch {}
+            try { count = walk(JSON.parse(plain)); } catch { }
           }
         }
 
         // Guardar contador si es un número válido
         if (!isNaN(count) && count >= 0) {
-          try { localStorage.setItem('passwords_count', String(count)); } catch {}
+          try { localStorage.setItem('passwords_count', String(count)); } catch { }
         }
-      } catch {}
+      } catch { }
     };
 
     updatePasswordsCount();
@@ -303,7 +303,7 @@ const App = () => {
     setMasterKey(key);
     // Actualizar el estado con la nueva clave después del cambio
   }, []);
-  
+
   // Lógica unificada de importación con deduplicación/merge y actualización de fuentes vinculadas
   const unifiedHandleImportComplete = async (importResult) => {
     const normalizeExact = (v) => (v || '').toString().trim().toLowerCase();
@@ -391,8 +391,8 @@ const App = () => {
     if (importResult.structure && Array.isArray(importResult.structure.nodes) && importResult.structure.nodes.length > 0) {
       const toAdd = (importResult.structure.nodes || []).map((n, idx) => ({
         ...n,
-        key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`,
-        uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`
+        key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random() * 1e6)}`,
+        uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random() * 1e6)}`
       }));
 
       const createContainerFolder = !!importResult.createContainerFolder;
@@ -488,7 +488,7 @@ const App = () => {
         try {
           const h = await window.electron?.import?.getFileHash?.(importResult.linkedFilePath);
           if (h?.ok && h?.hash) osHash = h.hash;
-        } catch {}
+        } catch { }
 
         const newSource = {
           id: stableId,
@@ -520,7 +520,7 @@ const App = () => {
       }
 
       toast.current?.show({ severity: 'success', summary: 'Importación exitosa', detail: `Añadidas ${addedConnections} conexiones y ${addedFolders} carpetas`, life: 5000 });
-      setTimeout(() => { try { resolveFormBlocking(toast.current); } catch {} }, 0);
+      setTimeout(() => { try { resolveFormBlocking(toast.current); } catch { } }, 0);
       return;
     }
 
@@ -587,7 +587,7 @@ const App = () => {
       try {
         const h = await window.electron?.import?.getFileHash?.(importResult.linkedFilePath);
         if (h?.ok && h?.hash) osHash = h.hash;
-      } catch {}
+      } catch { }
       const newSource = {
         id: stableId,
         fileName: importResult.linkedFileName || null,
@@ -612,7 +612,7 @@ const App = () => {
     }
 
     toast.current?.show({ severity: 'success', summary: 'Importación exitosa', detail: `Añadidas ${addedConnections} conexiones`, life: 5000 });
-    setTimeout(() => { try { resolveFormBlocking(toast.current); } catch {} }, 0);
+    setTimeout(() => { try { resolveFormBlocking(toast.current); } catch { } }, 0);
   };
 
   // Función para manejar la importación completa (estructura + conexiones)
@@ -638,12 +638,12 @@ const App = () => {
           .replace(/\s+/g, ' ')
           .trim();
       };
-      
+
       const removeConflictsAndAdd = (existingNodes, incomingNodes) => {
         if (!Array.isArray(existingNodes) || !Array.isArray(incomingNodes)) {
           return [...(existingNodes || []), ...(incomingNodes || [])];
         }
-        
+
         // Crear un Set con los nombres normalizados de los nodos entrantes
         const incomingLabels = new Set();
         incomingNodes.forEach(node => {
@@ -651,13 +651,13 @@ const App = () => {
             incomingLabels.add(normalizeLabel(node.label));
           }
         });
-        
+
         // Filtrar los nodos existentes, eliminando los que tienen conflicto
         const filteredExisting = existingNodes.filter(node => {
           if (!node || !node.label) return true;
           return !incomingLabels.has(normalizeLabel(node.label));
         });
-        
+
         // Retornar existentes filtrados + nuevos (los nuevos tienen prioridad)
         return [...filteredExisting, ...incomingNodes];
       };
@@ -670,7 +670,7 @@ const App = () => {
 
       // Opciones específicas según el modo (manual vs vinculado)
       const isLinkedMode = !!importResult?.linkFile;
-      const finalCreateContainerFolder = isLinkedMode 
+      const finalCreateContainerFolder = isLinkedMode
         ? (importResult?.linkedCreateContainerFolder === true)
         : (importResult?.createContainerFolder === true);
       // Respetar exactamente el nombre del modo vinculado si viene informado; no aplicar fallback
@@ -687,7 +687,7 @@ const App = () => {
         // Inserta un array de nodos en la carpeta destino, con soporte para overwrite y contenedor opcional
         const containerize = (children) => ({
           key: `import_container_${Date.now()}`,
-          uid: `import_container_${Date.now()}_${Math.floor(Math.random()*1e6)}`,
+          uid: `import_container_${Date.now()}_${Math.floor(Math.random() * 1e6)}`,
           label: finalContainerLabel,
           droppable: true,
           children: children,
@@ -762,8 +762,8 @@ const App = () => {
         console.log('📁 Importando estructura con carpetas:', importResult.structure.folderCount, 'folders');
         let toAdd = (importResult.structure.nodes || []).map((n, idx) => ({
           ...n,
-          key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`,
-          uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`
+          key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random() * 1e6)}`,
+          uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random() * 1e6)}`
         }));
         insertIntoTarget(toAdd);
 
@@ -798,7 +798,7 @@ const App = () => {
         detail: `Se importaron ${importedConnections.length} conexiones`,
         life: 5000
       });
-      
+
       console.log('✅ handleImportComplete COMPLETADO EXITOSAMENTE');
 
     } catch (error) {
@@ -817,8 +817,8 @@ const App = () => {
       });
     }
   };
-  
-  
+
+
   // Usar el hook de gestión de pestañas
   const {
     sshTabs, setSshTabs, rdpTabs, setRdpTabs, guacamoleTabs, setGuacamoleTabs,
@@ -861,7 +861,7 @@ const App = () => {
     availableFonts, terminalTheme, setTerminalTheme, statusBarTheme, setStatusBarTheme,
     localPowerShellTheme, setLocalPowerShellTheme, localLinuxTerminalTheme, setLocalLinuxTerminalTheme,
     uiTheme, setUiTheme, availableThemes, iconTheme, setIconTheme,
-    iconThemeSidebar, setIconThemeSidebar, iconSize, setIconSize, 
+    iconThemeSidebar, setIconThemeSidebar, iconSize, setIconSize,
     folderIconSize, setFolderIconSize, connectionIconSize, setConnectionIconSize,
     explorerFont, setExplorerFont,
     explorerFontSize, setExplorerFontSize, explorerColorTheme, setExplorerColorTheme,
@@ -1103,7 +1103,7 @@ const App = () => {
     showEditFolderDialog, setShowEditFolderDialog,
     showSettingsDialog, setShowSettingsDialog,
     showSyncDialog, setShowSyncDialog,
-  
+
     showUnifiedConnectionDialog, setShowUnifiedConnectionDialog,
     showFileConnectionDialog, setShowFileConnectionDialog,
     showProtocolSelectionDialog, setShowProtocolSelectionDialog,
@@ -1205,9 +1205,9 @@ const App = () => {
     handleResize, handleResizeThrottled,
     // Funciones de expansión
     toggleExpandAll
-  } = useWindowManagement({ 
-    getFilteredTabs, 
-    activeTabIndex, 
+  } = useWindowManagement({
+    getFilteredTabs,
+    activeTabIndex,
     resizeTerminals,
     nodes
   });
@@ -1278,8 +1278,8 @@ const App = () => {
     setShowFileConnectionDialog,
     setShowProtocolSelectionDialog,
     // Estados SSH para creación
-    sshName, setSSHName, sshHost, setSSHHost, sshUser, setSSHUser, 
-    sshPassword, setSSHPassword, sshRemoteFolder, setSSHRemoteFolder, 
+    sshName, setSSHName, sshHost, setSSHHost, sshUser, setSSHUser,
+    sshPassword, setSSHPassword, sshRemoteFolder, setSSHRemoteFolder,
     sshPort, setSSHPort, sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshDescription,
@@ -1287,7 +1287,7 @@ const App = () => {
     // Estados SSH para edición
     editSSHNode, setEditSSHNode,
     editSSHName, setEditSSHName,
-    editSSHHost, setEditSSHHost, 
+    editSSHHost, setEditSSHHost,
     editSSHUser, setEditSSHUser,
     editSSHPassword, setEditSSHPassword,
     editSSHRemoteFolder, setEditSSHRemoteFolder,
@@ -1299,7 +1299,7 @@ const App = () => {
     // Estados RDP
     rdpName, setRdpName,
     rdpServer, setRdpServer,
-    rdpUsername, setRdpUsername, 
+    rdpUsername, setRdpUsername,
     rdpPassword, setRdpPassword,
     rdpPort, setRdpPort,
     rdpClientType, setRdpClientType,
@@ -1405,7 +1405,7 @@ const App = () => {
         if (masterKey) {
           // CON master key: Cargar encriptado
           const encryptedData = localStorage.getItem('connections_encrypted');
-          
+
           if (encryptedData) {
             const decrypted = await secureStorage.decryptData(
               JSON.parse(encryptedData),
@@ -1420,7 +1420,7 @@ const App = () => {
               if (!Array.isArray(loadedNodes)) {
                 loadedNodes = [loadedNodes];
               }
-              
+
               const migrateNodes = (nodes) => {
                 return nodes.map(node => {
                   const migratedNode = { ...node };
@@ -1434,14 +1434,14 @@ const App = () => {
                 });
               };
               const migratedNodes = migrateNodes(loadedNodes);
-              
+
               // Encriptar y guardar
               const encrypted = await secureStorage.encryptData(migratedNodes, masterKey);
               localStorage.setItem('connections_encrypted', JSON.stringify(encrypted));
-              
+
               // Eliminar datos sin encriptar
               localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
-              
+
               setNodes(migratedNodes);
             } else {
               setNodes(getDefaultNodes());
@@ -1492,7 +1492,7 @@ const App = () => {
           // CON master key: Guardar encriptado
           const encrypted = await secureStorage.encryptData(nodes, masterKey);
           localStorage.setItem('connections_encrypted', JSON.stringify(encrypted));
-          
+
           // Limpiar datos sin encriptar
           localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
         } else {
@@ -1523,13 +1523,13 @@ const App = () => {
 
 
 
-  
+
 
 
   useEffect(() => {
     // Cuando cambia la pestaña activa, notificar al backend
     const activeTab = filteredTabs[activeTabIndex];
-    
+
     // Solo proceder si hay pestañas en el grupo actual
     if (filteredTabs.length > 0 && activeTab && window.electron && window.electron.ipcRenderer) {
       if (activeTab.type === 'split') {
@@ -1555,7 +1555,7 @@ const App = () => {
       window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.key);
     }
   }, [activeTabIndex, sshTabs]);
-  
+
   // TODO: Implementar lógica para overflow menu items
   const overflowMenuItems = [];
 
@@ -1588,7 +1588,7 @@ const App = () => {
     // Escuchar eventos de creación de pestañas de Guacamole
     if (window.electron && window.electron.ipcRenderer) {
       const unsubscribe = window.electron.ipcRenderer.on('guacamole:create-tab', handleGuacamoleCreateTabWrapper);
-      return () => { try { if (typeof unsubscribe === 'function') unsubscribe(); } catch {} };
+      return () => { try { if (typeof unsubscribe === 'function') unsubscribe(); } catch { } };
     }
   }, []);
 
@@ -1621,18 +1621,18 @@ const App = () => {
       try {
         const targetFolder = e.detail?.targetFolder || null;
         const isPasswordView = e.detail?.isPasswordView || false;
-        
+
         // Solo permitir crear passwords si estamos en la vista de passwords
         if (!isPasswordView) {
           console.log('⚠️ Intentando crear password fuera de la vista de passwords - ignorando');
           return;
         }
-        
+
         // Abrir diálogo unificado y cambiar a pestaña Password (índice 2)
         setShowUnifiedConnectionDialog(true);
         // Dejar una marca global para que el propio diálogo active la pestaña Password
         setTimeout(() => {
-          try { document.querySelector('.unified-connection-dialog'); } catch {}
+          try { document.querySelector('.unified-connection-dialog'); } catch { }
           const ev = new CustomEvent('switch-unified-tab', { detail: { index: 2, targetFolder } });
           window.dispatchEvent(ev);
         }, 0);
@@ -1650,7 +1650,7 @@ const App = () => {
       const info = e.detail || {};
       const tabId = `${info.key}_${Date.now()}`;
       const secretType = info.type || info.data?.type || 'password';
-      
+
       // Construir passwordData con todos los campos según el tipo
       const passwordData = {
         id: info.key,
@@ -1678,7 +1678,7 @@ const App = () => {
         // Campos para secure_note
         noteContent: info.noteContent || info.data?.noteContent || ''
       };
-      
+
       // Registrar como reciente para TODOS los tipos de secretos (password, wallet, api_key, etc.)
       try {
         recordRecentPassword({
@@ -1695,7 +1695,7 @@ const App = () => {
       } catch (e) {
         console.warn('Error registrando secreto reciente:', e);
       }
-      
+
       // Determinar icono según tipo para la etiqueta de la pestaña
       const getTabIcon = () => {
         switch (secretType) {
@@ -1705,7 +1705,7 @@ const App = () => {
           default: return '🔐';
         }
       };
-      
+
       // Usar TAB_TYPES.PASSWORD para que coincida con el renderer
       const newTab = { key: tabId, label: `${getTabIcon()} ${info.label}`, type: TAB_TYPES.PASSWORD, passwordData, createdAt: Date.now() };
       setSshTabs(prev => [newTab, ...prev]);
@@ -1735,12 +1735,12 @@ const App = () => {
         passwords: info.passwords || []
       };
       // Usar TAB_TYPES.PASSWORD_FOLDER para el nuevo tipo de pestaña
-      const newTab = { 
-        key: tabId, 
-        label: `📁 ${info.folderLabel}`, 
-        type: TAB_TYPES.PASSWORD_FOLDER, 
-        folderData, 
-        createdAt: Date.now() 
+      const newTab = {
+        key: tabId,
+        label: `📁 ${info.folderLabel}`,
+        type: TAB_TYPES.PASSWORD_FOLDER,
+        folderData,
+        createdAt: Date.now()
       };
       setSshTabs(prev => [newTab, ...prev]);
       // Activar la nueva pestaña usando la misma lógica que otras pestañas
@@ -1769,11 +1769,11 @@ const App = () => {
     };
 
     window.addEventListener('expand-node-path', handleExpandNodePath);
-    
+
     // Event listener para crear pestañas de auditoría global
     const handleCreateAuditTab = (event) => {
       const { tabId, title, recordings } = event.detail;
-      
+
       // Crear nueva pestaña de auditoría global
       const newAuditTab = {
         key: tabId,
@@ -1783,10 +1783,10 @@ const App = () => {
         createdAt: Date.now(),
         groupId: null
       };
-      
+
       // Añadir a las pestañas SSH (reutilizando la estructura existente)
       setSshTabs(prevTabs => [newAuditTab, ...prevTabs]);
-      
+
       // Activar la nueva pestaña
       setLastOpenedTabKey(tabId);
       setOnCreateActivateTabKey(tabId);
@@ -1794,21 +1794,21 @@ const App = () => {
       setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
       setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
     };
-    
+
     window.addEventListener('create-audit-tab', handleCreateAuditTab);
-    
+
     // Event listener para crear pestañas de terminal desde QuickAccessSidebar
     const handleCreateTerminalTab = (event) => {
       const { type, distroInfo } = event.detail;
-      
+
       // Disparar evento para que MainContentArea maneje la creación del terminal
       window.dispatchEvent(new CustomEvent('create-local-terminal', {
         detail: { terminalType: type, distroInfo: distroInfo }
       }));
     };
-    
+
     window.addEventListener('create-terminal-tab', handleCreateTerminalTab);
-    
+
     const insertPinnedTab = (tab) => {
       if (!tab) return;
       if (activeGroupId !== null) {
@@ -1838,11 +1838,11 @@ const App = () => {
     const handleCreateOpenWebUITab = (event) => {
       insertPinnedTab(event.detail?.tab);
     };
-    
+
     window.addEventListener('create-ai-tab', handleCreateAITab);
     window.addEventListener('create-anythingllm-tab', handleCreateAnythingLLMTab);
     window.addEventListener('create-openwebui-tab', handleCreateOpenWebUITab);
-    
+
     return () => {
       window.removeEventListener('expand-node-path', handleExpandNodePath);
       window.removeEventListener('create-audit-tab', handleCreateAuditTab);
@@ -1859,11 +1859,11 @@ const App = () => {
     if (!sidebarCallbacksRef.current) {
       sidebarCallbacksRef.current = {};
     }
-    
+
     sidebarCallbacksRef.current.showProtocolSelection = () => {
       setShowProtocolSelectionDialog(true);
     };
-    
+
     sidebarCallbacksRef.current.createSSH = (targetFolder = null) => {
       window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
     };
@@ -1905,7 +1905,7 @@ const App = () => {
       confirmDeleteNode(nodeKey, nodeLabel, hasChildren, nodes, setNodes);
     };
   }, [sidebarCallbacksRef.current, openEditFileConnectionDialog, onOpenSSHTunnel, openEditSSHTunnelDialog, duplicateSSHTunnel]);
-  
+
   // Listener para evento personalizado de guardar conexión de archivos (fallback)
   useEffect(() => {
     const handleSaveFileConnection = (event) => {
@@ -1927,12 +1927,12 @@ const App = () => {
     const handleOpenNewUnifiedConnectionDialog = (e) => {
       const activeTab = e?.detail?.activeTab;
       const initialCategory = e?.detail?.initialCategory;
-      
+
       // Si hay initialCategory, dejar que DialogsManager lo maneje
       if (initialCategory) {
         return;
       }
-      
+
       if (activeTab === 'password') {
         // Abrir diálogo unificado directamente en pestaña Password
         if (setShowUnifiedConnectionDialog) {
@@ -2001,7 +2001,7 @@ const App = () => {
 
       const treeData = JSON.parse(treeJson);
       let nodes = null;
-      
+
       // Manejar diferentes formatos de estructura
       if (Array.isArray(treeData)) {
         // Formato directo: array de nodos
@@ -2028,13 +2028,13 @@ const App = () => {
       };
 
       const migratedNodes = migrateNodes(nodes);
-      
+
       // Actualizar el estado de los nodos
       setNodes(migratedNodes);
-      
+
       // Guardar en localStorage
       localStorage.setItem(STORAGE_KEYS.TREE_DATA, JSON.stringify(migratedNodes));
-      
+
       // Árbol importado correctamente
       return true;
     } catch (error) {
@@ -2092,12 +2092,12 @@ const App = () => {
       // Detectar si el cursor está sobre una terminal
       // xterm.js crea elementos con clase 'xterm' y también puede estar dentro de contenedores
       const target = e.target;
-      const isOverTerminal = target.closest('.xterm') !== null || 
-                             target.closest('.terminal-outer-padding') !== null ||
-                             target.classList.contains('xterm') ||
-                             target.classList.contains('terminal-outer-padding') ||
-                             // También verificar si está dentro de un contenedor de terminal (para terminales locales)
-                             target.closest('[class*="terminal"]') !== null;
+      const isOverTerminal = target.closest('.xterm') !== null ||
+        target.closest('.terminal-outer-padding') !== null ||
+        target.classList.contains('xterm') ||
+        target.classList.contains('terminal-outer-padding') ||
+        // También verificar si está dentro de un contenedor de terminal (para terminales locales)
+        target.closest('[class*="terminal"]') !== null;
 
       // Si no está sobre una terminal, no hacer nada
       if (!isOverTerminal) return;
@@ -2139,10 +2139,10 @@ const App = () => {
 
       // 3. Linux/WSL terminales
       const currentLinuxSize = parseInt(localStorage.getItem('nodeterm_linux_font_size') || localFontSize || '14', 10);
-      const newLinuxSize = updateFontSize(currentLinuxSize, () => {}, 'nodeterm_linux_font_size');
+      const newLinuxSize = updateFontSize(currentLinuxSize, () => { }, 'nodeterm_linux_font_size');
       // Notificar cambio para que TerminalSettingsTab lo detecte
-      window.dispatchEvent(new CustomEvent('terminal-settings-changed', { 
-        detail: { linuxFontSize: newLinuxSize } 
+      window.dispatchEvent(new CustomEvent('terminal-settings-changed', {
+        detail: { linuxFontSize: newLinuxSize }
       }));
 
       // 4. Docker terminales
@@ -2205,14 +2205,14 @@ const App = () => {
     sidebarCallbacksRef,
     selectedNodeKey,
     setSelectedNodeKey,
-    
+
     // Props para conexiones
     getAllFolders,
     createNewSSH,
     saveEditSSH,
     openEditSSHDialog,
     handleSaveRdpToSidebar,
-    
+
     // Estados de formularios SSH
     sshName, setSSHName,
     sshHost, setSSHHost,
@@ -2223,7 +2223,7 @@ const App = () => {
     sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshDescription,
-    
+
     // Estados de formularios Edit SSH
     editSSHName, setEditSSHName,
     editSSHHost, setEditSSHHost,
@@ -2234,26 +2234,26 @@ const App = () => {
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHDescription, setEditSSHDescription,
     editSSHIcon, setEditSSHIcon,
-    
+
     // Estados para modo edición
     editSSHNode, setEditSSHNode,
-    
+
     // Estados de formularios RDP
     rdpNodeData, setRdpNodeData,
     editingRdpNode, setEditingRdpNode,
-    
+
     // Encriptación
     masterKey,
     secureStorage,
     isAIChatActive,
     onToggleLocalTerminalForAIChat: handleToggleLocalTerminalForAIChat,
-    
+
     // Tema del árbol
     treeTheme,
-    
+
     // Tema de iconos de acción
     sessionActionIconTheme,
-    
+
     // Callbacks para diálogos de importar/exportar
     onShowImportDialog: setShowImportDialog,
     onShowExportDialog: setShowExportDialog,
@@ -2264,7 +2264,7 @@ const App = () => {
     iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, sidebarFontColor, terminalTheme, treeTheme, sessionActionIconTheme,
     toast, confirmDialog, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu, hideContextMenu,
     sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey,
-    
+
     // Dependencias para conexiones
     getAllFolders, createNewSSH, saveEditSSH, openEditSSHDialog, handleSaveRdpToSidebar,
     sshName, setSSHName, sshHost, setSSHHost, sshUser, setSSHUser, sshPassword, setSSHPassword,
@@ -2277,11 +2277,11 @@ const App = () => {
     editSSHDescription, setEditSSHDescription, editSSHIcon, setEditSSHIcon,
     editSSHNode, setEditSSHNode,
     rdpNodeData, setRdpNodeData, editingRdpNode, setEditingRdpNode,
-    
+
     // Dependencias de encriptación
     masterKey, secureStorage,
     isAIChatActive, handleToggleLocalTerminalForAIChat,
-    
+
     // Dependencias de diálogos
     setShowImportDialog, setShowExportDialog, setShowImportExportDialog
   ]);
@@ -2295,6 +2295,14 @@ const App = () => {
   }), [tabDistros, dragStartTimer, draggedTabIndex]);
 
   // === PROPS MEMOIZADAS PARA TABCONTENTRENDERER ===
+  // Calcular activeIds para el HomeTab
+  const activeIds = useMemo(() => {
+    if (getActiveConnectionIds) {
+      return getActiveConnectionIds(sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs);
+    }
+    return new Set();
+  }, [getActiveConnectionIds, sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs]);
+
   // Memoizar props que no cambian frecuentemente
   const memoizedContentRendererProps = useMemo(() => ({
     // HomeTab props
@@ -2341,7 +2349,9 @@ const App = () => {
     // Recording props
     setSshTabs,
     // Tab group props
-    setShowCreateGroupDialog
+    setShowCreateGroupDialog,
+    // Active connections
+    activeIds
   }), [
     onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, onOpenVncConnection, handleLoadGroupFromFavorites,
     openEditRdpDialog, openEditSSHDialog, nodes, localFontFamily, localFontSize,
@@ -2349,7 +2359,7 @@ const App = () => {
     explorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
     handleTerminalContextMenu, showTerminalContextMenu, sshStatsByTabId,
     terminalRefs, statusBarIconTheme, handleCloseSplitPanel, rdpTabs, findNodeByKey,
-    setSshTabs, setShowCreateGroupDialog
+    setSshTabs, setShowCreateGroupDialog, activeIds
   ]);
 
   return (
@@ -2357,520 +2367,520 @@ const App = () => {
       <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
         {/* UnlockDialog - Pide master password al inicio si existe */}
         <UnlockDialog
-        visible={needsUnlock}
-        onSuccess={handleUnlockSuccess}
-        secureStorage={secureStorage}
-      />
+          visible={needsUnlock}
+          onSuccess={handleUnlockSuccess}
+          secureStorage={secureStorage}
+        />
 
-      <TitleBar
-        sidebarFilter={sidebarFilter}
-        setSidebarFilter={setSidebarFilter}
-        allNodes={nodes}
-        findAllConnections={findAllConnections}
-        onOpenSSHConnection={onOpenSSHConnection}
-        onOpenRdpConnection={onOpenRdpConnection}
-        onOpenVncConnection={onOpenVncConnection}
-        onShowImportDialog={setShowImportDialog}
-        onShowExportDialog={setShowExportDialog}
-        onShowImportExportDialog={setShowImportExportDialog}
-        masterKey={masterKey}
-        secureStorage={secureStorage}
-        onOpenImportWithSource={(source) => {
-          try {
-            setImportPreset({
-              linkFile: true,
-              linkedPath: source?.filePath || null,
-              pollInterval: Number(source?.intervalMs) || 30000,
-              overwrite: !!source?.options?.overwrite,
-              placeInFolder: !!source?.options?.createContainerFolder,
-              containerFolderName: source?.options?.containerFolderName || null
-            });
-          } catch {}
-          setShowImportDialog(true);
-        }}
-        openEditSSHDialog={openEditSSHDialog}
-        openEditRdpDialog={openEditRdpDialog}
-        openNewVncDialog={openNewVncDialog}
-        onQuickImportFromSource={async (source) => {
-          try {
-            if (!source?.filePath) {
-              setShowImportDialog(true);
-              return;
-            }
-            const readRes = await window.electron?.import?.readFile?.(source.filePath);
-            if (!readRes?.ok) {
-              setShowImportDialog(true);
-              return;
-            }
-            let fileBlob;
+        <TitleBar
+          sidebarFilter={sidebarFilter}
+          setSidebarFilter={setSidebarFilter}
+          allNodes={nodes}
+          findAllConnections={findAllConnections}
+          onOpenSSHConnection={onOpenSSHConnection}
+          onOpenRdpConnection={onOpenRdpConnection}
+          onOpenVncConnection={onOpenVncConnection}
+          onShowImportDialog={setShowImportDialog}
+          onShowExportDialog={setShowExportDialog}
+          onShowImportExportDialog={setShowImportExportDialog}
+          masterKey={masterKey}
+          secureStorage={secureStorage}
+          onOpenImportWithSource={(source) => {
             try {
-              const fileName = source.fileName || source.filePath.split('\\').pop() || 'import.xml';
-              fileBlob = new File([readRes.content], fileName, { type: 'text/xml' });
-            } catch {
-              fileBlob = new Blob([readRes.content], { type: 'text/xml' });
-            }
-
-            // Importar y aplicar EXACTAMENTE las mismas opciones que el diálogo vinculado
-            const result = await ImportService.importFromMRemoteNG(fileBlob);
-
-            // Refrescar la fuente desde localStorage para obtener las últimas opciones del diálogo
-            const allSources = JSON.parse(localStorage.getItem('IMPORT_SOURCES') || '[]');
-            const fresh = (() => {
-              const byId = allSources.find(s => (source?.id && s.id === source.id));
-              if (byId) return byId;
-              const byPath = allSources.find(s => (source?.filePath && s.filePath === source.filePath));
-              if (byPath) return byPath;
-              const byName = allSources.find(s => (source?.fileName && s.fileName === source.fileName));
-              return byName || source;
-            })();
-
-            const opts = fresh?.options || source?.options || {};
-            const linkedOverwrite = !!(opts.linkedOverwrite ?? opts.overwrite);
-            const linkedCreateContainerFolder = !!(opts.linkedCreateContainerFolder ?? opts.createContainerFolder);
-            // Tomar exactamente el nombre configurado en el diálogo (si existe)
-            const effectiveContainerName = (opts.linkedContainerFolderName ?? opts.containerFolderName ?? '').toString();
-
-            // Usar el MISMO hash que usa el poller para evitar banners repetidos
-            let effectiveHash = result?.metadata?.contentHash || null;
-            try {
-              const hashRes = await window.electron?.import?.getFileHash?.(source.filePath);
-              if (hashRes?.ok && hashRes?.hash) effectiveHash = hashRes.hash;
-            } catch {}
-
-            // Llamar a la MISMA ruta que usa el diálogo
-            await handleImportComplete({
-              ...result,
-              // Modo vinculado
-              linkFile: true,
-              pollInterval: Number(source?.intervalMs) || 30000,
-              linkedFileName: source?.fileName || null,
-              linkedFilePath: source?.filePath || null,
-              linkedFileHash: effectiveHash,
-              // Opciones específicas de modo vinculado (las que usa el diálogo)
-              linkedOverwrite,
-              linkedCreateContainerFolder,
-              linkedContainerFolderName: effectiveContainerName,
-              // Por compatibilidad, reflejamos en las opciones básicas también
-              overwrite: linkedOverwrite,
-              createContainerFolder: linkedCreateContainerFolder,
-              containerFolderName: effectiveContainerName
-            });
-          } catch (e) {
-            console.error('Quick import failed:', e);
+              setImportPreset({
+                linkFile: true,
+                linkedPath: source?.filePath || null,
+                pollInterval: Number(source?.intervalMs) || 30000,
+                overwrite: !!source?.options?.overwrite,
+                placeInFolder: !!source?.options?.createContainerFolder,
+                containerFolderName: source?.options?.containerFolderName || null
+              });
+            } catch { }
             setShowImportDialog(true);
-          }
-        }}
-        iconTheme={iconTheme}
-        expandedKeys={expandedKeys}
-      />
-      
-      {/* Línea separadora debajo de la titlebar - Solo en temas futuristas */}
-      {FUTURISTIC_UI_KEYS.includes(uiTheme) && (
-        <div style={{ 
-          height: '0.5px', 
-          background: 'var(--ui-tabgroup-border, #444)', 
-          opacity: 0.6,
-          width: '100%',
-          margin: 0,
-          padding: 0,
-          boxSizing: 'border-box',
-          border: 'none',
-          outline: 'none'
-        }} />
-      )}
-      
-      <DialogsManager
-        // Referencias
-        toast={toast}
-        
-        // Temas
-        availableThemes={availableThemes}
-        availableFonts={availableFonts}
-        fontFamily={fontFamily}
-        setFontFamily={setFontFamily}
-        fontSize={fontSize}
-        setFontSize={setFontSize}
-        localFontFamily={localFontFamily}
-        setLocalFontFamily={setLocalFontFamily}
-        localFontSize={localFontSize}
-        setLocalFontSize={setLocalFontSize}
-        terminalTheme={terminalTheme}
-        setTerminalTheme={setTerminalTheme}
-        statusBarTheme={statusBarTheme}
-        setStatusBarTheme={setStatusBarTheme}
-        localPowerShellTheme={localPowerShellTheme}
-        setLocalPowerShellTheme={setLocalPowerShellTheme}
-        localLinuxTerminalTheme={localLinuxTerminalTheme}
-        setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
-        uiTheme={uiTheme}
-        setUiTheme={setUiTheme}
-        iconTheme={iconTheme}
-        setIconTheme={setIconTheme}
-        iconThemeSidebar={iconThemeSidebar}
-        setIconThemeSidebar={setIconThemeSidebar}
-        iconSize={iconSize}
-        setIconSize={setIconSize}
-        folderIconSize={folderIconSize}
-        setFolderIconSize={setFolderIconSize}
-        connectionIconSize={connectionIconSize}
-        setConnectionIconSize={setConnectionIconSize}
-        explorerFont={explorerFont}
-        setExplorerFont={setExplorerFont}
-        explorerFontSize={explorerFontSize}
-        setExplorerFontSize={setExplorerFontSize}
-        explorerColorTheme={explorerColorTheme}
-        setExplorerColorTheme={setExplorerColorTheme}
-        sidebarFont={sidebarFont}
-        setSidebarFont={setSidebarFont}
-        sidebarFontSize={sidebarFontSize}
-        setSidebarFontSize={setSidebarFontSize}
-        sidebarFontColor={sidebarFontColor}
-        setSidebarFontColor={setSidebarFontColor}
-        treeTheme={treeTheme}
-        setTreeTheme={setTreeTheme}
-        sessionActionIconTheme={sessionActionIconTheme}
-        setSessionActionIconTheme={setSessionActionIconTheme}
-        statusBarIconTheme={statusBarIconTheme}
-        setStatusBarIconTheme={setStatusBarIconTheme}
-        statusBarPollingInterval={statusBarPollingInterval}
-        setStatusBarPollingInterval={setStatusBarPollingInterval}
-        
-        // Estados de diálogos
-        showSSHDialog={showSSHDialog}
-        setShowSSHDialog={setShowSSHDialog}
-        showRdpDialog={showRdpDialog}
-        setShowRdpDialog={setShowRdpDialog}
-        showFolderDialog={showFolderDialog}
-        setShowFolderDialog={setShowFolderDialog}
-        showEditSSHDialog={showEditSSHDialog}
-        setShowEditSSHDialog={setShowEditSSHDialog}
-        showEditFolderDialog={showEditFolderDialog}
-        setShowEditFolderDialog={setShowEditFolderDialog}
-        showSettingsDialog={showSettingsDialog}
-        setShowSettingsDialog={setShowSettingsDialog}
-        showSyncDialog={showSyncDialog}
-        setShowSyncDialog={setShowSyncDialog}
-
-        showCreateGroupDialog={showCreateGroupDialog}
-        setShowCreateGroupDialog={setShowCreateGroupDialog}
-        showUnifiedConnectionDialog={showUnifiedConnectionDialog}
-        setShowUnifiedConnectionDialog={setShowUnifiedConnectionDialog}
-        showFileConnectionDialog={showFileConnectionDialog}
-        setShowFileConnectionDialog={setShowFileConnectionDialog}
-        showProtocolSelectionDialog={showProtocolSelectionDialog}
-        setShowProtocolSelectionDialog={setShowProtocolSelectionDialog}
-        showNetworkToolsDialog={showNetworkToolsDialog}
-        setShowNetworkToolsDialog={setShowNetworkToolsDialog}
-        showSSHTunnelDialog={showSSHTunnelDialog}
-        setShowSSHTunnelDialog={setShowSSHTunnelDialog}
-        createNewSSHTunnel={createNewSSHTunnel}
-        editingSSHTunnelNode={editingSSHTunnelNode}
-        setEditingSSHTunnelNode={setEditingSSHTunnelNode}
-
-        // Estados de formularios SSH
-        sshName={sshName}
-        setSSHName={setSSHName}
-        sshHost={sshHost}
-        setSSHHost={setSSHHost}
-        sshUser={sshUser}
-        setSSHUser={setSSHUser}
-        sshPassword={sshPassword}
-        setSSHPassword={setSSHPassword}
-        sshRemoteFolder={sshRemoteFolder}
-        setSSHRemoteFolder={setSSHRemoteFolder}
-        sshPort={sshPort}
-        setSSHPort={setSSHPort}
-        sshTargetFolder={sshTargetFolder}
-        setSSHTargetFolder={setSSHTargetFolder}
-        sshAutoCopyPassword={sshAutoCopyPassword}
-        setSSHAutoCopyPassword={setSSHAutoCopyPassword}
-        sshDescription={sshDescription}
-        setSSHDescription={setSSHDescription}
-        
-        // Estados de formularios Edit SSH
-        editSSHName={editSSHName}
-        setEditSSHName={setEditSSHName}
-        editSSHHost={editSSHHost}
-        setEditSSHHost={setEditSSHHost}
-        editSSHUser={editSSHUser}
-        setEditSSHUser={setEditSSHUser}
-        editSSHPassword={editSSHPassword}
-        setEditSSHPassword={setEditSSHPassword}
-        editSSHRemoteFolder={editSSHRemoteFolder}
-        setEditSSHRemoteFolder={setEditSSHRemoteFolder}
-        editSSHPort={editSSHPort}
-        setEditSSHPort={setEditSSHPort}
-        editSSHAutoCopyPassword={editSSHAutoCopyPassword}
-        setEditSSHAutoCopyPassword={setEditSSHAutoCopyPassword}
-        editSSHDescription={editSSHDescription}
-        setEditSSHDescription={setEditSSHDescription}
-        editSSHIcon={editSSHIcon}
-        setEditSSHIcon={setEditSSHIcon}
-        
-        // Estados para modo edición
-        editSSHNode={editSSHNode}
-        setEditSSHNode={setEditSSHNode}
-        
-        // Estados de formularios RDP
-        rdpName={rdpName}
-        setRdpName={setRdpName}
-        rdpServer={rdpServer}
-        setRdpServer={setRdpServer}
-        rdpUsername={rdpUsername}
-        setRdpUsername={setRdpUsername}
-        rdpPassword={rdpPassword}
-        setRdpPassword={setRdpPassword}
-        rdpPort={rdpPort}
-        setRdpPort={setRdpPort}
-        rdpClientType={rdpClientType}
-        setRdpClientType={setRdpClientType}
-        rdpGuacSecurity={rdpGuacSecurity}
-        setRdpGuacSecurity={setRdpGuacSecurity}
-        rdpTargetFolder={rdpTargetFolder}
-        rdpNodeData={rdpNodeData}
-        setRdpNodeData={setRdpNodeData}
-        editingRdpNode={editingRdpNode}
-        setEditingRdpNode={setEditingRdpNode}
-        vncNodeData={vncNodeData}
-        setVncNodeData={setVncNodeData}
-        editingVncNode={editingVncNode}
-        setEditingVncNode={setEditingVncNode}
-        
-        // Estados de formularios Archivos (SFTP/FTP/SCP)
-        fileConnectionName={fileConnectionName}
-        setFileConnectionName={setFileConnectionName}
-        fileConnectionHost={fileConnectionHost}
-        setFileConnectionHost={setFileConnectionHost}
-        fileConnectionUser={fileConnectionUser}
-        setFileConnectionUser={setFileConnectionUser}
-        fileConnectionPassword={fileConnectionPassword}
-        setFileConnectionPassword={setFileConnectionPassword}
-        fileConnectionPort={fileConnectionPort}
-        setFileConnectionPort={setFileConnectionPort}
-        fileConnectionProtocol={fileConnectionProtocol}
-        setFileConnectionProtocol={setFileConnectionProtocol}
-        fileConnectionRemoteFolder={fileConnectionRemoteFolder}
-        setFileConnectionRemoteFolder={setFileConnectionRemoteFolder}
-        fileConnectionTargetFolder={fileConnectionTargetFolder}
-        setFileConnectionTargetFolder={setFileConnectionTargetFolder}
-        editingFileConnectionNode={editingFileConnectionNode}
-        setEditingFileConnectionNode={setEditingFileConnectionNode}
-        
-        // Estados de formularios Folder
-        folderName={folderName}
-        setFolderName={setFolderName}
-        folderColor={folderColor}
-        setFolderColor={setFolderColor}
-        folderIcon={folderIcon}
-        setFolderIcon={setFolderIcon}
-        parentNodeKey={parentNodeKey}
-        editFolderNode={editFolderNode}
-        editFolderName={editFolderName}
-        setEditFolderName={setEditFolderName}
-        editFolderColor={editFolderColor}
-        setEditFolderColor={setEditFolderColor}
-        editFolderIcon={editFolderIcon}
-        setEditFolderIcon={setEditFolderIcon}
-        
-        // Estados de formularios Group
-        newGroupName={newGroupName}
-        setNewGroupName={setNewGroupName}
-        selectedGroupColor={selectedGroupColor}
-        setSelectedGroupColor={setSelectedGroupColor}
-        GROUP_COLORS={GROUP_COLORS}
-        
-        // Funciones
-        createNewSSH={createNewSSH}
-        createNewFolder={createNewFolder}
-        createNewRdp={createNewRdp}
-        saveEditSSH={saveEditSSH}
-        saveEditFolder={saveEditFolder}
-        createNewGroup={createNewGroup}
-        handleSaveRdpToSidebar={handleSaveRdpToSidebar}
-        handleSaveVncToSidebar={handleSaveVncToSidebar}
-        handleSaveFileConnectionToSidebar={handleSaveFileConnectionToSidebar}
-        // Exponer globalmente para acceso directo
-        onFileConnectionSave={(fileData) => {
-          if (handleSaveFileConnectionToSidebar) {
-            handleSaveFileConnectionToSidebar(fileData, false, null);
-          }
-        }}
-        closeRdpDialog={closeRdpDialog}
-        getAllFolders={getAllFolders}
-        nodes={nodes}
-        
-        // Funciones de sincronización
-        exportTreeToJson={exportTreeToJson}
-        importTreeFromJson={importTreeFromJson}
-        sessionManager={sessionManager}
-        
-        // Encriptación
-        onMasterPasswordConfigured={handleMasterPasswordConfigured}
-        onMasterPasswordChanged={handleMasterPasswordChanged}
-      />
-
-      {/* Menú contextual del árbol de la sidebar */}
-      <ContextMenu
-        model={isGeneralTreeMenu ? getGeneralTreeContextMenuItems() : getTreeContextMenuItems(selectedNode)}
-        ref={treeContextMenuRef}
-        breakpoint="600px"
-        style={{ zIndex: 99999 }}
-      />
-      <MainContentArea
-        // Sidebar props
-        sidebarCollapsed={sidebarCollapsed}
-        setSidebarCollapsed={setSidebarCollapsed}
-        sidebarVisible={sidebarVisible}
-        handleResize={handleResize}
-        handleResizeThrottled={handleResizeThrottled}
-        memoizedSidebarProps={memoizedSidebarProps}
-        
-        // Tab management props
-        homeTabs={homeTabs}
-        sshTabs={sshTabs}
-        setSshTabs={setSshTabs}
-        fileExplorerTabs={fileExplorerTabs}
-        rdpTabs={rdpTabs}
-        guacamoleTabs={guacamoleTabs}
-        activeGroupId={activeGroupId}
-        setActiveGroupId={setActiveGroupId}
-        getTabsInGroup={getTabsInGroup}
-        activeTabIndex={activeTabIndex}
-        setActiveTabIndex={setActiveTabIndex}
-        activatingNowRef={activatingNowRef}
-        setGroupActiveIndices={setGroupActiveIndices}
-        setLastOpenedTabKey={setLastOpenedTabKey}
-        setOnCreateActivateTabKey={setOnCreateActivateTabKey}
-        GROUP_KEYS={GROUP_KEYS}
-        
-        // Tab rendering props
-        renderGroupTabs={renderGroupTabs}
-        filteredTabs={filteredTabs}
-        
-        // Tab header props
-        memoizedTabProps={memoizedTabProps}
-        tabHandlers={tabHandlers}
-        dragOverTabIndex={dragOverTabIndex}
-        
-        // Content renderer props
-        memoizedContentRendererProps={memoizedContentRendererProps}
-        sshStatsByTabId={sshStatsByTabId}
-        
-        // Context menu props
-        tabContextMenu={tabContextMenu}
-        setTabContextMenu={setTabContextMenu}
-        terminalContextMenu={terminalContextMenu}
-        setTerminalContextMenu={setTerminalContextMenu}
-        showOverflowMenu={showOverflowMenu}
-        setShowOverflowMenu={setShowOverflowMenu}
-        overflowMenuPosition={overflowMenuPosition}
-        overflowMenuItems={overflowMenuItems}
-        
-        // Tab context menu props
-        tabGroups={tabGroups}
-        moveTabToGroup={moveTabToGroup}
-        setShowCreateGroupDialog={setShowCreateGroupDialog}
-        isGroupFavorite={isGroupFavorite}
-        addGroupToFavorites={addGroupToFavorites}
-        removeGroupFromFavorites={removeGroupFromFavorites}
-        deleteGroup={deleteGroup}
-        toast={toast}
-        
-        // Selected node props
-        selectedNodeKey={selectedNodeKey}
-        
-        // Terminal handlers
-        handleCopyFromTerminalWrapper={handleCopyFromTerminalWrapper}
-        handlePasteToTerminalWrapper={handlePasteToTerminalWrapper}
-        handleSelectAllTerminalWrapper={handleSelectAllTerminalWrapper}
-        handleClearTerminalWrapper={handleClearTerminalWrapper}
-        
-        // Recording handlers
-        handleStartRecording={handleStartRecording}
-        handleStopRecording={handleStopRecording}
-        isRecordingTab={isRecording}
-        recordingTabs={recordingTabs}
-        
-        // Theme props
-        isHomeTabActive={isHomeTabActive}
-        localTerminalBg={localTerminalBg}
-        
-        // Tree context menu
-        isGeneralTreeMenu={isGeneralTreeMenu}
-        getGeneralTreeContextMenuItems={getGeneralTreeContextMenuItems}
-        getTreeContextMenuItems={getTreeContextMenuItems}
-        selectedNode={selectedNode}
-        treeContextMenuRef={treeContextMenuRef}
-        
-        // Sync settings props
-        updateThemesFromSync={updateThemesFromSync}
-        updateStatusBarFromSync={updateStatusBarFromSync}
-        exportTreeToJson={exportTreeToJson}
-        importTreeFromJson={importTreeFromJson}
-        sessionManager={sessionManager}
-      />
-      
-      {/* 🚀 OPTIMIZACIÓN: Lazy loading con Suspense */}
-      <Suspense fallback={null}>
-        <ImportDialog
-          visible={showImportDialog}
-          onHide={() => setShowImportDialog(false)}
-          onImportComplete={async (result) => {
+          }}
+          openEditSSHDialog={openEditSSHDialog}
+          openEditRdpDialog={openEditRdpDialog}
+          openNewVncDialog={openNewVncDialog}
+          onQuickImportFromSource={async (source) => {
             try {
-              const res = await handleImportComplete(result);
-              return res;
-            } catch (error) {
-              console.error('🔍 DEBUG App.js - Error en handleImportComplete:', error);
-              throw error;
+              if (!source?.filePath) {
+                setShowImportDialog(true);
+                return;
+              }
+              const readRes = await window.electron?.import?.readFile?.(source.filePath);
+              if (!readRes?.ok) {
+                setShowImportDialog(true);
+                return;
+              }
+              let fileBlob;
+              try {
+                const fileName = source.fileName || source.filePath.split('\\').pop() || 'import.xml';
+                fileBlob = new File([readRes.content], fileName, { type: 'text/xml' });
+              } catch {
+                fileBlob = new Blob([readRes.content], { type: 'text/xml' });
+              }
+
+              // Importar y aplicar EXACTAMENTE las mismas opciones que el diálogo vinculado
+              const result = await ImportService.importFromMRemoteNG(fileBlob);
+
+              // Refrescar la fuente desde localStorage para obtener las últimas opciones del diálogo
+              const allSources = JSON.parse(localStorage.getItem('IMPORT_SOURCES') || '[]');
+              const fresh = (() => {
+                const byId = allSources.find(s => (source?.id && s.id === source.id));
+                if (byId) return byId;
+                const byPath = allSources.find(s => (source?.filePath && s.filePath === source.filePath));
+                if (byPath) return byPath;
+                const byName = allSources.find(s => (source?.fileName && s.fileName === source.fileName));
+                return byName || source;
+              })();
+
+              const opts = fresh?.options || source?.options || {};
+              const linkedOverwrite = !!(opts.linkedOverwrite ?? opts.overwrite);
+              const linkedCreateContainerFolder = !!(opts.linkedCreateContainerFolder ?? opts.createContainerFolder);
+              // Tomar exactamente el nombre configurado en el diálogo (si existe)
+              const effectiveContainerName = (opts.linkedContainerFolderName ?? opts.containerFolderName ?? '').toString();
+
+              // Usar el MISMO hash que usa el poller para evitar banners repetidos
+              let effectiveHash = result?.metadata?.contentHash || null;
+              try {
+                const hashRes = await window.electron?.import?.getFileHash?.(source.filePath);
+                if (hashRes?.ok && hashRes?.hash) effectiveHash = hashRes.hash;
+              } catch { }
+
+              // Llamar a la MISMA ruta que usa el diálogo
+              await handleImportComplete({
+                ...result,
+                // Modo vinculado
+                linkFile: true,
+                pollInterval: Number(source?.intervalMs) || 30000,
+                linkedFileName: source?.fileName || null,
+                linkedFilePath: source?.filePath || null,
+                linkedFileHash: effectiveHash,
+                // Opciones específicas de modo vinculado (las que usa el diálogo)
+                linkedOverwrite,
+                linkedCreateContainerFolder,
+                linkedContainerFolderName: effectiveContainerName,
+                // Por compatibilidad, reflejamos en las opciones básicas también
+                overwrite: linkedOverwrite,
+                createContainerFolder: linkedCreateContainerFolder,
+                containerFolderName: effectiveContainerName
+              });
+            } catch (e) {
+              console.error('Quick import failed:', e);
+              setShowImportDialog(true);
             }
           }}
-          showToast={(message) => toast.current?.show(message)}
-          presetOptions={importPreset}
-          targetFolderOptions={(() => {
-            const list = [];
-            const walk = (arr, prefix = '') => {
-              if (!Array.isArray(arr)) return;
-              for (const n of arr) {
-                if (n && n.droppable) {
-                  list.push({ label: `${prefix}${n.label}`, value: n.key });
-                  if (n.children && n.children.length) walk(n.children, `${prefix}${n.label} / `);
+          iconTheme={iconTheme}
+          expandedKeys={expandedKeys}
+        />
+
+        {/* Línea separadora debajo de la titlebar - Solo en temas futuristas */}
+        {FUTURISTIC_UI_KEYS.includes(uiTheme) && (
+          <div style={{
+            height: '0.5px',
+            background: 'var(--ui-tabgroup-border, #444)',
+            opacity: 0.6,
+            width: '100%',
+            margin: 0,
+            padding: 0,
+            boxSizing: 'border-box',
+            border: 'none',
+            outline: 'none'
+          }} />
+        )}
+
+        <DialogsManager
+          // Referencias
+          toast={toast}
+
+          // Temas
+          availableThemes={availableThemes}
+          availableFonts={availableFonts}
+          fontFamily={fontFamily}
+          setFontFamily={setFontFamily}
+          fontSize={fontSize}
+          setFontSize={setFontSize}
+          localFontFamily={localFontFamily}
+          setLocalFontFamily={setLocalFontFamily}
+          localFontSize={localFontSize}
+          setLocalFontSize={setLocalFontSize}
+          terminalTheme={terminalTheme}
+          setTerminalTheme={setTerminalTheme}
+          statusBarTheme={statusBarTheme}
+          setStatusBarTheme={setStatusBarTheme}
+          localPowerShellTheme={localPowerShellTheme}
+          setLocalPowerShellTheme={setLocalPowerShellTheme}
+          localLinuxTerminalTheme={localLinuxTerminalTheme}
+          setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
+          uiTheme={uiTheme}
+          setUiTheme={setUiTheme}
+          iconTheme={iconTheme}
+          setIconTheme={setIconTheme}
+          iconThemeSidebar={iconThemeSidebar}
+          setIconThemeSidebar={setIconThemeSidebar}
+          iconSize={iconSize}
+          setIconSize={setIconSize}
+          folderIconSize={folderIconSize}
+          setFolderIconSize={setFolderIconSize}
+          connectionIconSize={connectionIconSize}
+          setConnectionIconSize={setConnectionIconSize}
+          explorerFont={explorerFont}
+          setExplorerFont={setExplorerFont}
+          explorerFontSize={explorerFontSize}
+          setExplorerFontSize={setExplorerFontSize}
+          explorerColorTheme={explorerColorTheme}
+          setExplorerColorTheme={setExplorerColorTheme}
+          sidebarFont={sidebarFont}
+          setSidebarFont={setSidebarFont}
+          sidebarFontSize={sidebarFontSize}
+          setSidebarFontSize={setSidebarFontSize}
+          sidebarFontColor={sidebarFontColor}
+          setSidebarFontColor={setSidebarFontColor}
+          treeTheme={treeTheme}
+          setTreeTheme={setTreeTheme}
+          sessionActionIconTheme={sessionActionIconTheme}
+          setSessionActionIconTheme={setSessionActionIconTheme}
+          statusBarIconTheme={statusBarIconTheme}
+          setStatusBarIconTheme={setStatusBarIconTheme}
+          statusBarPollingInterval={statusBarPollingInterval}
+          setStatusBarPollingInterval={setStatusBarPollingInterval}
+
+          // Estados de diálogos
+          showSSHDialog={showSSHDialog}
+          setShowSSHDialog={setShowSSHDialog}
+          showRdpDialog={showRdpDialog}
+          setShowRdpDialog={setShowRdpDialog}
+          showFolderDialog={showFolderDialog}
+          setShowFolderDialog={setShowFolderDialog}
+          showEditSSHDialog={showEditSSHDialog}
+          setShowEditSSHDialog={setShowEditSSHDialog}
+          showEditFolderDialog={showEditFolderDialog}
+          setShowEditFolderDialog={setShowEditFolderDialog}
+          showSettingsDialog={showSettingsDialog}
+          setShowSettingsDialog={setShowSettingsDialog}
+          showSyncDialog={showSyncDialog}
+          setShowSyncDialog={setShowSyncDialog}
+
+          showCreateGroupDialog={showCreateGroupDialog}
+          setShowCreateGroupDialog={setShowCreateGroupDialog}
+          showUnifiedConnectionDialog={showUnifiedConnectionDialog}
+          setShowUnifiedConnectionDialog={setShowUnifiedConnectionDialog}
+          showFileConnectionDialog={showFileConnectionDialog}
+          setShowFileConnectionDialog={setShowFileConnectionDialog}
+          showProtocolSelectionDialog={showProtocolSelectionDialog}
+          setShowProtocolSelectionDialog={setShowProtocolSelectionDialog}
+          showNetworkToolsDialog={showNetworkToolsDialog}
+          setShowNetworkToolsDialog={setShowNetworkToolsDialog}
+          showSSHTunnelDialog={showSSHTunnelDialog}
+          setShowSSHTunnelDialog={setShowSSHTunnelDialog}
+          createNewSSHTunnel={createNewSSHTunnel}
+          editingSSHTunnelNode={editingSSHTunnelNode}
+          setEditingSSHTunnelNode={setEditingSSHTunnelNode}
+
+          // Estados de formularios SSH
+          sshName={sshName}
+          setSSHName={setSSHName}
+          sshHost={sshHost}
+          setSSHHost={setSSHHost}
+          sshUser={sshUser}
+          setSSHUser={setSSHUser}
+          sshPassword={sshPassword}
+          setSSHPassword={setSSHPassword}
+          sshRemoteFolder={sshRemoteFolder}
+          setSSHRemoteFolder={setSSHRemoteFolder}
+          sshPort={sshPort}
+          setSSHPort={setSSHPort}
+          sshTargetFolder={sshTargetFolder}
+          setSSHTargetFolder={setSSHTargetFolder}
+          sshAutoCopyPassword={sshAutoCopyPassword}
+          setSSHAutoCopyPassword={setSSHAutoCopyPassword}
+          sshDescription={sshDescription}
+          setSSHDescription={setSSHDescription}
+
+          // Estados de formularios Edit SSH
+          editSSHName={editSSHName}
+          setEditSSHName={setEditSSHName}
+          editSSHHost={editSSHHost}
+          setEditSSHHost={setEditSSHHost}
+          editSSHUser={editSSHUser}
+          setEditSSHUser={setEditSSHUser}
+          editSSHPassword={editSSHPassword}
+          setEditSSHPassword={setEditSSHPassword}
+          editSSHRemoteFolder={editSSHRemoteFolder}
+          setEditSSHRemoteFolder={setEditSSHRemoteFolder}
+          editSSHPort={editSSHPort}
+          setEditSSHPort={setEditSSHPort}
+          editSSHAutoCopyPassword={editSSHAutoCopyPassword}
+          setEditSSHAutoCopyPassword={setEditSSHAutoCopyPassword}
+          editSSHDescription={editSSHDescription}
+          setEditSSHDescription={setEditSSHDescription}
+          editSSHIcon={editSSHIcon}
+          setEditSSHIcon={setEditSSHIcon}
+
+          // Estados para modo edición
+          editSSHNode={editSSHNode}
+          setEditSSHNode={setEditSSHNode}
+
+          // Estados de formularios RDP
+          rdpName={rdpName}
+          setRdpName={setRdpName}
+          rdpServer={rdpServer}
+          setRdpServer={setRdpServer}
+          rdpUsername={rdpUsername}
+          setRdpUsername={setRdpUsername}
+          rdpPassword={rdpPassword}
+          setRdpPassword={setRdpPassword}
+          rdpPort={rdpPort}
+          setRdpPort={setRdpPort}
+          rdpClientType={rdpClientType}
+          setRdpClientType={setRdpClientType}
+          rdpGuacSecurity={rdpGuacSecurity}
+          setRdpGuacSecurity={setRdpGuacSecurity}
+          rdpTargetFolder={rdpTargetFolder}
+          rdpNodeData={rdpNodeData}
+          setRdpNodeData={setRdpNodeData}
+          editingRdpNode={editingRdpNode}
+          setEditingRdpNode={setEditingRdpNode}
+          vncNodeData={vncNodeData}
+          setVncNodeData={setVncNodeData}
+          editingVncNode={editingVncNode}
+          setEditingVncNode={setEditingVncNode}
+
+          // Estados de formularios Archivos (SFTP/FTP/SCP)
+          fileConnectionName={fileConnectionName}
+          setFileConnectionName={setFileConnectionName}
+          fileConnectionHost={fileConnectionHost}
+          setFileConnectionHost={setFileConnectionHost}
+          fileConnectionUser={fileConnectionUser}
+          setFileConnectionUser={setFileConnectionUser}
+          fileConnectionPassword={fileConnectionPassword}
+          setFileConnectionPassword={setFileConnectionPassword}
+          fileConnectionPort={fileConnectionPort}
+          setFileConnectionPort={setFileConnectionPort}
+          fileConnectionProtocol={fileConnectionProtocol}
+          setFileConnectionProtocol={setFileConnectionProtocol}
+          fileConnectionRemoteFolder={fileConnectionRemoteFolder}
+          setFileConnectionRemoteFolder={setFileConnectionRemoteFolder}
+          fileConnectionTargetFolder={fileConnectionTargetFolder}
+          setFileConnectionTargetFolder={setFileConnectionTargetFolder}
+          editingFileConnectionNode={editingFileConnectionNode}
+          setEditingFileConnectionNode={setEditingFileConnectionNode}
+
+          // Estados de formularios Folder
+          folderName={folderName}
+          setFolderName={setFolderName}
+          folderColor={folderColor}
+          setFolderColor={setFolderColor}
+          folderIcon={folderIcon}
+          setFolderIcon={setFolderIcon}
+          parentNodeKey={parentNodeKey}
+          editFolderNode={editFolderNode}
+          editFolderName={editFolderName}
+          setEditFolderName={setEditFolderName}
+          editFolderColor={editFolderColor}
+          setEditFolderColor={setEditFolderColor}
+          editFolderIcon={editFolderIcon}
+          setEditFolderIcon={setEditFolderIcon}
+
+          // Estados de formularios Group
+          newGroupName={newGroupName}
+          setNewGroupName={setNewGroupName}
+          selectedGroupColor={selectedGroupColor}
+          setSelectedGroupColor={setSelectedGroupColor}
+          GROUP_COLORS={GROUP_COLORS}
+
+          // Funciones
+          createNewSSH={createNewSSH}
+          createNewFolder={createNewFolder}
+          createNewRdp={createNewRdp}
+          saveEditSSH={saveEditSSH}
+          saveEditFolder={saveEditFolder}
+          createNewGroup={createNewGroup}
+          handleSaveRdpToSidebar={handleSaveRdpToSidebar}
+          handleSaveVncToSidebar={handleSaveVncToSidebar}
+          handleSaveFileConnectionToSidebar={handleSaveFileConnectionToSidebar}
+          // Exponer globalmente para acceso directo
+          onFileConnectionSave={(fileData) => {
+            if (handleSaveFileConnectionToSidebar) {
+              handleSaveFileConnectionToSidebar(fileData, false, null);
+            }
+          }}
+          closeRdpDialog={closeRdpDialog}
+          getAllFolders={getAllFolders}
+          nodes={nodes}
+
+          // Funciones de sincronización
+          exportTreeToJson={exportTreeToJson}
+          importTreeFromJson={importTreeFromJson}
+          sessionManager={sessionManager}
+
+          // Encriptación
+          onMasterPasswordConfigured={handleMasterPasswordConfigured}
+          onMasterPasswordChanged={handleMasterPasswordChanged}
+        />
+
+        {/* Menú contextual del árbol de la sidebar */}
+        <ContextMenu
+          model={isGeneralTreeMenu ? getGeneralTreeContextMenuItems() : getTreeContextMenuItems(selectedNode)}
+          ref={treeContextMenuRef}
+          breakpoint="600px"
+          style={{ zIndex: 99999 }}
+        />
+        <MainContentArea
+          // Sidebar props
+          sidebarCollapsed={sidebarCollapsed}
+          setSidebarCollapsed={setSidebarCollapsed}
+          sidebarVisible={sidebarVisible}
+          handleResize={handleResize}
+          handleResizeThrottled={handleResizeThrottled}
+          memoizedSidebarProps={memoizedSidebarProps}
+
+          // Tab management props
+          homeTabs={homeTabs}
+          sshTabs={sshTabs}
+          setSshTabs={setSshTabs}
+          fileExplorerTabs={fileExplorerTabs}
+          rdpTabs={rdpTabs}
+          guacamoleTabs={guacamoleTabs}
+          activeGroupId={activeGroupId}
+          setActiveGroupId={setActiveGroupId}
+          getTabsInGroup={getTabsInGroup}
+          activeTabIndex={activeTabIndex}
+          setActiveTabIndex={setActiveTabIndex}
+          activatingNowRef={activatingNowRef}
+          setGroupActiveIndices={setGroupActiveIndices}
+          setLastOpenedTabKey={setLastOpenedTabKey}
+          setOnCreateActivateTabKey={setOnCreateActivateTabKey}
+          GROUP_KEYS={GROUP_KEYS}
+
+          // Tab rendering props
+          renderGroupTabs={renderGroupTabs}
+          filteredTabs={filteredTabs}
+
+          // Tab header props
+          memoizedTabProps={memoizedTabProps}
+          tabHandlers={tabHandlers}
+          dragOverTabIndex={dragOverTabIndex}
+
+          // Content renderer props
+          memoizedContentRendererProps={memoizedContentRendererProps}
+          sshStatsByTabId={sshStatsByTabId}
+
+          // Context menu props
+          tabContextMenu={tabContextMenu}
+          setTabContextMenu={setTabContextMenu}
+          terminalContextMenu={terminalContextMenu}
+          setTerminalContextMenu={setTerminalContextMenu}
+          showOverflowMenu={showOverflowMenu}
+          setShowOverflowMenu={setShowOverflowMenu}
+          overflowMenuPosition={overflowMenuPosition}
+          overflowMenuItems={overflowMenuItems}
+
+          // Tab context menu props
+          tabGroups={tabGroups}
+          moveTabToGroup={moveTabToGroup}
+          setShowCreateGroupDialog={setShowCreateGroupDialog}
+          isGroupFavorite={isGroupFavorite}
+          addGroupToFavorites={addGroupToFavorites}
+          removeGroupFromFavorites={removeGroupFromFavorites}
+          deleteGroup={deleteGroup}
+          toast={toast}
+
+          // Selected node props
+          selectedNodeKey={selectedNodeKey}
+
+          // Terminal handlers
+          handleCopyFromTerminalWrapper={handleCopyFromTerminalWrapper}
+          handlePasteToTerminalWrapper={handlePasteToTerminalWrapper}
+          handleSelectAllTerminalWrapper={handleSelectAllTerminalWrapper}
+          handleClearTerminalWrapper={handleClearTerminalWrapper}
+
+          // Recording handlers
+          handleStartRecording={handleStartRecording}
+          handleStopRecording={handleStopRecording}
+          isRecordingTab={isRecording}
+          recordingTabs={recordingTabs}
+
+          // Theme props
+          isHomeTabActive={isHomeTabActive}
+          localTerminalBg={localTerminalBg}
+
+          // Tree context menu
+          isGeneralTreeMenu={isGeneralTreeMenu}
+          getGeneralTreeContextMenuItems={getGeneralTreeContextMenuItems}
+          getTreeContextMenuItems={getTreeContextMenuItems}
+          selectedNode={selectedNode}
+          treeContextMenuRef={treeContextMenuRef}
+
+          // Sync settings props
+          updateThemesFromSync={updateThemesFromSync}
+          updateStatusBarFromSync={updateStatusBarFromSync}
+          exportTreeToJson={exportTreeToJson}
+          importTreeFromJson={importTreeFromJson}
+          sessionManager={sessionManager}
+        />
+
+        {/* 🚀 OPTIMIZACIÓN: Lazy loading con Suspense */}
+        <Suspense fallback={null}>
+          <ImportDialog
+            visible={showImportDialog}
+            onHide={() => setShowImportDialog(false)}
+            onImportComplete={async (result) => {
+              try {
+                const res = await handleImportComplete(result);
+                return res;
+              } catch (error) {
+                console.error('🔍 DEBUG App.js - Error en handleImportComplete:', error);
+                throw error;
+              }
+            }}
+            showToast={(message) => toast.current?.show(message)}
+            presetOptions={importPreset}
+            targetFolderOptions={(() => {
+              const list = [];
+              const walk = (arr, prefix = '') => {
+                if (!Array.isArray(arr)) return;
+                for (const n of arr) {
+                  if (n && n.droppable) {
+                    list.push({ label: `${prefix}${n.label}`, value: n.key });
+                    if (n.children && n.children.length) walk(n.children, `${prefix}${n.label} / `);
+                  }
+                }
+              };
+              walk(nodes || []);
+              return list;
+            })()}
+            defaultTargetFolderKey={null}
+          />
+
+          <ExportDialog
+            visible={showExportDialog}
+            onHide={() => setShowExportDialog(false)}
+            showToast={(message) => toast.current?.show(message)}
+          />
+
+          <ImportExportDialog
+            visible={showImportExportDialog}
+            onHide={() => setShowImportExportDialog(false)}
+            showToast={(message) => toast.current?.show(message)}
+            onImportComplete={(result) => {
+              console.log('[App.js] Importación completada:', result);
+              // Recargar nodos si es necesario
+              const treeData = localStorage.getItem('basicapp2_tree_data');
+              if (treeData) {
+                try {
+                  const parsed = JSON.parse(treeData);
+                  setNodes(parsed);
+                } catch (error) {
+                  console.error('Error al recargar nodos:', error);
                 }
               }
-            };
-            walk(nodes || []);
-            return list;
-          })()}
-          defaultTargetFolderKey={null}
-        />
+            }}
+          />
+        </Suspense>
 
-        <ExportDialog
-          visible={showExportDialog}
-          onHide={() => setShowExportDialog(false)}
-          showToast={(message) => toast.current?.show(message)}
-        />
-
-        <ImportExportDialog
-          visible={showImportExportDialog}
-          onHide={() => setShowImportExportDialog(false)}
-          showToast={(message) => toast.current?.show(message)}
-          onImportComplete={(result) => {
-            console.log('[App.js] Importación completada:', result);
-            // Recargar nodos si es necesario
-            const treeData = localStorage.getItem('basicapp2_tree_data');
-            if (treeData) {
-              try {
-                const parsed = JSON.parse(treeData);
-                setNodes(parsed);
-              } catch (error) {
-                console.error('Error al recargar nodos:', error);
-              }
-            }
-          }}
-        />
-      </Suspense>
-      
-      {/* ConfirmDialog para confirmaciones globales */}
-      <ConfirmDialog />
+        {/* ConfirmDialog para confirmaciones globales */}
+        <ConfirmDialog />
       </div>
     </ErrorBoundary>
   );
@@ -2887,7 +2897,7 @@ if (typeof window !== 'undefined') {
       console.error('❌ Error al desbloquear formularios:', error);
     }
   };
-  
+
   // Función de emergencia ultra-agresiva
   window.emergencyUnblock = () => {
     try {
@@ -2897,7 +2907,7 @@ if (typeof window !== 'undefined') {
       console.error('❌ Error en desbloqueo de emergencia:', error);
     }
   };
-  
+
   // Hacer disponible confirmDialog globalmente
   window.confirmDialog = confirmDialog;
 }

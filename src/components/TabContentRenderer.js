@@ -74,12 +74,14 @@ const TabContentRenderer = React.memo(({
   activeGroupId,
   activeTabIndex,
   // Tab group props
-  setShowCreateGroupDialog
+  setShowCreateGroupDialog,
+  activeIds
 }) => {
   if (tab.type === 'home') {
     return (
       <HomeTab
         isActiveTab={isActiveTab}
+        activeIds={activeIds}
         onCreateSSHConnection={onCreateSSHConnection}
         onCreateFolder={() => openFolderDialog(null)}
         onCreateRdpConnection={onOpenRdpConnection}
@@ -250,7 +252,7 @@ const TabContentRenderer = React.memo(({
   if (tab.type === TAB_TYPES.PASSWORD && tab.passwordData) {
     const p = tab.passwordData;
     const secretType = p.type || 'password';
-    
+
     const copyToClipboard = async (text, fieldName) => {
       try {
         if (window.electron?.clipboard?.writeText) {
@@ -258,7 +260,7 @@ const TabContentRenderer = React.memo(({
         } else {
           await navigator.clipboard.writeText(text);
         }
-        
+
         // Registrar como reciente cuando se copia (para cualquier tipo de secreto)
         if (fieldName === 'Contraseña' || fieldName === 'Seed Phrase' || fieldName === 'Private Key' || fieldName === 'API Key') {
           try {
@@ -277,7 +279,7 @@ const TabContentRenderer = React.memo(({
             console.warn('Error registrando secreto reciente:', e);
           }
         }
-        
+
         // Show success toast if available
         if (window.toast?.current?.show) {
           window.toast.current.show({ severity: 'success', summary: 'Copiado', detail: `${fieldName} copiado al portapapeles`, life: 1500 });
@@ -290,27 +292,27 @@ const TabContentRenderer = React.memo(({
     const Row = ({ label, value, copy, masked = false, mono = true }) => {
       const [showValue, setShowValue] = React.useState(!masked);
       const displayValue = masked && !showValue ? '••••••••••••' : value;
-      
+
       return (
-        <div style={{ 
-          display: 'flex', 
-          gap: 12, 
-          alignItems: 'center', 
-          padding: '12px 0', 
+        <div style={{
+          display: 'flex',
+          gap: 12,
+          alignItems: 'center',
+          padding: '12px 0',
           borderBottom: '1px solid var(--ui-content-border)'
         }}>
-          <div style={{ 
-            width: 140, 
-            color: 'var(--ui-dialog-text)', 
+          <div style={{
+            width: 140,
+            color: 'var(--ui-dialog-text)',
             fontWeight: '500',
             fontSize: '14px'
           }}>
             {label}
           </div>
-          <div style={{ 
-            flex: 1, 
-            color: 'var(--ui-dialog-text)', 
-            fontFamily: mono ? 'monospace' : 'inherit', 
+          <div style={{
+            flex: 1,
+            color: 'var(--ui-dialog-text)',
+            fontFamily: mono ? 'monospace' : 'inherit',
             fontSize: '14px',
             wordBreak: 'break-all',
             display: 'flex',
@@ -319,14 +321,14 @@ const TabContentRenderer = React.memo(({
           }}>
             {displayValue || '-'}
             {masked && value && (
-              <button 
-                onClick={() => setShowValue(!showValue)} 
-                style={{ 
+              <button
+                onClick={() => setShowValue(!showValue)}
+                style={{
                   padding: '4px',
-                  borderRadius: '50%', 
-                  border: 'none', 
-                  background: 'transparent', 
-                  color: '#9C27B0', 
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#9C27B0',
                   cursor: 'pointer',
                   fontSize: '16px',
                   display: 'flex',
@@ -348,14 +350,14 @@ const TabContentRenderer = React.memo(({
             )}
           </div>
           {copy && value && (
-            <button 
-              onClick={() => copyToClipboard(value, label)} 
-              style={{ 
-                padding: '6px 16px', 
-                borderRadius: 6, 
-                border: '1px solid var(--ui-content-border)', 
-                background: 'var(--ui-button-secondary)', 
-                color: 'var(--ui-button-secondary-text)', 
+            <button
+              onClick={() => copyToClipboard(value, label)}
+              style={{
+                padding: '6px 16px',
+                borderRadius: 6,
+                border: '1px solid var(--ui-content-border)',
+                background: 'var(--ui-button-secondary)',
+                color: 'var(--ui-button-secondary-text)',
                 cursor: 'pointer',
                 fontSize: '13px',
                 fontWeight: '500',
@@ -396,8 +398,8 @@ const TabContentRenderer = React.memo(({
     const iconInfo = getIconInfo();
 
     return (
-      <div style={{ 
-        padding: '24px', 
+      <div style={{
+        padding: '24px',
         background: 'var(--ui-content-bg)',
         height: '100%',
         overflow: 'auto'
@@ -419,11 +421,11 @@ const TabContentRenderer = React.memo(({
             </span>
           )}
         </div>
-        
-        <div style={{ 
-          background: 'var(--ui-dialog-bg)', 
-          borderRadius: 12, 
-          padding: '24px 20px', 
+
+        <div style={{
+          background: 'var(--ui-dialog-bg)',
+          borderRadius: 12,
+          padding: '24px 20px',
           border: '1px solid var(--ui-content-border)',
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
         }}>
@@ -443,38 +445,38 @@ const TabContentRenderer = React.memo(({
             <>
               <Row label="Red" value={getNetworkById(p.network)?.name || p.network} mono={false} />
               {p.address && <Row label="Dirección" value={p.address} copy />}
-              
+
               {/* Seed Phrase en campos individuales */}
               {p.seedPhrase && (() => {
                 const words = p.seedPhrase.trim().split(/\s+/).filter(w => w.length > 0);
                 const wordCount = words.length;
                 const [showSeedPhrase, setShowSeedPhrase] = React.useState(false);
-                
+
                 return (
                   <div style={{ padding: '12px 0', borderBottom: '1px solid var(--ui-content-border)' }}>
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'space-between',
                       marginBottom: '12px'
                     }}>
-                      <div style={{ 
-                        width: 140, 
-                        color: 'var(--ui-dialog-text)', 
+                      <div style={{
+                        width: 140,
+                        color: 'var(--ui-dialog-text)',
                         fontWeight: '500',
                         fontSize: '14px'
                       }}>
                         Seed Phrase
                       </div>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <button 
-                          onClick={() => setShowSeedPhrase(!showSeedPhrase)} 
-                          style={{ 
+                        <button
+                          onClick={() => setShowSeedPhrase(!showSeedPhrase)}
+                          style={{
                             padding: '4px',
-                            borderRadius: '50%', 
-                            border: 'none', 
-                            background: 'transparent', 
-                            color: '#9C27B0', 
+                            borderRadius: '50%',
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#9C27B0',
                             cursor: 'pointer',
                             fontSize: '16px',
                             display: 'flex',
@@ -493,14 +495,14 @@ const TabContentRenderer = React.memo(({
                         >
                           {showSeedPhrase ? '👁️' : '👁️‍🗨️'}
                         </button>
-                        <button 
-                          onClick={() => copyToClipboard(p.seedPhrase, 'Seed Phrase')} 
-                          style={{ 
-                            padding: '6px 16px', 
-                            borderRadius: 6, 
-                            border: '1px solid var(--ui-content-border)', 
-                            background: 'var(--ui-button-secondary)', 
-                            color: 'var(--ui-button-secondary-text)', 
+                        <button
+                          onClick={() => copyToClipboard(p.seedPhrase, 'Seed Phrase')}
+                          style={{
+                            padding: '6px 16px',
+                            borderRadius: 6,
+                            border: '1px solid var(--ui-content-border)',
+                            background: 'var(--ui-button-secondary)',
+                            color: 'var(--ui-button-secondary-text)',
                             cursor: 'pointer',
                             fontSize: '13px',
                             fontWeight: '500',
@@ -520,7 +522,7 @@ const TabContentRenderer = React.memo(({
                         </button>
                       </div>
                     </div>
-                    
+
                     {/* Grid de palabras */}
                     <div style={{
                       display: 'grid',
@@ -554,11 +556,11 @@ const TabContentRenderer = React.memo(({
                                       await navigator.clipboard.writeText(word);
                                     }
                                     if (window.toast?.current?.show) {
-                                      window.toast.current.show({ 
-                                        severity: 'success', 
-                                        summary: 'Copiado', 
+                                      window.toast.current.show({
+                                        severity: 'success',
+                                        summary: 'Copiado',
                                         detail: `Palabra ${index + 1} copiada`,
-                                        life: 1500 
+                                        life: 1500
                                       });
                                     }
                                   } catch (err) {
@@ -612,7 +614,7 @@ const TabContentRenderer = React.memo(({
                   </div>
                 );
               })()}
-              
+
               {p.passphrase && <Row label="Passphrase" value={p.passphrase} masked />}
               {p.privateKey && <Row label="Clave Privada" value={p.privateKey} copy masked />}
               {p.notes && <Row label="Notas" value={p.notes} mono={false} />}
@@ -632,9 +634,9 @@ const TabContentRenderer = React.memo(({
 
           {/* Vista para SECURE NOTE */}
           {secretType === 'secure_note' && (
-            <div style={{ 
-              whiteSpace: 'pre-wrap', 
-              fontFamily: 'inherit', 
+            <div style={{
+              whiteSpace: 'pre-wrap',
+              fontFamily: 'inherit',
               fontSize: '14px',
               color: 'var(--ui-dialog-text)',
               lineHeight: '1.6'
@@ -663,18 +665,18 @@ const TabContentRenderer = React.memo(({
             <span>NUNCA compartas tu seed phrase o clave privada con nadie</span>
           </div>
         )}
-        
+
         {/* Botón para abrir URL (solo password) */}
         {secretType === 'password' && p.url && (
           <div style={{ marginTop: 20, textAlign: 'center' }}>
-            <button 
-              onClick={() => window.electron?.import?.openExternal?.(p.url)} 
-              style={{ 
-                padding: '12px 24px', 
-                borderRadius: 8, 
-                border: 'none', 
-                background: 'var(--ui-button-primary)', 
-                color: 'var(--ui-button-primary-text)', 
+            <button
+              onClick={() => window.electron?.import?.openExternal?.(p.url)}
+              style={{
+                padding: '12px 24px',
+                borderRadius: 8,
+                border: 'none',
+                background: 'var(--ui-button-primary)',
+                color: 'var(--ui-button-primary-text)',
                 cursor: 'pointer',
                 fontSize: '14px',
                 fontWeight: '500',
@@ -699,14 +701,14 @@ const TabContentRenderer = React.memo(({
         {/* Botón para abrir endpoint (solo api_key) */}
         {secretType === 'api_key' && p.endpoint && (
           <div style={{ marginTop: 20, textAlign: 'center' }}>
-            <button 
-              onClick={() => window.electron?.import?.openExternal?.(p.endpoint)} 
-              style={{ 
-                padding: '12px 24px', 
-                borderRadius: 8, 
-                border: 'none', 
-                background: '#00BCD4', 
-                color: 'white', 
+            <button
+              onClick={() => window.electron?.import?.openExternal?.(p.endpoint)}
+              style={{
+                padding: '12px 24px',
+                borderRadius: 8,
+                border: 'none',
+                background: '#00BCD4',
+                color: 'white',
                 cursor: 'pointer',
                 fontSize: '14px',
                 fontWeight: '500',
@@ -734,22 +736,22 @@ const TabContentRenderer = React.memo(({
   // Password folder tab - muestra todos los passwords de una carpeta con paginación
   if (tab.type === TAB_TYPES.PASSWORD_FOLDER && tab.folderData) {
     const { folderLabel, passwords } = tab.folderData;
-    
+
     // Estado para paginación
     const [currentPage, setCurrentPage] = React.useState(1);
     const ITEMS_PER_PAGE = 20; // Mostrar 20 passwords por página
-    
+
     // Calcular paginación
     const totalPages = Math.ceil(passwords.length / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
     const currentPasswords = passwords.slice(startIndex, endIndex);
-    
+
     // Resetear página cuando cambie la carpeta
     React.useEffect(() => {
       setCurrentPage(1);
     }, [tab.key]);
-    
+
     const copyToClipboard = async (text, fieldName, passwordData = null) => {
       try {
         if (window.electron?.clipboard?.writeText) {
@@ -757,7 +759,7 @@ const TabContentRenderer = React.memo(({
         } else {
           await navigator.clipboard.writeText(text);
         }
-        
+
         // Registrar como reciente cuando se copia (para cualquier tipo de secreto)
         if ((fieldName === 'Contraseña' || fieldName === 'Seed Phrase' || fieldName === 'Private Key' || fieldName === 'API Key') && passwordData) {
           try {
@@ -776,7 +778,7 @@ const TabContentRenderer = React.memo(({
             console.warn('Error registrando secreto reciente:', e);
           }
         }
-        
+
         // Show success toast if available
         if (window.toast?.current?.show) {
           window.toast.current.show({ severity: 'success', summary: 'Copiado', detail: `${fieldName} copiado al portapapeles`, life: 1500 });
@@ -799,7 +801,7 @@ const TabContentRenderer = React.memo(({
     const getPasswordIcon = (password) => {
       const label = password.label.toLowerCase();
       const url = password.url ? password.url.toLowerCase() : '';
-      
+
       // Detectar por etiquetas comunes
       if (label.includes('cisco') || label.includes('ucs') || url.includes('cisco.com')) return '⚙️';
       if (label.includes('dell') || label.includes('poweredge')) return '🖥️';
@@ -809,7 +811,7 @@ const TabContentRenderer = React.memo(({
       if (label.includes('database') || label.includes('mysql') || label.includes('oracle')) return '🗄️';
       if (label.includes('linux') || label.includes('ubuntu') || label.includes('centos')) return '⚡';
       if (label.includes('admin') || label.includes('administrator')) return '🛡️';
-      
+
       // Detectar por URL
       if (url) {
         if (url.includes('github.com')) return '🐙';
@@ -822,13 +824,13 @@ const TabContentRenderer = React.memo(({
         if (url.includes('docker.com') || url.includes('hub.docker.com')) return '🐳';
         if (url.includes('kubernetes') || url.includes('k8s')) return '⚓';
         if (url.includes('jenkins') || url.includes('ci/cd')) return '🔧';
-        
+
         // Detectar por IPs internas
         if (url.includes('10.') || url.includes('192.168.') || url.includes('172.')) {
           if (url.includes(':443') || url.includes('https://')) return '🔒';
           return '🖥️';
         }
-        
+
         // Detectar por protocolos
         if (url.startsWith('ssh://') || url.includes(':22')) return '💻';
         if (url.startsWith('rdp://') || url.includes(':3389')) return '🖥️';
@@ -837,7 +839,7 @@ const TabContentRenderer = React.memo(({
         if (url.startsWith('ftp://') || url.startsWith('sftp://')) return '⬆️';
         if (url.startsWith('cmd://') || url.includes('.exe')) return '💻';
       }
-      
+
       // Detectar por nombre de usuario
       if (password.username) {
         const username = password.username.toLowerCase();
@@ -845,7 +847,7 @@ const TabContentRenderer = React.memo(({
         if (username.includes('service') || username.includes('svc_')) return '⚙️';
         if (username.includes('user') || username.includes('usr_')) return '👤';
       }
-      
+
       // Iconos por defecto más variados
       const defaultIcons = ['🔑', '🔐', '🛡️', '🌐', '🖥️', '⚙️', '🗄️', '📊', '🔧', '⚡'];
       const hash = password.label.split('').reduce((a, b) => {
@@ -875,7 +877,7 @@ const TabContentRenderer = React.memo(({
       };
 
       return (
-        <div 
+        <div
           style={rowStyle}
           onMouseEnter={(e) => !isSelected && (e.target.style.background = 'var(--ui-sidebar-hover)')}
           onMouseLeave={(e) => !isSelected && (e.target.style.background = 'transparent')}
@@ -883,7 +885,7 @@ const TabContentRenderer = React.memo(({
         >
           {/* Columna Icono */}
           <div style={{ width: '24px', marginRight: '12px', display: 'flex', justifyContent: 'center' }}>
-            <span style={{ 
+            <span style={{
               fontSize: '16px',
               filter: isSelected ? 'brightness(1.2) saturate(1.3)' : 'none'
             }}>
@@ -892,15 +894,15 @@ const TabContentRenderer = React.memo(({
           </div>
 
           {/* Columna Título */}
-          <div style={{ 
-            flex: '0 0 200px', 
+          <div style={{
+            flex: '0 0 200px',
             marginRight: '12px',
             overflow: 'hidden',
             whiteSpace: 'nowrap'
           }}>
-            <span style={{ 
-              color: 'var(--ui-dialog-text)', 
-              fontSize: '13px', 
+            <span style={{
+              color: 'var(--ui-dialog-text)',
+              fontSize: '13px',
               fontWeight: '500'
             }}>
               {truncateText(password.label, 25)}
@@ -908,14 +910,14 @@ const TabContentRenderer = React.memo(({
           </div>
 
           {/* Columna Usuario */}
-          <div style={{ 
-            flex: '0 0 150px', 
+          <div style={{
+            flex: '0 0 150px',
             marginRight: '12px',
             overflow: 'hidden',
             whiteSpace: 'nowrap'
           }}>
-            <span style={{ 
-              color: 'var(--ui-dialog-text)', 
+            <span style={{
+              color: 'var(--ui-dialog-text)',
               fontSize: '12px',
               fontFamily: 'monospace'
             }}>
@@ -924,16 +926,16 @@ const TabContentRenderer = React.memo(({
           </div>
 
           {/* Columna URL */}
-          <div style={{ 
-            flex: '0 0 180px', 
+          <div style={{
+            flex: '0 0 180px',
             marginRight: '12px',
             overflow: 'hidden',
             whiteSpace: 'nowrap'
           }}>
             {password.url ? (
-              <span 
-                style={{ 
-                  color: 'var(--ui-button-primary)', 
+              <span
+                style={{
+                  color: 'var(--ui-button-primary)',
                   fontSize: '12px',
                   cursor: 'pointer',
                   textDecoration: 'underline'
@@ -951,15 +953,15 @@ const TabContentRenderer = React.memo(({
           </div>
 
           {/* Columna Notas */}
-          <div style={{ 
-            flex: '0 0 150px', 
+          <div style={{
+            flex: '0 0 150px',
             marginRight: '12px',
             overflow: 'hidden',
             whiteSpace: 'nowrap'
           }}>
-            <span style={{ 
+            <span style={{
               color: 'var(--ui-dialog-text)',
-            opacity: 0.7, 
+              opacity: 0.7,
               fontSize: '12px'
             }}>
               {truncateText(password.notes, 20)}
@@ -967,15 +969,15 @@ const TabContentRenderer = React.memo(({
           </div>
 
           {/* Columna Contraseña */}
-          <div style={{ 
-            flex: '0 0 120px', 
+          <div style={{
+            flex: '0 0 120px',
             marginRight: '12px',
             overflow: 'hidden',
             whiteSpace: 'nowrap'
           }}>
             {password.password ? (
-              <span style={{ 
-                color: 'var(--ui-dialog-text)', 
+              <span style={{
+                color: 'var(--ui-dialog-text)',
                 fontSize: '12px',
                 fontFamily: 'monospace'
               }}>
@@ -987,24 +989,24 @@ const TabContentRenderer = React.memo(({
           </div>
 
           {/* Columna Acciones */}
-          <div style={{ 
-            flex: '0 0 60px', 
-            display: 'flex', 
+          <div style={{
+            flex: '0 0 60px',
+            display: 'flex',
             gap: '4px',
             justifyContent: 'flex-end'
           }}>
             {password.username && (
-              <button 
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   copyToClipboard(password.username, 'Usuario');
                 }}
-                style={{ 
-                  padding: '2px 6px', 
-                  borderRadius: 3, 
-                  border: '1px solid var(--ui-content-border)', 
-                  background: 'var(--ui-button-secondary)', 
-                  color: 'var(--ui-button-secondary-text)', 
+                style={{
+                  padding: '2px 6px',
+                  borderRadius: 3,
+                  border: '1px solid var(--ui-content-border)',
+                  background: 'var(--ui-button-secondary)',
+                  color: 'var(--ui-button-secondary-text)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   transition: 'all 0.2s'
@@ -1016,19 +1018,19 @@ const TabContentRenderer = React.memo(({
                 <span className="pi pi-user" style={{ fontSize: '10px' }}></span>
               </button>
             )}
-            
+
             {password.password && (
-              <button 
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   copyToClipboard(password.password, 'Contraseña', password);
                 }}
-                style={{ 
-                  padding: '2px 6px', 
-                  borderRadius: 3, 
-                  border: '1px solid var(--ui-content-border)', 
-                  background: 'var(--ui-button-secondary)', 
-                  color: 'var(--ui-button-secondary-text)', 
+                style={{
+                  padding: '2px 6px',
+                  borderRadius: 3,
+                  border: '1px solid var(--ui-content-border)',
+                  background: 'var(--ui-button-secondary)',
+                  color: 'var(--ui-button-secondary-text)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   transition: 'all 0.2s'
@@ -1069,8 +1071,8 @@ const TabContentRenderer = React.memo(({
     );
 
     return (
-      <div style={{ 
-        padding: '24px', 
+      <div style={{
+        padding: '24px',
         background: 'var(--ui-content-bg)',
         height: '100%',
         overflow: 'auto',
@@ -1080,7 +1082,7 @@ const TabContentRenderer = React.memo(({
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <span className="pi pi-folder-open" style={{ fontSize: '28px', color: 'var(--ui-button-primary)' }}></span>
           <h2 style={{ margin: 0, color: 'var(--ui-dialog-text)', fontSize: '24px' }}>{folderLabel}</h2>
-          <span style={{ 
+          <span style={{
             marginLeft: 'auto',
             padding: '4px 12px',
             borderRadius: 12,
@@ -1093,11 +1095,11 @@ const TabContentRenderer = React.memo(({
             {passwords.length} {passwords.length === 1 ? 'password' : 'passwords'}
           </span>
         </div>
-        
+
         {passwords.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '40px', 
+          <div style={{
+            textAlign: 'center',
+            padding: '40px',
             color: 'var(--ui-dialog-text)',
             opacity: 0.7,
             fontSize: '14px'
@@ -1108,9 +1110,9 @@ const TabContentRenderer = React.memo(({
         ) : (
           <>
             {/* Encabezados de tabla */}
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
               padding: '12px 12px 8px 12px',
               background: 'var(--ui-sidebar-hover)',
               borderBottom: '2px solid var(--ui-content-border)',
@@ -1119,10 +1121,10 @@ const TabContentRenderer = React.memo(({
             }}>
               {/* Columna Icono */}
               <div style={{ width: '24px', marginRight: '12px' }}></div>
-              
+
               {/* Columna Título */}
-              <div style={{ 
-                flex: '0 0 200px', 
+              <div style={{
+                flex: '0 0 200px',
                 marginRight: '12px',
                 color: 'var(--ui-dialog-text)',
                 fontSize: '13px',
@@ -1133,8 +1135,8 @@ const TabContentRenderer = React.memo(({
               </div>
 
               {/* Columna Usuario */}
-              <div style={{ 
-                flex: '0 0 150px', 
+              <div style={{
+                flex: '0 0 150px',
                 marginRight: '12px',
                 color: 'var(--ui-dialog-text)',
                 fontSize: '13px',
@@ -1144,8 +1146,8 @@ const TabContentRenderer = React.memo(({
               </div>
 
               {/* Columna URL */}
-              <div style={{ 
-                flex: '0 0 180px', 
+              <div style={{
+                flex: '0 0 180px',
                 marginRight: '12px',
                 color: 'var(--ui-dialog-text)',
                 fontSize: '13px',
@@ -1155,8 +1157,8 @@ const TabContentRenderer = React.memo(({
               </div>
 
               {/* Columna Notas */}
-              <div style={{ 
-                flex: '0 0 150px', 
+              <div style={{
+                flex: '0 0 150px',
                 marginRight: '12px',
                 color: 'var(--ui-dialog-text)',
                 fontSize: '13px',
@@ -1166,8 +1168,8 @@ const TabContentRenderer = React.memo(({
               </div>
 
               {/* Columna Contraseña */}
-              <div style={{ 
-                flex: '0 0 120px', 
+              <div style={{
+                flex: '0 0 120px',
                 marginRight: '12px',
                 color: 'var(--ui-dialog-text)',
                 fontSize: '13px',
@@ -1177,7 +1179,7 @@ const TabContentRenderer = React.memo(({
               </div>
 
               {/* Columna Acciones */}
-              <div style={{ 
+              <div style={{
                 flex: '0 0 60px',
                 color: 'var(--ui-dialog-text)',
                 fontSize: '13px',
@@ -1188,48 +1190,48 @@ const TabContentRenderer = React.memo(({
               </div>
             </div>
 
-            <div style={{ 
-              flex: 1, 
-              overflow: 'auto', 
+            <div style={{
+              flex: 1,
+              overflow: 'auto',
               marginBottom: '16px',
               background: 'var(--ui-dialog-bg)',
               borderRadius: '0 0 6px 6px'
             }}>
               {currentPasswords.map((password, index) => (
-                <PasswordTableRow 
-                  key={password.key || index} 
-                  password={password} 
+                <PasswordTableRow
+                  key={password.key || index}
+                  password={password}
                   index={index}
                 />
               ))}
             </div>
-            
+
             {/* Paginación */}
             {totalPages > 1 && (
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 gap: '12px',
                 padding: '16px 0',
                 borderTop: '1px solid #333',
                 marginTop: 'auto'
               }}>
-                <PaginationButton 
-                  onClick={() => setCurrentPage(1)} 
+                <PaginationButton
+                  onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
                 >
                   <span className="pi pi-angle-double-left"></span>
                 </PaginationButton>
-                
-                <PaginationButton 
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+
+                <PaginationButton
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
                 >
                   <span className="pi pi-angle-left"></span>
                 </PaginationButton>
-                
-                <div style={{ 
+
+                <div style={{
                   padding: '8px 16px',
                   background: '#2a2a2a',
                   borderRadius: 6,
@@ -1243,16 +1245,16 @@ const TabContentRenderer = React.memo(({
                     ({startIndex + 1}-{Math.min(endIndex, passwords.length)} de {passwords.length})
                   </span>
                 </div>
-                
-                <PaginationButton 
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+
+                <PaginationButton
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
                 >
                   <span className="pi pi-angle-right"></span>
                 </PaginationButton>
-                
-                <PaginationButton 
-                  onClick={() => setCurrentPage(totalPages)} 
+
+                <PaginationButton
+                  onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage === totalPages}
                 >
                   <span className="pi pi-angle-double-right"></span>
@@ -1363,7 +1365,7 @@ const TabContentRenderer = React.memo(({
   // Docker Terminal
   if (tab.type === 'docker') {
     const dockerTheme = themes[localDockerTerminalTheme]?.theme || themes['Default Dark']?.theme;
-    
+
     return (
       <DockerTerminal
         ref={el => terminalRefs.current[tab.key] = el}
@@ -1378,12 +1380,12 @@ const TabContentRenderer = React.memo(({
 
   if (tab.type === 'local-terminal') {
     const terminalType = tab.terminalType || 'powershell';
-    
+
     // PowerShell o terminal genérico
     if (terminalType === 'powershell' || terminalType === 'linux-terminal') {
       // Obtener el tema correcto
       const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
-      
+
       return (
         <PowerShellTerminal
           ref={el => terminalRefs.current[tab.key] = el}
@@ -1394,12 +1396,12 @@ const TabContentRenderer = React.memo(({
         />
       );
     }
-    
+
     // WSL genérico
     if (terminalType === 'wsl') {
       // Obtener el tema correcto
       const linuxTheme = themes[localLinuxTerminalTheme]?.theme || themes['Default Dark']?.theme;
-      
+
       return (
         <WSLTerminal
           ref={el => terminalRefs.current[tab.key] = el}
@@ -1410,12 +1412,12 @@ const TabContentRenderer = React.memo(({
         />
       );
     }
-    
+
     // Ubuntu o distribución WSL con información completa desde tab.distroInfo
     if (terminalType === 'ubuntu' || terminalType === 'wsl-distro') {
       // Obtener el tema correcto
       const linuxTheme = themes[localLinuxTerminalTheme]?.theme || themes['Default Dark']?.theme;
-      
+
       return (
         <UbuntuTerminal
           ref={el => terminalRefs.current[tab.key] = el}
@@ -1442,10 +1444,10 @@ const TabContentRenderer = React.memo(({
         />
       );
     }
-    
+
     // Fallback a PowerShell
     const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
-    
+
     return (
       <PowerShellTerminal
         ref={el => terminalRefs.current[tab.key] = el}
@@ -1474,7 +1476,7 @@ const TabContentRenderer = React.memo(({
               createdAt: Date.now(),
               groupId: null
             };
-            
+
             // Guardar estado del grupo actual antes de cambiar
             if (activeGroupId !== null && setGroupActiveIndices) {
               const currentGroupKey = activeGroupId || 'no-group';
@@ -1483,10 +1485,10 @@ const TabContentRenderer = React.memo(({
                 [currentGroupKey]: activeTabIndex
               }));
             }
-            
+
             // Crear la pestaña y activarla
             setSshTabs(prevTabs => [newTab, ...prevTabs]);
-            
+
             // Activar la nueva pestaña
             if (setLastOpenedTabKey) setLastOpenedTabKey(tabId);
             if (setOnCreateActivateTabKey) setOnCreateActivateTabKey(tabId);
@@ -1520,7 +1522,7 @@ const TabContentRenderer = React.memo(({
               createdAt: Date.now(),
               groupId: null
             };
-            
+
             // Guardar estado del grupo actual antes de cambiar
             if (activeGroupId !== null && setGroupActiveIndices) {
               const currentGroupKey = activeGroupId || 'no-group';
@@ -1529,10 +1531,10 @@ const TabContentRenderer = React.memo(({
                 [currentGroupKey]: activeTabIndex
               }));
             }
-            
+
             // Crear la pestaña y activarla
             setSshTabs(prevTabs => [newTab, ...prevTabs]);
-            
+
             // Activar la nueva pestaña
             if (setLastOpenedTabKey) setLastOpenedTabKey(tabId);
             if (setOnCreateActivateTabKey) setOnCreateActivateTabKey(tabId);
@@ -1620,20 +1622,20 @@ const TabContentRenderer = React.memo(({
   }
 
   // Si llegamos aquí y no es SSH, mostrar error
-  console.error('❌ Tipo de pestaña no soportado:', { 
-    tabKey: tab.key, 
-    type: tab.type, 
+  console.error('❌ Tipo de pestaña no soportado:', {
+    tabKey: tab.key,
+    type: tab.type,
     terminalType: tab.terminalType,
-    fullTab: tab 
+    fullTab: tab
   });
 
   // Mensaje de error para tipos no soportados
   return (
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      height: '100%', 
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100%',
       color: '#fff',
       flexDirection: 'column',
       gap: '10px',
@@ -1648,7 +1650,7 @@ const TabContentRenderer = React.memo(({
         terminalType: <code>{tab.terminalType || 'undefined'}</code>
       </div>
       <div style={{ fontSize: '12px', opacity: 0.5, marginTop: '20px' }}>
-        Esta pestaña fue creada con una estructura antigua.<br/>
+        Esta pestaña fue creada con una estructura antigua.<br />
         Cierra esta pestaña y crea una nueva.
       </div>
     </div>
