@@ -65,7 +65,7 @@ function toSerializable(connection) {
   if (type === 'sftp' || type === 'ftp' || type === 'scp') {
     type = connection.type;
   }
-  
+
   // Si es un grupo, usar estructura especial
   if (type === 'group') {
     return {
@@ -78,7 +78,7 @@ function toSerializable(connection) {
       lastConnected: connection.lastConnected ? new Date(connection.lastConnected).toISOString() : new Date().toISOString()
     };
   }
-  
+
   // Si es un secreto (password, wallet, api_key, etc.), usar estructura especial
   if (['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'].includes(type)) {
     return {
@@ -95,12 +95,12 @@ function toSerializable(connection) {
       lastAccessed: connection.lastAccessed || new Date().toISOString()
     };
   }
-  
+
   const host = connection.hostname || connection.host || '';
   const username = connection.username || connection.user || '';
   const port = normalizePort(type, connection.port);
   const id = connection.id || buildId({ type, host, username, port });
-  
+
   return {
     id,
     type,
@@ -270,13 +270,13 @@ export function addGroupToFavorites(group) {
     type: 'group'
   });
   const list = getFavorites();
-  
+
   // Buscar por ID del grupo original o por nombre si no hay ID
-  const idx = list.findIndex(f => 
-    (f.type === 'group' && f.id === groupSerial.id) || 
+  const idx = list.findIndex(f =>
+    (f.type === 'group' && f.id === groupSerial.id) ||
     (f.type === 'group' && f.name === groupSerial.name)
   );
-  
+
   if (idx >= 0) {
     // Actualizar el grupo existente
     list[idx] = groupSerial;
@@ -289,7 +289,7 @@ export function addGroupToFavorites(group) {
 }
 
 export function removeGroupFromFavorites(groupId, groupName = null) {
-  const list = getFavorites().filter(f => 
+  const list = getFavorites().filter(f =>
     !(f.type === 'group' && (f.id === groupId || (groupName && f.name === groupName)))
   );
   saveList(FAVORITES_KEY, list);
@@ -297,8 +297,8 @@ export function removeGroupFromFavorites(groupId, groupName = null) {
 }
 
 export function isGroupFavorite(groupId, groupName = null) {
-  return getFavorites().some(f => 
-    f.type === 'group' && 
+  return getFavorites().some(f =>
+    f.type === 'group' &&
     (f.id === groupId || (groupName && f.name === groupName))
   );
 }
@@ -311,20 +311,20 @@ export function isGroupFavorite(groupId, groupName = null) {
  */
 export function updateFavoriteOnEdit(oldConnection, newConnection) {
   if (!oldConnection || !newConnection) return;
-  
+
   const oldSerial = toSerializable(oldConnection);
   const newSerial = toSerializable(newConnection);
   const oldId = oldSerial.id;
   const newId = newSerial.id;
-  
+
   const list = getFavorites();
   const oldIdx = list.findIndex(f => f.id === oldId);
-  
+
   // Si el ID cambió (por ejemplo, cambió el tipo), remover el viejo
   if (oldId !== newId && oldIdx >= 0) {
     list.splice(oldIdx, 1);
   }
-  
+
   // Si el favorito existía (con ID viejo o nuevo), actualizarlo
   const newIdx = list.findIndex(f => f.id === newId);
   if (newIdx >= 0) {
@@ -335,7 +335,7 @@ export function updateFavoriteOnEdit(oldConnection, newConnection) {
     list.unshift(newSerial);
   }
   // Si no estaba en favoritos, no hacer nada
-  
+
   saveList(FAVORITES_KEY, list);
   return list;
 }
@@ -386,20 +386,20 @@ export function recordRecentPassword(passwordData, limit = 5) {
     lastConnected: new Date().toISOString(), // Para sincronizar con recientes generales
     icon: passwordData.icon || 'pi-key'
   };
-  
+
   console.log('🔐 [recordRecentPassword] Registrando secreto:', passwordRecord.type, passwordRecord.name);
-  
+
   // Guardar en RECENT_PASSWORDS_KEY (para compatibilidad con código existente)
   const list = loadList(RECENT_PASSWORDS_KEY);
   const filtered = list.filter(item => item.id !== passwordRecord.id);
   const updated = [passwordRecord, ...filtered];
   const trimmed = updated.slice(0, Math.max(1, limit));
   saveList(RECENT_PASSWORDS_KEY, trimmed);
-  
+
   // TAMBIÉN guardar en RECENTS_KEY para que aparezca en la lista unificada de recientes
   console.log('🔐 [recordRecentPassword] Registrando en lista unificada de recientes');
   recordRecent(passwordRecord, DEFAULT_RECENTS_LIMIT);
-  
+
   return trimmed;
 }
 
@@ -420,6 +420,11 @@ export function removeFavorite(idOrConn) {
   const list = getFavorites().filter(f => f.id !== id);
   saveList(FAVORITES_KEY, list);
   return list;
+}
+
+export function reorderFavorites(newOrderList) {
+  saveList(FAVORITES_KEY, newOrderList);
+  return newOrderList;
 }
 
 export function onUpdate(handler) {
