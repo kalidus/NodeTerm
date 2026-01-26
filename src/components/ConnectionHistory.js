@@ -603,13 +603,7 @@ const ConnectionHistory = ({
 		if (connections.length === 0) {
 			return (
 				<div className="connection-list-container">
-					<div className="connection-list-header">
-						<div className="connection-list-header-cell"><i className="pi pi-tag" style={{ fontSize: '0.7rem', opacity: 0.8 }} />{title}</div>
-						<div className="connection-list-header-cell"><i className="pi pi-server" style={{ fontSize: '0.7rem', opacity: 0.8 }} />Host</div>
-						<div className="connection-list-header-cell"><i className="pi pi-shield" style={{ fontSize: '0.7rem', opacity: 0.8 }} />Protocolo</div>
-						<div className="connection-list-header-cell"><i className="pi pi-history" style={{ fontSize: '0.7rem', opacity: 0.8 }} />Uso</div>
-						<div className="connection-list-header-cell" style={{ textAlign: 'right' }}><i className="pi pi-cog" style={{ fontSize: '0.7rem', opacity: 0.8 }} />Acciones</div>
-					</div>
+
 					<div className="ribbon-empty" style={{
 						marginTop: '0.5rem',
 						height: 'auto',
@@ -629,13 +623,7 @@ const ConnectionHistory = ({
 
 		return (
 			<div className="connection-list-container">
-				<div className="connection-list-header">
-					<div className="connection-list-header-cell"><i className="pi pi-tag" style={{ fontSize: '0.7rem', opacity: 0.8 }} />{title}</div>
-					<div className="connection-list-header-cell"><i className="pi pi-server" style={{ fontSize: '0.7rem', opacity: 0.8 }} />Host</div>
-					<div className="connection-list-header-cell"><i className="pi pi-shield" style={{ fontSize: '0.7rem', opacity: 0.8 }} />Protocolo</div>
-					<div className="connection-list-header-cell"><i className="pi pi-history" style={{ fontSize: '0.7rem', opacity: 0.8 }} />Uso</div>
-					<div className="connection-list-header-cell" style={{ textAlign: 'right' }}><i className="pi pi-cog" style={{ fontSize: '0.7rem', opacity: 0.8 }} />Acciones</div>
-				</div>
+
 				<div className="connection-list-body">
 					{connections.map((c) => (
 						<ConnectionRow
@@ -693,6 +681,7 @@ const ConnectionHistory = ({
 					</div>
 					<div className="modern-header-line"></div>
 				</div>
+
 				<ConnectionTable
 					connections={filteredRecents}
 					title="Nombre"
