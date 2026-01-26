@@ -274,13 +274,15 @@ const ConnectionHistory = ({
 	};
 
 	// Componente interno para las tarjetas del Carrusel
-	const RibbonCard = ({ connection, onConnect, onEdit, onToggleFav }) => {
+	const RibbonCard = ({ connection, onConnect, onEdit, onToggleFav, onDragStart, onDragOver, onDrop }) => {
 		const typeColor = getConnectionTypeColor(connection.type);
 		const protocolLabel = getProtocolLabel(connection.type);
 		const hostLabel = connection.host || connection.hostname || '—';
 
 		const handleStar = (e) => {
 			e.stopPropagation();
+			e.preventDefault(); // Asegurar que no propage
+			console.log('Toggle Fav clicked for:', connection.name);
 			onToggleFav(connection);
 		};
 
@@ -290,12 +292,18 @@ const ConnectionHistory = ({
 				onClick={() => onConnect?.(connection)}
 				style={{ '--card-accent': typeColor }}
 				title={`${connection.name} (${hostLabel})`}
+				draggable
+				onDragStart={(e) => onDragStart(e, connection)}
+				onDragOver={(e) => onDragOver(e)}
+				onDrop={(e) => onDrop(e, connection)}
 			>
-				{/* Pin Button */}
+				{/* Pin Button - Z-index alto para asegurar click */}
 				<div
 					className="ribbon-card__pin"
 					onClick={handleStar}
+					onMouseDown={(e) => e.stopPropagation()}
 					title="Quitar de favoritos"
+					style={{ zIndex: 20 }}
 				>
 					<i className="pi pi-star-fill" style={{ fontSize: '0.7rem' }} />
 				</div>
@@ -339,14 +347,15 @@ const ConnectionHistory = ({
 		);
 	};
 
-	const FavoritesRibbon = ({ connections }) => {
+	const FavoritesRibbon = ({ connections, fullList, onReorder }) => {
 		const trackRef = useRef(null);
+		const [draggedItem, setDraggedItem] = useState(null);
 
 		if (!connections || connections.length === 0) return null;
 
 		const scroll = (direction) => {
 			if (trackRef.current) {
-				const scrollAmount = 300; // Desplazamiento aproximado de 2 tarjetas
+				const scrollAmount = 300;
 				trackRef.current.scrollBy({
 					left: direction === 'left' ? -scrollAmount : scrollAmount,
 					behavior: 'smooth'
@@ -354,11 +363,51 @@ const ConnectionHistory = ({
 			}
 		};
 
+		const handleDragStart = (e, item) => {
+			setDraggedItem(item);
+			e.dataTransfer.effectAllowed = 'move';
+			e.dataTransfer.setData('text/plain', item.id); // Firefox fix
+		};
+
+		const handleDragOver = (e) => {
+			e.preventDefault();
+			e.dataTransfer.dropEffect = 'move';
+		};
+
+		const handleDrop = (e, targetItem) => {
+			e.preventDefault();
+			if (!draggedItem || draggedItem.id === targetItem.id) return;
+
+			// Usar la lista completa para el reordenamiento real
+			// Si no se pasó fullList, usar connections (por si acaso)
+			const sourceList = fullList || connections;
+			const newList = [...sourceList];
+
+			const draggedIdx = newList.findIndex(i => i.id === draggedItem.id);
+			const targetIdx = newList.findIndex(i => i.id === targetItem.id);
+
+			if (draggedIdx >= 0 && targetIdx >= 0) {
+				// Mover
+				newList.splice(draggedIdx, 1);
+				newList.splice(targetIdx, 0, draggedItem);
+
+				// Llamar al handler externo
+				if (onReorder) {
+					onReorder(newList);
+				} else {
+					// Fallback local (no debería usarse si se implementa bien arriba)
+					reorderFavorites(newList);
+					loadConnectionHistory();
+				}
+			}
+			setDraggedItem(null);
+		};
+
 		return (
 			<div className="favorites-ribbon-section">
 				<div className="favorites-ribbon-header">
 					<i className="pi pi-star-fill" style={{ color: '#FFD700' }} />
-					<span>FAVORITOS</span>
+					<span>FAVORITOS (Arrastrar para ordenar)</span>
 				</div>
 
 				{/* Navigation Buttons */}
@@ -385,6 +434,9 @@ const ConnectionHistory = ({
 							onConnect={onConnectToHistory}
 							onEdit={onEdit}
 							onToggleFav={(conn) => { toggleFavorite(conn); loadConnectionHistory(); }}
+							onDragStart={handleDragStart}
+							onDragOver={handleDragOver}
+							onDrop={handleDrop}
 						/>
 					))}
 				</div>
@@ -592,7 +644,17 @@ const ConnectionHistory = ({
 
 			{/* FAVORITES RIBBON (Visible if there are items and filter allows it) */}
 			{filteredPinned.length > 0 && (
-				<FavoritesRibbon connections={filteredPinned} />
+				<FavoritesRibbon
+					connections={filteredPinned}
+					fullList={favoriteConnections}
+					onReorder={(newList) => {
+						// Optimistic update
+						setFavoriteConnections(newList);
+						reorderFavorites(newList);
+						// loadConnectionHistory() no necesario si actualizamos el state aquí, 
+						// pero mal no hace para asegurar consistencia
+					}}
+				/>
 			)}
 
 			{/* RECIENTES TABLE (Fills remaining space) */}
