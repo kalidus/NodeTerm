@@ -258,10 +258,7 @@ const ConnectionHistory = ({
 		return items.filter(c => c.type === filter);
 	};
 
-	const handleFilterChange = (key) => {
-		setTypeFilter(key);
-		localStorage.setItem('nodeterm_fav_type', key);
-	};
+
 
 	const filteredPinned = applyTypeFilter(favoriteConnections, typeFilter);
 	const filteredRecents = applyTypeFilter(recentConnections, typeFilter);
@@ -271,7 +268,138 @@ const ConnectionHistory = ({
 		return `${c.type}:${c.host || ''}:${c.username || ''}:${c.port || ''}`;
 	};
 
-	// ... (helper functions keep existing)
+	const handleFilterChange = (key) => {
+		setTypeFilter(key);
+		localStorage.setItem('nodeterm_fav_type', key);
+	};
+
+	// Componente interno para las tarjetas del Carrusel
+	const RibbonCard = ({ connection, onConnect, onEdit, onToggleFav }) => {
+		const typeColor = getConnectionTypeColor(connection.type);
+		const protocolLabel = getProtocolLabel(connection.type);
+		const hostLabel = connection.host || connection.hostname || '—';
+
+		const handleStar = (e) => {
+			e.stopPropagation();
+			onToggleFav(connection);
+		};
+
+		return (
+			<div
+				className="ribbon-card"
+				onClick={() => onConnect?.(connection)}
+				style={{ '--card-accent': typeColor }}
+				title={`${connection.name} (${hostLabel})`}
+			>
+				{/* Pin Button */}
+				<div
+					className="ribbon-card__pin"
+					onClick={handleStar}
+					title="Quitar de favoritos"
+				>
+					<i className="pi pi-star-fill" style={{ fontSize: '0.7rem' }} />
+				</div>
+
+				{/* Protocol Badge */}
+				<div className="ribbon-card__badge" style={{ borderColor: typeColor, color: typeColor }}>
+					{protocolLabel}
+				</div>
+
+				{/* Icon */}
+				<div className="ribbon-card__icon">
+					{(() => {
+						let customIcon = connection.customIcon;
+						if ((!customIcon || customIcon === 'default') && sidebarNodes) {
+							const matchingNode = findNodeInTree(sidebarNodes, connection);
+							if (matchingNode && matchingNode.data?.customIcon) {
+								customIcon = matchingNode.data.customIcon;
+							}
+						}
+						// Si es un preset SVG
+						if (customIcon && customIcon !== 'default' && SSHIconPresets[customIcon.toUpperCase()]) {
+							const preset = SSHIconPresets[customIcon.toUpperCase()];
+							return <SSHIconRenderer preset={preset} pixelSize={48} />;
+						}
+						// Si es un SVG del tema de iconos
+						const svg = getConnectionTypeIconSVG(connection.type, customIcon);
+						if (svg) {
+							return React.cloneElement(svg, { width: 48, height: 48, style: { width: 48, height: 48 } });
+						}
+						// Fallback a icono de fuente
+						return <i className={getConnectionTypeIcon(connection.type)} aria-hidden="true" />;
+					})()}
+				</div>
+
+				{/* Content */}
+				<div className="ribbon-card__content">
+					<div className="ribbon-card__name">{connection.name}</div>
+					<div className="ribbon-card__host">{hostLabel}</div>
+				</div>
+			</div>
+		);
+	};
+
+	const FavoritesRibbon = ({ connections }) => {
+		const trackRef = useRef(null);
+
+		if (!connections || connections.length === 0) return null;
+
+		const scroll = (direction) => {
+			if (trackRef.current) {
+				const scrollAmount = 300; // Desplazamiento aproximado de 2 tarjetas
+				trackRef.current.scrollBy({
+					left: direction === 'left' ? -scrollAmount : scrollAmount,
+					behavior: 'smooth'
+				});
+			}
+		};
+
+		return (
+			<div className="favorites-ribbon-section">
+				<div className="favorites-ribbon-header">
+					<i className="pi pi-star-fill" style={{ color: '#FFD700' }} />
+					<span>FAVORITOS</span>
+				</div>
+
+				{/* Navigation Buttons */}
+				<button
+					className="ribbon-nav-btn prev"
+					onClick={() => scroll('left')}
+					aria-label="Anterior"
+				>
+					<i className="pi pi-chevron-left" />
+				</button>
+				<button
+					className="ribbon-nav-btn next"
+					onClick={() => scroll('right')}
+					aria-label="Siguiente"
+				>
+					<i className="pi pi-chevron-right" />
+				</button>
+
+				<div className="favorites-ribbon-track" ref={trackRef}>
+					{connections.map(c => (
+						<RibbonCard
+							key={c.id}
+							connection={c}
+							onConnect={onConnectToHistory}
+							onEdit={onEdit}
+							onToggleFav={(conn) => { toggleFavorite(conn); loadConnectionHistory(); }}
+						/>
+					))}
+				</div>
+			</div>
+		);
+	};
+
+	const filterTabs = [
+		{ key: 'all', label: 'Todas' },
+		{ key: 'ssh', label: 'SSH' },
+		{ key: 'rdp-guacamole', label: 'RDP' },
+		{ key: 'vnc-guacamole', label: 'VNC' },
+		{ key: 'sftp', label: 'SFTP' },
+		{ key: 'secret', label: 'Secretos' },
+	];
 
 	const ConnectionRow = ({ connection, isPinned, isActive, onConnect, onEdit, onToggleFav }) => {
 		const typeColor = getConnectionTypeColor(connection.type);
@@ -441,19 +569,10 @@ const ConnectionHistory = ({
 		);
 	};
 
-	const filterTabs = [
-		{ key: 'all', label: 'Todas' },
-		{ key: 'ssh', label: 'SSH' },
-		{ key: 'rdp-guacamole', label: 'RDP' },
-		{ key: 'vnc-guacamole', label: 'VNC' },
-		{ key: 'sftp', label: 'SFTP' },
-		{ key: 'secret', label: 'Secretos' },
-	];
-
 	return (
 		<div className="connection-history-root" ref={scrollRef}>
 			{/* Filters */}
-			<div className="connection-history-filters">
+			<div className="connection-history-filters" style={{ marginBottom: '1rem' }}>
 				{filterTabs.map(({ key, label }) => (
 					<button
 						key={key}
@@ -471,21 +590,17 @@ const ConnectionHistory = ({
 				))}
 			</div>
 
-			{/* RECIENTES TABLE */}
-			<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginBottom: '0.5rem' }}>
+			{/* FAVORITES RIBBON (Visible if there are items and filter allows it) */}
+			{filteredPinned.length > 0 && (
+				<FavoritesRibbon connections={filteredPinned} />
+			)}
+
+			{/* RECIENTES TABLE (Fills remaining space) */}
+			<section className="connection-history-section" style={{ flex: 1, minHeight: 0 }}>
 				<ConnectionTable
 					connections={filteredRecents}
 					title="RECIENTES"
 					emptyMessage="No hay sesiones recientes"
-				/>
-			</section>
-
-			{/* PINNED TABLE */}
-			<section className="connection-history-section" style={{ flex: 1, minHeight: 0 }}>
-				<ConnectionTable
-					connections={filteredPinned}
-					title="FAVORITOS (PINNED)"
-					emptyMessage="No hay favoritos guardados"
 				/>
 			</section>
 		</div>
