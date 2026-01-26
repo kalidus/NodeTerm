@@ -277,7 +277,8 @@ const ConnectionHistory = ({
 	const RibbonCard = ({ connection, onConnect, onEdit, onToggleFav, onDragStart, onDragOver, onDrop, index }) => {
 		const typeColor = getConnectionTypeColor(connection.type);
 		const hostLabel = connection.host || connection.hostname || '—';
-		const timeStr = formatRelativeTime(connection.lastConnected);
+		const protocolLabel = getProtocolLabel(connection.type);
+		// const timeStr = formatRelativeTime(connection.lastConnected);
 
 		// Map index to a gradient class
 		const gradientClass = `icon-gradient-${(index % 5) + 1}`;
@@ -290,7 +291,7 @@ const ConnectionHistory = ({
 
 		return (
 			<div
-				className="ribbon-card"
+				className="ribbon-card apple-card"
 				onClick={() => onConnect?.(connection)}
 				style={{ '--card-accent': typeColor }}
 				title={`${connection.name} (${hostLabel})`}
@@ -299,6 +300,9 @@ const ConnectionHistory = ({
 				onDragOver={(e) => onDragOver(e)}
 				onDrop={(e) => onDrop(e, connection)}
 			>
+				{/* Status Dot */}
+				<div className="ribbon-card__status-dot" title="Ready"></div>
+
 				{/* Pin Button */}
 				<div
 					className="ribbon-card__pin"
@@ -306,7 +310,7 @@ const ConnectionHistory = ({
 					onMouseDown={(e) => e.stopPropagation()}
 					title="Quitar de favoritos"
 				>
-					<i className="pi pi-star-fill" style={{ fontSize: '0.7rem' }} />
+					<i className="pi pi-star-fill" style={{ fontSize: '0.8rem' }} />
 				</div>
 
 				{/* Icon with Gradient Background */}
@@ -331,12 +335,17 @@ const ConnectionHistory = ({
 							return <i className={getConnectionTypeIcon(connection.type)} aria-hidden="true" />;
 						})()}
 					</div>
+
+					{/* Protocol Badge (Integrated) */}
+					<div className="ribbon-card__protocol-badge">
+						{protocolLabel}
+					</div>
 				</div>
 
 				{/* Content */}
 				<div className="ribbon-card__content">
-					<div className="ribbon-card__name">{connection.name?.toUpperCase()}</div>
-					<div className="ribbon-card__time">{timeStr}</div>
+					<div className="ribbon-card__name" title={connection.name}>{connection.name}</div>
+					<div className="ribbon-card__host" title={hostLabel}>{hostLabel}</div>
 				</div>
 			</div>
 		);
