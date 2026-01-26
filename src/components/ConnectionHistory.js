@@ -274,11 +274,11 @@ const ConnectionHistory = ({
 	};
 
 	// Componente interno para las tarjetas del Carrusel
-	const RibbonCard = ({ connection, onConnect, onEdit, onToggleFav, onDragStart, onDragOver, onDrop, index }) => {
+	const RibbonCard = ({ connection, isActive, onConnect, onEdit, onToggleFav, onDragStart, onDragOver, onDrop, index }) => {
 		const typeColor = getConnectionTypeColor(connection.type);
 		const hostLabel = connection.host || connection.hostname || '—';
 		const protocolLabel = getProtocolLabel(connection.type);
-		// const timeStr = formatRelativeTime(connection.lastConnected);
+		const timeStr = formatRelativeTime(connection.lastConnected);
 
 		// Map index to a gradient class
 		const gradientClass = `icon-gradient-${(index % 5) + 1}`;
@@ -300,8 +300,18 @@ const ConnectionHistory = ({
 				onDragOver={(e) => onDragOver(e)}
 				onDrop={(e) => onDrop(e, connection)}
 			>
-				{/* Status Dot */}
-				<div className="ribbon-card__status-dot" title="Ready"></div>
+				{/* Edit Button (visible on hover) */}
+				<div
+					className="ribbon-card__edit"
+					onClick={(e) => {
+						e.stopPropagation();
+						onEdit?.(connection);
+					}}
+					onMouseDown={(e) => e.stopPropagation()}
+					title="Editar conexión"
+				>
+					<i className="pi pi-pencil" style={{ fontSize: '0.8rem' }} />
+				</div>
 
 				{/* Pin Button */}
 				<div
@@ -346,6 +356,10 @@ const ConnectionHistory = ({
 				<div className="ribbon-card__content">
 					<div className="ribbon-card__name" title={connection.name}>{connection.name}</div>
 					<div className="ribbon-card__host" title={hostLabel}>{hostLabel}</div>
+					<div className="ribbon-card__time">
+						<span className={`ribbon-card__status-dot ${isActive ? 'is-active' : ''}`} title={isActive ? "Sesión activa" : "Desconectado"} />
+						{timeStr}
+					</div>
 				</div>
 			</div>
 		);
@@ -477,6 +491,7 @@ const ConnectionHistory = ({
 									key={c.id}
 									connection={c}
 									index={idx}
+									isActive={activeIds.has(activeKey(c))}
 									onConnect={onConnectToHistory}
 									onEdit={onEdit}
 									onToggleFav={(conn) => { toggleFavorite(conn); loadConnectionHistory(); }}

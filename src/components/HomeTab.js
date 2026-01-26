@@ -34,6 +34,7 @@ const HomeTab = ({
   onLoadGroup,
   sidebarNodes = null,
   setShowCreateGroupDialog,
+  activeIds = new Set(),
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal'); // Estado normal para tamaño correcto
@@ -88,7 +89,7 @@ const HomeTab = ({
       return null;
     }
   });
-  
+
   const versionInfo = getVersionInfo();
   const tabbedTerminalRef = useRef();
 
@@ -110,10 +111,10 @@ const HomeTab = ({
       // Forzar re-render cuando cambia el tema de iconos
       setIconThemeKey(prev => prev + 1);
     };
-    
+
     window.addEventListener('storage', handleIconThemeChange);
     window.addEventListener('icon-theme-changed', handleIconThemeChange);
-    
+
     return () => {
       window.removeEventListener('storage', handleIconThemeChange);
       window.removeEventListener('icon-theme-changed', handleIconThemeChange);
@@ -129,9 +130,9 @@ const HomeTab = ({
         const parsedSize = newSize ? parseInt(newSize, 10) : null;
         setHomeTabFont(newFont);
         setHomeTabFontSize(parsedSize);
-      } catch {}
+      } catch { }
     };
-    
+
     // Escuchar evento personalizado y cambios en localStorage
     window.addEventListener('home-tab-font-changed', handleHomeTabFontChange);
     window.addEventListener('sidebar-font-changed', handleHomeTabFontChange);
@@ -140,7 +141,7 @@ const HomeTab = ({
         handleHomeTabFontChange();
       }
     });
-    
+
     return () => {
       window.removeEventListener('home-tab-font-changed', handleHomeTabFontChange);
       window.removeEventListener('sidebar-font-changed', handleHomeTabFontChange);
@@ -161,7 +162,7 @@ const HomeTab = ({
 
     window.addEventListener('home-tab-local-terminal-visibility-changed', handleTerminalVisibilityChange);
     window.addEventListener('storage', handleTerminalVisibilityChange);
-    
+
     return () => {
       window.removeEventListener('home-tab-local-terminal-visibility-changed', handleTerminalVisibilityChange);
       window.removeEventListener('storage', handleTerminalVisibilityChange);
@@ -233,7 +234,7 @@ const HomeTab = ({
   const getPasswordTypeIcon = (type) => {
     // Si no hay tipo definido, intentar inferirlo del nombre o usar icono por defecto
     if (!type) return 'pi pi-key';
-    
+
     switch (type.toLowerCase()) {
       case 'web':
       case 'website':
@@ -279,7 +280,7 @@ const HomeTab = ({
   const getPasswordTypeColor = (type) => {
     // Si no hay tipo definido, usar color por defecto
     if (!type) return '#9E9E9E';
-    
+
     switch (type.toLowerCase()) {
       case 'web':
       case 'website':
@@ -329,14 +330,14 @@ const HomeTab = ({
       } else {
         await navigator.clipboard.writeText(text);
       }
-      
+
       // Mostrar notificación si está disponible
       if (window.toast?.current?.show) {
-        window.toast.current.show({ 
-          severity: 'success', 
-          summary: 'Copiado', 
-          detail: `${fieldName} copiado al portapapeles`, 
-          life: 1500 
+        window.toast.current.show({
+          severity: 'success',
+          summary: 'Copiado',
+          detail: `${fieldName} copiado al portapapeles`,
+          life: 1500
         });
       }
     } catch (err) {
@@ -362,7 +363,7 @@ const HomeTab = ({
           }
         }
       });
-      
+
       // Dispatch del evento
       window.dispatchEvent(event);
     } catch (err) {
@@ -374,7 +375,7 @@ const HomeTab = ({
   const currentTheme = React.useMemo(() => {
     return themeManager.getCurrentTheme() || uiThemes['Light'];
   }, [themeVersion]);
-  
+
   const dashboardBg = React.useMemo(() => {
     return currentTheme.colors?.contentBackground || '#fafafa';
   }, [currentTheme]);
@@ -383,7 +384,7 @@ const HomeTab = ({
   const themeColors = React.useMemo(() => {
     // Special handling for Nord theme to ensure visible hover effects
     const isNordTheme = currentTheme.name === 'Nord';
-    
+
     return {
       textPrimary: currentTheme.colors?.sidebarText || currentTheme.colors?.tabText || '#ffffff',
       textSecondary: currentTheme.colors?.sidebarText || '#9E9E9E',
@@ -395,7 +396,7 @@ const HomeTab = ({
       primaryColor: currentTheme.colors?.buttonPrimary || currentTheme.colors?.primaryColor || '#2196f3'
     };
   }, [currentTheme]);
-  
+
   const localTerminalBg = React.useMemo(() => {
     return themes[localLinuxTerminalTheme]?.theme?.background || themes[localPowerShellTheme]?.theme?.background || '#222';
   }, [localLinuxTerminalTheme, localPowerShellTheme]);
@@ -466,7 +467,7 @@ const HomeTab = ({
     // Cuando el usuario redimensiona, necesitamos obtener el nuevo tamaño del SplitLayout
     // Esto se manejará a través del callback de redimensionamiento
   };
-  
+
   // Callback para cuando el usuario redimensiona manualmente
   const handlePaneSizeChange = (newSize) => {
     // Permitir guardar cualquier tamaño, incluso si es el 100% de la altura
@@ -487,12 +488,12 @@ const HomeTab = ({
   // Función para toggle de visibilidad del terminal
   const handleToggleTerminalVisibility = async () => {
     if (isTerminalTransitioning) return; // Evitar múltiples clicks
-    
+
     setIsTerminalTransitioning(true);
-    
+
     // Pequeña transición antes del cambio
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     setTerminalHidden(prev => {
       const newHidden = !prev;
       // Si se está mostrando el terminal, cambiar el estado a 'normal' (1/4 de página)
@@ -501,7 +502,7 @@ const HomeTab = ({
       }
       return newHidden;
     });
-    
+
     // Transición más larga para estabilizar
     await new Promise(resolve => setTimeout(resolve, 600));
     setIsTerminalTransitioning(false);
@@ -531,7 +532,7 @@ const HomeTab = ({
       const next = !prev;
       try {
         localStorage.setItem(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_COLLAPSED, next.toString());
-      } catch (e) {}
+      } catch (e) { }
       return next;
     });
   };
@@ -640,175 +641,175 @@ const HomeTab = ({
           }
         `}
       </style>
-    <div style={{
-      height: '100%',
-      overflow: 'hidden',
-      background: dashboardBg,
-      display: 'flex',
-      flexDirection: 'column',
-      opacity: terminalState === 'maximized' ? 0 : 1,
-      visibility: terminalState === 'maximized' ? 'hidden' : 'visible',
-      transition: 'opacity 0.1s ease, visibility 0.1s ease'
-    }}>
-      <div className="home-page-scroll" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {/* Layout principal: área central + columna derecha */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'row',
-          flex: 1,
-          minHeight: 0,
-          overflow: 'hidden',
-          height: '100%'
-        }}>
-          {/* Área central (Chat IA o Favoritos+Recientes) */}
-          <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          {/* Mostrar Chat de IA o contenido normal */}
-          {showAIChat ? (
-            // Panel de Chat de IA
-            <div style={{
-              flex: 1,
-              padding: '1rem',
-              display: 'flex',
-              flexDirection: 'column',
-              height: '100%',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                flex: 1,
-                background: `linear-gradient(135deg,
-                  rgba(16, 20, 28, 0.6) 0%,
-                  rgba(16, 20, 28, 0.4) 100%)`,
-                backdropFilter: 'blur(8px) saturate(140%)',
-                WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-                border: `1px solid ${themeColors.cardBorder}`,
-                borderRadius: '12px',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-                overflow: 'hidden'
-              }}>
-                <AIChatWithHistory />
-              </div>
-            </div>
-          ) : (
-            // Contenido normal de la página de inicio (Favoritos + Recientes)
-            <>
-          {/* Columna central: Favoritos y Recientes */}
+      <div style={{
+        height: '100%',
+        overflow: 'hidden',
+        background: dashboardBg,
+        display: 'flex',
+        flexDirection: 'column',
+        opacity: terminalState === 'maximized' ? 0 : 1,
+        visibility: terminalState === 'maximized' ? 'hidden' : 'visible',
+        transition: 'opacity 0.1s ease, visibility 0.1s ease'
+      }}>
+        <div className="home-page-scroll" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Layout principal: área central + columna derecha */}
           <div style={{
-            flex: 1,
-            padding: '1rem',
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: 'row',
+            flex: 1,
             minHeight: 0,
             overflow: 'hidden',
             height: '100%'
           }}>
-            {/* PINNED + RECIENTES en una sola columna (estilo imagen) */}
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              flex: 1,
-              minHeight: 0,
-              overflow: 'hidden',
-              position: 'relative',
-              padding: '0.5rem 1rem'
-            }}>
-              <ConnectionHistory
-                onConnectToHistory={handleConnectToHistory}
-                recentConnections={recentConnections}
-                activeIds={new Set()}
-                onEdit={onEditConnection}
-                themeColors={themeColors}
-                sidebarNodes={sidebarNodes}
-              />
-              {isTerminalTransitioning && (
+            {/* Área central (Chat IA o Favoritos+Recientes) */}
+            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              {/* Mostrar Chat de IA o contenido normal */}
+              {showAIChat ? (
+                // Panel de Chat de IA
                 <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: 'rgba(0, 0, 0, 0.6)',
-                  backdropFilter: 'blur(4px)',
+                  flex: 1,
+                  padding: '1rem',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '12px',
-                  zIndex: 10
+                  flexDirection: 'column',
+                  height: '100%',
+                  overflow: 'hidden'
                 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', color: 'white' }}>
-                    <div style={{ width: 32, height: 32, border: '3px solid rgba(255,255,255,0.3)', borderTop: '3px solid #00BCD4', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                    <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>Actualizando terminal...</div>
+                  <div style={{
+                    flex: 1,
+                    background: `linear-gradient(135deg,
+                  rgba(16, 20, 28, 0.6) 0%,
+                  rgba(16, 20, 28, 0.4) 100%)`,
+                    backdropFilter: 'blur(8px) saturate(140%)',
+                    WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+                    border: `1px solid ${themeColors.cardBorder}`,
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+                    overflow: 'hidden'
+                  }}>
+                    <AIChatWithHistory />
                   </div>
                 </div>
+              ) : (
+                // Contenido normal de la página de inicio (Favoritos + Recientes)
+                <>
+                  {/* Columna central: Favoritos y Recientes */}
+                  <div style={{
+                    flex: 1,
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: 0,
+                    overflow: 'hidden',
+                    height: '100%'
+                  }}>
+                    {/* PINNED + RECIENTES en una sola columna (estilo imagen) */}
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      flex: 1,
+                      minHeight: 0,
+                      overflow: 'hidden',
+                      position: 'relative',
+                      padding: '0.5rem 1rem'
+                    }}>
+                      <ConnectionHistory
+                        onConnectToHistory={handleConnectToHistory}
+                        recentConnections={recentConnections}
+                        activeIds={activeIds}
+                        onEdit={onEditConnection}
+                        themeColors={themeColors}
+                        sidebarNodes={sidebarNodes}
+                      />
+                      {isTerminalTransitioning && (
+                        <div style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: 'rgba(0, 0, 0, 0.6)',
+                          backdropFilter: 'blur(4px)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '12px',
+                          zIndex: 10
+                        }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', color: 'white' }}>
+                            <div style={{ width: 32, height: 32, border: '3px solid rgba(255,255,255,0.3)', borderTop: '3px solid #00BCD4', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                            <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>Actualizando terminal...</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
-          </div>
-          </>
-          )}
-          </div>
-          {rightColumnCollapsed ? (
-            <div
-              style={{
-                width: '40px',
-                minWidth: '40px',
-                flexShrink: 0,
-                background: themeColors.cardBackground || 'rgba(16, 20, 28, 0.95)',
-                borderLeft: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}`,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-                paddingTop: '1rem'
-              }}
-            >
-              <button
-                onClick={handleToggleRightColumn}
-                title="Expandir columna"
+            {rightColumnCollapsed ? (
+              <div
                 style={{
-                  background: themeColors.itemBackground || 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
-                  borderRadius: '6px',
-                  width: '28px',
-                  height: '28px',
+                  width: '40px',
+                  minWidth: '40px',
+                  flexShrink: 0,
+                  background: themeColors.cardBackground || 'rgba(16, 20, 28, 0.95)',
+                  borderLeft: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}`,
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)';
-                  e.currentTarget.style.color = themeColors.textPrimary || 'rgba(255,255,255,0.9)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)';
-                  e.currentTarget.style.color = themeColors.textSecondary || 'rgba(255,255,255,0.7)';
+                  justifyContent: 'flex-start',
+                  paddingTop: '1rem'
                 }}
               >
-                <i className="pi pi-chevron-left" style={{ fontSize: '0.9rem' }} />
-              </button>
-            </div>
-          ) : (
-            <NodeTermStatus
-              variant="rightColumn"
-              sshConnectionsCount={sshConnectionsCount}
-              foldersCount={foldersCount}
-              rdpConnectionsCount={rdpConnectionsCount}
-              themeColors={themeColors}
-              onOpenFileExplorer={onOpenFileExplorer}
-              onOpenSettings={onOpenSettings}
-              onToggleTerminalVisibility={handleToggleTerminalVisibility}
-              onToggleAIChat={handleToggleAIChat}
-              onToggleStatusBar={handleToggleStatusBar}
-              onCollapse={handleToggleRightColumn}
-              showAIChat={showAIChat}
-              statusBarVisible={statusBarVisible}
-              setShowCreateGroupDialog={setShowCreateGroupDialog}
-            />
-          )}
+                <button
+                  onClick={handleToggleRightColumn}
+                  title="Expandir columna"
+                  style={{
+                    background: themeColors.itemBackground || 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+                    borderRadius: '6px',
+                    width: '28px',
+                    height: '28px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)';
+                    e.currentTarget.style.color = themeColors.textPrimary || 'rgba(255,255,255,0.9)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)';
+                    e.currentTarget.style.color = themeColors.textSecondary || 'rgba(255,255,255,0.7)';
+                  }}
+                >
+                  <i className="pi pi-chevron-left" style={{ fontSize: '0.9rem' }} />
+                </button>
+              </div>
+            ) : (
+              <NodeTermStatus
+                variant="rightColumn"
+                sshConnectionsCount={sshConnectionsCount}
+                foldersCount={foldersCount}
+                rdpConnectionsCount={rdpConnectionsCount}
+                themeColors={themeColors}
+                onOpenFileExplorer={onOpenFileExplorer}
+                onOpenSettings={onOpenSettings}
+                onToggleTerminalVisibility={handleToggleTerminalVisibility}
+                onToggleAIChat={handleToggleAIChat}
+                onToggleStatusBar={handleToggleStatusBar}
+                onCollapse={handleToggleRightColumn}
+                showAIChat={showAIChat}
+                statusBarVisible={statusBarVisible}
+                setShowCreateGroupDialog={setShowCreateGroupDialog}
+              />
+            )}
+          </div>
         </div>
       </div>
-    </div>
     </>
   );
 
@@ -935,7 +936,7 @@ const HomeTab = ({
       width: '100%',
       position: 'relative'
     }}>
-      <div 
+      <div
         style={{
           height: statusBarVisible ? 'calc(100% - 40px)' : '100%',
           width: '100%',
@@ -952,7 +953,7 @@ const HomeTab = ({
           fontFamily={''}
           fontSize={16}
           theme={{ background: localTerminalBg }}
-          onContextMenu={() => {}}
+          onContextMenu={() => { }}
           sshStatsByTabId={{}}
           terminalRefs={{ current: {} }}
           statusBarIconTheme="classic"
