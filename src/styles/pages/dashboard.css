@@ -1182,9 +1182,9 @@
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  margin-bottom: 2rem;
+  margin-bottom: 0.5rem;
   position: relative;
-  gap: 1rem;
+  gap: 0.25rem;
 }
 
 .favorites-ribbon-header {
