@@ -451,11 +451,11 @@ const ConnectionHistory = ({
 							justifyContent: 'center',
 							gap: '1rem',
 							minHeight: '130px',
-							color: 'rgba(255,255,255,0.4)',
+							color: themeColors.textSecondary || 'rgba(255,255,255,0.4)',
 							fontStyle: 'italic',
-							border: '1px dashed rgba(255,255,255,0.1)',
+							border: `1px dashed ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
 							borderRadius: '12px',
-							background: 'rgba(255,255,255,0.02)'
+							background: themeColors.itemBackground || 'rgba(255,255,255,0.02)'
 						}}>
 							<i className="pi pi-star" style={{ fontSize: '1.5rem', opacity: 0.5 }} />
 							<span>Usa el icono <i className="pi pi-star" /> en la lista para agregar favoritos</span>
@@ -575,8 +575,17 @@ const ConnectionHistory = ({
 						<div className="connection-list-header-cell"></div>
 						<div className="connection-list-header-cell"></div>
 					</div>
-					<div className="ribbon-empty" style={{ marginTop: '0.5rem', height: 'auto', minHeight: '100px', flexDirection: 'column', gap: '8px' }}>
-						<i className="pi pi-history" style={{ fontSize: '1.5rem', opacity: 0.5 }} />
+					<div className="ribbon-empty" style={{
+						marginTop: '0.5rem',
+						height: 'auto',
+						minHeight: '100px',
+						flexDirection: 'column',
+						gap: '8px',
+						color: themeColors.textSecondary || 'rgba(255,255,255,0.4)',
+						background: themeColors.itemBackground || 'rgba(255,255,255,0.02)',
+						border: `1px dashed ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`
+					}}>
+						<i className="pi pi-history" style={{ fontSize: '1.5rem', opacity: 0.5, color: themeColors.textSecondary }} />
 						<span>{emptyMessage}</span>
 					</div>
 				</div>
