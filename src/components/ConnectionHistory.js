@@ -116,7 +116,7 @@ const ConnectionHistory = ({
 			return null;
 		}
 	});
-	const scrollRef = useRef(null);
+	// const scrollRef = useRef(null); // Eliminado por no tener uso
 
 	useEffect(() => {
 		loadConnectionHistory();
@@ -658,7 +658,7 @@ const ConnectionHistory = ({
 	};
 
 	return (
-		<div className="connection-history-root" ref={scrollRef}>
+		<div className="connection-history-root">
 			{/* Filters */}
 			<div className="connection-history-filters" style={{ marginBottom: '1rem' }}>
 				{filterTabs.map(({ key, label }) => (
