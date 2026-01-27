@@ -1,4 +1,4 @@
-    # Script para crear Cygwin portable par NodeTerm
+# Script para crear Cygwin portable par NodeTerm
 # Ejecutar: .\scripts\create-cygwin-portable.ps1
 
 param(
@@ -38,7 +38,7 @@ $MINIMAL_PACKAGES = "bash,coreutils,grep,sed,gawk,findutils,which,less,ncurses"
 # SIN: tcpdump, strace, lsof (muy pesados con muchas dependencias), telnet (menos usado)
 # SIN compiladores, lenguajes de programación, documentación pesada ni herramientas redundantes
 # NOTA: nmap/htop/ping no se incluyen porque no están disponibles en Cygwin de forma oficial
-$MEDIUM_PACKAGES = "$MINIMAL_PACKAGES,wget,curl,git,vim,nano,openssh,tar,gzip,procps-ng,netcat,net-tools,openssl,ca-certificates,libcurl4,libssh2,rsync,unzip,zip"
+$MEDIUM_PACKAGES = "$MINIMAL_PACKAGES,wget,curl,git,vim,nano,openssh,tar,gzip,procps-ng,netcat,net-tools,bind-utils,openssl,ca-certificates,libcurl4,libssh2,rsync,unzip,zip"
 
 # Paquetes completos (MEDIUM + desarrollo)
 # Incluye: MEDIUM + compiladores y herramientas de desarrollo (gcc,g++,make,cmake)
@@ -50,15 +50,20 @@ $ULTRA_COMPLETE_PACKAGES = "$FULL_PACKAGES,tree,psmisc,util-linux,time,parallel,
 # Lógica de selección: MEDIUM es el modo por defecto (cuando no se especifica ningún parámetro)
 $PACKAGES = if ($Minimal) { 
     $MINIMAL_PACKAGES 
-} elseif ($Full) { 
+}
+elseif ($Full) { 
     $FULL_PACKAGES 
-} elseif ($UltraComplete) { 
+}
+elseif ($UltraComplete) { 
     $ULTRA_COMPLETE_PACKAGES 
-} elseif ($NoUltraComplete) { 
+}
+elseif ($NoUltraComplete) { 
     $FULL_PACKAGES  # NoUltraComplete = Full (sin lenguajes)
-} elseif ($Medium) { 
+}
+elseif ($Medium) { 
     $MEDIUM_PACKAGES 
-} else { 
+}
+else { 
     # Por defecto: MEDIUM (sin parámetros)
     $MEDIUM_PACKAGES 
 }
@@ -75,11 +80,11 @@ if ($UseTemp) {
 
 # Determinar modo
 $mode = if ($Minimal) { 'Minimal' } 
-        elseif ($Full) { 'Full' } 
-        elseif ($UltraComplete) { 'Ultra Complete' }
-        elseif ($NoUltraComplete) { 'Full (NoUltraComplete)' }
-        elseif ($Medium) { 'Medium' } 
-        else { 'Medium (por defecto)' }
+elseif ($Full) { 'Full' } 
+elseif ($UltraComplete) { 'Ultra Complete' }
+elseif ($NoUltraComplete) { 'Full (NoUltraComplete)' }
+elseif ($Medium) { 'Medium' } 
+else { 'Medium (por defecto)' }
 
 Write-Host "Configuracion:" -ForegroundColor Yellow
 Write-Host "   Proyecto: $ProjectRoot"
@@ -91,7 +96,7 @@ Write-Host ""
 # Verificar tamaño de instalación anterior si existe
 if (Test-Path $OutputDir) {
     $oldSize = (Get-ChildItem $OutputDir -Recurse -File -ErrorAction SilentlyContinue | 
-                Measure-Object -Property Length -Sum).Sum / 1MB
+        Measure-Object -Property Length -Sum).Sum / 1MB
     if ($oldSize -gt 0) {
         Write-Host "   Instalacion anterior detectada: $([math]::Round($oldSize, 2)) MB" -ForegroundColor Yellow
         Write-Host "   Se eliminara antes de instalar el modo $mode" -ForegroundColor Yellow
@@ -105,11 +110,13 @@ if (-not (Test-Path $SETUP_FILE)) {
     try {
         Invoke-WebRequest -Uri $CYGWIN_URL -OutFile $SETUP_FILE -UseBasicParsing
         Write-Host "   Descarga completada" -ForegroundColor Green
-    } catch {
+    }
+    catch {
         Write-Host "   Error descargando setup: $_" -ForegroundColor Red
         exit 1
     }
-} else {
+}
+else {
     Write-Host "Setup ya existe, reutilizando..." -ForegroundColor Green
 }
 
@@ -118,17 +125,19 @@ Write-Host ""
 Write-Host "Verificando instalacion anterior..." -ForegroundColor Cyan
 if (Test-Path $OutputDir) {
     $oldSize = (Get-ChildItem $OutputDir -Recurse -File -ErrorAction SilentlyContinue | 
-                Measure-Object -Property Length -Sum).Sum / 1MB
+        Measure-Object -Property Length -Sum).Sum / 1MB
     Write-Host "   Instalacion anterior encontrada: $([math]::Round($oldSize, 2)) MB" -ForegroundColor Yellow
     Write-Host "   Eliminando instalacion anterior..." -ForegroundColor Yellow
     try {
         Remove-Item -Path $OutputDir -Recurse -Force -ErrorAction Stop
         Write-Host "   Instalacion anterior eliminada correctamente" -ForegroundColor Green
-    } catch {
+    }
+    catch {
         Write-Host "   Error eliminando instalacion anterior: $_" -ForegroundColor Red
         Write-Host "   Intentando continuar (puede haber conflictos)..." -ForegroundColor Yellow
     }
-} else {
+}
+else {
     Write-Host "   No hay instalacion anterior, continuando..." -ForegroundColor Green
 }
 
@@ -156,10 +165,12 @@ try {
     $process = Start-Process -FilePath $SETUP_FILE -ArgumentList $installArgs -Wait -PassThru -NoNewWindow
     if ($process.ExitCode -eq 0) {
         Write-Host "   Instalacion completada" -ForegroundColor Green
-    } else {
+    }
+    else {
         throw "Setup salio con codigo: $($process.ExitCode)"
     }
-} catch {
+}
+catch {
     Write-Host "   Error durante instalacion: $_" -ForegroundColor Red
     exit 1
 }
@@ -170,7 +181,8 @@ Write-Host "Verificando instalacion..." -ForegroundColor Cyan
 $bashPath = Join-Path $OutputDir "bin\bash.exe"
 if (Test-Path $bashPath) {
     Write-Host "   bash.exe encontrado" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "   bash.exe NO encontrado!" -ForegroundColor Red
     exit 1
 }
@@ -179,7 +191,7 @@ if (Test-Path $bashPath) {
 Write-Host ""
 Write-Host "Calculando tamano..." -ForegroundColor Cyan
 $size = (Get-ChildItem $OutputDir -Recurse -File -ErrorAction SilentlyContinue | 
-         Measure-Object -Property Length -Sum).Sum / 1MB
+    Measure-Object -Property Length -Sum).Sum / 1MB
 Write-Host "   Tamano total: $([math]::Round($size, 2)) MB" -ForegroundColor Yellow
 
 # Analizar qué ocupa más espacio (solo en modo Medium para diagnóstico)
@@ -193,7 +205,7 @@ if ($mode -like 'Medium*') {
         $fullPath = Join-Path $OutputDir $dir
         if (Test-Path $fullPath) {
             $size = (Get-ChildItem $fullPath -Recurse -File -ErrorAction SilentlyContinue | 
-                    Measure-Object -Property Length -Sum).Sum / 1MB
+                Measure-Object -Property Length -Sum).Sum / 1MB
             if ($size -gt 0) {
                 $dirSizes[$dir] = $size
             }
@@ -225,7 +237,7 @@ $totalCleaned = 0
 foreach ($cleanPath in $cleanupPaths) {
     if (Test-Path $cleanPath) {
         $sizeBefore = (Get-ChildItem $cleanPath -Recurse -File -ErrorAction SilentlyContinue | 
-                      Measure-Object -Property Length -Sum).Sum / 1MB
+            Measure-Object -Property Length -Sum).Sum / 1MB
         Remove-Item $cleanPath -Recurse -Force -ErrorAction SilentlyContinue
         if ($sizeBefore -gt 0) {
             Write-Host "   Eliminado: $cleanPath ($([math]::Round($sizeBefore, 2)) MB)" -ForegroundColor Gray
@@ -399,7 +411,8 @@ foreach ($bin in $essentialBinaries) {
                     $foundAlt = $true
                     break
                 }
-            } else {
+            }
+            else {
                 $altExact = $allExeFiles | Where-Object { $_.Name -eq $altPattern } | Select-Object -First 1
                 if ($altExact) {
                     $binLocationMap[$bin] = $altExact.FullName
@@ -421,7 +434,8 @@ foreach ($bin in $essentialBinaries) {
         $destPath = Join-Path $liteDir "bin\$bin"
         Copy-Item $actualBinPath $destPath -Force -ErrorAction SilentlyContinue
         $copiedBinaries++
-    } else {
+    }
+    else {
         $missingBinaries += $bin
     }
 }
@@ -612,7 +626,7 @@ if ($TempInstall) {
 Write-Host ""
 Write-Host "Recalculando tamano final..." -ForegroundColor Cyan
 $size = (Get-ChildItem $OutputDir -Recurse -File -ErrorAction SilentlyContinue | 
-         Measure-Object -Property Length -Sum).Sum / 1MB
+    Measure-Object -Property Length -Sum).Sum / 1MB
 
 # Resumen final
 Write-Host ""
