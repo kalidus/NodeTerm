@@ -133,18 +133,21 @@ const HomeTab = ({
       } catch { }
     };
 
-    // Escuchar evento personalizado y cambios en localStorage
-    window.addEventListener('home-tab-font-changed', handleHomeTabFontChange);
-    window.addEventListener('sidebar-font-changed', handleHomeTabFontChange);
-    window.addEventListener('storage', (e) => {
+    const handleStorageChange = (e) => {
       if (e.key === 'homeTabFont' || e.key === 'homeTabFontSize' || e.key === 'sidebarFont') {
         handleHomeTabFontChange();
       }
-    });
+    };
+
+    // Escuchar evento personalizado y cambios en localStorage
+    window.addEventListener('home-tab-font-changed', handleHomeTabFontChange);
+    window.addEventListener('sidebar-font-changed', handleHomeTabFontChange);
+    window.addEventListener('storage', handleStorageChange);
 
     return () => {
       window.removeEventListener('home-tab-font-changed', handleHomeTabFontChange);
       window.removeEventListener('sidebar-font-changed', handleHomeTabFontChange);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
