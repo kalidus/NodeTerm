@@ -6,7 +6,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
   // === ESTADO DEL SIDEBAR ===
   const [nodes, setNodes] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.TREE_DATA);
-    
+
     try {
       return saved ? JSON.parse(saved) : [];
     } catch (error) {
@@ -16,23 +16,23 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
   });
   const [selectedNode, setSelectedNode] = useState(null);
   const [isGeneralTreeMenu, setIsGeneralTreeMenu] = useState(false);
-  
+
   // === ESTADO DE SELECCIÓN Y FILTRO ===
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
   const [sidebarFilter, setSidebarFilter] = useState('');
-  
+
   // === REFERENCIAS ===
   const sidebarCallbacksRef = useRef({});
 
   // === FUNCIONES AUXILIARES ===
-  
+
   // Función para detectar y parsear formato Wallix
   const parseWallixUser = useCallback((userString) => {
     // Formato Wallix: usuario@dominio@servidor:protocolo:usuario_destino
     // Ejemplo: rt01119@default@ESJC-SGCT-NX02P:SSH:rt01119
     const wallixPattern = /^(.+)@(.+)@(.+):(.+):(.+)$/;
     const match = userString.match(wallixPattern);
-    
+
     if (match) {
       const [, bastionUser, domain, targetServer, protocol, targetUser] = match;
       return {
@@ -44,7 +44,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         domain: domain
       };
     }
-    
+
     return {
       isWallix: false,
       targetUser: userString
@@ -56,42 +56,42 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     const result = new Set();
     try {
       sshTabs.forEach(tab => {
-        const id = connectionHelpers.buildId({ 
-          type: 'ssh', 
-          host: tab.sshConfig?.host, 
-          username: tab.sshConfig?.username, 
-          port: tab.sshConfig?.port 
+        const id = connectionHelpers.buildId({
+          type: 'ssh',
+          host: tab.sshConfig?.host,
+          username: tab.sshConfig?.username,
+          port: tab.sshConfig?.port
         });
         result.add(id);
       });
       rdpTabs.forEach(tab => {
-        const id = connectionHelpers.buildId({ 
-          type: 'rdp-guacamole', 
-          host: tab.rdpConfig?.hostname, 
-          username: tab.rdpConfig?.username, 
-          port: tab.rdpConfig?.port 
+        const id = connectionHelpers.buildId({
+          type: 'rdp-guacamole',
+          host: tab.rdpConfig?.hostname,
+          username: tab.rdpConfig?.username,
+          port: tab.rdpConfig?.port
         });
         result.add(id);
       });
       guacamoleTabs.forEach(tab => {
-        const id = connectionHelpers.buildId({ 
-          type: 'rdp-guacamole', 
-          host: tab.rdpConfig?.hostname, 
-          username: tab.rdpConfig?.username, 
-          port: tab.rdpConfig?.port 
+        const id = connectionHelpers.buildId({
+          type: 'rdp-guacamole',
+          host: tab.rdpConfig?.hostname,
+          username: tab.rdpConfig?.username,
+          port: tab.rdpConfig?.port
         });
         result.add(id);
       });
       fileExplorerTabs.forEach(tab => {
-        const id = connectionHelpers.buildId({ 
-          type: 'explorer', 
-          host: tab.sshConfig?.host, 
-          username: tab.sshConfig?.username, 
-          port: tab.sshConfig?.port 
+        const id = connectionHelpers.buildId({
+          type: 'explorer',
+          host: tab.sshConfig?.host,
+          username: tab.sshConfig?.username,
+          port: tab.sshConfig?.port
         });
         result.add(id);
       });
-    } catch (_) {}
+    } catch (_) { }
     return result;
   }, []);
 
@@ -110,7 +110,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
   }, []);
 
   // === FUNCIONES DE MENÚ CONTEXTUAL ===
-  
+
   // Función para generar items del menú contextual del árbol
   const getTreeContextMenuItems = useCallback((node) => {
     const {
@@ -127,7 +127,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     const isPassword = node.data && node.data.type === 'password';
     const isSSHTunnel = node.data && node.data.type === 'ssh-tunnel';
     const items = [];
-    
+
     if (isSSH) {
       items.push({
         label: 'Abrir Terminal',
@@ -172,14 +172,14 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           });
         }
       });
-      
+
       // Opción de explorador de archivos
       items.push({
         label: 'Abrir Explorador de Archivos',
         icon: 'pi pi-folder-open',
         command: () => openFileExplorer(node)
       });
-      
+
       // Opción de auditoría de sesiones
       items.push({
         label: '📼 Auditoría',
@@ -194,7 +194,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
             }));
             setActiveGroupId(null);
           }
-          
+
           setSshTabs(prevTabs => {
             const tabId = `audit_${node.key}_${Date.now()}`;
             const connectionInfo = {
@@ -203,7 +203,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
               port: node.data.port || 22,
               name: node.label
             };
-            
+
             const newTab = {
               key: tabId,
               label: `📼 ${node.label}`,
@@ -213,7 +213,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
               createdAt: Date.now(),
               groupId: null
             };
-            
+
             // Activación inmediata
             setLastOpenedTabKey(tabId);
             setOnCreateActivateTabKey(tabId);
@@ -223,24 +223,29 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           });
         }
       });
-      
+
       items.push({
         label: 'Agregar/Quitar de Favoritos',
         icon: 'pi pi-star',
         command: () => {
           try {
-            connectionStore.toggleFavorite({
+            const connection = {
               type: 'ssh',
               name: node.label,
               host: node.data?.useBastionWallix ? node.data?.targetServer : node.data?.host,
               username: node.data?.user,
               port: node.data?.port || 22,
               password: node.data?.password || ''
-            });
+            };
+            // Emitir evento para que el ConnectionHistory muestre el selector de grupos
+            window.dispatchEvent(new CustomEvent('request-add-favorite-with-groups', {
+              detail: { connection }
+            }));
           } catch (e) { /* noop */ }
         }
       });
-      
+
+
       // Función helper para contar terminales en árbol
       const countTerminalsInTab = (tab) => {
         if (tab.type === 'terminal') return 1;
@@ -267,7 +272,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         }
         return false;
       });
-      
+
       if (sshTabsFiltered.length > 0) {
         items.push({
           label: 'Abrir en Split',
@@ -277,7 +282,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
             const isFirstSplit = tab.type === 'terminal';
             const isThirdSplit = tab.type === 'split' && termCount === 2;
             const isFourthSplit = tab.type === 'split' && termCount === 3;
-            
+
             // Si es el 3er split (ya hay 2 terminales) o 4to split (ya hay 3 terminales), abrir automáticamente sin preguntar
             if (isThirdSplit || isFourthSplit) {
               return {
@@ -286,7 +291,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
                 command: () => openInSplit(node, tab, 'vertical')
               };
             }
-            
+
             // Si es el primer split (pestaña tipo 'terminal'), mostrar opciones vertical/horizontal
             if (isFirstSplit) {
               return {
@@ -306,7 +311,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
                 ]
               };
             }
-            
+
             // Para otros casos (split existente con 1 terminal), mostrar opciones
             return {
               label: `${tab.label} (${termCount}/4)`,
@@ -403,14 +408,17 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         icon: 'pi pi-star',
         command: () => {
           try {
-            connectionStore.toggleFavorite({
+            const connection = {
               type: 'rdp',
               name: node.label,
               host: node.data?.host || node.data?.server || node.data?.hostname,
               username: node.data?.username,
               port: node.data?.port || 3389,
               password: node.data?.password || ''
-            });
+            };
+            window.dispatchEvent(new CustomEvent('request-add-favorite-with-groups', {
+              detail: { connection }
+            }));
           } catch (e) { /* noop */ }
         }
       });
@@ -490,13 +498,16 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         icon: 'pi pi-star',
         command: () => {
           try {
-            connectionStore.toggleFavorite({
+            const connection = {
               type: 'vnc',
               name: node.label,
               host: node.data?.host || node.data?.server || node.data?.hostname,
               port: node.data?.port || 5900,
               password: node.data?.password || ''
-            });
+            };
+            window.dispatchEvent(new CustomEvent('request-add-favorite-with-groups', {
+              detail: { connection }
+            }));
           } catch (e) { /* noop */ }
         }
       });
@@ -568,7 +579,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     } else if (isFileConnection) {
       const protocol = node.data?.protocol || node.data?.type || 'sftp';
       const protocolLabel = protocol.toUpperCase();
-      
+
       items.push({
         label: `Abrir Explorador ${protocolLabel}`,
         icon: 'pi pi-folder-open',
@@ -584,24 +595,27 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           openFileExplorer(node);
         }
       });
-      
+
       items.push({
         label: 'Agregar/Quitar de Favoritos',
         icon: 'pi pi-star',
         command: () => {
           try {
-            connectionStore.toggleFavorite({
+            const connection = {
               type: protocol,
               name: node.label,
               host: node.data?.host,
               username: node.data?.username || node.data?.user,
               port: node.data?.port || (protocol === 'ftp' ? 21 : 22),
               password: node.data?.password || ''
-            });
+            };
+            window.dispatchEvent(new CustomEvent('request-add-favorite-with-groups', {
+              detail: { connection }
+            }));
           } catch (e) { /* noop */ }
         }
       });
-      
+
       items.push({ separator: true });
       items.push({
         label: 'Editar',
@@ -678,7 +692,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           }
         }
       });
-      
+
       // Opción para copiar contraseña
       if (node.data?.sshPassword) {
         items.push({
@@ -714,7 +728,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           }
         });
       }
-      
+
       items.push({ separator: true });
       items.push({
         label: 'Duplicar',
@@ -824,19 +838,19 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     nodes, setNodes,
     selectedNode, setSelectedNode,
     isGeneralTreeMenu, setIsGeneralTreeMenu,
-    
+
     // Estado de selección y filtro
     selectedNodeKey, setSelectedNodeKey,
     sidebarFilter, setSidebarFilter,
-    
+
     // Referencias
     sidebarCallbacksRef,
-    
+
     // Funciones auxiliares
     parseWallixUser,
     getActiveConnectionIds,
     findAllConnections,
-    
+
     // Funciones de menú contextual
     getTreeContextMenuItems,
     getGeneralTreeContextMenuItems

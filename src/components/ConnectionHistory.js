@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getFavorites, toggleFavorite, onUpdate, isFavorite, reorderFavorites } from '../utils/connectionStore';
 import { iconThemes } from '../themes/icon-themes';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
+import favoriteGroupsStore from '../utils/favoriteGroupsStore';
 
 // Formatear "Hace 5m", "Hace 2 h", "Ayer", etc.
 function formatRelativeTime(iso) {
@@ -137,6 +138,19 @@ const ConnectionHistory = ({
 		}
 	});
 
+	// Estados para grupos de favoritos personalizados
+	const [favoriteGroups, setFavoriteGroups] = useState(() => favoriteGroupsStore.getGroups());
+	const [activeGroupId, setActiveGroupId] = useState(() => {
+		const saved = localStorage.getItem('nodeterm_active_group');
+		return saved || 'all';
+	});
+	const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
+	const [newGroupName, setNewGroupName] = useState('');
+	const [newGroupColor, setNewGroupColor] = useState('#4fc3f7');
+	const [editingGroup, setEditingGroup] = useState(null);
+	const filterBarRef = useRef(null);
+	const [indicatorStyle, setIndicatorStyle] = useState({});
+
 	// Funciones para toggle de colapso
 	const toggleFavoritesCollapsed = () => {
 		setFavoritesCollapsed(prev => {
@@ -189,6 +203,165 @@ const ConnectionHistory = ({
 			window.removeEventListener('sidebar-font-changed', h);
 		};
 	}, []);
+
+	// Cargar y sincronizar grupos de favoritos
+	useEffect(() => {
+		const unsubscribe = favoriteGroupsStore.onGroupsUpdate(() => {
+			setFavoriteGroups(favoriteGroupsStore.getGroups());
+		});
+		return () => unsubscribe();
+	}, []);
+
+	// Escuchar evento de agregar favorito desde sidebar (para mostrar selector de grupos)
+	useEffect(() => {
+		const handleSidebarFavorite = (e) => {
+			const connection = e.detail?.connection;
+			if (!connection) return;
+
+			const isCurrentlyFavorite = isFavorite(connection);
+			const userGroups = favoriteGroups.filter(g => !g.isDefault);
+
+			if (isCurrentlyFavorite) {
+				// Si ya es favorito, quitarlo
+				toggleFavorite(connection);
+				loadConnectionHistory();
+			} else {
+				// Si no es favorito y hay grupos, mostrar selector
+				if (userGroups.length > 0) {
+					setConnectionToFavorite(connection);
+					setSelectedGroupsForFav([]);
+					setShowGroupSelector(true);
+				} else {
+					// Si no hay grupos, agregar directamente
+					toggleFavorite(connection);
+					loadConnectionHistory();
+				}
+			}
+		};
+
+		window.addEventListener('request-add-favorite-with-groups', handleSidebarFavorite);
+		return () => window.removeEventListener('request-add-favorite-with-groups', handleSidebarFavorite);
+	}, [favoriteGroups, loadConnectionHistory]);
+
+	// Actualizar indicador del filtro activo (sliding pill)
+	useEffect(() => {
+		const updateIndicator = () => {
+			if (!filterBarRef.current) return;
+			const activeButton = filterBarRef.current.querySelector('.filter-segment.active');
+			if (activeButton) {
+				const barRect = filterBarRef.current.getBoundingClientRect();
+				const btnRect = activeButton.getBoundingClientRect();
+				setIndicatorStyle({
+					left: btnRect.left - barRect.left,
+					width: btnRect.width,
+				});
+			}
+		};
+		// Delay para asegurar que el DOM esté listo
+		const timer = setTimeout(updateIndicator, 50);
+		window.addEventListener('resize', updateIndicator);
+		return () => {
+			clearTimeout(timer);
+			window.removeEventListener('resize', updateIndicator);
+		};
+	}, [typeFilter, activeGroupId, favoriteGroups]);
+
+	// Funciones para gestión de grupos
+	const handleCreateGroup = () => {
+		if (!newGroupName.trim()) return;
+		try {
+			favoriteGroupsStore.createGroup({
+				name: newGroupName.trim(),
+				color: newGroupColor,
+				icon: 'pi-folder'
+			});
+			setNewGroupName('');
+			setNewGroupColor('#4fc3f7');
+			setShowCreateGroupDialog(false);
+			setFavoriteGroups(favoriteGroupsStore.getGroups());
+		} catch (error) {
+			console.error('Error creando grupo:', error.message);
+		}
+	};
+
+	const handleDeleteGroup = (groupId) => {
+		try {
+			favoriteGroupsStore.deleteGroup(groupId);
+			setFavoriteGroups(favoriteGroupsStore.getGroups());
+			if (activeGroupId === groupId) {
+				setActiveGroupId('all');
+				localStorage.setItem('nodeterm_active_group', 'all');
+			}
+		} catch (error) {
+			console.error('Error eliminando grupo:', error.message);
+		}
+	};
+
+	const handleGroupChange = (groupId) => {
+		setActiveGroupId(groupId);
+		localStorage.setItem('nodeterm_active_group', groupId);
+	};
+
+	// Estado para el selector de grupos al agregar favorito
+	const [showGroupSelector, setShowGroupSelector] = useState(false);
+	const [connectionToFavorite, setConnectionToFavorite] = useState(null);
+	const [selectedGroupsForFav, setSelectedGroupsForFav] = useState([]);
+
+	// Manejar toggle de favorito con selector de grupo
+	const handleToggleFavoriteWithGroup = (connection) => {
+		const isCurrentlyFavorite = isFavorite(connection);
+		// Calcular grupos personalizados aquí para evitar problemas de hoisting
+		const userGroups = favoriteGroups.filter(g => !g.isDefault);
+
+		if (isCurrentlyFavorite) {
+			// Si ya es favorito, solo quitarlo
+			toggleFavorite(connection);
+			loadConnectionHistory();
+		} else {
+			// Si no es favorito y hay grupos personalizados, mostrar selector
+			if (userGroups.length > 0) {
+				setConnectionToFavorite(connection);
+				setSelectedGroupsForFav([]);
+				setShowGroupSelector(true);
+			} else {
+				// Si no hay grupos personalizados, agregar directamente
+				toggleFavorite(connection);
+				loadConnectionHistory();
+			}
+		}
+	};
+
+
+	// Confirmar agregar a favoritos con grupos seleccionados
+	const handleConfirmAddFavorite = () => {
+		if (!connectionToFavorite) return;
+
+		// Agregar a favoritos
+		toggleFavorite(connectionToFavorite);
+
+		// Asignar a grupos seleccionados
+		if (selectedGroupsForFav.length > 0) {
+			const serial = typeof connectionToFavorite === 'string'
+				? connectionToFavorite
+				: (connectionToFavorite.id || `${connectionToFavorite.type}:${connectionToFavorite.host || ''}:${connectionToFavorite.username || ''}:${connectionToFavorite.port || ''}`);
+			favoriteGroupsStore.assignFavoriteToGroups(serial, selectedGroupsForFav);
+		}
+
+		setShowGroupSelector(false);
+		setConnectionToFavorite(null);
+		setSelectedGroupsForFav([]);
+		loadConnectionHistory();
+	};
+
+	// Toggle selección de grupo para el favorito
+	const toggleGroupForFavorite = (groupId) => {
+		setSelectedGroupsForFav(prev => {
+			if (prev.includes(groupId)) {
+				return prev.filter(id => id !== groupId);
+			}
+			return [...prev, groupId];
+		});
+	};
 
 	const loadConnectionHistory = useCallback(() => {
 		try {
@@ -594,13 +767,35 @@ const ConnectionHistory = ({
 
 
 	const filterTabs = [
-		{ key: 'all', label: 'Todas' },
-		{ key: 'ssh', label: 'SSH' },
-		{ key: 'rdp-guacamole', label: 'RDP' },
-		{ key: 'vnc-guacamole', label: 'VNC' },
-		{ key: 'sftp', label: 'SFTP' },
-		{ key: 'secret', label: 'Secretos' },
+		{ key: 'all', label: 'Todas', icon: 'pi-th-large', color: '#9E9E9E' },
+		{ key: 'ssh', label: 'SSH', icon: 'pi-server', color: '#4fc3f7' },
+		{ key: 'rdp-guacamole', label: 'RDP', icon: 'pi-desktop', color: '#ff6b35' },
+		{ key: 'vnc-guacamole', label: 'VNC', icon: 'pi-desktop', color: '#81c784' },
+		{ key: 'sftp', label: 'SFTP', icon: 'pi-folder-open', color: '#FFB300' },
+		{ key: 'secret', label: 'Secretos', icon: 'pi-key', color: '#E91E63' },
 	];
+
+	// Calcular contadores por tipo de conexión
+	const countByType = (connections, filterKey) => {
+		if (filterKey === 'all') return connections.length;
+		if (filterKey === 'vnc-guacamole') return connections.filter(c => c.type === 'vnc-guacamole' || c.type === 'vnc').length;
+		if (filterKey === 'rdp-guacamole') return connections.filter(c => c.type === 'rdp-guacamole' || c.type === 'rdp').length;
+		if (filterKey === 'sftp') return connections.filter(c => ['sftp', 'explorer', 'ftp', 'scp'].includes(c.type)).length;
+		if (filterKey === 'secret') return connections.filter(c => ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'].includes(c.type)).length;
+		return connections.filter(c => c.type === filterKey).length;
+	};
+
+	// Obtener favoritos filtrados por grupo activo
+	const getFavoritesForActiveGroup = () => {
+		if (activeGroupId === 'all') {
+			return favoriteConnections;
+		}
+		return favoriteGroupsStore.getFavoritesInGroup(activeGroupId, favoriteConnections);
+	};
+
+	// Obtener grupos personalizados (excluyendo 'all')
+	const customGroups = favoriteGroups.filter(g => !g.isDefault);
+
 
 	const ConnectionRow = ({ connection, isPinned, isActive, onConnect, onEdit, onToggleFav }) => {
 		const typeColor = getConnectionTypeColor(connection.type);
@@ -725,7 +920,7 @@ const ConnectionHistory = ({
 							isActive={activeIds.has(activeKey(c))}
 							onConnect={onConnectToHistory}
 							onEdit={onEdit}
-							onToggleFav={(conn) => { toggleFavorite(conn); loadConnectionHistory(); }}
+							onToggleFav={handleToggleFavoriteWithGroup}
 						/>
 					))}
 				</div>
@@ -735,28 +930,230 @@ const ConnectionHistory = ({
 
 	return (
 		<div className="connection-history-root">
-			{/* Filters */}
-			<div className="connection-history-filters" style={{ marginBottom: '1rem' }}>
-				{filterTabs.map(({ key, label }) => (
-					<button
-						key={key}
-						type="button"
-						className={`connection-history-filter-tab ${typeFilter === key ? 'active' : ''}`}
-						onClick={() => handleFilterChange(key)}
+			{/* Advanced Filter Bar - Segmented Control with Groups */}
+			<div className="filter-bar-wrapper" style={{ marginBottom: '1rem' }}>
+				{/* Protocol Filters - Segmented Control */}
+				<div className="segmented-control" ref={filterBarRef}>
+					{/* Sliding indicator */}
+					<div
+						className="segment-indicator"
 						style={{
-							background: typeFilter === key ? (themeColors.hoverBackground || 'rgba(255,255,255,0.12)') : (themeColors.itemBackground || 'rgba(255,255,255,0.04)'),
-							borderColor: themeColors.borderColor || 'rgba(255,255,255,0.14)',
-							color: themeColors.textPrimary || 'var(--text-color)',
+							transform: `translateX(${indicatorStyle.left || 0}px)`,
+							width: indicatorStyle.width || 0
 						}}
+					/>
+
+					{filterTabs.map(({ key, label, icon, color }) => {
+						const count = countByType(recentConnections, key);
+						return (
+							<button
+								key={key}
+								type="button"
+								className={`filter-segment ${typeFilter === key ? 'active' : ''}`}
+								onClick={() => handleFilterChange(key)}
+								title={`${label} (${count})`}
+							>
+								<i className={`pi ${icon}`} style={{ color: typeFilter === key ? color : 'inherit' }} />
+								<span className="segment-label">{label}</span>
+								{count > 0 && <span className="segment-count">{count}</span>}
+							</button>
+						);
+					})}
+				</div>
+
+				{/* Separator */}
+				<div className="filter-bar-separator" />
+
+				{/* Custom Groups Tabs */}
+				<div className="groups-control">
+					{/* Default "All" group */}
+					<button
+						type="button"
+						className={`group-tab ${activeGroupId === 'all' ? 'active' : ''}`}
+						onClick={() => handleGroupChange('all')}
+						style={{ '--group-color': '#FFD700' }}
 					>
-						{label}
+						<i className="pi pi-star-fill" />
+						<span>Todos</span>
 					</button>
-				))}
+
+					{/* User-created groups */}
+					{customGroups.map(group => (
+						<div key={group.id} className="group-tab-wrapper">
+							<button
+								type="button"
+								className={`group-tab ${activeGroupId === group.id ? 'active' : ''}`}
+								onClick={() => handleGroupChange(group.id)}
+								onContextMenu={(e) => {
+									e.preventDefault();
+									setEditingGroup(group);
+								}}
+								style={{ '--group-color': group.color }}
+								title={`Grupo: ${group.name}`}
+							>
+								<span className="group-dot" style={{ background: group.color }} />
+								<span>{group.name}</span>
+							</button>
+							<button
+								type="button"
+								className="group-delete-btn"
+								onClick={(e) => {
+									e.stopPropagation();
+									handleDeleteGroup(group.id);
+								}}
+								title={`Eliminar grupo "${group.name}"`}
+							>
+								<i className="pi pi-times" />
+							</button>
+						</div>
+					))}
+
+
+					{/* Add new group button */}
+					<button
+						type="button"
+						className="group-tab add-group-btn"
+						onClick={() => setShowCreateGroupDialog(true)}
+						title="Crear nuevo grupo"
+					>
+						<i className="pi pi-plus" />
+					</button>
+				</div>
 			</div>
+
+			{/* Create Group Dialog */}
+			{showCreateGroupDialog && (
+				<div className="create-group-overlay" onClick={() => setShowCreateGroupDialog(false)}>
+					<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
+						<div className="dialog-header">
+							<h3>Crear Grupo</h3>
+							<button className="dialog-close" onClick={() => setShowCreateGroupDialog(false)}>
+								<i className="pi pi-times" />
+							</button>
+						</div>
+						<div className="dialog-body">
+							<div className="form-field">
+								<label>Nombre del grupo</label>
+								<input
+									type="text"
+									value={newGroupName}
+									onChange={(e) => setNewGroupName(e.target.value)}
+									placeholder="Ej: Producción, Desarrollo..."
+									autoFocus
+									onKeyDown={(e) => e.key === 'Enter' && handleCreateGroup()}
+								/>
+							</div>
+							<div className="form-field">
+								<label>Color</label>
+								<div className="color-picker">
+									{['#4fc3f7', '#ff6b35', '#81c784', '#FFB300', '#E91E63', '#9C27B0', '#00BCD4', '#FF5722'].map(c => (
+										<button
+											key={c}
+											type="button"
+											className={`color-option ${newGroupColor === c ? 'selected' : ''}`}
+											style={{ background: c }}
+											onClick={() => setNewGroupColor(c)}
+										/>
+									))}
+								</div>
+							</div>
+						</div>
+						<div className="dialog-footer">
+							<button className="btn-cancel" onClick={() => setShowCreateGroupDialog(false)}>
+								Cancelar
+							</button>
+							<button className="btn-create" onClick={handleCreateGroup} disabled={!newGroupName.trim()}>
+								<i className="pi pi-check" /> Crear
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Edit/Delete Group Menu */}
+			{editingGroup && (
+				<div className="create-group-overlay" onClick={() => setEditingGroup(null)}>
+					<div className="create-group-dialog small" onClick={(e) => e.stopPropagation()}>
+						<div className="dialog-header">
+							<h3>Opciones de "{editingGroup.name}"</h3>
+							<button className="dialog-close" onClick={() => setEditingGroup(null)}>
+								<i className="pi pi-times" />
+							</button>
+						</div>
+						<div className="dialog-body">
+							<button
+								className="menu-option danger"
+								onClick={() => {
+									handleDeleteGroup(editingGroup.id);
+									setEditingGroup(null);
+								}}
+							>
+								<i className="pi pi-trash" /> Eliminar grupo
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Group Selector Dialog - shown when adding a favorite */}
+			{showGroupSelector && connectionToFavorite && (
+				<div className="create-group-overlay" onClick={() => setShowGroupSelector(false)}>
+					<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
+						<div className="dialog-header">
+							<h3>Agregar a favoritos</h3>
+							<button className="dialog-close" onClick={() => setShowGroupSelector(false)}>
+								<i className="pi pi-times" />
+							</button>
+						</div>
+						<div className="dialog-body">
+							<p style={{ color: 'rgba(255,255,255,0.7)', margin: '0 0 16px', fontSize: '0.9rem' }}>
+								Selecciona los grupos donde quieres añadir <strong style={{ color: '#fff' }}>{connectionToFavorite.name}</strong>:
+							</p>
+							<div className="groups-selector">
+								{customGroups.map(group => (
+									<button
+										key={group.id}
+										type="button"
+										className={`group-selector-item ${selectedGroupsForFav.includes(group.id) ? 'selected' : ''}`}
+										onClick={() => toggleGroupForFavorite(group.id)}
+										style={{ '--group-color': group.color }}
+									>
+										<span className="group-dot" style={{ background: group.color }} />
+										<span>{group.name}</span>
+										{selectedGroupsForFav.includes(group.id) && (
+											<i className="pi pi-check" style={{ marginLeft: 'auto', color: group.color }} />
+										)}
+									</button>
+								))}
+							</div>
+							<p style={{ color: 'rgba(255,255,255,0.5)', margin: '16px 0 0', fontSize: '0.8rem', fontStyle: 'italic' }}>
+								Puedes saltarte este paso para agregar sin grupos
+							</p>
+						</div>
+						<div className="dialog-footer">
+							<button
+								className="btn-cancel"
+								onClick={() => {
+									// Agregar sin grupos
+									toggleFavorite(connectionToFavorite);
+									loadConnectionHistory();
+									setShowGroupSelector(false);
+									setConnectionToFavorite(null);
+								}}
+							>
+								Sin grupos
+							</button>
+							<button className="btn-create" onClick={handleConfirmAddFavorite}>
+								<i className="pi pi-star-fill" /> Agregar
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{/* FAVORITES RIBBON (Always visible, shows placeholder if empty) */}
 			<FavoritesRibbon
-				connections={filteredPinned}
+				connections={applyTypeFilter(getFavoritesForActiveGroup(), typeFilter)}
 				fullList={favoriteConnections}
 				onReorder={(newList) => {
 					setFavoriteConnections(newList);
@@ -765,6 +1162,7 @@ const ConnectionHistory = ({
 				collapsed={favoritesCollapsed}
 				onToggleCollapsed={toggleFavoritesCollapsed}
 			/>
+
 
 			{/* RECIENTES TABLE (Fills remaining space) */}
 			<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginTop: '0.2rem' }}>
