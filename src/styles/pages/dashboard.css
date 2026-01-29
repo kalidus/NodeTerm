@@ -1806,3 +1806,53 @@
     font-size: 0.9em;
   }
 }
+
+/* Estilos para botones de colapsar/expandir secciones */
+.section-collapse-btn {
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  border-radius: 4px;
+}
+
+.section-collapse-btn:hover {
+  color: rgba(255, 255, 255, 0.95);
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.section-collapse-btn:active {
+  transform: scale(0.95);
+}
+
+/* Animación para el colapso de secciones */
+.favorites-ribbon-section,
+.connection-history-section {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Asegurar que los íconos del header estén bien alineados */
+.modern-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.modern-section-header .modern-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modern-section-header .modern-header-line {
+  flex: 1;
+}
