@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { getFavorites, toggleFavorite, onUpdate, isFavorite, reorderFavorites } from '../utils/connectionStore';
+import { getFavorites, toggleFavorite, onUpdate, isFavorite, reorderFavorites, helpers } from '../utils/connectionStore';
 import { iconThemes } from '../themes/icon-themes';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import favoriteGroupsStore from '../utils/favoriteGroupsStore';
@@ -345,7 +345,7 @@ const ConnectionHistory = ({
 		if (selectedGroupsForFav.length > 0) {
 			const serial = typeof connectionToFavorite === 'string'
 				? connectionToFavorite
-				: (connectionToFavorite.id || `${connectionToFavorite.type}:${connectionToFavorite.host || ''}:${connectionToFavorite.username || ''}:${connectionToFavorite.port || ''}`);
+				: (connectionToFavorite.id || helpers.buildId(connectionToFavorite));
 			favoriteGroupsStore.assignFavoriteToGroups(serial, selectedGroupsForFav);
 		}
 
@@ -372,7 +372,7 @@ const ConnectionHistory = ({
 
 	// Abrir diálogo para editar grupos de un favorito existente
 	const handleEditFavoriteGroups = (connection) => {
-		const favId = connection.id || `${connection.type}:${connection.host || ''}:${connection.username || ''}:${connection.port || ''}`;
+		const favId = connection.id || helpers.buildId(connection);
 		const currentGroups = favoriteGroupsStore.getFavoriteGroups(favId);
 		setEditingFavorite(connection);
 		setEditSelectedGroups(currentGroups);
@@ -392,7 +392,7 @@ const ConnectionHistory = ({
 	// Guardar cambios de grupos
 	const handleSaveEditGroups = () => {
 		if (!editingFavorite) return;
-		const favId = editingFavorite.id || `${editingFavorite.type}:${editingFavorite.host || ''}:${editingFavorite.username || ''}:${editingFavorite.port || ''}`;
+		const favId = editingFavorite.id || helpers.buildId(editingFavorite);
 		favoriteGroupsStore.assignFavoriteToGroups(favId, editSelectedGroups);
 		setShowEditFavGroups(false);
 		setEditingFavorite(null);
