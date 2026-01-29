@@ -1358,6 +1358,37 @@
   opacity: 1;
 }
 
+/* Groups Button (manage groups for existing favorite) */
+.ribbon-card__groups {
+  position: absolute;
+  top: 12px;
+  left: 46px;
+  /* Offset to the right of the edit button */
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: all 0.2s;
+  z-index: 5;
+  cursor: pointer;
+}
+
+.ribbon-card__groups:hover {
+  background: rgba(79, 195, 247, 0.2);
+  color: #4fc3f7;
+  transform: scale(1.1);
+}
+
+.ribbon-card:hover .ribbon-card__groups {
+  opacity: 1;
+}
+
 /* Status Dot (Inline with text) */
 .ribbon-card__status-dot {
   display: inline-block;
