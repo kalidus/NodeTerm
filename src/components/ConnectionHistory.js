@@ -298,8 +298,10 @@ const ConnectionHistory = ({
 	};
 
 	const handleGroupChange = (groupId) => {
-		setActiveGroupId(groupId);
-		localStorage.setItem('nodeterm_active_group', groupId);
+		// Si hacemos clic en el grupo activo, volver a 'all' (sin filtro de grupo)
+		const newGroupId = (activeGroupId === groupId) ? 'all' : groupId;
+		setActiveGroupId(newGroupId);
+		localStorage.setItem('nodeterm_active_group', newGroupId);
 	};
 
 	// Estado para el selector de grupos al agregar favorito
@@ -361,6 +363,41 @@ const ConnectionHistory = ({
 			}
 			return [...prev, groupId];
 		});
+	};
+
+	// Estado para editar grupos de un favorito existente
+	const [showEditFavGroups, setShowEditFavGroups] = useState(false);
+	const [editingFavorite, setEditingFavorite] = useState(null);
+	const [editSelectedGroups, setEditSelectedGroups] = useState([]);
+
+	// Abrir diálogo para editar grupos de un favorito existente
+	const handleEditFavoriteGroups = (connection) => {
+		const favId = connection.id || `${connection.type}:${connection.host || ''}:${connection.username || ''}:${connection.port || ''}`;
+		const currentGroups = favoriteGroupsStore.getFavoriteGroups(favId);
+		setEditingFavorite(connection);
+		setEditSelectedGroups(currentGroups);
+		setShowEditFavGroups(true);
+	};
+
+	// Toggle grupo para favorito existente
+	const toggleEditGroup = (groupId) => {
+		setEditSelectedGroups(prev => {
+			if (prev.includes(groupId)) {
+				return prev.filter(id => id !== groupId);
+			}
+			return [...prev, groupId];
+		});
+	};
+
+	// Guardar cambios de grupos
+	const handleSaveEditGroups = () => {
+		if (!editingFavorite) return;
+		const favId = editingFavorite.id || `${editingFavorite.type}:${editingFavorite.host || ''}:${editingFavorite.username || ''}:${editingFavorite.port || ''}`;
+		favoriteGroupsStore.assignFavoriteToGroups(favId, editSelectedGroups);
+		setShowEditFavGroups(false);
+		setEditingFavorite(null);
+		setEditSelectedGroups([]);
+		loadConnectionHistory();
 	};
 
 	const loadConnectionHistory = useCallback(() => {
@@ -491,7 +528,7 @@ const ConnectionHistory = ({
 	};
 
 	// Componente interno para las tarjetas del Carrusel
-	const RibbonCard = ({ connection, isActive, onConnect, onEdit, onToggleFav, onDragStart, onDragOver, onDrop, index }) => {
+	const RibbonCard = ({ connection, isActive, onConnect, onEdit, onToggleFav, onEditGroups, onDragStart, onDragOver, onDrop, index }) => {
 		const typeColor = getConnectionTypeColor(connection.type);
 		const hostLabel = connection.host || connection.hostname || '—';
 		const protocolLabel = getProtocolLabel(connection.type);
@@ -504,6 +541,12 @@ const ConnectionHistory = ({
 			e.stopPropagation();
 			e.preventDefault();
 			onToggleFav(connection);
+		};
+
+		const handleGroups = (e) => {
+			e.stopPropagation();
+			e.preventDefault();
+			onEditGroups?.(connection);
 		};
 
 		return (
@@ -529,6 +572,18 @@ const ConnectionHistory = ({
 				>
 					<i className="pi pi-pencil" style={{ fontSize: '0.8rem' }} />
 				</div>
+
+				{/* Groups Button (only if custom groups exist) */}
+				{customGroups.length > 0 && (
+					<div
+						className="ribbon-card__groups"
+						onClick={handleGroups}
+						onMouseDown={(e) => e.stopPropagation()}
+						title="Gestionar grupos"
+					>
+						<i className="pi pi-folder" style={{ fontSize: '0.8rem' }} />
+					</div>
+				)}
 
 				{/* Pin Button */}
 				<div
@@ -734,6 +789,7 @@ const ConnectionHistory = ({
 											onConnect={onConnectToHistory}
 											onEdit={onEdit}
 											onToggleFav={(conn) => { toggleFavorite(conn); loadConnectionHistory(); }}
+											onEditGroups={handleEditFavoriteGroups}
 											onDragStart={handleDragStart}
 											onDragOver={handleDragOver}
 											onDrop={handleDrop}
@@ -966,18 +1022,8 @@ const ConnectionHistory = ({
 
 				{/* Custom Groups Tabs */}
 				<div className="groups-control">
-					{/* Default "All" group */}
-					<button
-						type="button"
-						className={`group-tab ${activeGroupId === 'all' ? 'active' : ''}`}
-						onClick={() => handleGroupChange('all')}
-						style={{ '--group-color': '#FFD700' }}
-					>
-						<i className="pi pi-star-fill" />
-						<span>Todos</span>
-					</button>
-
 					{/* User-created groups */}
+
 					{customGroups.map(group => (
 						<div key={group.id} className="group-tab-wrapper">
 							<button
@@ -1145,6 +1191,55 @@ const ConnectionHistory = ({
 							</button>
 							<button className="btn-create" onClick={handleConfirmAddFavorite}>
 								<i className="pi pi-star-fill" /> Agregar
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Edit Favorite Groups Dialog */}
+			{showEditFavGroups && editingFavorite && (
+				<div className="create-group-overlay" onClick={() => setShowEditFavGroups(false)}>
+					<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
+						<div className="dialog-header">
+							<h3><i className="pi pi-folder" /> Grupos de Favoritos</h3>
+							<button className="dialog-close" onClick={() => setShowEditFavGroups(false)}>
+								<i className="pi pi-times" />
+							</button>
+						</div>
+						<div className="dialog-body">
+							<p style={{ color: 'rgba(255,255,255,0.7)', margin: '0 0 16px', fontSize: '0.9rem' }}>
+								Asignar <strong style={{ color: '#fff' }}>{editingFavorite.name}</strong> a grupos:
+							</p>
+							<div className="groups-selector">
+								{customGroups.length > 0 ? (
+									customGroups.map(group => (
+										<button
+											key={group.id}
+											type="button"
+											className={`group-selector-item ${editSelectedGroups.includes(group.id) ? 'selected' : ''}`}
+											onClick={() => toggleEditGroup(group.id)}
+											style={{ '--group-color': group.color }}
+										>
+											<span className="group-dot" style={{ background: group.color }} />
+											<span>{group.name}</span>
+											{editSelectedGroups.includes(group.id) && (
+												<i className="pi pi-check" style={{ marginLeft: 'auto', color: group.color }} />
+											)}
+										</button>
+									))
+								) : (
+									<div style={{ textAlign: 'center', padding: '20px', color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>
+										<i className="pi pi-info-circle" style={{ display: 'block', fontSize: '1.5rem', marginBottom: '8px' }} />
+										No hay grupos personalizados creados.
+									</div>
+								)}
+							</div>
+						</div>
+						<div className="dialog-footer">
+							<button className="btn-cancel" onClick={() => setShowEditFavGroups(false)}>Cancelar</button>
+							<button className="btn-create" onClick={handleSaveEditGroups}>
+								<i className="pi pi-save" /> Guardar Cambios
 							</button>
 						</div>
 					</div>
