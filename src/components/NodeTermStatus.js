@@ -10,12 +10,12 @@ import { useTranslation } from '../i18n/hooks/useTranslation';
 import { getActionBarIcon, actionBarIconColors } from '../themes/action-bar-icon-themes';
 import { STORAGE_KEYS } from '../utils/constants';
 
-const NodeTermStatus = ({ 
-	sshConnectionsCount = 0, 
-	foldersCount = 0, 
-	rdpConnectionsCount = 0, 
-	themeColors = {}, 
-	horizontal = false, 
+const NodeTermStatus = ({
+	sshConnectionsCount = 0,
+	foldersCount = 0,
+	rdpConnectionsCount = 0,
+	themeColors = {},
+	horizontal = false,
 	compact = false,
 	variant, // 'rightColumn' = columna derecha en HomeTab
 	onCreateSSHConnection,
@@ -81,14 +81,14 @@ const NodeTermStatus = ({
 	const barContainerRef = useRef(null);
 	const dockerButtonRef = useRef(null);
 	const ubuntuButtonRef = useRef(null);
-	
+
 	// 🚀 CACHÉ PERSISTENTE: Usar sessionStorage para que persista entre montajes/desmontajes
 	const CACHE_KEYS = {
 		WSL: 'nodeterm_terminals_cache_wsl',
 		CYGWIN: 'nodeterm_terminals_cache_cygwin',
 		DOCKER: 'nodeterm_terminals_cache_docker'
 	};
-	
+
 	// Helpers para manejar la caché en sessionStorage
 	const getCachedData = (key) => {
 		try {
@@ -98,7 +98,7 @@ const NodeTermStatus = ({
 			return null;
 		}
 	};
-	
+
 	const setCachedData = (key, data) => {
 		try {
 			sessionStorage.setItem(key, JSON.stringify(data));
@@ -138,12 +138,12 @@ const NodeTermStatus = ({
 						}
 					}
 				}
-			} catch {}
+			} catch { }
 		};
-		
+
 		// Actualizar estado inicial
 		updateNextcloudState();
-		
+
 		// Escuchar eventos de cambio en la configuración de Nextcloud (solo cuando cambia, no periódicamente)
 		const handleSyncConfigChange = () => {
 			updateNextcloudState();
@@ -168,7 +168,7 @@ const NodeTermStatus = ({
 					setVaultState({ configured: true, unlocked: false });
 				});
 			}
-		} catch {}
+		} catch { }
 
 		// Estado Guacd (IPC)
 		// 🚀 OPTIMIZACIÓN: Retrasar la primera llamada para no bloquear el arranque
@@ -180,7 +180,7 @@ const NodeTermStatus = ({
 					const st = await window.electron.ipcRenderer.invoke('guacamole:get-status');
 					if (st && st.guacd) setGuacdState(st.guacd);
 				}
-			} catch {}
+			} catch { }
 		};
 		// Retrasar la primera llamada 2 segundos para dar tiempo a que la ventana esté lista
 		setTimeout(() => {
@@ -195,13 +195,13 @@ const NodeTermStatus = ({
 				const isRemote = !!aiService.remoteOllamaUrl;
 				const controller = new AbortController();
 				const timeoutId = setTimeout(() => controller.abort(), 3000);
-				
-				const response = await fetch(`${ollamaUrl}/api/tags`, { 
+
+				const response = await fetch(`${ollamaUrl}/api/tags`, {
 					method: 'GET',
 					signal: controller.signal
 				});
 				clearTimeout(timeoutId);
-				
+
 				if (response.ok) {
 					setOllamaState({ isRunning: true, url: ollamaUrl, isRemote });
 				} else {
@@ -226,7 +226,7 @@ const NodeTermStatus = ({
 					if (saved) {
 						try {
 							config = JSON.parse(saved);
-						} catch (e) {}
+						} catch (e) { }
 					}
 
 					// Verificar AnythingLLM
@@ -344,10 +344,10 @@ const NodeTermStatus = ({
 				const parsedSize = newSize ? parseInt(newSize, 10) : null;
 				setHomeTabFont(newFont);
 				setHomeTabFontSize(parsedSize);
-			} catch {}
+			} catch { }
 		};
 		handleHomeTabFontChange();
-		
+
 		// Escuchar cambios en localStorage para la fuente (entre pestañas)
 		const handleHomeTabFontStorageChange = (e) => {
 			if (e.key === 'homeTabFont' || e.key === 'homeTabFontSize' || e.key === 'sidebarFont') {
@@ -355,23 +355,23 @@ const NodeTermStatus = ({
 			}
 		};
 		window.addEventListener('storage', handleHomeTabFontStorageChange);
-		
+
 		// Escuchar eventos personalizados cuando se cambia la fuente desde la configuración
 		const handleFontConfigChange = () => {
 			handleHomeTabFontChange();
 		};
 		window.addEventListener('home-tab-font-changed', handleFontConfigChange);
 		window.addEventListener('sidebar-font-changed', handleFontConfigChange);
-		
+
 		// Escuchar cambios en el tema de iconos de la barra de acciones
 		const handleActionBarIconThemeChange = (e) => {
 			try {
 				const newTheme = e?.detail?.theme || localStorage.getItem('actionBarIconTheme') || 'original';
 				setActionBarIconTheme(newTheme);
-			} catch {}
+			} catch { }
 		};
 		window.addEventListener('action-bar-icon-theme-changed', handleActionBarIconThemeChange);
-		
+
 		// Escuchar cambios en localStorage para el tema de iconos
 		const handleActionBarIconThemeStorageChange = (e) => {
 			if (e.key === 'actionBarIconTheme') {
@@ -379,7 +379,7 @@ const NodeTermStatus = ({
 			}
 		};
 		window.addEventListener('storage', handleActionBarIconThemeStorageChange);
-		
+
 		// Polling periódico para detectar cambios (por si el evento no se dispara)
 		const fontCheckInterval = setInterval(() => {
 			try {
@@ -395,10 +395,10 @@ const NodeTermStatus = ({
 				if (currentIconTheme !== actionBarIconTheme) {
 					setActionBarIconTheme(currentIconTheme);
 				}
-			} catch {}
+			} catch { }
 		}, 1000);
 
-		return () => { 
+		return () => {
 			if (intervalId) clearInterval(intervalId);
 			if (ollamaIntervalId) clearInterval(ollamaIntervalId);
 			if (aiServicesIntervalId) clearInterval(aiServicesIntervalId);
@@ -418,14 +418,14 @@ const NodeTermStatus = ({
 	// 🚀 OPTIMIZACIÓN CON CACHÉ PERSISTENTE: Detectar distribuciones WSL DIFERIDO
 	useEffect(() => {
 		if ((!horizontal || !compact) && variant !== 'rightColumn') return;
-		
+
 		// 🚀 Verificar caché en sessionStorage primero
 		const cachedWSL = getCachedData(CACHE_KEYS.WSL);
 		if (cachedWSL !== null) {
 			setWSLDistributions(cachedWSL);
 			return;
 		}
-		
+
 		const timer = setTimeout(() => {
 			const detectWSLDistributions = async () => {
 				try {
@@ -455,14 +455,14 @@ const NodeTermStatus = ({
 	// 🚀 OPTIMIZACIÓN CON CACHÉ PERSISTENTE: Detectar disponibilidad de Cygwin DIFERIDO
 	useEffect(() => {
 		if ((!horizontal || !compact) && variant !== 'rightColumn') return;
-		
+
 		// 🚀 Verificar caché en sessionStorage primero
 		const cachedCygwin = getCachedData(CACHE_KEYS.CYGWIN);
 		if (cachedCygwin !== null) {
 			setCygwinAvailable(cachedCygwin);
 			return;
 		}
-		
+
 		const timer = setTimeout(() => {
 			const detectCygwin = async () => {
 				if (window.electron && window.electron.platform === 'win32') {
@@ -492,14 +492,14 @@ const NodeTermStatus = ({
 	// 🚀 OPTIMIZACIÓN CON CACHÉ PERSISTENTE: Detectar contenedores Docker DIFERIDO
 	useEffect(() => {
 		if ((!horizontal || !compact) && variant !== 'rightColumn') return;
-		
+
 		// 🚀 Verificar caché en sessionStorage primero
 		const cachedDocker = getCachedData(CACHE_KEYS.DOCKER);
 		if (cachedDocker !== null) {
 			setDockerContainers(cachedDocker);
 			return;
 		}
-		
+
 		let mounted = true;
 		const timer = setTimeout(() => {
 			const detectDocker = async () => {
@@ -527,24 +527,24 @@ const NodeTermStatus = ({
 	// Cerrar menú Docker al hacer clic fuera
 	useEffect(() => {
 		if (!dockerMenuOpen) return;
-		
+
 		const handleClickOutside = (event) => {
 			const target = event.target;
 			// Verificar si el clic fue fuera del menú y del botón
 			const dockerMenu = target.closest('[data-docker-menu]');
 			const dockerButton = target.closest('[data-docker-button]');
-			
+
 			if (!dockerMenu && !dockerButton) {
 				console.log('[Docker] Clic fuera, cerrando menú');
 				setDockerMenuOpen(false);
 			}
 		};
-		
+
 		// Agregar listener después de un pequeño delay para evitar que se cierre inmediatamente
 		const timeoutId = setTimeout(() => {
 			window.addEventListener('click', handleClickOutside, true);
 		}, 100);
-		
+
 		return () => {
 			clearTimeout(timeoutId);
 			window.removeEventListener('click', handleClickOutside, true);
@@ -554,23 +554,23 @@ const NodeTermStatus = ({
 	// Cerrar menú Ubuntu al hacer clic fuera
 	useEffect(() => {
 		if (!ubuntuMenuOpen) return;
-		
+
 		const handleClickOutside = (event) => {
 			const target = event.target;
 			// Verificar si el clic fue fuera del menú y del botón
 			const ubuntuMenu = target.closest('[data-ubuntu-menu]');
 			const ubuntuButton = target.closest('[data-ubuntu-button]');
-			
+
 			if (!ubuntuMenu && !ubuntuButton) {
 				setUbuntuMenuOpen(false);
 			}
 		};
-		
+
 		// Agregar listener después de un pequeño delay para evitar que se cierre inmediatamente
 		const timeoutId = setTimeout(() => {
 			window.addEventListener('click', handleClickOutside, true);
 		}, 100);
-		
+
 		return () => {
 			clearTimeout(timeoutId);
 			window.removeEventListener('click', handleClickOutside, true);
@@ -597,7 +597,7 @@ const NodeTermStatus = ({
 		const category = terminal.distroInfo?.category || terminal.category || '';
 		const label = (terminal.label || '').toLowerCase();
 		const value = (terminal.value || '').toLowerCase();
-		
+
 		// Convertir el tamaño del icono a píxeles si es rem para cálculos
 		let baseIconSizePx = 20;
 		const iconSizeStr = compactBar.buttonIconSize;
@@ -607,13 +607,13 @@ const NodeTermStatus = ({
 		} else if (typeof iconSizeStr === 'number') {
 			baseIconSizePx = Math.max(iconSizeStr, 20);
 		}
-		
+
 		// Detectar PowerShell - aumentar tamaño
 		if (value === 'powershell') {
 			const powershellIconSize = Math.round(baseIconSizePx * 1.3);
 			return <i className={terminal.icon} style={{ color: terminal.color, fontSize: `${powershellIconSize}px`, fontWeight: 'bold' }} />;
 		}
-		
+
 		// Detectar WSL genérico (usar pingüino de Linux) - debe ser exactamente 'wsl' sin distribuciones específicas - aumentar tamaño
 		if (value === 'wsl' && !value.includes('ubuntu') && !value.includes('debian') && !value.includes('kali')) {
 			const wslIconSize = Math.round(baseIconSizePx * 1.3);
@@ -621,7 +621,7 @@ const NodeTermStatus = ({
 			const wslColor = themeColors?.primaryColor || terminal.color || '#4fc3f7';
 			return <FaLinux style={{ color: wslColor, fontSize: `${wslIconSize}px` }} />;
 		}
-		
+
 		// Detectar Ubuntu (por categoría o por nombre)
 		if (category === 'ubuntu' || label.includes('ubuntu') || value.includes('ubuntu')) {
 			// Convertir el tamaño del icono a píxeles si es rem
@@ -635,19 +635,19 @@ const NodeTermStatus = ({
 			}
 			// Aumentar tamaño para que sea más visible (1.4x para Ubuntu)
 			iconSizePx = Math.round(iconSizePx * 1.4);
-			
+
 			// Si es Ubuntu básico (sin versión específica), usar color blanco
 			const isBasicUbuntu = !label.includes('24.04') && !label.includes('22.04') && !label.includes('20.04');
 			const ubuntuColor = isBasicUbuntu ? '#FFFFFF' : (terminal.color || '#E95420');
-			
+
 			return <FaUbuntu style={{ color: ubuntuColor, fontSize: `${iconSizePx}px` }} />;
 		}
-		
+
 		// Detectar Debian
 		if (category === 'debian' || label.includes('debian') || value.includes('debian')) {
 			return <SiDebian style={{ color: terminal.color, fontSize: compactBar.buttonIconSize }} />;
 		}
-		
+
 		// Detectar Kali Linux (usar icono SVG oficial del dragón de Kali Linux)
 		if (category === 'kali' || label.includes('kali') || value.includes('kali')) {
 			// Convertir el tamaño del icono a píxeles si es rem, o usar un tamaño mínimo
@@ -661,17 +661,17 @@ const NodeTermStatus = ({
 			}
 			// Aumentar el tamaño para que sea más visible (1.5x para Kali)
 			iconSizePx = Math.round(iconSizePx * 1.5);
-			
+
 			// Color de Kali Linux: #557C94 (azul grisáceo) - usar el color del SVG original o el del terminal
 			const kaliColor = terminal.color || '#78909c';
 			return (
-				<svg 
+				<svg
 					xmlns="http://www.w3.org/2000/svg"
-					width={iconSizePx} 
-					height={iconSizePx} 
-					viewBox="0 0 48 48" 
-					style={{ 
-						display: 'inline-block', 
+					width={iconSizePx}
+					height={iconSizePx}
+					viewBox="0 0 48 48"
+					style={{
+						display: 'inline-block',
 						verticalAlign: 'middle',
 						flexShrink: 0
 					}}
@@ -681,44 +681,44 @@ const NodeTermStatus = ({
 				</svg>
 			);
 		}
-		
+
 		// Detectar Alpine (usar FaLinux con estilo personalizado)
 		if (category === 'alpine' || label.includes('alpine') || value.includes('alpine')) {
 			return <FaLinux style={{ color: terminal.color, fontSize: compactBar.buttonIconSize }} />;
 		}
-		
+
 		// Detectar openSUSE (usar FaLinux con estilo personalizado)
 		if (category === 'opensuse' || label.includes('opensuse') || label.includes('suse') || value.includes('opensuse')) {
 			return <FaLinux style={{ color: terminal.color, fontSize: compactBar.buttonIconSize }} />;
 		}
-		
+
 		// Detectar Fedora
 		if (category === 'fedora' || label.includes('fedora') || value.includes('fedora')) {
 			return <FaFedora style={{ color: terminal.color, fontSize: compactBar.buttonIconSize }} />;
 		}
-		
+
 		// Detectar CentOS
 		if (category === 'centos' || label.includes('centos') || value.includes('centos')) {
 			return <FaCentos style={{ color: terminal.color, fontSize: compactBar.buttonIconSize }} />;
 		}
-		
+
 		// Detectar RedHat
 		if (category === 'redhat' || category === 'rhel' || label.includes('redhat') || label.includes('rhel')) {
 			return <FaRedhat style={{ color: terminal.color, fontSize: compactBar.buttonIconSize }} />;
 		}
-		
+
 		// Detectar Cygwin - aumentar tamaño
 		if (value === 'cygwin' || label.includes('cygwin')) {
 			const cygwinIconSize = Math.round(baseIconSizePx * 1.3);
 			return <i className={terminal.icon} style={{ color: terminal.color, fontSize: `${cygwinIconSize}px`, fontWeight: 'bold' }} />;
 		}
-		
+
 		// Detectar Docker - aumentar tamaño
 		if (value.includes('docker') || label.includes('docker')) {
 			const dockerIconSize = Math.round(baseIconSizePx * 1.3);
 			return <SiDocker style={{ color: terminal.color, fontSize: `${dockerIconSize}px` }} />;
 		}
-		
+
 		// Fallback: usar icono genérico de PrimeIcons si no hay match
 		return <i className={terminal.icon} style={{ color: terminal.color, fontSize: compactBar.buttonIconSize, fontWeight: 'bold' }} />;
 	};
@@ -727,7 +727,7 @@ const NodeTermStatus = ({
 	const handleOpenTerminal = (terminalType, distroInfo = null) => {
 		try {
 			window.dispatchEvent(new CustomEvent('create-terminal-tab', {
-				detail: { 
+				detail: {
 					type: terminalType,
 					distroInfo: distroInfo
 				}
@@ -767,10 +767,10 @@ const NodeTermStatus = ({
 					action: () => handleOpenTerminal('cygwin')
 				});
 			}
-			
+
 			// Separar distribuciones para ordenarlas correctamente
 			// console.log('[NodeTermStatus] Distribuciones WSL detectadas:', wslDistributions.map(d => ({ name: d.name, label: d.label })));
-			
+
 			// Recopilar todas las distribuciones Ubuntu (básico y con versión)
 			const allUbuntuDistros = wslDistributions.filter(distro => {
 				const isUbuntu = distro.name && distro.name.toLowerCase().includes('ubuntu');
@@ -783,16 +783,16 @@ const NodeTermStatus = ({
 				action: () => handleOpenTerminal(`wsl-${distro.name}`, distro),
 				distroInfo: distro
 			}));
-			
+
 			// Guardar distribuciones Ubuntu en estado separado para el menú agrupado
 			setUbuntuDistributions(allUbuntuDistros);
-			
+
 			const otherDistros = wslDistributions.filter(distro => {
 				const isUbuntu = distro.name && distro.name.toLowerCase().includes('ubuntu');
 				const isBasicDebian = distro.name && distro.name.toLowerCase().includes('debian');
 				return !isUbuntu && !isBasicDebian;
 			});
-			
+
 			// Agregar el resto de distribuciones (Kali Linux, etc.) - Ubuntu se maneja por separado
 			otherDistros.forEach(distro => {
 				terminals.push({
@@ -856,7 +856,7 @@ const NodeTermStatus = ({
 				passwordsCount = Array.isArray(parsed) ? walk(parsed) : 0;
 			}
 		}
-	} catch {}
+	} catch { }
 
 
 
@@ -884,16 +884,16 @@ const NodeTermStatus = ({
 				<i className={icon} style={{ color, fontSize: compact ? '0.5rem' : '0.6rem' }} />
 			</div>
 			<div style={{ flex: 1 }}>
-				<div style={{ 
-					color: themeColors.textPrimary || 'var(--text-color)', 
-					fontWeight: '700', 
+				<div style={{
+					color: themeColors.textPrimary || 'var(--text-color)',
+					fontWeight: '700',
 					fontSize: compact ? '0.6rem' : '0.7rem',
 					lineHeight: '1.2'
 				}}>
 					{value}
 				</div>
-				<div style={{ 
-					color: themeColors.textSecondary || 'var(--text-color-secondary)', 
+				<div style={{
+					color: themeColors.textSecondary || 'var(--text-color-secondary)',
 					fontSize: compact ? '0.45rem' : '0.5rem',
 					lineHeight: '1.2'
 				}}>
@@ -930,14 +930,14 @@ const NodeTermStatus = ({
 
 		let rafId = null;
 		let pendingRaf = false;
-		
+
 		const adjustScale = () => {
 			// Evitar múltiples llamadas simultáneas
 			if (pendingRaf) return;
 			pendingRaf = true;
-			
+
 			if (rafId) cancelAnimationFrame(rafId);
-			
+
 			rafId = requestAnimationFrame(() => {
 				pendingRaf = false;
 				const container = barContainerRef.current;
@@ -946,11 +946,11 @@ const NodeTermStatus = ({
 				const containerWidth = container.scrollWidth || container.offsetWidth;
 				const parentWidth = container.parentElement?.offsetWidth || window.innerWidth;
 				const availableWidth = parentWidth * 0.95; // 95% del ancho disponible
-				
+
 				setScaleFactor(prev => {
 					// Calcular el factor de escala ideal directamente
 					let newScale = prev;
-					
+
 					if (containerWidth > availableWidth && prev > 0.65) {
 						// Calcular reducción más precisa basada en la diferencia
 						const overflowRatio = availableWidth / containerWidth;
@@ -960,7 +960,7 @@ const NodeTermStatus = ({
 						const spaceRatio = availableWidth / containerWidth;
 						newScale = Math.min(1, prev * Math.min(spaceRatio * 0.98, 1.05));
 					}
-					
+
 					// Redondear a 2 decimales para evitar cambios microscópicos
 					return Math.round(newScale * 100) / 100;
 				});
@@ -1002,10 +1002,10 @@ const NodeTermStatus = ({
 
 	// Calcular si hay clientes de IA activos (fuera del bloque condicional para que siempre se calcule)
 	const hasActiveAIClients = useMemo(() => {
-		const result = aiClientsState.nodeterm || 
+		const result = aiClientsState.nodeterm ||
 			(aiClientsState.anythingllm && aiClientsState.anythingllm.enabled) ||
 			(aiClientsState.openwebui && aiClientsState.openwebui.enabled);
-		
+
 		// Debug: Log del estado de IA (temporal para depuración)
 		if (process.env.NODE_ENV === 'development') {
 			console.log('[NodeTermStatus] Calculando hasActiveAIClients:', {
@@ -1016,10 +1016,10 @@ const NodeTermStatus = ({
 				'variant': variant
 			});
 		}
-		
+
 		return result;
 	}, [aiClientsState.nodeterm, aiClientsState.anythingllm?.enabled, aiClientsState.openwebui?.enabled, variant]);
-	
+
 	// Layout columna derecha (variant rightColumn) - sustituye barra superior en HomeTab
 	if (variant === 'rightColumn') {
 		const colBg = themeColors.cardBackground || 'rgba(16, 20, 28, 0.95)';
@@ -1055,12 +1055,12 @@ const NodeTermStatus = ({
 		const toggleSection = (k) => {
 			setRightColumnSectionsCollapsed(prev => {
 				const next = { ...prev, [k]: !prev[k] };
-				try { localStorage.setItem(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_SECTIONS, JSON.stringify(next)); } catch (e) {}
+				try { localStorage.setItem(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_SECTIONS, JSON.stringify(next)); } catch (e) { }
 				return next;
 			});
 		};
 		const sc = rightColumnSectionsCollapsed;
-		
+
 		// 🚀 Función para refrescar manualmente la caché de terminales
 		const refreshTerminalsCache = async () => {
 			// 🚀 Limpiar caché de sessionStorage
@@ -1071,7 +1071,7 @@ const NodeTermStatus = ({
 			} catch {
 				// Silenciar errores
 			}
-			
+
 			// Recargar WSL
 			try {
 				if (window.electron && window.electron.ipcRenderer) {
@@ -1088,7 +1088,7 @@ const NodeTermStatus = ({
 				setCachedData(CACHE_KEYS.WSL, []);
 				setWSLDistributions([]);
 			}
-			
+
 			// Recargar Cygwin
 			if (window.electron && window.electron.platform === 'win32') {
 				try {
@@ -1105,7 +1105,7 @@ const NodeTermStatus = ({
 					setCygwinAvailable(false);
 				}
 			}
-			
+
 			// Recargar Docker
 			try {
 				if (window.electron && window.electronAPI) {
@@ -1123,12 +1123,12 @@ const NodeTermStatus = ({
 				setDockerContainers([]);
 			}
 		};
-		
+
 		const SectionHeader = ({ id, label, onRefresh }) => (
-			<div style={{ 
-				width: '100%', 
-				display: 'flex', 
-				alignItems: 'center', 
+			<div style={{
+				width: '100%',
+				display: 'flex',
+				alignItems: 'center',
 				justifyContent: 'space-between',
 				marginBottom: sc[id] ? 0 : '0.5rem'
 			}}>
@@ -1176,11 +1176,11 @@ const NodeTermStatus = ({
 							borderRadius: '4px',
 							transition: 'all 0.2s ease'
 						}}
-						onMouseEnter={e => { 
+						onMouseEnter={e => {
 							e.currentTarget.style.color = themeColors.primaryColor || '#4fc3f7';
 							e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
 						}}
-						onMouseLeave={e => { 
+						onMouseLeave={e => {
 							e.currentTarget.style.color = themeColors.textSecondary || 'rgba(255,255,255,0.5)';
 							e.currentTarget.style.background = 'none';
 						}}
@@ -1240,26 +1240,29 @@ const NodeTermStatus = ({
 				<div>
 					<SectionHeader id="acciones" label="ACCIONES RÁPIDAS" />
 					{!sc.acciones && (
-					<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-						<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-							<i className="pi pi-plus" style={{ color: '#22c55e', fontSize: '1rem' }} /><span>Nueva Conexión</span>
-						</button>
-						<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog', { detail: { initialCategory: secretsManagementCategory } }))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-							<i className="pi pi-key" style={{ color: '#ffc107', fontSize: '1rem' }} /><span>Nuevo Secreto</span>
-						</button>
-						{setShowCreateGroupDialog && (
-							<button style={btnStyle()} onClick={() => setShowCreateGroupDialog(true)} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-								<i className="pi pi-th-large" style={{ color: '#4fc3f7', fontSize: '1rem' }} /><span>Nuevo grupo de pestañas</span>
+						<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+							<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+								<i className="pi pi-plus" style={{ color: '#22c55e', fontSize: '1rem' }} /><span>Nueva Conexión</span>
 							</button>
-						)}
-					<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-						<i className="pi pi-wrench" style={{ color: '#06b6d4', fontSize: '1rem' }} /><span>Herramientas</span>
-					</button>
+							<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog', { detail: { initialCategory: secretsManagementCategory } }))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+								<i className="pi pi-key" style={{ color: '#ffc107', fontSize: '1rem' }} /><span>Nuevo Secreto</span>
+							</button>
+							{setShowCreateGroupDialog && (
+								<button style={btnStyle()} onClick={() => setShowCreateGroupDialog(true)} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+									<i className="pi pi-th-large" style={{ color: '#4fc3f7', fontSize: '1rem' }} /><span>Nuevo grupo de pestañas</span>
+								</button>
+							)}
+							<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+								<i className="pi pi-wrench" style={{ color: '#06b6d4', fontSize: '1rem' }} /><span>Herramientas</span>
+							</button>
+							<button style={btnStyle()} onClick={onOpenSettings} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+								<i className="pi pi-cog" style={{ color: '#b0bec5', fontSize: '1rem' }} /><span>Configuración</span>
+							</button>
+						</div>
+					)}
 				</div>
-				)}
-			</div>
 
-			{/* TERMINALES LOCALES - después de Acciones rápidas, usa availableTerminals + ubuntuDistributions + dockerContainers */}
+				{/* TERMINALES LOCALES - después de Acciones rápidas, usa availableTerminals + ubuntuDistributions + dockerContainers */}
 				<div>
 					<SectionHeader id="terminales" label="TERMINALES LOCALES" onRefresh={refreshTerminalsCache} />
 					{!sc.terminales && (() => {
@@ -1292,17 +1295,17 @@ const NodeTermStatus = ({
 							return <i className={it.icon || 'pi pi-terminal'} style={{ color: it.color, fontSize: '1rem' }} />;
 						};
 						return (
-						<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-							{items.length === 0 ? (
-								<div style={{ fontSize: '0.75rem', color: themeColors.textSecondary, fontStyle: 'italic', padding: '0.25rem 0' }}>No hay terminales detectados</div>
-							) : (
-								items.map((it, idx) => (
-									<button key={idx} style={btnStyle()} onClick={() => dispatch(it.terminalType, it.distroInfo)} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-										<TermIcon it={it} /><span>{it.label}</span>
-									</button>
-								))
-							)}
-						</div>
+							<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+								{items.length === 0 ? (
+									<div style={{ fontSize: '0.75rem', color: themeColors.textSecondary, fontStyle: 'italic', padding: '0.25rem 0' }}>No hay terminales detectados</div>
+								) : (
+									items.map((it, idx) => (
+										<button key={idx} style={btnStyle()} onClick={() => dispatch(it.terminalType, it.distroInfo)} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+											<TermIcon it={it} /><span>{it.label}</span>
+										</button>
+									))
+								)}
+							</div>
 						);
 					})()}
 				</div>
@@ -1319,11 +1322,11 @@ const NodeTermStatus = ({
 										<i className="pi pi-comments" style={{ color: '#8b5cf6', fontSize: '1rem' }} /><span>Chat IA</span>
 									</button>
 								)}
-								
+
 								{/* AnythingLLM */}
 								{aiClientsState.anythingllm && aiClientsState.anythingllm.enabled && (
-									<button 
-										style={btnStyle()} 
+									<button
+										style={btnStyle()}
 										onClick={() => {
 											const newTab = {
 												key: `anythingllm-${Date.now()}`,
@@ -1335,30 +1338,30 @@ const NodeTermStatus = ({
 											window.dispatchEvent(new CustomEvent('create-anythingllm-tab', {
 												detail: { tab: newTab }
 											}));
-										}} 
-										onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} 
+										}}
+										onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }}
 										onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}
 										title={aiClientsState.anythingllm.running ? 'AnythingLLM: En ejecución' : 'AnythingLLM: Detenido'}
 									>
 										<i className="pi pi-cloud" style={{ color: aiClientsState.anythingllm.running ? '#22c55e' : '#f59e0b', fontSize: '1rem' }} />
 										<span>AnythingLLM</span>
 										{aiClientsState.anythingllm.running && (
-											<span style={{ 
-												marginLeft: 'auto', 
-												width: '8px', 
-												height: '8px', 
-												borderRadius: '50%', 
+											<span style={{
+												marginLeft: 'auto',
+												width: '8px',
+												height: '8px',
+												borderRadius: '50%',
 												background: '#22c55e',
 												boxShadow: '0 0 4px #22c55e'
 											}} />
 										)}
 									</button>
 								)}
-								
+
 								{/* OpenWebUI */}
 								{aiClientsState.openwebui && aiClientsState.openwebui.enabled && (
-									<button 
-										style={btnStyle()} 
+									<button
+										style={btnStyle()}
 										onClick={() => {
 											const newTab = {
 												key: `openwebui-${Date.now()}`,
@@ -1370,19 +1373,19 @@ const NodeTermStatus = ({
 											window.dispatchEvent(new CustomEvent('create-openwebui-tab', {
 												detail: { tab: newTab }
 											}));
-										}} 
-										onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} 
+										}}
+										onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }}
 										onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}
 										title={aiClientsState.openwebui.running ? 'OpenWebUI: En ejecución' : 'OpenWebUI: Detenido'}
 									>
 										<i className="pi pi-globe" style={{ color: aiClientsState.openwebui.running ? '#3b82f6' : '#f59e0b', fontSize: '1rem' }} />
 										<span>OpenWebUI</span>
 										{aiClientsState.openwebui.running && (
-											<span style={{ 
-												marginLeft: 'auto', 
-												width: '8px', 
-												height: '8px', 
-												borderRadius: '50%', 
+											<span style={{
+												marginLeft: 'auto',
+												width: '8px',
+												height: '8px',
+												borderRadius: '50%',
 												background: '#3b82f6',
 												boxShadow: '0 0 4px #3b82f6'
 											}} />
@@ -1398,20 +1401,20 @@ const NodeTermStatus = ({
 				<div>
 					<SectionHeader id="servicios" label="SERVICIOS" />
 					{!sc.servicios && (
-					<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-						<button style={cardStyle()} onClick={() => { onOpenSettings?.(); try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'rdp' } })); } catch (e) {} }} title={`Guacd: ${guacdState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-							<i className={guacdState.method === 'docker' ? 'pi pi-box' : 'pi pi-window-maximize'} style={{ color: guacdState.isRunning ? '#22c55e' : '#ef4444', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Guacd</span>
-						</button>
-						<button style={cardStyle()} title={`Ollama: ${ollamaState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-							<i className="pi pi-bolt" style={{ color: ollamaState.isRunning ? '#22c55e' : '#ef4444', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Ollama</span>
-						</button>
-						<button style={cardStyle()} onClick={() => { onOpenSettings?.(); try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'sync' } })); } catch (e) {} }} title={`Nextcloud: ${syncState.configured ? (syncState.connectivity === 'ok' ? 'Conectado' : 'Configurado') : 'No configurado'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-							<i className="pi pi-cloud" style={{ color: syncState.configured ? (syncState.connectivity === 'error' ? '#ef4444' : '#60a5fa') : '#9ca3af', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Nextcloud</span>
-						</button>
-						<button style={cardStyle()} onClick={() => { onOpenSettings?.(); try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'security' } })); } catch (e) {} }} title={`Vault: ${!vaultState.configured ? 'No configurado' : (vaultState.unlocked ? 'Desbloqueado' : 'Bloqueado')}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-							<i className={vaultState.unlocked ? 'pi pi-unlock' : 'pi pi-lock'} style={{ color: !vaultState.configured ? '#9ca3af' : '#f59e0b', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Vault</span>
-						</button>
-					</div>
+						<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'rdp' } })); } catch (e) { } }} title={`Guacd: ${guacdState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+								<i className={guacdState.method === 'docker' ? 'pi pi-box' : 'pi pi-window-maximize'} style={{ color: guacdState.isRunning ? '#22c55e' : '#ef4444', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Guacd</span>
+							</button>
+							<button style={cardStyle()} title={`Ollama: ${ollamaState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+								<i className="pi pi-bolt" style={{ color: ollamaState.isRunning ? '#22c55e' : '#ef4444', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Ollama</span>
+							</button>
+							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'sync' } })); } catch (e) { } }} title={`Nextcloud: ${syncState.configured ? (syncState.connectivity === 'ok' ? 'Conectado' : 'Configurado') : 'No configurado'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+								<i className="pi pi-cloud" style={{ color: syncState.configured ? (syncState.connectivity === 'error' ? '#ef4444' : '#60a5fa') : '#9ca3af', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Nextcloud</span>
+							</button>
+							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'security' } })); } catch (e) { } }} title={`Vault: ${!vaultState.configured ? 'No configurado' : (vaultState.unlocked ? 'Desbloqueado' : 'Bloqueado')}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+								<i className={vaultState.unlocked ? 'pi pi-unlock' : 'pi pi-lock'} style={{ color: !vaultState.configured ? '#9ca3af' : '#f59e0b', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Vault</span>
+							</button>
+						</div>
 					)}
 				</div>
 
@@ -1419,10 +1422,10 @@ const NodeTermStatus = ({
 				<div style={{ marginTop: 'auto', paddingTop: '0.5rem', borderTop: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}` }}>
 					<SectionHeader id="toggles" label="OPCIONES" />
 					{!sc.toggles && (
-					<div style={{ display: 'flex', gap: '0.35rem' }}>
-						{onToggleTerminalVisibility && <button style={{ ...btnStyle(), padding: '0.35rem', flex: 1 }} onClick={onToggleTerminalVisibility} title="Mostrar/ocultar terminal" onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}><i className="pi pi-window-minimize" style={{ fontSize: '0.9rem' }} /></button>}
-						{onToggleStatusBar && <button style={{ ...btnStyle(), padding: '0.35rem', flex: 1 }} onClick={onToggleStatusBar} title="Mostrar/ocultar barra de estado" onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}><i className="pi pi-bars" style={{ fontSize: '0.9rem' }} /></button>}
-					</div>
+						<div style={{ display: 'flex', gap: '0.35rem' }}>
+							{onToggleTerminalVisibility && <button style={{ ...btnStyle(), padding: '0.35rem', flex: 1 }} onClick={onToggleTerminalVisibility} title="Mostrar/ocultar terminal" onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}><i className="pi pi-window-minimize" style={{ fontSize: '0.9rem' }} /></button>}
+							{onToggleStatusBar && <button style={{ ...btnStyle(), padding: '0.35rem', flex: 1 }} onClick={onToggleStatusBar} title="Mostrar/ocultar barra de estado" onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}><i className="pi pi-bars" style={{ fontSize: '0.9rem' }} /></button>}
+						</div>
 					)}
 				</div>
 			</div>
@@ -1432,7 +1435,7 @@ const NodeTermStatus = ({
 	// Layout horizontal compacto - LAYOUT 3: BARRA SUPERIOR CENTRADA
 	if (horizontal && compact) {
 		return (
-			<div style={{ 
+			<div style={{
 				width: '100%',
 				display: 'flex',
 				justifyContent: 'center',
@@ -1481,10 +1484,10 @@ const NodeTermStatus = ({
 				`}</style>
 
 				{/* BARRA SUPERIOR CENTRADA: ACCIONES Y TERMINALES */}
-				<div 
+				<div
 					ref={barContainerRef}
 					data-compact-menu-container
-					style={{ 
+					style={{
 						padding: compactBar.containerPadding,
 						display: 'flex',
 						alignItems: 'center',
@@ -1507,7 +1510,7 @@ const NodeTermStatus = ({
 						minWidth: 0,
 						flexShrink: 0
 					}}>
-					{/* Botones principales */}
+						{/* Botones principales */}
 						<div style={{
 							display: 'flex',
 							alignItems: 'flex-start',
@@ -1518,340 +1521,340 @@ const NodeTermStatus = ({
 							overflow: 'visible',
 							width: 'auto'
 						}}>
-						{/* Botón Nueva Conexión */}
-						<div style={{
-							display: 'flex',
-							flexDirection: 'column',
-							alignItems: 'center',
-							gap: '0.25rem',
-							flexShrink: 0
-						}}>
-							<button
-								title="Nueva conexión SSH/RDP/VNC"
-								onClick={() => {
-									window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
-								}}
-								style={{
-									cursor: 'pointer',
-									display: 'flex',
-									alignItems: 'center',
-									justifyContent: 'center',
-									width: `${compactBar.buttonSize}px`,
-									height: `${compactBar.buttonSize}px`,
-									padding: '0',
-									borderRadius: `${compactBar.buttonRadius}px`,
-									background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(34, 197, 94, 0.15) 100%)',
-									border: '1px solid rgba(34, 197, 94, 0.35)',
-									boxShadow: '0 1px 4px rgba(34, 197, 94, 0.2)',
-									transition: 'all 0.2s ease',
-									position: 'relative'
-								}}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.35) 0%, rgba(34, 197, 94, 0.25) 100%)';
-									e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-									e.currentTarget.style.boxShadow = '0 3px 8px rgba(34, 197, 94, 0.3)';
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(34, 197, 94, 0.15) 100%)';
-									e.currentTarget.style.transform = 'translateY(0) scale(1)';
-									e.currentTarget.style.boxShadow = '0 1px 4px rgba(34, 197, 94, 0.2)';
-								}}
-							>
-								{getActionBarIcon(actionBarIconTheme, 'nuevo', (() => {
-									let baseIconSizePx = 20;
-									const iconSizeStr = compactBar.buttonIconSize;
-									if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
-										const remValue = parseFloat(iconSizeStr.replace('rem', ''));
-										baseIconSizePx = Math.max(remValue * 16, 20);
-									} else if (typeof iconSizeStr === 'number') {
-										baseIconSizePx = Math.max(iconSizeStr, 20);
-									}
-									return Math.round(baseIconSizePx * 1.3);
-								})(), '#22c55e')}
-							</button>
-						</div>
-
-						{/* Botón Crear Grupo */}
-						<div style={{
-							display: 'flex',
-							flexDirection: 'column',
-							alignItems: 'center',
-							gap: '0.25rem',
-							flexShrink: 0
-						}}>
-							<button
-								title="Crear grupo de pestañas"
-								onClick={() => {
-									window.dispatchEvent(new CustomEvent('open-create-group-dialog'));
-								}}
-								style={{
-									cursor: 'pointer',
-									display: 'flex',
-									alignItems: 'center',
-									justifyContent: 'center',
-									width: `${compactBar.buttonSize}px`,
-									height: `${compactBar.buttonSize}px`,
-									padding: '0',
-									borderRadius: `${compactBar.buttonRadius}px`,
-									background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.25) 0%, rgba(255, 152, 0, 0.15) 100%)',
-									border: '1px solid rgba(255, 152, 0, 0.35)',
-									boxShadow: '0 1px 4px rgba(255, 152, 0, 0.2)',
-									transition: 'all 0.2s ease',
-									position: 'relative'
-								}}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 152, 0, 0.35) 0%, rgba(255, 152, 0, 0.25) 100%)';
-									e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-									e.currentTarget.style.boxShadow = '0 3px 8px rgba(255, 152, 0, 0.3)';
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 152, 0, 0.25) 0%, rgba(255, 152, 0, 0.15) 100%)';
-									e.currentTarget.style.transform = 'translateY(0) scale(1)';
-									e.currentTarget.style.boxShadow = '0 1px 4px rgba(255, 152, 0, 0.2)';
-								}}
-							>
-								{getActionBarIcon(actionBarIconTheme, 'grupo', (() => {
-									let baseIconSizePx = 20;
-									const iconSizeStr = compactBar.buttonIconSize;
-									if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
-										const remValue = parseFloat(iconSizeStr.replace('rem', ''));
-										baseIconSizePx = Math.max(remValue * 16, 20);
-									} else if (typeof iconSizeStr === 'number') {
-										baseIconSizePx = Math.max(iconSizeStr, 20);
-									}
-									return Math.round(baseIconSizePx * 1.3);
-								})(), '#ff9800')}
-							</button>
-						</div>
-
-						{/* Separador vertical decorativo */}
-						<div style={{
-							width: '1px',
-							height: `${compactBar.separatorHeight}px`,
-							background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
-							borderRadius: '1px',
-							flexShrink: 0,
-							margin: '0 0.5rem',
-							minWidth: '1px'
-						}} />
-
-						{/* Botón Conexiones */}
-						{(() => {
-							const conexionesColor = '#64C8FF';
-							// Usar el mismo tamaño que las terminales (1.3x del tamaño base)
-							let baseIconSizePx = 20;
-							const iconSizeStr = compactBar.buttonIconSize;
-							if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
-								const remValue = parseFloat(iconSizeStr.replace('rem', ''));
-								baseIconSizePx = Math.max(remValue * 16, 20);
-							} else if (typeof iconSizeStr === 'number') {
-								baseIconSizePx = Math.max(iconSizeStr, 20);
-							}
-							const conexionesIconSize = Math.round(baseIconSizePx * 1.3);
-							
-							return (
-								<div style={{
-									display: 'flex',
-									flexDirection: 'column',
-									alignItems: 'center',
-									gap: '0.25rem',
-									flexShrink: 0
-								}}>
-									<button
-										title="Ver historial de sesiones"
-										onClick={() => {
-											const expandSidebarEvent = new CustomEvent('expand-sidebar');
-											window.dispatchEvent(expandSidebarEvent);
-											const switchToConnectionsEvent = new CustomEvent('switch-to-connections');
-											window.dispatchEvent(switchToConnectionsEvent);
-										}}
-										style={{
-											cursor: 'pointer',
-											display: 'flex',
-											alignItems: 'center',
-											justifyContent: 'center',
-											width: `${compactBar.buttonSize}px`,
-											height: `${compactBar.buttonSize}px`,
-											padding: '0',
-											borderRadius: `${compactBar.buttonRadius}px`,
-											background: 'linear-gradient(135deg, rgba(100, 200, 255, 0.25) 0%, rgba(100, 200, 255, 0.15) 100%)',
-											border: '1px solid rgba(100, 200, 255, 0.35)',
-											boxShadow: '0 1px 4px rgba(100, 200, 255, 0.2)',
-											transition: 'all 0.2s ease',
-											position: 'relative'
-										}}
-										onMouseEnter={(e) => {
-											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(100, 200, 255, 0.35) 0%, rgba(100, 200, 255, 0.25) 100%)';
-											e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-											e.currentTarget.style.boxShadow = '0 3px 8px rgba(100, 200, 255, 0.3)';
-										}}
-										onMouseLeave={(e) => {
-											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(100, 200, 255, 0.25) 0%, rgba(100, 200, 255, 0.15) 100%)';
-											e.currentTarget.style.transform = 'translateY(0) scale(1)';
-											e.currentTarget.style.boxShadow = '0 1px 4px rgba(100, 200, 255, 0.2)';
-										}}
-									>
-										{getActionBarIcon(actionBarIconTheme, 'conexiones', conexionesIconSize, conexionesColor)}
-									</button>
-								</div>
-							);
-						})()}
-
-						{/* Botón Contraseñas */}
-						{(() => {
-							const passwordsColor = '#FFC107';
-							// Usar el mismo tamaño que las terminales (1.3x del tamaño base)
-							let baseIconSizePx = 20;
-							const iconSizeStr = compactBar.buttonIconSize;
-							if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
-								const remValue = parseFloat(iconSizeStr.replace('rem', ''));
-								baseIconSizePx = Math.max(remValue * 16, 20);
-							} else if (typeof iconSizeStr === 'number') {
-								baseIconSizePx = Math.max(iconSizeStr, 20);
-							}
-							const passwordsIconSize = Math.round(baseIconSizePx * 1.6);
-							
-							return (
-								<div style={{
-									display: 'flex',
-									flexDirection: 'column',
-									alignItems: 'center',
-									gap: '0.25rem',
-									flexShrink: 0
-								}}>
-									<button
-										title={locale === 'es' ? 'Gestor de secretos' : 'Secrets manager'}
-										onClick={() => {
-											const expandSidebarEvent = new CustomEvent('expand-sidebar');
-											window.dispatchEvent(expandSidebarEvent);
-											window.dispatchEvent(new CustomEvent('open-password-manager'));
-										}}
-										style={{
-											cursor: 'pointer',
-											display: 'flex',
-											alignItems: 'center',
-											justifyContent: 'center',
-											width: `${compactBar.buttonSize}px`,
-											height: `${compactBar.buttonSize}px`,
-											padding: '0',
-											borderRadius: `${compactBar.buttonRadius}px`,
-											background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)',
-											border: '1px solid rgba(255, 193, 7, 0.35)',
-											boxShadow: '0 1px 4px rgba(255, 193, 7, 0.2)',
-											transition: 'all 0.2s ease',
-											position: 'relative'
-										}}
-										onMouseEnter={(e) => {
-											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 193, 7, 0.35) 0%, rgba(255, 193, 7, 0.25) 100%)';
-											e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-											e.currentTarget.style.boxShadow = '0 3px 8px rgba(255, 193, 7, 0.3)';
-										}}
-										onMouseLeave={(e) => {
-											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)';
-											e.currentTarget.style.transform = 'translateY(0) scale(1)';
-											e.currentTarget.style.boxShadow = '0 1px 4px rgba(255, 193, 7, 0.2)';
-										}}
-									>
-										{getActionBarIcon(actionBarIconTheme, 'contraseñas', passwordsIconSize, passwordsColor)}
-									</button>
-								</div>
-							);
-						})()}
-
-						{/* Botón Herramientas de Red */}
-						{(() => {
-							const netToolsColor = '#06b6d4';
-							// Usar el mismo tamaño que las terminales (1.3x del tamaño base)
-							let baseIconSizePx = 20;
-							const iconSizeStr = compactBar.buttonIconSize;
-							if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
-								const remValue = parseFloat(iconSizeStr.replace('rem', ''));
-								baseIconSizePx = Math.max(remValue * 16, 20);
-							} else if (typeof iconSizeStr === 'number') {
-								baseIconSizePx = Math.max(iconSizeStr, 20);
-							}
-							const netToolsIconSize = Math.round(baseIconSizePx * 1.3);
-							
-							return (
-								<div style={{
-									display: 'flex',
-									flexDirection: 'column',
-									alignItems: 'center',
-									gap: '0.25rem',
-									flexShrink: 0
-								}}>
-									<button
-										title="Herramientas de Red y Seguridad"
-										onClick={() => {
-											window.dispatchEvent(new CustomEvent('open-network-tools-dialog'));
-										}}
-										style={{
-											cursor: 'pointer',
-											display: 'flex',
-											alignItems: 'center',
-											justifyContent: 'center',
-											width: `${compactBar.buttonSize}px`,
-											height: `${compactBar.buttonSize}px`,
-											padding: '0',
-											borderRadius: `${compactBar.buttonRadius}px`,
-											background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(6, 182, 212, 0.15) 100%)',
-											border: '1px solid rgba(6, 182, 212, 0.35)',
-											boxShadow: '0 1px 4px rgba(6, 182, 212, 0.2)',
-											transition: 'all 0.2s ease',
-											position: 'relative'
-										}}
-										onMouseEnter={(e) => {
-											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.35) 0%, rgba(6, 182, 212, 0.25) 100%)';
-											e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-											e.currentTarget.style.boxShadow = '0 3px 8px rgba(6, 182, 212, 0.3)';
-										}}
-										onMouseLeave={(e) => {
-											e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(6, 182, 212, 0.15) 100%)';
-											e.currentTarget.style.transform = 'translateY(0) scale(1)';
-											e.currentTarget.style.boxShadow = '0 1px 4px rgba(6, 182, 212, 0.2)';
-										}}
-									>
-										{getActionBarIcon(actionBarIconTheme, 'nettools', netToolsIconSize, netToolsColor)}
-									</button>
-								</div>
-							);
-						})()}
-					</div>
-				</div>
-
-						{/* Separador vertical decorativo */}
-						<div style={{
-							width: '1px',
-							height: `${compactBar.separatorHeight}px`,
-							background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
-							borderRadius: '1px',
-							flexShrink: 0,
-							margin: '0 0.5rem',
-							minWidth: '1px'
-						}} />
-
-						{/* SECCIÓN 2: TERMINALES */}
-						{availableTerminals.length > 0 && (
+							{/* Botón Nueva Conexión */}
 							<div style={{
 								display: 'flex',
 								flexDirection: 'column',
-								gap: '0.4rem',
 								alignItems: 'center',
-								justifyContent: 'center',
-								minWidth: 0,
+								gap: '0.25rem',
 								flexShrink: 0
 							}}>
-				{/* Botones */}
-								<div style={{
-									display: 'flex',
-									alignItems: 'flex-start',
-									justifyContent: 'flex-start',
-									gap: '0.5rem',
-									flexWrap: 'nowrap',
-									maxWidth: '100%',
-									overflow: 'visible',
-									width: 'auto'
-								}}>
+								<button
+									title="Nueva conexión SSH/RDP/VNC"
+									onClick={() => {
+										window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
+									}}
+									style={{
+										cursor: 'pointer',
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'center',
+										width: `${compactBar.buttonSize}px`,
+										height: `${compactBar.buttonSize}px`,
+										padding: '0',
+										borderRadius: `${compactBar.buttonRadius}px`,
+										background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(34, 197, 94, 0.15) 100%)',
+										border: '1px solid rgba(34, 197, 94, 0.35)',
+										boxShadow: '0 1px 4px rgba(34, 197, 94, 0.2)',
+										transition: 'all 0.2s ease',
+										position: 'relative'
+									}}
+									onMouseEnter={(e) => {
+										e.currentTarget.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.35) 0%, rgba(34, 197, 94, 0.25) 100%)';
+										e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+										e.currentTarget.style.boxShadow = '0 3px 8px rgba(34, 197, 94, 0.3)';
+									}}
+									onMouseLeave={(e) => {
+										e.currentTarget.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(34, 197, 94, 0.15) 100%)';
+										e.currentTarget.style.transform = 'translateY(0) scale(1)';
+										e.currentTarget.style.boxShadow = '0 1px 4px rgba(34, 197, 94, 0.2)';
+									}}
+								>
+									{getActionBarIcon(actionBarIconTheme, 'nuevo', (() => {
+										let baseIconSizePx = 20;
+										const iconSizeStr = compactBar.buttonIconSize;
+										if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+											const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+											baseIconSizePx = Math.max(remValue * 16, 20);
+										} else if (typeof iconSizeStr === 'number') {
+											baseIconSizePx = Math.max(iconSizeStr, 20);
+										}
+										return Math.round(baseIconSizePx * 1.3);
+									})(), '#22c55e')}
+								</button>
+							</div>
+
+							{/* Botón Crear Grupo */}
+							<div style={{
+								display: 'flex',
+								flexDirection: 'column',
+								alignItems: 'center',
+								gap: '0.25rem',
+								flexShrink: 0
+							}}>
+								<button
+									title="Crear grupo de pestañas"
+									onClick={() => {
+										window.dispatchEvent(new CustomEvent('open-create-group-dialog'));
+									}}
+									style={{
+										cursor: 'pointer',
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'center',
+										width: `${compactBar.buttonSize}px`,
+										height: `${compactBar.buttonSize}px`,
+										padding: '0',
+										borderRadius: `${compactBar.buttonRadius}px`,
+										background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.25) 0%, rgba(255, 152, 0, 0.15) 100%)',
+										border: '1px solid rgba(255, 152, 0, 0.35)',
+										boxShadow: '0 1px 4px rgba(255, 152, 0, 0.2)',
+										transition: 'all 0.2s ease',
+										position: 'relative'
+									}}
+									onMouseEnter={(e) => {
+										e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 152, 0, 0.35) 0%, rgba(255, 152, 0, 0.25) 100%)';
+										e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+										e.currentTarget.style.boxShadow = '0 3px 8px rgba(255, 152, 0, 0.3)';
+									}}
+									onMouseLeave={(e) => {
+										e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 152, 0, 0.25) 0%, rgba(255, 152, 0, 0.15) 100%)';
+										e.currentTarget.style.transform = 'translateY(0) scale(1)';
+										e.currentTarget.style.boxShadow = '0 1px 4px rgba(255, 152, 0, 0.2)';
+									}}
+								>
+									{getActionBarIcon(actionBarIconTheme, 'grupo', (() => {
+										let baseIconSizePx = 20;
+										const iconSizeStr = compactBar.buttonIconSize;
+										if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+											const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+											baseIconSizePx = Math.max(remValue * 16, 20);
+										} else if (typeof iconSizeStr === 'number') {
+											baseIconSizePx = Math.max(iconSizeStr, 20);
+										}
+										return Math.round(baseIconSizePx * 1.3);
+									})(), '#ff9800')}
+								</button>
+							</div>
+
+							{/* Separador vertical decorativo */}
+							<div style={{
+								width: '1px',
+								height: `${compactBar.separatorHeight}px`,
+								background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
+								borderRadius: '1px',
+								flexShrink: 0,
+								margin: '0 0.5rem',
+								minWidth: '1px'
+							}} />
+
+							{/* Botón Conexiones */}
+							{(() => {
+								const conexionesColor = '#64C8FF';
+								// Usar el mismo tamaño que las terminales (1.3x del tamaño base)
+								let baseIconSizePx = 20;
+								const iconSizeStr = compactBar.buttonIconSize;
+								if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+									const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+									baseIconSizePx = Math.max(remValue * 16, 20);
+								} else if (typeof iconSizeStr === 'number') {
+									baseIconSizePx = Math.max(iconSizeStr, 20);
+								}
+								const conexionesIconSize = Math.round(baseIconSizePx * 1.3);
+
+								return (
+									<div style={{
+										display: 'flex',
+										flexDirection: 'column',
+										alignItems: 'center',
+										gap: '0.25rem',
+										flexShrink: 0
+									}}>
+										<button
+											title="Ver historial de sesiones"
+											onClick={() => {
+												const expandSidebarEvent = new CustomEvent('expand-sidebar');
+												window.dispatchEvent(expandSidebarEvent);
+												const switchToConnectionsEvent = new CustomEvent('switch-to-connections');
+												window.dispatchEvent(switchToConnectionsEvent);
+											}}
+											style={{
+												cursor: 'pointer',
+												display: 'flex',
+												alignItems: 'center',
+												justifyContent: 'center',
+												width: `${compactBar.buttonSize}px`,
+												height: `${compactBar.buttonSize}px`,
+												padding: '0',
+												borderRadius: `${compactBar.buttonRadius}px`,
+												background: 'linear-gradient(135deg, rgba(100, 200, 255, 0.25) 0%, rgba(100, 200, 255, 0.15) 100%)',
+												border: '1px solid rgba(100, 200, 255, 0.35)',
+												boxShadow: '0 1px 4px rgba(100, 200, 255, 0.2)',
+												transition: 'all 0.2s ease',
+												position: 'relative'
+											}}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.background = 'linear-gradient(135deg, rgba(100, 200, 255, 0.35) 0%, rgba(100, 200, 255, 0.25) 100%)';
+												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+												e.currentTarget.style.boxShadow = '0 3px 8px rgba(100, 200, 255, 0.3)';
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.background = 'linear-gradient(135deg, rgba(100, 200, 255, 0.25) 0%, rgba(100, 200, 255, 0.15) 100%)';
+												e.currentTarget.style.transform = 'translateY(0) scale(1)';
+												e.currentTarget.style.boxShadow = '0 1px 4px rgba(100, 200, 255, 0.2)';
+											}}
+										>
+											{getActionBarIcon(actionBarIconTheme, 'conexiones', conexionesIconSize, conexionesColor)}
+										</button>
+									</div>
+								);
+							})()}
+
+							{/* Botón Contraseñas */}
+							{(() => {
+								const passwordsColor = '#FFC107';
+								// Usar el mismo tamaño que las terminales (1.3x del tamaño base)
+								let baseIconSizePx = 20;
+								const iconSizeStr = compactBar.buttonIconSize;
+								if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+									const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+									baseIconSizePx = Math.max(remValue * 16, 20);
+								} else if (typeof iconSizeStr === 'number') {
+									baseIconSizePx = Math.max(iconSizeStr, 20);
+								}
+								const passwordsIconSize = Math.round(baseIconSizePx * 1.6);
+
+								return (
+									<div style={{
+										display: 'flex',
+										flexDirection: 'column',
+										alignItems: 'center',
+										gap: '0.25rem',
+										flexShrink: 0
+									}}>
+										<button
+											title={locale === 'es' ? 'Gestor de secretos' : 'Secrets manager'}
+											onClick={() => {
+												const expandSidebarEvent = new CustomEvent('expand-sidebar');
+												window.dispatchEvent(expandSidebarEvent);
+												window.dispatchEvent(new CustomEvent('open-password-manager'));
+											}}
+											style={{
+												cursor: 'pointer',
+												display: 'flex',
+												alignItems: 'center',
+												justifyContent: 'center',
+												width: `${compactBar.buttonSize}px`,
+												height: `${compactBar.buttonSize}px`,
+												padding: '0',
+												borderRadius: `${compactBar.buttonRadius}px`,
+												background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)',
+												border: '1px solid rgba(255, 193, 7, 0.35)',
+												boxShadow: '0 1px 4px rgba(255, 193, 7, 0.2)',
+												transition: 'all 0.2s ease',
+												position: 'relative'
+											}}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 193, 7, 0.35) 0%, rgba(255, 193, 7, 0.25) 100%)';
+												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+												e.currentTarget.style.boxShadow = '0 3px 8px rgba(255, 193, 7, 0.3)';
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)';
+												e.currentTarget.style.transform = 'translateY(0) scale(1)';
+												e.currentTarget.style.boxShadow = '0 1px 4px rgba(255, 193, 7, 0.2)';
+											}}
+										>
+											{getActionBarIcon(actionBarIconTheme, 'contraseñas', passwordsIconSize, passwordsColor)}
+										</button>
+									</div>
+								);
+							})()}
+
+							{/* Botón Herramientas de Red */}
+							{(() => {
+								const netToolsColor = '#06b6d4';
+								// Usar el mismo tamaño que las terminales (1.3x del tamaño base)
+								let baseIconSizePx = 20;
+								const iconSizeStr = compactBar.buttonIconSize;
+								if (typeof iconSizeStr === 'string' && iconSizeStr.includes('rem')) {
+									const remValue = parseFloat(iconSizeStr.replace('rem', ''));
+									baseIconSizePx = Math.max(remValue * 16, 20);
+								} else if (typeof iconSizeStr === 'number') {
+									baseIconSizePx = Math.max(iconSizeStr, 20);
+								}
+								const netToolsIconSize = Math.round(baseIconSizePx * 1.3);
+
+								return (
+									<div style={{
+										display: 'flex',
+										flexDirection: 'column',
+										alignItems: 'center',
+										gap: '0.25rem',
+										flexShrink: 0
+									}}>
+										<button
+											title="Herramientas de Red y Seguridad"
+											onClick={() => {
+												window.dispatchEvent(new CustomEvent('open-network-tools-dialog'));
+											}}
+											style={{
+												cursor: 'pointer',
+												display: 'flex',
+												alignItems: 'center',
+												justifyContent: 'center',
+												width: `${compactBar.buttonSize}px`,
+												height: `${compactBar.buttonSize}px`,
+												padding: '0',
+												borderRadius: `${compactBar.buttonRadius}px`,
+												background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(6, 182, 212, 0.15) 100%)',
+												border: '1px solid rgba(6, 182, 212, 0.35)',
+												boxShadow: '0 1px 4px rgba(6, 182, 212, 0.2)',
+												transition: 'all 0.2s ease',
+												position: 'relative'
+											}}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.35) 0%, rgba(6, 182, 212, 0.25) 100%)';
+												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+												e.currentTarget.style.boxShadow = '0 3px 8px rgba(6, 182, 212, 0.3)';
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(6, 182, 212, 0.15) 100%)';
+												e.currentTarget.style.transform = 'translateY(0) scale(1)';
+												e.currentTarget.style.boxShadow = '0 1px 4px rgba(6, 182, 212, 0.2)';
+											}}
+										>
+											{getActionBarIcon(actionBarIconTheme, 'nettools', netToolsIconSize, netToolsColor)}
+										</button>
+									</div>
+								);
+							})()}
+						</div>
+					</div>
+
+					{/* Separador vertical decorativo */}
+					<div style={{
+						width: '1px',
+						height: `${compactBar.separatorHeight}px`,
+						background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
+						borderRadius: '1px',
+						flexShrink: 0,
+						margin: '0 0.5rem',
+						minWidth: '1px'
+					}} />
+
+					{/* SECCIÓN 2: TERMINALES */}
+					{availableTerminals.length > 0 && (
+						<div style={{
+							display: 'flex',
+							flexDirection: 'column',
+							gap: '0.4rem',
+							alignItems: 'center',
+							justifyContent: 'center',
+							minWidth: 0,
+							flexShrink: 0
+						}}>
+							{/* Botones */}
+							<div style={{
+								display: 'flex',
+								alignItems: 'flex-start',
+								justifyContent: 'flex-start',
+								gap: '0.5rem',
+								flexWrap: 'nowrap',
+								maxWidth: '100%',
+								overflow: 'visible',
+								width: 'auto'
+							}}>
 								{availableTerminals.map((terminal, index) => (
 									<div key={index} style={{
 										display: 'flex',
@@ -1906,7 +1909,7 @@ const NodeTermStatus = ({
 
 								{/* Botón Ubuntu si hay distribuciones */}
 								{ubuntuDistributions.length > 0 && (
-									<div 
+									<div
 										data-ubuntu-button
 										style={{
 											display: 'flex',
@@ -2020,13 +2023,13 @@ const NodeTermStatus = ({
 												)}
 											</div>
 										</button>
-										
+
 										{/* Menú desplegable de distribuciones Ubuntu - Renderizado con Portal */}
 										{ubuntuMenuOpen && ubuntuDistributions.length > 1 && typeof document !== 'undefined' && document.body && (() => {
 											return createPortal(
 												<>
 													{/* Overlay para cerrar al hacer clic fuera */}
-													<div 
+													<div
 														style={{
 															position: 'fixed',
 															top: 0,
@@ -2040,7 +2043,7 @@ const NodeTermStatus = ({
 															setUbuntuMenuOpen(false);
 														}}
 													/>
-													<div 
+													<div
 														data-ubuntu-menu
 														style={{
 															position: 'fixed',
@@ -2073,60 +2076,60 @@ const NodeTermStatus = ({
 														}}
 														onMouseDown={(e) => e.stopPropagation()}
 													>
-												<div style={{
-													padding: '0.5rem',
-													fontSize: '0.7rem',
-													fontWeight: '600',
-													color: themeColors.textPrimary || '#fff',
-													borderBottom: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
-													marginBottom: '0.25rem'
-												}}>
-													Distribuciones Ubuntu ({ubuntuDistributions.length})
-												</div>
-												{ubuntuDistributions.map((distro, idx) => (
-													<button
-														key={idx}
-														onClick={() => {
-															distro.action();
-															setUbuntuMenuOpen(false);
-														}}
-														style={{
-															padding: '0.5rem 0.75rem',
-															borderRadius: '6px',
-															background: 'rgba(255,255,255,0.05)',
-															border: '1px solid transparent',
+														<div style={{
+															padding: '0.5rem',
+															fontSize: '0.7rem',
+															fontWeight: '600',
 															color: themeColors.textPrimary || '#fff',
-															fontSize: '0.65rem',
-															textAlign: 'left',
-															cursor: 'pointer',
-															transition: 'all 0.2s ease',
-															display: 'flex',
-															alignItems: 'center',
-															gap: '0.5rem'
-														}}
-														onMouseEnter={(e) => {
-															e.currentTarget.style.background = 'rgba(233, 84, 32, 0.2)';
-															e.currentTarget.style.border = '1px solid rgba(233, 84, 32, 0.4)';
-														}}
-														onMouseLeave={(e) => {
-															e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-															e.currentTarget.style.border = '1px solid transparent';
-														}}
-													>
-														<FaUbuntu style={{ color: '#E95420', fontSize: '0.9rem', flexShrink: 0 }} />
-														<span style={{ 
-															flex: 1, 
-															overflow: 'hidden', 
-															textOverflow: 'ellipsis', 
-															whiteSpace: 'nowrap' 
+															borderBottom: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+															marginBottom: '0.25rem'
 														}}>
-															{distro.label || `Ubuntu ${idx + 1}`}
-														</span>
-													</button>
-												))}
-												</div>
-											</>,
-											document.body
+															Distribuciones Ubuntu ({ubuntuDistributions.length})
+														</div>
+														{ubuntuDistributions.map((distro, idx) => (
+															<button
+																key={idx}
+																onClick={() => {
+																	distro.action();
+																	setUbuntuMenuOpen(false);
+																}}
+																style={{
+																	padding: '0.5rem 0.75rem',
+																	borderRadius: '6px',
+																	background: 'rgba(255,255,255,0.05)',
+																	border: '1px solid transparent',
+																	color: themeColors.textPrimary || '#fff',
+																	fontSize: '0.65rem',
+																	textAlign: 'left',
+																	cursor: 'pointer',
+																	transition: 'all 0.2s ease',
+																	display: 'flex',
+																	alignItems: 'center',
+																	gap: '0.5rem'
+																}}
+																onMouseEnter={(e) => {
+																	e.currentTarget.style.background = 'rgba(233, 84, 32, 0.2)';
+																	e.currentTarget.style.border = '1px solid rgba(233, 84, 32, 0.4)';
+																}}
+																onMouseLeave={(e) => {
+																	e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+																	e.currentTarget.style.border = '1px solid transparent';
+																}}
+															>
+																<FaUbuntu style={{ color: '#E95420', fontSize: '0.9rem', flexShrink: 0 }} />
+																<span style={{
+																	flex: 1,
+																	overflow: 'hidden',
+																	textOverflow: 'ellipsis',
+																	whiteSpace: 'nowrap'
+																}}>
+																	{distro.label || `Ubuntu ${idx + 1}`}
+																</span>
+															</button>
+														))}
+													</div>
+												</>,
+												document.body
 											);
 										})()}
 									</div>
@@ -2134,7 +2137,7 @@ const NodeTermStatus = ({
 
 								{/* Botón Docker si hay contenedores */}
 								{dockerContainers.length > 0 && (
-									<div 
+									<div
 										data-docker-button
 										style={{
 											display: 'flex',
@@ -2216,7 +2219,7 @@ const NodeTermStatus = ({
 											}}
 										>
 											<div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-												<SiDocker style={{ 
+												<SiDocker style={{
 													color: '#2496ED',
 													fontSize: (() => {
 														let baseIconSizePx = 20;
@@ -2255,14 +2258,14 @@ const NodeTermStatus = ({
 												)}
 											</div>
 										</button>
-										
+
 										{/* Menú desplegable de contenedores Docker - Renderizado con Portal */}
 										{dockerMenuOpen && dockerContainers.length > 1 && typeof document !== 'undefined' && document.body && (() => {
 											console.log('[Docker] Creando portal, posición:', dockerMenuPosition);
 											return createPortal(
 												<>
 													{/* Overlay para cerrar al hacer clic fuera */}
-													<div 
+													<div
 														style={{
 															position: 'fixed',
 															top: 0,
@@ -2277,7 +2280,7 @@ const NodeTermStatus = ({
 															setDockerMenuOpen(false);
 														}}
 													/>
-													<div 
+													<div
 														data-docker-menu
 														style={{
 															position: 'fixed',
@@ -2310,60 +2313,60 @@ const NodeTermStatus = ({
 														}}
 														onMouseDown={(e) => e.stopPropagation()}
 													>
-												<div style={{
-													padding: '0.5rem',
-													fontSize: '0.7rem',
-													fontWeight: '600',
-													color: themeColors.textPrimary || '#fff',
-													borderBottom: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
-													marginBottom: '0.25rem'
-												}}>
-													Contenedores Docker ({dockerContainers.length})
-												</div>
-												{dockerContainers.map((container, idx) => (
-													<button
-														key={idx}
-														onClick={() => {
-															handleOpenTerminal(`docker-${container.name}`, { dockerContainer: container });
-															setDockerMenuOpen(false);
-														}}
-														style={{
-															padding: '0.5rem 0.75rem',
-															borderRadius: '6px',
-															background: 'rgba(255,255,255,0.05)',
-															border: '1px solid transparent',
+														<div style={{
+															padding: '0.5rem',
+															fontSize: '0.7rem',
+															fontWeight: '600',
 															color: themeColors.textPrimary || '#fff',
-															fontSize: '0.65rem',
-															textAlign: 'left',
-															cursor: 'pointer',
-															transition: 'all 0.2s ease',
-															display: 'flex',
-															alignItems: 'center',
-															gap: '0.5rem'
-														}}
-														onMouseEnter={(e) => {
-															e.currentTarget.style.background = 'rgba(36, 150, 237, 0.2)';
-															e.currentTarget.style.border = '1px solid rgba(36, 150, 237, 0.4)';
-														}}
-														onMouseLeave={(e) => {
-															e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-															e.currentTarget.style.border = '1px solid transparent';
-														}}
-													>
-														<SiDocker style={{ color: '#2496ED', fontSize: '0.9rem', flexShrink: 0 }} />
-														<span style={{ 
-															flex: 1, 
-															overflow: 'hidden', 
-															textOverflow: 'ellipsis', 
-															whiteSpace: 'nowrap' 
+															borderBottom: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+															marginBottom: '0.25rem'
 														}}>
-															{container.name || `Contenedor ${idx + 1}`}
-														</span>
-													</button>
-												))}
-												</div>
-											</>,
-											document.body
+															Contenedores Docker ({dockerContainers.length})
+														</div>
+														{dockerContainers.map((container, idx) => (
+															<button
+																key={idx}
+																onClick={() => {
+																	handleOpenTerminal(`docker-${container.name}`, { dockerContainer: container });
+																	setDockerMenuOpen(false);
+																}}
+																style={{
+																	padding: '0.5rem 0.75rem',
+																	borderRadius: '6px',
+																	background: 'rgba(255,255,255,0.05)',
+																	border: '1px solid transparent',
+																	color: themeColors.textPrimary || '#fff',
+																	fontSize: '0.65rem',
+																	textAlign: 'left',
+																	cursor: 'pointer',
+																	transition: 'all 0.2s ease',
+																	display: 'flex',
+																	alignItems: 'center',
+																	gap: '0.5rem'
+																}}
+																onMouseEnter={(e) => {
+																	e.currentTarget.style.background = 'rgba(36, 150, 237, 0.2)';
+																	e.currentTarget.style.border = '1px solid rgba(36, 150, 237, 0.4)';
+																}}
+																onMouseLeave={(e) => {
+																	e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+																	e.currentTarget.style.border = '1px solid transparent';
+																}}
+															>
+																<SiDocker style={{ color: '#2496ED', fontSize: '0.9rem', flexShrink: 0 }} />
+																<span style={{
+																	flex: 1,
+																	overflow: 'hidden',
+																	textOverflow: 'ellipsis',
+																	whiteSpace: 'nowrap'
+																}}>
+																	{container.name || `Contenedor ${idx + 1}`}
+																</span>
+															</button>
+														))}
+													</div>
+												</>,
+												document.body
 											);
 										})()}
 									</div>
@@ -2374,12 +2377,12 @@ const NodeTermStatus = ({
 
 					{/* Separador vertical decorativo */}
 					{(() => {
-						const hasActiveAIClients = aiClientsState.nodeterm || 
+						const hasActiveAIClients = aiClientsState.nodeterm ||
 							aiClientsState.anythingllm.enabled ||
 							aiClientsState.openwebui.enabled;
-						
+
 						if (!hasActiveAIClients) return null;
-						
+
 						return (
 							<div style={{
 								width: '1px',
@@ -2395,10 +2398,10 @@ const NodeTermStatus = ({
 
 					{/* SECCIÓN 4: CLIENTES DE IA */}
 					{(() => {
-						const hasActiveAIClients = aiClientsState.nodeterm || 
+						const hasActiveAIClients = aiClientsState.nodeterm ||
 							aiClientsState.anythingllm.enabled ||
 							aiClientsState.openwebui.enabled;
-						
+
 						if (!hasActiveAIClients) return null;
 
 						return (
@@ -2431,7 +2434,7 @@ const NodeTermStatus = ({
 											gap: '0.25rem',
 											flexShrink: 0
 										}}>
-											<div 
+											<div
 												title="NodeTerm AI: Activo"
 												onClick={() => {
 													const tabId = `ai-chat-${Date.now()}`;
@@ -2488,7 +2491,7 @@ const NodeTermStatus = ({
 												const anythingllmColor = isRunning ? '#22c55e' : '#f59e0b';
 												const anythingllmStatus = isRunning ? 'En ejecución' : 'Detenido';
 												return (
-													<div 
+													<div
 														title={`AnythingLLM: ${anythingllmStatus}`}
 														onClick={() => {
 															const newTab = {
@@ -2546,7 +2549,7 @@ const NodeTermStatus = ({
 												const openwebuiColor = isRunning ? '#3b82f6' : '#f59e0b';
 												const openwebuiStatus = isRunning ? 'En ejecución' : 'Detenido';
 												return (
-													<div 
+													<div
 														title={`OpenWebUI: ${openwebuiStatus}`}
 														onClick={() => {
 															const newTab = {
@@ -2629,7 +2632,7 @@ const NodeTermStatus = ({
 								baseIconSizePx = Math.max(iconSizeStr, 20);
 							}
 							const configIconSize = Math.round(baseIconSizePx * 1.1);
-							
+
 							return (
 								<div style={{
 									display: 'flex',
@@ -2698,7 +2701,7 @@ const NodeTermStatus = ({
 							}
 							const terminalIconSize = Math.round(baseIconSizePx * 1.3);
 							const terminalIconUrl = 'https://icons.iconarchive.com/icons/alecive/flatwoken/256/Apps-Terminal-Pc-104-icon.png';
-							
+
 							return (
 								<div style={{
 									display: 'flex',
@@ -2766,7 +2769,7 @@ const NodeTermStatus = ({
 								baseIconSizePx = Math.max(iconSizeStr, 20);
 							}
 							const statusIconSize = Math.round(baseIconSizePx * 1.6);
-							
+
 							return (
 								<div style={{
 									display: 'flex',
@@ -2841,7 +2844,7 @@ const NodeTermStatus = ({
 						minWidth: 0,
 						flexShrink: 0
 					}}>
-			{/* Badges de servicios */}
+						{/* Badges de servicios */}
 						<div style={{
 							display: 'flex',
 							alignItems: 'flex-start',
@@ -2865,7 +2868,7 @@ const NodeTermStatus = ({
 									baseIconSizePx = Math.max(iconSizeStr, 20);
 								}
 								const auditIconSize = Math.round(baseIconSizePx * 1.0);
-								
+
 								return (
 									<div style={{
 										display: 'flex',
@@ -2973,21 +2976,21 @@ const NodeTermStatus = ({
 												height: `${compactBar.buttonSize}px`,
 												padding: '0',
 												borderRadius: `${compactBar.buttonRadius}px`,
-												background: `linear-gradient(135deg, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.15) 100%)`,
-												border: `1px solid rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.35)`,
-												boxShadow: `0 1px 4px rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.2)`,
+												background: `linear-gradient(135deg, rgba(${parseInt(vaultColor.slice(1, 3), 16)}, ${parseInt(vaultColor.slice(3, 5), 16)}, ${parseInt(vaultColor.slice(5, 7), 16)}, 0.25) 0%, rgba(${parseInt(vaultColor.slice(1, 3), 16)}, ${parseInt(vaultColor.slice(3, 5), 16)}, ${parseInt(vaultColor.slice(5, 7), 16)}, 0.15) 100%)`,
+												border: `1px solid rgba(${parseInt(vaultColor.slice(1, 3), 16)}, ${parseInt(vaultColor.slice(3, 5), 16)}, ${parseInt(vaultColor.slice(5, 7), 16)}, 0.35)`,
+												boxShadow: `0 1px 4px rgba(${parseInt(vaultColor.slice(1, 3), 16)}, ${parseInt(vaultColor.slice(3, 5), 16)}, ${parseInt(vaultColor.slice(5, 7), 16)}, 0.2)`,
 												transition: 'all 0.2s ease',
 												position: 'relative'
 											}}
 											onMouseEnter={(e) => {
-												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.35) 0%, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.25) 100%)`;
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(vaultColor.slice(1, 3), 16)}, ${parseInt(vaultColor.slice(3, 5), 16)}, ${parseInt(vaultColor.slice(5, 7), 16)}, 0.35) 0%, rgba(${parseInt(vaultColor.slice(1, 3), 16)}, ${parseInt(vaultColor.slice(3, 5), 16)}, ${parseInt(vaultColor.slice(5, 7), 16)}, 0.25) 100%)`;
 												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-												e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.3)`;
+												e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(vaultColor.slice(1, 3), 16)}, ${parseInt(vaultColor.slice(3, 5), 16)}, ${parseInt(vaultColor.slice(5, 7), 16)}, 0.3)`;
 											}}
 											onMouseLeave={(e) => {
-												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.15) 100%)`;
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(vaultColor.slice(1, 3), 16)}, ${parseInt(vaultColor.slice(3, 5), 16)}, ${parseInt(vaultColor.slice(5, 7), 16)}, 0.25) 0%, rgba(${parseInt(vaultColor.slice(1, 3), 16)}, ${parseInt(vaultColor.slice(3, 5), 16)}, ${parseInt(vaultColor.slice(5, 7), 16)}, 0.15) 100%)`;
 												e.currentTarget.style.transform = 'translateY(0) scale(1)';
-												e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(vaultColor.slice(1,3), 16)}, ${parseInt(vaultColor.slice(3,5), 16)}, ${parseInt(vaultColor.slice(5,7), 16)}, 0.2)`;
+												e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(vaultColor.slice(1, 3), 16)}, ${parseInt(vaultColor.slice(3, 5), 16)}, ${parseInt(vaultColor.slice(5, 7), 16)}, 0.2)`;
 											}}
 										>
 											<i className={vaultState.unlocked ? 'pi pi-unlock' : 'pi pi-lock'} style={{ color: vaultColor, fontSize: compactBar.serviceIconSize }} />
@@ -3035,21 +3038,21 @@ const NodeTermStatus = ({
 												height: `${compactBar.buttonSize}px`,
 												padding: '0',
 												borderRadius: `${compactBar.buttonRadius}px`,
-												background: `linear-gradient(135deg, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.15) 100%)`,
-												border: `1px solid rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.35)`,
-												boxShadow: `0 1px 4px rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.2)`,
+												background: `linear-gradient(135deg, rgba(${parseInt(ncColor.slice(1, 3), 16)}, ${parseInt(ncColor.slice(3, 5), 16)}, ${parseInt(ncColor.slice(5, 7), 16)}, 0.25) 0%, rgba(${parseInt(ncColor.slice(1, 3), 16)}, ${parseInt(ncColor.slice(3, 5), 16)}, ${parseInt(ncColor.slice(5, 7), 16)}, 0.15) 100%)`,
+												border: `1px solid rgba(${parseInt(ncColor.slice(1, 3), 16)}, ${parseInt(ncColor.slice(3, 5), 16)}, ${parseInt(ncColor.slice(5, 7), 16)}, 0.35)`,
+												boxShadow: `0 1px 4px rgba(${parseInt(ncColor.slice(1, 3), 16)}, ${parseInt(ncColor.slice(3, 5), 16)}, ${parseInt(ncColor.slice(5, 7), 16)}, 0.2)`,
 												transition: 'all 0.2s ease',
 												position: 'relative'
 											}}
 											onMouseEnter={(e) => {
-												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.35) 0%, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.25) 100%)`;
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ncColor.slice(1, 3), 16)}, ${parseInt(ncColor.slice(3, 5), 16)}, ${parseInt(ncColor.slice(5, 7), 16)}, 0.35) 0%, rgba(${parseInt(ncColor.slice(1, 3), 16)}, ${parseInt(ncColor.slice(3, 5), 16)}, ${parseInt(ncColor.slice(5, 7), 16)}, 0.25) 100%)`;
 												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-												e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.3)`;
+												e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(ncColor.slice(1, 3), 16)}, ${parseInt(ncColor.slice(3, 5), 16)}, ${parseInt(ncColor.slice(5, 7), 16)}, 0.3)`;
 											}}
 											onMouseLeave={(e) => {
-												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.15) 100%)`;
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ncColor.slice(1, 3), 16)}, ${parseInt(ncColor.slice(3, 5), 16)}, ${parseInt(ncColor.slice(5, 7), 16)}, 0.25) 0%, rgba(${parseInt(ncColor.slice(1, 3), 16)}, ${parseInt(ncColor.slice(3, 5), 16)}, ${parseInt(ncColor.slice(5, 7), 16)}, 0.15) 100%)`;
 												e.currentTarget.style.transform = 'translateY(0) scale(1)';
-												e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(ncColor.slice(1,3), 16)}, ${parseInt(ncColor.slice(3,5), 16)}, ${parseInt(ncColor.slice(5,7), 16)}, 0.2)`;
+												e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(ncColor.slice(1, 3), 16)}, ${parseInt(ncColor.slice(3, 5), 16)}, ${parseInt(ncColor.slice(5, 7), 16)}, 0.2)`;
 											}}
 										>
 											<i className="pi pi-cloud" style={{ color: ncColor, fontSize: compactBar.serviceIconSize }} />
@@ -3082,21 +3085,21 @@ const NodeTermStatus = ({
 												height: `${compactBar.buttonSize}px`,
 												padding: '0',
 												borderRadius: `${compactBar.buttonRadius}px`,
-												background: `linear-gradient(135deg, rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.15) 100%)`,
-												border: `1px solid rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.35)`,
-												boxShadow: `0 1px 4px rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.2)`,
+												background: `linear-gradient(135deg, rgba(${parseInt(guacdColor.slice(1, 3), 16)}, ${parseInt(guacdColor.slice(3, 5), 16)}, ${parseInt(guacdColor.slice(5, 7), 16)}, 0.25) 0%, rgba(${parseInt(guacdColor.slice(1, 3), 16)}, ${parseInt(guacdColor.slice(3, 5), 16)}, ${parseInt(guacdColor.slice(5, 7), 16)}, 0.15) 100%)`,
+												border: `1px solid rgba(${parseInt(guacdColor.slice(1, 3), 16)}, ${parseInt(guacdColor.slice(3, 5), 16)}, ${parseInt(guacdColor.slice(5, 7), 16)}, 0.35)`,
+												boxShadow: `0 1px 4px rgba(${parseInt(guacdColor.slice(1, 3), 16)}, ${parseInt(guacdColor.slice(3, 5), 16)}, ${parseInt(guacdColor.slice(5, 7), 16)}, 0.2)`,
 												transition: 'all 0.2s ease',
 												position: 'relative'
 											}}
 											onMouseEnter={(e) => {
-												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.35) 0%, rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.25) 100%)`;
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(guacdColor.slice(1, 3), 16)}, ${parseInt(guacdColor.slice(3, 5), 16)}, ${parseInt(guacdColor.slice(5, 7), 16)}, 0.35) 0%, rgba(${parseInt(guacdColor.slice(1, 3), 16)}, ${parseInt(guacdColor.slice(3, 5), 16)}, ${parseInt(guacdColor.slice(5, 7), 16)}, 0.25) 100%)`;
 												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-												e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.3)`;
+												e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(guacdColor.slice(1, 3), 16)}, ${parseInt(guacdColor.slice(3, 5), 16)}, ${parseInt(guacdColor.slice(5, 7), 16)}, 0.3)`;
 											}}
 											onMouseLeave={(e) => {
-												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.15) 100%)`;
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(guacdColor.slice(1, 3), 16)}, ${parseInt(guacdColor.slice(3, 5), 16)}, ${parseInt(guacdColor.slice(5, 7), 16)}, 0.25) 0%, rgba(${parseInt(guacdColor.slice(1, 3), 16)}, ${parseInt(guacdColor.slice(3, 5), 16)}, ${parseInt(guacdColor.slice(5, 7), 16)}, 0.15) 100%)`;
 												e.currentTarget.style.transform = 'translateY(0) scale(1)';
-												e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(guacdColor.slice(1,3), 16)}, ${parseInt(guacdColor.slice(3,5), 16)}, ${parseInt(guacdColor.slice(5,7), 16)}, 0.2)`;
+												e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(guacdColor.slice(1, 3), 16)}, ${parseInt(guacdColor.slice(3, 5), 16)}, ${parseInt(guacdColor.slice(5, 7), 16)}, 0.2)`;
 											}}
 										>
 											{isDocker ? (
@@ -3132,21 +3135,21 @@ const NodeTermStatus = ({
 												height: `${compactBar.buttonSize}px`,
 												padding: '0',
 												borderRadius: `${compactBar.buttonRadius}px`,
-												background: `linear-gradient(135deg, rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.15) 100%)`,
-												border: `1px solid rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.35)`,
-												boxShadow: `0 1px 4px rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.2)`,
+												background: `linear-gradient(135deg, rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.25) 0%, rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.15) 100%)`,
+												border: `1px solid rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.35)`,
+												boxShadow: `0 1px 4px rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.2)`,
 												transition: 'all 0.2s ease',
 												position: 'relative'
 											}}
 											onMouseEnter={(e) => {
-												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.35) 0%, rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.25) 100%)`;
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.35) 0%, rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.25) 100%)`;
 												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-												e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.3)`;
+												e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.3)`;
 											}}
 											onMouseLeave={(e) => {
-												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.25) 0%, rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.15) 100%)`;
+												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.25) 0%, rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.15) 100%)`;
 												e.currentTarget.style.transform = 'translateY(0) scale(1)';
-												e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(ollamaColor.slice(1,3), 16)}, ${parseInt(ollamaColor.slice(3,5), 16)}, ${parseInt(ollamaColor.slice(5,7), 16)}, 0.2)`;
+												e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.2)`;
 											}}
 										>
 											<i className="pi pi-desktop" style={{ color: ollamaColor, fontSize: compactBar.serviceIconSize }} />
@@ -3197,7 +3200,7 @@ const NodeTermStatus = ({
 						Estado de NodeTerm
 					</h3>
 				</div>
-				
+
 				{/* Solo el punto verde */}
 				<div style={{
 					width: '8px',
