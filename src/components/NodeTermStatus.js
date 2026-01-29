@@ -1402,6 +1402,34 @@ const NodeTermStatus = ({
 					<SectionHeader id="servicios" label="SERVICIOS" />
 					{!sc.servicios && (
 						<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+							<button style={cardStyle()} onClick={async () => {
+								try {
+									if (window?.electron?.ipcRenderer) {
+										const result = await window.electron.ipcRenderer.invoke('recording:list', {});
+										if (result && result.success && Array.isArray(result.recordings) && result.recordings.length > 0) {
+											const auditTabId = `audit_global_${Date.now()}`;
+											window.dispatchEvent(new CustomEvent('create-audit-tab', {
+												detail: {
+													tabId: auditTabId,
+													title: 'Auditoría Global',
+													recordings: result.recordings
+												}
+											}));
+										} else {
+											if (window.showToast) {
+												window.showToast('info', 'Sin grabaciones', 'No hay grabaciones disponibles para mostrar');
+											}
+										}
+									}
+								} catch (e) {
+									console.warn('[NodeTermStatus] Error abriendo auditoría global:', e?.message || e);
+									if (window.showToast) {
+										window.showToast('error', 'Error', 'Error al cargar las grabaciones');
+									}
+								}
+							}} title="Ver grabaciones y auditoría" onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+								<i className="pi pi-history" style={{ color: '#a855f7', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Auditoría</span>
+							</button>
 							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'rdp' } })); } catch (e) { } }} title={`Guacd: ${guacdState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
 								<i className={guacdState.method === 'docker' ? 'pi pi-box' : 'pi pi-window-maximize'} style={{ color: guacdState.isRunning ? '#22c55e' : '#ef4444', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Guacd</span>
 							</button>
