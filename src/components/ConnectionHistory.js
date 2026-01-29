@@ -118,6 +118,50 @@ const ConnectionHistory = ({
 	});
 	// const scrollRef = useRef(null); // Eliminado por no tener uso
 
+	// Estados para colapsar/expandir secciones
+	const [favoritesCollapsed, setFavoritesCollapsed] = useState(() => {
+		try {
+			const saved = localStorage.getItem('nodeterm_favorites_collapsed');
+			return saved === 'true';
+		} catch {
+			return false;
+		}
+	});
+
+	const [recentsCollapsed, setRecentsCollapsed] = useState(() => {
+		try {
+			const saved = localStorage.getItem('nodeterm_recents_collapsed');
+			return saved === 'true';
+		} catch {
+			return false;
+		}
+	});
+
+	// Funciones para toggle de colapso
+	const toggleFavoritesCollapsed = () => {
+		setFavoritesCollapsed(prev => {
+			const newValue = !prev;
+			try {
+				localStorage.setItem('nodeterm_favorites_collapsed', newValue.toString());
+			} catch (e) {
+				console.error('Error guardando estado de favoritos colapsados:', e);
+			}
+			return newValue;
+		});
+	};
+
+	const toggleRecentsCollapsed = () => {
+		setRecentsCollapsed(prev => {
+			const newValue = !prev;
+			try {
+				localStorage.setItem('nodeterm_recents_collapsed', newValue.toString());
+			} catch (e) {
+				console.error('Error guardando estado de recientes colapsados:', e);
+			}
+			return newValue;
+		});
+	};
+
 	useEffect(() => {
 		loadConnectionHistory();
 		const off = onUpdate(loadConnectionHistory);
@@ -365,7 +409,7 @@ const ConnectionHistory = ({
 		);
 	};
 
-	const FavoritesRibbon = ({ connections, fullList, onReorder }) => {
+	const FavoritesRibbon = ({ connections, fullList, onReorder, collapsed, onToggleCollapsed }) => {
 		const trackRef = useRef(null);
 		const [draggedItem, setDraggedItem] = useState(null);
 		const [scrollPos, setScrollPos] = useState(0);
@@ -453,64 +497,96 @@ const ConnectionHistory = ({
 						<span>FAVORITOS</span>
 					</div>
 					<div className="modern-header-line"></div>
+					<button
+						className="section-collapse-btn"
+						onClick={onToggleCollapsed}
+						title={collapsed ? "Expandir favoritos" : "Colapsar favoritos"}
+						style={{
+							background: 'transparent',
+							border: 'none',
+							padding: '4px 8px',
+							cursor: 'pointer',
+							color: 'rgba(255, 255, 255, 0.7)',
+							fontSize: '0.9rem',
+							transition: 'all 0.2s ease',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							marginLeft: '8px',
+						}}
+						onMouseEnter={(e) => {
+							e.currentTarget.style.color = 'rgba(255, 255, 255, 0.95)';
+							e.currentTarget.style.transform = 'scale(1.1)';
+						}}
+						onMouseLeave={(e) => {
+							e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+							e.currentTarget.style.transform = 'scale(1)';
+						}}
+					>
+						<i className={collapsed ? "pi pi-chevron-down" : "pi pi-chevron-up"} />
+					</button>
 				</div>
 
-				<div className="ribbon-container-relative">
-					{/* Modern Circular Navigation Buttons (Side) */}
-					{hasItems && (
-						<>
-							<button
-								className="ribbon-side-btn prev"
-								onClick={() => scroll('left')}
-								aria-label="Anterior"
-							>
-								<i className="pi pi-chevron-left" />
-							</button>
-							<button
-								className="ribbon-side-btn next"
-								onClick={() => scroll('right')}
-								aria-label="Siguiente"
-							>
-								<i className="pi pi-chevron-right" />
-							</button>
-						</>
-					)}
+				{!collapsed && (
+					<>
+						<div className="ribbon-container-relative">
+							{/* Modern Circular Navigation Buttons (Side) */}
+							{hasItems && (
+								<>
+									<button
+										className="ribbon-side-btn prev"
+										onClick={() => scroll('left')}
+										aria-label="Anterior"
+									>
+										<i className="pi pi-chevron-left" />
+									</button>
+									<button
+										className="ribbon-side-btn next"
+										onClick={() => scroll('right')}
+										aria-label="Siguiente"
+									>
+										<i className="pi pi-chevron-right" />
+									</button>
+								</>
+							)}
 
-					<div className="favorites-ribbon-track" ref={trackRef}>
-						{hasItems ? (
-							connections.map((c, idx) => (
-								<RibbonCard
-									key={c.id}
-									connection={c}
-									index={idx}
-									isActive={activeIds.has(activeKey(c))}
-									onConnect={onConnectToHistory}
-									onEdit={onEdit}
-									onToggleFav={(conn) => { toggleFavorite(conn); loadConnectionHistory(); }}
-									onDragStart={handleDragStart}
-									onDragOver={handleDragOver}
-									onDrop={handleDrop}
-								/>
-							))
-						) : (
-							<div className="ribbon-empty">
-								<i className="pi pi-star" style={{ fontSize: '1.5rem', opacity: 0.5 }} />
-								<span>Usa el icono <i className="pi pi-star" /> en la lista para agregar favoritos</span>
+							<div className="favorites-ribbon-track" ref={trackRef}>
+								{hasItems ? (
+									connections.map((c, idx) => (
+										<RibbonCard
+											key={c.id}
+											connection={c}
+											index={idx}
+											isActive={activeIds.has(activeKey(c))}
+											onConnect={onConnectToHistory}
+											onEdit={onEdit}
+											onToggleFav={(conn) => { toggleFavorite(conn); loadConnectionHistory(); }}
+											onDragStart={handleDragStart}
+											onDragOver={handleDragOver}
+											onDrop={handleDrop}
+										/>
+									))
+								) : (
+									<div className="ribbon-empty">
+										<i className="pi pi-star" style={{ fontSize: '1.5rem', opacity: 0.5 }} />
+										<span>Usa el icono <i className="pi pi-star" /> en la lista para agregar favoritos</span>
+									</div>
+								)}
+							</div>
+						</div>
+
+						{/* Pagination Dots */}
+						{hasItems && connections.length > 1 && (
+							<div className="ribbon-pagination">
+								{Array.from({ length: dotsCount }).map((_, i) => (
+									<div
+										key={i}
+										className={`pagination-dot ${i === activeDotIndex ? 'active' : ''}`}
+									/>
+								))}
 							</div>
 						)}
-					</div>
-				</div>
-
-				{/* Pagination Dots */}
-				{hasItems && connections.length > 1 && (
-					<div className="ribbon-pagination">
-						{Array.from({ length: dotsCount }).map((_, i) => (
-							<div
-								key={i}
-								className={`pagination-dot ${i === activeDotIndex ? 'active' : ''}`}
-							/>
-						))}
-					</div>
+					</>
 				)}
 			</div>
 		);
@@ -686,6 +762,8 @@ const ConnectionHistory = ({
 					setFavoriteConnections(newList);
 					reorderFavorites(newList);
 				}}
+				collapsed={favoritesCollapsed}
+				onToggleCollapsed={toggleFavoritesCollapsed}
 			/>
 
 			{/* RECIENTES TABLE (Fills remaining space) */}
@@ -696,13 +774,43 @@ const ConnectionHistory = ({
 						<span>RECIENTES</span>
 					</div>
 					<div className="modern-header-line"></div>
+					<button
+						className="section-collapse-btn"
+						onClick={toggleRecentsCollapsed}
+						title={recentsCollapsed ? "Expandir recientes" : "Colapsar recientes"}
+						style={{
+							background: 'transparent',
+							border: 'none',
+							padding: '4px 8px',
+							cursor: 'pointer',
+							color: 'rgba(255, 255, 255, 0.7)',
+							fontSize: '0.9rem',
+							transition: 'all 0.2s ease',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							marginLeft: '8px',
+						}}
+						onMouseEnter={(e) => {
+							e.currentTarget.style.color = 'rgba(255, 255, 255, 0.95)';
+							e.currentTarget.style.transform = 'scale(1.1)';
+						}}
+						onMouseLeave={(e) => {
+							e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+							e.currentTarget.style.transform = 'scale(1)';
+						}}
+					>
+						<i className={recentsCollapsed ? "pi pi-chevron-down" : "pi pi-chevron-up"} />
+					</button>
 				</div>
 
-				<ConnectionTable
-					connections={filteredRecents}
-					title="Nombre"
-					emptyMessage="No hay sesiones recientes"
-				/>
+				{!recentsCollapsed && (
+					<ConnectionTable
+						connections={filteredRecents}
+						title="Nombre"
+						emptyMessage="No hay sesiones recientes"
+					/>
+				)}
 			</section>
 		</div>
 	);
