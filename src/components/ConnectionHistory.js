@@ -514,8 +514,17 @@ const ConnectionHistory = ({
 
 
 
-	const filteredPinned = applyTypeFilter(favoriteConnections, typeFilter);
-	const filteredRecents = applyTypeFilter(recentConnections, typeFilter);
+	// Calculate active connections (filtered by group)
+	const activeFavs = activeGroupId === 'all'
+		? favoriteConnections
+		: favoriteGroupsStore.getFavoritesInGroup(activeGroupId, favoriteConnections);
+
+	const activeRecents = activeGroupId === 'all'
+		? recentConnections
+		: favoriteGroupsStore.getFavoritesInGroup(activeGroupId, recentConnections);
+
+	const filteredPinned = applyTypeFilter(activeFavs, typeFilter);
+	const filteredRecents = applyTypeFilter(activeRecents, typeFilter);
 
 	const activeKey = (c) => {
 		if (c.type === 'group') return `group:${c.id}`;
@@ -720,11 +729,6 @@ const ConnectionHistory = ({
 		return (
 			<div className="favorites-ribbon-section">
 				<div className="modern-section-header">
-					<div className="modern-header-title">
-						<i className="pi pi-star-fill" style={{ color: '#FFD700' }} />
-						<span>FAVORITOS</span>
-					</div>
-					<div className="modern-header-line"></div>
 					<button
 						className="section-collapse-btn"
 						onClick={onToggleCollapsed}
@@ -740,7 +744,6 @@ const ConnectionHistory = ({
 							display: 'flex',
 							alignItems: 'center',
 							justifyContent: 'center',
-							marginLeft: '8px',
 						}}
 						onMouseEnter={(e) => {
 							e.currentTarget.style.color = 'rgba(255, 255, 255, 0.95)';
@@ -753,6 +756,11 @@ const ConnectionHistory = ({
 					>
 						<i className={collapsed ? "pi pi-chevron-down" : "pi pi-chevron-up"} />
 					</button>
+					<div className="modern-header-title">
+						<i className="pi pi-star-fill" style={{ color: '#FFD700' }} />
+						<span>FAVORITOS</span>
+					</div>
+					<div className="modern-header-line"></div>
 				</div>
 
 				{!collapsed && (
@@ -841,13 +849,7 @@ const ConnectionHistory = ({
 		return connections.filter(c => c.type === filterKey).length;
 	};
 
-	// Obtener favoritos filtrados por grupo activo
-	const getFavoritesForActiveGroup = () => {
-		if (activeGroupId === 'all') {
-			return favoriteConnections;
-		}
-		return favoriteGroupsStore.getFavoritesInGroup(activeGroupId, favoriteConnections);
-	};
+
 
 	// Obtener grupos personalizados (excluyendo 'all')
 	const customGroups = favoriteGroups.filter(g => !g.isDefault);
@@ -1000,7 +1002,9 @@ const ConnectionHistory = ({
 					/>
 
 					{filterTabs.map(({ key, label, icon, color }) => {
-						const count = countByType(recentConnections, key);
+						// Only count Favorites for the filter badges
+						// This provides a clean "Inventory Count" without noise from Recents history
+						const count = countByType(activeFavs, key);
 						return (
 							<button
 								key={key}
@@ -1248,11 +1252,15 @@ const ConnectionHistory = ({
 
 			{/* FAVORITES RIBBON (Always visible, shows placeholder if empty) */}
 			<FavoritesRibbon
-				connections={applyTypeFilter(getFavoritesForActiveGroup(), typeFilter)}
-				fullList={favoriteConnections}
+				connections={filteredPinned}
+				fullList={activeFavs}
 				onReorder={(newList) => {
-					setFavoriteConnections(newList);
-					reorderFavorites(newList);
+					// Reorder only works if showing all favorites or we handle group reordering logic carefully
+					// For now, if filtered, we might just update the main list if possible, but simplest is:
+					if (activeGroupId === 'all' && typeFilter === 'all') {
+						setFavoriteConnections(newList);
+						reorderFavorites(newList);
+					}
 				}}
 				collapsed={favoritesCollapsed}
 				onToggleCollapsed={toggleFavoritesCollapsed}
@@ -1262,11 +1270,6 @@ const ConnectionHistory = ({
 			{/* RECIENTES TABLE (Fills remaining space) */}
 			<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginTop: '0.2rem' }}>
 				<div className="modern-section-header">
-					<div className="modern-header-title">
-						<i className="pi pi-history" style={{ color: '#4fc3f7' }} />
-						<span>RECIENTES</span>
-					</div>
-					<div className="modern-header-line"></div>
 					<button
 						className="section-collapse-btn"
 						onClick={toggleRecentsCollapsed}
@@ -1282,7 +1285,6 @@ const ConnectionHistory = ({
 							display: 'flex',
 							alignItems: 'center',
 							justifyContent: 'center',
-							marginLeft: '8px',
 						}}
 						onMouseEnter={(e) => {
 							e.currentTarget.style.color = 'rgba(255, 255, 255, 0.95)';
@@ -1295,6 +1297,11 @@ const ConnectionHistory = ({
 					>
 						<i className={recentsCollapsed ? "pi pi-chevron-down" : "pi pi-chevron-up"} />
 					</button>
+					<div className="modern-header-title">
+						<i className="pi pi-history" style={{ color: '#4fc3f7' }} />
+						<span>RECIENTES</span>
+					</div>
+					<div className="modern-header-line"></div>
 				</div>
 
 				{!recentsCollapsed && (
