@@ -1296,9 +1296,9 @@
 .ribbon-card {
   --rc-width: 160px;
   --rc-height: 190px;
-  --rc-bg: rgba(255, 255, 255, 0.03);
-  --rc-border: rgba(255, 255, 255, 0.08);
-  --rc-hover-bg: rgba(255, 255, 255, 0.06);
+  --rc-bg: var(--ui-sidebar-bg);
+  --rc-border: var(--ui-content-border);
+  --rc-hover-bg: var(--ui-sidebar-hover);
   --rc-accent-color: #4fc3f7;
 
   flex: 0 0 var(--rc-width);
@@ -1339,8 +1339,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  color: rgba(255, 255, 255, 0.8);
-  background: rgba(0, 0, 0, 0.2);
+  color: var(--ui-sidebar-text);
+  background: var(--ui-sidebar-hover);
   backdrop-filter: blur(4px);
   opacity: 0;
   transition: all 0.2s;
@@ -1350,7 +1350,7 @@
 
 .ribbon-card__edit:hover {
   background: rgba(255, 255, 255, 0.15);
-  color: #fff;
+  color: var(--ui-dialog-text);
   transform: scale(1.1);
 }
 
@@ -1370,8 +1370,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  color: rgba(255, 255, 255, 0.8);
-  background: rgba(0, 0, 0, 0.2);
+  color: var(--ui-sidebar-text);
+  background: var(--ui-sidebar-hover);
   backdrop-filter: blur(4px);
   opacity: 0;
   transition: all 0.2s;
@@ -1479,7 +1479,7 @@
 .ribbon-card__icon-wrapper i {
   font-size: 3.5rem;
   /* Increased from 2.2rem */
-  color: #fff;
+  color: var(--ui-dialog-text);
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
@@ -1501,7 +1501,7 @@
 .ribbon-card__name {
   font-size: 1rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--ui-dialog-text);
   letter-spacing: 0.3px;
   white-space: nowrap;
   overflow: hidden;
@@ -1511,7 +1511,7 @@
 
 .ribbon-card__host {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--ui-sidebar-text);
   font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
@@ -1521,11 +1521,11 @@
 
 .ribbon-card__time {
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--ui-sidebar-text);
   font-weight: 400;
   margin-top: auto;
   padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--ui-content-border);
   width: 100%;
   text-align: center;
 }
@@ -1844,7 +1844,9 @@
   border: none;
   padding: 4px 8px;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  color: var(--ui-sidebar-text);
+  font-size: 0.9rem;
   font-size: 0.9rem;
   transition: all 0.2s ease;
   display: flex;
@@ -1855,9 +1857,9 @@
 }
 
 .section-collapse-btn:hover {
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--ui-dialog-text);
   transform: scale(1.1);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--ui-sidebar-hover);
 }
 
 .section-collapse-btn:active {
@@ -1904,8 +1906,8 @@
   display: flex;
   align-items: center;
   position: relative;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--ui-sidebar-bg);
+  border: 1px solid var(--ui-content-border);
   border-radius: 12px;
   padding: 4px;
   gap: 2px;
@@ -1916,7 +1918,7 @@
 .segment-indicator {
   position: absolute;
   height: calc(100% - 8px);
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--ui-sidebar-selected);
   border-radius: 8px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
@@ -1935,7 +1937,7 @@
   background: transparent;
   border-radius: 8px;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--ui-sidebar-text);
   font-size: 0.85rem;
   font-weight: 500;
   transition: all 0.2s ease;
@@ -1943,11 +1945,12 @@
 }
 
 .filter-segment:hover {
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--ui-dialog-text);
 }
 
 .filter-segment.active {
-  color: #fff;
+  color: var(--ui-dialog-text);
+  font-weight: 600;
 }
 
 .filter-segment i {
@@ -1968,13 +1971,14 @@
   padding: 0 5px;
   font-size: 0.7rem;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--ui-sidebar-hover);
   border-radius: 9px;
   color: inherit;
 }
 
 .filter-segment.active .segment-count {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--ui-button-primary);
+  color: var(--ui-button-primary-text);
 }
 
 /* Separator between protocol filters and groups */
@@ -1998,11 +2002,11 @@
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--ui-content-border);
+  background: var(--ui-sidebar-bg);
   border-radius: 20px;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--ui-sidebar-text);
   font-size: 0.85rem;
   font-weight: 500;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2018,7 +2022,7 @@
 .group-tab.active {
   background: rgba(var(--group-color-rgb, 79, 195, 247), 0.15);
   border-color: var(--group-color, #4fc3f7);
-  color: #fff;
+  color: var(--ui-dialog-text);
 }
 
 .group-tab i {

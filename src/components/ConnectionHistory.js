@@ -738,7 +738,6 @@ const ConnectionHistory = ({
 							border: 'none',
 							padding: '4px 8px',
 							cursor: 'pointer',
-							color: 'rgba(255, 255, 255, 0.7)',
 							fontSize: '0.9rem',
 							transition: 'all 0.2s ease',
 							display: 'flex',
@@ -746,11 +745,9 @@ const ConnectionHistory = ({
 							justifyContent: 'center',
 						}}
 						onMouseEnter={(e) => {
-							e.currentTarget.style.color = 'rgba(255, 255, 255, 0.95)';
 							e.currentTarget.style.transform = 'scale(1.1)';
 						}}
 						onMouseLeave={(e) => {
-							e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
 							e.currentTarget.style.transform = 'scale(1)';
 						}}
 					>
@@ -1300,7 +1297,6 @@ const ConnectionHistory = ({
 							border: 'none',
 							padding: '4px 8px',
 							cursor: 'pointer',
-							color: 'rgba(255, 255, 255, 0.7)',
 							fontSize: '0.9rem',
 							transition: 'all 0.2s ease',
 							display: 'flex',
@@ -1308,11 +1304,9 @@ const ConnectionHistory = ({
 							justifyContent: 'center',
 						}}
 						onMouseEnter={(e) => {
-							e.currentTarget.style.color = 'rgba(255, 255, 255, 0.95)';
 							e.currentTarget.style.transform = 'scale(1.1)';
 						}}
 						onMouseLeave={(e) => {
-							e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
 							e.currentTarget.style.transform = 'scale(1)';
 						}}
 					>
