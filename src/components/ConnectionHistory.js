@@ -1009,10 +1009,11 @@ const ConnectionHistory = ({
 								className={`filter-segment ${typeFilter === key ? 'active' : ''}`}
 								onClick={() => handleFilterChange(key)}
 								title={`${label} (${count})`}
+								style={{ '--segment-accent': color }}
 							>
-								<i className={`pi ${icon}`} style={{ color: typeFilter === key ? color : 'inherit' }} />
+								<i className={`pi ${icon}`} />
 								<span className="segment-label">{label}</span>
-								{count > 0 && <span className="segment-count">{count}</span>}
+								<span className="segment-count">{count}</span>
 							</button>
 						);
 					})}
