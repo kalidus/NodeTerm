@@ -1255,11 +1255,32 @@ const ConnectionHistory = ({
 				connections={filteredPinned}
 				fullList={activeFavs}
 				onReorder={(newList) => {
-					// Reorder only works if showing all favorites or we handle group reordering logic carefully
-					// For now, if filtered, we might just update the main list if possible, but simplest is:
-					if (activeGroupId === 'all' && typeFilter === 'all') {
-						setFavoriteConnections(newList);
-						reorderFavorites(newList);
+					// Enable reordering even if filtered
+					// We merge the reordered subset back into the main list
+					const currentFullList = [...favoriteConnections];
+
+					// 1. Identify indices of the items in the main list that are part of the reordered set
+					// (The items in 'newList' are the ones currently visible and reordered)
+					const subsetIds = new Set(newList.map(c => c.id));
+					const indices = [];
+
+					currentFullList.forEach((c, index) => {
+						if (subsetIds.has(c.id)) {
+							indices.push(index);
+						}
+					});
+
+					// 2. Place the items from the new list into the identified slots
+					if (indices.length === newList.length) {
+						indices.forEach((originalIndex, i) => {
+							currentFullList[originalIndex] = newList[i];
+						});
+
+						// 3. Save and update
+						reorderFavorites(currentFullList);
+						loadConnectionHistory();
+					} else {
+						console.warn('Cannot reorder: index mismatch', indices.length, newList.length);
 					}
 				}}
 				collapsed={favoritesCollapsed}
