@@ -1901,29 +1901,47 @@
   flex-wrap: wrap;
 }
 
-/* Segmented Control Container */
+/* Segmented Control Container - Futuristic Glass */
+/* Segmented Control Container - Futuristic Glass */
 .segmented-control {
   display: flex;
   align-items: center;
   position: relative;
-  background: var(--ui-sidebar-bg);
-  border: 1px solid var(--ui-content-border);
-  border-radius: 12px;
+  background: rgba(8, 10, 15, 0.6);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 100px;
   padding: 4px;
-  gap: 2px;
+  /* Medium padding */
+  gap: 0;
   overflow: hidden;
+  box-shadow:
+    0 6px 24px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  margin-right: 10px;
 }
 
-/* Sliding Indicator */
+/* Sliding Indicator - Neon Glow Pill */
 .segment-indicator {
   position: absolute;
   height: calc(100% - 8px);
-  background: var(--ui-sidebar-selected);
-  border-radius: 8px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Adjusted for medium padding */
+  top: 4px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 100px;
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
   pointer-events: none;
   z-index: 0;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 16px rgba(64, 196, 255, 0.1);
 }
+
+/* Subtle blue atmospherics */
+
 
 /* Individual Filter Segment */
 .filter-segment {
@@ -1931,31 +1949,45 @@
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: 8px;
+  /* Restored gap */
+  padding: 8px 16px;
+  /* Medium padding */
   border: none;
   background: transparent;
-  border-radius: 8px;
+  border-radius: 100px;
   cursor: pointer;
-  color: var(--ui-sidebar-text);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 0.85rem;
+  /* Standard font size */
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   white-space: nowrap;
+  letter-spacing: 0.2px;
 }
 
 .filter-segment:hover {
-  color: var(--ui-dialog-text);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .filter-segment.active {
-  color: var(--ui-dialog-text);
+  color: #fff;
   font-weight: 600;
+  text-shadow: 0 0 12px var(--segment-accent, rgba(255, 255, 255, 0.5));
 }
 
 .filter-segment i {
   font-size: 1rem;
-  transition: color 0.2s ease;
+  /* Standard icon size */
+  transition: all 0.3s ease;
+  opacity: 0.8;
+}
+
+.filter-segment.active i {
+  opacity: 1;
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 6px var(--segment-accent, #fff));
+  color: var(--segment-accent, inherit);
 }
 
 .segment-label {
@@ -1966,19 +1998,28 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
+  min-width: 20px;
+  height: 20px;
   padding: 0 5px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  background: var(--ui-sidebar-hover);
-  border-radius: 9px;
-  color: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.15);
+  /* Slightly brighter */
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.85);
+  /* More visible */
+  margin-left: 6px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  flex-shrink: 0;
+  /* Critical fix */
+  z-index: 2;
 }
 
 .filter-segment.active .segment-count {
-  background: var(--ui-button-primary);
-  color: var(--ui-button-primary-text);
+  background: var(--segment-accent, #fff);
+  color: #000;
+  box-shadow: 0 2px 8px var(--segment-accent, rgba(0, 0, 0, 0.5));
+  transform: translateY(-0.5px);
 }
 
 /* Separator between protocol filters and groups */
@@ -2001,36 +2042,49 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
-  border: 1px solid var(--ui-content-border);
-  background: var(--ui-sidebar-bg);
-  border-radius: 20px;
+  padding: 6px 12px;
+  /* Smaller padding */
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 100px;
   cursor: pointer;
-  color: var(--ui-sidebar-text);
-  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+  /* Smaller font */
   font-weight: 500;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   white-space: nowrap;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .group-tab:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .group-tab.active {
   background: rgba(var(--group-color-rgb, 79, 195, 247), 0.15);
   border-color: var(--group-color, #4fc3f7);
-  color: var(--ui-dialog-text);
+  color: #fff;
+  box-shadow:
+    0 0 15px rgba(var(--group-color-rgb, 79, 195, 247), 0.2),
+    inset 0 0 0 1px rgba(var(--group-color-rgb, 79, 195, 247), 0.3);
+  transform: translateY(-1px);
 }
 
 .group-tab i {
   font-size: 0.9rem;
+  opacity: 0.8;
 }
 
 .group-tab.active i {
   color: var(--group-color, #FFD700);
+  opacity: 1;
+  filter: drop-shadow(0 0 6px currentColor);
 }
 
 .group-dot {
