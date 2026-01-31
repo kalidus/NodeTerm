@@ -1688,7 +1688,7 @@
   border-radius: 12px;
 
   /* Glassmorphism base */
-  background: var(--ui-tab-bg, rgba(255, 255, 255, 0.03));
+  background: var(--ui-sidebar-bg, rgba(255, 255, 255, 0.03));
   border: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.05));
   /* Muy sutil */
   backdrop-filter: blur(5px);
@@ -1701,7 +1701,7 @@
 
 /* Hover effect */
 .connection-card-row:hover {
-  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.08));
+  background: var(--ui-sidebar-hover, rgba(255, 255, 255, 0.08));
   /* Más visible en hover */
   border-color: var(--ui-sidebar-border, rgba(255, 255, 255, 0.15));
   transform: translateY(-2px);
