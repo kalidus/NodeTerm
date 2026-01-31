@@ -983,12 +983,28 @@ const ConnectionHistory = ({
 		);
 	};
 
+	// Debug: Log theme colors to see what we're getting
+	React.useEffect(() => {
+		console.log('🎨 ConnectionHistory themeColors:', {
+			itemBackground: themeColors.itemBackground,
+			cardBackground: themeColors.cardBackground,
+			textPrimary: themeColors.textPrimary
+		});
+	}, [themeColors]);
+
 	return (
 		<div className="connection-history-root">
 			{/* Advanced Filter Bar - Segmented Control with Groups */}
 			<div className="filter-bar-wrapper" style={{ marginBottom: '1rem' }}>
 				{/* Protocol Filters - Segmented Control */}
-				<div className="segmented-control" ref={filterBarRef}>
+				<div
+					className="segmented-control"
+					ref={filterBarRef}
+					style={{
+						background: themeColors.itemBackground || themeColors.cardBackground,
+						backgroundColor: themeColors.itemBackground || themeColors.cardBackground
+					}}
+				>
 					{/* Sliding indicator */}
 					<div
 						className="segment-indicator"
