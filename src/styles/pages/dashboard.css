@@ -1907,10 +1907,10 @@
   display: flex;
   align-items: center;
   position: relative;
-  background: rgba(8, 10, 15, 0.6);
+  background: var(--ui-tab-bg, rgba(8, 10, 15, 0.6));
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.08));
   border-radius: 100px;
   padding: 4px;
   /* Medium padding */
@@ -1957,7 +1957,7 @@
   background: transparent;
   border-radius: 100px;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.6));
   font-size: 0.85rem;
   /* Standard font size */
   font-weight: 500;
@@ -1967,11 +1967,11 @@
 }
 
 .filter-segment:hover {
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--ui-dialog-text, rgba(255, 255, 255, 0.95));
 }
 
 .filter-segment.active {
-  color: #fff;
+  color: var(--ui-dialog-text, #fff);
   font-weight: 600;
   text-shadow: 0 0 12px var(--segment-accent, rgba(255, 255, 255, 0.5));
 }
@@ -2026,7 +2026,7 @@
 .filter-bar-separator {
   width: 1px;
   height: 32px;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--ui-sidebar-border, rgba(255, 255, 255, 0.12));
   flex-shrink: 0;
 }
 
@@ -2044,11 +2044,11 @@
   gap: 6px;
   padding: 6px 12px;
   /* Smaller padding */
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.12));
+  background: var(--ui-tab-bg, rgba(255, 255, 255, 0.04));
   border-radius: 100px;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.8));
   font-size: 0.8rem;
   /* Smaller font */
   font-weight: 500;
@@ -2059,9 +2059,9 @@
 }
 
 .group-tab:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #fff;
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.1));
+  border-color: var(--ui-sidebar-border, rgba(255, 255, 255, 0.3));
+  color: var(--ui-dialog-text, #fff);
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
@@ -2069,7 +2069,7 @@
 .group-tab.active {
   background: rgba(var(--group-color-rgb, 79, 195, 247), 0.15);
   border-color: var(--group-color, #4fc3f7);
-  color: #fff;
+  color: var(--ui-dialog-text, #fff);
   box-shadow:
     0 0 15px rgba(var(--group-color-rgb, 79, 195, 247), 0.2),
     inset 0 0 0 1px rgba(var(--group-color-rgb, 79, 195, 247), 0.3);
