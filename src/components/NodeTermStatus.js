@@ -107,6 +107,9 @@ const NodeTermStatus = ({
 		}
 	};
 
+	// Estado estadísticas
+	const [statsOpen, setStatsOpen] = useState(false);
+
 	const defaultSections = { acciones: false, servicios: false, terminales: false, toggles: false, ia: false };
 	const [rightColumnSectionsCollapsed, setRightColumnSectionsCollapsed] = useState(() => {
 		try {
@@ -1442,6 +1445,9 @@ const NodeTermStatus = ({
 							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'security' } })); } catch (e) { } }} title={`Vault: ${!vaultState.configured ? 'No configurado' : (vaultState.unlocked ? 'Desbloqueado' : 'Bloqueado')}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
 								<i className={vaultState.unlocked ? 'pi pi-unlock' : 'pi pi-lock'} style={{ color: !vaultState.configured ? '#9ca3af' : '#f59e0b', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Vault</span>
 							</button>
+							<button style={cardStyle()} onClick={() => setStatsOpen(true)} title={`Estadísticas de la aplicación\n• Conexiones: ${sshConnectionsCount + rdpConnectionsCount}\n• Secretos: ${passwordsCount}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+								<i className="pi pi-chart-pie" style={{ color: '#ec4899', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Estadísticas</span>
+							</button>
 						</div>
 					)}
 				</div>
@@ -1456,6 +1462,206 @@ const NodeTermStatus = ({
 						</div>
 					)}
 				</div>
+
+				{/* Modal de Estadísticas */}
+				{statsOpen && typeof document !== 'undefined' && document.body && createPortal(
+					<div
+						style={{
+							position: 'fixed',
+							top: 0,
+							left: 0,
+							right: 0,
+							bottom: 0,
+							zIndex: 9999,
+							background: 'rgba(0,0,0,0.4)',
+							backdropFilter: 'blur(4px)',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							animation: 'fadeIn 0.2s ease-out'
+						}}
+						onClick={() => setStatsOpen(false)}
+					>
+						<div
+							style={{
+								background: `linear-gradient(135deg, ${themeColors.cardBackground || 'rgba(16, 20, 28, 0.95)'} 0%, rgba(16, 20, 28, 0.98) 100%)`,
+								border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+								borderRadius: '16px',
+								boxShadow: '0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(236, 72, 153, 0.1)',
+								width: '400px',
+								maxWidth: '90%',
+								padding: '0',
+								overflow: 'hidden',
+								animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+								display: 'flex',
+								flexDirection: 'column'
+							}}
+							onClick={e => e.stopPropagation()}
+						>
+							{/* Header */}
+							<div style={{
+								padding: '1.25rem 1.5rem',
+								borderBottom: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'space-between',
+								background: 'rgba(255,255,255,0.02)'
+							}}>
+								<div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+									<div style={{
+										width: '32px',
+										height: '32px',
+										borderRadius: '10px',
+										background: 'rgba(236, 72, 153, 0.15)',
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'center',
+										border: '1px solid rgba(236, 72, 153, 0.3)'
+									}}>
+										<i className="pi pi-chart-pie" style={{ color: '#ec4899', fontSize: '1.1rem' }} />
+									</div>
+									<h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600', color: themeColors.textPrimary || '#fff' }}>Estadísticas</h3>
+								</div>
+								<button
+									onClick={() => setStatsOpen(false)}
+									style={{
+										background: 'none',
+										border: 'none',
+										color: themeColors.textSecondary || 'rgba(255,255,255,0.5)',
+										cursor: 'pointer',
+										display: 'flex',
+										padding: '0.5rem',
+										borderRadius: '50%',
+										transition: 'all 0.2s'
+									}}
+									onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+									onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = themeColors.textSecondary || 'rgba(255,255,255,0.5)'; }}
+								>
+									<i className="pi pi-times" style={{ fontSize: '1rem' }} />
+								</button>
+							</div>
+
+							{/* Body */}
+							<div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+								{/* Grid de Stats Principales */}
+								<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+									<div style={{
+										background: 'rgba(255,255,255,0.03)',
+										borderRadius: '12px',
+										padding: '1rem',
+										display: 'flex',
+										flexDirection: 'column',
+										gap: '0.5rem',
+										border: '1px solid rgba(255,255,255,0.05)'
+									}}>
+										<span style={{ fontSize: '0.8rem', color: themeColors.textSecondary || 'rgba(255,255,255,0.6)', fontWeight: '500' }}>Conexiones</span>
+										<div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+											<span style={{ fontSize: '1.8rem', fontWeight: '700', color: themeColors.textPrimary || '#fff' }}>{sshConnectionsCount + rdpConnectionsCount}</span>
+											<span style={{ fontSize: '0.8rem', color: themeColors.success || '#22c55e' }}>activas</span>
+										</div>
+										<div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem' }}>
+											<span style={{ fontSize: '0.75rem', color: '#4fc3f7', background: 'rgba(79, 195, 247, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>SSH: {sshConnectionsCount}</span>
+											<span style={{ fontSize: '0.75rem', color: '#ff6b35', background: 'rgba(255, 107, 53, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>RDP: {rdpConnectionsCount}</span>
+										</div>
+									</div>
+
+									<div style={{
+										background: 'rgba(255,255,255,0.03)',
+										borderRadius: '12px',
+										padding: '1rem',
+										display: 'flex',
+										flexDirection: 'column',
+										gap: '0.5rem',
+										border: '1px solid rgba(255,255,255,0.05)'
+									}}>
+										<span style={{ fontSize: '0.8rem', color: themeColors.textSecondary || 'rgba(255,255,255,0.6)', fontWeight: '500' }}>Secretos</span>
+										<div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+											<span style={{ fontSize: '1.8rem', fontWeight: '700', color: themeColors.textPrimary || '#fff' }}>{passwordsCount}</span>
+											<span style={{ fontSize: '0.8rem', color: '#fbbf24' }}>teclas</span>
+										</div>
+										<div style={{ marginTop: '0.2rem' }}>
+											<span style={{ fontSize: '0.75rem', color: vaultState.configured ? '#22c55e' : '#9ca3af', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+												<i className={vaultState.configured ? 'pi pi-check-circle' : 'pi pi-info-circle'} style={{ fontSize: '0.7rem' }} />
+												{vaultState.configured ? (vaultState.unlocked ? 'Vault desbloqueado' : 'Vault bloqueado') : 'Vault no config.'}
+											</span>
+										</div>
+									</div>
+								</div>
+
+								{/* Stats Secundarios */}
+								<div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+									<div style={{
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'space-between',
+										padding: '0.75rem',
+										background: 'rgba(255,255,255,0.02)',
+										borderRadius: '8px',
+										borderBottom: '1px solid rgba(255,255,255,0.05)'
+									}}>
+										<div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+											<div style={{ padding: '0.4rem', background: 'rgba(36, 150, 237, 0.15)', borderRadius: '6px', display: 'flex' }}>
+												<SiDocker style={{ color: '#2496ed', fontSize: '1rem' }} />
+											</div>
+											<span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.9rem' }}>Docker Containers</span>
+										</div>
+										<span style={{ fontWeight: '600', color: themeColors.textPrimary || '#fff' }}>{dockerContainers.length}</span>
+									</div>
+
+									<div style={{
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'space-between',
+										padding: '0.75rem',
+										background: 'rgba(255,255,255,0.02)',
+										borderRadius: '8px'
+									}}>
+										<div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+											<div style={{ padding: '0.4rem', background: 'rgba(233, 84, 32, 0.15)', borderRadius: '6px', display: 'flex' }}>
+												<FaUbuntu style={{ color: '#e95420', fontSize: '1rem' }} />
+											</div>
+											<span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.9rem' }}>Distribuciones WSL</span>
+										</div>
+										<span style={{ fontWeight: '600', color: themeColors.textPrimary || '#fff' }}>{ubuntuDistributions.length + (wslDistributions.length - ubuntuDistributions.length)}</span>
+									</div>
+								</div>
+							</div>
+
+							{/* Footer */}
+							<div style={{
+								padding: '0.75rem 1.5rem 1.25rem',
+								textAlign: 'center',
+								borderTop: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.05)'}`,
+								display: 'flex',
+								justifyContent: 'flex-end'
+							}}>
+								<button
+									onClick={() => setStatsOpen(false)}
+									style={{
+										padding: '0.5rem 1.5rem',
+										background: themeColors.primaryColor || '#4fc3f7',
+										color: '#000',
+										border: 'none',
+										borderRadius: '6px',
+										fontWeight: '600',
+										fontSize: '0.85rem',
+										cursor: 'pointer',
+										transition: 'opacity 0.2s'
+									}}
+									onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+									onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+								>
+									Aceptar
+								</button>
+							</div>
+						</div>
+						<style>{`
+							@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+							@keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+						`}</style>
+					</div>,
+					document.body
+				)}
 			</div>
 		);
 	}
