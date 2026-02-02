@@ -49,7 +49,6 @@ const HomeTab = ({
     }
   });
   const [manualPaneSize, setManualPaneSize] = useState(null); // Tamaño manual del panel superior
-  const [isTerminalTransitioning, setIsTerminalTransitioning] = useState(false);
   const [favType, setFavType] = useState('all'); // Nuevo estado para filtros
   const [recentConnections, setRecentConnections] = useState([]); // Estado para conexiones recientes
   const [recentPasswords, setRecentPasswords] = useState([]); // Estado para passwords recientes
@@ -489,14 +488,7 @@ const HomeTab = ({
   };
 
   // Función para toggle de visibilidad del terminal
-  const handleToggleTerminalVisibility = async () => {
-    if (isTerminalTransitioning) return; // Evitar múltiples clicks
-
-    setIsTerminalTransitioning(true);
-
-    // Pequeña transición antes del cambio
-    await new Promise(resolve => setTimeout(resolve, 100));
-
+  const handleToggleTerminalVisibility = () => {
     setTerminalHidden(prev => {
       const newHidden = !prev;
       // Si se está mostrando el terminal, cambiar el estado a 'normal' (1/4 de página)
@@ -505,10 +497,6 @@ const HomeTab = ({
       }
       return newHidden;
     });
-
-    // Transición más larga para estabilizar
-    await new Promise(resolve => setTimeout(resolve, 600));
-    setIsTerminalTransitioning(false);
   };
 
   // Función para toggle del chat de IA
@@ -723,27 +711,6 @@ const HomeTab = ({
                         themeColors={themeColors}
                         sidebarNodes={sidebarNodes}
                       />
-                      {isTerminalTransitioning && (
-                        <div style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          background: 'rgba(0, 0, 0, 0.6)',
-                          backdropFilter: 'blur(4px)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderRadius: '12px',
-                          zIndex: 10
-                        }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', color: 'white' }}>
-                            <div style={{ width: 32, height: 32, border: '3px solid rgba(255,255,255,0.3)', borderTop: '3px solid #00BCD4', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                            <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>Actualizando terminal...</div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </>
@@ -811,8 +778,8 @@ const HomeTab = ({
               />
             )}
           </div>
-        </div>
-      </div>
+        </div >
+      </div >
     </>
   );
 
