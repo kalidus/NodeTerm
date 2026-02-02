@@ -13,6 +13,7 @@ const FilterPanel = ({
     availableFilters = { protocols: [], groups: [] },
     themeColors = {},
     onCreateGroup,
+    onDeleteGroup,
 }) => {
     const panelRef = useRef(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -193,6 +194,7 @@ const FilterPanel = ({
                                 checked={tempFilters.groups?.includes(filter.id)}
                                 onChange={() => toggleFilter('groups', filter.id)}
                                 color={filter.color}
+                                onDelete={onDeleteGroup ? () => onDeleteGroup(filter.id) : undefined}
                             />
                         ))}
                         {availableFilters.groups.length === 0 && (
@@ -290,22 +292,39 @@ const FilterSection = ({ id, title, icon, expanded, onToggle, children }) => {
 /**
  * FilterCheckbox - Checkbox individual para un filtro
  */
-const FilterCheckbox = ({ label, icon, count, checked, onChange, color }) => {
+const FilterCheckbox = ({ label, icon, count, checked, onChange, color, onDelete }) => {
     return (
-        <label className="filter-checkbox" style={{ '--filter-color': color }}>
-            <input
-                type="checkbox"
-                checked={checked}
-                onChange={onChange}
-            />
-            <div className="filter-checkbox-label">
-                {icon && <i className={`pi ${icon}`} style={{ color }} />}
-                <span>{label}</span>
-            </div>
-            {count !== undefined && (
-                <span className="filter-checkbox-count">{count}</span>
+        <div className="filter-checkbox-wrapper">
+            <label className="filter-checkbox" style={{ '--filter-color': color }}>
+                <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={onChange}
+                />
+                <div className="filter-checkbox-label">
+                    {icon && <i className={`pi ${icon}`} style={{ color }} />}
+                    <span>{label}</span>
+                </div>
+                {count !== undefined && (
+                    <span className="filter-checkbox-count">{count}</span>
+                )}
+            </label>
+            {onDelete && (
+                <button
+                    className="filter-checkbox-delete"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        // Confirm deletion? Since it's a destructive action inside a menu.
+                        // Assuming the parent component handles confirmation or it's direct.
+                        // User asked for "some way to delete".
+                        onDelete();
+                    }}
+                    title="Eliminar grupo"
+                >
+                    <i className="pi pi-trash" />
+                </button>
             )}
-        </label>
+        </div>
     );
 };
 
