@@ -2,7 +2,18 @@
 // Supports localStorage + ready for cloud sync
 
 const GROUPS_KEY = 'nodeterm_favorite_groups';
+const FILTER_CONFIG_KEY = 'nodeterm_filter_config';
 const UPDATED_EVENT = 'favorite-groups-updated';
+
+// Protocol filters (predefined, but configurable visibility/order)
+const PROTOCOL_FILTERS = [
+    { id: 'all', type: 'protocol', label: 'Todas', icon: 'pi-th-large', color: '#9E9E9E', isProtocol: true, isDefault: true },
+    { id: 'ssh', type: 'protocol', label: 'SSH', icon: 'pi-server', color: '#4fc3f7', isProtocol: true },
+    { id: 'rdp-guacamole', type: 'protocol', label: 'RDP', icon: 'pi-desktop', color: '#ff6b35', isProtocol: true },
+    { id: 'vnc-guacamole', type: 'protocol', label: 'VNC', icon: 'pi-desktop', color: '#81c784', isProtocol: true },
+    { id: 'sftp', type: 'protocol', label: 'SFTP', icon: 'pi-folder-open', color: '#FFB300', isProtocol: true },
+    { id: 'secret', type: 'protocol', label: 'Secretos', icon: 'pi-key', color: '#E91E63', isProtocol: true },
+];
 
 // Default groups that always exist
 const DEFAULT_GROUPS = [
@@ -256,6 +267,112 @@ export function countFavoritesPerGroup(allFavorites) {
     return counts;
 }
 
+// ============================================
+// Unified Filter Configuration
+// ============================================
+
+// Load filter configuration (order and hidden filters)
+function loadFilterConfig() {
+    return safeParse(localStorage.getItem(FILTER_CONFIG_KEY), { order: [], hidden: [] });
+}
+
+// Save filter configuration
+function saveFilterConfig(config) {
+    localStorage.setItem(FILTER_CONFIG_KEY, JSON.stringify(config));
+    window.dispatchEvent(new CustomEvent(UPDATED_EVENT, { detail: { filterConfig: config } }));
+}
+
+// Get filter configuration
+export function getFilterConfig() {
+    return loadFilterConfig();
+}
+
+// Get all protocol filters
+export function getProtocolFilters() {
+    return [...PROTOCOL_FILTERS];
+}
+
+// Get all filters (protocols + groups) in configured order, respecting visibility
+export function getAllFilters() {
+    const config = loadFilterConfig();
+    const protocolFilters = [...PROTOCOL_FILTERS];
+    const userGroups = loadGroups().filter(g => !g.isDefault).map(g => ({
+        id: g.id,
+        type: 'group',
+        label: g.name,
+        icon: g.icon || 'pi-folder',
+        color: g.color,
+        isProtocol: false,
+        isGroup: true
+    }));
+
+    // Combine all filters
+    let allFilters = [...protocolFilters, ...userGroups];
+
+    // Apply custom order if exists
+    if (config.order && config.order.length > 0) {
+        const orderedFilters = [];
+        const filterMap = new Map(allFilters.map(f => [f.id, f]));
+
+        // Add filters in saved order
+        for (const id of config.order) {
+            if (filterMap.has(id)) {
+                orderedFilters.push(filterMap.get(id));
+                filterMap.delete(id);
+            }
+        }
+
+        // Add any new filters that weren't in the saved order
+        for (const [, filter] of filterMap) {
+            orderedFilters.push(filter);
+        }
+
+        allFilters = orderedFilters;
+    }
+
+    // Apply visibility filter (but always show 'all')
+    const hiddenSet = new Set(config.hidden || []);
+    return allFilters.map(f => ({
+        ...f,
+        visible: f.id === 'all' || !hiddenSet.has(f.id)
+    }));
+}
+
+// Get only visible filters
+export function getVisibleFilters() {
+    return getAllFilters().filter(f => f.visible);
+}
+
+// Set visibility for a filter
+export function setFilterVisibility(filterId, visible) {
+    if (filterId === 'all') return; // 'all' filter always visible
+
+    const config = loadFilterConfig();
+    const hidden = new Set(config.hidden || []);
+
+    if (visible) {
+        hidden.delete(filterId);
+    } else {
+        hidden.add(filterId);
+    }
+
+    config.hidden = [...hidden];
+    saveFilterConfig(config);
+}
+
+// Reorder all filters
+export function reorderAllFilters(newOrderIds) {
+    const config = loadFilterConfig();
+    config.order = newOrderIds;
+    saveFilterConfig(config);
+}
+
+// Reset filter configuration to defaults
+export function resetFilterConfig() {
+    localStorage.removeItem(FILTER_CONFIG_KEY);
+    window.dispatchEvent(new CustomEvent(UPDATED_EVENT, { detail: { filterConfig: null } }));
+}
+
 export default {
     getGroups,
     getUserGroups,
@@ -271,5 +388,14 @@ export default {
     getFavoritesInGroup,
     isFavoriteInGroup,
     onGroupsUpdate,
-    countFavoritesPerGroup
+    countFavoritesPerGroup,
+    // New filter config exports
+    getFilterConfig,
+    getProtocolFilters,
+    getAllFilters,
+    getVisibleFilters,
+    setFilterVisibility,
+    reorderAllFilters,
+    resetFilterConfig,
+    PROTOCOL_FILTERS
 };

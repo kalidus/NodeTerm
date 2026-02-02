@@ -3,6 +3,8 @@ import { getFavorites, toggleFavorite, onUpdate, isFavorite, reorderFavorites, h
 import { iconThemes } from '../themes/icon-themes';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import favoriteGroupsStore from '../utils/favoriteGroupsStore';
+import FilterPanel from './FilterPanel';
+import FilterBadge from './FilterBadge';
 
 // Formatear "Hace 5m", "Hace 2 h", "Ayer", etc.
 function formatRelativeTime(iso) {
@@ -151,6 +153,21 @@ const ConnectionHistory = ({
 	const filterBarRef = useRef(null);
 	const [indicatorStyle, setIndicatorStyle] = useState({});
 
+	// Estado para configuración unificada de filtros
+	const [showFilterConfig, setShowFilterConfig] = useState(false);
+	const [allFilters, setAllFilters] = useState(() => favoriteGroupsStore.getAllFilters());
+
+	// Estado para nuevo sistema de filtros (FilterPanel)
+	const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+	const [activeFilters, setActiveFilters] = useState(() => {
+		try {
+			const saved = localStorage.getItem('nodeterm_active_filters');
+			return saved ? JSON.parse(saved) : { protocols: [], groups: [], states: [] };
+		} catch {
+			return { protocols: [], groups: [], states: [] };
+		}
+	});
+
 	// Funciones para toggle de colapso
 	const toggleFavoritesCollapsed = () => {
 		setFavoritesCollapsed(prev => {
@@ -204,10 +221,11 @@ const ConnectionHistory = ({
 		};
 	}, []);
 
-	// Cargar y sincronizar grupos de favoritos
+	// Cargar y sincronizar grupos de favoritos y filtros
 	useEffect(() => {
 		const unsubscribe = favoriteGroupsStore.onGroupsUpdate(() => {
 			setFavoriteGroups(favoriteGroupsStore.getGroups());
+			setAllFilters(favoriteGroupsStore.getAllFilters());
 		});
 		return () => unsubscribe();
 	}, []);
@@ -514,17 +532,6 @@ const ConnectionHistory = ({
 
 
 
-	// Calculate active connections (filtered by group)
-	const activeFavs = activeGroupId === 'all'
-		? favoriteConnections
-		: favoriteGroupsStore.getFavoritesInGroup(activeGroupId, favoriteConnections);
-
-	const activeRecents = activeGroupId === 'all'
-		? recentConnections
-		: favoriteGroupsStore.getFavoritesInGroup(activeGroupId, recentConnections);
-
-	const filteredPinned = applyTypeFilter(activeFavs, typeFilter);
-	const filteredRecents = applyTypeFilter(activeRecents, typeFilter);
 
 	const activeKey = (c) => {
 		if (c.type === 'group') return `group:${c.id}`;
@@ -535,6 +542,159 @@ const ConnectionHistory = ({
 		setTypeFilter(key);
 		localStorage.setItem('nodeterm_fav_type', key);
 	};
+
+	// ============================================
+	// NEW: Multi-Filter System Functions
+	// ============================================
+
+	const matchesProtocol = (conn, protocolId) => {
+		if (protocolId === 'all') return true;
+		if (protocolId === 'vnc-guacamole') return conn.type === 'vnc-guacamole' || conn.type === 'vnc';
+		if (protocolId === 'rdp-guacamole') return conn.type === 'rdp-guacamole' || conn.type === 'rdp';
+		if (protocolId === 'sftp') return ['sftp', 'explorer', 'ftp', 'scp'].includes(conn.type);
+		if (protocolId === 'secret') return ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'].includes(conn.type);
+		return conn.type === protocolId;
+	};
+
+	const applyMultipleFilters = (connections, filters) => {
+		let result = [...connections];
+
+		// Filter by protocols (OR logic within protocols)
+		if (filters.protocols && filters.protocols.length > 0) {
+			result = result.filter(conn => {
+				return filters.protocols.some(protocolId => matchesProtocol(conn, protocolId));
+			});
+		}
+
+		// Filter by groups (OR logic within groups)
+		if (filters.groups && filters.groups.length > 0) {
+			result = result.filter(conn => {
+				return filters.groups.some(groupId => {
+					return favoriteGroupsStore.isFavoriteInGroup(conn.id || helpers.buildId(conn), groupId);
+				});
+			});
+		}
+
+		// Filter by states (AND logic for states)
+		if (filters.states && filters.states.includes('favorites')) {
+			result = result.filter(conn => isFavorite(conn));
+		}
+		if (filters.states && filters.states.includes('connected')) {
+			result = result.filter(conn => activeIds.has(activeKey(conn)));
+		}
+		if (filters.states && filters.states.includes('recent')) {
+			const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+			result = result.filter(conn => {
+				if (!conn.lastConnected) return false;
+				const lastConn = new Date(conn.lastConnected);
+				return lastConn >= weekAgo;
+			});
+		}
+
+		return result;
+	};
+
+	const handleApplyFilters = (filters) => {
+		setActiveFilters(filters);
+		// Guardar en localStorage
+		try {
+			localStorage.setItem('nodeterm_active_filters', JSON.stringify(filters));
+		} catch (e) {
+			console.error('Error guardando filtros activos:', e);
+		}
+	};
+
+	const handleRemoveFilter = (category, filterId) => {
+		setActiveFilters(prev => {
+			const newFilters = {
+				...prev,
+				[category]: prev[category].filter(id => id !== filterId)
+			};
+			// Guardar en localStorage
+			try {
+				localStorage.setItem('nodeterm_active_filters', JSON.stringify(newFilters));
+			} catch (e) {
+				console.error('Error guardando filtros activos:', e);
+			}
+			return newFilters;
+		});
+	};
+
+	const getActiveFilterCount = () => {
+		return (activeFilters.protocols?.length || 0) +
+			(activeFilters.groups?.length || 0) +
+			(activeFilters.states?.length || 0);
+	};
+
+	const getFilterLabel = (category, filterId) => {
+		if (category === 'protocols') {
+			const protocolFilters = favoriteGroupsStore.getProtocolFilters();
+			const filter = protocolFilters.find(f => f.id === filterId);
+			return filter?.label || filterId;
+		} else if (category === 'groups') {
+			const group = favoriteGroups.find(g => g.id === filterId);
+			return group?.name || filterId;
+		} else if (category === 'states') {
+			const stateLabels = {
+				favorites: 'Favoritos',
+				connected: 'Conectados',
+				recent: 'Recientes'
+			};
+			return stateLabels[filterId] || filterId;
+		}
+		return filterId;
+	};
+
+	const getFilterColor = (category, filterId) => {
+		if (category === 'protocols') {
+			const protocolFilters = favoriteGroupsStore.getProtocolFilters();
+			const filter = protocolFilters.find(f => f.id === filterId);
+			return filter?.color || '#4fc3f7';
+		} else if (category === 'groups') {
+			const group = favoriteGroups.find(g => g.id === filterId);
+			return group?.color || '#4fc3f7';
+		} else if (category === 'states') {
+			const stateColors = {
+				favorites: '#FFD700',
+				connected: '#4CAF50',
+				recent: '#2196F3'
+			};
+			return stateColors[filterId] || '#4fc3f7';
+		}
+		return '#4fc3f7';
+	};
+
+	const getFilterIcon = (category, filterId) => {
+		if (category === 'protocols') {
+			const protocolFilters = favoriteGroupsStore.getProtocolFilters();
+			const filter = protocolFilters.find(f => f.id === filterId);
+			return filter?.icon || 'pi-circle';
+		} else if (category === 'groups') {
+			const group = favoriteGroups.find(g => g.id === filterId);
+			return group?.icon || 'pi-folder';
+		} else if (category === 'states') {
+			const stateIcons = {
+				favorites: 'pi-star',
+				connected: 'pi-circle-fill',
+				recent: 'pi-clock'
+			};
+			return stateIcons[filterId] || 'pi-circle';
+		}
+		return 'pi-circle';
+	};
+
+	// ============================================
+	// Calculate filtered connections (AFTER function definitions)
+	// ============================================
+	const hasActiveFilters = getActiveFilterCount() > 0;
+
+	const filteredFavorites = hasActiveFilters
+		? applyMultipleFilters(favoriteConnections, activeFilters)
+		: favoriteConnections;
+
+	const filteredRecentsForDisplay = hasActiveFilters
+		? applyMultipleFilters(recentConnections, activeFilters)
+		: recentConnections;
 
 	// Componente interno para las tarjetas del Carrusel
 	const RibbonCard = ({ connection, isActive, onConnect, onEdit, onToggleFav, onEditGroups, onDragStart, onDragOver, onDrop, index }) => {
@@ -827,14 +987,8 @@ const ConnectionHistory = ({
 	};
 
 
-	const filterTabs = [
-		{ key: 'all', label: 'Todas', icon: 'pi-th-large', color: '#9E9E9E' },
-		{ key: 'ssh', label: 'SSH', icon: 'pi-server', color: '#4fc3f7' },
-		{ key: 'rdp-guacamole', label: 'RDP', icon: 'pi-desktop', color: '#ff6b35' },
-		{ key: 'vnc-guacamole', label: 'VNC', icon: 'pi-desktop', color: '#81c784' },
-		{ key: 'sftp', label: 'SFTP', icon: 'pi-folder-open', color: '#FFB300' },
-		{ key: 'secret', label: 'Secretos', icon: 'pi-key', color: '#E91E63' },
-	];
+	// Filtros unificados visibles (protocolos + grupos personalizados)
+	const visibleFilters = allFilters.filter(f => f.visible);
 
 	// Calcular contadores por tipo de conexión
 	const countByType = (connections, filterKey) => {
@@ -994,98 +1148,144 @@ const ConnectionHistory = ({
 
 	return (
 		<div className="connection-history-root">
-			{/* Advanced Filter Bar - Segmented Control with Groups */}
-			<div className="filter-bar-wrapper" style={{ marginBottom: '1rem' }}>
-				{/* Protocol Filters - Segmented Control */}
-				<div
-					className="segmented-control"
-					ref={filterBarRef}
-					style={{
-						background: themeColors.itemBackground || themeColors.cardBackground,
-						backgroundColor: themeColors.itemBackground || themeColors.cardBackground
-					}}
+			{/* NEW: Filter Toolbar with Dropdown Panel */}
+			<div className="filter-toolbar">
+				{/* Filter trigger button */}
+				<button
+					className="filter-trigger-btn"
+					onClick={() => setFilterPanelOpen(true)}
+					title="Abrir panel de filtros"
 				>
-					{/* Sliding indicator */}
-					<div
-						className="segment-indicator"
-						style={{
-							transform: `translateX(${indicatorStyle.left || 0}px)`,
-							width: indicatorStyle.width || 0
-						}}
-					/>
+					<i className="pi pi-filter" />
+					Filtros
+					{getActiveFilterCount() > 0 && (
+						<span className="filter-count-badge">{getActiveFilterCount()}</span>
+					)}
+				</button>
 
-					{filterTabs.map(({ key, label, icon, color }) => {
-						// Only count Favorites for the filter badges
-						// This provides a clean "Inventory Count" without noise from Recents history
-						const count = countByType(activeFavs, key);
-						return (
-							<button
-								key={key}
-								type="button"
-								className={`filter-segment ${typeFilter === key ? 'active' : ''}`}
-								onClick={() => handleFilterChange(key)}
-								title={`${label} (${count})`}
-								style={{ '--segment-accent': color }}
-							>
-								<i className={`pi ${icon}`} />
-								<span className="segment-label">{label}</span>
-								<span className="segment-count">{count}</span>
-							</button>
-						);
-					})}
-				</div>
-
-				{/* Separator */}
-				<div className="filter-bar-separator" />
-
-				{/* Custom Groups Tabs */}
-				<div className="groups-control">
-					{/* User-created groups */}
-
-					{customGroups.map(group => (
-						<div key={group.id} className="group-tab-wrapper">
-							<button
-								type="button"
-								className={`group-tab ${activeGroupId === group.id ? 'active' : ''}`}
-								onClick={() => handleGroupChange(group.id)}
-								onContextMenu={(e) => {
-									e.preventDefault();
-									setEditingGroup(group);
-								}}
-								style={{ '--group-color': group.color }}
-								title={`Grupo: ${group.name}`}
-							>
-								<span className="group-dot" style={{ background: group.color }} />
-								<span>{group.name}</span>
-							</button>
-							<button
-								type="button"
-								className="group-delete-btn"
-								onClick={(e) => {
-									e.stopPropagation();
-									handleDeleteGroup(group.id);
-								}}
-								title={`Eliminar grupo "${group.name}"`}
-							>
-								<i className="pi pi-times" />
-							</button>
-						</div>
+				{/* Active filter badges */}
+				<div className="active-filters-chips">
+					{activeFilters.protocols?.map(filterId => (
+						<FilterBadge
+							key={`protocol-${filterId}`}
+							label={getFilterLabel('protocols', filterId)}
+							color={getFilterColor('protocols', filterId)}
+							icon={getFilterIcon('protocols', filterId)}
+							type="protocol"
+							onRemove={() => handleRemoveFilter('protocols', filterId)}
+						/>
 					))}
-
-
-					{/* Add new group button */}
-					<button
-						type="button"
-						className="group-tab add-group-btn"
-						onClick={() => setShowCreateGroupDialog(true)}
-						title="Crear nuevo grupo"
-					>
-						<i className="pi pi-plus" />
-					</button>
+					{activeFilters.groups?.map(filterId => (
+						<FilterBadge
+							key={`group-${filterId}`}
+							label={getFilterLabel('groups', filterId)}
+							color={getFilterColor('groups', filterId)}
+							icon={getFilterIcon('groups', filterId)}
+							type="group"
+							onRemove={() => handleRemoveFilter('groups', filterId)}
+						/>
+					))}
+					{activeFilters.states?.map(filterId => (
+						<FilterBadge
+							key={`state-${filterId}`}
+							label={getFilterLabel('states', filterId)}
+							color={getFilterColor('states', filterId)}
+							icon={getFilterIcon('states', filterId)}
+							type="state"
+							onRemove={() => handleRemoveFilter('states', filterId)}
+						/>
+					))}
 				</div>
 			</div>
 
-			{/* Create Group Dialog */}
+			{/* FilterPanel Dropdown */}
+			<FilterPanel
+				isOpen={filterPanelOpen}
+				onClose={() => setFilterPanelOpen(false)}
+				activeFilters={activeFilters}
+				onApplyFilters={handleApplyFilters}
+				availableFilters={{
+					protocols: favoriteGroupsStore.getProtocolFilters().map(f => ({
+						...f,
+						count: countByType(favoriteConnections, f.id)
+					})),
+					groups: favoriteGroups.filter(g => !g.isDefault).map(g => ({
+						id: g.id,
+						label: g.name,
+						icon: g.icon || 'pi-folder',
+						color: g.color,
+						count: favoriteGroupsStore.getFavoritesInGroup(g.id, favoriteConnections).length
+					}))
+				}}
+				themeColors={themeColors}
+				onCreateGroup={() => setShowCreateGroupDialog(true)}
+			/>
+
+			{/* Filter Configuration Dialog */}
+			{showFilterConfig && (
+				<div className="create-group-overlay" onClick={() => setShowFilterConfig(false)}>
+					<div className="create-group-dialog filter-config-dialog" onClick={(e) => e.stopPropagation()}>
+						<div className="dialog-header">
+							<h3><i className="pi pi-cog" /> Configurar Filtros</h3>
+							<button className="dialog-close" onClick={() => setShowFilterConfig(false)}>
+								<i className="pi pi-times" />
+							</button>
+						</div>
+						<div className="dialog-body">
+							<p style={{ color: 'rgba(255,255,255,0.6)', margin: '0 0 16px', fontSize: '0.85rem' }}>
+								Activa o desactiva los filtros que deseas ver en la barra:
+							</p>
+							<div className="filter-config-list">
+								{allFilters.map(filter => (
+									<div
+										key={filter.id}
+										className={`filter-config-item ${filter.visible ? 'visible' : 'hidden'}`}
+										style={{ '--item-color': filter.color }}
+									>
+										<div className="filter-config-info">
+											{filter.isGroup && (
+												<span className="filter-config-dot" style={{ background: filter.color }} />
+											)}
+											<i className={`pi ${filter.icon}`} style={{ color: filter.color }} />
+											<span className="filter-config-label">{filter.label}</span>
+											{filter.isProtocol && <span className="filter-config-type">Protocolo</span>}
+											{filter.isGroup && <span className="filter-config-type">Grupo</span>}
+										</div>
+										<button
+											type="button"
+											className={`filter-config-toggle ${filter.visible ? 'on' : 'off'}`}
+											onClick={() => {
+												if (filter.id !== 'all') {
+													favoriteGroupsStore.setFilterVisibility(filter.id, !filter.visible);
+													setAllFilters(favoriteGroupsStore.getAllFilters());
+												}
+											}}
+											disabled={filter.id === 'all'}
+											title={filter.id === 'all' ? 'Este filtro siempre está visible' : (filter.visible ? 'Ocultar' : 'Mostrar')}
+										>
+											<i className={filter.visible ? 'pi pi-eye' : 'pi pi-eye-slash'} />
+										</button>
+									</div>
+								))}
+							</div>
+						</div>
+						<div className="dialog-footer">
+							<button
+								className="btn-cancel"
+								onClick={() => {
+									favoriteGroupsStore.resetFilterConfig();
+									setAllFilters(favoriteGroupsStore.getAllFilters());
+								}}
+							>
+								<i className="pi pi-refresh" /> Restaurar
+							</button>
+							<button className="btn-create" onClick={() => setShowFilterConfig(false)}>
+								<i className="pi pi-check" /> Listo
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 			{showCreateGroupDialog && (
 				<div className="create-group-overlay" onClick={() => setShowCreateGroupDialog(false)}>
 					<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
@@ -1266,8 +1466,8 @@ const ConnectionHistory = ({
 
 			{/* FAVORITES RIBBON (Always visible, shows placeholder if empty) */}
 			<FavoritesRibbon
-				connections={filteredPinned}
-				fullList={activeFavs}
+				connections={filteredFavorites}
+				fullList={favoriteConnections}
 				onReorder={(newList) => {
 					// Enable reordering even if filtered
 					// We merge the reordered subset back into the main list
@@ -1338,7 +1538,7 @@ const ConnectionHistory = ({
 
 				{!recentsCollapsed && (
 					<ConnectionTable
-						connections={filteredRecents}
+						connections={filteredRecentsForDisplay}
 						title="Nombre"
 						emptyMessage="No hay sesiones recientes"
 					/>

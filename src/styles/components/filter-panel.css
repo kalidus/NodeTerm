@@ -1,0 +1,528 @@
+/* ============================================
+   FILTER PANEL - Dropdown Multi-Filter Panel
+   Glassmorphism design inspired by Linear/Notion
+   ============================================ */
+
+/* === OVERLAY === */
+.filter-panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 1000;
+}
+
+.filter-panel-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* === PANEL CONTAINER === */
+.filter-panel-container {
+    position: absolute;
+    top: 80px;
+    left: 20px;
+    width: 380px;
+    max-width: calc(100vw - 40px);
+    max-height: calc(100vh - 120px);
+    background: linear-gradient(135deg,
+            var(--panel-bg, rgba(16, 20, 28, 0.95)) 0%,
+            var(--panel-bg, rgba(16, 20, 28, 0.90)) 100%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.1));
+    border-radius: 12px;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateY(-10px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.filter-panel-overlay.open .filter-panel-container {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+/* === HEADER === */
+.filter-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--panel-border, rgba(255, 255, 255, 0.08));
+    flex-shrink: 0;
+}
+
+.filter-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--panel-text, rgba(255, 255, 255, 0.9));
+}
+
+.filter-panel-title i {
+    font-size: 1.1rem;
+    opacity: 0.8;
+}
+
+.filter-panel-title h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.filter-active-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 8px;
+    background: rgba(79, 195, 247, 0.2);
+    border: 1px solid rgba(79, 195, 247, 0.4);
+    border-radius: 12px;
+    color: #4fc3f7;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.filter-panel-close {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.6));
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 1.1rem;
+}
+
+.filter-panel-close:hover {
+    background: var(--panel-hover, rgba(255, 255, 255, 0.05));
+    border-color: var(--panel-border, rgba(255, 255, 255, 0.1));
+    color: var(--panel-text, rgba(255, 255, 255, 0.9));
+}
+
+/* === SEARCH === */
+.filter-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--panel-border, rgba(255, 255, 255, 0.08));
+    flex-shrink: 0;
+}
+
+.filter-search i.pi-search {
+    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.5));
+    font-size: 0.9rem;
+}
+
+.filter-search input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--panel-text, rgba(255, 255, 255, 0.9));
+    font-size: 0.9rem;
+    padding: 0;
+}
+
+.filter-search input::placeholder {
+    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.4));
+}
+
+.search-clear {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.5));
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 0.75rem;
+}
+
+.search-clear:hover {
+    background: var(--panel-hover, rgba(255, 255, 255, 0.08));
+    color: var(--panel-text, rgba(255, 255, 255, 0.9));
+}
+
+/* === SECTIONS === */
+.filter-sections {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+}
+
+.filter-section {
+    border-bottom: 1px solid var(--panel-border, rgba(255, 255, 255, 0.06));
+}
+
+.filter-section:last-child {
+    border-bottom: none;
+}
+
+.filter-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease;
+}
+
+.filter-section-header:hover {
+    background: var(--panel-hover, rgba(255, 255, 255, 0.03));
+}
+
+.section-icon {
+    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.6));
+    font-size: 0.9rem;
+}
+
+.section-title {
+    flex: 1;
+    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.7));
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+
+.section-chevron {
+    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.5));
+    font-size: 0.75rem;
+    transition: transform 0.2s ease;
+}
+
+/* === SECTION CONTENT === */
+.filter-section-content {
+    padding: 4px 20px 12px 20px;
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* === CHECKBOX === */
+.filter-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.filter-checkbox:hover {
+    background: var(--panel-hover, rgba(255, 255, 255, 0.05));
+}
+
+.filter-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--filter-color, #4fc3f7);
+    cursor: pointer;
+}
+
+.filter-checkbox-label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--panel-text, rgba(255, 255, 255, 0.9));
+    font-size: 0.9rem;
+    min-width: 0;
+}
+
+.filter-checkbox-label i {
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.filter-checkbox-label span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.filter-checkbox-count {
+    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.5));
+    font-size: 0.85rem;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+/* === EMPTY STATE === */
+.filter-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px;
+    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.4));
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.filter-empty-state i {
+    font-size: 1.5rem;
+    opacity: 0.5;
+}
+
+/* === ADD GROUP BUTTON === */
+.filter-add-group-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px dashed var(--panel-border, rgba(255, 255, 255, 0.15));
+    border-radius: 6px;
+    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.6));
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-top: 4px;
+}
+
+.filter-add-group-btn:hover {
+    background: var(--panel-hover, rgba(255, 255, 255, 0.05));
+    border-color: rgba(79, 195, 247, 0.4);
+    color: #4fc3f7;
+}
+
+.filter-add-group-btn i {
+    font-size: 0.8rem;
+}
+
+/* === FOOTER === */
+.filter-panel-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--panel-border, rgba(255, 255, 255, 0.08));
+    flex-shrink: 0;
+}
+
+.filter-footer-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.15));
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.filter-footer-btn.secondary {
+    background: transparent;
+    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.filter-footer-btn.secondary:hover:not(:disabled) {
+    background: var(--panel-hover, rgba(255, 255, 255, 0.05));
+    border-color: var(--panel-border, rgba(255, 255, 255, 0.25));
+    color: var(--panel-text, rgba(255, 255, 255, 0.9));
+}
+
+.filter-footer-btn.primary {
+    background: linear-gradient(135deg, #4fc3f7 0%, #2196f3 100%);
+    border-color: transparent;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.filter-footer-btn.primary:hover {
+    background: linear-gradient(135deg, #60d0ff 0%, #2ea3ff 100%);
+    box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);
+    transform: translateY(-1px);
+}
+
+.filter-footer-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* === FILTER BADGE === */
+.filter-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    padding-right: 4px;
+    background: var(--badge-bg, rgba(79, 195, 247, 0.15));
+    border: 1px solid var(--badge-border, rgba(79, 195, 247, 0.4));
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--badge-color, #4fc3f7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: all 0.15s ease;
+}
+
+.filter-badge:hover {
+    background: var(--badge-bg, rgba(79, 195, 247, 0.2));
+    border-color: var(--badge-color, #4fc3f7);
+}
+
+.filter-badge-icon {
+    font-size: 0.75rem;
+}
+
+.filter-badge-label {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.filter-badge-remove {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.1);
+    border: none;
+    border-radius: 4px;
+    color: currentColor;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 0.7rem;
+}
+
+.filter-badge-remove:hover {
+    background: rgba(0, 0, 0, 0.2);
+    transform: scale(1.1);
+}
+
+/* === FILTER TOOLBAR === */
+.filter-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.filter-trigger-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--panel-bg, rgba(16, 20, 28, 0.6));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.15));
+    border-radius: 8px;
+    color: var(--panel-text, rgba(255, 255, 255, 0.9));
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.filter-trigger-btn:hover {
+    background: var(--panel-bg, rgba(16, 20, 28, 0.8));
+    border-color: rgba(79, 195, 247, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+}
+
+.filter-trigger-btn i {
+    font-size: 0.9rem;
+}
+
+.filter-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    background: linear-gradient(135deg, #4fc3f7 0%, #2196f3 100%);
+    border-radius: 10px;
+    color: #ffffff;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.active-filters-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* === SCROLLBAR === */
+.filter-sections::-webkit-scrollbar {
+    width: 6px;
+}
+
+.filter-sections::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.filter-sections::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.filter-sections::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+    .filter-panel-container {
+        left: 10px;
+        right: 10px;
+        width: auto;
+        max-width: none;
+    }
+}
