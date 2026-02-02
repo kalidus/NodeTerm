@@ -297,6 +297,7 @@ const ConnectionHistory = ({
 	};
 
 	const handleDeleteGroup = (groupId) => {
+		if (!window.confirm('¿Estás seguro de que deseas eliminar este grupo?')) return;
 		try {
 			favoriteGroupsStore.deleteGroup(groupId);
 			setFavoriteGroups(favoriteGroupsStore.getGroups());
@@ -1233,6 +1234,7 @@ const ConnectionHistory = ({
 				}}
 				themeColors={themeColors}
 				onCreateGroup={() => setShowCreateGroupDialog(true)}
+				onDeleteGroup={handleDeleteGroup}
 			/>
 
 			{/* Filter Configuration Dialog */}

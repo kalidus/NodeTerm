@@ -238,6 +238,20 @@
 }
 
 /* === CHECKBOX === */
+/* === CHECKBOX === */
+.filter-checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+
+.filter-checkbox-wrapper:hover {
+    background: var(--panel-hover, rgba(255, 255, 255, 0.05));
+}
+
 .filter-checkbox {
     display: flex;
     align-items: center;
@@ -246,10 +260,37 @@
     border-radius: 6px;
     cursor: pointer;
     transition: background 0.15s ease;
+    flex: 1;
 }
 
-.filter-checkbox:hover {
+/* Remove hover from inner element as wrapper handles it */
+/* .filter-checkbox:hover {
     background: var(--panel-hover, rgba(255, 255, 255, 0.05));
+} */
+
+.filter-checkbox-delete {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.4));
+    cursor: pointer;
+    border-radius: 4px;
+    margin-right: 8px;
+    opacity: 0;
+    transition: all 0.15s ease;
+}
+
+.filter-checkbox-wrapper:hover .filter-checkbox-delete {
+    opacity: 1;
+}
+
+.filter-checkbox-delete:hover {
+    background: rgba(255, 82, 82, 0.15);
+    color: #ff5252;
 }
 
 .filter-checkbox input[type="checkbox"] {
