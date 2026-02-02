@@ -236,25 +236,19 @@ const ConnectionHistory = ({
 			const connection = e.detail?.connection;
 			if (!connection) return;
 
-			const isCurrentlyFavorite = isFavorite(connection);
-			const userGroups = favoriteGroups.filter(g => !g.isDefault);
+			// Always show dialog for sidebar actions
+			setConnectionToFavorite(connection);
 
-			if (isCurrentlyFavorite) {
-				// Si ya es favorito, quitarlo
-				toggleFavorite(connection);
-				loadConnectionHistory();
+			const isFav = isFavorite(connection);
+			if (isFav) {
+				const favId = connection.id || helpers.buildId(connection);
+				const currentGroups = favoriteGroupsStore.getFavoriteGroups(favId);
+				setSelectedGroupsForFav(currentGroups);
 			} else {
-				// Si no es favorito y hay grupos, mostrar selector
-				if (userGroups.length > 0) {
-					setConnectionToFavorite(connection);
-					setSelectedGroupsForFav([]);
-					setShowGroupSelector(true);
-				} else {
-					// Si no hay grupos, agregar directamente
-					toggleFavorite(connection);
-					loadConnectionHistory();
-				}
+				setSelectedGroupsForFav([]);
 			}
+
+			setShowGroupSelector(true);
 		};
 
 		window.addEventListener('request-add-favorite-with-groups', handleSidebarFavorite);
@@ -356,15 +350,35 @@ const ConnectionHistory = ({
 	const handleConfirmAddFavorite = () => {
 		if (!connectionToFavorite) return;
 
-		// Agregar a favoritos
-		toggleFavorite(connectionToFavorite);
+		const isFav = isFavorite(connectionToFavorite);
+
+		// Solo hacemos toggle si NO es favorito (para añadirlo).
+		// Si YA es favorito, no hacemos toggle (lo quitaría), solo actualizamos grupos.
+		if (!isFav) {
+			toggleFavorite(connectionToFavorite);
+		}
 
 		// Asignar a grupos seleccionados
-		if (selectedGroupsForFav.length > 0) {
-			const serial = typeof connectionToFavorite === 'string'
-				? connectionToFavorite
-				: (connectionToFavorite.id || helpers.buildId(connectionToFavorite));
-			favoriteGroupsStore.assignFavoriteToGroups(serial, selectedGroupsForFav);
+		// Usamos un ID consistente (el toggle ya debió añadirlo al store si era nuevo)
+		const serial = typeof connectionToFavorite === 'string'
+			? connectionToFavorite
+			: (connectionToFavorite.id || helpers.buildId(connectionToFavorite));
+
+		favoriteGroupsStore.assignFavoriteToGroups(serial, selectedGroupsForFav);
+
+		setShowGroupSelector(false);
+		setConnectionToFavorite(null);
+		setSelectedGroupsForFav([]);
+		loadConnectionHistory();
+	};
+
+	// Función para quitar de favoritos desde el diálogo
+	const handleRemoveFavoriteFromDialog = () => {
+		if (!connectionToFavorite) return;
+
+		const isFav = isFavorite(connectionToFavorite);
+		if (isFav) {
+			toggleFavorite(connectionToFavorite); // Quitar
 		}
 
 		setShowGroupSelector(false);
@@ -1360,18 +1374,19 @@ const ConnectionHistory = ({
 			)}
 
 			{/* Group Selector Dialog - shown when adding a favorite */}
+			{/* Group Selector Dialog - shown when adding a favorite */}
 			{showGroupSelector && connectionToFavorite && (
 				<div className="create-group-overlay" onClick={() => setShowGroupSelector(false)}>
 					<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
 						<div className="dialog-header">
-							<h3>Agregar a favoritos</h3>
+							<h3>{isFavorite(connectionToFavorite) ? 'Editar favorito' : 'Agregar a favoritos'}</h3>
 							<button className="dialog-close" onClick={() => setShowGroupSelector(false)}>
 								<i className="pi pi-times" />
 							</button>
 						</div>
 						<div className="dialog-body">
 							<p style={{ color: 'rgba(255,255,255,0.7)', margin: '0 0 16px', fontSize: '0.9rem' }}>
-								Selecciona los grupos donde quieres añadir <strong style={{ color: '#fff' }}>{connectionToFavorite.name}</strong>:
+								Selecciona los grupos para <strong style={{ color: '#fff' }}>{connectionToFavorite.name}</strong>:
 							</p>
 							<div className="groups-selector">
 								{customGroups.map(group => (
@@ -1390,25 +1405,43 @@ const ConnectionHistory = ({
 									</button>
 								))}
 							</div>
-							<p style={{ color: 'rgba(255,255,255,0.5)', margin: '16px 0 0', fontSize: '0.8rem', fontStyle: 'italic' }}>
-								Puedes saltarte este paso para agregar sin grupos
-							</p>
+							{!customGroups.length && (
+								<p style={{ color: 'rgba(255,255,255,0.5)', margin: '8px 0', fontSize: '0.8rem', fontStyle: 'italic' }}>
+									No hay grupos personalizados.
+								</p>
+							)}
 						</div>
 						<div className="dialog-footer">
-							<button
-								className="btn-cancel"
-								onClick={() => {
-									// Agregar sin grupos
-									toggleFavorite(connectionToFavorite);
-									loadConnectionHistory();
-									setShowGroupSelector(false);
-									setConnectionToFavorite(null);
-								}}
-							>
-								Sin grupos
-							</button>
+							{isFavorite(connectionToFavorite) ? (
+								<button
+									className="btn-cancel"
+									style={{ color: '#ff5252' }}
+									onClick={handleRemoveFavoriteFromDialog}
+								>
+									<i className="pi pi-trash" style={{ marginRight: 6 }} />
+									Quitar fav
+								</button>
+							) : (
+								<button
+									className="btn-cancel"
+									onClick={() => {
+										// Agregar sin grupos
+										toggleFavorite(connectionToFavorite);
+										loadConnectionHistory();
+										setShowGroupSelector(false);
+										setConnectionToFavorite(null);
+									}}
+								>
+									Sin grupos
+								</button>
+							)}
+
 							<button className="btn-create" onClick={handleConfirmAddFavorite}>
-								<i className="pi pi-star-fill" /> Agregar
+								{isFavorite(connectionToFavorite) ? (
+									<><i className="pi pi-save" /> Guardar</>
+								) : (
+									<><i className="pi pi-star-fill" /> Agregar</>
+								)}
 							</button>
 						</div>
 					</div>
