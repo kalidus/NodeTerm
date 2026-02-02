@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { getFavorites, toggleFavorite, onUpdate, isFavorite, reorderFavorites, helpers } from '../utils/connectionStore';
 import { iconThemes } from '../themes/icon-themes';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
@@ -1213,32 +1214,35 @@ const ConnectionHistory = ({
 				</div>
 			</div>
 
-			{/* FilterPanel Dropdown */}
-			<FilterPanel
-				isOpen={filterPanelOpen}
-				onClose={() => setFilterPanelOpen(false)}
-				activeFilters={activeFilters}
-				onApplyFilters={handleApplyFilters}
-				availableFilters={{
-					protocols: favoriteGroupsStore.getProtocolFilters().map(f => ({
-						...f,
-						count: countByType(favoriteConnections, f.id)
-					})),
-					groups: favoriteGroups.filter(g => !g.isDefault).map(g => ({
-						id: g.id,
-						label: g.name,
-						icon: g.icon || 'pi-folder',
-						color: g.color,
-						count: favoriteGroupsStore.getFavoritesInGroup(g.id, favoriteConnections).length
-					}))
-				}}
-				themeColors={themeColors}
-				onCreateGroup={() => setShowCreateGroupDialog(true)}
-				onDeleteGroup={handleDeleteGroup}
-			/>
+			{/* FilterPanel Dropdown - Rendered in Portal to avoid clipping */}
+			{ReactDOM.createPortal(
+				<FilterPanel
+					isOpen={filterPanelOpen}
+					onClose={() => setFilterPanelOpen(false)}
+					activeFilters={activeFilters}
+					onApplyFilters={handleApplyFilters}
+					availableFilters={{
+						protocols: favoriteGroupsStore.getProtocolFilters().map(f => ({
+							...f,
+							count: countByType(favoriteConnections, f.id)
+						})),
+						groups: favoriteGroups.filter(g => !g.isDefault).map(g => ({
+							id: g.id,
+							label: g.name,
+							icon: g.icon || 'pi-folder',
+							color: g.color,
+							count: favoriteGroupsStore.getFavoritesInGroup(g.id, favoriteConnections).length
+						}))
+					}}
+					themeColors={themeColors}
+					onCreateGroup={() => setShowCreateGroupDialog(true)}
+					onDeleteGroup={handleDeleteGroup}
+				/>,
+				document.body
+			)}
 
 			{/* Filter Configuration Dialog */}
-			{showFilterConfig && (
+			{showFilterConfig && ReactDOM.createPortal(
 				<div className="create-group-overlay" onClick={() => setShowFilterConfig(false)}>
 					<div className="create-group-dialog filter-config-dialog" onClick={(e) => e.stopPropagation()}>
 						<div className="dialog-header">
@@ -1300,9 +1304,10 @@ const ConnectionHistory = ({
 							</button>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
-			{showCreateGroupDialog && (
+			{showCreateGroupDialog && ReactDOM.createPortal(
 				<div className="create-group-overlay" onClick={() => setShowCreateGroupDialog(false)}>
 					<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
 						<div className="dialog-header">
@@ -1347,11 +1352,12 @@ const ConnectionHistory = ({
 							</button>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
 
 			{/* Edit/Delete Group Menu */}
-			{editingGroup && (
+			{editingGroup && ReactDOM.createPortal(
 				<div className="create-group-overlay" onClick={() => setEditingGroup(null)}>
 					<div className="create-group-dialog small" onClick={(e) => e.stopPropagation()}>
 						<div className="dialog-header">
@@ -1372,12 +1378,13 @@ const ConnectionHistory = ({
 							</button>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
 
 			{/* Group Selector Dialog - shown when adding a favorite */}
 			{/* Group Selector Dialog - shown when adding a favorite */}
-			{showGroupSelector && connectionToFavorite && (
+			{showGroupSelector && connectionToFavorite && ReactDOM.createPortal(
 				<div className="create-group-overlay" onClick={() => setShowGroupSelector(false)}>
 					<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
 						<div className="dialog-header">
@@ -1447,11 +1454,12 @@ const ConnectionHistory = ({
 							</button>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
 
 			{/* Edit Favorite Groups Dialog */}
-			{showEditFavGroups && editingFavorite && (
+			{showEditFavGroups && editingFavorite && ReactDOM.createPortal(
 				<div className="create-group-overlay" onClick={() => setShowEditFavGroups(false)}>
 					<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
 						<div className="dialog-header">
@@ -1496,7 +1504,8 @@ const ConnectionHistory = ({
 							</button>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
 
 			{/* FAVORITES RIBBON (Always visible, shows placeholder if empty) */}
