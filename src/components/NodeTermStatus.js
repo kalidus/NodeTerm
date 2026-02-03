@@ -1453,14 +1453,64 @@ const NodeTermStatus = ({
 				</div>
 
 				{/* Toggles terminal y status bar */}
-				<div style={{ marginTop: 'auto', paddingTop: '0.5rem', borderTop: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}` }}>
-					<SectionHeader id="toggles" label="OPCIONES" />
-					{!sc.toggles && (
-						<div style={{ display: 'flex', gap: '0.35rem' }}>
-							{onToggleTerminalVisibility && <button style={{ ...btnStyle(), padding: '0.35rem', flex: 1 }} onClick={onToggleTerminalVisibility} title="Mostrar/ocultar terminal" onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}><i className="pi pi-window-minimize" style={{ fontSize: '0.9rem' }} /></button>}
-							{onToggleStatusBar && <button style={{ ...btnStyle(), padding: '0.35rem', flex: 1 }} onClick={onToggleStatusBar} title="Mostrar/ocultar barra de estado" onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}><i className="pi pi-bars" style={{ fontSize: '0.9rem' }} /></button>}
-						</div>
-					)}
+				{/* Toggles terminal y status bar */}
+				<div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}` }}>
+					<div style={{ display: 'flex', gap: '0.75rem' }}>
+						{onToggleTerminalVisibility && (
+							<button
+								onClick={onToggleTerminalVisibility}
+								title="Mostrar/ocultar terminal"
+								style={{
+									...btnStyle(),
+									padding: '0.5rem',
+									flex: 1,
+									justifyContent: 'center',
+									background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%)',
+									border: '1px solid rgba(59, 130, 246, 0.2)',
+									boxShadow: '0 2px 10px rgba(59, 130, 246, 0.1)'
+								}}
+								onMouseEnter={e => {
+									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(59, 130, 246, 0.15) 100%)';
+									e.currentTarget.style.transform = 'translateY(-1px)';
+									e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.2)';
+								}}
+								onMouseLeave={e => {
+									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%)';
+									e.currentTarget.style.transform = 'translateY(0)';
+									e.currentTarget.style.boxShadow = '0 2px 10px rgba(59, 130, 246, 0.1)';
+								}}
+							>
+								<i className="pi pi-desktop" style={{ fontSize: '1.1rem', color: '#60a5fa' }} />
+							</button>
+						)}
+						{onToggleStatusBar && (
+							<button
+								onClick={onToggleStatusBar}
+								title="Mostrar/ocultar barra de estado"
+								style={{
+									...btnStyle(),
+									padding: '0.5rem',
+									flex: 1,
+									justifyContent: 'center',
+									background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(168, 85, 247, 0.05) 100%)',
+									border: '1px solid rgba(168, 85, 247, 0.2)',
+									boxShadow: '0 2px 10px rgba(168, 85, 247, 0.1)'
+								}}
+								onMouseEnter={e => {
+									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)';
+									e.currentTarget.style.transform = 'translateY(-1px)';
+									e.currentTarget.style.boxShadow = '0 4px 12px rgba(168, 85, 247, 0.2)';
+								}}
+								onMouseLeave={e => {
+									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(168, 85, 247, 0.05) 100%)';
+									e.currentTarget.style.transform = 'translateY(0)';
+									e.currentTarget.style.boxShadow = '0 2px 10px rgba(168, 85, 247, 0.1)';
+								}}
+							>
+								<i className="pi pi-bars" style={{ fontSize: '1.1rem', color: '#c084fc' }} />
+							</button>
+						)}
+					</div>
 				</div>
 
 				{/* Modal de Estadísticas */}
