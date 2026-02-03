@@ -432,26 +432,32 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 8px;
+    padding: 3px 8px;
+    /* Reduced vertical padding */
     padding-right: 4px;
-    background: var(--badge-bg, rgba(79, 195, 247, 0.15));
-    border: 1px solid var(--badge-border, rgba(79, 195, 247, 0.4));
+    background: var(--badge-bg, rgba(79, 195, 247, 0.1));
+    /* More subtle background */
+    border: 1px solid var(--badge-border, rgba(79, 195, 247, 0.3));
+    /* More subtle border */
     border-radius: 6px;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+    /* Smaller font */
     font-weight: 500;
     color: var(--badge-color, #4fc3f7);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     transition: all 0.15s ease;
+    height: 24px;
+    /* Fixed height for consistency */
 }
 
 .filter-badge:hover {
-    background: var(--badge-bg, rgba(79, 195, 247, 0.2));
+    background: var(--badge-bg, rgba(79, 195, 247, 0.15));
     border-color: var(--badge-color, #4fc3f7);
 }
 
 .filter-badge-icon {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
 }
 
 .filter-badge-label {
@@ -462,18 +468,18 @@
 }
 
 .filter-badge-remove {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: rgba(0, 0, 0, 0.1);
     border: none;
-    border-radius: 4px;
+    border-radius: 3px;
     color: currentColor;
     cursor: pointer;
     transition: all 0.15s ease;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
 }
 
 .filter-badge-remove:hover {
@@ -487,50 +493,62 @@
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
+    /* Reduced margin */
+    padding: 0 4px;
+    /* Slight horizontal padding adjustment */
 }
 
 .filter-trigger-btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: var(--panel-bg, rgba(16, 20, 28, 0.6));
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.15));
-    border-radius: 8px;
-    color: var(--panel-text, rgba(255, 255, 255, 0.9));
-    font-size: 0.9rem;
+    gap: 6px;
+    padding: 4px 10px;
+    /* Significantly reduced padding */
+    background: transparent;
+    /* Cleaner look, less button-like */
+    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.1));
+    border-radius: 6px;
+    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.7));
+    /* Subtle text color */
+    font-size: 0.8rem;
+    /* Smaller font */
     font-weight: 500;
     cursor: pointer;
     transition: all 0.15s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    height: 26px;
+    /* Fixed height */
 }
 
 .filter-trigger-btn:hover {
-    background: var(--panel-bg, rgba(16, 20, 28, 0.8));
-    border-color: rgba(79, 195, 247, 0.4);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transform: translateY(-1px);
+    background: var(--panel-hover, rgba(255, 255, 255, 0.05));
+    border-color: var(--panel-border, rgba(255, 255, 255, 0.2));
+    color: var(--panel-text, rgba(255, 255, 255, 0.9));
+}
+
+.filter-trigger-btn.active {
+    background: var(--badge-bg, rgba(79, 195, 247, 0.1));
+    border-color: var(--badge-border, rgba(79, 195, 247, 0.3));
+    color: var(--badge-color, #4fc3f7);
 }
 
 .filter-trigger-btn i {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
 }
 
 .filter-count-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
     background: linear-gradient(135deg, #4fc3f7 0%, #2196f3 100%);
-    border-radius: 10px;
+    border-radius: 8px;
     color: #ffffff;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 700;
+    margin-left: 2px;
 }
 
 .active-filters-chips {
