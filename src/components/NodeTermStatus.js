@@ -1433,16 +1433,16 @@ const NodeTermStatus = ({
 							}} title="Ver grabaciones y auditoría" onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
 								<i className="pi pi-history" style={{ color: '#a855f7', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Auditoría</span>
 							</button>
-							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'rdp' } })); } catch (e) { } }} title={`Guacd: ${guacdState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); setTimeout(() => { try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'rdp' } })); } catch (e) { } }, 100); }} title={`Guacd: ${guacdState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
 								<i className={guacdState.method === 'docker' ? 'pi pi-box' : 'pi pi-window-maximize'} style={{ color: guacdState.isRunning ? '#22c55e' : '#ef4444', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Guacd</span>
 							</button>
-							<button style={cardStyle()} title={`Ollama: ${ollamaState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); setTimeout(() => { try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'ai' } })); } catch (e) { } }, 100); }} title={`Ollama: ${ollamaState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
 								<i className="pi pi-bolt" style={{ color: ollamaState.isRunning ? '#22c55e' : '#ef4444', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Ollama</span>
 							</button>
-							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'sync' } })); } catch (e) { } }} title={`Nextcloud: ${syncState.configured ? (syncState.connectivity === 'ok' ? 'Conectado' : 'Configurado') : 'No configurado'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); setTimeout(() => { try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'sync' } })); } catch (e) { } }, 100); }} title={`Nextcloud: ${syncState.configured ? (syncState.connectivity === 'ok' ? 'Conectado' : 'Configurado') : 'No configurado'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
 								<i className="pi pi-cloud" style={{ color: syncState.configured ? (syncState.connectivity === 'error' ? '#ef4444' : '#60a5fa') : '#9ca3af', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Nextcloud</span>
 							</button>
-							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'security' } })); } catch (e) { } }} title={`Vault: ${!vaultState.configured ? 'No configurado' : (vaultState.unlocked ? 'Desbloqueado' : 'Bloqueado')}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); setTimeout(() => { try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'security', subTab: 'clave-maestra' } })); } catch (e) { } }, 100); }} title={`Vault: ${!vaultState.configured ? 'No configurado' : (vaultState.unlocked ? 'Desbloqueado' : 'Bloqueado')}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
 								<i className={vaultState.unlocked ? 'pi pi-unlock' : 'pi pi-lock'} style={{ color: !vaultState.configured ? '#9ca3af' : '#f59e0b', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Vault</span>
 							</button>
 							<button style={cardStyle()} onClick={() => setStatsOpen(true)} title={`Estadísticas de la aplicación\n• Conexiones: ${sshConnectionsCount + rdpConnectionsCount}\n• Secretos: ${passwordsCount}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
@@ -3189,11 +3189,18 @@ const NodeTermStatus = ({
 											onClick={() => {
 												if (onOpenSettings) {
 													onOpenSettings();
+													setTimeout(() => {
+														try {
+															window.dispatchEvent(new CustomEvent('open-settings-dialog', {
+																detail: { tab: 'security', subTab: 'clave-maestra' }
+															}));
+														} catch (e) { }
+													}, 100);
 												} else {
 													// Fallback: disparar evento directamente si onOpenSettings no está disponible
 													try {
 														window.dispatchEvent(new CustomEvent('open-settings-dialog', {
-															detail: { tab: 'security' }
+															detail: { tab: 'security', subTab: 'clave-maestra' }
 														}));
 													} catch (e) {
 														console.warn('[NodeTermStatus] Error abriendo configuración de Vault:', e);
@@ -3309,6 +3316,24 @@ const NodeTermStatus = ({
 										flexShrink: 0
 									}}>
 										<button
+											onClick={() => {
+												if (onOpenSettings) {
+													onOpenSettings();
+													setTimeout(() => {
+														try {
+															window.dispatchEvent(new CustomEvent('open-settings-dialog', {
+																detail: { tab: 'rdp' }
+															}));
+														} catch (e) { }
+													}, 100);
+												} else {
+													try {
+														window.dispatchEvent(new CustomEvent('open-settings-dialog', {
+															detail: { tab: 'rdp' }
+														}));
+													} catch (e) { }
+												}
+											}}
 											title={`Guacd: ${guacdStatus} (${guacdState.method})`}
 											style={{
 												cursor: 'pointer',
@@ -3359,6 +3384,24 @@ const NodeTermStatus = ({
 										flexShrink: 0
 									}}>
 										<button
+											onClick={() => {
+												if (onOpenSettings) {
+													onOpenSettings();
+													setTimeout(() => {
+														try {
+															window.dispatchEvent(new CustomEvent('open-settings-dialog', {
+																detail: { tab: 'ai' }
+															}));
+														} catch (e) { }
+													}, 100);
+												} else {
+													try {
+														window.dispatchEvent(new CustomEvent('open-settings-dialog', {
+															detail: { tab: 'ai' }
+														}));
+													} catch (e) { }
+												}
+											}}
 											title={`Ollama: ${ollamaStatus}${ollamaState.isRemote ? ' (Remoto)' : ''}`}
 											style={{
 												cursor: 'pointer',

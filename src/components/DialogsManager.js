@@ -20,7 +20,7 @@ import { SSHTunnelDialog } from './SSHTunnelDialog';
 const DialogsManager = ({
   // Referencias
   toast,
-  
+
   // Estados de diálogos
   showSSHDialog,
   setShowSSHDialog,
@@ -47,7 +47,7 @@ const DialogsManager = ({
   setShowProtocolSelectionDialog,
   showNetworkToolsDialog,
   setShowNetworkToolsDialog,
-  
+
   // Estados SSH Tunnel
   showSSHTunnelDialog,
   setShowSSHTunnelDialog,
@@ -74,7 +74,7 @@ const DialogsManager = ({
   setSSHAutoCopyPassword,
   sshDescription,
   setSSHDescription,
-  
+
   // Estados de formularios Edit SSH
   editSSHName,
   setEditSSHName,
@@ -94,7 +94,7 @@ const DialogsManager = ({
   setEditSSHDescription,
   editSSHIcon,
   setEditSSHIcon,
-  
+
   // Estados de formularios RDP
   rdpName,
   setRdpName,
@@ -119,11 +119,11 @@ const DialogsManager = ({
   setVncNodeData,
   editingVncNode,
   setEditingVncNode,
-  
+
   // Estados para modo edición
   editSSHNode,
   setEditSSHNode,
-  
+
   // Estados de formularios Archivos (SFTP/FTP/SCP)
   fileConnectionName,
   setFileConnectionName,
@@ -143,7 +143,7 @@ const DialogsManager = ({
   setFileConnectionTargetFolder,
   editingFileConnectionNode,
   setEditingFileConnectionNode,
-  
+
   // Estados de formularios Folder
   folderName,
   setFolderName,
@@ -159,14 +159,14 @@ const DialogsManager = ({
   setEditFolderColor,
   editFolderIcon,
   setEditFolderIcon,
-  
+
   // Estados de formularios Group
   newGroupName,
   setNewGroupName,
   selectedGroupColor,
   setSelectedGroupColor,
   GROUP_COLORS,
-  
+
   // Funciones
   createNewSSH,
   createNewFolder,
@@ -181,7 +181,7 @@ const DialogsManager = ({
   openNewVncDialog,
   getAllFolders,
   nodes,
-  
+
   // Theme management props
   availableThemes,
   availableFonts,
@@ -233,16 +233,16 @@ const DialogsManager = ({
   setStatusBarIconTheme,
   statusBarPollingInterval,
   setStatusBarPollingInterval,
-  
+
   // Sync settings props
   updateThemesFromSync,
   updateStatusBarFromSync,
-  
+
   // Tree sync functions
   exportTreeToJson,
   importTreeFromJson,
   sessionManager,
-  
+
   // Encriptación
   onMasterPasswordConfigured
 }) => {
@@ -250,7 +250,7 @@ const DialogsManager = ({
   // useEffect(() => {
   //   console.log('DialogsManager - Montado - handleSaveFileConnectionToSidebar:', typeof handleSaveFileConnectionToSidebar, !!handleSaveFileConnectionToSidebar);
   // }, [handleSaveFileConnectionToSidebar]);
-  
+
   // Debug: verificar props de folder (deshabilitado)
   // useEffect(() => {
   //   console.log('🔍 DialogsManager - Folder props:', {
@@ -261,7 +261,7 @@ const DialogsManager = ({
   //     folderColor
   //   });
   // }, [setFolderIcon, setFolderColor, folderIcon, folderColor]);
-  
+
   // Crear handler estable con useCallback para que no cambie entre renders
   const stableFileConnectionHandler = useCallback((fileData) => {
     if (!fileData || !fileData.name || !fileData.host || !fileData.username) {
@@ -284,19 +284,19 @@ const DialogsManager = ({
       console.error('❌ DialogsManager - handleSaveFileConnectionToSidebar no está definido o no es una función!');
     }
   }, [handleSaveFileConnectionToSidebar, editingFileConnectionNode, setEditingFileConnectionNode]);
-  
+
   // Estados para los nuevos diálogos de creación
   const [showNewSSHDialog, setShowNewSSHDialog] = useState(false);
   const [showNewRDPDialog, setShowNewRDPDialog] = useState(false);
   const [showNewVNCDialog, setShowNewVNCDialog] = useState(false);
-  
+
   // Estado para la categoría inicial del diálogo de selección de protocolo
   const [protocolSelectionInitialCategory, setProtocolSelectionInitialCategory] = useState(null);
 
   // Handler para cuando se selecciona un protocolo
   const handleProtocolSelect = useCallback((protocolId) => {
     setShowProtocolSelectionDialog(false);
-    
+
     // Abrir el diálogo correspondiente según el protocolo seleccionado
     switch (protocolId) {
       case 'ssh':
@@ -363,6 +363,15 @@ const DialogsManager = ({
     return () => window.removeEventListener('open-connection-dialog', handleOpenConnectionDialog);
   }, []);
 
+  // Escuchar evento para abrir el diálogo de configuración
+  useEffect(() => {
+    const handleOpenSettings = () => {
+      setShowSettingsDialog(true);
+    };
+    window.addEventListener('open-settings-dialog', handleOpenSettings);
+    return () => window.removeEventListener('open-settings-dialog', handleOpenSettings);
+  }, [setShowSettingsDialog]);
+
   // Limpiar categoría inicial cuando se cierra el diálogo
   useEffect(() => {
     if (!showProtocolSelectionDialog) {
@@ -390,14 +399,14 @@ const DialogsManager = ({
     // Cerrar el diálogo NewSSHConnectionDialog
     setShowNewSSHDialog(false);
   }, [createNewSSH]);
-  
+
   return (
     <>
       {/* Toast para notificaciones */}
       <Toast ref={toast} />
-      
 
-      
+
+
       {/* 🚀 OPTIMIZACIÓN: Settings Dialog solo se monta cuando es visible */}
       {showSettingsDialog && <SettingsDialog
         visible={showSettingsDialog}
@@ -457,7 +466,7 @@ const DialogsManager = ({
         sessionManager={sessionManager}
         onMasterPasswordConfigured={onMasterPasswordConfigured}
       />}
-      
+
       {/* Sync Settings Dialog - solo se monta cuando es visible */}
       {showSyncDialog && <SyncSettingsDialog
         visible={showSyncDialog}
@@ -489,7 +498,7 @@ const DialogsManager = ({
         targetFolder={sshTargetFolder}
         onConfirm={createNewSSH}
       />
-      
+
       {/* Diálogo: Nueva carpeta */}
       <FolderDialog
         visible={showFolderDialog}
@@ -504,7 +513,7 @@ const DialogsManager = ({
         onConfirm={createNewFolder}
         iconTheme={iconTheme}
       />
-      
+
       {/* Diálogo: Editar carpeta */}
       <FolderDialog
         visible={showEditFolderDialog}
@@ -519,7 +528,7 @@ const DialogsManager = ({
         onConfirm={saveEditFolder}
         iconTheme={iconTheme}
       />
-      
+
       {/* Diálogo: Editar SSH - Reemplazado por UnifiedConnectionDialog */}
       {/* <SSHDialog
         visible={showEditSSHDialog}
@@ -539,7 +548,7 @@ const DialogsManager = ({
         foldersOptions={getAllFolders(nodes)}
         onConfirm={saveEditSSH}
       /> */}
-      
+
       {/* Diálogo: Crear grupo */}
       <GroupDialog
         visible={showCreateGroupDialog}
