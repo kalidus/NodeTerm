@@ -1168,12 +1168,12 @@ const ConnectionHistory = ({
 			<div className="filter-toolbar">
 				{/* Filter trigger button */}
 				<button
-					className="filter-trigger-btn"
+					className={`filter-trigger-btn ${getActiveFilterCount() > 0 ? 'active' : ''}`}
 					onClick={() => setFilterPanelOpen(true)}
 					title="Abrir panel de filtros"
 				>
 					<i className="pi pi-filter" />
-					Filtros
+					<span>Filtros</span>
 					{getActiveFilterCount() > 0 && (
 						<span className="filter-count-badge">{getActiveFilterCount()}</span>
 					)}
