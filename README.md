@@ -140,31 +140,25 @@ npm run build:win
 
 ## 🎉 Versión Actual: v1.6.2
 
-### 🔌 Mejoras de Túneles SSH
-- **Verificación de Puertos**: Verificación automática de puertos libres antes de crear túneles
-- **Limpieza Automática**: Cierre automático de túneles anteriores que usen el mismo puerto
-- **Limpieza al Cerrar App**: Todos los túneles SSH se cierran correctamente al cerrar la aplicación
-- **Gestión de Recursos**: Prevención de puertos ocupados y túneles huérfanos
-- **Mensajes de Error Mejorados**: Mensajes claros cuando un puerto está ocupado
+### 🎨 Rediseño de HomeTab y UI
+- **Nuevo Panel de Filtros**: Sistema de filtrado avanzado con diseño *glassmorphism*, selección múltiple y búsqueda de grupos.
+- **Estética Refinada**: Botones de acciones y opciones completamente rediseñados con efectos de cristal y mejor accesibilidad.
+- **Integración de Temas**: Mejoras visuales en temas claros y oscuros para todos los elementos de la interfaz.
 
-### 🚀 Optimizaciones de Arranque
-- **Arranque Mucho Más Rápido**: Optimizaciones significativas que reducen drásticamente el tiempo de inicio
-- **Lazy Loading**: Módulos pesados (SSH2, Docker, Guacamole, etc.) se cargan solo cuando se necesitan
-- **Inicialización Diferida**: Servicios pesados se inicializan después de mostrar la ventana
-- **Mejora de Percepción**: La aplicación aparece más rápido mientras los servicios se cargan en background
+### 🚀 Performance y Arranque
+- **Arranque Instantáneo**: Implementación de `StartupProfiler` y optimización de carga de servicios.
+- **Carga Diferida**: Los módulos pesados ahora se cargan proactivamente en segundo plano sin bloquear la UI.
+- **Fluid UI**: Animaciones más suaves y renderizado optimizado en listas de conexiones.
+
+### 🛠️ Nuevas Funcionalidades
+- **Accesos Rápidos de Servicio**: Configura Guacd, Ollama y Vault directamente desde los botones de estado.
+- **Gestión de PowerShell**: Nuevo `PowerShellProcessManager` para una mejor experiencia con terminales locales en Windows.
+- **Drag & Drop Mejorado**: Reordenamiento de favoritos más fluido y estable.
 
 ### 🐛 Correcciones de Bugs
-- **Fix de Conexión WALLIX**: Corrección de problemas críticos con conexiones a través de Bastion Wallix
-- **Mejora de Estabilidad**: Mejoras en la estabilidad y confiabilidad de las conexiones SSH que utilizan servidores bastion
-- **Fix de Túneles Huérfanos**: Corrección de problemas donde los túneles quedaban abiertos al cerrar la app
-
-### 🔄 Sistema de Actualización Automática (v1.6.0)
-- **Actualizaciones desde GitHub Releases**: Sistema completo de actualización automática
-- **Configuración Avanzada**: Control completo sobre cuándo y cómo actualizar
-- **Canales Stable/Beta**: Elige entre versiones estables o beta
-- **Notificaciones Inteligentes**: Recibe avisos de nuevas versiones sin interrupciones
-- **Actualizaciones Seguras**: Todas las actualizaciones están firmadas y verificadas
-- **Descarga en Background**: Sin interrumpir tu flujo de trabajo
+- **Fix de Superposición**: Corregido error visual donde el terminal cubría diálogos modales.
+- **Contadores de Filtros**: Lógica corregida para mostrar conteos precisos en filtros y grupos.
+- **Mejoras de Estabilidad**: Optimizaciones varias en el manejo de sesiones y eventos.
 
 ---
 
@@ -267,8 +261,12 @@ NodeTerm/
 
 ## 📝 Changelog
 
-### v1.6.2 (Fecha a definir) - ACTUAL
-- 🔧 **Mejoras y Correcciones** - Actualización de versión y mejoras generales
+### v1.6.2 (3 Febrero 2026) - ACTUAL
+- 🎨 **Rediseño Total de HomeTab** - Nueva barra de filtros, diseño glassmorphism y panel de opciones moderno
+- 🚀 **Arranque Optimizado** - Reducción drástica del tiempo de carga con `StartupProfiler`
+- ✨ **Mejoras de UX** - Botones de servicio interactivos (Guacd, Ollama, Vault) y visualización refinada
+- 🖥️ **PowerShell Manager** - Mejor soporte para terminales locales en Windows
+- 🐛 **Bug Fixes** - Correcciones en drag-and-drop, contadores de filtros y superposición de UI
 
 ### v1.6.1 (19 Noviembre 2025)
 - 🐛 **Fix de Conexión WALLIX** - Corrección de problemas con conexiones a través de Bastion Wallix
