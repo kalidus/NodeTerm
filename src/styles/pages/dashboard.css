@@ -1678,7 +1678,7 @@
   opacity: 0.7;
 }
 
-/* Fila/Card de la lista (Glassy) - NEON ACCENT DESIGN (SIMPLIFIED) */
+/* Fila/Card de la lista (Glassy) - NEON ACCENT DESIGN (THEME UNIFIED) */
 .connection-card-row {
   display: grid;
   grid-template-columns: minmax(200px, 1.5fr) minmax(150px, 1.5fr) 100px 120px 80px;
@@ -1688,18 +1688,18 @@
   border-radius: 4px 14px 14px 4px;
   /* Slightly squarer left for neon bar */
 
-  /* Fondo base y efecto neón integrados */
+  /* Fondo base y efecto neón integrados - USANDO COLOR DEL TEMA */
   background: linear-gradient(90deg,
-      color-mix(in srgb, var(--row-accent, #4fc3f7) 8%, transparent) 0%,
+      color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 8%, transparent) 0%,
       rgba(255, 255, 255, 0.02) 100px);
 
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-left: 4px solid var(--row-accent, #4fc3f7);
-  /* La barra neón física */
+  border-left: 4px solid var(--ui-button-primary, #4fc3f7);
+  /* Barra neón con color del tema */
 
   /* Glow del neón usando sombra interna */
   box-shadow:
-    inset 10px 0 20px -8px color-mix(in srgb, var(--row-accent, #4fc3f7) 30%, transparent),
+    inset 10px 0 20px -8px color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 30%, transparent),
     0 4px 10px rgba(0, 0, 0, 0.2);
 
   backdrop-filter: blur(10px);
@@ -1708,7 +1708,6 @@
   cursor: pointer;
   transition: all 0.2s ease-out;
   position: relative;
-  /* No overflow: hidden para permitir sombras externas si se desean */
 }
 
 /* Eliminar pseudo-elementos complejos que causaban problemas */
@@ -1721,15 +1720,15 @@
 /* Hover effect */
 .connection-card-row:hover {
   background: linear-gradient(90deg,
-      color-mix(in srgb, var(--row-accent, #4fc3f7) 15%, transparent) 0%,
+      color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 15%, transparent) 0%,
       rgba(255, 255, 255, 0.06) 100px);
   border-left-width: 6px;
   /* Barra crece */
   transform: translateX(4px);
   box-shadow:
-    inset 15px 0 25px -8px color-mix(in srgb, var(--row-accent, #4fc3f7) 40%, transparent),
+    inset 15px 0 25px -8px color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 40%, transparent),
     /* Glow interno más fuerte */
-    0 0 15px color-mix(in srgb, var(--row-accent, #4fc3f7) 20%, transparent);
+    0 0 15px color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 20%, transparent);
   /* Glow externo */
 
   border-color: rgba(255, 255, 255, 0.15);
@@ -1737,12 +1736,12 @@
 
 /* Active state */
 .connection-card-row.active-row {
-  border-left-color: var(--row-accent, #4fc3f7);
+  border-left-color: var(--ui-button-primary, #4fc3f7);
   background: linear-gradient(90deg,
-      color-mix(in srgb, var(--row-accent, #4fc3f7) 20%, transparent) 0%,
+      color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 20%, transparent) 0%,
       rgba(255, 255, 255, 0.05) 100%);
   box-shadow:
-    inset 10px 0 30px -5px color-mix(in srgb, var(--row-accent, #4fc3f7) 40%, transparent);
+    inset 10px 0 30px -5px color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 40%, transparent);
 }
 
 /* Cells styling - Ensure content is ABOVE background effects */
@@ -1771,10 +1770,10 @@
   border-radius: 10px;
   background:
     radial-gradient(circle at center,
-      color-mix(in srgb, var(--row-accent, #4fc3f7) 12%, transparent),
+      color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 12%, transparent),
       transparent 70%),
     rgba(255, 255, 255, 0.05);
-  border: 1px solid color-mix(in srgb, var(--row-accent, #4fc3f7) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 20%, transparent);
   flex-shrink: 0;
   font-size: 1.1rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1789,7 +1788,7 @@
   inset: -2px;
   border-radius: 12px;
   background: radial-gradient(circle at center,
-      color-mix(in srgb, var(--row-accent, #4fc3f7) 20%, transparent),
+      color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 20%, transparent),
       transparent 70%);
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -1800,12 +1799,12 @@
 .connection-card-row:hover .col-name .icon-box {
   background:
     radial-gradient(circle at center,
-      color-mix(in srgb, var(--row-accent, #4fc3f7) 20%, transparent),
+      color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 20%, transparent),
       transparent 70%),
     rgba(255, 255, 255, 0.1);
-  border-color: color-mix(in srgb, var(--row-accent, #4fc3f7) 40%, transparent);
+  border-color: color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 40%, transparent);
   transform: scale(1.08);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--row-accent, #4fc3f7) 25%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 25%, transparent);
 }
 
 .connection-card-row:hover .col-name .icon-box::after {
@@ -1848,8 +1847,8 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  /* Fallback color safely */
-  color: var(--row-accent, #4fc3f7);
+  /* Fallback color safely - USAR COLOR DEL TEMA */
+  color: var(--ui-button-primary, #4fc3f7);
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(8px);
