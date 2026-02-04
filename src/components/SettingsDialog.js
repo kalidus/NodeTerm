@@ -400,6 +400,10 @@ const SettingsDialog = ({
     const stored = localStorage.getItem('update_auto_download');
     return stored !== null ? stored === 'true' : true;
   });
+  const [autoInstallEnabled, setAutoInstallEnabled] = useState(() => {
+    const stored = localStorage.getItem('update_auto_install');
+    return stored !== null ? stored === 'true' : false;
+  });
   const [updateChannel, setUpdateChannel] = useState(() => {
     const stored = localStorage.getItem('update_channel');
     return stored || 'latest';
@@ -677,6 +681,26 @@ const SettingsDialog = ({
         severity: 'success',
         summary: 'Guardado',
         detail: enabled ? t('updateChannels.autoDownloadEnabled') : t('updateChannels.autoDownloadDisabled'),
+        life: 2000,
+      });
+    }
+  };
+
+  const handleAutoInstallChange = async (enabled) => {
+    setAutoInstallEnabled(enabled);
+    localStorage.setItem('update_auto_install', enabled.toString());
+    try {
+      if (window.electron?.updater?.updateConfig) {
+        await window.electron.updater.updateConfig({ autoInstall: enabled });
+      }
+    } catch (e) {
+      console.warn('[Settings] No se pudo sincronizar autoInstall con el proceso principal:', e);
+    }
+    if (toastRef && toastRef.current) {
+      toastRef.current.show({
+        severity: 'success',
+        summary: 'Guardado',
+        detail: enabled ? t('updateChannels.autoInstallEnabled') : t('updateChannels.autoInstallDisabled'),
         life: 2000,
       });
     }
@@ -5448,6 +5472,28 @@ const SettingsDialog = ({
                                 <Checkbox
                                   checked={autoCheckEnabled}
                                   onChange={(e) => handleAutoCheckChange(e.checked)}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="general-setting-card" onClick={() => handleAutoInstallChange(!autoInstallEnabled)}>
+                            <div className="general-setting-content">
+                              <div className="general-setting-icon bolt">
+                                <i className="pi pi-refresh"></i>
+                              </div>
+                              <div className="general-setting-info">
+                                <label className="general-setting-label">
+                                  Instalar automáticamente al detectar nueva versión
+                                </label>
+                                <p className="general-setting-description">
+                                  Al cerrar la aplicación
+                                </p>
+                              </div>
+                              <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                  checked={autoInstallEnabled}
+                                  onChange={(e) => handleAutoInstallChange(e.checked)}
                                 />
                               </div>
                             </div>
