@@ -1292,20 +1292,34 @@
   /* Moved inside padding area */
 }
 
-/* RIBBON CARD - OPTION 3 (Hybrid Modern / Apple-like) */
+/* RIBBON CARD - OPTION 3 (Unificado con Recientes Neon Accent - BOTTOM LINE) */
 .ribbon-card {
   --rc-width: 160px;
   --rc-height: 190px;
-  --rc-bg: var(--ui-sidebar-bg);
-  --rc-border: var(--ui-content-border);
-  --rc-hover-bg: var(--ui-sidebar-hover);
-  --rc-accent-color: #4fc3f7;
 
   flex: 0 0 var(--rc-width);
   height: var(--rc-height);
-  border-radius: 24px;
-  background: var(--rc-bg);
-  border: 1px solid var(--rc-border);
+
+  /* Borde redondeado simétrico */
+  border-radius: 16px 16px 4px 4px;
+
+  /* Fondo base y efecto neón integrados - DESDE ABAJO */
+  background: linear-gradient(0deg,
+      color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 12%, transparent) 0%,
+      rgba(255, 255, 255, 0.02) 100%);
+
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 4px solid var(--ui-button-primary, #4fc3f7);
+  /* Barra neón ABAJO */
+
+  /* Glow interno desde abajo */
+  box-shadow:
+    inset 0 -10px 20px -8px color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 30%, transparent),
+    0 4px 10px rgba(0, 0, 0, 0.2);
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
   position: relative;
   display: flex;
   flex-direction: column;
@@ -1313,22 +1327,28 @@
   cursor: pointer;
   scroll-snap-align: start;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   align-items: center;
   text-align: center;
+
+  /* Asegurar que el contenido esté por encima del fondo */
+  z-index: 1;
 }
 
 .ribbon-card:hover {
   transform: translateY(-5px);
-  background: var(--rc-hover-bg);
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(0deg,
+      color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 20%, transparent) 0%,
+      rgba(255, 255, 255, 0.06) 100%);
+  border-bottom-width: 6px;
+  /* Barra crece hacia arriba visualmente */
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow:
+    inset 0 -15px 25px -8px color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 40%, transparent),
+    0 12px 30px rgba(0, 0, 0, 0.3);
 }
 
-/* Edit Button (replaces Status Dot) */
+/* Edit Button using Theme Color */
 .ribbon-card__edit {
   position: absolute;
   top: 12px;
@@ -1339,63 +1359,68 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  color: var(--ui-sidebar-text);
-  background: var(--ui-sidebar-hover);
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(4px);
   opacity: 0;
   transition: all 0.2s;
   z-index: 5;
   cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .ribbon-card__edit:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--ui-dialog-text);
+  background: var(--ui-button-primary, #4fc3f7);
+  color: #fff;
   transform: scale(1.1);
+  border-color: transparent;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 50%, transparent);
 }
 
 .ribbon-card:hover .ribbon-card__edit {
   opacity: 1;
 }
 
-/* Groups Button (manage groups for existing favorite) */
+/* Groups Button */
 .ribbon-card__groups {
   position: absolute;
   top: 12px;
   left: 46px;
-  /* Offset to the right of the edit button */
   width: 28px;
   height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  color: var(--ui-sidebar-text);
-  background: var(--ui-sidebar-hover);
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(4px);
   opacity: 0;
   transition: all 0.2s;
   z-index: 5;
   cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .ribbon-card__groups:hover {
-  background: rgba(79, 195, 247, 0.2);
-  color: #4fc3f7;
+  background: var(--ui-button-primary, #4fc3f7);
+  color: #fff;
   transform: scale(1.1);
+  border-color: transparent;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 50%, transparent);
 }
 
 .ribbon-card:hover .ribbon-card__groups {
   opacity: 1;
 }
 
-/* Status Dot (Inline with text) */
+/* Status Dot */
 .ribbon-card__status-dot {
   display: inline-block;
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.3);
   margin-right: 6px;
   flex-shrink: 0;
   transition: all 0.3s ease;
@@ -1403,7 +1428,7 @@
 
 .ribbon-card__status-dot.is-active {
   background-color: #4CAF50;
-  box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.8);
   width: 8px;
   height: 8px;
 }
@@ -1413,8 +1438,9 @@
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
-  color: #9E9E9E;
+  color: rgba(255, 255, 255, 0.6);
   margin-top: auto;
+  z-index: 2;
 }
 
 /* Star/Pin Button */
