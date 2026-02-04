@@ -904,7 +904,7 @@ const ConnectionHistory = ({
 
 		return (
 			<div className="favorites-ribbon-section">
-				<div className="modern-section-header">
+				<div className="modern-section-header header-favorites">
 					<button
 						className="section-collapse-btn"
 						onClick={onToggleCollapsed}
@@ -930,11 +930,12 @@ const ConnectionHistory = ({
 						<i className={collapsed ? "pi pi-chevron-down" : "pi pi-chevron-up"} />
 					</button>
 					<div className="modern-header-title">
-						<i className="pi pi-star-fill" style={{ color: '#FFD700' }} />
+						<i className="pi pi-star-fill" />
 						<span>FAVORITOS</span>
 					</div>
 					<div className="modern-header-line"></div>
 				</div>
+
 
 				{!collapsed && (
 					<>
@@ -1548,7 +1549,7 @@ const ConnectionHistory = ({
 
 			{/* RECIENTES TABLE (Fills remaining space) */}
 			<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginTop: '0.2rem' }}>
-				<div className="modern-section-header">
+				<div className="modern-section-header header-recents">
 					<button
 						className="section-collapse-btn"
 						onClick={toggleRecentsCollapsed}
@@ -1574,11 +1575,12 @@ const ConnectionHistory = ({
 						<i className={recentsCollapsed ? "pi pi-chevron-down" : "pi pi-chevron-up"} />
 					</button>
 					<div className="modern-header-title">
-						<i className="pi pi-history" style={{ color: '#4fc3f7' }} />
+						<i className="pi pi-history" />
 						<span>RECIENTES</span>
 					</div>
 					<div className="modern-header-line"></div>
 				</div>
+
 
 				{!recentsCollapsed && (
 					<ConnectionTable

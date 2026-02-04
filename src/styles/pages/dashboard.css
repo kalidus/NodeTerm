@@ -1642,36 +1642,116 @@
 }
 
 /* Modern Section Header (Recientes, etc) */
+/* Modern Section Header (Recientes, Favs) - OPTION: TECH MINIMALIST */
 .modern-section-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin: 0.2rem 0.25rem 1rem 0.25rem;
+  gap: 0;
+  margin: 1.2rem 0.5rem 0.8rem 0.5rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  position: relative;
+  transition: opacity 0.3s ease;
   flex-shrink: 0;
 }
+
+.modern-section-header::after {
+  content: none;
+  display: none;
+}
+
+/* Header Variations - Just mainly for context/targeting if needed, colors handled in children */
+/* .modern-section-header.header-favorites {} */
+/* .modern-section-header.header-recents {} */
+
 
 .modern-header-title {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  font-size: 0.9rem;
+  gap: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
-  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.9));
-  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 2px;
   text-transform: uppercase;
+  margin-right: 16px;
+  transition: all 0.3s ease;
+  flex: 0 0 auto;
 }
 
 .modern-header-title i {
-  font-size: 1.1rem;
-  filter: drop-shadow(0 0 5px rgba(79, 195, 247, 0.4));
+  font-size: 0.9rem;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+/* Specific icon colors & glows */
+.header-favorites .modern-header-title i {
+  color: #FFD700;
+}
+
+.header-favorites:hover .modern-header-title i {
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
+  transform: scale(1.1);
+}
+
+.header-recents .modern-header-title i {
+  color: #4fc3f7;
+}
+
+.header-recents:hover .modern-header-title i {
+  filter: drop-shadow(0 0 8px rgba(79, 195, 247, 0.6));
+  transform: scale(1.1);
+}
+
+.modern-section-header:hover .modern-header-title {
+  color: #fff;
+  transform: translateX(2px);
+}
+
+/* Restore and style the line separator */
 .modern-header-line {
+  display: block;
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent);
-  margin-top: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  /* Default fallback */
+  position: relative;
+  margin-top: 2px;
+  transition: all 0.3s ease;
 }
+
+.header-favorites .modern-header-line {
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.4) 0%, rgba(255, 215, 0, 0) 100%);
+}
+
+.header-recents .modern-header-line {
+  background: linear-gradient(90deg, rgba(79, 195, 247, 0.4) 0%, rgba(79, 195, 247, 0) 100%);
+}
+
+/* Subtle dot at start of line for tech feel */
+.modern-header-line::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.8;
+}
+
+.header-favorites .modern-header-line::before {
+  background: #FFD700;
+}
+
+.header-recents .modern-header-line::before {
+  background: #4fc3f7;
+}
+
 
 .connection-list-header {
   display: grid;
