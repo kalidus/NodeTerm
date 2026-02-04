@@ -19,7 +19,7 @@ import { useTranslation } from '../i18n/hooks/useTranslation';
 
 const UpdatePanel = () => {
   const { t } = useTranslation('common');
-  
+
   const [currentVersion, setCurrentVersion] = useState('');
   const [config, setConfig] = useState({
     autoCheck: true,
@@ -28,13 +28,13 @@ const UpdatePanel = () => {
     autoInstall: false,
     channel: 'latest',
   });
-  
+
   const [updateStatus, setUpdateStatus] = useState('idle'); // idle, checking, available, downloading, downloaded, error
   const [updateInfo, setUpdateInfo] = useState(null);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
   const [isChecking, setIsChecking] = useState(false);
-  
+
   const toast = useRef(null);
 
   /**
@@ -42,16 +42,16 @@ const UpdatePanel = () => {
    */
   const handleUpdateEvent = (data) => {
     const { event, data: eventData } = data;
-    
+
     console.log('📨 Evento de actualización recibido:', event, eventData);
-    
+
     switch (event) {
       case 'checking-for-update':
         console.log('Evento: checking-for-update');
         setUpdateStatus('checking');
         setIsChecking(true);
         break;
-        
+
       case 'update-available':
         console.log('Evento: update-available', eventData);
         setUpdateStatus('available');
@@ -66,7 +66,7 @@ const UpdatePanel = () => {
           });
         }
         break;
-        
+
       case 'update-not-available':
         console.log('Evento: update-not-available', eventData);
         setUpdateStatus('idle');
@@ -80,13 +80,13 @@ const UpdatePanel = () => {
           });
         }
         break;
-        
+
       case 'download-progress':
         console.log('Evento: download-progress', eventData.percent);
         setUpdateStatus('downloading');
         setDownloadProgress(eventData.percent || 0);
         break;
-        
+
       case 'update-downloaded':
         console.log('Evento: update-downloaded', eventData);
         setUpdateStatus('downloaded');
@@ -100,7 +100,7 @@ const UpdatePanel = () => {
           });
         }
         break;
-        
+
       case 'error':
         console.log('Evento: error', eventData);
         setUpdateStatus('error');
@@ -115,7 +115,7 @@ const UpdatePanel = () => {
           });
         }
         break;
-        
+
       default:
         console.log('Evento desconocido:', event);
         break;
@@ -126,17 +126,17 @@ const UpdatePanel = () => {
   useEffect(() => {
     loadConfig();
     loadCurrentVersion();
-    
+
     // Suscribirse a eventos de actualización
     const handleUpdaterEvent = (data) => {
       console.log('🎯 Evento IPC recibido en UpdatePanel:', data);
       handleUpdateEvent(data);
     };
-    
+
     if (window.electron?.ipcRenderer) {
       // Suscribiéndose a eventos updater silenciosamente
       const unsubscribe = window.electron.ipcRenderer.on('updater-event', handleUpdaterEvent);
-      
+
       return () => {
         // Desuscribiéndose silenciosamente
         if (unsubscribe && typeof unsubscribe === 'function') {
@@ -173,7 +173,11 @@ const UpdatePanel = () => {
         const result = await window.electron.updater.getUpdateInfo();
         if (result.success) {
           setCurrentVersion(result.currentVersion);
-          if (result.updateAvailable) {
+          if (result.isUpdateDownloaded) {
+            setUpdateStatus('downloaded');
+            setUpdateInfo(result.updateInfo);
+            setDownloadProgress(100);
+          } else if (result.updateAvailable) {
             setUpdateStatus('available');
             setUpdateInfo(result.updateInfo);
           }
@@ -224,21 +228,21 @@ const UpdatePanel = () => {
     setIsChecking(true);
     setUpdateStatus('checking');
     setErrorMessage('');
-    
+
     try {
       if (window.electron?.updater) {
         console.log('📡 Llamando a electron.updater.checkForUpdates()');
         const result = await window.electron.updater.checkForUpdates();
-        
+
         console.log('📦 Resultado recibido:', result);
-        
+
         // Si estamos en modo desarrollo, la simulación ya está en marcha
         if (result?.isDevMode) {
           console.log('🔧 Modo desarrollo detectado - simulación activada');
           // Los eventos llegarán por IPC, no hacemos nada más aquí
           return;
         }
-        
+
         console.log('✅ Comprobación iniciada - esperando eventos IPC');
         // La respuesta real llegará por eventos IPC desde electron-updater
       } else {
@@ -250,7 +254,7 @@ const UpdatePanel = () => {
       setIsChecking(false);
       setUpdateStatus('error');
       setErrorMessage(error.message || 'Error desconocido');
-      
+
       if (toast.current) {
         toast.current.show({
           severity: 'error',
@@ -270,7 +274,7 @@ const UpdatePanel = () => {
     setIsChecking(false);
     setUpdateStatus('idle');
     setErrorMessage('');
-    
+
     if (toast.current) {
       toast.current.show({
         severity: 'info',
@@ -407,7 +411,7 @@ const UpdatePanel = () => {
               v{currentVersion}
             </div>
           </div>
-          
+
           {updateStatus === 'available' && updateInfo && (
             <div style={{ textAlign: 'right' }}>
               <Badge value={`v${updateInfo.version}`} severity="success" size="large" />
@@ -422,7 +426,7 @@ const UpdatePanel = () => {
         {updateStatus === 'checking' && (
           <Message severity="info" text="Comprobando actualizaciones..." style={{ width: '100%', marginTop: '1rem' }} />
         )}
-        
+
         {updateStatus === 'downloading' && (
           <div style={{ marginTop: '1rem' }}>
             <div style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-color-secondary)' }}>
@@ -431,20 +435,20 @@ const UpdatePanel = () => {
             <ProgressBar value={downloadProgress} showValue={false} />
           </div>
         )}
-        
+
         {updateStatus === 'downloaded' && (
-          <Message 
-            severity="success" 
-            text="Actualización descargada y lista para instalar" 
-            style={{ width: '100%', marginTop: '1rem' }} 
+          <Message
+            severity="success"
+            text="Actualización descargada y lista para instalar"
+            style={{ width: '100%', marginTop: '1rem' }}
           />
         )}
-        
+
         {updateStatus === 'error' && (
-          <Message 
-            severity="error" 
-            text={`Error: ${errorMessage}`} 
-            style={{ width: '100%', marginTop: '1rem' }} 
+          <Message
+            severity="error"
+            text={`Error: ${errorMessage}`}
+            style={{ width: '100%', marginTop: '1rem' }}
           />
         )}
       </div>
@@ -467,7 +471,7 @@ const UpdatePanel = () => {
             className="p-button-danger p-button-outlined"
           />
         )}
-        
+
         {updateStatus === 'available' && !config.autoDownload && (
           <Button
             label="Descargar"
@@ -476,7 +480,7 @@ const UpdatePanel = () => {
             className="p-button-success"
           />
         )}
-        
+
         {updateStatus === 'downloaded' && (
           <Button
             label="Instalar y Reiniciar"
@@ -485,7 +489,7 @@ const UpdatePanel = () => {
             className="p-button-success"
           />
         )}
-        
+
         {updateStatus === 'error' && (
           <Button
             label="Limpiar Caché"
@@ -501,8 +505,8 @@ const UpdatePanel = () => {
 
       {/* Configuración */}
       <div style={{ width: '100%', maxWidth: '600px' }}>
-        <h4 style={{ 
-          margin: '0 0 1.5rem 0', 
+        <h4 style={{
+          margin: '0 0 1.5rem 0',
           color: 'var(--text-color)',
           display: 'flex',
           alignItems: 'center',
@@ -513,7 +517,7 @@ const UpdatePanel = () => {
         </h4>
 
         {/* Auto-comprobación */}
-        <div style={{ 
+        <div style={{
           marginBottom: '1.5rem',
           padding: '1rem',
           background: 'var(--surface-ground)',
@@ -528,11 +532,11 @@ const UpdatePanel = () => {
               Buscar actualizaciones automáticamente
             </label>
           </div>
-          
+
           {config.autoCheck && (
             <div style={{ marginLeft: '2rem' }}>
-              <label style={{ 
-                display: 'block', 
+              <label style={{
+                display: 'block',
                 marginBottom: '0.5rem',
                 fontSize: '0.9rem',
                 color: 'var(--text-color-secondary)'
@@ -556,7 +560,7 @@ const UpdatePanel = () => {
         </div>
 
         {/* Auto-descarga */}
-        <div style={{ 
+        <div style={{
           marginBottom: '1.5rem',
           padding: '1rem',
           background: 'var(--surface-ground)',
@@ -568,7 +572,7 @@ const UpdatePanel = () => {
               onChange={(e) => updateConfig({ ...config, autoDownload: e.checked })}
             />
             <div>
-              <label style={{ 
+              <label style={{
                 display: 'block',
                 fontWeight: '500',
                 color: 'var(--text-color)',
@@ -583,15 +587,44 @@ const UpdatePanel = () => {
           </div>
         </div>
 
-        {/* Canal de actualizaciones */}
-        <div style={{ 
+        {/* Auto-instalación */}
+        <div style={{
           marginBottom: '1.5rem',
           padding: '1rem',
           background: 'var(--surface-ground)',
           borderRadius: '8px'
         }}>
-          <label style={{ 
-            display: 'block', 
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Checkbox
+              checked={config.autoInstall}
+              onChange={(e) => updateConfig({ ...config, autoInstall: e.checked })}
+              disabled={!config.autoDownload} // Deshabilitar si no se descarga automáticamente
+            />
+            <div>
+              <label style={{
+                display: 'block',
+                fontWeight: '500',
+                color: 'var(--text-color)',
+                marginBottom: '0.25rem'
+              }}>
+                Instalar automáticamente
+              </label>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-color-secondary)' }}>
+                Se instalarán las actualizaciones al reiniciar la aplicación (sin preguntar)
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Canal de actualizaciones */}
+        <div style={{
+          marginBottom: '1.5rem',
+          padding: '1rem',
+          background: 'var(--surface-ground)',
+          borderRadius: '8px'
+        }}>
+          <label style={{
+            display: 'block',
             marginBottom: '0.75rem',
             fontWeight: '500',
             color: 'var(--text-color)'
@@ -605,7 +638,7 @@ const UpdatePanel = () => {
             style={{ width: '100%' }}
           />
           <div style={{ fontSize: '0.85rem', color: 'var(--text-color-secondary)', marginTop: '0.75rem' }}>
-            {config.channel === 'latest' 
+            {config.channel === 'latest'
               ? '📦 Recibirás solo versiones estables y probadas'
               : '🧪 Recibirás versiones beta con nuevas funcionalidades (puede contener bugs)'
             }
@@ -614,7 +647,7 @@ const UpdatePanel = () => {
       </div>
 
       {/* Información adicional */}
-      <div style={{ 
+      <div style={{
         marginTop: '2rem',
         textAlign: 'center',
         fontSize: '0.85rem',
@@ -633,7 +666,7 @@ const UpdatePanel = () => {
             <strong>Modo Desarrollo:</strong> Las actualizaciones se prueban con la aplicación empaquetada
           </div>
         )}
-        
+
         <p style={{ margin: '0.5rem 0' }}>
           <i className="pi pi-info-circle" style={{ marginRight: '0.5rem' }}></i>
           Las actualizaciones se descargan desde GitHub Releases

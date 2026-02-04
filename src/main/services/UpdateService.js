@@ -22,19 +22,21 @@ class UpdateService {
     this.mainWindow = null;
     this.checkInterval = null;
     this.updateInfo = null;
-    
+
+    this.isUpdateDownloaded = false;
+
     // Configuración por defecto
     this.config = {
       autoCheck: true,              // Comprobar automáticamente
       checkIntervalHours: 24,       // Cada 24 horas por defecto
       autoDownload: true,           // Descargar automáticamente
-      autoInstall: false,           // No instalar automáticamente (requiere confirmación)
+      autoInstall: false,           // Instalar automáticamente al cerrar (requiere configuración explícita)
       channel: 'latest',            // Canal: 'latest' o 'beta'
     };
 
     // Configurar electron-updater
     this.setupAutoUpdater();
-    
+
     // Configurar logging
     log.transports.file.level = 'info';
     autoUpdater.logger = log;
@@ -60,6 +62,7 @@ class UpdateService {
     autoUpdater.on('update-available', (info) => {
       log.info('Actualización disponible:', info.version);
       this.updateInfo = info;
+      this.isUpdateDownloaded = false; // Resetear flag
       this.sendStatusToWindow('update-available', {
         version: info.version,
         releaseDate: info.releaseDate,
@@ -103,6 +106,8 @@ class UpdateService {
     // Evento: Actualización descargada
     autoUpdater.on('update-downloaded', (info) => {
       log.info('Actualización descargada:', info.version);
+      this.isUpdateDownloaded = true;
+      this.updateInfo = info; // Asegurar que tenemos la info
       this.sendStatusToWindow('update-downloaded', {
         version: info.version,
         releaseNotes: info.releaseNotes,
@@ -111,7 +116,7 @@ class UpdateService {
 
     // Configuración de autoUpdater
     autoUpdater.autoDownload = this.config.autoDownload;
-    autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.autoInstallOnAppQuit = this.config.autoInstall;
   }
 
   /**
@@ -141,6 +146,7 @@ class UpdateService {
     if (storedConfig && typeof storedConfig === 'object') {
       this.config = { ...this.config, ...storedConfig };
       autoUpdater.autoDownload = this.config.autoDownload;
+      autoUpdater.autoInstallOnAppQuit = this.config.autoInstall;
       log.info('Configuración de actualización cargada:', this.config);
     }
   }
@@ -151,6 +157,7 @@ class UpdateService {
   updateConfig(newConfig) {
     this.config = { ...this.config, ...newConfig };
     autoUpdater.autoDownload = this.config.autoDownload;
+    autoUpdater.autoInstallOnAppQuit = this.config.autoInstall;
     log.info('Configuración de actualización actualizada:', this.config);
     return this.config;
   }
@@ -171,14 +178,27 @@ class UpdateService {
       log.info(`NODE_ENV: ${process.env.NODE_ENV}`);
       log.info(`app.isPackaged: ${app.isPackaged}`);
       log.info(`Versión actual: ${app.getVersion()}`);
-      
+
+      // Si ya hay una actualización descargada, notificarlo
+      if (this.isUpdateDownloaded && this.updateInfo) {
+        log.info('✅ Actualización ya descargada previamente:', this.updateInfo.version);
+        this.sendStatusToWindow('update-downloaded', {
+          version: this.updateInfo.version,
+          releaseNotes: this.updateInfo.releaseNotes,
+        });
+        return {
+          success: true,
+          message: 'Actualización ya descargada'
+        };
+      }
+
       // MODO DESARROLLO: Simular respuesta
       if (!app.isPackaged) {
         log.info('🔧 MODO DESARROLLO: Simulando comprobación');
-        
+
         // Enviar evento "checking" inmediatamente
         this.sendStatusToWindow('checking-for-update');
-        
+
         // Simular respuesta después de 2 segundos
         setTimeout(() => {
           log.info('✅ Simulación: No hay actualizaciones disponibles');
@@ -186,7 +206,7 @@ class UpdateService {
             version: app.getVersion(),
           });
         }, 2000);
-        
+
         return {
           success: true,
           isDevMode: true,
@@ -196,7 +216,7 @@ class UpdateService {
 
       // MODO PRODUCCIÓN: Comprobación real en GitHub Releases
       log.info('🚀 MODO PRODUCCIÓN: Comprobando GitHub Releases');
-      
+
       // Configurar el canal
       if (this.config.channel === 'beta') {
         autoUpdater.allowPrerelease = true;
@@ -216,7 +236,7 @@ class UpdateService {
 
       // Iniciar la comprobación real en GitHub Releases
       log.info('📡 Llamando a autoUpdater.checkForUpdates()...');
-      
+
       try {
         const result = await autoUpdater.checkForUpdates();
         clearTimeout(timeoutId);
@@ -227,21 +247,21 @@ class UpdateService {
         log.error('❌ Error en checkForUpdates:', error.message);
         throw error;
       }
-      
+
       return {
         success: true,
         message: 'Comprobación iniciada correctamente'
       };
-      
+
     } catch (error) {
       log.error('❌ ERROR EN COMPROBACIÓN:', error.message);
       log.error('Stack:', error.stack);
-      
+
       // Enviar evento de error al renderer
       this.sendStatusToWindow('error', {
         message: error.message || 'Error desconocido al comprobar actualizaciones'
       });
-      
+
       return {
         success: false,
         error: error.message,
@@ -255,15 +275,15 @@ class UpdateService {
   async downloadUpdate() {
     try {
       log.info('Descarga manual de actualización iniciada');
-      
+
       // Configurar opciones de descarga para manejar errores de checksum
       autoUpdater.disableDifferentialDownload = true; // Deshabilitar descarga diferencial para evitar problemas de checksum
-      
+
       await autoUpdater.downloadUpdate();
       return { success: true };
     } catch (error) {
       log.error('Error al descargar actualización:', error);
-      
+
       // Si es un error de checksum, intentar limpiar caché y reintentar
       if (error.message && error.message.includes('checksum')) {
         log.warn('Error de checksum detectado, limpiando caché y reintentando...');
@@ -272,13 +292,13 @@ class UpdateService {
           const { app } = require('electron');
           const path = require('path');
           const fs = require('fs');
-          
+
           const updateCacheDir = path.join(app.getPath('userData'), 'updater');
           if (fs.existsSync(updateCacheDir)) {
             fs.rmSync(updateCacheDir, { recursive: true, force: true });
             log.info('Caché de actualizaciones limpiado');
           }
-          
+
           // Reintentar descarga
           await autoUpdater.downloadUpdate();
           return { success: true };
@@ -290,7 +310,7 @@ class UpdateService {
           };
         }
       }
-      
+
       return {
         success: false,
         error: error.message,
@@ -350,6 +370,7 @@ class UpdateService {
     return {
       currentVersion: app.getVersion(),
       updateAvailable: this.updateInfo !== null,
+      isUpdateDownloaded: this.isUpdateDownloaded,
       updateInfo: this.updateInfo,
     };
   }
@@ -372,11 +393,13 @@ class UpdateService {
       const { app } = require('electron');
       const path = require('path');
       const fs = require('fs');
-      
+
       const updateCacheDir = path.join(app.getPath('userData'), 'updater');
       if (fs.existsSync(updateCacheDir)) {
         fs.rmSync(updateCacheDir, { recursive: true, force: true });
         log.info('Caché de actualizaciones limpiado manualmente');
+        this.isUpdateDownloaded = false; // Reset status
+        this.updateInfo = null;
         return { success: true, message: 'Caché limpiado correctamente' };
       } else {
         log.info('No se encontró caché de actualizaciones para limpiar');
@@ -389,6 +412,20 @@ class UpdateService {
         error: error.message,
       };
     }
+  }
+
+  /**
+   * Simula eventos para pruebas (Dev Only)
+   */
+  simulateEvents() {
+    // Implementar si es necesario para depuración visual
+  }
+
+  /**
+   * Obtiene la versión actual
+   */
+  getVersion() {
+    return app.getVersion();
   }
 }
 
