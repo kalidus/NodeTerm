@@ -1673,7 +1673,8 @@
   gap: 12px;
   font-size: 0.75rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.6));
+  /* Adapted for Light/Dark */
   letter-spacing: 2px;
   text-transform: uppercase;
   margin-right: 16px;
@@ -1706,7 +1707,8 @@
 }
 
 .modern-section-header:hover .modern-header-title {
-  color: #fff;
+  color: var(--ui-dialog-text, #fff);
+  /* Highlight color adapted */
   transform: translateX(2px);
 }
 
@@ -1715,19 +1717,23 @@
   display: block;
   flex: 1;
   height: 1px;
-  background: rgba(255, 255, 255, 0.08);
-  /* Default fallback */
+  background: var(--ui-sidebar-border, rgba(255, 255, 255, 0.08));
+  /* Adapted for Light/Dark */
   position: relative;
   margin-top: 2px;
   transition: all 0.3s ease;
+  opacity: 0.5;
 }
 
 .header-favorites .modern-header-line {
-  background: linear-gradient(90deg, rgba(255, 215, 0, 0.4) 0%, rgba(255, 215, 0, 0) 100%);
+  /* Keep gradient but use variable for base if possible, or just opacity to blend with white/black bg */
+  background: linear-gradient(90deg, #FFD700 0%, transparent 100%);
+  opacity: 0.3;
 }
 
 .header-recents .modern-header-line {
-  background: linear-gradient(90deg, rgba(79, 195, 247, 0.4) 0%, rgba(79, 195, 247, 0) 100%);
+  background: linear-gradient(90deg, #4fc3f7 0%, transparent 100%);
+  opacity: 0.3;
 }
 
 /* Subtle dot at start of line for tech feel */
@@ -1919,23 +1925,26 @@
 
 .col-name-text {
   font-weight: 600;
-  color: #fff;
-  /* Ensure white text */
-  font-size: 0.95rem;
+  color: var(--ui-dialog-text, #fff);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-  /* Better readability */
+  font-size: 0.95rem;
+  transition: color 0.2s ease;
+}
+
+.connection-card-row:hover .col-name-text {
+  color: var(--ui-button-primary, #4fc3f7);
 }
 
 .col-host {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.7));
   font-size: 0.85rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: monospace;
+  font-family: 'JetBrains Mono', monospace;
+  opacity: 0.8;
 }
 
 /* Protocol Tag */
