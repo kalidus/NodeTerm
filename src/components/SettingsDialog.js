@@ -408,6 +408,84 @@ const SettingsDialog = ({
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
+  const [currentAppVersion, setCurrentAppVersion] = useState(() => getVersionInfo().appVersion || '1.0.0');
+
+  // Escuchar eventos del actualizador (update-available, update-downloaded, etc.) para actualizar la UI
+  useEffect(() => {
+    if (!window.electron?.ipcRenderer) return;
+    const handleUpdaterEvent = (ev) => {
+      const { event, data } = ev;
+      switch (event) {
+        case 'update-available':
+          setUpdateStatus('available');
+          setUpdateInfo(data);
+          setIsCheckingUpdates(false);
+          if (toastRef?.current) {
+            toastRef.current.show({
+              severity: 'info',
+              summary: t('updateChannels.available'),
+              detail: `${t('updateChannels.newVersion') || 'Nueva versión'}: ${data?.version || ''}`,
+              life: 5000,
+            });
+          }
+          break;
+        case 'update-downloaded':
+          setUpdateStatus('downloaded');
+          setUpdateInfo(data);
+          setDownloadProgress(100);
+          setIsDownloading(false);
+          if (toastRef?.current) {
+            toastRef.current.show({
+              severity: 'success',
+              summary: t('updateChannels.downloadComplete'),
+              detail: t('updateChannels.downloadCompleteDetail'),
+              life: 5000,
+            });
+          }
+          break;
+        case 'update-not-available':
+          setUpdateStatus('idle');
+          setUpdateInfo(null);
+          setIsCheckingUpdates(false);
+          break;
+        case 'download-progress':
+          setUpdateStatus('downloading');
+          setDownloadProgress(data?.percent ?? 0);
+          break;
+        case 'error':
+          setUpdateStatus('error');
+          setIsCheckingUpdates(false);
+          setIsDownloading(false);
+          break;
+        default:
+          break;
+      }
+    };
+    const unsubscribe = window.electron.ipcRenderer.on('updater-event', handleUpdaterEvent);
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, [t]);
+
+  // Al abrir la sección Actualizaciones, sincronizar estado con el main (p. ej. si ya hay actualización descargada)
+  useEffect(() => {
+    if (activeMainTab !== 'actualizaciones' || !window.electron?.updater) return;
+    window.electron.updater.getUpdateInfo().then((result) => {
+      if (!result) return;
+      if (result.currentVersion) setCurrentAppVersion(result.currentVersion);
+      if (result.isUpdateDownloaded && result.updateInfo) {
+        setUpdateStatus('downloaded');
+        setUpdateInfo(result.updateInfo);
+        setDownloadProgress(100);
+      } else if (result.updateAvailable && result.updateInfo) {
+        setUpdateStatus('available');
+        setUpdateInfo(result.updateInfo);
+      } else {
+        setUpdateStatus('idle');
+        setUpdateInfo(null);
+      }
+    }).catch(() => {});
+  }, [activeMainTab]);
 
   // Función para cambiar el canal de actualizaciones
   const handleChannelChange = (channel) => {
@@ -437,31 +515,20 @@ const SettingsDialog = ({
 
         console.log('📦 Resultado de búsqueda:', result);
 
-        if (result?.updateAvailable) {
+        // El main devuelve enseguida; update-available / update-not-available llegan por evento
+        if (result?.updateAvailable && result?.updateInfo) {
           setUpdateStatus('available');
           setUpdateInfo(result.updateInfo);
-
           if (toastRef && toastRef.current) {
             toastRef.current.show({
-              severity: 'success',
+              severity: 'info',
               summary: t('updateChannels.available'),
-              detail: `Nueva versión disponible: ${result.updateInfo?.version || 'desconocida'}`,
+              detail: `Nueva versión: ${result.updateInfo?.version || ''}`,
               life: 5000,
             });
           }
-        } else {
-          setUpdateStatus('idle');
-          setUpdateInfo(null);
-
-          if (toastRef && toastRef.current) {
-            toastRef.current.show({
-              severity: 'success',
-              summary: t('updateChannels.upToDate'),
-              detail: t('updateChannels.upToDateDetail'),
-              life: 3000,
-            });
-          }
         }
+        // Si no hay updateAvailable, no poner 'idle' aquí; lo pondrá el evento update-not-available
       } else {
         throw new Error(t('updateChannels.notAvailable'));
       }
@@ -4907,14 +4974,18 @@ const SettingsDialog = ({
                                     letterSpacing: '-0.3px',
                                     marginBottom: '0.125rem'
                                   }}>
-                                    v1.6.2
+                                    v{currentAppVersion}
                                   </div>
                                   <div style={{
                                     fontSize: '0.75rem',
                                     color: 'var(--text-color-secondary)',
                                     lineHeight: '1.3'
                                   }}>
-                                    Instalada y actualizada
+                                    {updateStatus === 'downloaded'
+                                      ? (t('updateChannels.downloadCompleteDetail') || 'Actualización lista para instalar')
+                                      : updateStatus === 'available'
+                                        ? (t('updateChannels.newVersion') || 'Nueva versión disponible')
+                                        : (t('updateChannels.upToDateDetail') || 'Instalada y actualizada')}
                                   </div>
                                 </div>
                               </div>

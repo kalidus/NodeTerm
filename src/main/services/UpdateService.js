@@ -16,6 +16,7 @@ const { autoUpdater } = require('electron-updater');
 const { app, BrowserWindow } = require('electron');
 const log = require('electron-log');
 const path = require('path');
+const fs = require('fs');
 
 class UpdateService {
   constructor() {
@@ -216,6 +217,17 @@ class UpdateService {
 
       // MODO PRODUCCIÓN: Comprobación real en GitHub Releases
       log.info('🚀 MODO PRODUCCIÓN: Comprobando GitHub Releases');
+
+      // Limpiar caché del actualizador para que "Verificar ahora" obtenga siempre datos frescos
+      const updateCacheDir = path.join(app.getPath('userData'), 'updater');
+      if (fs.existsSync(updateCacheDir)) {
+        try {
+          fs.rmSync(updateCacheDir, { recursive: true, force: true });
+          log.info('📂 Caché de actualizaciones limpiada para comprobación fresca');
+        } catch (e) {
+          log.warn('No se pudo limpiar caché de actualizaciones:', e.message);
+        }
+      }
 
       // Configurar el canal
       if (this.config.channel === 'beta') {
