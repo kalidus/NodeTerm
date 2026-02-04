@@ -447,6 +447,14 @@ const SettingsDialog = ({
           setUpdateStatus('idle');
           setUpdateInfo(null);
           setIsCheckingUpdates(false);
+          if (toastRef?.current) {
+            toastRef.current.show({
+              severity: 'success',
+              summary: t('updateChannels.upToDate'),
+              detail: t('updateChannels.upToDateDetail'),
+              life: 3000,
+            });
+          }
           break;
         case 'download-progress':
           setUpdateStatus('downloading');
