@@ -272,6 +272,8 @@
     "autoCheckDisabled": "Búsqueda automática desactivada",
     "autoDownloadEnabled": "Descarga automática activada",
     "autoDownloadDisabled": "Descarga automática desactivada",
+    "autoInstallEnabled": "Instalación automática activada",
+    "autoInstallDisabled": "Instalación automática desactivada",
     "download": "Descargar Actualización",
     "install": "Instalar y Reiniciar",
     "retry": "Reintentar"

@@ -200,6 +200,8 @@
     "autoCheckDisabled": "Automatic check disabled",
     "autoDownloadEnabled": "Automatic download enabled",
     "autoDownloadDisabled": "Automatic download disabled",
+    "autoInstallEnabled": "Automatic install enabled",
+    "autoInstallDisabled": "Automatic install disabled",
     "download": "Download Update",
     "install": "Install and Restart",
     "retry": "Retry"
