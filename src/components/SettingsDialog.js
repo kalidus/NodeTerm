@@ -5724,7 +5724,7 @@ const SettingsDialog = ({
                             whiteSpace: 'nowrap',
                             flexShrink: 0
                           }}>
-                            {versionInfo.appVersion ? `v${versionInfo.appVersion}` : 'v1.3.1'}
+                            {versionInfo.appVersion ? `v${versionInfo.appVersion}` : `v${getVersionInfo().appVersion}`}
                           </div>
                         </div>
                       </div>

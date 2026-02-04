@@ -13,6 +13,7 @@ const { spawn } = require('child_process');
 const fs = require('fs').promises;
 const path = require('path');
 const { app } = require('electron');
+const packageJson = require(path.join(__dirname, '../../../package.json'));
 const WebSearchNativeServer = require('./native/WebSearchNativeServer');
 const SSHTerminalNativeServer = require('./native/SSHTerminalNativeServer');
 
@@ -561,7 +562,7 @@ class MCPService {
       },
       clientInfo: {
         name: 'NodeTerm',
-        version: '1.6.2'
+        version: packageJson.version
       }
     });
 

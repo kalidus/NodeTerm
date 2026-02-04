@@ -1,12 +1,12 @@
-# 🚀 NodeTerm v1.6.2 - Release Notes
+# 🚀 NodeTerm v1.6.3 - Release Notes
 
-**Fecha de Release**: Por definir  
+**Fecha de Release**: 2025-02-04  
 **Tipo de Release**: Patch Release  
-**Versión Anterior**: v1.6.1
+**Versión Anterior**: v1.6.2
 
 ---
 
-## 🎉 ¡Bienvenido a NodeTerm v1.6.2!
+## 🎉 ¡Bienvenido a NodeTerm v1.6.3!
 
 Esta es una **versión patch** que incluye mejoras y correcciones generales. Esta actualización mejora la estabilidad y confiabilidad de la aplicación.
 
@@ -301,8 +301,8 @@ src/mcp-servers/
 git clone https://github.com/kalidus/NodeTerm.git
 cd NodeTerm
 
-# Cambiar a la rama v1.6.2
-git checkout release/1.6.2
+# Cambiar a la rama v1.6.3
+git checkout v1.6.3
 
 # Instalar dependencias
 npm install
@@ -385,4 +385,4 @@ Puedes invitarme a un café ☕ o dejar una estrella ⭐ en GitHub. ¡Gracias!
 
 ---
 
-**¡Disfruta de NodeTerm v1.6.2!** 🚀
+**¡Disfruta de NodeTerm v1.6.3!** 🚀
