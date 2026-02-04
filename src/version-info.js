@@ -2,10 +2,10 @@
 
 // Función helper para obtener información de versión de forma segura
 const getVersionInfo = () => {
-  // Valores por defecto
+  // Valores por defecto (la versión real viene de package.json vía webpack REACT_APP_VERSION)
   const defaultInfo = {
-    appVersion: '1.6.2',
-    appName: 'NodeTerm',
+    appVersion: process?.env?.REACT_APP_VERSION || '0.0.0',
+    appName: process?.env?.REACT_APP_NAME || 'NodeTerm',
     buildDate: new Date().toLocaleDateString(),
     electronVersion: 'Unknown',
     nodeVersion: 'Unknown',

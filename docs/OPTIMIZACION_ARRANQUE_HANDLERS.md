@@ -259,5 +259,5 @@ npm run dev
 ---
 
 **Fecha de implementación**: 21 de enero de 2026  
-**Versión**: NodeTerm 1.6.2+  
+**Versión**: NodeTerm 1.6.3+  
 **Impacto**: Alto - Mejora significativa en tiempo de arranque

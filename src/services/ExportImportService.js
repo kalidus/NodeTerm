@@ -8,6 +8,8 @@
  * - Formato de archivo: .nodeterm (JSON encriptado)
  */
 
+import { getVersionInfo } from '../version-info';
+
 class ExportImportService {
   constructor() {
     this.supportedVersion = '1.0';
@@ -91,7 +93,7 @@ class ExportImportService {
       version: this.supportedVersion,
       exportedAt: new Date().toISOString(),
       appVersion: window.electronAPI?.getVersionInfo ? 
-        (await window.electronAPI.getVersionInfo()).appVersion : '1.3.1',
+        (await window.electronAPI.getVersionInfo()).appVersion : getVersionInfo().appVersion,
       encrypted: !!encryptPassword,
       categories: {
         connections: connections,

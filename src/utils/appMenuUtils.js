@@ -3,6 +3,8 @@
  * Se usa tanto en Sidebar como en SidebarFooter
  */
 
+import { getVersionInfo } from '../version-info';
+
 export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImportExportDialog, t) => {
   // Si no se pasa t, usar valores por defecto en español (fallback)
   const getText = (key) => {
@@ -164,7 +166,7 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
           aboutDialog.innerHTML = `
             <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; text-align: center;">${versionInfo.appName || 'NodeTerm'}</h3>
             <div style="margin: 16px 0;">
-              <p style="margin: 8px 0; font-size: 14px;"><strong>${getText('appMenu.version')}:</strong> ${versionInfo.appVersion || '1.3.1'}</p>
+              <p style="margin: 8px 0; font-size: 14px;"><strong>${getText('appMenu.version')}:</strong> ${versionInfo.appVersion || getVersionInfo().appVersion}</p>
               <p style="margin: 8px 0; font-size: 14px;"><strong>Electron:</strong> ${versionInfo.electronVersion || 'N/A'}</p>
               <p style="margin: 8px 0; font-size: 14px;"><strong>Node.js:</strong> ${versionInfo.nodeVersion || 'N/A'}</p>
               <p style="margin: 8px 0; font-size: 14px;"><strong>Chrome:</strong> ${versionInfo.chromeVersion || 'N/A'}</p>
