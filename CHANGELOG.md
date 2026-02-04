@@ -5,10 +5,16 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.6.2] - Por definir
+## [1.6.2] - 2026-02-04
 
 ### 🔧 Mejoras y Correcciones
 - **Actualización de Versión**: Actualización a versión 1.6.2 con mejoras generales
+
+### 🐛 Correcciones de Sistema de Actualización
+- **Fix de Actualización Automática**: Corregido comportamiento de actualización automática no deseado
+- **autoDownload**: Configurado a `false` por defecto - solo notifica, no descarga automáticamente
+- **autoInstallOnAppQuit**: Configurado a `false` - no instala automáticamente al cerrar la app
+- **Control del Usuario**: Ahora el usuario tiene control completo sobre cuándo descargar e instalar actualizaciones
 
 ### 🔌 Mejoras de Túneles SSH
 - **Verificación de Puertos**: Verificación automática de puertos libres antes de crear túneles

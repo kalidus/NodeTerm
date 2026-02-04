@@ -27,7 +27,7 @@ class UpdateService {
     this.config = {
       autoCheck: true,              // Comprobar automáticamente
       checkIntervalHours: 24,       // Cada 24 horas por defecto
-      autoDownload: true,           // Descargar automáticamente
+      autoDownload: false,          // NO descargar automáticamente (requiere confirmación del usuario)
       autoInstall: false,           // No instalar automáticamente (requiere confirmación)
       channel: 'latest',            // Canal: 'latest' o 'beta'
     };
@@ -111,7 +111,7 @@ class UpdateService {
 
     // Configuración de autoUpdater
     autoUpdater.autoDownload = this.config.autoDownload;
-    autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.autoInstallOnAppQuit = false; // NO instalar automáticamente, requiere acción del usuario
   }
 
   /**
