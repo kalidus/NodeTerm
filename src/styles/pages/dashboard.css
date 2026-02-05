@@ -1261,9 +1261,9 @@
   /* Slightly larger */
   height: 42px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 30%, transparent);
   background: rgba(15, 20, 30, 0.6);
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--ui-button-primary, #4fc3f7) !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1271,15 +1271,19 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+  box-shadow: none;
 }
 
 .ribbon-side-btn:hover {
   background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.35);
-  color: #fff;
+  border-color: var(--ui-button-primary, #4fc3f7) !important;
+  color: var(--ui-button-primary, #4fc3f7) !important;
   transform: translateY(-50%) scale(1.1);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: none;
+}
+
+.ribbon-side-btn i {
+  color: inherit;
 }
 
 .ribbon-side-btn.prev {
