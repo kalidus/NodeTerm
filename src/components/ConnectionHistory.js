@@ -822,7 +822,17 @@ const ConnectionHistory = ({
 		);
 	};
 
-	const FavoritesRibbon = ({ connections, fullList, onReorder, collapsed, onToggleCollapsed }) => {
+	const FavoritesRibbon = ({
+		connections,
+		fullList,
+		onReorder,
+		collapsed,
+		onToggleCollapsed,
+		onOpenFilter,
+		activeFilterCount,
+		activeFilters,
+		onRemoveFilter
+	}) => {
 		const trackRef = useRef(null);
 		const [draggedItem, setDraggedItem] = useState(null);
 		const [scrollPos, setScrollPos] = useState(0);
@@ -933,6 +943,56 @@ const ConnectionHistory = ({
 						<i className="pi pi-star-fill" />
 						<span>FAVORITOS</span>
 					</div>
+
+					{/* Filter Button (Inline) */}
+					<button
+						className={`section-action-btn ${activeFilterCount > 0 ? 'active' : ''}`}
+						onClick={onOpenFilter}
+						title="Filtrar conexiones"
+						style={{ marginRight: '8px' }}
+					>
+						<i className={`pi ${activeFilterCount > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
+					</button>
+
+					{/* Active Filter Chips (Inline, Scrollable) */}
+					{activeFilterCount > 0 && (
+						<div className="header-active-filters">
+							{activeFilters.protocols?.map(filterId => (
+								<FilterBadge
+									key={`protocol-${filterId}`}
+									label={getFilterLabel('protocols', filterId)}
+									color={getFilterColor('protocols', filterId)}
+									icon={getFilterIcon('protocols', filterId)}
+									type="protocol"
+									onRemove={() => onRemoveFilter('protocols', filterId)}
+									compact
+								/>
+							))}
+							{activeFilters.groups?.map(filterId => (
+								<FilterBadge
+									key={`group-${filterId}`}
+									label={getFilterLabel('groups', filterId)}
+									color={getFilterColor('groups', filterId)}
+									icon={getFilterIcon('groups', filterId)}
+									type="group"
+									onRemove={() => onRemoveFilter('groups', filterId)}
+									compact
+								/>
+							))}
+							{activeFilters.states?.map(filterId => (
+								<FilterBadge
+									key={`state-${filterId}`}
+									label={getFilterLabel('states', filterId)}
+									color={getFilterColor('states', filterId)}
+									icon={getFilterIcon('states', filterId)}
+									type="state"
+									onRemove={() => onRemoveFilter('states', filterId)}
+									compact
+								/>
+							))}
+						</div>
+					)}
+
 					<div className="modern-header-line"></div>
 				</div>
 
@@ -1165,55 +1225,7 @@ const ConnectionHistory = ({
 
 	return (
 		<div className="connection-history-root">
-			{/* NEW: Filter Toolbar with Dropdown Panel */}
-			<div className="filter-toolbar">
-				{/* Filter trigger button */}
-				<button
-					className={`filter-trigger-btn ${getActiveFilterCount() > 0 ? 'active' : ''}`}
-					onClick={() => setFilterPanelOpen(true)}
-					title="Abrir panel de filtros"
-				>
-					<i className="pi pi-filter" />
-					<span>Filtros</span>
-					{getActiveFilterCount() > 0 && (
-						<span className="filter-count-badge">{getActiveFilterCount()}</span>
-					)}
-				</button>
 
-				{/* Active filter badges */}
-				<div className="active-filters-chips">
-					{activeFilters.protocols?.map(filterId => (
-						<FilterBadge
-							key={`protocol-${filterId}`}
-							label={getFilterLabel('protocols', filterId)}
-							color={getFilterColor('protocols', filterId)}
-							icon={getFilterIcon('protocols', filterId)}
-							type="protocol"
-							onRemove={() => handleRemoveFilter('protocols', filterId)}
-						/>
-					))}
-					{activeFilters.groups?.map(filterId => (
-						<FilterBadge
-							key={`group-${filterId}`}
-							label={getFilterLabel('groups', filterId)}
-							color={getFilterColor('groups', filterId)}
-							icon={getFilterIcon('groups', filterId)}
-							type="group"
-							onRemove={() => handleRemoveFilter('groups', filterId)}
-						/>
-					))}
-					{activeFilters.states?.map(filterId => (
-						<FilterBadge
-							key={`state-${filterId}`}
-							label={getFilterLabel('states', filterId)}
-							color={getFilterColor('states', filterId)}
-							icon={getFilterIcon('states', filterId)}
-							type="state"
-							onRemove={() => handleRemoveFilter('states', filterId)}
-						/>
-					))}
-				</div>
-			</div>
 
 			{/* FilterPanel Dropdown - Rendered in Portal to avoid clipping */}
 			{ReactDOM.createPortal(
@@ -1544,6 +1556,10 @@ const ConnectionHistory = ({
 				}}
 				collapsed={favoritesCollapsed}
 				onToggleCollapsed={toggleFavoritesCollapsed}
+				onOpenFilter={() => setFilterPanelOpen(true)}
+				activeFilterCount={getActiveFilterCount()}
+				activeFilters={activeFilters}
+				onRemoveFilter={handleRemoveFilter}
 			/>
 
 
