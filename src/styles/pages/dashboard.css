@@ -2858,6 +2858,79 @@
   font-size: 0.9rem;
 }
 
+/* Botón de acción en el header (Filtro Inline) */
+.section-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  margin-left: 4px;
+  position: relative;
+}
+
+.section-action-btn:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.section-action-btn.active {
+  color: #4fc3f7;
+  /* Primary accent color */
+  background: rgba(79, 195, 247, 0.1);
+}
+
+.section-action-btn i {
+  font-size: 0.9rem;
+}
+
+/* Chips de filtros activos en el header */
+.header-active-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  flex: 0 1 auto;
+  /* Solo ocupar lo necesario */
+  margin-left: 4px;
+  margin-right: 8px;
+  /* Espacio antes de la línea */
+  scrollbar-width: none;
+  /* Firefox */
+  max-width: 400px;
+}
+
+.header-active-filters::-webkit-scrollbar {
+  display: none;
+  /* Chrome/Safari */
+}
+
+/* Modificar el FilterBadge para que sea "compact" si está en el header */
+/* Nota: Como estoy reusando `FilterBadge`, si no tiene prop `compact`, puedo forzarlo por CSS */
+.header-active-filters .filter-badge {
+  height: 22px;
+  /* Un poco más alto que 20px para que encaje mejor texto */
+  font-size: 0.75rem;
+  padding: 0 4px 0 8px;
+  /* Ajuste padding */
+  gap: 4px;
+}
+
+.header-active-filters .filter-badge-icon {
+  font-size: 0.7rem;
+}
+
+.header-active-filters .filter-badge-remove {
+  width: 16px;
+  height: 16px;
+  font-size: 0.65rem;
+}
+
 /* Restore button style */
 .btn-cancel i {
   margin-right: 4px;
