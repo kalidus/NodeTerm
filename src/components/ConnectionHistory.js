@@ -160,9 +160,20 @@ const ConnectionHistory = ({
 
 	// Estado para nuevo sistema de filtros (FilterPanel)
 	const [filterPanelOpen, setFilterPanelOpen] = useState(false);
-	const [activeFilters, setActiveFilters] = useState(() => {
+	const [filterContext, setFilterContext] = useState(null); // 'favorites' | 'recents'
+
+	const [activeFavFilters, setActiveFavFilters] = useState(() => {
 		try {
-			const saved = localStorage.getItem('nodeterm_active_filters');
+			const saved = localStorage.getItem('nodeterm_fav_filters');
+			return saved ? JSON.parse(saved) : { protocols: [], groups: [], states: [] };
+		} catch {
+			return { protocols: [], groups: [], states: [] };
+		}
+	});
+
+	const [activeRecentFilters, setActiveRecentFilters] = useState(() => {
+		try {
+			const saved = localStorage.getItem('nodeterm_recent_filters');
 			return saved ? JSON.parse(saved) : { protocols: [], groups: [], states: [] };
 		} catch {
 			return { protocols: [], groups: [], states: [] };
@@ -611,35 +622,46 @@ const ConnectionHistory = ({
 	};
 
 	const handleApplyFilters = (filters) => {
-		setActiveFilters(filters);
-		// Guardar en localStorage
-		try {
-			localStorage.setItem('nodeterm_active_filters', JSON.stringify(filters));
-		} catch (e) {
-			console.error('Error guardando filtros activos:', e);
+		if (filterContext === 'favorites') {
+			setActiveFavFilters(filters);
+			try {
+				localStorage.setItem('nodeterm_fav_filters', JSON.stringify(filters));
+			} catch (e) {
+				console.error('Error guardando filtros favoritos:', e);
+			}
+		} else if (filterContext === 'recents') {
+			setActiveRecentFilters(filters);
+			try {
+				localStorage.setItem('nodeterm_recent_filters', JSON.stringify(filters));
+			} catch (e) {
+				console.error('Error guardando filtros recientes:', e);
+			}
 		}
 	};
 
-	const handleRemoveFilter = (category, filterId) => {
-		setActiveFilters(prev => {
+	const handleRemoveFilter = (context, category, filterId) => {
+		const setFilters = context === 'favorites' ? setActiveFavFilters : setActiveRecentFilters;
+		const storageKey = context === 'favorites' ? 'nodeterm_fav_filters' : 'nodeterm_recent_filters';
+
+		setFilters(prev => {
 			const newFilters = {
 				...prev,
 				[category]: prev[category].filter(id => id !== filterId)
 			};
 			// Guardar en localStorage
 			try {
-				localStorage.setItem('nodeterm_active_filters', JSON.stringify(newFilters));
+				localStorage.setItem(storageKey, JSON.stringify(newFilters));
 			} catch (e) {
-				console.error('Error guardando filtros activos:', e);
+				console.error('Error guardando filtros:', e);
 			}
 			return newFilters;
 		});
 	};
 
-	const getActiveFilterCount = () => {
-		return (activeFilters.protocols?.length || 0) +
-			(activeFilters.groups?.length || 0) +
-			(activeFilters.states?.length || 0);
+	const getActiveFilterCount = (filters) => {
+		return (filters?.protocols?.length || 0) +
+			(filters?.groups?.length || 0) +
+			(filters?.states?.length || 0);
 	};
 
 	const getFilterLabel = (category, filterId) => {
@@ -702,14 +724,16 @@ const ConnectionHistory = ({
 	// ============================================
 	// Calculate filtered connections (AFTER function definitions)
 	// ============================================
-	const hasActiveFilters = getActiveFilterCount() > 0;
-
-	const filteredFavorites = hasActiveFilters
-		? applyMultipleFilters(favoriteConnections, activeFilters)
+	// Filters for Favorites
+	const hasFavFilters = getActiveFilterCount(activeFavFilters) > 0;
+	const filteredFavorites = hasFavFilters
+		? applyMultipleFilters(favoriteConnections, activeFavFilters)
 		: favoriteConnections;
 
-	const filteredRecentsForDisplay = hasActiveFilters
-		? applyMultipleFilters(recentConnections, activeFilters)
+	// Filters for Recents
+	const hasRecentFilters = getActiveFilterCount(activeRecentFilters) > 0;
+	const filteredRecentsForDisplay = hasRecentFilters
+		? applyMultipleFilters(recentConnections, activeRecentFilters)
 		: recentConnections;
 
 	// Componente interno para las tarjetas del Carrusel
@@ -1232,19 +1256,21 @@ const ConnectionHistory = ({
 				<FilterPanel
 					isOpen={filterPanelOpen}
 					onClose={() => setFilterPanelOpen(false)}
-					activeFilters={activeFilters}
+					activeFilters={filterContext === 'favorites' ? activeFavFilters : activeRecentFilters}
 					onApplyFilters={handleApplyFilters}
 					availableFilters={{
 						protocols: favoriteGroupsStore.getProtocolFilters().map(f => ({
 							...f,
-							count: countByType(favoriteConnections, f.id)
+							count: countByType(filterContext === 'recents' ? recentConnections : favoriteConnections, f.id)
 						})),
 						groups: favoriteGroups.filter(g => !g.isDefault).map(g => ({
 							id: g.id,
 							label: g.name,
 							icon: g.icon || 'pi-folder',
 							color: g.color,
-							count: favoriteGroupsStore.getFavoritesInGroup(g.id, favoriteConnections).length
+							count: filterContext === 'recents'
+								? recentConnections.filter(c => c.groupId === g.id).length // Simple check for recents
+								: favoriteGroupsStore.getFavoritesInGroup(g.id, favoriteConnections).length
 						}))
 					}}
 					themeColors={themeColors}
@@ -1556,10 +1582,13 @@ const ConnectionHistory = ({
 				}}
 				collapsed={favoritesCollapsed}
 				onToggleCollapsed={toggleFavoritesCollapsed}
-				onOpenFilter={() => setFilterPanelOpen(true)}
-				activeFilterCount={getActiveFilterCount()}
-				activeFilters={activeFilters}
-				onRemoveFilter={handleRemoveFilter}
+				onOpenFilter={() => {
+					setFilterContext('favorites');
+					setFilterPanelOpen(true);
+				}}
+				activeFilterCount={getActiveFilterCount(activeFavFilters)}
+				activeFilters={activeFavFilters}
+				onRemoveFilter={(cat, id) => handleRemoveFilter('favorites', cat, id)}
 			/>
 
 
@@ -1594,6 +1623,58 @@ const ConnectionHistory = ({
 						<i className="pi pi-history" />
 						<span>RECIENTES</span>
 					</div>
+
+					{/* Filter Button (Recents) */}
+					<button
+						className={`section-action-btn ${getActiveFilterCount(activeRecentFilters) > 0 ? 'active' : ''}`}
+						onClick={() => {
+							setFilterContext('recents');
+							setFilterPanelOpen(true);
+						}}
+						title="Filtrar recientes"
+						style={{ marginRight: '8px' }}
+					>
+						<i className={`pi ${getActiveFilterCount(activeRecentFilters) > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
+					</button>
+
+					{/* Active Filter Chips (Recents) */}
+					{getActiveFilterCount(activeRecentFilters) > 0 && (
+						<div className="header-active-filters">
+							{activeRecentFilters.protocols?.map(filterId => (
+								<FilterBadge
+									key={`protocol-${filterId}`}
+									label={getFilterLabel('protocols', filterId)}
+									color={getFilterColor('protocols', filterId)}
+									icon={getFilterIcon('protocols', filterId)}
+									type="protocol"
+									onRemove={() => handleRemoveFilter('recents', 'protocols', filterId)}
+									compact
+								/>
+							))}
+							{activeRecentFilters.groups?.map(filterId => (
+								<FilterBadge
+									key={`group-${filterId}`}
+									label={getFilterLabel('groups', filterId)}
+									color={getFilterColor('groups', filterId)}
+									icon={getFilterIcon('groups', filterId)}
+									type="group"
+									onRemove={() => handleRemoveFilter('recents', 'groups', filterId)}
+									compact
+								/>
+							))}
+							{activeRecentFilters.states?.map(filterId => (
+								<FilterBadge
+									key={`state-${filterId}`}
+									label={getFilterLabel('states', filterId)}
+									color={getFilterColor('states', filterId)}
+									icon={getFilterIcon('states', filterId)}
+									type="state"
+									onRemove={() => handleRemoveFilter('recents', 'states', filterId)}
+									compact
+								/>
+							))}
+						</div>
+					)}
 					<div className="modern-header-line"></div>
 				</div>
 
