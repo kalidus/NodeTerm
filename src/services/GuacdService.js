@@ -27,7 +27,7 @@ function getUserDataDir() {
     if (electronApp && typeof electronApp.getPath === 'function') {
       return electronApp.getPath('userData');
     }
-  } catch (_) {}
+  } catch (_) { }
   // Fallback para contextos sin Electron: usar carpeta en el home
   return path.join(os.homedir(), '.nodeterm');
 }
@@ -42,7 +42,7 @@ function ensureDriveHostDir() {
   const envDir = process.env.NODETERM_GUAC_DRIVE_DIR || process.env.GUAC_DRIVE_DIR;
   if (typeof envDir === 'string' && envDir.trim().length > 0) {
     const target = envDir.trim();
-    try { if (!fs.existsSync(target)) fs.mkdirSync(target, { recursive: true }); } catch {}
+    try { if (!fs.existsSync(target)) fs.mkdirSync(target, { recursive: true }); } catch { }
     if (fs.existsSync(target)) return target;
   }
 
@@ -58,7 +58,7 @@ function ensureDriveHostDir() {
     const downloadsDir = path.join(downloadsBase, 'NodeTerm Drive');
     if (!fs.existsSync(downloadsDir)) fs.mkdirSync(downloadsDir, { recursive: true });
     if (fs.existsSync(downloadsDir)) return downloadsDir;
-  } catch (_) {}
+  } catch (_) { }
 
   // 3) Fallback: userData/GuacamoleDrive
   const base = getUserDataDir();
@@ -73,7 +73,7 @@ function ensureDriveHostDir() {
       const fallback = path.join(os.tmpdir(), 'NodeTerm-GuacamoleDrive');
       if (!fs.existsSync(fallback)) fs.mkdirSync(fallback, { recursive: true });
       return fallback;
-    } catch {}
+    } catch { }
   }
   return dir;
 }
@@ -84,20 +84,20 @@ function ensureDriveHostDir() {
 function isPathIncompatibleWithOS(inputPath) {
   try {
     if (typeof inputPath !== 'string' || !inputPath.trim()) return false;
-    
+
     const trimmedPath = inputPath.trim();
     const currentPlatform = process.platform;
-    
+
     // Detectar rutas de Windows en sistemas no-Windows
     if (currentPlatform !== 'win32' && /^[A-Za-z]:[\\/]/.test(trimmedPath)) {
       return true;
     }
-    
+
     // Detectar rutas de Unix en Windows (menos común pero posible)
     if (currentPlatform === 'win32' && trimmedPath.startsWith('/') && !trimmedPath.startsWith('//')) {
       return true;
     }
-    
+
     return false;
   } catch (_) {
     return false;
@@ -112,26 +112,26 @@ function normalizePathForCurrentOS(inputPath) {
     if (typeof inputPath !== 'string' || !inputPath.trim()) {
       return ensureDriveHostDir();
     }
-    
+
     const trimmedPath = inputPath.trim();
     const currentPlatform = process.platform;
-    
+
     // Si la ruta es incompatible, usar la ruta por defecto
     if (isPathIncompatibleWithOS(trimmedPath)) {
       return ensureDriveHostDir();
     }
-    
+
     // Normalizar separadores de ruta según el SO
-    const normalizedPath = currentPlatform === 'win32' 
+    const normalizedPath = currentPlatform === 'win32'
       ? trimmedPath.replace(/\//g, '\\')
       : trimmedPath.replace(/\\/g, '/');
-    
+
     // Verificar que la ruta existe y es accesible
     try {
       if (!fs.existsSync(normalizedPath)) {
         return ensureDriveHostDir();
       }
-      
+
       // Verificar permisos de escritura
       fs.accessSync(normalizedPath, fs.constants.W_OK);
       return normalizedPath;
@@ -257,7 +257,7 @@ function findGuacdExeUnder(rootDir, maxDepth = 6) {
         if (found) return found;
       }
     }
-  } catch (_) {}
+  } catch (_) { }
   return null;
 }
 
@@ -371,8 +371,8 @@ function downloadFile(url, destPath) {
       const file = fs.createWriteStream(destPath);
       const req = https.get(url, (res) => {
         if (res.statusCode !== 200) {
-          try { file.close(); } catch {}
-          try { fs.unlinkSync(destPath); } catch {}
+          try { file.close(); } catch { }
+          try { fs.unlinkSync(destPath); } catch { }
           resolve(false);
           return;
         }
@@ -383,8 +383,8 @@ function downloadFile(url, destPath) {
         });
       });
       req.on('error', () => {
-        try { file.close(); } catch {}
-        try { fs.unlinkSync(destPath); } catch {}
+        try { file.close(); } catch { }
+        try { fs.unlinkSync(destPath); } catch { }
         resolve(false);
       });
     } catch (_) {
@@ -415,7 +415,7 @@ async function attemptDownloadAndExtract(installRootDir) {
       try {
         console.log('📂 Extrayendo zip descargado...');
         await extractZip(tempZip, installRootDir);
-        try { fs.unlinkSync(tempZip); } catch {}
+        try { fs.unlinkSync(tempZip); } catch { }
         // Intentar encontrar guacd.exe dentro de lo extraído (no debería existir en zip de fuentes)
         const exeMaybe = findGuacdExeUnder(installRootDir);
         if (exeMaybe) {
@@ -471,27 +471,27 @@ class GuacdService {
   _startHealthCheck() {
     // Solo para WSL
     if (this.detectedMethod !== 'wsl') return;
-    
+
     // Limpiar intervalo anterior si existe
     if (this._healthCheckInterval) {
       clearInterval(this._healthCheckInterval);
     }
-    
+
     console.log('🏥 [GuacdService] Health check para WSL iniciado (cada 15s)');
-    
+
     this._healthCheckInterval = setInterval(async () => {
       try {
         // Hacer una conexión TCP real para verificar que guacd responde
         const isHealthy = await this._checkGuacdConnection();
-        
+
         if (!isHealthy) {
           this._healthCheckFailures++;
           console.warn(`⚠️ [GuacdService] Health check fallido (${this._healthCheckFailures}/2): guacd no responde`);
-          
+
           if (this._healthCheckFailures >= 2) {
             console.error('🚨 [GuacdService] guacd en WSL dejó de responder. Reiniciando...');
             this._healthCheckFailures = 0;
-            
+
             // Intentar reiniciar guacd en WSL
             try {
               await this._restartGuacdInWSL();
@@ -511,7 +511,7 @@ class GuacdService {
       }
     }, 15000); // Cada 15 segundos (más frecuente)
   }
-  
+
   /**
    * Verifica la conexión a guacd con una conexión TCP real
    * @returns {Promise<boolean>} true si guacd responde correctamente
@@ -520,39 +520,39 @@ class GuacdService {
     return new Promise((resolve) => {
       const socket = new net.Socket();
       let resolved = false;
-      
+
       const cleanup = () => {
         if (!resolved) {
           resolved = true;
-          try { socket.destroy(); } catch {}
+          try { socket.destroy(); } catch { }
         }
       };
-      
+
       socket.setTimeout(3000); // 3 segundos de timeout
-      
+
       socket.on('connect', () => {
         // Conexión exitosa - guacd está escuchando
         cleanup();
         resolve(true);
       });
-      
+
       socket.on('timeout', () => {
         cleanup();
         resolve(false);
       });
-      
+
       socket.on('error', () => {
         cleanup();
         resolve(false);
       });
-      
+
       socket.on('close', () => {
         if (!resolved) {
           resolved = true;
           resolve(false);
         }
       });
-      
+
       try {
         socket.connect(this.port, this.host);
       } catch {
@@ -561,7 +561,7 @@ class GuacdService {
       }
     });
   }
-  
+
   /**
    * Detiene el health check periódico
    */
@@ -572,30 +572,30 @@ class GuacdService {
       console.log('🏥 [GuacdService] Health check detenido');
     }
   }
-  
+
   /**
    * Reinicia guacd en WSL si dejó de responder
    */
   async _restartGuacdInWSL() {
     if (this.detectedMethod !== 'wsl') return;
-    
+
     const wslExec = (args, cb) => execFile('wsl.exe', ['-u', 'root', '--', ...args], { encoding: 'utf8' }, cb);
-    
+
     // Matar procesos guacd existentes
     await new Promise((r) => wslExec(['sh', '-lc', 'pkill -9 guacd || true'], () => r()));
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     // Reiniciar guacd
     const bindIp = '0.0.0.0';
     const guacdCmd = '/usr/sbin/guacd';
     const startCmd = `${guacdCmd} -b ${bindIp} -l ${this.port} >/var/log/guacd-wsl.log 2>&1`;
-    
+
     await new Promise((r) => wslExec(['sh', '-lc', startCmd], () => r()));
-    
+
     // Esperar a que el puerto esté escuchando
     const waitReadyCmd = `for i in $(seq 1 30); do ss -tln 2>/dev/null | grep -E ":${this.port}\\b" && echo READY && break; sleep 0.2; done`;
     await new Promise((r) => wslExec(['sh', '-lc', waitReadyCmd], () => r()));
-    
+
     // Verificar que esté accesible
     const isAvailable = await this.isPortAvailable(this.port);
     if (!isAvailable) {
@@ -617,103 +617,112 @@ class GuacdService {
 
     this._initializePromise = (async () => {
       try {
-      // Evitar inicialización múltiple
-      if (this.isRunning) {
-        console.log('✅ GuacdService ya está corriendo, omitiendo inicialización...');
-        return true;
-      }
-
-      // Primero verificar si guacd ya está corriendo
-      const portAvailable = await this.isPortAvailable(this.port);
-      if (!portAvailable) {
-        this._debug('🔍 Detectado puerto ocupado, verificando si guacd está accesible...');
-        
-        // Intentar detectar el método automáticamente
-        await this.detectRunningMethod();
-
-        // Caso especial: WSL detectado pero mal configurado (solo 127.0.0.1 dentro de WSL)
-        if (this.detectedMethod === 'wsl' && this.wslNeedsRebind) {
-          console.log('⚠️ guacd en WSL está escuchando solo en 127.0.0.1. Reiniciando para bind 0.0.0.0...');
-          try {
-            await this.stop(); // stop() en WSL hace pkill dentro de WSL (por defecto)
-          } catch {}
-          this.wslNeedsRebind = false;
-          // Continuar con el inicio normal más abajo
+        // Evitar inicialización múltiple
+        if (this.isRunning) {
+          console.log('✅ GuacdService ya está corriendo, omitiendo inicialización...');
+          return true;
         }
 
-        // Si no se detectó método o está mal configurado, matar procesos existentes y reiniciar
-        if (!this.detectedMethod) {
-          console.log('⚠️ Proceso guacd detectado pero no está bien configurado, limpiando procesos existentes...');
-          // Intentar matar procesos guacd en WSL por defecto SIEMPRE (sin depender de isRunning)
-          if (process.platform === 'win32') {
-            this._debug('🧹 Matando procesos guacd en WSL por defecto...');
-            execFile('wsl.exe', ['-u', 'root', '--', 'sh', '-lc', 'pkill -9 guacd || true'], () => {});
-          }
-          // Continuar con el inicio normal más abajo
-        } else {
-          // El proceso está bien configurado y accesible
-          this.isRunning = true;
-          const methodLabel = (this.detectedMethod || 'unknown').toUpperCase();
-          console.log(`✅ guacd ya está corriendo y accesible en puerto ${this.port} (método: ${methodLabel})`);
+        // Primero verificar si guacd ya está corriendo
+        const portAvailable = await this.isPortAvailable(this.port);
+        if (!portAvailable) {
+          this._debug('🔍 Detectado puerto ocupado, verificando si guacd está accesible...');
 
-          // Si hay una preferencia explícita y lo detectado no coincide, intentar cambiar
-          const desired = (this.preferredMethod === 'wsl') ? 'wsl' : (this.preferredMethod === 'docker' ? 'docker' : null);
-          if (desired && this.detectedMethod && this.detectedMethod !== desired) {
-            console.log(`🔁 Preferencia actual: ${desired}. Método preexistente detectado: ${this.detectedMethod}. Reiniciando según preferencia...`);
+          // Intentar detectar el método automáticamente
+          await this.detectRunningMethod();
+
+          // Caso especial: WSL detectado pero mal configurado (solo 127.0.0.1 dentro de WSL)
+          if (this.detectedMethod === 'wsl' && this.wslNeedsRebind) {
+            console.log('⚠️ guacd en WSL está escuchando solo en 127.0.0.1. Reiniciando para bind 0.0.0.0...');
             try {
-              await this.stop();
-            } catch {}
+              await this.stop(); // stop() en WSL hace pkill dentro de WSL (por defecto)
+            } catch { }
+            this.wslNeedsRebind = false;
+            // Continuar con el inicio normal más abajo
+          }
+
+          // Si no se detectó método o está mal configurado
+          if (!this.detectedMethod) {
+            // Última verificación: si conectamos por TCP, respetar el proceso (no matarlo)
+            const isAlive = await this._checkGuacdConnection();
+            if (isAlive) {
+              console.log('⚠️ Proceso guacd detectado en puerto pero método desconocido. Asumiendo proceso externo y reutilizando.');
+              this.detectedMethod = 'external';
+              this.isRunning = true;
+              return true;
+            }
+
+            console.log('⚠️ Proceso guacd detectado pero no está bien configurado ni responde, limpiando procesos existentes...');
+            // Intentar matar procesos guacd en WSL por defecto SIEMPRE (sin depender de isRunning)
+            if (process.platform === 'win32') {
+              this._debug('🧹 Matando procesos guacd en WSL por defecto...');
+              execFile('wsl.exe', ['-u', 'root', '--', 'sh', '-lc', 'pkill -9 guacd || true'], () => { });
+            }
             // Continuar con el inicio normal más abajo
           } else {
-            // Verificar una vez más que realmente sea accesible
-            const finalCheck = await this.isPortAvailable(this.port);
-            if (!finalCheck) {
-              console.log(`🔌 Conectado con ${methodLabel} (preexistente)`);
-              
-              // Iniciar health check para WSL preexistente
-              if (this.detectedMethod === 'wsl') {
-                this._startHealthCheck();
-              }
-              
-              return true;
-            } else {
-              console.log('⚠️ El proceso parece haberse detenido, continuando con inicio normal...');
+            // El proceso está bien configurado y accesible
+            this.isRunning = true;
+            const methodLabel = (this.detectedMethod || 'unknown').toUpperCase();
+            console.log(`✅ guacd ya está corriendo y accesible en puerto ${this.port} (método: ${methodLabel})`);
+
+            // Si hay una preferencia explícita y lo detectado no coincide, intentar cambiar
+            const desired = (this.preferredMethod === 'wsl') ? 'wsl' : (this.preferredMethod === 'docker' ? 'docker' : null);
+            if (desired && this.detectedMethod && this.detectedMethod !== desired) {
+              console.log(`🔁 Preferencia actual: ${desired}. Método preexistente detectado: ${this.detectedMethod}. Reiniciando según preferencia...`);
+              try {
+                await this.stop();
+              } catch { }
               // Continuar con el inicio normal más abajo
+            } else {
+              // Verificar una vez más que realmente sea accesible
+              const finalCheck = await this.isPortAvailable(this.port);
+              if (!finalCheck) {
+                console.log(`🔌 Conectado con ${methodLabel} (preexistente)`);
+
+                // Iniciar health check para WSL preexistente
+                if (this.detectedMethod === 'wsl') {
+                  this._startHealthCheck();
+                }
+
+                return true;
+              } else {
+                console.log('⚠️ El proceso parece haberse detenido, continuando con inicio normal...');
+                // Continuar con el inicio normal más abajo
+              }
             }
           }
         }
-      }
 
-      // Orden dinámico según preferencia y SO
-      const isWindows = this.platform === 'win32';
-      const isMacOS = this.platform === 'darwin';
-      // Windows: solo docker, wsl, mock (no hay guacd nativo)
-      // macOS: solo docker, mock (no hay guacd nativo)
-      // Linux: docker, native, mock (guacd nativo disponible)
-      const all = isWindows ? ['docker', 'wsl', 'mock'] : 
-                  isMacOS ? ['docker', 'mock'] : 
-                  ['docker', 'native', 'mock'];
-      const pref = all.includes(this.preferredMethod) ? this.preferredMethod : 'docker';
-      const rest = all.filter(m => m !== pref);
-      const orderedMethods = [pref, ...rest];
+        // Orden dinámico según preferencia y SO
+        const isWindows = this.platform === 'win32';
+        const isMacOS = this.platform === 'darwin';
+        // Windows: solo docker, wsl, mock (no hay guacd nativo)
+        // macOS: solo docker, mock (no hay guacd nativo)
+        // Linux: docker, native, mock (guacd nativo disponible)
+        const all = isWindows ? ['docker', 'wsl', 'mock'] :
+          isMacOS ? ['docker', 'mock'] :
+            ['docker', 'native', 'mock'];
+        const pref = all.includes(this.preferredMethod) ? this.preferredMethod : 'docker';
+        const rest = all.filter(m => m !== pref);
+        const orderedMethods = [pref, ...rest];
 
-      for (const method of orderedMethods) {
-        try {
-          if (method === 'docker') {
-            if (await this.startWithDocker()) { this.detectedMethod = 'docker'; console.log('🔌 Conectado con DOCKER'); return true; }
-          } else if (method === 'wsl') {
-            if (await this.startWithWSL()) { this.detectedMethod = 'wsl'; console.log('🔌 Conectado con WSL'); return true; }
-          } else if (method === 'native') {
-            if (await this.startWithNative()) { this.detectedMethod = 'native'; console.log('🔌 Conectado con NATIVE'); return true; }
-          } else if (method === 'mock') {
-            if (await this.startMockMode()) { this.detectedMethod = 'mock'; console.log('🔌 Conectado con MOCK'); return true; }
+        for (const method of orderedMethods) {
+          try {
+            if (method === 'docker') {
+              if (await this.startWithDocker()) { this.detectedMethod = 'docker'; console.log('🔌 Conectado con DOCKER'); return true; }
+            } else if (method === 'wsl') {
+              if (await this.startWithWSL()) { this.detectedMethod = 'wsl'; console.log('🔌 Conectado con WSL'); return true; }
+            } else if (method === 'native') {
+              if (await this.startWithNative()) { this.detectedMethod = 'native'; console.log('🔌 Conectado con NATIVE'); return true; }
+            } else if (method === 'mock') {
+              if (await this.startMockMode()) { this.detectedMethod = 'mock'; console.log('🔌 Conectado con MOCK'); return true; }
+            }
+          } catch (e) {
+            // Error intentando método
           }
-        } catch (e) {
-          // Error intentando método
         }
-      }
 
-      throw new Error('No se pudo iniciar guacd con ningún método');
+        throw new Error('No se pudo iniciar guacd con ningún método');
       } catch (error) {
         console.error('❌ Error inicializando GuacdService:', error);
         return false;
@@ -738,19 +747,19 @@ class GuacdService {
   async restart() {
     try {
       console.log('🔄 Reiniciando GuacdService con preferencia:', this.preferredMethod);
-      
+
       // Detener el servicio actual si está corriendo
       if (this.isRunning) {
         await this.stop();
       }
-      
+
       // Limpiar estado
       this.isRunning = false;
       this.detectedMethod = null;
-      
+
       // Pequeña pausa para asegurar que el puerto se libere
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Reinicializar con la nueva preferencia
       return await this.initialize();
     } catch (error) {
@@ -766,14 +775,14 @@ class GuacdService {
     return new Promise((resolve) => {
       // Verificar si Docker está disponible y corriendo
       // En aplicaciones empaquetadas, usar PATH completo para Docker
-      const dockerCommand = process.platform === 'darwin' ? 
-        '/usr/local/bin/docker' : 
-        process.platform === 'win32' ? 
-          'docker.exe' : 
+      const dockerCommand = process.platform === 'darwin' ?
+        '/usr/local/bin/docker' :
+        process.platform === 'win32' ?
+          'docker.exe' :
           'docker';
-      
+
       // Verificando Docker
-      
+
       exec(`${dockerCommand} --version`, (error) => {
         if (error) {
           console.log('❌ Docker no está disponible:', error.message);
@@ -800,12 +809,12 @@ class GuacdService {
 
   _checkDockerRunning(resolve, dockerCommand = 'docker') {
     // Verificar si Docker Desktop está corriendo
-      exec(`${dockerCommand} ps`, (dockerError) => {
-        if (dockerError) {
-          console.log('❌ Docker Desktop no está corriendo');
-          resolve(false);
-          return;
-        }
+    exec(`${dockerCommand} ps`, (dockerError) => {
+      if (dockerError) {
+        console.log('❌ Docker Desktop no está corriendo');
+        resolve(false);
+        return;
+      }
 
       // Intentar iniciar contenedor guacd con imagen multi-arquitectura
       const dockerArgs = [
@@ -863,31 +872,31 @@ class GuacdService {
   async _forceDockerContainerRecreation() {
     try {
       console.log('[GuacdService] Deteniendo contenedor Docker existente...');
-      
+
       // Detener y eliminar el contenedor existente
       const { exec } = require('child_process');
       const util = require('util');
       const execAsync = util.promisify(exec);
-      
+
       try {
         await execAsync('docker stop nodeterm-guacd');
         console.log('[GuacdService] Contenedor detenido exitosamente');
       } catch (error) {
         console.log('[GuacdService] Contenedor no estaba corriendo o ya fue eliminado');
       }
-      
+
       try {
         await execAsync('docker rm nodeterm-guacd');
         console.log('[GuacdService] Contenedor eliminado exitosamente');
       } catch (error) {
         console.log('[GuacdService] Contenedor no existía o ya fue eliminado');
       }
-      
+
       // Reiniciar guacd con la nueva configuración
       console.log('[GuacdService] Reiniciando guacd con nueva carpeta:', this.driveHostDir);
       this.isRunning = false;
       await this.startWithDocker();
-      
+
     } catch (error) {
       console.error('[GuacdService] Error recreando contenedor Docker:', error);
     }
@@ -969,7 +978,7 @@ class GuacdService {
                 testResolve();
               });
             });
-          } catch (_) {}
+          } catch (_) { }
         }
       }
 
@@ -991,7 +1000,7 @@ class GuacdService {
         if (isWindows) {
           try {
             envVars.PATH = `${finalCwd};${envVars.PATH || ''}`;
-          } catch (_) {}
+          } catch (_) { }
         }
         // Intentar configurar ruta de plugins de FreeRDP si existe
         try {
@@ -1000,7 +1009,7 @@ class GuacdService {
             envVars.FREERDP_PLUGIN_PATH = pluginsDir;
             console.log('🔧 FREERDP_PLUGIN_PATH =', pluginsDir);
           }
-        } catch (_) {}
+        } catch (_) { }
 
         this.guacdProcess = spawn(guacdPath, ['-f', '-p', this.port.toString()], {
           cwd: finalCwd,
@@ -1076,7 +1085,7 @@ class GuacdService {
           }
           r();
         }));
-        
+
         if (!guacdAvailable) {
           console.log('📦 guacd no está instalado en WSL. Instalando automáticamente...');
           let installSuccess = false;
@@ -1096,7 +1105,7 @@ class GuacdService {
               r();
             });
           });
-          
+
           if (!installSuccess) {
             resolve(false);
             return;
@@ -1112,7 +1121,7 @@ class GuacdService {
           portInUse = result === 'YES';
           r();
         }));
-        
+
         if (portInUse) {
           console.log(`⚠️ El puerto ${this.port} está ocupado en WSL. Intentando detener procesos guacd existentes...`);
           // Intentar detener procesos guacd existentes
@@ -1137,11 +1146,11 @@ class GuacdService {
         // - guacd debe escuchar en 0.0.0.0 dentro de WSL (todas las interfaces)
         // - Windows conecta via localhost:4822 (WSL2 reenvía automáticamente)
         const bindIp = '0.0.0.0';
-        
+
         // Establecer el host ANTES de iniciar para evitar race conditions
         // Windows usará localhost gracias al localhost forwarding de WSL2
         this.host = '127.0.0.1';
-        
+
         console.log(`🔧 [WSL] guacd bind: ${bindIp}:${this.port} → Windows accede via ${this.host}:${this.port}`);
         // IMPORTANTE (WSL): no usar `-f` (foreground) + `&` desde `sh -lc`, porque el proceso puede morir al cerrar el shell.
         // Dejamos que guacd demonize normalmente para que permanezca vivo.
@@ -1186,10 +1195,10 @@ class GuacdService {
           const checkInterval = 500; // Verificar cada 500ms
           const startTime = Date.now();
           let verified = false;
-          
+
           while (!verified && (Date.now() - startTime) < maxWaitTime) {
             await new Promise(r => setTimeout(r, checkInterval));
-            
+
             try {
               const available = await this.isPortAvailable(this.port);
               if (!available) {
@@ -1201,7 +1210,7 @@ class GuacdService {
               // Continuar verificando
             }
           }
-          
+
           // Si localhost no funcionó después del timeout, intentar con IP de WSL directamente (fallback)
           if (!verified) {
             let wslIp = null;
@@ -1233,16 +1242,16 @@ class GuacdService {
               // noop
             }
           }
-          
+
           if (verified) {
             this.isRunning = true;
             this.detectedMethod = 'wsl';
             this.guacdProcess = null;
             console.log(`✅ [WSL] guacd accesible desde Windows via ${this.host}:${this.port}`);
-            
+
             // Iniciar health check periódico para WSL
             this._startHealthCheck();
-            
+
             resolve(true);
           } else {
             console.log('❌ [WSL] guacd no accesible desde Windows después de esperar');
@@ -1261,14 +1270,14 @@ class GuacdService {
       // Simular que guacd está corriendo
       this.isRunning = true;
       this.detectedMethod = 'mock';
-      
+
       // Simular un proceso que se puede detener
       this.guacdProcess = {
         kill: () => {
           this.isRunning = false;
         }
       };
-      
+
       resolve(true);
     });
   }
@@ -1279,19 +1288,19 @@ class GuacdService {
   async isPortAvailable(port) {
     return new Promise((resolve) => {
       const socket = new net.Socket();
-      
+
       socket.setTimeout(1000); // Timeout optimizado para conexión más rápida
-      
+
       socket.on('connect', () => {
         socket.destroy();
         resolve(false); // Puerto ocupado (guacd corriendo)
       });
-      
+
       socket.on('timeout', () => {
         socket.destroy();
         resolve(true); // Puerto disponible
       });
-      
+
       socket.on('error', (error) => {
         resolve(true); // Puerto disponible
       });
@@ -1305,7 +1314,7 @@ class GuacdService {
   async stop() {
     // Detener health check si está activo
     this._stopHealthCheck();
-    
+
     // Intentar detener aunque isRunning sea false (p.ej. proceso externo/preexistente).
     if (!this.isRunning && !this.detectedMethod && !this.guacdProcess) {
       return;
@@ -1316,12 +1325,12 @@ class GuacdService {
     try {
       if (this.detectedMethod === 'docker') {
         // Detener contenedor Docker
-        const dockerCommand = process.platform === 'darwin' ? 
-          '/usr/local/bin/docker' : 
-          process.platform === 'win32' ? 
-            'docker.exe' : 
+        const dockerCommand = process.platform === 'darwin' ?
+          '/usr/local/bin/docker' :
+          process.platform === 'win32' ?
+            'docker.exe' :
             'docker';
-        
+
         exec(`${dockerCommand} stop nodeterm-guacd`, (error) => {
           if (error) {
             console.error('Error deteniendo contenedor Docker:', error);
@@ -1330,7 +1339,7 @@ class GuacdService {
               exec('docker stop nodeterm-guacd', (error2) => {
                 if (error2) {
                   console.error('Error deteniendo contenedor Docker (genérico):', error2);
-            }
+                }
               });
             }
           }
@@ -1370,7 +1379,7 @@ class GuacdService {
         method = 'unknown';
       }
     }
-    
+
     return {
       isRunning: this.isRunning,
       method: method,
@@ -1385,12 +1394,12 @@ class GuacdService {
   async detectRunningMethod() {
     return new Promise((resolve) => {
       // Verificar Docker primero
-      const dockerCommand = process.platform === 'darwin' ? 
-        '/usr/local/bin/docker' : 
-        process.platform === 'win32' ? 
-          'docker.exe' : 
+      const dockerCommand = process.platform === 'darwin' ?
+        '/usr/local/bin/docker' :
+        process.platform === 'win32' ?
+          'docker.exe' :
           'docker';
-      
+
       exec(`${dockerCommand} ps --filter "name=nodeterm-guacd" --format "{{.Names}}"`, (dockerErr, dockerOut) => {
         if (!dockerErr && dockerOut.trim() === 'nodeterm-guacd') {
           console.log('🐳 Detectado: guacd corriendo en Docker');
@@ -1398,7 +1407,7 @@ class GuacdService {
           resolve();
           return;
         }
-        
+
         // Si falla con ruta completa, intentar con comando genérico
         if (dockerCommand !== 'docker') {
           exec('docker ps --filter "name=nodeterm-guacd" --format "{{.Names}}"', (dockerErr2, dockerOut2) => {
@@ -1424,7 +1433,7 @@ class GuacdService {
       resolve();
       return;
     }
-    
+
     // Usar la distribución WSL por defecto (sin especificar -d)
     const tryWSL = async () => {
       let found = false;
@@ -1435,11 +1444,11 @@ class GuacdService {
           if (out.includes(`${this.port}`)) {
             // No establecer distribución específica (usar por defecto)
             this.wslDistro = null;
-            
+
             // Verificar si está escuchando en 0.0.0.0 (correcto) o solo en 127.0.0.1 (incorrecto)
             const isListeningOnAll = out.includes('0.0.0.0') || out.includes('::');
             const isListeningOnLocalhost = out.includes('127.0.0.1');
-            
+
             if (isListeningOnAll) {
               // Está bien configurado, accesible desde Windows
               this.host = '127.0.0.1'; // Windows accede via localhost
@@ -1481,7 +1490,7 @@ class GuacdService {
             }
           } else { r(); }
         }));
-      } catch {}
+      } catch { }
       if (!found) {
         // En Windows, no hay guacd nativo, solo Docker o WSL
         this.detectedMethod = 'unknown';
@@ -1558,25 +1567,25 @@ class GuacdService {
    */
   resolveDrivePath(hostDir) {
     const method = this.detectedMethod || this.preferredMethod || '';
-    
+
     // NUEVA VALIDACIÓN: Normalizar ruta para el SO actual
     const originalDir = typeof hostDir === 'string' && hostDir.trim().length > 0 ? hostDir.trim() : this.driveHostDir;
     const dir = normalizePathForCurrentOS(originalDir);
-    
+
     // Si la ruta fue corregida automáticamente, actualizar driveHostDir
     if (originalDir !== dir) {
       this.driveHostDir = dir;
     }
-    
+
     if (method === 'docker') {
       if (dir && this.driveHostDir && path.resolve(dir) !== path.resolve(this.driveHostDir)) {
         console.warn('[GuacdService] Advertencia: método docker activo; el volumen está montado en', this.driveHostDir, 'y no puede cambiarse sin reiniciar guacd.');
         console.log('[GuacdService] Nueva carpeta solicitada:', dir);
         console.log('[GuacdService] Actualizando driveHostDir y forzando recreación del contenedor...');
-        
+
         // Actualizar la carpeta del host
         this.driveHostDir = dir;
-        
+
         // Forzar recreación del contenedor Docker con la nueva carpeta
         this._forceDockerContainerRecreation();
       } else {

@@ -496,7 +496,7 @@ const SettingsDialog = ({
         setUpdateStatus('idle');
         setUpdateInfo(null);
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, [activeMainTab]);
 
   // Función para cambiar el canal de actualizaciones
@@ -892,8 +892,12 @@ const SettingsDialog = ({
   }, []);
 
   useEffect(() => {
-    // Verificar si hay clave maestra guardada
-    setHasMasterKey(secureStorage.hasSavedMasterKey());
+    const checkMasterKey = async () => {
+      // Verificar si hay clave maestra guardada (async para multi-instancia)
+      const hasKey = await secureStorage.checkHasSavedMasterKey();
+      setHasMasterKey(hasKey);
+    };
+    checkMasterKey();
   }, [secureStorage]);
 
   // Persistir configuración del botón de inicio

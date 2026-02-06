@@ -5,33 +5,33 @@ import { initSimpleMatrixAnimation, initSimpleMatrixBlueAnimation, cleanupMatrix
 function hexToRgba(hex, alpha) {
   if (!hex || typeof hex !== 'string') return 'rgba(0,0,0,0)';
   if (!hex.startsWith('#')) return hex;
-  
+
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
-  
+
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 // Función para ajustar el brillo de un color hex
 function adjustColorBrightness(hex, percent) {
   if (!hex || typeof hex !== 'string' || !hex.startsWith('#')) return hex;
-  
+
   let r = parseInt(hex.slice(1, 3), 16);
   let g = parseInt(hex.slice(3, 5), 16);
   let b = parseInt(hex.slice(5, 7), 16);
-  
+
   // Determinar si el color es claro u oscuro
   const brightness = (0.299 * r + 0.587 * g + 0.114 * b);
   const isDark = brightness < 128;
-  
+
   // Ajustar el brillo: si es oscuro, hacerlo más claro; si es claro, hacerlo más oscuro
   const adjustment = isDark ? percent : -percent;
-  
+
   r = Math.min(255, Math.max(0, Math.round(r + (adjustment / 100) * 255)));
   g = Math.min(255, Math.max(0, Math.round(g + (adjustment / 100) * 255)));
   b = Math.min(255, Math.max(0, Math.round(b + (adjustment / 100) * 255)));
-  
+
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
@@ -48,10 +48,35 @@ class ThemeManager {
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
           setTimeout(() => this.applyCheckboxStyles(), 100);
+          this.loadSharedTheme(); // Cargar tema compartido
         });
       } else {
         setTimeout(() => this.applyCheckboxStyles(), 100);
+        this.loadSharedTheme(); // Cargar tema compartido
       }
+    }
+  }
+
+  // Cargar tema desde archivo compartido (Sync)
+  async loadSharedTheme() {
+    try {
+      if (window.electron && window.electron.theme) {
+        const sharedConfig = await window.electron.theme.get();
+        if (sharedConfig && sharedConfig.themeName) {
+          console.log('[ThemeManager] Cargando tema compartido:', sharedConfig.themeName);
+          // Aplicar sin guardar para evitar bucle infinito si fuera bidireccional
+          this._applyThemeInternal(sharedConfig.themeName, false);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Error cargando tema compartido:', e);
+    }
+
+    // Fallback a localStorage si no hay compartido
+    const savedTheme = localStorage.getItem('ui_theme');
+    if (savedTheme) {
+      this.applyTheme(savedTheme);
     }
   }
 
@@ -63,6 +88,10 @@ class ThemeManager {
   }
 
   applyTheme(themeName) {
+    this._applyThemeInternal(themeName, true);
+  }
+
+  _applyThemeInternal(themeName, save = true) {
     const theme = uiThemes[themeName];
     if (!theme) {
       console.warn(`[THEME] Theme "${themeName}" not found. Available themes:`, Object.keys(uiThemes));
@@ -71,16 +100,24 @@ class ThemeManager {
 
     this.currentTheme = theme;
     this.generateCSS(theme);
-    
+
     // Aplicar animaciones si es un tema animado
     this.applyAnimations(theme);
-    
+
     // Aplicar configuración del icono interactivo
     this.applyInteractiveIcon();
-    
-    // Guardar el tema seleccionado
-    localStorage.setItem('ui_theme', themeName);
-    
+
+    // Guardar el tema seleccionado localmente
+    if (save) {
+      localStorage.setItem('ui_theme', themeName);
+    }
+
+    // Sincronizar globalmente si es necesario
+    if (save && window.electron && window.electron.theme) {
+      window.electron.theme.save({ themeName: themeName })
+        .catch(err => console.warn('Error syncing theme:', err));
+    }
+
     // Emitir evento global para notificar cambio de tema
     if (typeof window !== 'undefined') {
       // Usar setTimeout para asegurar que el tema se haya aplicado completamente
@@ -108,7 +145,7 @@ class ThemeManager {
     const sidebarBgIsLight = isColorLight(colors.sidebarBackground);
     const sidebarButtonText = colors.sidebarText;
     const palette = theme.statusBarPalette || {};
-    
+
     // Verificar si se debe usar colores primarios para titlebar
     const usePrimaryColorsForTitlebar = localStorage.getItem('use_primary_colors_titlebar') === 'true';
     const css = `
@@ -667,7 +704,7 @@ class ThemeManager {
     // Logs de debug removidos para limpiar la consola
     this.styleElement.textContent = css;
     // Log de debug removido para limpiar la consola
-    
+
     // Verificar que las variables CSS se aplicaron (sin logging)
     setTimeout(() => {
       const rootStyles = getComputedStyle(document.documentElement);
@@ -679,35 +716,35 @@ class ThemeManager {
 
   applyCheckboxStyles() {
     if (typeof document === 'undefined') return;
-    
+
     // Obtener el color primario del tema actual o de las variables CSS
     const root = document.documentElement;
-    const primaryColor = this.currentTheme?.colors?.buttonPrimary || 
-                        getComputedStyle(root).getPropertyValue('--primary-color').trim() ||
-                        getComputedStyle(root).getPropertyValue('--ui-button-primary').trim() ||
-                        '#6366f1'; // Fallback
-    
-    const primaryColorText = this.currentTheme?.colors?.buttonPrimaryText || 
-                            getComputedStyle(root).getPropertyValue('--primary-color-text').trim() ||
-                            getComputedStyle(root).getPropertyValue('--ui-button-primary-text').trim() ||
-                            '#ffffff'; // Fallback
-    
+    const primaryColor = this.currentTheme?.colors?.buttonPrimary ||
+      getComputedStyle(root).getPropertyValue('--primary-color').trim() ||
+      getComputedStyle(root).getPropertyValue('--ui-button-primary').trim() ||
+      '#6366f1'; // Fallback
+
+    const primaryColorText = this.currentTheme?.colors?.buttonPrimaryText ||
+      getComputedStyle(root).getPropertyValue('--primary-color-text').trim() ||
+      getComputedStyle(root).getPropertyValue('--ui-button-primary-text').trim() ||
+      '#ffffff'; // Fallback
+
     // Buscar todos los checkboxes marcados
     const checkboxes = document.querySelectorAll('.p-checkbox-box.p-highlight, .p-checkbox-box.p-checkbox-checked, .p-checkbox.p-checkbox-checked .p-checkbox-box');
-    
+
     checkboxes.forEach(box => {
       // Aplicar estilos directamente al elemento con !important usando setProperty
       box.style.setProperty('background', primaryColor, 'important');
       box.style.setProperty('background-color', primaryColor, 'important');
       box.style.setProperty('border-color', primaryColor, 'important');
-      
+
       // Aplicar color al icono si existe
       const icon = box.querySelector('.p-checkbox-icon, .pi');
       if (icon) {
         icon.style.setProperty('color', primaryColorText, 'important');
       }
     });
-    
+
     // También aplicar a checkboxes que puedan tener el estado en el input
     const checkboxInputs = document.querySelectorAll('input[type="checkbox"]:checked');
     checkboxInputs.forEach(input => {
@@ -719,7 +756,7 @@ class ThemeManager {
         box.classList.add('p-highlight', 'p-checkbox-checked');
       }
     });
-    
+
     // Usar MutationObserver para aplicar estilos a checkboxes que se creen después
     if (!this.checkboxObserver && typeof MutationObserver !== 'undefined') {
       this.checkboxObserver = new MutationObserver(() => {
@@ -729,7 +766,7 @@ class ThemeManager {
           this.applyCheckboxStyles();
         }, 50);
       });
-      
+
       if (document.body) {
         this.checkboxObserver.observe(document.body, {
           childList: true,
@@ -739,7 +776,7 @@ class ThemeManager {
         });
       }
     }
-    
+
     // También escuchar cambios en checkboxes
     if (!this.checkboxChangeListener) {
       this.checkboxChangeListener = (e) => {
@@ -756,23 +793,23 @@ class ThemeManager {
     this.cleanupAutumnLeaves();
     this.cleanupForestMist();
     cleanupMatrixAnimation();
-    
+
     // Verificar si el tema tiene animaciones
     if (theme.colors && theme.colors.animationType) {
       const animationType = theme.colors.animationType;
-      
+
       // Aplicar animación a la barra del menú superior
       const titleBar = document.querySelector('.title-bar');
       if (titleBar) {
         titleBar.setAttribute('data-animation', animationType);
-        
+
         // Para Space Station Animated, agregar estrellas adicionales
         if (animationType === 'space-station') {
           this.addSpaceStationStars(titleBar);
         } else {
           this.removeSpaceStationStars(titleBar);
         }
-        
+
         // Para Matrix Animated, agregar animación JavaScript simple
         if (animationType === 'matrix') {
           initSimpleMatrixAnimation();
@@ -791,7 +828,7 @@ class ThemeManager {
           cleanupMatrixAnimation();
         }
       }
-      
+
       // Aplicar animación al buscador - múltiples selectores para mayor compatibilidad
       const searchSelectors = [
         '.search-input',
@@ -800,7 +837,7 @@ class ThemeManager {
         '.title-bar input[type="text"]',
         '.title-bar .p-inputtext'
       ];
-      
+
       let searchInput = null;
       for (const selector of searchSelectors) {
         searchInput = document.querySelector(selector);
@@ -809,19 +846,19 @@ class ThemeManager {
           break;
         }
       }
-      
+
       // Aplicar animación a la sidebar
       const sidebar = document.querySelector('.sidebar-container');
       if (sidebar) {
         sidebar.setAttribute('data-animation', animationType);
       }
-      
+
       // Aplicar animación a la status bar
       const statusBar = document.querySelector('.status-bar');
       if (statusBar) {
         statusBar.setAttribute('data-animation', animationType);
       }
-      
+
       // Escuchar cambios en la velocidad de animación para actualizar las estrellas
       this.setupAnimationSpeedListener();
     } else {
@@ -833,10 +870,10 @@ class ThemeManager {
   addSpaceStationStars(titleBar) {
     // Remover estrellas existentes primero
     this.removeSpaceStationStars(titleBar);
-    
+
     // Obtener la velocidad de animación actual
     const animSpeed = document.documentElement.getAttribute('data-tab-anim-speed') || 'normal';
-    
+
     // Multiplicadores de velocidad basados en el selector
     const speedMultipliers = {
       'slow': 3.0,    // 3x más lento
@@ -844,9 +881,9 @@ class ThemeManager {
       'fast': 1.5,    // 1.5x más lento
       'turbo': 1.0    // Velocidad base
     };
-    
+
     const speedMultiplier = speedMultipliers[animSpeed] || 2.0;
-    
+
     // Crear muchas más estrellas para mayor densidad con velocidad MUY reducida
     const starPositions = [
       // Primera fila de estrellas (velocidad MUY lenta)
@@ -863,7 +900,7 @@ class ThemeManager {
       { left: '80%', size: '8px', delay: '5.5s', duration: `${Math.round(90 * speedMultiplier)}s` },
       { left: '88%', size: '6px', delay: '6s', duration: `${Math.round(80 * speedMultiplier)}s` },
       { left: '95%', size: '9px', delay: '6.5s', duration: `${Math.round(110 * speedMultiplier)}s` },
-      
+
       // Segunda fila de estrellas (más pequeñas pero también MUY lentas)
       { left: '8%', size: '4px', delay: '7s', duration: `${Math.round(70 * speedMultiplier)}s` },
       { left: '18%', size: '5px', delay: '7.5s', duration: `${Math.round(75 * speedMultiplier)}s` },
@@ -873,7 +910,7 @@ class ThemeManager {
       { left: '68%', size: '4px', delay: '9.5s', duration: `${Math.round(60 * speedMultiplier)}s` },
       { left: '78%', size: '6px', delay: '10s', duration: `${Math.round(85 * speedMultiplier)}s` },
       { left: '90%', size: '5px', delay: '10.5s', duration: `${Math.round(75 * speedMultiplier)}s` },
-      
+
       // Tercera fila de estrellas (variedad de tamaños, velocidad MUY lenta)
       { left: '3%', size: '12px', delay: '11s', duration: `${Math.round(140 * speedMultiplier)}s` },
       { left: '15%', size: '9px', delay: '11.5s', duration: `${Math.round(115 * speedMultiplier)}s` },
@@ -885,7 +922,7 @@ class ThemeManager {
       { left: '85%', size: '12px', delay: '14.5s', duration: `${Math.round(135 * speedMultiplier)}s` },
       { left: '92%', size: '9px', delay: '15s', duration: `${Math.round(110 * speedMultiplier)}s` }
     ];
-    
+
     starPositions.forEach((star, index) => {
       const starElement = document.createElement('div');
       starElement.className = `star-${index + 1}`;
@@ -915,7 +952,7 @@ class ThemeManager {
     if (this.animationSpeedObserver) {
       this.animationSpeedObserver.disconnect();
     }
-    
+
     // Crear un observer para detectar cambios en el atributo data-tab-anim-speed
     this.animationSpeedObserver = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -928,7 +965,7 @@ class ThemeManager {
         }
       });
     });
-    
+
     // Observar cambios en el documentElement
     this.animationSpeedObserver.observe(document.documentElement, {
       attributes: true,
@@ -942,14 +979,14 @@ class ThemeManager {
       this.animationSpeedObserver.disconnect();
       this.animationSpeedObserver = null;
     }
-    
+
     // Remover animación Matrix si existe
     cleanupMatrixAnimation();
-    
+
     // Limpiar todas las animaciones específicas
     this.cleanupAutumnLeaves();
     this.cleanupForestMist();
-    
+
     // Remover atributos de animación de todos los elementos
     const elements = document.querySelectorAll('[data-animation]');
     elements.forEach(element => {
@@ -963,13 +1000,13 @@ class ThemeManager {
     // Limpiar hojas de otoño existentes
     const existingLeaves = document.querySelectorAll('.autumn-leaf');
     existingLeaves.forEach(leaf => leaf.remove());
-    
+
     // Limpiar contenedor de hojas de otoño
     const leafContainer = document.querySelector('.autumn-leaf-container');
     if (leafContainer) {
       leafContainer.remove();
     }
-    
+
     // Limpiar estilos CSS dinámicos de hojas de otoño
     const existingStyles = document.querySelectorAll('style');
     existingStyles.forEach(style => {
@@ -983,13 +1020,13 @@ class ThemeManager {
     // Limpiar hojas de bosque existentes
     const existingLeaves = document.querySelectorAll('.forest-leaf');
     existingLeaves.forEach(leaf => leaf.remove());
-    
+
     // Limpiar contenedor de hojas de bosque
     const leafContainer = document.querySelector('.forest-leaf-container');
     if (leafContainer) {
       leafContainer.remove();
     }
-    
+
     // Limpiar estilos CSS dinámicos de hojas de bosque
     const existingStyles = document.querySelectorAll('style');
     existingStyles.forEach(style => {
@@ -1017,7 +1054,7 @@ class ThemeManager {
     // Limpiar todas las animaciones existentes antes de crear nuevas
     this.cleanupAutumnLeaves();
     this.cleanupForestMist();
-    
+
     // Crear contenedor para las hojas si no existe
     let leafContainer = document.querySelector('.autumn-leaf-container');
     if (!leafContainer) {
@@ -1033,40 +1070,40 @@ class ThemeManager {
         z-index: 1000;
         overflow: hidden;
       `;
-      
+
       const titleBar = document.querySelector('.title-bar[data-animation="autumn-leaves"]');
       if (titleBar) {
         titleBar.appendChild(leafContainer);
       }
     }
-    
+
     // Crear 25 hojas con posiciones aleatorias (más hojas)
     for (let i = 0; i < 25; i++) {
       const leaf = document.createElement('div');
       leaf.className = 'autumn-leaf';
-      
+
       // Posición horizontal aleatoria (5% a 95%)
       const randomLeft = Math.random() * 90 + 5;
-      
+
       // Tipo de hoja aleatorio solo otoñales
       const leafTypes = ['🍂', '🍁', '🍂', '🍁', '🍂', '🍁', '🍂', '🍁', '🍂', '🍁'];
       const randomLeaf = leafTypes[Math.floor(Math.random() * leafTypes.length)];
-      
+
       // Tamaño aleatorio
       const randomSize = Math.random() * 8 + 10; // 10px a 18px (más grandes)
-      
+
       // Velocidad aleatoria MUY LENTA
       const randomDuration = Math.random() * 12 + 18; // 18s a 30s (muy lento)
-      
+
       // Delay aleatorio
       const randomDelay = Math.random() * 40; // 0s a 40s
-      
+
       // Desplazamiento lateral aleatorio
       const randomDrift = (Math.random() - 0.5) * 120; // -60px a +60px
-      
+
       // Rotación aleatoria
       const randomRotation = Math.random() * 360; // 0° a 360°
-      
+
       leaf.textContent = randomLeaf;
       leaf.style.cssText = `
         position: absolute;
@@ -1079,7 +1116,7 @@ class ThemeManager {
         transform: rotate(${randomRotation}deg);
         filter: hue-rotate(${Math.random() * 60 - 30}deg) saturate(1.2) brightness(1.1);
       `;
-      
+
       // Agregar animación CSS dinámica
       const style = document.createElement('style');
       style.textContent = `
@@ -1097,10 +1134,10 @@ class ThemeManager {
         }
       `;
       document.head.appendChild(style);
-      
+
       leafContainer.appendChild(leaf);
     }
-    
+
     // Renovar las hojas cada 45 segundos para mantener variedad
     setTimeout(() => {
       this.initAutumnLeaves();
@@ -1111,7 +1148,7 @@ class ThemeManager {
     // Limpiar todas las animaciones existentes antes de crear nuevas
     this.cleanupAutumnLeaves();
     this.cleanupForestMist();
-    
+
     // Crear contenedor para las hojas si no existe
     let leafContainer = document.querySelector('.forest-leaf-container');
     if (!leafContainer) {
@@ -1127,40 +1164,40 @@ class ThemeManager {
         z-index: 1000;
         overflow: hidden;
       `;
-      
+
       const titleBar = document.querySelector('.title-bar[data-animation="forest-mist"]');
       if (titleBar) {
         titleBar.appendChild(leafContainer);
       }
     }
-    
+
     // Crear 20 hojas verdes del bosque con posiciones aleatorias
     for (let i = 0; i < 20; i++) {
       const leaf = document.createElement('div');
       leaf.className = 'forest-leaf';
-      
+
       // Posición horizontal aleatoria (5% a 95%)
       const randomLeft = Math.random() * 90 + 5;
-      
+
       // Tipo de hoja verde del bosque
       const leafTypes = ['🌿', '🍃', '🌱', '🌾', '🌿', '🍃', '🌱', '🌾', '🌿', '🍃'];
       const randomLeaf = leafTypes[Math.floor(Math.random() * leafTypes.length)];
-      
+
       // Tamaño aleatorio
       const randomSize = Math.random() * 6 + 8; // 8px a 14px
-      
+
       // Velocidad aleatoria
       const randomDuration = Math.random() * 8 + 10; // 10s a 18s
-      
+
       // Delay aleatorio
       const randomDelay = Math.random() * 25; // 0s a 25s
-      
+
       // Desplazamiento lateral aleatorio
       const randomDrift = (Math.random() - 0.5) * 80; // -40px a +40px
-      
+
       // Rotación aleatoria
       const randomRotation = Math.random() * 360; // 0° a 360°
-      
+
       leaf.textContent = randomLeaf;
       leaf.style.cssText = `
         position: absolute;
@@ -1173,7 +1210,7 @@ class ThemeManager {
         transform: rotate(${randomRotation}deg);
         filter: hue-rotate(${Math.random() * 40 - 20}deg) saturate(1.3) brightness(1.2);
       `;
-      
+
       // Agregar animación CSS dinámica
       const style = document.createElement('style');
       style.textContent = `
@@ -1191,10 +1228,10 @@ class ThemeManager {
         }
       `;
       document.head.appendChild(style);
-      
+
       leafContainer.appendChild(leaf);
     }
-    
+
     // Renovar las hojas cada 40 segundos para mantener variedad
     setTimeout(() => {
       this.initForestMist();
@@ -1205,7 +1242,7 @@ class ThemeManager {
     // Verificar si el icono interactivo está habilitado
     const interactiveIconEnabled = localStorage.getItem('nodeterm_interactive_icon');
     const titleBar = document.querySelector('.title-bar');
-    
+
     if (titleBar) {
       if (interactiveIconEnabled === 'true') {
         titleBar.setAttribute('data-interactive-icon', 'true');

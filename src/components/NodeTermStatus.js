@@ -161,17 +161,23 @@ const NodeTermStatus = ({
 		window.addEventListener('storage', handleSyncStorageChange);
 
 		// Estado Vault
-		try {
-			const hasKey = secureStorageRef.current.hasSavedMasterKey();
-			setVaultState({ configured: hasKey, unlocked: false });
-			if (hasKey) {
-				secureStorageRef.current.getMasterKey().then(key => {
-					setVaultState({ configured: true, unlocked: !!key });
-				}).catch(() => {
-					setVaultState({ configured: true, unlocked: false });
-				});
-			}
-		} catch { }
+		const checkVaultStatus = async () => {
+			try {
+				const hasKey = await secureStorageRef.current.checkHasSavedMasterKey();
+				setVaultState(prev => ({ ...prev, configured: hasKey }));
+
+				if (hasKey) {
+					try {
+						// getMasterKey ya intenta cargar desde archivo si es necesario
+						const key = await secureStorageRef.current.getMasterKey();
+						setVaultState({ configured: true, unlocked: !!key });
+					} catch {
+						setVaultState({ configured: true, unlocked: false });
+					}
+				}
+			} catch { }
+		};
+		checkVaultStatus();
 
 		// Estado Guacd (IPC)
 		// 🚀 OPTIMIZACIÓN: Retrasar la primera llamada para no bloquear el arranque

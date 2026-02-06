@@ -21,13 +21,13 @@ class SecureStorage {
    */
   generateDeviceFingerprint() {
     if (this.deviceFingerprint) return this.deviceFingerprint;
-    
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     ctx.textBaseline = 'top';
     ctx.font = '14px Arial';
     ctx.fillText('NodeTerm Security', 2, 2);
-    
+
     const fingerprint = [
       navigator.userAgent,
       navigator.language,
@@ -36,7 +36,7 @@ class SecureStorage {
       canvas.toDataURL(),
       navigator.hardwareConcurrency || 'unknown'
     ].join('|');
-    
+
     this.deviceFingerprint = btoa(fingerprint).slice(0, 32);
     return this.deviceFingerprint;
   }
@@ -75,10 +75,10 @@ class SecureStorage {
     const enc = new TextEncoder();
     const salt = window.crypto.getRandomValues(new Uint8Array(16));
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
-    
+
     const key = await this.deriveKey(password, salt);
     const jsonData = JSON.stringify(data);
-    
+
     const encrypted = await window.crypto.subtle.encrypt(
       { name: 'AES-GCM', iv: iv },
       key,
@@ -101,9 +101,9 @@ class SecureStorage {
     const salt = new Uint8Array(encryptedObj.salt);
     const iv = new Uint8Array(encryptedObj.iv);
     const data = new Uint8Array(encryptedObj.data);
-    
+
     const key = await this.deriveKey(password, salt);
-    
+
     const decrypted = await window.crypto.subtle.decrypt(
       { name: 'AES-GCM', iv: iv },
       key,
@@ -123,8 +123,17 @@ class SecureStorage {
       { masterKey, savedAt: Date.now() },
       protectionKey
     );
-    
+
+    // Guardar en archivo compartido (Multi-Instance support)
+    if (window.electron && window.electron.security) {
+      try {
+        await window.electron.security.saveMasterKey(encrypted);
+      } catch (e) { console.error('Error saving master key to file:', e); }
+    }
+
+    // Mantener backup en localStorage
     localStorage.setItem('nodeterm_master_key', JSON.stringify(encrypted));
+
     this.masterKeyCache = masterKey;
     this.resetTimeout();
   }
@@ -134,16 +143,30 @@ class SecureStorage {
    */
   async loadMasterKey(sessionPassword = null) {
     try {
-      const stored = localStorage.getItem('nodeterm_master_key');
-      if (!stored) return null;
+      let encrypted = null;
 
-      const encrypted = JSON.parse(stored);
+      // Intentar cargar desde archivo compartido (Prioridad 1)
+      if (window.electron && window.electron.security) {
+        try {
+          const fromFile = await window.electron.security.getMasterKey();
+          if (fromFile) encrypted = fromFile;
+        } catch (e) { console.warn('Failed to load master key from file:', e); }
+      }
+
+      // Si no hay archivo, intentar localStorage (Prioridad 2 - Fallback/Legacy)
+      if (!encrypted) {
+        const stored = localStorage.getItem('nodeterm_master_key');
+        if (stored) encrypted = JSON.parse(stored);
+      }
+
+      if (!encrypted) return null;
+
       const protectionKey = sessionPassword || this.generateDeviceFingerprint();
-      
+
       const decrypted = await this.decryptData(encrypted, protectionKey);
       this.masterKeyCache = decrypted.masterKey;
       this.resetTimeout();
-      
+
       return decrypted.masterKey;
     } catch (error) {
       console.error('Error cargando clave maestra:', error);
@@ -154,15 +177,33 @@ class SecureStorage {
   /**
    * Verifica si existe una clave maestra guardada
    */
+  /**
+   * Verifica si existe una clave maestra guardada (Sync version supports only localStorage)
+   * @deprecated Use checkHasSavedMasterKey() for full support
+   */
   hasSavedMasterKey() {
     return localStorage.getItem('nodeterm_master_key') !== null;
   }
 
   /**
+   * Verifica asíncronamente si existe master key (Archivo o LocalStorage)
+   */
+  async checkHasSavedMasterKey() {
+    if (window.electron && window.electron.security) {
+      const hasFile = await window.electron.security.hasMasterKey();
+      if (hasFile) return true;
+    }
+    return this.hasSavedMasterKey();
+  }
+
+  /**
    * Elimina la clave maestra guardada
    */
-  clearMasterKey() {
+  async clearMasterKey() {
     localStorage.removeItem('nodeterm_master_key');
+    if (window.electron && window.electron.security) {
+      await window.electron.security.clearMasterKey();
+    }
     this.masterKeyCache = null;
     this.clearTimeout();
   }
@@ -209,7 +250,7 @@ class SecureStorage {
 
       const encrypted = JSON.parse(stored);
       const decrypted = await this.decryptData(encrypted, key);
-      
+
       return decrypted.sessions || [];
     } catch (error) {
       console.error('Error cargando sesiones:', error);
@@ -255,7 +296,7 @@ class SecureStorage {
     // Verificar clave antigua - intentar descifrar cualquier dato existente
     let validKey = false;
     let validationSuccess = [];
-    
+
     // Intentar verificar con conexiones (más común)
     const connectionsData = localStorage.getItem('connections_encrypted');
     if (connectionsData) {
@@ -294,10 +335,10 @@ class SecureStorage {
     }
 
     // Si no hay datos encriptados pero hay master key guardada, asumir que es válida
-    if (!validKey && this.hasSavedMasterKey() && 
-        !connectionsData && 
-        !localStorage.getItem('passwords_encrypted') && 
-        !localStorage.getItem('nodeterm_secure_sessions')) {
+    if (!validKey && this.hasSavedMasterKey() &&
+      !connectionsData &&
+      !localStorage.getItem('passwords_encrypted') &&
+      !localStorage.getItem('nodeterm_secure_sessions')) {
       console.log('No hay datos encriptados, pero hay master key guardada');
       validKey = true;
     }

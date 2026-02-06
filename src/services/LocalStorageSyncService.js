@@ -1,0 +1,185 @@
+/**
+ * LocalStorageSyncService - Sincronización de localStorage entre instancias
+ * 
+ * Este servicio resuelve el problema de que las instancias secundarias de Electron
+ * usan un directorio UserData temporal y no tienen acceso al localStorage de la
+ * instancia principal.
+ * 
+ * Funcionamiento:
+ * 1. Al iniciar, si es instancia secundaria, carga datos del archivo compartido
+ * 2. Después de cambios importantes, exporta localStorage al archivo compartido
+ */
+
+// Lista de claves críticas que deben sincronizarse
+const SYNC_KEYS = [
+    // Conexiones encriptadas
+    'connections_encrypted',
+    'passwords_encrypted',
+    'nodeterm_secure_sessions',
+
+    // Historial y favoritos
+    'nodeterm_connection_history',
+    'nodeterm_favorite_connections',
+
+    // Árbol de datos (conexiones organizadas)
+    'basicapp2_tree_data',
+
+    // Configuración de sincronización
+    'nodeterm_sync_config',
+
+    // Temas y configuración visual
+    'ui_theme',
+    'basicapp_statusbar_theme',
+    'basicapp_terminal_theme',
+    'iconTheme',
+    'explorerFont',
+    'explorerFontSize',
+    'explorerColorTheme',
+    'sidebarFont',
+    'sidebarFontSize',
+
+    // Configuración de terminal
+    'basicapp_statusbar_height',
+    'basicapp_local_terminal_font_family',
+    'basicapp_local_terminal_font_size',
+    'basicapp_local_powershell_theme',
+    'basicapp_local_linux_terminal_theme',
+
+    // Grupos de favoritos
+    'nodeterm_favorite_groups',
+    'nodeterm_group_assignments',
+    'nodeterm_filter_config',
+
+    // Master key (backup)
+    'nodeterm_master_key'
+];
+
+class LocalStorageSyncService {
+    constructor() {
+        this._initialized = false;
+        this._debounceTimer = null;
+    }
+
+    /**
+     * Inicializa el servicio y carga datos del archivo compartido si es necesario
+     */
+    async initialize() {
+        if (this._initialized) return;
+
+        try {
+            // Verificar si el API está disponible
+            if (!window.electron?.appdata) {
+                console.warn('[LocalStorageSync] API no disponible');
+                return;
+            }
+
+            // Cargar datos del archivo compartido
+            const sharedData = await window.electron.appdata.getAll();
+
+            if (sharedData) {
+                console.log('[LocalStorageSync] Cargando datos desde archivo compartido...');
+                this._importToLocalStorage(sharedData);
+                console.log('[LocalStorageSync] Datos cargados correctamente');
+            } else {
+                console.log('[LocalStorageSync] No hay datos compartidos, exportando localStorage actual...');
+                // Si no hay archivo compartido, exportar los datos actuales (esto ocurre en la primera ejecución)
+                await this.syncToFile();
+            }
+
+            this._initialized = true;
+
+            // 🔄 Auto-sync cuando la ventana pierde el foco (para que otras instancias vean cambios)
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden') {
+                    console.log('[LocalStorageSync] Ventana oculta, sincronizando datos...');
+                    this.syncToFile();
+                }
+            });
+
+            // 🔄 Sync periódico cada 30 segundos para mantener datos actualizados
+            setInterval(() => {
+                this.syncToFile();
+            }, 30000);
+
+        } catch (error) {
+            console.error('[LocalStorageSync] Error inicializando:', error);
+        }
+    }
+
+    /**
+     * Importa datos del archivo compartido a localStorage
+     */
+    _importToLocalStorage(data) {
+        let importedCount = 0;
+
+        for (const key of SYNC_KEYS) {
+            if (data[key] !== undefined && data[key] !== null) {
+                // Solo importar si no existe o está vacío en localStorage
+                const existing = localStorage.getItem(key);
+                if (!existing) {
+                    localStorage.setItem(key, data[key]);
+                    importedCount++;
+                }
+            }
+        }
+
+        console.log(`[LocalStorageSync] Importados ${importedCount} items a localStorage`);
+    }
+
+    /**
+     * Exporta localStorage a archivo compartido
+     */
+    async syncToFile() {
+        try {
+            console.log('[LocalStorageSync] Iniciando syncToFile...');
+
+            if (!window.electron?.appdata) {
+                console.warn('[LocalStorageSync] API appdata no disponible');
+                return;
+            }
+
+            const data = {};
+            let count = 0;
+            for (const key of SYNC_KEYS) {
+                const value = localStorage.getItem(key);
+                if (value !== null) {
+                    data[key] = value;
+                    count++;
+                }
+            }
+
+            console.log(`[LocalStorageSync] Encontradas ${count} claves para sincronizar`);
+
+            if (count === 0) {
+                console.log('[LocalStorageSync] No hay datos que sincronizar (localStorage vacío)');
+                return;
+            }
+
+            const result = await window.electron.appdata.saveAll(data);
+            if (result.success) {
+                console.log('[LocalStorageSync] ✅ Datos sincronizados a archivo compartido');
+            } else {
+                console.error('[LocalStorageSync] ❌ Error guardando:', result.error);
+            }
+        } catch (error) {
+            console.error('[LocalStorageSync] Error sincronizando a archivo:', error);
+        }
+    }
+
+    /**
+     * Sincroniza después de un cambio con debounce para evitar escrituras frecuentes
+     */
+    debouncedSync() {
+        if (this._debounceTimer) {
+            clearTimeout(this._debounceTimer);
+        }
+        this._debounceTimer = setTimeout(() => {
+            this.syncToFile();
+        }, 2000); // Esperar 2 segundos después del último cambio
+    }
+}
+
+// Singleton
+const localStorageSyncService = new LocalStorageSyncService();
+
+export default localStorageSyncService;

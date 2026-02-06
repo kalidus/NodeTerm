@@ -36,7 +36,7 @@ function setAppQuitting(quitting) {
 function getLinuxShell() {
   const { execSync } = require('child_process');
   const shells = ['bash', 'zsh', 'fish', 'sh'];
-  
+
   for (const shell of shells) {
     try {
       execSync(`which ${shell}`, { stdio: 'ignore' });
@@ -57,20 +57,26 @@ function startPowerShellSession(tabId, { cols, rows }) {
     console.log(`Evitando iniciar PowerShell para ${tabId} - aplicación cerrando`);
     return;
   }
-  
+
+  // Verificar que el PTY está inicializado
+  if (!getPtyFn) {
+    console.warn(`[PowerShellProcessManager] getPtyFn no inicializado para ${tabId}, omitiendo`);
+    return;
+  }
+
   try {
     // Verificar si ya hay un proceso activo
     if (powershellProcesses[tabId]) {
       const platform = os.platform();
       const shellName = platform === 'win32' ? 'PowerShell' : 'Terminal';
       console.log(`${shellName} ya existe para ${tabId}, reutilizando proceso existente`);
-      
+
       // Simular mensaje de bienvenida y refrescar prompt para procesos reutilizados
       if (mainWindow && mainWindow.webContents) {
         const welcomeMsg = `\r\n\x1b[32m=== Sesión ${shellName} reutilizada ===\x1b[0m\r\n`;
         mainWindow.webContents.send(`powershell:data:${tabId}`, welcomeMsg);
       }
-      
+
       // Refrescar prompt para mostrar estado actual
       setTimeout(() => {
         if (powershellProcesses[tabId]) {
@@ -81,14 +87,14 @@ function startPowerShellSession(tabId, { cols, rows }) {
           }
         }
       }, 300);
-      
+
       return;
     }
 
     // Determine shell and arguments based on OS
     let shell, args;
     const platform = os.platform();
-    
+
     if (platform === 'win32') {
       shell = 'powershell.exe';
       args = ['-NoExit'];
@@ -113,7 +119,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
       },
       windowsHide: false
     };
-    
+
     // Platform-specific configurations
     if (os.platform() === 'win32') {
       spawnOptions.useConpty = false;
@@ -130,18 +136,28 @@ function startPowerShellSession(tabId, { cols, rows }) {
         LC_ALL: process.env.LC_ALL || 'en_US.UTF-8'
       };
     }
-    
+
     // Intentar crear el proceso con manejo de errores robusto
     let spawnSuccess = false;
     let lastError = null;
-    
+
     const configsToTry = [
-      spawnOptions,
-      { ...alternativePtyConfig.conservative, cwd: os.homedir() },
-      { ...alternativePtyConfig.winpty, cwd: os.homedir() },
-      { ...alternativePtyConfig.minimal, cwd: os.homedir() }
+      spawnOptions
     ];
-    
+
+    // Solo añadir configuraciones alternativas si están disponibles
+    if (alternativePtyConfig) {
+      if (alternativePtyConfig.conservative) {
+        configsToTry.push({ ...alternativePtyConfig.conservative, cwd: os.homedir() });
+      }
+      if (alternativePtyConfig.winpty) {
+        configsToTry.push({ ...alternativePtyConfig.winpty, cwd: os.homedir() });
+      }
+      if (alternativePtyConfig.minimal) {
+        configsToTry.push({ ...alternativePtyConfig.minimal, cwd: os.homedir() });
+      }
+    }
+
     for (let i = 0; i < configsToTry.length && !spawnSuccess; i++) {
       try {
         powershellProcesses[tabId] = getPtyFn().spawn(shell, args, configsToTry[i]);
@@ -149,7 +165,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
       } catch (spawnError) {
         lastError = spawnError;
         console.warn(`Configuración ${i + 1} falló para PowerShell ${tabId}:`, spawnError.message);
-        
+
         if (powershellProcesses[tabId]) {
           try {
             powershellProcesses[tabId].kill();
@@ -160,7 +176,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
         }
       }
     }
-    
+
     if (!spawnSuccess) {
       // Último recurso: usar SafeWindowsTerminal para Windows
       if (os.platform() === 'win32') {
@@ -171,14 +187,14 @@ function startPowerShellSession(tabId, { cols, rows }) {
             env: process.env,
             windowsHide: false
           });
-          
+
           powershellProcesses[tabId] = safeTerminal.spawn();
           spawnSuccess = true;
         } catch (safeError) {
           console.error(`SafeWindowsTerminal también falló para ${tabId}:`, safeError.message);
         }
       }
-      
+
       if (!spawnSuccess) {
         throw new Error(`No se pudo iniciar PowerShell para ${tabId} después de probar todas las configuraciones: ${lastError?.message || 'Error desconocido'}`);
       }
@@ -208,11 +224,11 @@ function startPowerShellSession(tabId, { cols, rows }) {
       } else {
         actualExitCode = 0;
       }
-      
+
       delete powershellProcesses[tabId];
-      
+
       const needsRestart = actualExitCode === -1073741510;
-      
+
       if (needsRestart) {
         console.log(`PowerShell ${tabId} falló con código ${actualExitCode}, reiniciando en 1 segundo...`);
         setTimeout(() => {
@@ -235,7 +251,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
         }
       }
     });
-    
+
     // Agregar manejador de errores del proceso
     if (powershellProcesses[tabId] && powershellProcesses[tabId].pty) {
       powershellProcesses[tabId].on('error', (error) => {
@@ -289,16 +305,16 @@ function stopPowerShell(tabId) {
     try {
       const process = powershellProcesses[tabId];
       const pid = process.pid;
-      
+
       process.removeAllListeners();
-      
+
       // En Windows, usar taskkill directamente para evitar errores de AttachConsole
       if (os.platform() === 'win32') {
         try {
           const { execSync } = require('child_process');
           // Usar taskkill directamente sin llamar a destroy() para evitar
           // el error "AttachConsole failed" de node-pty
-          execSync(`taskkill /F /PID ${pid} /T`, { 
+          execSync(`taskkill /F /PID ${pid} /T`, {
             stdio: 'ignore',
             windowsHide: true
           });
@@ -312,7 +328,7 @@ function stopPowerShell(tabId) {
           // Ignorar errores de kill
         }
       }
-      
+
       delete powershellProcesses[tabId];
     } catch (error) {
       console.error(`Error stopping PowerShell ${tabId}:`, error);

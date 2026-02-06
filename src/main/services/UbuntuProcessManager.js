@@ -35,7 +35,13 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
     console.log(`Evitando iniciar Ubuntu para ${tabId} - aplicación cerrando`);
     return;
   }
-  
+
+  // Verificar que el PTY está inicializado
+  if (!getPtyFn) {
+    console.warn(`[UbuntuProcessManager] getPtyFn no inicializado para ${tabId}, omitiendo`);
+    return;
+  }
+
   try {
     // Kill existing process if any
     if (ubuntuProcesses[tabId]) {
@@ -49,7 +55,7 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
     // Determine shell and arguments for Ubuntu
     let shell, args;
     const platform = os.platform();
-    
+
     if (platform === 'win32') {
       // Usar el ejecutable específico de la versión de Ubuntu
       if (ubuntuInfo && ubuntuInfo.executable) {
@@ -80,7 +86,7 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
       },
       windowsHide: false
     };
-    
+
     // Platform-specific configurations
     if (os.platform() === 'win32') {
       spawnOptions.useConpty = false;              // Deshabilitar ConPTY completamente
@@ -88,7 +94,7 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
       spawnOptions.experimentalUseConpty = false;  // Deshabilitar experimental
       spawnOptions.backend = 'winpty';             // Forzar uso de WinPTY
     }
-    
+
     ubuntuProcesses[tabId] = getPtyFn().spawn(shell, args, spawnOptions);
 
     // Handle Ubuntu output
@@ -100,7 +106,7 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
 
     // Handle Ubuntu exit
     ubuntuProcesses[tabId].onExit((exitCode, signal) => {
-      
+
       // Extraer el código de salida real
       let actualExitCode = exitCode;
       if (typeof exitCode === 'object' && exitCode !== null) {
@@ -112,12 +118,12 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
       } else if (typeof exitCode === 'string') {
         actualExitCode = parseInt(exitCode, 10) || 0;
       }
-      
+
       if (actualExitCode !== 0 && signal !== 'SIGTERM' && signal !== 'SIGKILL') {
         // Silenciar el mensaje de error de proceso cerrado inesperadamente
         // No enviar mensaje de error al frontend para evitar mostrar errores al usuario
       }
-      
+
       // Cleanup
       delete ubuntuProcesses[tabId];
     });
@@ -130,7 +136,7 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
   } catch (error) {
     console.error(`Error starting Ubuntu session for tab ${tabId}:`, error);
     if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send(`ubuntu:error:${tabId}`, 
+      mainWindow.webContents.send(`ubuntu:error:${tabId}`,
         `Failed to start Ubuntu: ${error.message}`);
     }
   }
@@ -175,17 +181,17 @@ function stopUbuntu(tabId) {
     try {
       const process = ubuntuProcesses[tabId];
       const pid = process.pid;
-      
+
       // Remover listeners antes de terminar el proceso
       process.removeAllListeners();
-      
+
       // En Windows, usar taskkill directamente para evitar errores de AttachConsole
       if (os.platform() === 'win32') {
         try {
           const { execSync } = require('child_process');
           // Usar taskkill directamente sin llamar a destroy() para evitar
           // el error "AttachConsole failed" de node-pty
-          execSync(`taskkill /F /PID ${pid} /T`, { 
+          execSync(`taskkill /F /PID ${pid} /T`, {
             stdio: 'ignore',
             windowsHide: true
           });
@@ -196,7 +202,7 @@ function stopUbuntu(tabId) {
         // En otros sistemas, usar kill() con señales apropiadas
         try {
           process.kill('SIGTERM');
-          
+
           // Dar tiempo para que termine graciosamente
           setTimeout(() => {
             if (ubuntuProcesses[tabId]) {
@@ -211,7 +217,7 @@ function stopUbuntu(tabId) {
           // Ignorar errores de kill
         }
       }
-      
+
       delete ubuntuProcesses[tabId];
     } catch (error) {
       console.error(`Error stopping Ubuntu ${tabId}:`, error);
