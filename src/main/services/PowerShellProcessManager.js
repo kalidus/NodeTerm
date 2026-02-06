@@ -6,7 +6,7 @@
 const os = require('os');
 
 let powershellProcesses = {};
-let isAppQuitting = false;
+let isAppQuitting = { value: false };
 let mainWindow = null;
 let getPtyFn = null;
 let alternativePtyConfig = null;
@@ -20,14 +20,14 @@ function initialize(dependencies) {
   getPtyFn = dependencies.getPty;
   alternativePtyConfig = dependencies.alternativePtyConfig;
   SafeWindowsTerminal = dependencies.SafeWindowsTerminal;
-  isAppQuitting = dependencies.isAppQuitting || false;
+  isAppQuitting = dependencies.isAppQuitting || { value: false };
 }
 
 /**
  * Actualiza el estado de cierre de la aplicación
  */
 function setAppQuitting(quitting) {
-  isAppQuitting = quitting;
+  isAppQuitting.value = quitting;
 }
 
 /**
@@ -53,7 +53,7 @@ function getLinuxShell() {
  */
 function startPowerShellSession(tabId, { cols, rows }) {
   // No iniciar nuevos procesos si la app está cerrando
-  if (isAppQuitting) {
+  if (isAppQuitting.value) {
     console.log(`Evitando iniciar PowerShell para ${tabId} - aplicación cerrando`);
     return;
   }
@@ -232,7 +232,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
       if (needsRestart) {
         console.log(`PowerShell ${tabId} falló con código ${actualExitCode}, reiniciando en 1 segundo...`);
         setTimeout(() => {
-          if (!isAppQuitting && mainWindow && mainWindow.webContents) {
+          if (!isAppQuitting.value && mainWindow && mainWindow.webContents) {
             console.log(`Reiniciando PowerShell ${tabId} después de fallo...`);
             const originalCols = cols || 120;
             const originalRows = rows || 30;

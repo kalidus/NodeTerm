@@ -338,7 +338,7 @@ const { getRecordingsDirectory } = require('./src/main/utils/recording-utils');
 // Ver getAnythingLLMService() y getOpenWebUIService() arriba
 
 let mainWindow;
-let isAppQuitting = false; // Flag para evitar operaciones durante el cierre
+const isAppQuitting = { value: false }; // Flag para evitar operaciones durante el cierre
 
 // Los handlers SSH se registrarán después de definir findSSHConnection
 
@@ -2233,7 +2233,7 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
 
 // Limpieza robusta también en before-quit
 app.on('before-quit', async () => {
-  isAppQuitting = true;
+  isAppQuitting.value = true;
 
   // ✅ MEMORY LEAK FIX: Limpiar intervalo de limpieza de conexiones huérfanas
   if (orphanCleanupInterval) {
@@ -2738,7 +2738,7 @@ ipcMain.on('register-tab-events', (event, tabId) => {
 
 // Cleanup terminals on app quit
 app.on('before-quit', (event) => {
-  isAppQuitting = true;
+  isAppQuitting.value = true;
 
   // Cleanup all PowerShell processes (ahora manejado por PowerShellProcessManager)
   try {
