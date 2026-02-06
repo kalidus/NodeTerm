@@ -6,6 +6,7 @@ import { statusBarThemeManager } from '../utils/statusBarThemeManager';
 import { STORAGE_KEYS } from '../utils/constants';
 import { TREE_THEME_STORAGE_KEY } from '../themes/tree-themes';
 import { getAvailableFonts } from '../utils/fontsList';
+import { applyTabTheme } from '../utils/tabThemeLoader';
 
 export const useThemeManagement = () => {
   // Storage keys
@@ -452,6 +453,7 @@ export const useThemeManagement = () => {
       // Aplicar tema de pestañas
       const updatedTabTheme = localStorage.getItem('nodeterm_tab_theme');
       if (updatedTabTheme) {
+        applyTabTheme(updatedTabTheme);
         window.dispatchEvent(new CustomEvent('tab-theme-changed', { detail: updatedTabTheme }));
       }
     } catch (e) {

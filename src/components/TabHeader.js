@@ -7,7 +7,7 @@ import { getHomeTabIcon } from '../themes/home-tab-icons';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 
-const TabHeader = React.memo(({ 
+const TabHeader = React.memo(({
   // Props básicas de PrimeReact
   className,
   onClick,
@@ -16,20 +16,20 @@ const TabHeader = React.memo(({
   rightIcon,
   style,
   selected,
-  
+
   // Props específicas de la pestaña
   tab,
   idx,
-  
+
   // Estados de drag & drop
   isDragging,
   isDragOver,
   dragStartTimer,
   draggedTabIndex,
-  
+
   // Props de iconos
   tabDistros,
-  
+
   // Event handlers
   onTabClick,
   onTabDragStart,
@@ -43,18 +43,30 @@ const TabHeader = React.memo(({
   const isHomeTab = tab.type === 'home';
   const [homeIconVersion, setHomeIconVersion] = useState(0);
   const [themeVersion, setThemeVersion] = useState(0);
-  
+
   // Verificar si el botón de inicio está bloqueado
-  const isHomeButtonLocked = localStorage.getItem('lock_home_button') === 'true';
-  
-  // Escuchar cambios en el icono de inicio
+  const [isHomeButtonLocked, setIsHomeButtonLocked] = useState(() => localStorage.getItem('lock_home_button') === 'true');
+
+  // Escuchar cambios en el icono de inicio y bloqueo
   useEffect(() => {
     const handleHomeIconChange = () => {
       setHomeIconVersion(v => v + 1);
     };
-    
+
+    const handleSettingsUpdate = () => {
+      setIsHomeButtonLocked(localStorage.getItem('lock_home_button') === 'true');
+    };
+
     window.addEventListener('home-icon-changed', handleHomeIconChange);
-    return () => window.removeEventListener('home-icon-changed', handleHomeIconChange);
+    // Escuchar tanto evento de sync como evento nativo de storage
+    window.addEventListener('settings-updated', handleSettingsUpdate);
+    window.addEventListener('storage', handleSettingsUpdate);
+
+    return () => {
+      window.removeEventListener('home-icon-changed', handleHomeIconChange);
+      window.removeEventListener('settings-updated', handleSettingsUpdate);
+      window.removeEventListener('storage', handleSettingsUpdate);
+    };
   }, []);
 
   // Escuchar cambios en el tema
@@ -92,46 +104,46 @@ const TabHeader = React.memo(({
     const terminalType = tab.terminalType || '';
     const distroInfo = tab.distroInfo;
     const label = (tab.label || '').toLowerCase();
-    
+
     const baseIconSize = 12; // Tamaño base para pestañas
-    
+
     // Si hay distroInfo, usar su categoría
     const category = distroInfo?.category || '';
-    
+
     // PowerShell
     if (terminalType === 'powershell') {
       return <FaWindows style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#0078D4' }} />;
     }
-    
+
     // WSL genérico (sin distribución específica) - debe ser exactamente 'wsl' sin distroInfo
     // Usar el color primario del tema
     if (terminalType === 'wsl' && !distroInfo) {
       return <FaLinux style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: primaryColor }} />;
     }
-    
+
     // Ubuntu (por categoría, terminalType o nombre)
     if (category === 'ubuntu' || terminalType === 'ubuntu' || label.includes('ubuntu') || (terminalType.includes('ubuntu') && !terminalType.includes('kubuntu'))) {
       const isBasicUbuntu = !label.includes('24.04') && !label.includes('22.04') && !label.includes('20.04');
       const ubuntuColor = isBasicUbuntu ? '#FFFFFF' : (distroInfo?.color || getColorForCategory('ubuntu'));
       return <FaUbuntu style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: ubuntuColor }} />;
     }
-    
+
     // Debian
     if (category === 'debian' || label.includes('debian') || terminalType.includes('debian')) {
       return <SiDebian style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: distroInfo?.color || getColorForCategory('debian') }} />;
     }
-    
+
     // Kali Linux
     if (category === 'kali' || label.includes('kali') || terminalType.includes('kali')) {
       const kaliColor = distroInfo?.color || getColorForCategory('kali');
       return (
-        <svg 
+        <svg
           xmlns="http://www.w3.org/2000/svg"
-          width={baseIconSize} 
-          height={baseIconSize} 
-          viewBox="0 0 48 48" 
-          style={{ 
-            display: 'inline-block', 
+          width={baseIconSize}
+          height={baseIconSize}
+          viewBox="0 0 48 48"
+          style={{
+            display: 'inline-block',
             verticalAlign: 'middle',
             marginRight: '6px',
             flexShrink: 0
@@ -141,47 +153,47 @@ const TabHeader = React.memo(({
         </svg>
       );
     }
-    
+
     // Alpine, openSUSE - usar FaLinux
     if (category === 'alpine' || category === 'opensuse' || label.includes('alpine') || label.includes('opensuse') || label.includes('suse')) {
       return <FaLinux style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: distroInfo?.color || getColorForCategory(category) }} />;
     }
-    
+
     // Fedora
     if (category === 'fedora' || label.includes('fedora')) {
       return <FaFedora style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: distroInfo?.color || getColorForCategory('fedora') }} />;
     }
-    
+
     // CentOS
     if (category === 'centos' || label.includes('centos')) {
       return <FaCentos style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: distroInfo?.color || getColorForCategory('centos') }} />;
     }
-    
+
     // RedHat
     if (category === 'redhat' || category === 'rhel' || label.includes('redhat') || label.includes('rhel')) {
       return <FaRedhat style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: distroInfo?.color || getColorForCategory('redhat') }} />;
     }
-    
+
     // Cygwin
     if (terminalType === 'cygwin' || label.includes('cygwin')) {
       return <i className="pi pi-code" style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#00FF00', fontWeight: 'bold' }}></i>;
     }
-    
+
     // Docker
     if (terminalType === 'docker' || label.includes('docker') || tab.type === 'docker') {
       return <SiDocker style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#0db7ed' }} />;
     }
-    
+
     // Linux terminal genérico
     if (terminalType === 'linux-terminal') {
       return <FaLinux style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#4fc3f7' }} />;
     }
-    
+
     // WSL con distribución específica (wsl-*)
     if (terminalType?.startsWith('wsl-')) {
       return <FaLinux style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: primaryColor }} />;
     }
-    
+
     // Fallback: icono genérico
     return <i className="pi pi-desktop" style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#4fc3f7' }}></i>;
   };
@@ -189,10 +201,10 @@ const TabHeader = React.memo(({
   return (
     <div
       className={`${className} ${isDragging ? 'tab-dragging' : ''} ${isDragOver ? 'tab-drop-zone' : ''}`}
-      style={{ 
-        ...style, 
-        display: 'flex', 
-        alignItems: 'center', 
+      style={{
+        ...style,
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: isHomeTab ? 'center' : 'flex-start',
         maxWidth: isHomeTab ? 50 : 220,
         minWidth: isHomeTab ? 50 : 130,
@@ -228,54 +240,54 @@ const TabHeader = React.memo(({
       title="Arrastra para reordenar pestañas | Clic derecho para opciones de grupo"
     >
       {leftIcon}
-      
+
       {/* Mostrar icono de distribución si está disponible para pestañas de terminal */}
       {tab.type === 'terminal' && tabDistros && tabDistros[tab.key] && (
         <DistroIcon distro={tabDistros[tab.key]} size={12} />
       )}
-      
-        {/* Icono específico para pestaña de inicio */}
-        {tab.type === 'home' && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: '0px' }}>
-            {getHomeTabIcon(26)}
-          </span>
-        )}
-      
+
+      {/* Icono específico para pestaña de inicio */}
+      {tab.type === 'home' && (
+        <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: '0px' }}>
+          {getHomeTabIcon(26)}
+        </span>
+      )}
+
       {/* Icono específico para splits */}
       {tab.type === 'split' && (
         <i className="pi pi-window-maximize" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9' }}></i>
       )}
-      
+
       {/* Icono específico para exploradores */}
       {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
         <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px' }}></i>
       )}
-      
+
       {/* Icono específico para pestañas RDP */}
       {tab.type === 'rdp' && (
         <i className="pi pi-desktop" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9' }}></i>
       )}
-      
+
       {/* Icono específico para pestañas RDP-Guacamole */}
       {tab.type === 'rdp-guacamole' && (
         <i className="pi pi-desktop" style={{ fontSize: '12px', marginRight: '6px', color: '#ff6b35' }}></i>
       )}
-      
+
       {/* Icono específico para pestañas Guacamole */}
       {tab.type === 'guacamole' && (
         <i className="pi pi-globe" style={{ fontSize: '12px', marginRight: '6px', color: '#00C851' }}></i>
       )}
-      
+
       {/* Icono específico para terminales locales - usar misma lógica que NodeTermStatus */}
       {(tab.type === 'local-terminal' || tab.type === 'docker') && getLocalTerminalIcon(tab)}
-      
+
       {/* Mostrar label solo si NO es pestaña de inicio (las pestañas de inicio nunca muestran texto) */}
       {!isHomeTab && (
         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {tab.label}
         </span>
       )}
-      
+
       {/* Mostrar botón de cierre solo si NO es una pestaña de inicio (las pestañas de inicio nunca se pueden cerrar) */}
       {tab.type !== 'home' && (
         <Button
@@ -290,7 +302,7 @@ const TabHeader = React.memo(({
           }}
         />
       )}
-      
+
       {rightIcon}
     </div>
   );
