@@ -32,6 +32,7 @@ const SYNC_KEYS = [
     'basicapp_statusbar_theme',
     'basicapp_terminal_theme',
     'iconTheme',
+    'nodeterm_tab_theme',
     // Configuración de fuentes y terminal
     'basicapp_font_family',
     'basicapp_font_size',
