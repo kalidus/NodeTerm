@@ -50,8 +50,9 @@ const SYNC_KEYS = [
     'nodeterm_group_assignments',
     'nodeterm_filter_config',
 
-    // Master key (backup)
-    'nodeterm_master_key'
+    // Master key (backup) y Auth pref
+    'nodeterm_master_key',
+    'nodeterm_remember_password'
 ];
 
 class LocalStorageSyncService {

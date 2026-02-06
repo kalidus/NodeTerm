@@ -14,6 +14,19 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       return [];
     }
   });
+
+  // Función para recargar nodos desde localStorage (para multi-instancia tras sync)
+  const reloadNodes = useCallback(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.TREE_DATA);
+      if (saved) {
+        console.log('[useSidebarManagement] Recargando nodos desde localStorage...');
+        setNodes(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error('[useSidebarManagement] Error recargando nodos:', e);
+    }
+  }, []);
   const [selectedNode, setSelectedNode] = useState(null);
   const [isGeneralTreeMenu, setIsGeneralTreeMenu] = useState(false);
 
@@ -853,6 +866,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
 
     // Funciones de menú contextual
     getTreeContextMenuItems,
-    getGeneralTreeContextMenuItems
+    getGeneralTreeContextMenuItems,
+    reloadNodes
   };
 };
