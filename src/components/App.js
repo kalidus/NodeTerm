@@ -220,6 +220,7 @@ const App = () => {
 
         // 🔄 Recargar datos en los hooks que inicializaron con localStorage vacío
         if (reloadNodes) reloadNodes();
+        if (reloadThemes) reloadThemes(); // Recargar temas y FUENTES desde sync
       } catch (err) {
         console.warn('[App] Error sincronizando localStorage:', err);
       }
@@ -901,7 +902,9 @@ const App = () => {
     sidebarFont, setSidebarFont, sidebarFontSize, setSidebarFontSize, sidebarFontColor, setSidebarFontColor,
     treeTheme, setTreeTheme,
     sessionActionIconTheme, setSessionActionIconTheme,
-    updateThemesFromSync
+
+    // Utility
+    reloadThemes
   } = useThemeManagement();
 
   // Docker terminal theme state
@@ -2850,7 +2853,7 @@ const App = () => {
           treeContextMenuRef={treeContextMenuRef}
 
           // Sync settings props
-          updateThemesFromSync={updateThemesFromSync}
+          updateThemesFromSync={reloadThemes}
           updateStatusBarFromSync={updateStatusBarFromSync}
           exportTreeToJson={exportTreeToJson}
           importTreeFromJson={importTreeFromJson}
