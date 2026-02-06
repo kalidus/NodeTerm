@@ -20,7 +20,7 @@ let getPtyFn = null;
  */
 function setDependencies({ mainWindow, alternativePtyConfig, SafeWindowsTerminal, isAppQuitting, getPty }) {
   getPtyFn = getPty;
-  
+
   // Inicializar PowerShellProcessManager con las dependencias
   PowerShellProcessManager.initialize({
     mainWindow,
@@ -29,10 +29,8 @@ function setDependencies({ mainWindow, alternativePtyConfig, SafeWindowsTerminal
     SafeWindowsTerminal,
     isAppQuitting
   });
-  
-  if (isAppQuitting !== undefined) {
-    PowerShellProcessManager.setAppQuitting(isAppQuitting);
-  }
+
+  // No need to call setAppQuitting as it is handled by the shared object reference in initialize
 }
 
 // Funciones delegadas al PowerShellProcessManager

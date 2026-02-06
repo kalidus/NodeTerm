@@ -6,7 +6,7 @@
 const os = require('os');
 
 let ubuntuProcesses = {};
-let isAppQuitting = false;
+let isAppQuitting = { value: false };
 let mainWindow = null;
 let getPtyFn = null;
 
@@ -16,14 +16,14 @@ let getPtyFn = null;
 function initialize(dependencies) {
   mainWindow = dependencies.mainWindow;
   getPtyFn = dependencies.getPty;
-  isAppQuitting = dependencies.isAppQuitting || false;
+  isAppQuitting = dependencies.isAppQuitting || { value: false };
 }
 
 /**
  * Actualiza el estado de cierre de la aplicación
  */
 function setAppQuitting(quitting) {
-  isAppQuitting = quitting;
+  isAppQuitting.value = quitting;
 }
 
 /**
@@ -31,7 +31,7 @@ function setAppQuitting(quitting) {
  */
 function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
   // No iniciar nuevos procesos si la app está cerrando
-  if (isAppQuitting) {
+  if (isAppQuitting.value) {
     console.log(`Evitando iniciar Ubuntu para ${tabId} - aplicación cerrando`);
     return;
   }

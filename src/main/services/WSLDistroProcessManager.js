@@ -4,7 +4,7 @@
 // ============================================
 
 let wslDistroProcesses = {};
-let isAppQuitting = false;
+let isAppQuitting = { value: false };
 let mainWindow = null;
 let getPtyFn = null;
 
@@ -14,21 +14,21 @@ let getPtyFn = null;
 function initialize(dependencies) {
   mainWindow = dependencies.mainWindow;
   getPtyFn = dependencies.getPty;
-  isAppQuitting = dependencies.isAppQuitting || false;
+  isAppQuitting = dependencies.isAppQuitting || { value: false };
 }
 
 /**
  * Actualiza el estado de cierre de la aplicación
  */
 function setAppQuitting(quitting) {
-  isAppQuitting = quitting;
+  isAppQuitting.value = quitting;
 }
 
 /**
  * Inicia una sesión de distribución WSL
  */
 function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
-  if (isAppQuitting) {
+  if (isAppQuitting.value) {
     console.log(`Evitando iniciar distribución WSL para ${tabId} - aplicación cerrando`);
     return;
   }
@@ -151,13 +151,13 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
       // Send ready only on first data reception
       if (!wslDistroProcesses[tabId]._hasReceivedData) {
         wslDistroProcesses[tabId]._hasReceivedData = true;
-        if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
+        if (!isAppQuitting.value && mainWindow && !mainWindow.isDestroyed()) {
           const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
           mainWindow.webContents.send(`${channelName}:ready:${tabId}`);
         }
       }
 
-      if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
+      if (!isAppQuitting.value && mainWindow && !mainWindow.isDestroyed()) {
         const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
         mainWindow.webContents.send(`${channelName}:data:${tabId}`, data);
       }
@@ -166,7 +166,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
     // Handle distribution exit  
     wslDistroProcesses[tabId].onExit((exitCode, signal) => {
 
-      if (isAppQuitting) {
+      if (isAppQuitting.value) {
         console.log(`App is closing, ignoring exit for ${tabId}`);
         return;
       }
@@ -187,7 +187,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
       if (needsRestart) {
         console.log(`WSL ${shell} (${tabId}) falló con error de ConPTY, reiniciando en 2 segundos...`);
         setTimeout(() => {
-          if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
+          if (!isAppQuitting.value && mainWindow && !mainWindow.isDestroyed()) {
             console.log(`Reiniciando WSL ${shell} (${tabId}) después de error de ConPTY...`);
             startWSLDistroSession(tabId, { cols: cols || 80, rows: rows || 24, distroInfo });
           }
@@ -202,7 +202,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
 
   } catch (error) {
     console.error(`Error starting WSL distro session for tab ${tabId}:`, error);
-    if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
+    if (!isAppQuitting.value && mainWindow && !mainWindow.isDestroyed()) {
       const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
       mainWindow.webContents.send(`${channelName}:error:${tabId}`,
         `Failed to start ${distroInfo?.label || 'WSL Distribution'}: ${error.message}`);
