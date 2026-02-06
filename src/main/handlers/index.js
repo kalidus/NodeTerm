@@ -23,6 +23,9 @@ let _nextcloudHandlers = null;
 let _fileHandlers = null;
 let _networkToolsHandlers = null;
 let _sshTunnelHandlers = null;
+let _themeHandlers = null;
+let _securityHandlers = null;
+let _appdataHandlers = null;
 
 function getAppHandlers() {
   if (!_appHandlers) _appHandlers = require('./app-handlers');
@@ -89,21 +92,45 @@ function getSSHTunnelHandlers() {
   return _sshTunnelHandlers;
 }
 
+function getThemeHandlers() {
+  if (!_themeHandlers) _themeHandlers = require('./theme-handlers');
+  return _themeHandlers;
+}
+
+function getSecurityHandlers() {
+  if (!_securityHandlers) _securityHandlers = require('./security-handlers');
+  return _securityHandlers;
+}
+
+function getAppDataHandlers() {
+  if (!_appdataHandlers) _appdataHandlers = require('./appdata-handlers');
+  return _appdataHandlers;
+}
+
 /**
  * Registra handlers CRÍTICOS inmediatamente (necesarios para mostrar la UI)
  */
 function registerCriticalHandlers(dependencies) {
   // Handlers de aplicación (UI, versión, cierre) - CRÍTICOS
   getAppHandlers().registerAppHandlers(dependencies);
-  
+
   // Handlers del sistema - CRÍTICOS (clipboard y dialog)
   getSystemHandlers().registerSystemHandlers();
-  
+
+  // Handlers de seguridad - CRÍTICOS (Master Key)
+  getSecurityHandlers().registerSecurityHandlers(dependencies);
+
+  // Handlers de tema - CRÍTICOS (necesarios para cargar el tema al inicio)
+  getThemeHandlers().registerThemeHandlers(dependencies);
+
+  // Handlers de datos de aplicación - CRÍTICOS (sincronización localStorage entre instancias)
+  getAppDataHandlers().registerAppDataHandlers(dependencies);
+
   // 🚀 CRÍTICO: Registrar handlers de monitoreo INMEDIATAMENTE
   // El REGISTRO es ligero (solo IPC), lo PESADO es la EJECUCIÓN (que es on-demand)
   // Esto evita errores de "No handler registered" cuando el frontend los llama
   getSystemHandlers().registerSystemMonitoringHandlers();
-  
+
   // 🚀 CRÍTICO: System stats handler debe estar disponible INMEDIATAMENTE
   // porque TODOS los componentes del frontend lo llaman al cargar
   const { ipcMain } = require('electron');
@@ -131,28 +158,30 @@ function registerCriticalHandlers(dependencies) {
 function registerSecondaryHandlers(dependencies) {
   // Handlers de servicios del sistema (historial, estadísticas)
   getSystemServicesHandlers().registerSystemServicesHandlers(dependencies);
-  
+
   // Handlers RDP (Remote Desktop Protocol)
   getRdpHandlers().registerRdpHandlers(dependencies);
-  
+
   // Handlers de Guacamole
   getGuacamoleHandlers().registerGuacamoleHandlers(dependencies);
   getAnythingLLMHandlers().registerAnythingLLMHandlers(dependencies);
   getOpenWebUIHandlers().registerOpenWebUIHandlers(dependencies);
-  
+
   // Handlers SSH
   getSSHHandlers()(dependencies);
-  
+
   // Handlers MCP y Nextcloud (no críticos para el arranque)
   getMCPHandlers().registerMCPHandlers();
   getNextcloudHandlers().registerNextcloudHandlers();
-  
+
   // Handlers de archivos (SFTP/FTP/SCP)
   getFileHandlers().registerFileHandlers();
-  
+
   // Handlers de herramientas de red
   getNetworkToolsHandlers().registerNetworkToolsHandlers();
-  
+
+  // NOTA: Theme handlers ahora se registran en registerCriticalHandlers()
+
   // 🚀 OPTIMIZACIÓN: Handlers de túneles SSH se registran DESPUÉS de ready-to-show
   // Ver registerSSHTunnelHandlers() que se llama desde main.js
 }
@@ -210,5 +239,8 @@ module.exports = {
   getNextcloudHandlers,
   getFileHandlers,
   getNetworkToolsHandlers,
-  getSSHTunnelHandlers
+  getSSHTunnelHandlers,
+  getThemeHandlers,
+  getSecurityHandlers,
+  getAppDataHandlers
 };

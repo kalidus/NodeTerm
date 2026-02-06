@@ -128,6 +128,51 @@ const url = require('url');
 const os = require('os');
 const fs = require('fs');
 
+// ============================================================================
+// 🔒 MULTI-INSTANCE SUPPORT (Fix for "Cache Lock" errors)
+// ============================================================================
+// Electron applications by default lock the User Data directory (net::disk_cache).
+// To allow multiple instances, we check if the lock is available.
+// - Primary Instance: Gets the lock, uses standard UserData.
+// - Secondary Instance: Fails to get lock, switches to a TEMP UserData directory.
+//
+// NOTE: Secondary instances will have empty localStorage/Cookies but share:
+// - Connection History (~/.nodeterm/connection_history.json)
+// - Themes (via sync to ~/.nodeterm/theme.json)
+// ============================================================================
+
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  console.log('⚠️ [MAIN] Instancia secundaria detectada (Lock no obtenido)');
+  console.log('⚠️ [MAIN] Cambiando a directorio UserData temporal para evitar bloqueo de caché...');
+
+  const tempUserData = path.join(app.getPath('temp'), `NodeTerm-Instance-${process.pid}`);
+
+  try {
+    // Intentar limpiar directorio temporal previo si existe
+    if (fs.existsSync(tempUserData)) {
+      try { fs.rmSync(tempUserData, { recursive: true, force: true }); } catch (e) { }
+    }
+    fs.mkdirSync(tempUserData, { recursive: true });
+    app.setPath('userData', tempUserData);
+    console.log(`✅ [MAIN] UserData redirigido a: ${tempUserData}`);
+  } catch (error) {
+    console.error('❌ [MAIN] Error configurando UserData temporal:', error);
+    // Fallback: Dejar que continúe, aunque probablemente fallará con net::ERR_CACHE_LOCK
+  }
+} else {
+  console.log('🔒 [MAIN] Instancia primaria (Lock obtenido)');
+  // Opcional: Manejar evento 'second-instance' si quisiéramos enfocar la ventana existente
+  // en lugar de abrir una nueva. Pero el usuario quiere ventanas independientes.
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Si quisiéramos Single Window, aquí haríamos mainWindow.restore() y .focus()
+    // Pero para Multi-Window, dejamos que la segunda instancia corra con su propio UserData
+    console.log('ℹ️ [MAIN] Otra instancia intentó iniciar (detectado via second-instance event)');
+  });
+}
+// ============================================================================
+
 // 🚀 OPTIMIZACIÓN: Docker con lazy loading (no se usa hasta listar contenedores)
 function getDocker() {
   if (Docker === null) {
@@ -376,7 +421,18 @@ const ConnectionPoolCleaner = require('./src/main/services/ConnectionPoolCleaner
 async function getOrCreateGuacamoleSecretKey() {
   const crypto = require('crypto');
   const fs = require('fs').promises;
-  const keyPath = path.join(app.getPath('userData'), 'guacamole-secret.key');
+  const os = require('os');
+
+  // Usar path persistente en .nodeterm para compartir clave entre instancias
+  // (app.getPath('userData') cambia en instancias secundarias)
+  const configDir = path.join(os.homedir(), '.nodeterm');
+
+  // Asegurar que el directorio existe
+  try {
+    await fs.mkdir(configDir, { recursive: true });
+  } catch (e) { }
+
+  const keyPath = path.join(configDir, 'guacamole-secret.key');
 
   try {
     // Intentar cargar clave existente
@@ -430,6 +486,9 @@ async function initializeGuacamoleServices() {
   // Importar servicio de configuración
   const GuacamoleConfigService = require('./src/main/services/GuacamoleConfigService');
 
+  // Importar utilidad de puertos
+  const { findFreePort } = require('./src/main/utils/net-utils');
+
   // Crear nueva promesa de inicialización
   guacamoleInitPromise = (async () => {
     try {
@@ -460,10 +519,13 @@ async function initializeGuacamoleServices() {
       const guacdStatus = getGuacdService().getStatus();
       await GuacamoleConfigService.waitForGuacdReady(getGuacdService(), guacdStatus);
 
-      // Configurar servidor Guacamole-lite
-      const websocketOptions = { port: 8081 };
-      const guacdOptions = getGuacdService().getGuacdOptions();
+      // Encontrar puerto libre con reintentos robustos
+      // Intentar vincular directamente el servidor Guacamole a puertos sucesivos
+      let websocketPort = 8081;
+      let serverCreated = false;
+      const MAX_RETRIES = 20;
 
+      const guacdOptions = getGuacdService().getGuacdOptions();
       // ✅ SEGURIDAD: Obtener o crear clave secreta única por instalación
       const SECRET_KEY = await getOrCreateGuacamoleSecretKey();
 
@@ -487,8 +549,63 @@ async function initializeGuacamoleServices() {
         guacdInactivityTimeoutMs
       );
 
-      // Crear servidor Guacamole-lite
-      guacamoleServer = new (getGuacamoleLite())(websocketOptions, guacdOptions, clientOptions);
+      // Bucle de reintentos para encontrar puerto libre
+      const GuacamoleLite = getGuacamoleLite();
+      for (let i = 0; i < MAX_RETRIES; i++) {
+        try {
+          websocketPort = 8081 + i;
+          const websocketOptions = { port: websocketPort };
+
+          if (DEBUG_GUACAMOLE) console.log(`🔄 Intentando iniciar WebSocket en puerto ${websocketPort} (intento ${i + 1}/${MAX_RETRIES})`);
+
+          guacamoleServer = new GuacamoleLite(websocketOptions, guacdOptions, clientOptions);
+
+          // Verificar si se vinculó correctamente añadiendo un handler de error temporal
+          // (GuacamoleLite puede emitir errores asíncronos en el socket)
+          await new Promise((resolve, reject) => {
+            const errorHandler = (err) => {
+              if (err.code === 'EADDRINUSE') {
+                reject(err);
+              }
+            };
+
+            // Hack: Acceder al WebSocketServer interno si es posible, o esperar un tick
+            // Como GuacamoleLite no expone evento 'listening' fácil, confiamos en que si no falla en 100ms, está bien.
+            // O mejor, intentamos capturar el error del servidor interno.
+            if (guacamoleServer && guacamoleServer.webSocketServer) {
+              guacamoleServer.webSocketServer.on('error', errorHandler);
+            }
+            // Si el constructor lanza error sincrónico, ya estaría en catch.
+            // Esperamos un momento para ver si hay error asíncrono de binding.
+            setTimeout(() => {
+              if (guacamoleServer && guacamoleServer.webSocketServer) {
+                guacamoleServer.webSocketServer.removeListener('error', errorHandler);
+              }
+              resolve();
+            }, 100);
+          });
+
+          serverCreated = true;
+          console.log(`✅ Servidor Guacamole-lite iniciado en puerto ${websocketPort}`);
+          break; // Éxito
+        } catch (error) {
+          if (error.code === 'EADDRINUSE') {
+            console.log(`⚠️ Puerto ${websocketPort} ocupado, probando siguiente...`);
+            guacamoleServer = null; // Limpiar para el GC
+            continue;
+          } else {
+            console.error('❌ Error no relacionado con puerto:', error);
+            throw error; // Re-lanzar si no es puerto ocupado
+          }
+        }
+      }
+
+      if (!serverCreated) {
+        throw new Error(`No se pudo encontrar un puerto libre entre 8081 y ${8081 + MAX_RETRIES}`);
+      }
+
+      // Reconstituyendo websocketOptions para el resto del código
+      const websocketOptions = { port: websocketPort };
 
       if (DEBUG_GUACAMOLE) {
         console.log('🌐 [initializeGuacamoleServices] Servidor Guacamole-lite creado:', !!guacamoleServer);
@@ -758,6 +875,18 @@ function createWindow() {
     }
   });
   logTiming('BrowserWindow creado');
+
+  // 🔒 CRÍTICO: Registrar handlers de seguridad ANTES de que la ventana cargue
+  // Esto asegura que security:get-master-key esté disponible cuando el renderer arranque
+  try {
+    const { registerCriticalHandlers } = require('./src/main/handlers');
+    registerCriticalHandlers({
+      mainWindow,
+      packageJson
+    });
+  } catch (err) {
+    console.error('❌ Error registrando handlers críticos:', err);
+  }
 
   // 🚀 OPTIMIZACIÓN: Precalentamiento de guacd DIFERIDO hasta después de ready-to-show
   // Se ejecutará en initializeServicesAfterShow() para no bloquear el arranque
@@ -1059,16 +1188,15 @@ function createWindow() {
       isAppQuitting,
       getGuacamoleServer: () => guacamoleServer,
       getGuacamoleServerReadyAt: () => guacamoleServerReadyAt,
+      getGuacamoleWebSocketPort: () => (guacamoleServer ? guacamoleServer.port : null),
       getOrCreateGuacamoleSecretKey: getOrCreateGuacamoleSecretKey,
       isGuacamoleInitializing: () => guacamoleInitializing,
       isGuacamoleInitialized: () => guacamoleInitialized
     });
 
-    // 🚀 OPTIMIZACIÓN: Registrar handlers principales (sin túnel SSH)
-    registerAllHandlers(getHandlerDependencies());
-
-    // Handlers registrados exitosamente
-    // Nota: get-user-home ya está registrado en registerSystemHandlers()
+    // 🔒 NOTA: Los handlers CRÍTICOS ya se registran al inicio de createWindow() (línea 879)
+    // Los handlers SECUNDARIOS se registran después de ready-to-show en initializeServicesAfterShow()
+    // Por lo tanto, registerAllHandlers() ya NO es necesario aquí
 
     // 🚀 OPTIMIZACIÓN: Guacamole se inicializa en initializeServicesAfterShow()
     // después de que la ventana se muestre, para no bloquear el arranque

@@ -58,6 +58,8 @@ import { SSHDialog, FolderDialog, GroupDialog } from './Dialogs';
 import ImportService from '../services/ImportService';
 import { unblockAllInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import SecureStorage from '../services/SecureStorage';
+import localStorageSyncService from '../services/LocalStorageSyncService';
+
 import UnlockDialog from './UnlockDialog';
 import { detectBlockedInputs } from '../utils/formDebugger';
 // import '../assets/form-fixes.css';
@@ -95,6 +97,7 @@ const App = () => {
   const [showImportDialog, setShowImportDialog] = React.useState(false);
   const [showExportDialog, setShowExportDialog] = React.useState(false);
   const [showImportExportDialog, setShowImportExportDialog] = React.useState(false);
+  const [isAppReady, setIsAppReady] = React.useState(false);
   const [importPreset, setImportPreset] = React.useState(null);
 
   // === SISTEMA DE ENCRIPTACIÓN ===
@@ -198,18 +201,36 @@ const App = () => {
   // Detectar si necesita unlock al iniciar (o auto-unlock si está recordado)
   useEffect(() => {
     const initializeApp = async () => {
-      if (secureStorage.hasSavedMasterKey()) {
+      console.log('[App] ✅ initializeApp() iniciado');
+
+      // 🔄 MULTI-INSTANCIA: Cargar datos compartidos ANTES de verificar autenticación
+      // Esto permite que instancias secundarias tengan acceso a localStorage de la principal
+      try {
+        console.log('[App] Llamando a localStorageSyncService.initialize()...');
+        await localStorageSyncService.initialize();
+        console.log('[App] ✅ localStorage sync completado');
+      } catch (err) {
+        console.warn('[App] Error sincronizando localStorage:', err);
+      }
+
+
+      // Usar verificación asíncrona compatible con multi-instancia (archivo compartido)
+      const hasKey = await secureStorage.checkHasSavedMasterKey();
+
+      if (hasKey) {
         // Verificar si el usuario marcó "recordar contraseña"
         const rememberPassword = localStorage.getItem('nodeterm_remember_password') === 'true';
 
         if (rememberPassword) {
           // Intentar auto-unlock
           try {
+            // loadMasterKey ya maneja la carga desde archivo si es necesario
             const savedMasterKey = await secureStorage.loadMasterKey();
             if (savedMasterKey) {
               // Auto-unlock exitoso
               setMasterKey(savedMasterKey);
               setNeedsUnlock(false);
+              setIsAppReady(true);
               return;
             }
           } catch (err) {
@@ -220,6 +241,7 @@ const App = () => {
         // Si no está recordado o falló, mostrar unlock dialog
         setNeedsUnlock(true);
       }
+      setIsAppReady(true);
     };
 
     initializeApp();
@@ -2361,6 +2383,10 @@ const App = () => {
     terminalRefs, statusBarIconTheme, handleCloseSplitPanel, rdpTabs, findNodeByKey,
     setSshTabs, setShowCreateGroupDialog, activeIds
   ]);
+
+  if (!isAppReady) {
+    return <div style={{ background: '#1e1e1e', height: '100vh', width: '100vw' }} />;
+  }
 
   return (
     <ErrorBoundary>

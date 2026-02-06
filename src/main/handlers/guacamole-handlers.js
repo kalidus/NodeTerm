@@ -32,6 +32,7 @@ function registerGuacamoleHandlers({
   guacdInactivityTimeoutMs,
   getGuacamoleServer,
   getGuacamoleServerReadyAt,
+  getGuacamoleWebSocketPort,
   getOrCreateGuacamoleSecretKey,
   isGuacamoleInitializing,
   isGuacamoleInitialized
@@ -43,11 +44,11 @@ function registerGuacamoleHandlers({
       if (Number.isNaN(parsed) || parsed < 0) {
         return { success: false, error: 'Invalid timeout value' };
       }
-      
+
       // Verificar si el valor realmente cambió antes de guardar
       const currentValue = typeof guacdInactivityTimeoutMs === 'number' ? guacdInactivityTimeoutMs : null;
       const savedValue = await loadGuacdInactivityTimeout();
-      
+
       // Si el valor es el mismo que el actual o el guardado, no hacer nada
       if (currentValue === parsed && (savedValue === null || savedValue === parsed)) {
         // Solo actualizar el servicio si está activo, pero no guardar
@@ -56,10 +57,10 @@ function registerGuacamoleHandlers({
         }
         return { success: true, value: parsed, saved: false };
       }
-      
+
       // Actualizar la variable global
       guacdInactivityTimeoutMs = parsed;
-      
+
       // Persistir el valor solo si realmente cambió
       try {
         await saveGuacdInactivityTimeout(parsed);
@@ -68,12 +69,12 @@ function registerGuacamoleHandlers({
       } catch (saveError) {
         console.warn('⚠️ No se pudo persistir el timeout de guacd:', saveError?.message);
       }
-      
+
       // Si el servicio guacd está activo, actualizar su configuración
       if (guacdService && typeof guacdService.setInactivityTimeout === 'function') {
         guacdService.setInactivityTimeout(parsed);
       }
-      
+
       return { success: true, value: parsed };
     } catch (error) {
       console.error('Error setting guacd timeout:', error);
@@ -94,19 +95,19 @@ function registerGuacamoleHandlers({
   // IPC handlers for Guacamole RDP connections
   // Cache para evitar logs repetidos
   let guacamoleStatusWarningLogged = false;
-  
+
   ipcMain.handle('guacamole:get-status', async (event) => {
     try {
       const guacdStatus = guacdService ? guacdService.getStatus() : { isRunning: false, method: 'unknown' };
-      
+
       // Obtener el estado actual del servidor usando las funciones getter
       const currentServer = getGuacamoleServer ? getGuacamoleServer() : guacamoleServer;
       const currentReadyAt = getGuacamoleServerReadyAt ? getGuacamoleServerReadyAt() : guacamoleServerReadyAt;
-      
+
       // Verificar si la inicialización está en progreso o ya completada
       const isInitializing = isGuacamoleInitializing ? isGuacamoleInitializing() : false;
       const isInitialized = isGuacamoleInitialized ? isGuacamoleInitialized() : false;
-      
+
       // Solo mostrar warning si NO está inicializando y NO está inicializado (problema real)
       // Durante el arranque, es normal que el servidor aún no esté listo
       if (!currentServer && !isInitializing && !isInitialized && !guacamoleStatusWarningLogged) {
@@ -116,7 +117,7 @@ function registerGuacamoleHandlers({
         // Resetear el flag si el servidor está disponible
         guacamoleStatusWarningLogged = false;
       }
-      
+
       const result = {
         guacd: guacdStatus,
         server: currentServer ? {
@@ -124,19 +125,19 @@ function registerGuacamoleHandlers({
           running: true,
           port: currentServer.port || 'unknown',
           readyAt: currentReadyAt || Date.now()
-        } : { 
+        } : {
           isRunning: false,
           running: false,
           readyAt: 0
         }
       };
-      
+
       return result;
     } catch (error) {
       console.error('Error getting Guacamole status:', error);
       const errorResult = {
         guacd: { isRunning: false, method: 'error' },
-        server: { 
+        server: {
           isRunning: false,
           running: false,
           readyAt: 0
@@ -164,11 +165,11 @@ function registerGuacamoleHandlers({
           }
           return { success: true, method, restarted: false, skippedDuringInit: true };
         }
-        
+
         // Verificar si el método ya es el mismo que el detectado actualmente
         const currentStatus = guacdService.getStatus();
         const currentMethod = currentStatus.method;
-        
+
         // Si el método ya es el correcto y está corriendo, no reiniciar
         if (currentMethod === method && currentStatus.isRunning) {
           console.log(`✅ Método Guacd ya está configurado como ${method} y está corriendo, omitiendo reinicio`);
@@ -181,10 +182,10 @@ function registerGuacamoleHandlers({
           }
           return { success: true, method, restarted: false, alreadyCorrect: true };
         }
-        
+
         // Establecer la nueva preferencia
         guacdService.setPreferredMethod(method);
-        
+
         // Guardar la preferencia de forma persistente
         try {
           const { savePreferredGuacdMethod } = require('../../main/utils/file-utils');
@@ -193,11 +194,11 @@ function registerGuacamoleHandlers({
         } catch (saveError) {
           console.warn('⚠️ No se pudo guardar la preferencia de método Guacd:', saveError.message);
         }
-        
+
         // Reiniciar el servicio para aplicar la nueva preferencia
         console.log(`🔄 Aplicando nueva preferencia de método Guacd: ${method}`);
         const restartSuccess = await guacdService.restart();
-        
+
         if (restartSuccess) {
           // Actualizar opciones de Guacamole-lite si está inicializado
           const currentServer = getGuacamoleServer ? getGuacamoleServer() : guacamoleServer;
@@ -209,7 +210,7 @@ function registerGuacamoleHandlers({
             console.log(`📝 [set-preferred-method] Nuevas opciones guacd: ${newGuacdOptions.host}:${newGuacdOptions.port}`);
             console.warn('⚠️ [set-preferred-method] Guacamole-lite puede necesitar reiniciarse para usar nuevas opciones');
           }
-          
+
           console.log(`✅ GuacdService reiniciado exitosamente con método: ${method}`);
           return { success: true, method, restarted: true };
         } else {
@@ -231,7 +232,7 @@ function registerGuacamoleHandlers({
       if (guacdService && typeof guacdService.restart === 'function') {
         console.log('🔄 Reiniciando GuacdService desde la UI...');
         const restartSuccess = await guacdService.restart();
-        
+
         if (restartSuccess) {
           const status = guacdService.getStatus ? guacdService.getStatus() : { isRunning: true };
           console.log('✅ GuacdService reiniciado exitosamente');
@@ -256,7 +257,7 @@ function registerGuacamoleHandlers({
 
   ipcMain.handle('guacamole:create-token', async (event, config) => {
     try {
-      
+
       // Si guacd está en modo mock, informar al usuario y rechazar
       try {
         if (guacdService && guacdService.getStatus && guacdService.getStatus().method === 'mock') {
@@ -265,16 +266,16 @@ function registerGuacamoleHandlers({
           console.warn(`⚠️  [MAIN] Intento de crear token con guacd en modo mock. ${message}`);
           return { success: false, error: message };
         }
-      } catch {}
-      
+      } catch { }
+
       // Detectar tipo de conexión: RDP o VNC
       const connectionType = config.connectionType || (config.type === 'vnc' || config.type === 'vnc-guacamole' ? 'vnc' : 'rdp');
       const isVNC = connectionType === 'vnc';
-      
+
       // Calcular resolución final: priorizar width/height, luego parsear resolution
       let finalWidth = config.width || 1024;
       let finalHeight = config.height || 768;
-      
+
       // Si no hay width/height específicos pero sí resolution, parsearla
       if (!config.width && !config.height && config.resolution) {
         const [width, height] = config.resolution.split('x');
@@ -293,12 +294,12 @@ function registerGuacamoleHandlers({
         if (allowedDepths.includes(candidateDepth)) {
           normalizedColorDepth = candidateDepth;
         }
-      } catch {}
+      } catch { }
 
-      
+
       // Obtener el estado actual del servidor usando las funciones getter
       const currentServer = getGuacamoleServer ? getGuacamoleServer() : guacamoleServer;
-      
+
       if (!currentServer) {
         throw new Error('Servidor Guacamole no está inicializado');
       }
@@ -354,7 +355,7 @@ function registerGuacamoleHandlers({
 
       // Construir objeto de configuración según el tipo
       let connectionSettings = {};
-      
+
       if (isVNC) {
         // Configuración VNC
         connectionSettings = {
@@ -423,16 +424,19 @@ function registerGuacamoleHandlers({
           settings: connectionSettings
         }
       };
-      
+
 
       // Encriptar token usando Crypt de guacamole-lite para asegurar compatibilidad de formato
       const Crypt = require('guacamole-lite/lib/Crypt.js');
       const crypt = new Crypt(CIPHER, SECRET_KEY);
       const token = crypt.encrypt(tokenObject);
-      
+
+      // Obtener el puerto dinámico actual (o fallback a 8081)
+      const currentPort = getGuacamoleWebSocketPort ? (getGuacamoleWebSocketPort() || 8081) : 8081;
+
       // Añadir '&' al final para asegurar separación si el cliente añade más parámetros
-      const websocketUrl = `ws://localhost:8081/?token=${encodeURIComponent(token)}&`;
-      
+      const websocketUrl = `ws://localhost:${currentPort}/?token=${encodeURIComponent(token)}&`;
+
       return {
         success: true,
         token: token,

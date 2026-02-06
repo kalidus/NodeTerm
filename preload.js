@@ -96,6 +96,21 @@ contextBridge.exposeInMainWorld('electron', {
     getMemoryStats: () => ipcRenderer.invoke('system:get-memory-stats'),
     getGPUStats: () => ipcRenderer.invoke('system:get-gpu-stats')
   },
+  theme: {
+    get: () => ipcRenderer.invoke('theme:get'),
+    save: (config) => ipcRenderer.invoke('theme:save', config)
+  },
+  security: {
+    getMasterKey: () => ipcRenderer.invoke('security:get-master-key'),
+    saveMasterKey: (key) => ipcRenderer.invoke('security:save-master-key', key),
+    hasMasterKey: () => ipcRenderer.invoke('security:has-master-key'),
+    clearMasterKey: () => ipcRenderer.invoke('security:clear-master-key')
+  },
+  appdata: {
+    getAll: () => ipcRenderer.invoke('appdata:get-all'),
+    saveAll: (data) => ipcRenderer.invoke('appdata:save-all', data),
+    getSyncKeys: () => ipcRenderer.invoke('appdata:get-sync-keys')
+  },
   ipcRenderer: {
     send: (channel, data) => {
       ipcRenderer.send(channel, data);
@@ -135,7 +150,10 @@ contextBridge.exposeInMainWorld('electron', {
         /^recording:.*$/,
         /^mcp:.*$/,
         /^network-tools:.*$/,
-        /^ssh-tunnel:.*$/
+        /^ssh-tunnel:.*$/,
+        /^theme:.*$/,
+        /^security:.*$/,
+        /^appdata:.*$/
       ];
       if (validChannels.some(regex => {
         if (typeof regex === 'string') {

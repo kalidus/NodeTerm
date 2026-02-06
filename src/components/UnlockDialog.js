@@ -14,11 +14,14 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
   const handleUnlock = async () => {
     setLoading(true);
     setError('');
+    console.log('[UnlockDialog] 🔑 Iniciando unlock...');
 
     try {
       // Cargar la master key guardada (usa device fingerprint)
+      console.log('[UnlockDialog] Cargando master key guardada...');
       const savedMasterKey = await secureStorage.loadMasterKey();
-      
+      console.log('[UnlockDialog] Master key cargada:', savedMasterKey ? 'OK' : 'NULL');
+
       if (!savedMasterKey) {
         setError('Error al cargar la clave guardada');
         setLoading(false);
@@ -27,6 +30,7 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
 
       // Verificar que el password introducido es correcto
       // comparándolo con el masterKey guardado
+      console.log('[UnlockDialog] Verificando password...');
       if (password !== savedMasterKey) {
         setError('Contraseña incorrecta');
         setLoading(false);
@@ -34,6 +38,7 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
       }
 
       // Password correcto - guardar preferencia de recordar
+      console.log('[UnlockDialog] Password correcto, guardando preferencias...');
       if (rememberPassword) {
         localStorage.setItem('nodeterm_remember_password', 'true');
       } else {
@@ -41,8 +46,11 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
       }
 
       // Devolver la master key
+      console.log('[UnlockDialog] ✅ Llamando onSuccess...');
       onSuccess(savedMasterKey);
+      console.log('[UnlockDialog] ✅ onSuccess completado');
     } catch (err) {
+      console.error('[UnlockDialog] Error:', err);
       setError('Error al desbloquear la aplicación');
       setLoading(false);
     }
@@ -59,8 +67,8 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
       <div className="p-fluid">
         {error && <Message severity="error" text={error} className="mb-3" />}
 
-        <Message 
-          severity="info" 
+        <Message
+          severity="info"
           text="Introduce tu contraseña maestra para desbloquear la aplicación"
           className="mb-3"
         />
