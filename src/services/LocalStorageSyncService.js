@@ -61,6 +61,38 @@ const SYNC_KEYS = [
 
     // Master key (backup) y Auth pref
     'nodeterm_master_key',
+    'nodeterm_remember_password',
+
+    // Configuración General
+    'lock_home_button',
+    'home_tab_icon',
+    'sidebar_start_collapsed',
+    'nodeterm_default_local_terminal',
+    'nodeterm_ui_anim_speed',
+    'nodeterm_language',
+    'nodeterm_ai_provider',
+    'nodeterm_ai_model',
+
+    // Configuración HomeTab
+    'homeTab_localTerminalVisible',
+    'homeTab_statusBarVisible',
+    'homeTab_rightColumnCollapsed',
+    'homeTab_rightColumn_sections',
+    'homeTabFont',
+    'homeTabFontSize',
+
+    // Configuración RDP/Guacamole
+    'rdp_idle_timeout_minutes',
+    'rdp_session_activity_minutes',
+    'rdp_resize_debounce_ms',
+    'rdp_resize_ack_timeout_ms',
+    'rdp_guacd_inactivity_ms',
+    'rdp_freeze_timeout_ms',
+
+    // Configuración AI
+    'aichat_history',
+    'aichat_model_config',
+
     'nodeterm_remember_password'
 ];
 
@@ -131,6 +163,13 @@ class LocalStorageSyncService {
         }
 
         console.log(`[LocalStorageSync] Importados ${importedCount} items a localStorage`);
+
+        // Notificar a la aplicación que hubo cambios
+        if (importedCount > 0) {
+            window.dispatchEvent(new CustomEvent('settings-updated', {
+                detail: { source: 'sync', count: importedCount }
+            }));
+        }
     }
 
     /**
