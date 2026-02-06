@@ -124,9 +124,14 @@ const App = () => {
           const { themeManager } = await import('../utils/themeManager');
           const { statusBarThemeManager } = await import('../utils/statusBarThemeManager');
 
-          // 3. Aplicar temas con verificación
-          themeManager.loadSavedTheme();
-          statusBarThemeManager.loadSavedTheme();
+          // 3. Aplicar temas con verificación (await para asegurar carga)
+          // Preferir cargar desde archivo compartido (sync)
+          await themeManager.loadSharedTheme();
+          if (statusBarThemeManager.loadSharedTheme) {
+            await statusBarThemeManager.loadSharedTheme();
+          } else {
+            statusBarThemeManager.loadSavedTheme();
+          }
 
           // 4. Verificar que los temas se aplicaron correctamente
           setTimeout(() => {
@@ -137,6 +142,7 @@ const App = () => {
             // Si los temas no se aplicaron correctamente, forzar re-aplicación
             if (!dialogBg || dialogBg === 'initial' || dialogBg === '' ||
               !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
+              console.warn('[Theme] Failsafe: Tema no cargado, aplicando Nord');
               themeManager.applyTheme('Nord');
               statusBarThemeManager.applyTheme('Night Owl');
             }
@@ -151,7 +157,7 @@ const App = () => {
                 }
               });
             });
-          }, 200);
+          }, 800); // Aumentado a 800ms para dar tiempo al IPC
         };
 
         // Diferir carga pesada usando requestIdleCallback si está disponible

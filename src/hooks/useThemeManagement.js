@@ -27,19 +27,19 @@ export const useThemeManagement = () => {
   const availableThemes = themes ? Object.keys(themes) : [];
 
   // Font states
-  const [fontFamily, setFontFamily] = useState(() => 
+  const [fontFamily, setFontFamily] = useState(() =>
     localStorage.getItem(FONT_FAMILY_STORAGE_KEY) || availableFonts[0].value
   );
-  
+
   const [fontSize, setFontSize] = useState(() => {
     const savedSize = localStorage.getItem(FONT_SIZE_STORAGE_KEY);
     return savedSize ? parseInt(savedSize, 10) : 14;
   });
 
-  const [localFontFamily, setLocalFontFamily] = useState(() => 
+  const [localFontFamily, setLocalFontFamily] = useState(() =>
     localStorage.getItem(LOCAL_FONT_FAMILY_STORAGE_KEY) || '"FiraCode Nerd Font", monospace'
   );
-  
+
   const [localFontSize, setLocalFontSize] = useState(() => {
     const saved = localStorage.getItem(LOCAL_FONT_SIZE_STORAGE_KEY);
     return saved ? parseInt(saved, 10) : 14;
@@ -51,19 +51,19 @@ export const useThemeManagement = () => {
     return themes && themes[savedThemeName] ? themes[savedThemeName] : {};
   });
 
-  const [statusBarTheme, setStatusBarTheme] = useState(() => 
+  const [statusBarTheme, setStatusBarTheme] = useState(() =>
     localStorage.getItem(STATUSBAR_THEME_STORAGE_KEY) || 'Default Dark'
   );
 
-  const [localPowerShellTheme, setLocalPowerShellTheme] = useState(() => 
+  const [localPowerShellTheme, setLocalPowerShellTheme] = useState(() =>
     localStorage.getItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY) || 'Dark'
   );
-  
-  const [localLinuxTerminalTheme, setLocalLinuxTerminalTheme] = useState(() => 
+
+  const [localLinuxTerminalTheme, setLocalLinuxTerminalTheme] = useState(() =>
     localStorage.getItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY) || 'Dark'
   );
 
-  const [uiTheme, setUiTheme] = useState(() => 
+  const [uiTheme, setUiTheme] = useState(() =>
     localStorage.getItem('ui_theme') || 'Light'
   );
 
@@ -76,7 +76,7 @@ export const useThemeManagement = () => {
 
     // Escuchar el evento global de cambio de tema
     window.addEventListener('theme-changed', handleThemeChange);
-    
+
     return () => {
       window.removeEventListener('theme-changed', handleThemeChange);
     };
@@ -104,12 +104,12 @@ export const useThemeManagement = () => {
     const checkAndUpdateIconThemes = () => {
       const storedIconTheme = localStorage.getItem('iconTheme');
       const storedIconThemeSidebar = localStorage.getItem('iconThemeSidebar');
-      
+
       if (storedIconTheme && storedIconTheme !== iconTheme) {
         console.log('[THEME] Actualizando iconTheme desde localStorage:', storedIconTheme);
         setIconTheme(storedIconTheme);
       }
-      
+
       if (storedIconThemeSidebar && storedIconThemeSidebar !== iconThemeSidebar) {
         console.log('[THEME] Actualizando iconThemeSidebar desde localStorage:', storedIconThemeSidebar);
         setIconThemeSidebar(storedIconThemeSidebar);
@@ -118,10 +118,10 @@ export const useThemeManagement = () => {
 
     // Verificar inmediatamente
     checkAndUpdateIconThemes();
-    
+
     // Verificar después de un pequeño delay para asegurar que initializeGlobalThemes se haya ejecutado
     const timeoutId = setTimeout(checkAndUpdateIconThemes, 100);
-    
+
     return () => clearTimeout(timeoutId);
   }, []);
 
@@ -241,7 +241,7 @@ export const useThemeManagement = () => {
   useEffect(() => {
     try {
       localStorage.setItem('iconTheme', iconTheme);
-    } catch {}
+    } catch { }
   }, [iconTheme]);
 
   useEffect(() => {
@@ -249,55 +249,55 @@ export const useThemeManagement = () => {
       localStorage.setItem('iconThemeSidebar', iconThemeSidebar);
       // Notificar a los componentes que el tema de iconos cambió
       window.dispatchEvent(new Event('icon-theme-changed'));
-    } catch {}
+    } catch { }
   }, [iconThemeSidebar]);
 
   useEffect(() => {
     try {
       localStorage.setItem('iconSize', iconSize.toString());
-    } catch {}
+    } catch { }
   }, [iconSize]);
 
   useEffect(() => {
     try {
       localStorage.setItem('folderIconSize', folderIconSize.toString());
-    } catch {}
+    } catch { }
   }, [folderIconSize]);
 
   useEffect(() => {
     try {
       localStorage.setItem('connectionIconSize', connectionIconSize.toString());
-    } catch {}
+    } catch { }
   }, [connectionIconSize]);
 
   useEffect(() => {
     try {
       localStorage.setItem('explorerFont', explorerFont);
-    } catch {}
+    } catch { }
   }, [explorerFont]);
 
   useEffect(() => {
     try {
       localStorage.setItem('explorerFontSize', explorerFontSize.toString());
-    } catch {}
+    } catch { }
   }, [explorerFontSize]);
 
   useEffect(() => {
     try {
       localStorage.setItem('explorerColorTheme', explorerColorTheme);
-    } catch {}
+    } catch { }
   }, [explorerColorTheme]);
 
   useEffect(() => {
     try {
       localStorage.setItem('sidebarFont', sidebarFont);
-    } catch {}
+    } catch { }
   }, [sidebarFont]);
 
   useEffect(() => {
     try {
       localStorage.setItem('sidebarFontSize', sidebarFontSize.toString());
-    } catch {}
+    } catch { }
   }, [sidebarFontSize]);
 
   useEffect(() => {
@@ -307,26 +307,26 @@ export const useThemeManagement = () => {
       } else {
         localStorage.removeItem('sidebarFontColor');
       }
-    } catch {}
+    } catch { }
   }, [sidebarFontColor]);
 
   useEffect(() => {
     try {
       localStorage.setItem('iconSize', iconSize.toString());
-    } catch {}
+    } catch { }
   }, [iconSize]);
 
   // Tree theme auto-save
   useEffect(() => {
     try {
       localStorage.setItem(TREE_THEME_STORAGE_KEY, treeTheme);
-    } catch {}
+    } catch { }
   }, [treeTheme]);
 
   useEffect(() => {
     try {
       localStorage.setItem('sessionActionIconTheme', sessionActionIconTheme);
-    } catch {}
+    } catch { }
   }, [sessionActionIconTheme]);
 
   // Initial theme loading effect
@@ -335,32 +335,40 @@ export const useThemeManagement = () => {
     const initializeThemes = () => {
       try {
         // Inicializando temas
-        
-        // Cargar tema UI guardado
-        themeManager.loadSavedTheme();
-        
+
+        // Cargar tema UI guardado (Preferir compartido)
+        if (themeManager.loadSharedTheme) {
+          themeManager.loadSharedTheme();
+        } else {
+          themeManager.loadSavedTheme();
+        }
+
         // Cargar tema de status bar guardado
-        statusBarThemeManager.loadSavedTheme();
-        
+        if (statusBarThemeManager.loadSharedTheme) {
+          statusBarThemeManager.loadSharedTheme();
+        } else {
+          statusBarThemeManager.loadSavedTheme();
+        }
+
         // Verificar que los temas se aplicaron correctamente
         setTimeout(() => {
           const rootStyles = getComputedStyle(document.documentElement);
           const dialogBg = rootStyles.getPropertyValue('--ui-dialog-bg');
           const sidebarBg = rootStyles.getPropertyValue('--ui-sidebar-bg');
-          
+
           // Si los temas no se aplicaron, forzar aplicación
-          if (!dialogBg || dialogBg === 'initial' || dialogBg === '' || 
-              !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
+          if (!dialogBg || dialogBg === 'initial' || dialogBg === '' ||
+            !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
             themeManager.applyTheme('Nord');
             statusBarThemeManager.applyTheme('Night Owl');
           }
         }, 100);
-        
+
       } catch (error) {
         console.error('[THEME] Error en useThemeManagement:', error);
       }
     };
-    
+
     // Ejecutar inicialización
     initializeThemes();
   }, []);
@@ -373,7 +381,7 @@ export const useThemeManagement = () => {
     const updatedLocalTerminalTheme = localStorage.getItem(LOCAL_TERMINAL_THEME_STORAGE_KEY) || 'Default Dark';
     const updatedLocalPowerShellTheme = localStorage.getItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY) || 'Dark';
     const updatedLocalLinuxTerminalTheme = localStorage.getItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY) || 'Dark';
-    
+
     const updatedExplorerFont = localStorage.getItem('explorerFont') || explorerFonts[0];
     const updatedExplorerFontSize = localStorage.getItem('explorerFontSize');
     const updatedExplorerColorTheme = localStorage.getItem('explorerColorTheme') || 'Light';
@@ -412,16 +420,16 @@ export const useThemeManagement = () => {
     const handleSettingsUpdate = (event) => {
       if (event.detail?.source === 'sync') {
         // Actualizando estados React tras sincronización
-        
+
         // Actualizar temas desde sincronización usando el hook
         updateThemesFromSync();
-        
+
         // Estados React actualizados
       }
     };
 
     window.addEventListener('settings-updated', handleSettingsUpdate);
-    
+
     return () => {
       window.removeEventListener('settings-updated', handleSettingsUpdate);
     };
@@ -475,7 +483,7 @@ export const useThemeManagement = () => {
     setSidebarFontSize,
     sidebarFontColor,
     setSidebarFontColor,
-    
+
     // Tree theme
     treeTheme,
     setTreeTheme,
