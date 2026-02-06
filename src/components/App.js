@@ -51,6 +51,8 @@ const GuacamoleTab = lazy(() => import('./GuacamoleTab'));
 const GuacamoleTerminal = lazy(() => import('./GuacamoleTerminal'));
 const FileExplorer = lazy(() => import('./FileExplorer'));
 
+import localStorageSyncService from '../services/LocalStorageSyncService';
+
 // Componentes críticos (se cargan inmediatamente)
 import TitleBar from './TitleBar';
 import HomeTab from './HomeTab';
@@ -58,7 +60,7 @@ import { SSHDialog, FolderDialog, GroupDialog } from './Dialogs';
 import ImportService from '../services/ImportService';
 import { unblockAllInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import SecureStorage from '../services/SecureStorage';
-import localStorageSyncService from '../services/LocalStorageSyncService';
+
 
 import UnlockDialog from './UnlockDialog';
 import { detectBlockedInputs } from '../utils/formDebugger';
@@ -209,6 +211,9 @@ const App = () => {
         console.log('[App] Llamando a localStorageSyncService.initialize()...');
         await localStorageSyncService.initialize();
         console.log('[App] ✅ localStorage sync completado');
+
+        // 🔄 Recargar datos en los hooks que inicializaron con localStorage vacío
+        if (reloadNodes) reloadNodes();
       } catch (err) {
         console.warn('[App] Error sincronizando localStorage:', err);
       }
@@ -1053,7 +1058,7 @@ const App = () => {
 
   // Usar el hook de gestión del sidebar
   const {
-    nodes, setNodes,
+    nodes, setNodes, reloadNodes,
     selectedNode, setSelectedNode,
     isGeneralTreeMenu, setIsGeneralTreeMenu,
     selectedNodeKey, setSelectedNodeKey,
