@@ -32,18 +32,24 @@ const SYNC_KEYS = [
     'basicapp_statusbar_theme',
     'basicapp_terminal_theme',
     'iconTheme',
+    // Configuración de fuentes y terminal
+    'basicapp_font_family',
+    'basicapp_font_size',
+    'basicapp_local_terminal_font_family',
+    'basicapp_local_terminal_font_size',
+    'basicapp_statusbar_height',
+    'basicapp_local_powershell_theme',
+    'basicapp_local_linux_terminal_theme',
     'explorerFont',
     'explorerFontSize',
     'explorerColorTheme',
     'sidebarFont',
     'sidebarFontSize',
-
-    // Configuración de terminal
-    'basicapp_statusbar_height',
-    'basicapp_local_terminal_font_family',
-    'basicapp_local_terminal_font_size',
-    'basicapp_local_powershell_theme',
-    'basicapp_local_linux_terminal_theme',
+    'sidebarFontColor',
+    'iconSize',
+    'folderIconSize',
+    'connectionIconSize',
+    'nodeterm_interactive_icon',
 
     // Grupos de favoritos
     'nodeterm_favorite_groups',
@@ -115,12 +121,9 @@ class LocalStorageSyncService {
 
         for (const key of SYNC_KEYS) {
             if (data[key] !== undefined && data[key] !== null) {
-                // Solo importar si no existe o está vacío en localStorage
-                const existing = localStorage.getItem(key);
-                if (!existing) {
-                    localStorage.setItem(key, data[key]);
-                    importedCount++;
-                }
+                // Sobrescribir siempre al inicializar para asegurar sync
+                localStorage.setItem(key, data[key]);
+                importedCount++;
             }
         }
 
