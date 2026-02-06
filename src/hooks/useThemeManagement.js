@@ -448,6 +448,12 @@ export const useThemeManagement = () => {
       statusBarThemeManager.applyTheme(updatedStatusBarTheme);
       // Aplicar tema de iconos si cambió
       window.dispatchEvent(new Event('icon-theme-changed'));
+
+      // Aplicar tema de pestañas
+      const updatedTabTheme = localStorage.getItem('nodeterm_tab_theme');
+      if (updatedTabTheme) {
+        window.dispatchEvent(new CustomEvent('tab-theme-changed', { detail: updatedTabTheme }));
+      }
     } catch (e) {
       console.error('[THEME] Error aplicando estilos forzados:', e);
     }
