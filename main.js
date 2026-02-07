@@ -882,7 +882,11 @@ function createWindow() {
     const { registerCriticalHandlers } = require('./src/main/handlers');
     registerCriticalHandlers({
       mainWindow,
-      packageJson
+      packageJson,
+      disconnectAllGuacamoleConnections,
+      sshConnections,
+      cleanupOrphanedConnections,
+      isAppQuitting
     });
   } catch (err) {
     console.error('❌ Error registrando handlers críticos:', err);
