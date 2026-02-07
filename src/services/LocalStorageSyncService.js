@@ -59,6 +59,13 @@ const SYNC_KEYS = [
     'nodeterm_group_assignments',
     'nodeterm_filter_config',
 
+    // Configuración específica de terminales (Docker/Linux)
+    'localDockerTerminalTheme',
+    'nodeterm_docker_font_family',
+    'nodeterm_docker_font_size',
+    'nodeterm_linux_font_family',
+    'nodeterm_linux_font_size',
+
     // Master key (backup) y Auth pref
     'nodeterm_master_key',
     'nodeterm_remember_password',
@@ -123,9 +130,18 @@ class LocalStorageSyncService {
                 this._importToLocalStorage(sharedData);
                 console.log('[LocalStorageSync] Datos cargados correctamente');
             } else {
-                console.log('[LocalStorageSync] No hay datos compartidos, exportando localStorage actual...');
-                // Si no hay archivo compartido, exportar los datos actuales (esto ocurre en la primera ejecución)
-                await this.syncToFile();
+                console.log('[LocalStorageSync] No hay datos compartidos.');
+
+                // Verificar si tenemos datos locales significativos antes de sobrescribir
+                const hasLocalTheme = localStorage.getItem('ui_theme');
+                const hasLocalHistory = localStorage.getItem('nodeterm_connection_history');
+
+                if (hasLocalTheme || hasLocalHistory) {
+                    console.log('[LocalStorageSync] Exportando datos locales existentes a archivo compartido...');
+                    await this.syncToFile();
+                } else {
+                    console.log('[LocalStorageSync] LocalStorage vacío, esperando cambios antes de sincronizar.');
+                }
             }
 
             this._initialized = true;

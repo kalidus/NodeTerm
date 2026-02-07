@@ -56,6 +56,13 @@ const SYNC_KEYS = [
     'nodeterm_group_assignments',
     'nodeterm_filter_config',
 
+    // Configuración específica de terminales (Docker/Linux)
+    'localDockerTerminalTheme',
+    'nodeterm_docker_font_family',
+    'nodeterm_docker_font_size',
+    'nodeterm_linux_font_family',
+    'nodeterm_linux_font_size',
+
     // Master key (backup)
     'nodeterm_master_key'
 ];
@@ -66,21 +73,29 @@ const SYNC_KEYS = [
 function registerAppDataHandlers(dependencies) {
     // Handler para obtener todos los datos sincronizados
     ipcMain.handle('appdata:get-all', async () => {
-        try {
-            if (fs.existsSync(APP_DATA_PATH)) {
-                const data = fs.readFileSync(APP_DATA_PATH, 'utf8');
-                try {
-                    return JSON.parse(data);
-                } catch (e) {
-                    console.warn('⚠️ [AppData] Error parseando app-data.json:', e);
-                    return null;
+        let retries = 3;
+        while (retries > 0) {
+            try {
+                if (fs.existsSync(APP_DATA_PATH)) {
+                    const data = fs.readFileSync(APP_DATA_PATH, 'utf8');
+                    try {
+                        return JSON.parse(data);
+                    } catch (e) {
+                        console.warn(`⚠️ [AppData] Error parseando app-data.json (intento ${4 - retries}):`, e);
+                        // Si el archivo está corrupto o vacío, podría ser porque se está escribiendo
+                        retries--;
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        continue;
+                    }
                 }
+                return null;
+            } catch (error) {
+                console.warn(`⚠️ [AppData] Error leyendo datos (intento ${4 - retries}):`, error.message);
+                retries--;
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
-            return null;
-        } catch (error) {
-            console.warn('⚠️ [AppData] Error leyendo datos:', error.message);
-            return null;
         }
+        return null;
     });
 
     // Handler para guardar todos los datos sincronizados
@@ -97,7 +112,11 @@ function registerAppDataHandlers(dependencies) {
                 _syncedAt: new Date().toISOString()
             };
 
-            fs.writeFileSync(APP_DATA_PATH, JSON.stringify(dataWithMeta, null, 2), 'utf8');
+            // ESCRITURA ATÓMICA: Escribir a un archivo temporal y luego renombrar
+            const tempPath = `${APP_DATA_PATH}.tmp`;
+            fs.writeFileSync(tempPath, JSON.stringify(dataWithMeta, null, 2), 'utf8');
+            fs.renameSync(tempPath, APP_DATA_PATH);
+
             return { success: true };
         } catch (error) {
             console.error('❌ [AppData] Error guardando datos:', error.message);
