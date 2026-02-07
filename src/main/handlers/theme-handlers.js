@@ -15,16 +15,28 @@ const THEME_CONFIG_PATH = path.join(os.homedir(), '.nodeterm', 'theme.json');
 function registerThemeHandlers(dependencies) {
     // Handler para obtener el tema actual
     ipcMain.handle('theme:get', async () => {
-        try {
-            if (fs.existsSync(THEME_CONFIG_PATH)) {
-                const data = fs.readFileSync(THEME_CONFIG_PATH, 'utf8');
-                return JSON.parse(data);
+        let retries = 3;
+        while (retries > 0) {
+            try {
+                if (fs.existsSync(THEME_CONFIG_PATH)) {
+                    const data = fs.readFileSync(THEME_CONFIG_PATH, 'utf8');
+                    try {
+                        return JSON.parse(data);
+                    } catch (e) {
+                        console.warn(`⚠️ [Theme] Error parseando theme.json (intento ${4 - retries}):`, e);
+                        retries--;
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        continue;
+                    }
+                }
+                return null;
+            } catch (error) {
+                console.warn(`⚠️ [Theme] Error leyendo configuración de tema (intento ${4 - retries}):`, error.message);
+                retries--;
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
-            return null;
-        } catch (error) {
-            console.warn('⚠️ [Theme] Error leyendo configuración de tema:', error.message);
-            return null;
         }
+        return null;
     });
 
     // Handler para guardar el tema actual
@@ -36,8 +48,11 @@ function registerThemeHandlers(dependencies) {
                 fs.mkdirSync(configDir, { recursive: true });
             }
 
-            // Escritura atómica simple
-            fs.writeFileSync(THEME_CONFIG_PATH, JSON.stringify(themeConfig, null, 2), 'utf8');
+            // Escritura atómica simple: Escribir a un archivo temporal y luego renombrar
+            const tempPath = `${THEME_CONFIG_PATH}.tmp`;
+            fs.writeFileSync(tempPath, JSON.stringify(themeConfig, null, 2), 'utf8');
+            fs.renameSync(tempPath, THEME_CONFIG_PATH);
+
             return { success: true };
         } catch (error) {
             console.error('❌ [Theme] Error guardando configuración de tema:', error.message);

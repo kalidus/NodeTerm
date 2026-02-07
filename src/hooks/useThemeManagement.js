@@ -64,6 +64,10 @@ export const useThemeManagement = () => {
     localStorage.getItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY) || 'Dark'
   );
 
+  const [localDockerTerminalTheme, setLocalDockerTerminalTheme] = useState(() =>
+    localStorage.getItem('localDockerTerminalTheme') || 'Default Dark'
+  );
+
   const [uiTheme, setUiTheme] = useState(() =>
     localStorage.getItem('ui_theme') || 'Light'
   );
@@ -382,6 +386,7 @@ export const useThemeManagement = () => {
     const updatedLocalTerminalTheme = localStorage.getItem(LOCAL_TERMINAL_THEME_STORAGE_KEY) || 'Default Dark';
     const updatedLocalPowerShellTheme = localStorage.getItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY) || 'Dark';
     const updatedLocalLinuxTerminalTheme = localStorage.getItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY) || 'Dark';
+    const updatedLocalDockerTerminalTheme = localStorage.getItem('localDockerTerminalTheme') || 'Default Dark';
 
     // UI Fonts
     const updatedFontFamily = localStorage.getItem(FONT_FAMILY_STORAGE_KEY) || availableFonts[0].value;
@@ -407,6 +412,7 @@ export const useThemeManagement = () => {
     if (updatedLocalFontSize) setLocalFontSize(parseInt(updatedLocalFontSize, 10));
     setLocalPowerShellTheme(updatedLocalPowerShellTheme);
     setLocalLinuxTerminalTheme(updatedLocalLinuxTerminalTheme);
+    setLocalDockerTerminalTheme(updatedLocalDockerTerminalTheme);
 
     // UI Fonts State Update
     setFontFamily(updatedFontFamily);
@@ -426,8 +432,10 @@ export const useThemeManagement = () => {
     setTreeTheme(updatedTreeTheme);
     setSessionActionIconTheme(updatedSessionActionIconTheme);
 
-    // Actualizar tema de terminal
-    const updatedTerminalThemeObj = themes && themes[updatedLocalTerminalTheme] ? themes[updatedLocalTerminalTheme] : {};
+    // Actualizar tema de terminal SSH
+    // FIX: Usar THEME_STORAGE_KEY para SSH, no LOCAL_TERMINAL_THEME_STORAGE_KEY
+    const updatedTerminalThemeName = localStorage.getItem(THEME_STORAGE_KEY) || 'Default Dark';
+    const updatedTerminalThemeObj = themes && themes[updatedTerminalThemeName] ? themes[updatedTerminalThemeName] : {};
     setTerminalTheme(updatedTerminalThemeObj);
 
     // 🚀 FORZAR APLICACIÓN VISUAL
@@ -504,7 +512,10 @@ export const useThemeManagement = () => {
     localPowerShellTheme,
     setLocalPowerShellTheme,
     localLinuxTerminalTheme,
+    localLinuxTerminalTheme,
     setLocalLinuxTerminalTheme,
+    localDockerTerminalTheme,
+    setLocalDockerTerminalTheme,
     uiTheme,
     setUiTheme,
     availableThemes,
