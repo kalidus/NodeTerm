@@ -51,7 +51,8 @@ const GuacamoleTab = lazy(() => import('./GuacamoleTab'));
 const GuacamoleTerminal = lazy(() => import('./GuacamoleTerminal'));
 const FileExplorer = lazy(() => import('./FileExplorer'));
 
-import localStorageSyncService from '../services/LocalStorageSyncService';
+
+// NOTA: localStorageSyncService ahora se inicializa en index.js antes del render
 
 // Componentes críticos (se cargan inmediatamente)
 import TitleBar from './TitleBar';
@@ -211,19 +212,8 @@ const App = () => {
     const initializeApp = async () => {
       console.log('[App] ✅ initializeApp() iniciado');
 
-      // 🔄 MULTI-INSTANCIA: Cargar datos compartidos ANTES de verificar autenticación
-      // Esto permite que instancias secundarias tengan acceso a localStorage de la principal
-      try {
-        console.log('[App] Llamando a localStorageSyncService.initialize()...');
-        await localStorageSyncService.initialize();
-        console.log('[App] ✅ localStorage sync completado');
-
-        // 🔄 Recargar datos en los hooks que inicializaron con localStorage vacío
-        if (reloadNodes) reloadNodes();
-        if (reloadThemes) reloadThemes(); // Recargar temas y FUENTES desde sync
-      } catch (err) {
-        console.warn('[App] Error sincronizando localStorage:', err);
-      }
+      // NOTA: La sincronización de localStorage se hace en index.js ANTES del render
+      // para asegurar que los datos estén disponibles cuando los hooks se inicializan
 
 
       // Usar verificación asíncrona compatible con multi-instancia (archivo compartido)
