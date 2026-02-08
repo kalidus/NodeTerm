@@ -112,10 +112,20 @@ function registerAppDataHandlers(dependencies) {
                 _syncedAt: new Date().toISOString()
             };
 
-            // ESCRITURA ATÓMICA: Escribir a un archivo temporal y luego renombrar
-            const tempPath = `${APP_DATA_PATH}.tmp`;
+            // ESCRITURA ATÓMICA: Escribir a un archivo temporal único y luego renombrar
+            // Usamos un ID único para evitar colisiones entre múltiples procesos (ENOENT race condition)
+            const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const tempPath = path.join(path.dirname(APP_DATA_PATH), `app-data.${uniqueId}.tmp`);
+
             fs.writeFileSync(tempPath, JSON.stringify(dataWithMeta, null, 2), 'utf8');
-            fs.renameSync(tempPath, APP_DATA_PATH);
+
+            try {
+                fs.renameSync(tempPath, APP_DATA_PATH);
+            } catch (err) {
+                // Intentar limpiar el archivo temporal si falla el renombrado
+                try { fs.unlinkSync(tempPath); } catch (e) { /* ignorar error de limpieza */ }
+                throw err;
+            }
 
             return { success: true };
         } catch (error) {
