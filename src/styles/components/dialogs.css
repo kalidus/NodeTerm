@@ -3353,3 +3353,607 @@
     transform: scale(1.1);
   }
 }
+
+/* ========================================
+   IMPORT WIZARD DIALOG STYLES
+   Diálogo de importación con wizard de pasos
+   ======================================== */
+
+/* Dialog container */
+.import-wizard-dialog {
+  overflow: visible;
+}
+
+.import-wizard-dialog .p-dialog-header {
+  padding: 1rem 1.25rem !important;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-bottom: 1px solid rgba(102, 126, 234, 0.2) !important;
+}
+
+.import-wizard-dialog .p-dialog-content {
+  padding: 0 !important;
+  overflow: visible;
+}
+
+.import-wizard-dialog .p-dialog-footer {
+  padding: 1rem 1.25rem !important;
+  background: var(--ui-dialog-bg);
+  border-top: 1px solid var(--ui-dialog-border) !important;
+}
+
+/* Header */
+.import-wizard-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.import-wizard-header i {
+  font-size: 1.25rem;
+  color: var(--ui-button-primary);
+}
+
+.import-wizard-header span {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* Content container */
+.import-wizard-content {
+  padding: 1.25rem;
+  min-height: 400px;
+}
+
+/* Steps indicator */
+.import-wizard-steps {
+  margin-bottom: 1.5rem;
+}
+
+.import-wizard-steps .p-steps-item {
+  flex: 1;
+}
+
+.import-wizard-steps .p-steps-item .p-menuitem-link {
+  background: transparent;
+  padding: 0.5rem;
+}
+
+.import-wizard-steps .p-steps-item .p-steps-number {
+  background: var(--ui-dialog-border);
+  color: var(--ui-dialog-text);
+  border: none;
+  width: 2rem;
+  height: 2rem;
+  font-size: 0.9rem;
+}
+
+.import-wizard-steps .p-steps-item.p-highlight .p-steps-number {
+  background: var(--ui-button-primary);
+  color: white;
+}
+
+.import-wizard-steps .p-steps-item .p-steps-title {
+  font-size: 0.8rem;
+  color: var(--ui-dialog-text);
+  opacity: 0.7;
+}
+
+.import-wizard-steps .p-steps-item.p-highlight .p-steps-title {
+  opacity: 1;
+  font-weight: 600;
+}
+
+/* Step content */
+.import-wizard-step-content {
+  min-height: 350px;
+}
+
+/* Section titles */
+.import-wizard-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 1.25rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ui-dialog-text);
+}
+
+.import-wizard-section-title i {
+  color: var(--ui-button-primary);
+  font-size: 1.1rem;
+}
+
+/* Source selection */
+.import-wizard-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.import-wizard-category {
+  margin-bottom: 0.5rem;
+}
+
+.import-wizard-category-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-color-secondary);
+}
+
+.import-wizard-category-title i {
+  font-size: 0.9rem;
+}
+
+.import-wizard-source-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+/* Source cards */
+.import-source-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.import-source-card:hover:not(.disabled) {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: var(--ui-button-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.import-source-card.selected {
+  background: rgba(102, 126, 234, 0.15);
+  border-color: var(--ui-button-primary);
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+}
+
+.import-source-card.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.import-source-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.import-source-card-icon i {
+  font-size: 1.1rem;
+  color: var(--ui-button-primary);
+}
+
+.import-source-card.disabled .import-source-card-icon {
+  background: rgba(128, 128, 128, 0.1);
+}
+
+.import-source-card.disabled .import-source-card-icon i {
+  color: var(--text-color-secondary);
+}
+
+.import-source-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.import-source-card-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ui-dialog-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.import-source-card-desc {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.import-source-card-check {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: var(--ui-button-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.import-source-card-check i {
+  font-size: 0.7rem;
+  color: white;
+}
+
+/* Configuration section */
+.import-wizard-config {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Dropzone */
+.import-wizard-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  border: 2px dashed var(--ui-dialog-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 120px;
+}
+
+.import-wizard-dropzone:hover:not(.has-file) {
+  border-color: var(--ui-button-primary);
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.import-wizard-dropzone.drag-over {
+  border-color: var(--ui-button-primary);
+  background: rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 20px rgba(102, 126, 234, 0.2);
+}
+
+.import-wizard-dropzone.has-file {
+  cursor: default;
+  border-style: solid;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.import-wizard-dropzone-icon {
+  font-size: 2.5rem;
+  color: var(--text-color-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.import-wizard-dropzone-text {
+  text-align: center;
+  color: var(--ui-dialog-text);
+  font-size: 0.95rem;
+}
+
+.import-wizard-dropzone-hint {
+  color: var(--text-color-secondary);
+  font-size: 0.85rem;
+}
+
+/* File info */
+.import-wizard-file-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.import-wizard-file-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  background: var(--ui-button-primary);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.import-wizard-file-icon i {
+  font-size: 1.5rem;
+  color: white;
+}
+
+.import-wizard-file-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.import-wizard-file-name {
+  font-weight: 600;
+  color: var(--ui-dialog-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.import-wizard-file-size {
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+}
+
+.import-wizard-file-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Options section */
+.import-wizard-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.import-wizard-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.import-wizard-field label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--ui-dialog-text);
+}
+
+.import-wizard-field label i {
+  font-size: 0.9rem;
+  color: var(--text-color-secondary);
+}
+
+.import-wizard-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: 8px;
+}
+
+.import-wizard-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.import-wizard-checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--ui-dialog-text);
+  cursor: pointer;
+}
+
+.import-wizard-checkbox label i {
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+}
+
+.import-wizard-key-file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: 6px;
+}
+
+.import-wizard-key-file span {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.import-wizard-hint {
+  color: var(--text-color-secondary);
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+/* Preview section */
+.import-wizard-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.import-wizard-stats {
+  margin-bottom: 0.5rem;
+}
+
+.import-wizard-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.import-wizard-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.import-wizard-stat-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.import-wizard-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ui-dialog-text);
+}
+
+.import-wizard-stat-label {
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
+}
+
+.import-wizard-tree {
+  margin-top: 0.5rem;
+}
+
+.import-wizard-tree h5 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ui-dialog-text);
+}
+
+.import-wizard-tree-container {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: 8px;
+}
+
+.import-wizard-final-config {
+  padding: 0.75rem;
+  background: rgba(102, 126, 234, 0.05);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 8px;
+}
+
+/* Loading state */
+.import-wizard-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  gap: 1rem;
+  color: var(--text-color-secondary);
+}
+
+.import-wizard-loading i {
+  color: var(--ui-button-primary);
+}
+
+/* Error state */
+.import-wizard-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+/* Import progress */
+.import-wizard-importing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 250px;
+  gap: 1rem;
+}
+
+.import-wizard-status {
+  color: var(--text-color-secondary);
+  font-size: 0.95rem;
+}
+
+/* Import result */
+.import-wizard-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 250px;
+  text-align: center;
+}
+
+.import-wizard-result-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.import-wizard-result.success .import-wizard-result-icon i {
+  color: #a6e3a1;
+}
+
+.import-wizard-result.error .import-wizard-result-icon i {
+  color: #f38ba8;
+}
+
+.import-wizard-result h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: var(--ui-dialog-text);
+}
+
+.import-wizard-result-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.import-wizard-result-stat {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: 6px;
+}
+
+.import-wizard-result-stat .label {
+  color: var(--text-color-secondary);
+  text-transform: capitalize;
+}
+
+.import-wizard-result-stat .value {
+  font-weight: 600;
+  color: var(--ui-dialog-text);
+}
+
+/* Footer */
+.import-wizard-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.import-wizard-footer-left,
+.import-wizard-footer-right {
+  display: flex;
+  gap: 0.5rem;
+}

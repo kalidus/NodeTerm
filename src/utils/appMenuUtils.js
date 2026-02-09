@@ -5,14 +5,14 @@
 
 import { getVersionInfo } from '../version-info';
 
-export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImportExportDialog, t) => {
+export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImportExportDialog, t, onShowImportWizard) => {
   // Si no se pasa t, usar valores por defecto en español (fallback)
   const getText = (key) => {
     if (t) return t(key);
     // Fallback en español si no hay traducción
     const fallbacks = {
       'appMenu.file': 'Archivo',
-      'appMenu.import': 'Importar',
+      'appMenu.import': 'Importar...',
       'appMenu.importMremote': 'Importar mRemoteNG/KeePass',
       'appMenu.importNodeterm': 'Importar NodeTerm (.nodeterm)',
       'appMenu.export': 'Exportar',
@@ -49,19 +49,17 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
         },
         { separator: true },
         {
-          label: getText('appMenu.importNodeterm'),
-          icon: 'pi pi-file-import',
+          label: getText('appMenu.import'),
+          icon: 'pi pi-upload',
           command: () => {
-            console.log('🔍 [Menu] Importar NodeTerm clickeado');
-            onShowImportExportDialog && onShowImportExportDialog(true);
-          }
-        },
-        {
-          label: getText('appMenu.importMremote'),
-          icon: 'pi pi-file-excel',
-          command: () => {
-            console.log('🔍 [Menu] Importar mRemoteNG clickeado');
-            onShowImportDialog && onShowImportDialog(true);
+            console.log('🔍 [Menu] Importar (Wizard) clickeado');
+            // Usar el nuevo wizard unificado si está disponible
+            if (onShowImportWizard) {
+              onShowImportWizard(true);
+            } else {
+              // Fallback a los diálogos antiguos
+              onShowImportDialog && onShowImportDialog(true);
+            }
           }
         }
       ]
@@ -149,7 +147,7 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
             align-items: center;
             justify-content: center;
           `;
-          
+
           const aboutDialog = document.createElement('div');
           aboutDialog.style.cssText = `
             background: var(--ui-sidebar-bg, #fff);
@@ -162,7 +160,7 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
             color: var(--ui-text-primary, #333);
             font-family: var(--font-family, sans-serif);
           `;
-          
+
           aboutDialog.innerHTML = `
             <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; text-align: center;">${versionInfo.appName || 'NodeTerm'}</h3>
             <div style="margin: 16px 0;">
@@ -184,7 +182,7 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
               ">${getText('appMenu.close')}</button>
             </div>
           `;
-          
+
           overlay.appendChild(aboutDialog);
           // Asegurar que overlay no bloquee inputs si queda colgado
           document.body.appendChild(overlay);
@@ -193,21 +191,21 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
               closeDialog();
             }
           });
-          
+
           // Eventos para cerrar el diálogo
           const closeDialog = () => {
             if (document.body.contains(overlay)) {
               document.body.removeChild(overlay);
             }
           };
-          
+
           document.getElementById('closeAboutDialog').addEventListener('click', closeDialog);
           overlay.addEventListener('click', (e) => {
             if (e.target === overlay) {
               closeDialog();
             }
           });
-          
+
           // Cerrar con ESC
           const handleEsc = (e) => {
             if (e.key === 'Escape') {
@@ -244,11 +242,11 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     existingMenu.remove();
     return;
   }
-  
+
   // Variables globales para el menú
   let activeSubmenu = null;
   let submenuTimer = null;
-  
+
   // Función de limpieza completa
   const cleanupMenus = () => {
     if (submenuTimer) clearTimeout(submenuTimer);
@@ -269,7 +267,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     activeSubmenu = null;
     submenuTimer = null;
   };
-  
+
   // Función simplificada para cerrar submenú (como funciona "Ver")
   const scheduleSubmenuClose = () => {
     if (submenuTimer) clearTimeout(submenuTimer);
@@ -280,7 +278,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
       }
     }, 300); // Timer más corto y simple
   };
-  
+
   // Función para cancelar el cierre
   const cancelSubmenuClose = () => {
     if (submenuTimer) {
@@ -288,7 +286,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
       submenuTimer = null;
     }
   };
-  
+
   // Crear el menú contextual principal
   const contextMenu = document.createElement('div');
   contextMenu.className = menuClass;
@@ -307,19 +305,19 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     top: -9999px;
     opacity: 0;
   `;
-  
+
   const createMenuItem = (item, isSubmenu = false) => {
-      if (item.separator) {
-        const separator = document.createElement('div');
-        separator.style.cssText = `
+    if (item.separator) {
+      const separator = document.createElement('div');
+      separator.style.cssText = `
           height: 1px;
           background: var(--ui-context-border, #555);
           margin: 4px 8px;
           opacity: 0.5;
         `;
-        return separator;
-      }
-    
+      return separator;
+    }
+
     const menuItem = document.createElement('div');
     menuItem.className = 'menu-item-unified';
     menuItem.style.cssText = `
@@ -332,7 +330,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
       transition: background-color 0.15s ease;
       position: relative;
     `;
-    
+
     const leftContent = document.createElement('div');
     leftContent.style.cssText = `
       display: flex;
@@ -340,14 +338,14 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
       gap: 10px;
       flex: 1;
     `;
-    
+
     leftContent.innerHTML = `
       <i class="${item.icon}" style="width: 16px; font-size: 14px;"></i>
       <span>${item.label}</span>
     `;
-    
+
     menuItem.appendChild(leftContent);
-    
+
     // Agregar shortcut si existe
     if (item.shortcut) {
       const shortcut = document.createElement('span');
@@ -359,7 +357,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
       shortcut.textContent = item.shortcut;
       menuItem.appendChild(shortcut);
     }
-    
+
     // Agregar flecha para submenús
     if (item.submenu) {
       const arrow = document.createElement('i');
@@ -370,12 +368,12 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
       `;
       menuItem.appendChild(arrow);
     }
-    
+
     // Eventos para elementos con submenú
     if (item.submenu) {
       menuItem.addEventListener('mouseenter', () => {
         cancelSubmenuClose();
-        
+
         // Limpiar hover de otros elementos
         const allMenuItems = contextMenu.querySelectorAll('.menu-item-unified');
         allMenuItems.forEach(item => {
@@ -384,12 +382,12 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
           }
         });
         menuItem.style.backgroundColor = 'var(--ui-context-hover, rgba(255, 255, 255, 0.1))';
-        
+
         // Limpiar submenú anterior
         if (activeSubmenu && document.body.contains(activeSubmenu)) {
           document.body.removeChild(activeSubmenu);
         }
-        
+
         // Crear nuevo submenú
         activeSubmenu = document.createElement('div');
         activeSubmenu.className = `${menuClass}-submenu`;
@@ -408,26 +406,26 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
           top: -9999px;
           opacity: 0;
         `;
-        
+
         // Eventos simplificados del submenú (igual que funciona "Ver")
         activeSubmenu.addEventListener('mouseenter', cancelSubmenuClose);
         activeSubmenu.addEventListener('mouseleave', scheduleSubmenuClose);
-        
+
         item.submenu.forEach(subItem => {
           const subMenuItem = createMenuItem(subItem, true);
           activeSubmenu.appendChild(subMenuItem);
         });
-        
+
         document.body.appendChild(activeSubmenu);
-        
+
         // Posicionar submenú de manera simple y directa (sin destellos)
         setTimeout(() => {
           const menuRect = menuItem.getBoundingClientRect();
           const submenuRect = activeSubmenu.getBoundingClientRect();
-          
+
           let left = menuRect.right;
           let top = menuRect.top;
-          
+
           // Ajustar si se sale de la pantalla
           if (left + submenuRect.width > window.innerWidth) {
             left = menuRect.left - submenuRect.width;
@@ -435,13 +433,13 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
           if (top + submenuRect.height > window.innerHeight) {
             top = window.innerHeight - submenuRect.height - 8;
           }
-          
+
           activeSubmenu.style.left = `${left}px`;
           activeSubmenu.style.top = `${top}px`;
           activeSubmenu.style.opacity = '1';
         }, 5);
       });
-      
+
       menuItem.addEventListener('mouseleave', scheduleSubmenuClose);
     } else {
       // Eventos para elementos normales
@@ -455,12 +453,12 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
         });
         menuItem.style.backgroundColor = 'var(--ui-context-hover, rgba(255, 255, 255, 0.1))';
       });
-      
+
       menuItem.addEventListener('mouseleave', () => {
         menuItem.style.backgroundColor = 'transparent';
       });
     }
-    
+
     if (item.command) {
       menuItem.addEventListener('click', () => {
         item.command();
@@ -468,25 +466,25 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
         cleanupMenus();
       });
     }
-    
+
     return menuItem;
   };
-  
+
   menuStructure.forEach(item => {
     const menuItem = createMenuItem(item);
     contextMenu.appendChild(menuItem);
   });
-  
+
   document.body.appendChild(contextMenu);
-  
+
   // Posicionar el menú principal (sin destellos)
   setTimeout(() => {
     const rect = event.target.closest('button').getBoundingClientRect();
     const menuRect = contextMenu.getBoundingClientRect();
-    
+
     let left = rect.left;
     let top = rect.top - menuRect.height - 8;
-    
+
     // Ajustar si se sale de la pantalla
     if (left + menuRect.width > window.innerWidth) {
       left = window.innerWidth - menuRect.width - 8;
@@ -494,12 +492,12 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     if (top < 8) {
       top = rect.bottom + 8;
     }
-    
+
     contextMenu.style.left = `${left}px`;
     contextMenu.style.top = `${top}px`;
     contextMenu.style.opacity = '1';
   }, 10);
-  
+
   // Cerrar el menú al hacer clic fuera
   const closeMenu = (e) => {
     const button = event.target.closest('button');
@@ -508,13 +506,13 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     const isClickOnButton = button && button.contains(e.target);
     const isClickOnMenu = menu && menu.contains(e.target);
     const isClickOnSubmenu = submenu && submenu.contains(e.target);
-    
+
     if (!isClickOnButton && !isClickOnMenu && !isClickOnSubmenu) {
       cleanupMenus();
       document.removeEventListener('click', closeMenu);
     }
   };
-  
+
   setTimeout(() => {
     document.addEventListener('click', closeMenu);
   }, 100);

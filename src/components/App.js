@@ -46,6 +46,7 @@ const SyncSettingsDialog = lazy(() => import('./SyncSettingsDialog'));
 const ImportDialog = lazy(() => import('./ImportDialog'));
 const ExportDialog = lazy(() => import('./ExportDialog'));
 const ImportExportDialog = lazy(() => import('./ImportExportDialog'));
+const ImportWizardDialog = lazy(() => import('./ImportWizardDialog'));
 const RdpSessionTab = lazy(() => import('./RdpSessionTab'));
 const GuacamoleTab = lazy(() => import('./GuacamoleTab'));
 const GuacamoleTerminal = lazy(() => import('./GuacamoleTerminal'));
@@ -100,6 +101,7 @@ const App = () => {
   const [showImportDialog, setShowImportDialog] = React.useState(false);
   const [showExportDialog, setShowExportDialog] = React.useState(false);
   const [showImportExportDialog, setShowImportExportDialog] = React.useState(false);
+  const [showImportWizard, setShowImportWizard] = React.useState(false);
   const [isAppReady, setIsAppReady] = React.useState(false);
   const [importPreset, setImportPreset] = React.useState(null);
 
@@ -2283,7 +2285,8 @@ const App = () => {
     // Callbacks para diálogos de importar/exportar
     onShowImportDialog: setShowImportDialog,
     onShowExportDialog: setShowExportDialog,
-    onShowImportExportDialog: setShowImportExportDialog
+    onShowImportExportDialog: setShowImportExportDialog,
+    onShowImportWizard: setShowImportWizard
   }), [
     nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
@@ -2309,7 +2312,7 @@ const App = () => {
     isAIChatActive, handleToggleLocalTerminalForAIChat,
 
     // Dependencias de diálogos
-    setShowImportDialog, setShowExportDialog, setShowImportExportDialog
+    setShowImportDialog, setShowExportDialog, setShowImportExportDialog, setShowImportWizard
   ]);
 
   // === PROPS MEMOIZADAS PARA TABHEADER ===
@@ -2413,6 +2416,7 @@ const App = () => {
           onShowImportDialog={setShowImportDialog}
           onShowExportDialog={setShowExportDialog}
           onShowImportExportDialog={setShowImportExportDialog}
+          onShowImportWizard={setShowImportWizard}
           masterKey={masterKey}
           secureStorage={secureStorage}
           onOpenImportWithSource={(source) => {
@@ -2906,6 +2910,41 @@ const App = () => {
                 }
               }
             }}
+          />
+
+          {/* Import Wizard Dialog - Nueva interfaz unificada de importación */}
+          <ImportWizardDialog
+            visible={showImportWizard}
+            onHide={() => setShowImportWizard(false)}
+            onImportComplete={async (result) => {
+              try {
+                const res = await handleImportComplete(result);
+                return res;
+              } catch (error) {
+                console.error('[ImportWizard] Error en handleImportComplete:', error);
+                throw error;
+              }
+            }}
+            onImportPasswordsComplete={(payload) => {
+              // Dispatch event para el Password Manager
+              window.dispatchEvent(new CustomEvent('import-passwords-to-manager', { detail: payload }));
+            }}
+            showToast={(message) => toast.current?.show(message)}
+            targetFolderOptions={(() => {
+              const list = [];
+              const walk = (arr, prefix = '') => {
+                if (!Array.isArray(arr)) return;
+                for (const n of arr) {
+                  if (n && n.droppable) {
+                    list.push({ label: `${prefix}${n.label}`, value: n.key });
+                    if (n.children && n.children.length) walk(n.children, `${prefix}${n.label} / `);
+                  }
+                }
+              };
+              walk(nodes || []);
+              return list;
+            })()}
+            defaultTargetFolderKey={null}
           />
         </Suspense>
 

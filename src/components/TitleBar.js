@@ -8,16 +8,16 @@ import { iconThemes } from '../themes/icon-themes';
 import { toggleFavorite, helpers } from '../utils/connectionStore';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
-const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onOpenVncConnection, onShowImportDialog, onShowExportDialog, onShowImportExportDialog, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog, expandedKeys, masterKey, secureStorage }) => {
+const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onOpenVncConnection, onShowImportDialog, onShowExportDialog, onShowImportExportDialog, onShowImportWizard, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog, expandedKeys, masterKey, secureStorage }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
-  
+
   const [isMaximized, setIsMaximized] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredConnections, setFilteredConnections] = useState([]);
   const [passwordNodes, setPasswordNodes] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  
+
   // Cache para passwords y conexiones aplanados
   const [cachedAllItems, setCachedAllItems] = useState([]);
 
@@ -31,7 +31,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         if (masterKey && secureStorage) {
           // CON master key: Cargar encriptado
           const encryptedData = localStorage.getItem('passwords_encrypted');
-          
+
           if (encryptedData) {
             const decrypted = await secureStorage.decryptData(
               JSON.parse(encryptedData),
@@ -69,18 +69,18 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     };
 
     loadPasswords();
-    
+
     // Recargar cuando cambie el localStorage o masterKey
     const handleStorageChange = (e) => {
       if (e.key === 'passwordManagerNodes' || e.key === 'passwords_encrypted') {
         loadPasswords();
       }
     };
-    
+
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [masterKey, secureStorage]);
-  
+
   // Función para extraer todos los passwords recursivamente
   const findAllPasswords = (nodes) => {
     const result = [];
@@ -97,7 +97,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     traverse(nodes);
     return result;
   };
-  
+
   // Actualizar cache cuando cambien los nodos o passwords
   useEffect(() => {
     const updateCache = () => {
@@ -110,7 +110,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         console.error('Error actualizando cache:', error);
       }
     };
-    
+
     // Usar requestIdleCallback para no bloquear
     if (typeof requestIdleCallback !== 'undefined') {
       requestIdleCallback(updateCache);
@@ -122,22 +122,22 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   // Función para extraer y truncar el usuario correctamente
   const getDisplayUser = (node) => {
     if (!node.data) return null;
-    
+
     // SSH usa 'user', RDP usa 'username'
     const user = node.data.user || node.data.username;
     if (!user) return null;
-    
+
     // Para formatos Wallix largos, extraer solo el usuario final
     // Formato: usuario@dominio@servidor:protocolo:usuario_destino
     const wallixPattern = /^(.+)@(.+)@(.+):(.+):(.+)$/;
     const match = user.match(wallixPattern);
-    
+
     if (match) {
       // Si es formato Wallix, mostrar el usuario destino (último elemento)
       const targetUser = match[5];
       return targetUser.length > 25 ? targetUser.substring(0, 22) + '...' : targetUser;
     }
-    
+
     // Para usuarios normales, truncar si es muy largo
     return user.length > 25 ? user.substring(0, 22) + '...' : user;
   };
@@ -148,19 +148,19 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     const timeoutId = setTimeout(() => {
       if (sidebarFilter.trim()) {
         setIsSearching(true);
-        
+
         // Realizar filtrado de manera asíncrona
         const performFilter = () => {
           try {
             const searchTerm = sidebarFilter.toLowerCase();
             const filtered = [];
             const MAX_RESULTS = 50; // Limitar a 50 resultados para mejor rendimiento
-            
+
             // Filtrado eficiente: parar cuando tengamos suficientes resultados
             for (let i = 0; i < cachedAllItems.length && filtered.length < MAX_RESULTS; i++) {
               const node = cachedAllItems[i];
               let matches = false;
-              
+
               // Búsqueda rápida en label primero (más común)
               if (node.label.toLowerCase().includes(searchTerm)) {
                 matches = true;
@@ -181,12 +181,12 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                   );
                 }
               }
-              
+
               if (matches) {
                 filtered.push(node);
               }
             }
-            
+
             setFilteredConnections(filtered);
             setShowDropdown(filtered.length > 0);
             setIsSearching(false);
@@ -195,7 +195,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             setIsSearching(false);
           }
         };
-        
+
         // Usar requestIdleCallback si está disponible, sino setTimeout para no bloquear
         if (typeof requestIdleCallback !== 'undefined') {
           requestIdleCallback(performFilter, { timeout: 100 });
@@ -208,7 +208,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         setIsSearching(false);
       }
     }, 200); // Reducido a 200ms para respuesta más rápida
-    
+
     // Limpiar timeout si el usuario sigue escribiendo
     return () => clearTimeout(timeoutId);
   }, [sidebarFilter, cachedAllItems]);
@@ -249,7 +249,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     // Crear copos de nieve si el tema está activo
     if (checkAnimation()) {
       const snowflakes = [];
-      
+
       // Crear 6 copos de nieve adicionales
       for (let i = 1; i <= 6; i++) {
         const snowflake = document.createElement('div');
@@ -279,7 +279,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       mutations.forEach((mutation) => {
         if (mutation.type === 'attributes' && mutation.attributeName === 'data-animation') {
           const animation = titleBar.getAttribute('data-animation');
-          
+
           // Limpiar elementos animados existentes
           const existingSnowflakes = titleBar.querySelectorAll('[class^="snowflake-"]');
           const existingRaindrops = titleBar.querySelectorAll('[class^="raindrop-"]');
@@ -289,13 +289,13 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           existingRaindrops.forEach(el => el.remove());
           existingLightning.forEach(el => el.remove());
           existingSand.forEach(el => el.remove());
-          
+
           // Crear nuevos copos si es winter-snowfall
           if (animation === 'winter-snowfall') {
             // Verificar velocidad de animación
             const animSpeed = document.documentElement.getAttribute('data-ui-anim-speed') || 'normal';
             const maxSnowflakes = animSpeed === 'slow' ? 2 : (animSpeed === 'normal' ? 8 : 6); // Más copos en normal
-            
+
             for (let i = 1; i <= maxSnowflakes; i++) {
               const snowflake = document.createElement('div');
               snowflake.className = `snowflake-${i}`;
@@ -303,14 +303,14 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               titleBar.appendChild(snowflake);
             }
           }
-          
+
           // Crear gotas de lluvia y relámpagos si es thunderstorm
           if (animation === 'thunderstorm') {
             // Verificar velocidad de animación
             const animSpeed = document.documentElement.getAttribute('data-ui-anim-speed') || 'normal';
             const maxRaindrops = animSpeed === 'slow' ? 4 : (animSpeed === 'normal' ? 16 : 12); // Más gotas en normal
             const maxLightning = animSpeed === 'slow' ? 1 : (animSpeed === 'normal' ? 3 : 2); // Más rayos en normal
-            
+
             // Crear gotas de lluvia
             for (let i = 1; i <= maxRaindrops; i++) {
               const raindrop = document.createElement('div');
@@ -318,7 +318,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               raindrop.textContent = '💧';
               titleBar.appendChild(raindrop);
             }
-            
+
             // Crear rayos visibles
             for (let i = 1; i <= maxLightning; i++) {
               const lightning = document.createElement('div');
@@ -327,13 +327,13 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               titleBar.appendChild(lightning);
             }
           }
-          
+
           // Crear partículas de arena si es desert-storm
           if (animation === 'desert-storm') {
             // Verificar velocidad de animación
             const animSpeed = document.documentElement.getAttribute('data-ui-anim-speed') || 'normal';
             const maxSand = animSpeed === 'slow' ? 5 : (animSpeed === 'normal' ? 20 : 15); // Más partículas en normal
-            
+
             for (let i = 1; i <= maxSand; i++) {
               const sand = document.createElement('div');
               sand.className = `sand-${i}`;
@@ -406,12 +406,12 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     const findPath = (nodeList, target, currentPath = []) => {
       for (const node of nodeList) {
         const newPath = [...currentPath, node.key];
-        
+
         // Si encontramos el nodo objetivo, retornar la ruta
         if (node.key === target.key) {
           return newPath;
         }
-        
+
         // Si tiene hijos, buscar recursivamente
         if (node.children && node.children.length > 0) {
           const foundPath = findPath(node.children, target, newPath);
@@ -422,7 +422,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       }
       return null;
     };
-    
+
     return findPath(nodes, targetNode);
   };
 
@@ -433,12 +433,12 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         // Solo agregar a la ruta si es una carpeta (no una conexión)
         const isFolder = !node.data || (!node.data.type || (node.data.type !== 'ssh' && node.data.type !== 'rdp' && node.data.type !== 'rdp-guacamole'));
         const newPath = isFolder ? [...currentPath, node.label] : currentPath;
-        
+
         // Si encontramos el nodo objetivo, retornar la ruta de carpetas (sin incluir la conexión)
         if (node.key === target.key) {
           return currentPath; // Retornar solo las carpetas padre, no la conexión misma
         }
-        
+
         // Si tiene hijos, buscar recursivamente
         if (node.children && node.children.length > 0) {
           const foundPath = findFolderPath(node.children, target, newPath);
@@ -449,17 +449,17 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       }
       return null;
     };
-    
+
     return findFolderPath(nodes, targetNode);
   };
 
   // Función para expandir carpetas en la ruta de una conexión
   const expandNodePath = (nodePath, currentExpandedKeys) => {
     if (!nodePath || nodePath.length === 0) return currentExpandedKeys;
-    
+
     // Crear una copia de las claves expandidas actuales para preservar el estado existente
     const newExpandedKeys = { ...currentExpandedKeys };
-    
+
     // Solo expandir las carpetas en la ruta que no estén ya expandidas
     for (let i = 0; i < nodePath.length - 1; i++) {
       const folderKey = nodePath[i];
@@ -468,33 +468,33 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         newExpandedKeys[folderKey] = true;
       }
     }
-    
+
     return newExpandedKeys;
   };
 
   const handleSelectConnection = (node) => {
     setSidebarFilter('');
     setShowDropdown(false);
-    
+
     // Encontrar la ruta de la conexión y expandir las carpetas padre
     const nodePath = findNodePath(allNodes, node);
     if (nodePath && nodePath.length > 1) {
       // Expandir las carpetas en la ruta, preservando las que ya están expandidas
       const newExpandedKeys = expandNodePath(nodePath, expandedKeys || {});
-      
+
       // Disparar evento personalizado para que el componente padre actualice expandedKeys
-      const expandEvent = new CustomEvent('expand-node-path', { 
-        detail: { expandedKeys: newExpandedKeys } 
+      const expandEvent = new CustomEvent('expand-node-path', {
+        detail: { expandedKeys: newExpandedKeys }
       });
       window.dispatchEvent(expandEvent);
     }
-    
+
     // Detectar el tipo y llamar a la función apropiada
     const isPassword = node.data && node.data.type === 'password';
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && (node.data.type === 'rdp' || node.data.type === 'rdp-guacamole');
     const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
-    
+
     if (isPassword) {
       // Abrir password en una pestaña
       const payload = {
@@ -538,10 +538,10 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   const handleEditConnection = (node) => {
     setSidebarFilter('');
     setShowDropdown(false);
-    
+
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && (node.data.type === 'rdp' || node.data.type === 'rdp-guacamole');
-    
+
     if (isSSH && openEditSSHDialog) {
       openEditSSHDialog(node);
     } else if (isRDP && openEditRdpDialog) {
@@ -559,19 +559,19 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       } else {
         await navigator.clipboard.writeText(text);
       }
-      
+
       // Mostrar notificación si está disponible
       if (window.toast?.current?.show) {
         // Mensaje especial para passwords
-        const message = fieldName === 'Contraseña' || fieldName === 'Password' 
-          ? 'Password copiado' 
+        const message = fieldName === 'Contraseña' || fieldName === 'Password'
+          ? 'Password copiado'
           : `${fieldName} copiado al portapapeles`;
-        
-        window.toast.current.show({ 
-          severity: 'success', 
-          summary: 'Copiado', 
-          detail: message, 
-          life: 1500 
+
+        window.toast.current.show({
+          severity: 'success',
+          summary: 'Copiado',
+          detail: message,
+          life: 1500
         });
       }
     } catch (err) {
@@ -598,7 +598,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   // Función para manejar el menú de aplicación del TitleBar
   const handleAppMenuClick = (event) => {
     console.log('handleAppMenuClick TitleBar ejecutado - menú unificado');
-    const menuStructure = createAppMenu(onShowImportDialog, onShowExportDialog, onShowImportExportDialog, t);
+    const menuStructure = createAppMenu(onShowImportDialog, onShowExportDialog, onShowImportExportDialog, t, onShowImportWizard);
     createContextMenu(event, menuStructure, 'app-context-menu-unified');
     return;
 
@@ -689,7 +689,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               align-items: center;
               justify-content: center;
             `;
-            
+
             const aboutDialog = document.createElement('div');
             aboutDialog.style.cssText = `
               background: var(--ui-sidebar-bg, #fff);
@@ -702,7 +702,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               color: var(--ui-text-primary, #333);
               font-family: var(--font-family, sans-serif);
             `;
-            
+
             aboutDialog.innerHTML = `
               <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; text-align: center;">${versionInfo.appName || 'NodeTerm'}</h3>
               <div style="margin: 16px 0;">
@@ -724,7 +724,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                 ">Cerrar</button>
               </div>
             `;
-            
+
             overlay.appendChild(aboutDialog);
             document.body.appendChild(overlay);
             // Evitar overlays colgados que bloqueen la UI
@@ -733,21 +733,21 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                 closeDialog();
               }
             });
-            
+
             // Eventos para cerrar el diálogo
             const closeDialog = () => {
               if (document.body.contains(overlay)) {
                 document.body.removeChild(overlay);
               }
             };
-            
+
             document.getElementById('closeAboutDialog').addEventListener('click', closeDialog);
             overlay.addEventListener('click', (e) => {
               if (e.target === overlay) {
                 closeDialog();
               }
             });
-            
+
             // Cerrar con ESC
             const handleEsc = (e) => {
               if (e.key === 'Escape') {
@@ -773,11 +773,11 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         }
       }
     ];
-    
+
     // Variables globales para el menú
     let activeSubmenu = null;
     let submenuTimer = null;
-    
+
     // Función de limpieza completa
     const cleanupMenus = () => {
       if (submenuTimer) clearTimeout(submenuTimer);
@@ -798,7 +798,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       activeSubmenu = null;
       submenuTimer = null;
     };
-    
+
     // SIN TIMERS - Control directo del submenú
     const hideSubmenu = () => {
       if (activeSubmenu && document.body.contains(activeSubmenu)) {
@@ -806,11 +806,11 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         activeSubmenu = null;
       }
     };
-    
+
     const showSubmenu = (menuItem, submenuItems) => {
       // PRIMERO: Ocultar cualquier submenú existente
       hideSubmenu();
-      
+
       // SEGUNDO: Crear el nuevo submenú
       activeSubmenu = document.createElement('div');
       activeSubmenu.className = 'app-submenu-titlebar';
@@ -826,28 +826,28 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         font-family: var(--font-family, sans-serif);
         font-size: 14px;
       `;
-      
+
       submenuItems.forEach(subItem => {
         const subMenuItem = createMenuItem(subItem, true);
         activeSubmenu.appendChild(subMenuItem);
       });
-      
+
       // Agregar eventos para mantener el submenú abierto
       activeSubmenu.addEventListener('mouseenter', () => {
         // Mantener submenú abierto mientras el mouse esté sobre él
       });
-      
+
       activeSubmenu.addEventListener('mouseleave', () => {
         hideSubmenu();
       });
-      
+
       document.body.appendChild(activeSubmenu);
-      
+
       // Posicionar inmediatamente
       const menuRect = menuItem.getBoundingClientRect();
       let left = menuRect.right;
       let top = menuRect.top;
-      
+
       // Ajustar si se sale de la pantalla
       if (left + 200 > window.innerWidth) {
         left = menuRect.left - 200;
@@ -855,11 +855,11 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       if (top + 300 > window.innerHeight) {
         top = window.innerHeight - 300 - 8;
       }
-      
+
       activeSubmenu.style.left = `${left}px`;
       activeSubmenu.style.top = `${top}px`;
     };
-    
+
     // Crear el menú contextual principal
     const contextMenu = document.createElement('div');
     contextMenu.className = 'app-context-menu-titlebar';
@@ -875,7 +875,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       font-family: var(--font-family, sans-serif);
       font-size: 14px;
     `;
-    
+
     const createMenuItem = (item, isSubmenu = false) => {
       if (item.separator) {
         const separator = document.createElement('div');
@@ -887,7 +887,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         `;
         return separator;
       }
-      
+
       const menuItem = document.createElement('div');
       menuItem.className = 'menu-item-titlebar';
       menuItem.style.cssText = `
@@ -900,7 +900,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         transition: background-color 0.15s ease;
         position: relative;
       `;
-      
+
       const leftContent = document.createElement('div');
       leftContent.style.cssText = `
         display: flex;
@@ -908,14 +908,14 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         gap: 10px;
         flex: 1;
       `;
-      
+
       leftContent.innerHTML = `
         <i class="${item.icon}" style="width: 16px; font-size: 14px;"></i>
         <span>${item.label}</span>
       `;
-      
+
       menuItem.appendChild(leftContent);
-      
+
       // Agregar shortcut si existe
       if (item.shortcut) {
         const shortcut = document.createElement('span');
@@ -928,7 +928,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         shortcut.textContent = item.shortcut;
         menuItem.appendChild(shortcut);
       }
-      
+
       // Agregar flecha para submenús
       if (item.submenu) {
         const arrow = document.createElement('i');
@@ -939,11 +939,11 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         `;
         menuItem.appendChild(arrow);
       }
-      
+
       // Eventos para elementos con submenú
       if (item.submenu) {
         menuItem.addEventListener('mouseenter', () => {
-          
+
           // Limpiar hover de otros elementos
           const allMenuItems = contextMenu.querySelectorAll('.menu-item-titlebar');
           allMenuItems.forEach(item => {
@@ -952,11 +952,11 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             }
           });
           menuItem.style.backgroundColor = 'var(--ui-context-hover)';
-          
+
           // Mostrar submenú directamente - SIN TIMERS
           showSubmenu(menuItem, item.submenu);
         });
-        
+
         menuItem.addEventListener('mouseleave', (e) => {
           // Solo ocultar si NO se va hacia el submenú
           const rect = activeSubmenu ? activeSubmenu.getBoundingClientRect() : null;
@@ -981,12 +981,12 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           });
           menuItem.style.backgroundColor = 'var(--ui-context-hover)';
         });
-        
+
         menuItem.addEventListener('mouseleave', () => {
           menuItem.style.backgroundColor = '';
         });
       }
-      
+
       if (item.command) {
         menuItem.addEventListener('click', () => {
           item.command();
@@ -994,25 +994,25 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           cleanupMenus();
         });
       }
-      
+
       return menuItem;
     };
-    
+
     menuStructure.forEach(item => {
       const menuItem = createMenuItem(item);
       contextMenu.appendChild(menuItem);
     });
-    
+
     document.body.appendChild(contextMenu);
-    
+
     // Posicionar el menú principal
     setTimeout(() => {
       const rect = event.target.closest('button').getBoundingClientRect();
       const menuRect = contextMenu.getBoundingClientRect();
-      
+
       let left = rect.left;
       let top = rect.top - menuRect.height - 8;
-      
+
       // Ajustar si se sale de la pantalla
       if (left + menuRect.width > window.innerWidth) {
         left = window.innerWidth - menuRect.width - 8;
@@ -1020,11 +1020,11 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       if (top < 8) {
         top = rect.bottom + 8;
       }
-      
+
       contextMenu.style.left = `${left}px`;
       contextMenu.style.top = `${top}px`;
     }, 10);
-    
+
     // Cerrar el menú al hacer clic fuera
     const closeMenu = (e) => {
       const button = event.target.closest('button');
@@ -1033,13 +1033,13 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       const isClickOnButton = button && button.contains(e.target);
       const isClickOnMenu = menu && menu.contains(e.target);
       const isClickOnSubmenu = submenu && submenu.contains(e.target);
-      
+
       if (!isClickOnButton && !isClickOnMenu && !isClickOnSubmenu) {
         cleanupMenus();
         document.removeEventListener('click', closeMenu);
       }
     };
-    
+
     setTimeout(() => {
       document.addEventListener('click', closeMenu);
     }, 100);
@@ -1124,24 +1124,24 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 6 }}>
-        <svg 
-          width="18" 
-          height="18" 
-          viewBox="0 0 24 24" 
-          style={{ 
-            width: 18, 
-            height: 18, 
-            marginRight: 6, 
-            marginLeft: 8, 
-            display: 'flex', 
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          style={{
+            width: 18,
+            height: 18,
+            marginRight: 6,
+            marginLeft: 8,
+            display: 'flex',
             alignItems: 'center'
           }}
         >
           <g fill="var(--ui-titlebar-text, #fff)">
             {/* Símbolo > de prompt */}
-            <path d="M7 8 L11 12 L7 16" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M7 8 L11 12 L7 16" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             {/* Línea de comando _ */}
-            <rect x="13" y="15" width="5" height="1.5" rx="0.75" className="title-cursor-blink"/>
+            <rect x="13" y="15" width="5" height="1.5" rx="0.75" className="title-cursor-blink" />
           </g>
         </svg>
         <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--ui-titlebar-text, #fff)', letterSpacing: 0.1, lineHeight: '18px', display: 'flex', alignItems: 'center', height: 18, marginTop: '2px' }}>NodeTerm</span>
@@ -1149,16 +1149,16 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, flex: 1, justifyContent: 'center' }}>
         <div style={{ position: 'relative', minWidth: 350, maxWidth: 600, width: '35vw', WebkitAppRegion: 'no-drag' }}>
           {!sidebarFilter ? (
-            <span style={{ 
-              position: 'absolute', 
-              left: '50%', 
-              top: '50%', 
-              transform: 'translate(-50%, -50%)', 
-              color: 'var(--ui-titlebar-text, #fff)', 
-              pointerEvents: 'none', 
-              fontSize: 13, 
-              display: 'flex', 
-              alignItems: 'center', 
+            <span style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              color: 'var(--ui-titlebar-text, #fff)',
+              pointerEvents: 'none',
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
               gap: 8,
               opacity: 1,
               zIndex: 2
@@ -1167,15 +1167,15 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               <span>NodeTerm</span>
             </span>
           ) : isSearching && (
-            <span style={{ 
-              position: 'absolute', 
-              right: '12px', 
-              top: '50%', 
-              transform: 'translateY(-50%)', 
-              color: '#666', 
-              pointerEvents: 'none', 
-              fontSize: 12, 
-              display: 'flex', 
+            <span style={{
+              position: 'absolute',
+              right: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#666',
+              pointerEvents: 'none',
+              fontSize: 12,
+              display: 'flex',
               alignItems: 'center',
               zIndex: 2
             }}>
@@ -1218,7 +1218,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             autoComplete="off"
           />
           {showDropdown && ReactDOM.createPortal(
-            <div 
+            <div
               className="search-dropdown"
               onClick={(e) => e.stopPropagation()}
               style={{
@@ -1251,11 +1251,11 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                 const isRDP = node.data && node.data.type === 'rdp';
                 const isPassword = node.data && node.data.type === 'password';
                 const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['nord'].icons;
-                
+
                 let icon = null;
                 let protocolColor = '#4fc3f7';
                 let protocolName = 'Conexión';
-                
+
                 if (isPassword) {
                   protocolColor = '#ffc107';
                   protocolName = 'Password';
@@ -1268,16 +1268,16 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                   protocolColor = '#007ad9';
                   protocolName = 'RDP';
                 }
-                
+
                 // Obtener la ruta de carpetas de la conexión
                 const folderPath = getNodeFolderPath(allNodes, node);
                 const folderPathString = folderPath && folderPath.length > 0 ? folderPath.join(' / ') : 'Raíz';
-                
+
                 // Verificar si es favorito
                 const connection = helpers.fromSidebarNode(node);
                 const favorites = JSON.parse(localStorage.getItem('nodeterm_favorite_connections') || '[]');
                 const isFavorite = favorites.some(fav => fav.id === connection?.id);
-                
+
                 return (
                   <div
                     key={node.key}
@@ -1320,13 +1320,13 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                         <span style={{ color: protocolColor, fontSize: 16, fontWeight: 'bold' }}>🔗</span>
                       )}
                     </div>
-                    
+
                     {/* Nombre, carpeta y protocolo */}
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ 
-                          whiteSpace: 'nowrap', 
-                          overflow: 'hidden', 
+                        <span style={{
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           fontWeight: 500,
                           color: 'var(--ui-dialog-text, #fff)',
@@ -1334,8 +1334,8 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                         }}>
                           {node.label}
                         </span>
-                        <span style={{ 
-                          fontSize: 10, 
+                        <span style={{
+                          fontSize: 10,
                           color: protocolColor,
                           fontWeight: 600,
                           backgroundColor: `${protocolColor}20`,
@@ -1348,18 +1348,18 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                         </span>
                       </div>
                       {/* Ruta de carpeta */}
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
                         gap: 4,
                         fontSize: '11px',
                         color: 'var(--ui-dialog-text, #aaa)',
                         opacity: 0.8
                       }}>
                         <span style={{ fontSize: '10px' }}>📁</span>
-                        <span style={{ 
-                          whiteSpace: 'nowrap', 
-                          overflow: 'hidden', 
+                        <span style={{
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           fontStyle: 'italic'
                         }}>
@@ -1367,18 +1367,18 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                         </span>
                       </div>
                     </div>
-                    
+
                     {/* Usuario con mismo formato que protocolo */}
                     {getDisplayUser(node) && (
-                      <div style={{ 
+                      <div style={{
                         display: 'flex',
                         alignItems: 'flex-start',
                         gap: 6,
                         marginRight: 8,
                         paddingTop: '2px'
                       }}>
-                        <span style={{ 
-                          fontSize: 11, 
+                        <span style={{
+                          fontSize: 11,
                           color: 'var(--ui-dialog-text, #fff)',
                           fontWeight: 600,
                           backgroundColor: 'var(--ui-sidebar-hover, #2a2d31)',
@@ -1395,7 +1395,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                         </span>
                       </div>
                     )}
-                    
+
                     {/* Botones de acción */}
                     {isPassword ? (
                       /* Icono de copiar password - Solo para passwords */
@@ -1475,7 +1475,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                             <i className="pi pi-key" style={{ fontSize: '12px' }} />
                           </span>
                         )}
-                        
+
                         {/* Botón de favoritos */}
                         <button
                           style={{
@@ -1507,7 +1507,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                         >
                           <i className="pi pi-star" />
                         </button>
-                        
+
                         {/* Botón de editar */}
                         <button
                           style={{
@@ -1545,19 +1545,19 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                 );
               })}
               {filteredConnections.length === 0 && (
-                <div style={{ 
-                  padding: '12px', 
-                  color: 'var(--ui-dialog-text, #aaa)', 
-                  fontSize: 13, 
+                <div style={{
+                  padding: '12px',
+                  color: 'var(--ui-dialog-text, #aaa)',
+                  fontSize: 13,
                   textAlign: 'center',
                   fontFamily: 'inherit'
                 }}>Sin resultados</div>
               )}
               {filteredConnections.length >= 50 && (
-                <div style={{ 
-                  padding: '8px 12px', 
-                  color: 'var(--ui-dialog-text, #888)', 
-                  fontSize: 11, 
+                <div style={{
+                  padding: '8px 12px',
+                  color: 'var(--ui-dialog-text, #888)',
+                  fontSize: 11,
                   textAlign: 'center',
                   fontFamily: 'inherit',
                   fontStyle: 'italic',
@@ -1603,7 +1603,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
-          <svg width="12" height="12" viewBox="0 0 12 12"><circle cy="6" cx="2.5" r="1.2" fill="var(--ui-titlebar-text, #fff)"/><circle cy="6" cx="6" r="1.2" fill="var(--ui-titlebar-text, #fff)"/><circle cy="6" cx="9.5" r="1.2" fill="var(--ui-titlebar-text, #fff)"/></svg>
+          <svg width="12" height="12" viewBox="0 0 12 12"><circle cy="6" cx="2.5" r="1.2" fill="var(--ui-titlebar-text, #fff)" /><circle cy="6" cx="6" r="1.2" fill="var(--ui-titlebar-text, #fff)" /><circle cy="6" cx="9.5" r="1.2" fill="var(--ui-titlebar-text, #fff)" /></svg>
         </button>
         {/* Minimizar */}
         <button

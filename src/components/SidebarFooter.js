@@ -4,7 +4,7 @@ import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { sessionActionIconThemes } from '../themes/session-action-icons';
 
-const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed, onShowImportDialog, onShowExportDialog, onShowImportExportDialog, sessionActionIconTheme = 'modern', onUpdateStatusClick }) => {
+const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed, onShowImportDialog, onShowExportDialog, onShowImportExportDialog, onShowImportWizard, sessionActionIconTheme = 'modern', onUpdateStatusClick }) => {
   const { t } = useTranslation('common');
   const { t: tSettings } = useTranslation('settings');
   const [updateStatus, setUpdateStatus] = useState('idle'); // idle | available | downloaded
@@ -20,7 +20,7 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed,
     window.electron.updater.getUpdateInfo?.().then((result) => {
       if (result?.isUpdateDownloaded) setUpdateStatus('downloaded');
       else if (result?.updateAvailable) setUpdateStatus('available');
-    }).catch(() => {});
+    }).catch(() => { });
     const unsubscribe = window.electron.ipcRenderer?.on?.('updater-event', handleUpdaterEvent);
     return () => { if (typeof unsubscribe === 'function') unsubscribe(); };
   }, []);
@@ -45,9 +45,9 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed,
             padding: 0
           }}
         >
-          <span style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <span style={{
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center',
             width: '20px',
             height: '20px',
@@ -62,10 +62,10 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed,
   const handleAppMenuClick = (event) => {
     // Handle app menu click
     // Usar el menú unificado
-    const menuStructure = createAppMenu(onShowImportDialog, onShowExportDialog, onShowImportExportDialog, t);
+    const menuStructure = createAppMenu(onShowImportDialog, onShowExportDialog, onShowImportExportDialog, t, onShowImportWizard);
     createContextMenu(event, menuStructure, 'app-context-menu-unified');
   };
-  
+
   const handleUpdateStatusClick = () => {
     if (onUpdateStatusClick) onUpdateStatusClick();
     else if (onConfigClick) onConfigClick();
@@ -78,9 +78,9 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed,
         className="p-button-rounded p-button-text sidebar-action-button glass-button"
         onClick={handleAppMenuClick}
         tooltip={t('tooltips.appMenu')}
-        style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        style={{
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           width: '40px',
           height: '40px',
@@ -88,9 +88,9 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed,
           flexShrink: 0
         }}
       >
-        <span style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        <span style={{
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           width: '20px',
           height: '20px',
@@ -106,9 +106,9 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed,
             className="p-button-rounded p-button-text sidebar-action-button glass-button"
             onClick={handleUpdateStatusClick}
             tooltip={updateStatus === 'downloaded' ? tSettings('updateChannels.downloadCompleteDetail') : tSettings('updateChannels.available')}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
               justifyContent: 'center',
               width: '40px',
               height: '40px',
@@ -125,45 +125,45 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed,
           className="p-button-rounded p-button-text sidebar-action-button glass-button"
           onClick={toggleExpandAll}
           tooltip={allExpanded ? t('tooltips.collapseAll') : t('tooltips.expandAll')}
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          style={{
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center',
             width: '40px',
             height: '40px',
             padding: 0
           }}
         >
-          <span style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <span style={{
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center',
             width: '20px',
             height: '20px',
             color: 'var(--ui-sidebar-text)'
           }}>
-            {allExpanded 
+            {allExpanded
               ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseAll
               : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandAll
             }
           </span>
         </Button>
-        <Button 
-          className="p-button-rounded p-button-text sidebar-action-button glass-button" 
-          onClick={onConfigClick} 
+        <Button
+          className="p-button-rounded p-button-text sidebar-action-button glass-button"
+          onClick={onConfigClick}
           tooltip={t('tooltips.settings')}
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          style={{
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center',
             width: '40px',
             height: '40px',
             padding: 0
           }}
         >
-          <span style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <span style={{
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center',
             width: '20px',
             height: '20px',
@@ -173,8 +173,8 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed,
           </span>
         </Button>
       </div>
-  </div>
-);
+    </div>
+  );
 };
 
 export default SidebarFooter; 
