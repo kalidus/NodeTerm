@@ -26,7 +26,7 @@ import '../styles/components/tree-themes.css';
 // Helper para loggear setNodes
 function logSetNodes(source, nodes) {
   // Log de debug removido para limpiar la consola
-      // Log de trace removido para limpiar la consola
+  // Log de trace removido para limpiar la consola
   return nodes;
 }
 
@@ -35,7 +35,7 @@ function safeUnblockForms(showToast) {
   try {
     const blockedInputs = detectBlockedInputs();
     unblockAllInputs();
-    
+
     if (blockedInputs.length > 0 && showToast) {
       showToast({
         severity: 'info',
@@ -81,14 +81,14 @@ const Sidebar = React.memo(({
   sidebarCallbacksRef, // ref para registrar callbacks del menú contextual
   selectedNodeKey, // estado de selección del hook
   setSelectedNodeKey, // setter de selección del hook
-  
+
   // Props para conexiones
   getAllFolders,
   createNewSSH,
   saveEditSSH,
   openEditSSHDialog,
   handleSaveRdpToSidebar,
-  
+
   // Estados de formularios SSH
   sshName, setSSHName,
   sshHost, setSSHHost,
@@ -98,7 +98,7 @@ const Sidebar = React.memo(({
   sshRemoteFolder, setSSHRemoteFolder,
   sshTargetFolder, setSSHTargetFolder,
   sshAutoCopyPassword, setSSHAutoCopyPassword,
-  
+
   // Estados de formularios Edit SSH
   editSSHName, setEditSSHName,
   editSSHHost, setEditSSHHost,
@@ -107,44 +107,45 @@ const Sidebar = React.memo(({
   editSSHRemoteFolder, setEditSSHRemoteFolder,
   editSSHPort, setEditSSHPort,
   editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
-  
+
   // Estados para modo edición
   editSSHNode, setEditSSHNode,
-  
+
   // Estados de formularios RDP
   rdpNodeData, setRdpNodeData,
   editingRdpNode, setEditingRdpNode,
-  
+
   // Encriptación
   masterKey,
   secureStorage,
 
   isAIChatActive = false,
   onToggleLocalTerminalForAIChat,
-  
+
   // Filtro de búsqueda desde TitleBar
   sidebarFilter = '',
-  
+
   // Tema del árbol
   treeTheme = 'default',
-  
+
   // Tema de iconos de acción
   sessionActionIconTheme = 'modern',
-  
+
   // Callbacks para diálogos de importar/exportar
   onShowImportDialog,
   onShowExportDialog,
-  onShowImportExportDialog
+  onShowImportExportDialog,
+  onShowImportWizard
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
-  
+
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
-  
+
   // Estado para modo de visualización (conexiones, passwords, filesystem, localExplorer)
   const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'filesystem' | 'localExplorer'
-  
+
   // Estado para el nodo seleccionado actualmente (para el panel de detalles)
   const [selectedNodeForDetails, setSelectedNodeForDetails] = useState(null);
 
@@ -168,10 +169,10 @@ const Sidebar = React.memo(({
     if (updatedNode && updatedNode.key) {
       const updatedNodes = findAndUpdateNode(nodes, updatedNode.key);
       setNodes(updatedNodes);
-      
+
       // Actualizar también el nodo seleccionado
       setSelectedNodeForDetails(updatedNode);
-      
+
       if (showToast) {
         showToast({
           severity: 'success',
@@ -191,7 +192,7 @@ const Sidebar = React.memo(({
   });
   const [initialFilesystemPath, setInitialFilesystemPath] = useState(null);
   const [localExplorerPath, setLocalExplorerPath] = useState(null);
-  
+
   // 🔗 Sincronizar conexiones SSH a window para que AIChatPanel las acceda
   useEffect(() => {
     const extractSSHNodes = (treeNodes) => {
@@ -211,11 +212,11 @@ const Sidebar = React.memo(({
       }
       return sshNodes;
     };
-    
+
     const sshConnections = extractSSHNodes(nodes);
     window.sshConnectionsFromSidebar = sshConnections;
     // console.log(`🔗 [Sidebar] Sincronizadas ${sshConnections.length} conexiones SSH a window`);
-    
+
     // Disparar evento para que AIChatPanel se resincronice
     window.dispatchEvent(new CustomEvent('sidebar-ssh-connections-updated', {
       detail: { count: sshConnections.length }
@@ -240,7 +241,7 @@ const Sidebar = React.memo(({
     const currentKey = typeof selectedNodeKey === 'object' && selectedNodeKey !== null
       ? Object.keys(selectedNodeKey)[0]
       : selectedNodeKey;
-    
+
     // Si hay una key seleccionada, buscar el nodo actualizado en el árbol
     if (currentKey) {
       const updatedNode = findNodeInTree(nodes, currentKey);
@@ -251,12 +252,12 @@ const Sidebar = React.memo(({
             // Si no hay nodo previo o la key cambió, actualizar directamente
             return updatedNode;
           }
-          
+
           // Comparar si realmente hay cambios significativos
-          const hasChanges = 
+          const hasChanges =
             updatedNode.label !== prevNode.label ||
             JSON.stringify(updatedNode.data) !== JSON.stringify(prevNode.data);
-          
+
           return hasChanges ? updatedNode : prevNode;
         });
       } else if (selectedNodeForDetails && selectedNodeForDetails.key === currentKey) {
@@ -271,9 +272,9 @@ const Sidebar = React.memo(({
     const handleSwitchToConnections = () => {
       setViewMode('connections');
     };
-    
+
     window.addEventListener('switch-to-connections', handleSwitchToConnections);
-    
+
     return () => {
       window.removeEventListener('switch-to-connections', handleSwitchToConnections);
     };
@@ -299,12 +300,12 @@ const Sidebar = React.memo(({
     const handleShowLocalExplorer = (event) => {
       const { path } = event?.detail || {};
       if (!path) return;
-      
+
       setLocalExplorerPath(path);
       setViewMode('localExplorer');
       setSidebarCollapsed(false);
     };
-    
+
     window.addEventListener('show-local-file-explorer', handleShowLocalExplorer);
     return () => {
       window.removeEventListener('show-local-file-explorer', handleShowLocalExplorer);
@@ -312,7 +313,7 @@ const Sidebar = React.memo(({
   }, []);
 
   const filesystemAvailable = !!filesystemStatus?.active;
-  
+
   // Permitir modo filesystem si se solicita explícitamente desde FileExplorer
   // incluso sin AI Chat activo, pero solo si hay un path inicial establecido
   useEffect(() => {
@@ -325,25 +326,25 @@ const Sidebar = React.memo(({
   const getThemeDefaultColor = (themeName) => {
     const theme = iconThemes[themeName];
     if (!theme || !theme.icons || !theme.icons.folder) return '#5e81ac'; // Nord color por defecto
-    
+
     const folderIcon = theme.icons.folder;
-    
+
     // Si el SVG tiene fill y no es "none", usar ese color
     if (folderIcon.props && folderIcon.props.fill && folderIcon.props.fill !== 'none') {
       return folderIcon.props.fill;
     }
-    
+
     // Si el SVG tiene stroke, usar ese color (para temas como linea que usan stroke)
     if (folderIcon.props && folderIcon.props.stroke) {
       return folderIcon.props.stroke;
     }
-    
+
     // Fallback: buscar en los children del SVG
     if (folderIcon.props && folderIcon.props.children) {
-      const children = Array.isArray(folderIcon.props.children) 
-        ? folderIcon.props.children 
+      const children = Array.isArray(folderIcon.props.children)
+        ? folderIcon.props.children
         : [folderIcon.props.children];
-      
+
       for (const child of children) {
         if (child.props && child.props.fill && child.props.fill !== 'none') {
           return child.props.fill;
@@ -353,14 +354,14 @@ const Sidebar = React.memo(({
         }
       }
     }
-    
+
     return '#5e81ac'; // Nord color por defecto
   };
 
   // Función para verificar si un color es el color por defecto de algún tema
   const isDefaultThemeColor = (color) => {
     if (!color) return false;
-    
+
     // Lista de colores por defecto de todos los temas
     const defaultThemeColors = [
       '#007ad9', // Material
@@ -371,7 +372,7 @@ const Sidebar = React.memo(({
       '#b58900', // Solarized
       '#dcb67a'  // VS Code
     ];
-    
+
     return defaultThemeColors.includes(color.toLowerCase());
   };
 
@@ -381,47 +382,47 @@ const Sidebar = React.memo(({
   const [folderIcon, setFolderIcon] = useState(null);
   const [parentNodeKey, setParentNodeKey] = useState(null);
   const [editingNode, setEditingNode] = useState(null); // Para saber si estamos editando un nodo existente
-  
+
   // Actualizar color por defecto cuando cambie el tema
   useEffect(() => {
     const newDefaultColor = getThemeDefaultColor(iconTheme);
     setFolderColor(newDefaultColor);
-    
+
     // Actualizar colores de carpetas existentes SOLO si no tienen color personalizado
     const updateExistingFoldersColor = (nodes, newColor) => {
       return nodes.map(node => {
         if (node.droppable) {
           // Es una carpeta
           const updatedNode = { ...node };
-          
+
           // Si la carpeta no tiene la propiedad hasCustomColor, determinar si tiene color personalizado
           // basándose en si su color es diferente al color del tema actual
           if (node.hasCustomColor === undefined) {
             const currentThemeColor = getThemeDefaultColor(iconTheme);
             updatedNode.hasCustomColor = node.color && node.color !== currentThemeColor;
           }
-          
+
           // Solo actualizar el color si la carpeta NO tiene color personalizado
           // Las carpetas con color personalizado mantienen su color
           if (!updatedNode.hasCustomColor) {
             updatedNode.color = newColor;
           }
-          
+
           // Si tiene children, actualizarlos recursivamente
           if (node.children && node.children.length > 0) {
             updatedNode.children = updateExistingFoldersColor(node.children, newColor);
           }
-          
+
           return updatedNode;
         }
         return node;
       });
     };
-    
+
     // Actualizar solo las carpetas sin color personalizado
     const updatedNodes = updateExistingFoldersColor(nodes, newDefaultColor);
     setNodes(updatedNodes);
-    
+
     // Forzar re-render del árbol para aplicar los nuevos colores
     setTimeout(() => {
       const treeElement = document.querySelector('.sidebar-tree');
@@ -432,21 +433,21 @@ const Sidebar = React.memo(({
         }, 10);
       }
     }, 100);
-    
+
   }, [iconTheme, setNodes]);
-  
+
   // Actualizar variable CSS cuando cambie el color de fuente
   // Usar useRef para evitar loops infinitos
   const prevColorRef = React.useRef(explorerFontColor);
-  
+
   React.useEffect(() => {
     // Solo actualizar si el color realmente cambió
     if (prevColorRef.current === explorerFontColor) {
       return;
     }
-    
+
     prevColorRef.current = explorerFontColor;
-    
+
     // Aplicar la variable CSS al contenedor del sidebar usando el elemento raíz
     if (explorerFontColor) {
       const root = document.documentElement;
@@ -456,7 +457,7 @@ const Sidebar = React.memo(({
       root.style.removeProperty('--ui-sidebar-text');
     }
   }, [explorerFontColor]);
-  
+
   // Estado para controlar la visibilidad de los botones de clientes de IA
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
     nodeterm: true,
@@ -500,7 +501,7 @@ const Sidebar = React.memo(({
     };
 
     window.addEventListener('storage', handleStorageChange);
-    
+
     // También escuchar evento personalizado para cambios en la misma pestaña
     const handleConfigChange = () => {
       loadAIClientsConfig();
@@ -512,7 +513,7 @@ const Sidebar = React.memo(({
       window.removeEventListener('ai-clients-config-changed', handleConfigChange);
     };
   }, []);
-  
+
   // Ref para el contenedor de la sidebar
   const sidebarRef = useRef(null);
   const openAnythingLLMTab = () => {
@@ -540,29 +541,30 @@ const Sidebar = React.memo(({
       detail: { tab: newTab }
     }));
   };
-  
+
   // Función para manejar el menú de aplicación (unificada)
   const handleAppMenuClick = (event) => {
     // Usar los callbacks pasados como props, o el estado local como fallback
     const importCallback = onShowImportDialog || setShowImportDialog;
     const exportCallback = onShowExportDialog || (() => console.warn('onShowExportDialog no disponible'));
     const importExportCallback = onShowImportExportDialog || (() => console.warn('onShowImportExportDialog no disponible'));
-    const menuStructure = createAppMenu(importCallback, exportCallback, importExportCallback, t);
+    const wizardCallback = onShowImportWizard || (() => console.warn('onShowImportWizard no disponible'));
+    const menuStructure = createAppMenu(importCallback, exportCallback, importExportCallback, t, wizardCallback);
     createContextMenu(event, menuStructure, 'app-context-menu-sidebar');
   };
-  
+
   // Efecto para manejar la visibilidad de botones durante el redimensionamiento
   useEffect(() => {
     if (!sidebarRef.current || sidebarCollapsed) return;
-    
+
     const handleSidebarResize = () => {
       const sidebarElement = sidebarRef.current;
       if (!sidebarElement) return;
-      
+
       const sidebarWidth = sidebarElement.offsetWidth;
       const headerElement = sidebarElement.querySelector('div:first-child');
       const buttonsContainer = headerElement?.querySelector('div:last-child');
-      
+
       if (buttonsContainer) {
         // Ocultar botones adicionales cuando el ancho es muy pequeño
         if (sidebarWidth <= 120) {
@@ -574,7 +576,7 @@ const Sidebar = React.memo(({
           buttonsContainer.style.transform = 'scale(1)';
           buttonsContainer.style.pointerEvents = 'auto';
         }
-        
+
         // Ocultar completamente cuando es muy estrecho
         if (sidebarWidth <= 80) {
           buttonsContainer.style.display = 'none';
@@ -583,19 +585,19 @@ const Sidebar = React.memo(({
         }
       }
     };
-    
+
     // Observar cambios en el tamaño de la sidebar
     const resizeObserver = new ResizeObserver(handleSidebarResize);
     resizeObserver.observe(sidebarRef.current);
-    
+
     // Llamar una vez al inicio
     handleSidebarResize();
-    
+
     return () => {
       resizeObserver.disconnect();
     };
   }, [sidebarCollapsed]);
-  
+
   // Helpers
   const deepCopy = (obj) => JSON.parse(JSON.stringify(obj));
   const findNodeByKey = (nodes, key) => {
@@ -622,7 +624,7 @@ const Sidebar = React.memo(({
     }
     return folders;
   };
-  
+
   // Usar la función del prop o el fallback
   const getAllFoldersToUse = getAllFolders || getAllFoldersFallback;
 
@@ -649,12 +651,12 @@ const Sidebar = React.memo(({
           .replace(/\s+/g, ' ')
           .trim();
       };
-      
+
       const removeConflictsAndAdd = (existingNodes, incomingNodes) => {
         if (!Array.isArray(existingNodes) || !Array.isArray(incomingNodes)) {
           return [...(existingNodes || []), ...(incomingNodes || [])];
         }
-        
+
         // Crear un Set con los nombres normalizados de los nodos entrantes
         const incomingLabels = new Set();
         incomingNodes.forEach(node => {
@@ -662,13 +664,13 @@ const Sidebar = React.memo(({
             incomingLabels.add(normalizeLabel(node.label));
           }
         });
-        
+
         // Filtrar los nodos existentes, eliminando los que tienen conflicto
         const filteredExisting = existingNodes.filter(node => {
           if (!node || !node.label) return true;
           return !incomingLabels.has(normalizeLabel(node.label));
         });
-        
+
         // Retornar existentes filtrados + nuevos (los nuevos tienen prioridad)
         return [...filteredExisting, ...incomingNodes];
       };
@@ -681,7 +683,7 @@ const Sidebar = React.memo(({
 
       // Opciones específicas según el modo (manual vs vinculado)
       const isLinkedMode = !!importResult?.linkFile;
-      const finalCreateContainerFolder = isLinkedMode 
+      const finalCreateContainerFolder = isLinkedMode
         ? (importResult?.linkedCreateContainerFolder || false)
         : (importResult?.createContainerFolder || false);
       const finalContainerLabel = isLinkedMode
@@ -697,7 +699,7 @@ const Sidebar = React.memo(({
         // Inserta un array de nodos en la carpeta destino, con soporte para overwrite y contenedor opcional
         const containerize = (children) => ({
           key: `import_container_${Date.now()}`,
-          uid: `import_container_${Date.now()}_${Math.floor(Math.random()*1e6)}`,
+          uid: `import_container_${Date.now()}_${Math.floor(Math.random() * 1e6)}`,
           label: finalContainerLabel,
           droppable: true,
           children: children,
@@ -771,8 +773,8 @@ const Sidebar = React.memo(({
       if (importResult.structure && Array.isArray(importResult.structure.nodes) && importResult.structure.nodes.length > 0) {
         let toAdd = (importResult.structure.nodes || []).map((n, idx) => ({
           ...n,
-          key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`,
-          uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`
+          key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random() * 1e6)}`,
+          uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random() * 1e6)}`
         }));
         insertIntoTarget(toAdd);
 
@@ -790,7 +792,7 @@ const Sidebar = React.memo(({
             try {
               const h = await window.electron?.import?.getFileHash?.(importResult.linkedFilePath);
               if (h?.ok && h?.hash) osHash = h.hash;
-            } catch {}
+            } catch { }
             const newSource = {
               id: stableId,
               fileName: importResult.linkedFileName || null,
@@ -817,7 +819,7 @@ const Sidebar = React.memo(({
             ));
             filtered.push(newSource);
             localStorage.setItem(KEY, JSON.stringify(filtered));
-          } catch {}
+          } catch { }
         }
         showToast && showToast({
           severity: 'success',
@@ -853,7 +855,7 @@ const Sidebar = React.memo(({
           try {
             const h = await window.electron?.import?.getFileHash?.(importResult.linkedFilePath);
             if (h?.ok && h?.hash) osHash = h.hash;
-          } catch {}
+          } catch { }
           const newSource = {
             id: stableId,
             fileName: importResult.linkedFileName || null,
@@ -878,7 +880,7 @@ const Sidebar = React.memo(({
           ));
           filtered.push(newSource);
           localStorage.setItem(KEY, JSON.stringify(filtered));
-        } catch {}
+        } catch { }
       }
       showToast && showToast({
         severity: 'success',
@@ -926,7 +928,7 @@ const Sidebar = React.memo(({
                   return { ...s, fileHash: osHash, lastNotifiedHash: osHash, lastCheckedAt: Date.now() };
                 }
               }
-            } catch {}
+            } catch { }
           }
           return s;
         }));
@@ -934,10 +936,10 @@ const Sidebar = React.memo(({
         const before = JSON.stringify(sources);
         const after = JSON.stringify(updated);
         if (before !== after) {
-          try { localStorage.setItem(KEY, JSON.stringify(updated)); } catch {}
+          try { localStorage.setItem(KEY, JSON.stringify(updated)); } catch { }
           sources = updated;
         }
-      } catch {}
+      } catch { }
 
       // 2) Programar timers usando snapshot actualizado
       (sources || []).forEach(snapshotSource => {
@@ -990,9 +992,9 @@ const Sidebar = React.memo(({
       showToast && showToast({ severity: 'error', summary: 'Error', detail: 'El nombre de carpeta no puede estar vacío', life: 3000 });
       return;
     }
-    
+
     const nodesCopy = deepCopy(nodes);
-    
+
     if (editingNode) {
       // Modo edición: actualizar carpeta existente
       const updateNodeInTree = (nodes, targetKey, newLabel, newColor, newIcon) => {
@@ -1023,7 +1025,7 @@ const Sidebar = React.memo(({
         color: folderColor,
         folderIcon: folderIcon || 'general'
       };
-      
+
       if (parentNodeKey === null) {
         nodesCopy.push(newFolder);
       } else {
@@ -1038,17 +1040,17 @@ const Sidebar = React.memo(({
       setNodes(() => logSetNodes('Sidebar', nodesCopy));
       showToast && showToast({ severity: 'success', summary: 'Éxito', detail: `Carpeta "${folderName}" creada`, life: 3000 });
     }
-    
+
     // Limpiar formulario
     setShowFolderDialog(false);
     setFolderName('');
     setFolderColor(getThemeDefaultColor(iconTheme));
     setParentNodeKey(null);
     setEditingNode(null);
-    
+
     // Desbloquear formularios por si alguna máscara quedó activa
     setTimeout(() => {
-      try { unblockAllInputs(); } catch {}
+      try { unblockAllInputs(); } catch { }
     }, 0);
   };
 
@@ -1167,7 +1169,7 @@ const Sidebar = React.memo(({
               // Mantener todos los datos originales
             }
           };
-          
+
           // Encontrar el nodo padre y añadir la copia
           const findParentAndAdd = (nodes, targetKey, newNode) => {
             for (let i = 0; i < nodes.length; i++) {
@@ -1191,7 +1193,7 @@ const Sidebar = React.memo(({
             }
             return false;
           };
-          
+
           // Buscar el nodo original para encontrar su posición
           const findNodePosition = (nodes, targetKey) => {
             for (let i = 0; i < nodes.length; i++) {
@@ -1210,7 +1212,7 @@ const Sidebar = React.memo(({
             }
             return null;
           };
-          
+
           const position = findNodePosition(nodesCopy, node.key);
           if (position) {
             position.parentNodes.splice(position.index + 1, 0, duplicatedNode);
@@ -1242,7 +1244,7 @@ const Sidebar = React.memo(({
               // Mantener todos los datos originales
             }
           };
-          
+
           // Buscar el nodo original para encontrar su posición
           const findNodePosition = (nodes, targetKey) => {
             for (let i = 0; i < nodes.length; i++) {
@@ -1261,7 +1263,7 @@ const Sidebar = React.memo(({
             }
             return null;
           };
-          
+
           const position = findNodePosition(nodesCopy, node.key);
           if (position) {
             position.parentNodes.splice(position.index + 1, 0, duplicatedNode);
@@ -1293,7 +1295,7 @@ const Sidebar = React.memo(({
               // Mantener todos los datos originales
             }
           };
-          
+
           // Buscar el nodo original para encontrar su posición
           const findNodePosition = (nodes, targetKey) => {
             for (let i = 0; i < nodes.length; i++) {
@@ -1312,7 +1314,7 @@ const Sidebar = React.memo(({
             }
             return null;
           };
-          
+
           const position = findNodePosition(nodesCopy, node.key);
           if (position) {
             position.parentNodes.splice(position.index + 1, 0, duplicatedNode);
@@ -1334,7 +1336,7 @@ const Sidebar = React.memo(({
           // Duplicar carpeta con todo su contenido
           const nodesCopy = deepCopy(nodes);
           const newKey = `folder_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
-          
+
           // Función recursiva para duplicar un nodo y todos sus hijos
           const duplicateNodeRecursive = (originalNode) => {
             const newNode = {
@@ -1343,16 +1345,16 @@ const Sidebar = React.memo(({
               uid: `${originalNode.uid}_copy_${Date.now()}_${Math.floor(Math.random() * 1000000)}`,
               label: originalNode.droppable ? `${originalNode.label} (Copia)` : originalNode.label
             };
-            
+
             if (originalNode.children && originalNode.children.length > 0) {
               newNode.children = originalNode.children.map(child => duplicateNodeRecursive(child));
             }
-            
+
             return newNode;
           };
-          
+
           const duplicatedFolder = duplicateNodeRecursive(node);
-          
+
           // Buscar el nodo original para encontrar su posición
           const findNodePosition = (nodes, targetKey) => {
             for (let i = 0; i < nodes.length; i++) {
@@ -1371,7 +1373,7 @@ const Sidebar = React.memo(({
             }
             return null;
           };
-          
+
           const position = findNodePosition(nodesCopy, node.key);
           if (position) {
             position.parentNodes.splice(position.index + 1, 0, duplicatedFolder);
@@ -1415,7 +1417,7 @@ const Sidebar = React.memo(({
           setShowFolderDialog(true);
         },
         deleteNode: (nodeKey, nodeLabel) => {
-          
+
           // Buscar el nodo para determinar si tiene hijos
           const findNodeByKey = (nodes, targetKey) => {
             for (const node of nodes) {
@@ -1429,19 +1431,19 @@ const Sidebar = React.memo(({
             }
             return null;
           };
-          
+
           const targetNode = findNodeByKey(nodes, nodeKey);
           const hasChildren = targetNode && targetNode.children && targetNode.children.length > 0;
-          
+
           // Función para ejecutar la eliminación
           const executeDeletion = () => {
-            
+
             const removeNodeFromTree = (nodes, targetKey) => {
               if (!Array.isArray(nodes)) {
                 console.error('❌ removeNodeFromTree: nodes no es un array:', typeof nodes, nodes);
                 return [];
               }
-              
+
               return nodes.filter(node => {
                 if (node.key === targetKey) {
                   return false;
@@ -1452,52 +1454,52 @@ const Sidebar = React.memo(({
                 return true;
               });
             };
-            
+
             try {
               const nodesCopy = JSON.parse(JSON.stringify(nodes));
               const newNodes = removeNodeFromTree(nodesCopy, nodeKey);
               setNodes(() => logSetNodes('Sidebar-Delete', newNodes));
-              
-              showToast && showToast({ 
-                severity: 'success', 
-                summary: 'Eliminado', 
-                detail: `"${nodeLabel}" ha sido eliminado`, 
-                life: 3000 
+
+              showToast && showToast({
+                severity: 'success',
+                summary: 'Eliminado',
+                detail: `"${nodeLabel}" ha sido eliminado`,
+                life: 3000
               });
-              
+
               // Cerrar menú contextual inmediatamente
               if (hideContextMenu) {
                 hideContextMenu();
               }
-              
+
               // Desbloquear formularios después de un breve delay
               setTimeout(() => {
-                try { 
+                try {
                   unblockAllInputs();
                 } catch (error) {
                   console.error('Error al desbloquear formularios:', error);
                 }
               }, 100);
-              
+
             } catch (error) {
               console.error('❌ Error en deleteNode:', error);
-              showToast && showToast({ 
-                severity: 'error', 
-                summary: 'Error', 
-                detail: `Error al eliminar "${nodeLabel}": ${error.message}`, 
-                life: 5000 
+              showToast && showToast({
+                severity: 'error',
+                summary: 'Error',
+                detail: `Error al eliminar "${nodeLabel}": ${error.message}`,
+                life: 5000
               });
             }
           };
-          
+
           // Mostrar diálogo de confirmación antes de eliminar
           const dialogToUse = confirmDialog || window.confirmDialog;
-          
+
           if (dialogToUse) {
             const message = hasChildren
               ? `¿Estás seguro de que deseas eliminar la carpeta "${nodeLabel}" y todo su contenido? Esta acción no se puede deshacer.`
               : `¿Estás seguro de que deseas eliminar "${nodeLabel}"? Esta acción no se puede deshacer.`;
-            
+
             dialogToUse({
               message: message,
               header: 'Confirmar eliminación',
@@ -1516,7 +1518,7 @@ const Sidebar = React.memo(({
       };
     }
   }, [nodes, setShowFolderDialog, deepCopy, findNodeByKey, showToast, confirmDialog,
-      setEditingNode, setFolderName, setParentNodeKey, setNodes, openEditSSHDialog]);
+    setEditingNode, setFolderName, setParentNodeKey, setNodes, openEditSSHDialog]);
 
 
 
@@ -1550,7 +1552,7 @@ const Sidebar = React.memo(({
         icon = sshIcon ? React.cloneElement(sshIcon, {
           width: connectionIconSize,
           height: connectionIconSize,
-          style: { 
+          style: {
             ...sshIcon.props.style,
             width: `${connectionIconSize}px`,
             height: `${connectionIconSize}px`
@@ -1562,7 +1564,7 @@ const Sidebar = React.memo(({
       icon = rdpIcon ? React.cloneElement(rdpIcon, {
         width: connectionIconSize,
         height: connectionIconSize,
-        style: { 
+        style: {
           ...rdpIcon.props.style,
           width: `${connectionIconSize}px`,
           height: `${connectionIconSize}px`
@@ -1574,7 +1576,7 @@ const Sidebar = React.memo(({
       icon = vncIcon ? React.cloneElement(vncIcon, {
         width: connectionIconSize,
         height: connectionIconSize,
-        style: { 
+        style: {
           ...vncIcon.props.style,
           width: `${connectionIconSize}px`,
           height: `${connectionIconSize}px`
@@ -1646,218 +1648,218 @@ const Sidebar = React.memo(({
         // 3. Si tiene color personalizado → mantener ese color
         const hasCustomColor = node.color && !isDefaultThemeColor(node.color);
         const folderColor = hasCustomColor ? node.color : getThemeDefaultColor(iconTheme);
-        
+
         // Usar el icono del tema si existe, pero forzar el color
         const themeIcon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
-      
-      if (themeIcon) {
-        // Si hay un icono del tema, clonarlo y aplicar el color y tamaño
-        // Para SVG, necesitamos modificar los atributos fill, stroke y tamaño directamente
-        const modifiedIcon = React.cloneElement(themeIcon, {
-          width: folderIconSize,
-          height: folderIconSize,
-          style: { 
-            ...themeIcon.props.style, 
-            color: folderColor,
-            '--icon-color': folderColor,
-            width: `${folderIconSize}px`,
-            height: `${folderIconSize}px`
-          },
-          'data-folder-color': folderColor,
-          'data-debug': 'sidebar-theme-icon'
-        });
-        
-        // Modificar los colores del SVG preservando la identidad del tema
-        const modifySVGColors = (element, newColor, index = 0) => {
-          if (!element || !element.props) return element;
-          
-          const newProps = { ...element.props };
-          
-          // Añadir key única si no existe
-          if (!newProps.key) {
-            newProps.key = `svg-child-${index}-${Date.now()}`;
-          }
-          
-          // Función para convertir hex a HSL
-          const hexToHsl = (hex) => {
-            const r = parseInt(hex.substr(1, 2), 16) / 255;
-            const g = parseInt(hex.substr(3, 2), 16) / 255;
-            const b = parseInt(hex.substr(5, 2), 16) / 255;
-            
-            const max = Math.max(r, g, b);
-            const min = Math.min(r, g, b);
-            let h, s, l = (max + min) / 2;
-            
-            if (max === min) {
-              h = s = 0;
-            } else {
-              const d = max - min;
-              s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-              switch (max) {
-                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                case g: h = (b - r) / d + 2; break;
-                case b: h = (r - g) / d + 4; break;
+
+        if (themeIcon) {
+          // Si hay un icono del tema, clonarlo y aplicar el color y tamaño
+          // Para SVG, necesitamos modificar los atributos fill, stroke y tamaño directamente
+          const modifiedIcon = React.cloneElement(themeIcon, {
+            width: folderIconSize,
+            height: folderIconSize,
+            style: {
+              ...themeIcon.props.style,
+              color: folderColor,
+              '--icon-color': folderColor,
+              width: `${folderIconSize}px`,
+              height: `${folderIconSize}px`
+            },
+            'data-folder-color': folderColor,
+            'data-debug': 'sidebar-theme-icon'
+          });
+
+          // Modificar los colores del SVG preservando la identidad del tema
+          const modifySVGColors = (element, newColor, index = 0) => {
+            if (!element || !element.props) return element;
+
+            const newProps = { ...element.props };
+
+            // Añadir key única si no existe
+            if (!newProps.key) {
+              newProps.key = `svg-child-${index}-${Date.now()}`;
+            }
+
+            // Función para convertir hex a HSL
+            const hexToHsl = (hex) => {
+              const r = parseInt(hex.substr(1, 2), 16) / 255;
+              const g = parseInt(hex.substr(3, 2), 16) / 255;
+              const b = parseInt(hex.substr(5, 2), 16) / 255;
+
+              const max = Math.max(r, g, b);
+              const min = Math.min(r, g, b);
+              let h, s, l = (max + min) / 2;
+
+              if (max === min) {
+                h = s = 0;
+              } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                  case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                  case g: h = (b - r) / d + 2; break;
+                  case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
               }
-              h /= 6;
-            }
-            
-            return [h * 360, s * 100, l * 100];
-          };
-          
-          // Función para convertir HSL a hex
-          const hslToHex = (h, s, l) => {
-            h /= 360;
-            s /= 100;
-            l /= 100;
-            
-            const hue2rgb = (p, q, t) => {
-              if (t < 0) t += 1;
-              if (t > 1) t -= 1;
-              if (t < 1/6) return p + (q - p) * 6 * t;
-              if (t < 1/2) return q;
-              if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-              return p;
+
+              return [h * 360, s * 100, l * 100];
             };
-            
-            let r, g, b;
-            if (s === 0) {
-              r = g = b = l;
-            } else {
-              const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-              const p = 2 * l - q;
-              r = hue2rgb(p, q, h + 1/3);
-              g = hue2rgb(p, q, h);
-              b = hue2rgb(p, q, h - 1/3);
-            }
-            
-            const toHex = (c) => {
-              const hex = Math.round(c * 255).toString(16);
-              return hex.length === 1 ? '0' + hex : hex;
+
+            // Función para convertir HSL a hex
+            const hslToHex = (h, s, l) => {
+              h /= 360;
+              s /= 100;
+              l /= 100;
+
+              const hue2rgb = (p, q, t) => {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1 / 6) return p + (q - p) * 6 * t;
+                if (t < 1 / 2) return q;
+                if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+                return p;
+              };
+
+              let r, g, b;
+              if (s === 0) {
+                r = g = b = l;
+              } else {
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1 / 3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1 / 3);
+              }
+
+              const toHex = (c) => {
+                const hex = Math.round(c * 255).toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+              };
+
+              return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
             };
-            
-            return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-          };
-          
-          // Función para crear un color complementario
-          const getComplementaryColor = (color) => {
-            const [h, s, l] = hexToHsl(color);
-            return hslToHex((h + 180) % 360, s, l);
-          };
-          
-          // Función para crear un color análogo (desplazado en el círculo cromático)
-          const getAnalogousColor = (color, offset = 30) => {
-            const [h, s, l] = hexToHsl(color);
-            return hslToHex((h + offset) % 360, s, l);
-          };
-          
-          // Función para ajustar la saturación
-          const adjustSaturation = (color, factor) => {
-            const [h, s, l] = hexToHsl(color);
-            return hslToHex(h, Math.min(100, s * factor), l);
-          };
-          
-          // Función para ajustar la luminosidad
-          const adjustLightness = (color, factor) => {
-            const [h, s, l] = hexToHsl(color);
-            return hslToHex(h, s, Math.min(100, Math.max(0, l * factor)));
-          };
-          
-          // Lista de temas que deben preservar sus colores originales
-          // NOTA: Fluent se excluye intencionalmente para mantener su funcionalidad de colores personalizados
-          const preserveOriginalColorsThemes = [
-            // Temas originales que deben mantener sus colores
-            'monokai', 'onedark', 'gruvbox', 'tokyonight', 'palenight', 'minimal',
-            // Nuevos temas añadidos
-            'cyberpunk', 'retroGaming', 'corporate', 'nature', 'space', 'ocean', 
-            'fire', 'ice', 'forest', 'sunset', 'matrix', 'neon', 'gradient', 
-            'rainbow', 'metallic', 'holographic', 'glitch', 
-            'vaporwave', 'minimalist', 'geometric', 'organic', 'tech', 'gaming', 'professional'
-          ];
-          
-          // Si es un tema que debe preservar colores originales, no modificar nada
-          if (preserveOriginalColorsThemes.includes(iconTheme)) {
-            return element;
-          }
-          
-          // Mapeo de colores específicos del tema a colores adaptados
-          // REGLA: La parte superior (flap) mantiene el color secundario del tema, solo el cuerpo cambia
-          const colorMapping = {
-            // Synthwave: #ff007c (rosa) -> color personalizado, #00d4ff (cian) -> MANTENER (parte superior)
-            '#ff007c': newColor,   // Aplicar color personalizado al cuerpo
-            '#00d4ff': '#00d4ff', // Mantener cian original en parte superior
-            
-            // Nord: #5e81ac (azul) -> color personalizado, #88c0d0 (azul claro) -> MANTENER (parte superior)
-            '#5e81ac': newColor,   // Aplicar color personalizado al cuerpo
-            '#88c0d0': '#88c0d0', // Mantener azul claro original en parte superior
-            
-            // Dracula: #bd93f9 (púrpura) -> color personalizado, #ff79c6 (rosa) -> MANTENER (parte superior)
-            '#bd93f9': newColor,   // Aplicar color personalizado al cuerpo
-            '#ff79c6': '#ff79c6', // Mantener rosa original en parte superior
-            
-            // Fluent: #0078d4 (azul) -> color personalizado, #50e6ff (cian) -> MANTENER (parte superior)
-            '#0078d4': newColor,   // Aplicar color personalizado al cuerpo
-            '#50e6ff': '#50e6ff', // Mantener cian original en parte superior
-            
-            // Solarized: #b58900 (amarillo) -> color personalizado, #268bd2 (azul) -> MANTENER (parte superior)
-            '#b58900': newColor,   // Aplicar color personalizado al cuerpo
-            '#268bd2': '#268bd2', // Mantener azul original en parte superior
-            
-            // VS Code: #dcb67a (dorado) -> color personalizado, #f5d18a (dorado claro) -> MANTENER (parte superior)
-            '#dcb67a': newColor,   // Aplicar color personalizado al cuerpo
-            '#f5d18a': '#f5d18a', // Mantener dorado claro original en parte superior
-          };
-          
-          // Cambiar colores de manera inteligente
-          if (newProps.fill && newProps.fill !== 'none') {
-            if (colorMapping[newProps.fill]) {
-              newProps.fill = colorMapping[newProps.fill];
-            } else {
-              // Para colores no mapeados, usar el color personalizado
-              newProps.fill = newColor;
+
+            // Función para crear un color complementario
+            const getComplementaryColor = (color) => {
+              const [h, s, l] = hexToHsl(color);
+              return hslToHex((h + 180) % 360, s, l);
+            };
+
+            // Función para crear un color análogo (desplazado en el círculo cromático)
+            const getAnalogousColor = (color, offset = 30) => {
+              const [h, s, l] = hexToHsl(color);
+              return hslToHex((h + offset) % 360, s, l);
+            };
+
+            // Función para ajustar la saturación
+            const adjustSaturation = (color, factor) => {
+              const [h, s, l] = hexToHsl(color);
+              return hslToHex(h, Math.min(100, s * factor), l);
+            };
+
+            // Función para ajustar la luminosidad
+            const adjustLightness = (color, factor) => {
+              const [h, s, l] = hexToHsl(color);
+              return hslToHex(h, s, Math.min(100, Math.max(0, l * factor)));
+            };
+
+            // Lista de temas que deben preservar sus colores originales
+            // NOTA: Fluent se excluye intencionalmente para mantener su funcionalidad de colores personalizados
+            const preserveOriginalColorsThemes = [
+              // Temas originales que deben mantener sus colores
+              'monokai', 'onedark', 'gruvbox', 'tokyonight', 'palenight', 'minimal',
+              // Nuevos temas añadidos
+              'cyberpunk', 'retroGaming', 'corporate', 'nature', 'space', 'ocean',
+              'fire', 'ice', 'forest', 'sunset', 'matrix', 'neon', 'gradient',
+              'rainbow', 'metallic', 'holographic', 'glitch',
+              'vaporwave', 'minimalist', 'geometric', 'organic', 'tech', 'gaming', 'professional'
+            ];
+
+            // Si es un tema que debe preservar colores originales, no modificar nada
+            if (preserveOriginalColorsThemes.includes(iconTheme)) {
+              return element;
             }
-          }
-          
-          if (newProps.stroke && newProps.stroke !== 'none') {
-            if (colorMapping[newProps.stroke]) {
-              newProps.stroke = colorMapping[newProps.stroke];
-            } else {
-              newProps.stroke = newColor;
+
+            // Mapeo de colores específicos del tema a colores adaptados
+            // REGLA: La parte superior (flap) mantiene el color secundario del tema, solo el cuerpo cambia
+            const colorMapping = {
+              // Synthwave: #ff007c (rosa) -> color personalizado, #00d4ff (cian) -> MANTENER (parte superior)
+              '#ff007c': newColor,   // Aplicar color personalizado al cuerpo
+              '#00d4ff': '#00d4ff', // Mantener cian original en parte superior
+
+              // Nord: #5e81ac (azul) -> color personalizado, #88c0d0 (azul claro) -> MANTENER (parte superior)
+              '#5e81ac': newColor,   // Aplicar color personalizado al cuerpo
+              '#88c0d0': '#88c0d0', // Mantener azul claro original en parte superior
+
+              // Dracula: #bd93f9 (púrpura) -> color personalizado, #ff79c6 (rosa) -> MANTENER (parte superior)
+              '#bd93f9': newColor,   // Aplicar color personalizado al cuerpo
+              '#ff79c6': '#ff79c6', // Mantener rosa original en parte superior
+
+              // Fluent: #0078d4 (azul) -> color personalizado, #50e6ff (cian) -> MANTENER (parte superior)
+              '#0078d4': newColor,   // Aplicar color personalizado al cuerpo
+              '#50e6ff': '#50e6ff', // Mantener cian original en parte superior
+
+              // Solarized: #b58900 (amarillo) -> color personalizado, #268bd2 (azul) -> MANTENER (parte superior)
+              '#b58900': newColor,   // Aplicar color personalizado al cuerpo
+              '#268bd2': '#268bd2', // Mantener azul original en parte superior
+
+              // VS Code: #dcb67a (dorado) -> color personalizado, #f5d18a (dorado claro) -> MANTENER (parte superior)
+              '#dcb67a': newColor,   // Aplicar color personalizado al cuerpo
+              '#f5d18a': '#f5d18a', // Mantener dorado claro original en parte superior
+            };
+
+            // Cambiar colores de manera inteligente
+            if (newProps.fill && newProps.fill !== 'none') {
+              if (colorMapping[newProps.fill]) {
+                newProps.fill = colorMapping[newProps.fill];
+              } else {
+                // Para colores no mapeados, usar el color personalizado
+                newProps.fill = newColor;
+              }
             }
-          }
-          
-          // Procesar children recursivamente
-          if (newProps.children) {
-            if (Array.isArray(newProps.children)) {
-              newProps.children = newProps.children.map((child, index) => 
-                typeof child === 'object' ? modifySVGColors(child, newColor, index) : child
-              );
-            } else if (typeof newProps.children === 'object') {
-              newProps.children = modifySVGColors(newProps.children, newColor, 0);
+
+            if (newProps.stroke && newProps.stroke !== 'none') {
+              if (colorMapping[newProps.stroke]) {
+                newProps.stroke = colorMapping[newProps.stroke];
+              } else {
+                newProps.stroke = newColor;
+              }
             }
-          }
-          
-          return React.cloneElement(element, newProps);
-        };
-        
-        icon = modifySVGColors(modifiedIcon, folderColor, 0);
-      } else {
-        // Fallback a iconos PrimeReact con color forzado
-        icon = options.expanded
-          ? <span 
-              className="pi pi-folder-open" 
-              style={{ 
+
+            // Procesar children recursivamente
+            if (newProps.children) {
+              if (Array.isArray(newProps.children)) {
+                newProps.children = newProps.children.map((child, index) =>
+                  typeof child === 'object' ? modifySVGColors(child, newColor, index) : child
+                );
+              } else if (typeof newProps.children === 'object') {
+                newProps.children = modifySVGColors(newProps.children, newColor, 0);
+              }
+            }
+
+            return React.cloneElement(element, newProps);
+          };
+
+          icon = modifySVGColors(modifiedIcon, folderColor, 0);
+        } else {
+          // Fallback a iconos PrimeReact con color forzado
+          icon = options.expanded
+            ? <span
+              className="pi pi-folder-open"
+              style={{
                 color: folderColor,
                 '--icon-color': folderColor
-              }} 
+              }}
               data-folder-color={folderColor}
               data-debug="sidebar-fallback-open"
             />
-          : <span 
-              className="pi pi-folder" 
-              style={{ 
+            : <span
+              className="pi pi-folder"
+              style={{
                 color: folderColor,
                 '--icon-color': folderColor
-              }} 
+              }}
               data-folder-color={folderColor}
               data-debug="sidebar-fallback-closed"
             />;
@@ -1866,7 +1868,7 @@ const Sidebar = React.memo(({
     } else {
       icon = themeIcons.file;
     }
-    
+
     // Determinar el título según el tipo de nodo
     let title = "Click derecho para más opciones";
     if (isSSH) {
@@ -1879,10 +1881,10 @@ const Sidebar = React.memo(({
       const protocolLabel = (node.data?.protocol || node.data?.type || 'SFTP').toUpperCase();
       title += ` | Doble click para abrir explorador ${protocolLabel}`;
     }
-    
+
     // Detectar si tiene icono personalizado (para ajustar alineación del texto)
     const hasCustomFolderIcon = isFolder && node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()];
-    
+
     // Render básico, puedes añadir acciones/contextual aquí
     return (
       <div className="flex align-items-center gap-1"
@@ -1901,8 +1903,8 @@ const Sidebar = React.memo(({
             sidebarCallbacksRef.current.openSSHTunnel(node, nodes);
           }
         }}
-        style={{ 
-          cursor: 'pointer', 
+        style={{
+          cursor: 'pointer',
           fontFamily: explorerFont,
           display: 'flex',
           alignItems: 'flex-end',
@@ -1921,12 +1923,12 @@ const Sidebar = React.memo(({
               label: node.label,
               data: node.data
             };
-            
+
             // Almacenar en ref global
             if (window.draggedSSHNodeRef && window.draggedSSHNodeRef.current !== undefined) {
               window.draggedSSHNodeRef.current = sshNodeData;
             }
-            
+
             // También establecer en dataTransfer
             try {
               e.dataTransfer.effectAllowed = 'copy';
@@ -1942,68 +1944,68 @@ const Sidebar = React.memo(({
           // Se limpiará en handleTabDrop después de procesar
         }}
       >
-        <span style={{ 
+        <span style={{
           minWidth: 20,
-          display: 'flex', 
-          alignItems: 'flex-end', 
-          justifyContent: 'center', 
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'center',
           height: '20px',
           position: 'relative' // Para posicionar el tag SSH
         }}>
           {icon}
-             {/* Tag SSH superpuesto en la parte derecha inferior - Solo para tema Nodeterm Basic */}
-             {isSSH && iconTheme === 'nodetermBasic' && (
-               <span
-                 className="ssh-connection-tag"
-                 style={{
-                   position: 'absolute',
-                   bottom: '1px', // Mover a la parte inferior
-                   right: '-7px', // Mover un poquito más a la derecha
-                   backgroundColor: '#1a1a1a',
-                   color: '#42a5f5',
-                   fontSize: '5px', // Un poquito más grande
-                   fontWeight: 'bold',
-                   padding: '0.7px 2.5px', // Un poquito más grande
-                   borderRadius: '2px',
-                   border: '0.5px solid #42a5f5', // Borde más fino
-                   lineHeight: 1,
-                   zIndex: 10,
-                   fontFamily: 'monospace',
-                   letterSpacing: '0.3px',
-                   boxShadow: '0 1px 2px rgba(0,0,0,0.3)'
-                 }}
-               >
-                 SSH
-               </span>
-             )}
+          {/* Tag SSH superpuesto en la parte derecha inferior - Solo para tema Nodeterm Basic */}
+          {isSSH && iconTheme === 'nodetermBasic' && (
+            <span
+              className="ssh-connection-tag"
+              style={{
+                position: 'absolute',
+                bottom: '1px', // Mover a la parte inferior
+                right: '-7px', // Mover un poquito más a la derecha
+                backgroundColor: '#1a1a1a',
+                color: '#42a5f5',
+                fontSize: '5px', // Un poquito más grande
+                fontWeight: 'bold',
+                padding: '0.7px 2.5px', // Un poquito más grande
+                borderRadius: '2px',
+                border: '0.5px solid #42a5f5', // Borde más fino
+                lineHeight: 1,
+                zIndex: 10,
+                fontFamily: 'monospace',
+                letterSpacing: '0.3px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.3)'
+              }}
+            >
+              SSH
+            </span>
+          )}
 
-             {/* Tag RDP superpuesto en la parte derecha inferior - Solo para tema Nodeterm Basic */}
-             {isRDP && iconTheme === 'nodetermBasic' && (
-               <span
-                 className="rdp-connection-tag"
-                 style={{
-                   position: 'absolute',
-                   bottom: '1px', // Mover a la parte inferior
-                   right: '-7px', // Mover un poquito más a la derecha
-                   backgroundColor: '#1a1a1a',
-                   color: '#00ffff', // Color azul turquesa muy chillón
-                   fontSize: '5px', // Un poquito más grande
-                   fontWeight: 'bold',
-                   padding: '0.7px 2.5px', // Un poquito más grande
-                   borderRadius: '2px',
-                   border: '0.5px solid #00ffff', // Borde azul turquesa muy chillón
-                   lineHeight: 1,
-                   zIndex: 10,
-                   fontFamily: 'monospace',
-                   letterSpacing: '0.3px',
-                   boxShadow: '0 1px 2px rgba(0,0,0,0.3)'
-                 }}
-               >
-                 RDP
-               </span>
-             )}
+          {/* Tag RDP superpuesto en la parte derecha inferior - Solo para tema Nodeterm Basic */}
+          {isRDP && iconTheme === 'nodetermBasic' && (
+            <span
+              className="rdp-connection-tag"
+              style={{
+                position: 'absolute',
+                bottom: '1px', // Mover a la parte inferior
+                right: '-7px', // Mover un poquito más a la derecha
+                backgroundColor: '#1a1a1a',
+                color: '#00ffff', // Color azul turquesa muy chillón
+                fontSize: '5px', // Un poquito más grande
+                fontWeight: 'bold',
+                padding: '0.7px 2.5px', // Un poquito más grande
+                borderRadius: '2px',
+                border: '0.5px solid #00ffff', // Borde azul turquesa muy chillón
+                lineHeight: 1,
+                zIndex: 10,
+                fontFamily: 'monospace',
+                letterSpacing: '0.3px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.3)'
+              }}
+            >
+              RDP
+            </span>
+          )}
         </span>
-        <span className="node-label" style={{ 
+        <span className="node-label" style={{
           flex: 1,
           marginLeft: (isSSH || isRDP || isVNC) && iconTheme === 'nodetermBasic' ? '6px' : '0px',
           lineHeight: '20px',
@@ -2018,7 +2020,7 @@ const Sidebar = React.memo(({
     );
   };
   return (
-    <div 
+    <div
       ref={sidebarRef}
       className="sidebar-container"
       style={{
@@ -2039,17 +2041,17 @@ const Sidebar = React.memo(({
       }}>
       {sidebarCollapsed ? (
         // Layout de sidebar colapsada: botón de colapsar arriba a la izquierda, menú y config abajo
-        <div style={{ 
-          flex: 1, 
-          display: 'flex', 
-          flexDirection: 'column', 
-          width: '100%', 
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
           height: '100%',
           position: 'relative'
         }}>
           {/* Botones superiores: colapsar, nueva conexión, nuevo grupo */}
-          <div style={{ 
-            display: 'flex', 
+          <div style={{
+            display: 'flex',
             flexDirection: 'column',
             alignItems: 'flex-start', // Alinear a la izquierda
             padding: '8px 2px 100px 2px',
@@ -2060,7 +2062,7 @@ const Sidebar = React.memo(({
             gap: '8px',
             boxSizing: 'border-box'
           }}>
-            <div style={{ 
+            <div style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-start',
@@ -2068,17 +2070,17 @@ const Sidebar = React.memo(({
               width: '100%'
             }}>
               {/* Botón de colapsar */}
-              <Button 
-                className="p-button-rounded p-button-text sidebar-action-button glass-button" 
-                onClick={() => setSidebarCollapsed(v => !v)} 
-                tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')} 
-                tooltipOptions={{ position: 'right' }} 
-                style={{ 
-                  margin: 0, 
-                  width: 40, 
-                  height: 40, 
-                  minWidth: 40, 
-                  minHeight: 40, 
+              <Button
+                className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                onClick={() => setSidebarCollapsed(v => !v)}
+                tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')}
+                tooltipOptions={{ position: 'right' }}
+                style={{
+                  margin: 0,
+                  width: 40,
+                  height: 40,
+                  minWidth: 40,
+                  minHeight: 40,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
@@ -2086,38 +2088,38 @@ const Sidebar = React.memo(({
                   visibility: 'visible !important',
                   opacity: '1 !important',
                   padding: 0
-                }} 
+                }}
               >
-                <span style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
                   width: '20px',
                   height: '20px',
                   color: 'var(--ui-sidebar-text)'
                 }}>
-                  {sidebarCollapsed 
+                  {sidebarCollapsed
                     ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
                     : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft
                   }
                 </span>
               </Button>
-              
+
               {/* Botón de conexiones */}
-              <Button 
-                className="p-button-rounded p-button-text sidebar-action-button glass-button" 
+              <Button
+                className="p-button-rounded p-button-text sidebar-action-button glass-button"
                 onClick={() => {
                   setViewMode('connections');
                   setSidebarCollapsed(false);
-                }} 
-                tooltip={t('tooltips.connections')} 
-                tooltipOptions={{ position: 'right' }} 
-                style={{ 
-                  margin: 0, 
-                  width: 40, 
-                  height: 40, 
-                  minWidth: 40, 
-                  minHeight: 40, 
+                }}
+                tooltip={t('tooltips.connections')}
+                tooltipOptions={{ position: 'right' }}
+                style={{
+                  margin: 0,
+                  width: 40,
+                  height: 40,
+                  minWidth: 40,
+                  minHeight: 40,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
@@ -2125,11 +2127,11 @@ const Sidebar = React.memo(({
                   visibility: 'visible !important',
                   opacity: '1 !important',
                   padding: 0
-                }} 
+                }}
               >
-                <span style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
                   width: '20px',
                   height: '20px',
@@ -2138,22 +2140,22 @@ const Sidebar = React.memo(({
                   {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
                 </span>
               </Button>
-              
+
               {/* Botón de passwords */}
-              <Button 
-                className="p-button-rounded p-button-text sidebar-action-button glass-button" 
+              <Button
+                className="p-button-rounded p-button-text sidebar-action-button glass-button"
                 onClick={() => {
                   setViewMode('passwords');
                   setSidebarCollapsed(false);
-                }} 
-                tooltip={t('tooltips.passwords')} 
-                tooltipOptions={{ position: 'right' }} 
-                style={{ 
-                  margin: 0, 
-                  width: 40, 
-                  height: 40, 
-                  minWidth: 40, 
-                  minHeight: 40, 
+                }}
+                tooltip={t('tooltips.passwords')}
+                tooltipOptions={{ position: 'right' }}
+                style={{
+                  margin: 0,
+                  width: 40,
+                  height: 40,
+                  minWidth: 40,
+                  minHeight: 40,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
@@ -2161,11 +2163,11 @@ const Sidebar = React.memo(({
                   visibility: 'visible !important',
                   opacity: '1 !important',
                   padding: 0
-                }} 
+                }}
               >
-                <span style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
                   width: '20px',
                   height: '20px',
@@ -2174,19 +2176,19 @@ const Sidebar = React.memo(({
                   {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
                 </span>
               </Button>
-              
+
               {/* Botón de nuevo grupo */}
-              <Button 
-                className="p-button-rounded p-button-text sidebar-action-button glass-button" 
-                onClick={() => setShowCreateGroupDialog(true)} 
-                tooltip={t('tooltips.createGroup')} 
-                tooltipOptions={{ position: 'right' }} 
-                style={{ 
-                  margin: 0, 
-                  width: 40, 
-                  height: 40, 
-                  minWidth: 40, 
-                  minHeight: 40, 
+              <Button
+                className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                onClick={() => setShowCreateGroupDialog(true)}
+                tooltip={t('tooltips.createGroup')}
+                tooltipOptions={{ position: 'right' }}
+                style={{
+                  margin: 0,
+                  width: 40,
+                  height: 40,
+                  minWidth: 40,
+                  minHeight: 40,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
@@ -2194,11 +2196,11 @@ const Sidebar = React.memo(({
                   visibility: 'visible !important',
                   opacity: '1 !important',
                   padding: 0
-                }} 
+                }}
               >
-                <span style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
                   width: '20px',
                   height: '20px',
@@ -2207,111 +2209,111 @@ const Sidebar = React.memo(({
                   {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
                 </span>
               </Button>
-              
-            {/* Separador para clientes de IA */}
-            {(aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui) && (
-              <div style={{
-                width: '28px',
-                height: '1px',
-                backgroundColor: 'var(--ui-sidebar-border, rgba(255, 255, 255, 0.1))',
-                margin: '10px auto',
-                borderRadius: '0.5px',
-                opacity: 0.6,
-                flexShrink: 0
-              }} />
-            )}
 
-            {/* Botones de clientes de IA */}
-            {/* Botón de Chat de IA - Solo visible si está activado */}
-            {aiClientsEnabled.nodeterm && (
-              <Button 
-                icon="pi pi-comments" 
-                className="p-button-rounded p-button-text sidebar-action-button" 
-                onClick={() => {
-                  // Crear pestaña de IA
-                  const newAITab = {
-                    key: `ai-chat-${Date.now()}`,
-                    label: 'Chat IA',
-                    type: 'ai-chat',
-                    createdAt: Date.now(),
-                    groupId: null
-                  };
+              {/* Separador para clientes de IA */}
+              {(aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui) && (
+                <div style={{
+                  width: '28px',
+                  height: '1px',
+                  backgroundColor: 'var(--ui-sidebar-border, rgba(255, 255, 255, 0.1))',
+                  margin: '10px auto',
+                  borderRadius: '0.5px',
+                  opacity: 0.6,
+                  flexShrink: 0
+                }} />
+              )}
 
-                  // Disparar evento para crear la pestaña
-                  window.dispatchEvent(new CustomEvent('create-ai-tab', {
-                    detail: { tab: newAITab }
-                  }));
-                }} 
-                tooltip={t('tooltips.aiChat')} 
-                tooltipOptions={{ position: 'right' }} 
-                style={{ 
-                  margin: 0, 
-                  width: 40, 
-                  height: 40, 
-                  minWidth: 40, 
-                  minHeight: 40, 
-                  fontSize: 18,
-                  border: 'none',
-                  display: 'flex !important',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  visibility: 'visible !important',
-                  opacity: '1 !important'
-                }} 
-              />
-            )}
+              {/* Botones de clientes de IA */}
+              {/* Botón de Chat de IA - Solo visible si está activado */}
+              {aiClientsEnabled.nodeterm && (
+                <Button
+                  icon="pi pi-comments"
+                  className="p-button-rounded p-button-text sidebar-action-button"
+                  onClick={() => {
+                    // Crear pestaña de IA
+                    const newAITab = {
+                      key: `ai-chat-${Date.now()}`,
+                      label: 'Chat IA',
+                      type: 'ai-chat',
+                      createdAt: Date.now(),
+                      groupId: null
+                    };
 
-            {/* Botón de AnythingLLM - Solo visible si está activado */}
-            {aiClientsEnabled.anythingllm && (
-              <Button 
-                icon="pi pi-box" 
-                className="p-button-rounded p-button-text sidebar-action-button" 
-                onClick={openAnythingLLMTab} 
-                tooltip={t('tooltips.anythingLLM')} 
-                tooltipOptions={{ position: 'right' }} 
-                style={{ 
-                  margin: 0, 
-                  width: 40, 
-                  height: 40, 
-                  minWidth: 40, 
-                  minHeight: 40, 
-                  fontSize: 18,
-                  border: 'none',
-                  display: 'flex !important',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  visibility: 'visible !important',
-                  opacity: '1 !important',
-                  color: '#9c27b0'
-                }} 
-              />
-            )}
+                    // Disparar evento para crear la pestaña
+                    window.dispatchEvent(new CustomEvent('create-ai-tab', {
+                      detail: { tab: newAITab }
+                    }));
+                  }}
+                  tooltip={t('tooltips.aiChat')}
+                  tooltipOptions={{ position: 'right' }}
+                  style={{
+                    margin: 0,
+                    width: 40,
+                    height: 40,
+                    minWidth: 40,
+                    minHeight: 40,
+                    fontSize: 18,
+                    border: 'none',
+                    display: 'flex !important',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    visibility: 'visible !important',
+                    opacity: '1 !important'
+                  }}
+                />
+              )}
 
-            {/* Botón de Open WebUI - Solo visible si está activado */}
-            {aiClientsEnabled.openwebui && (
-              <Button 
-                icon="pi pi-globe" 
-                className="p-button-rounded p-button-text sidebar-action-button" 
-                onClick={openOpenWebUITab} 
-                tooltip={t('tooltips.openWebUI')} 
-                tooltipOptions={{ position: 'right' }} 
-                style={{ 
-                  margin: 0, 
-                  width: 40, 
-                  height: 40, 
-                  minWidth: 40, 
-                  minHeight: 40, 
-                  fontSize: 18,
-                  border: 'none',
-                  display: 'flex !important',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  visibility: 'visible !important',
-                  opacity: '1 !important',
-                  color: '#2196F3'
-                }} 
-              />
-            )}
+              {/* Botón de AnythingLLM - Solo visible si está activado */}
+              {aiClientsEnabled.anythingllm && (
+                <Button
+                  icon="pi pi-box"
+                  className="p-button-rounded p-button-text sidebar-action-button"
+                  onClick={openAnythingLLMTab}
+                  tooltip={t('tooltips.anythingLLM')}
+                  tooltipOptions={{ position: 'right' }}
+                  style={{
+                    margin: 0,
+                    width: 40,
+                    height: 40,
+                    minWidth: 40,
+                    minHeight: 40,
+                    fontSize: 18,
+                    border: 'none',
+                    display: 'flex !important',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    visibility: 'visible !important',
+                    opacity: '1 !important',
+                    color: '#9c27b0'
+                  }}
+                />
+              )}
+
+              {/* Botón de Open WebUI - Solo visible si está activado */}
+              {aiClientsEnabled.openwebui && (
+                <Button
+                  icon="pi pi-globe"
+                  className="p-button-rounded p-button-text sidebar-action-button"
+                  onClick={openOpenWebUITab}
+                  tooltip={t('tooltips.openWebUI')}
+                  tooltipOptions={{ position: 'right' }}
+                  style={{
+                    margin: 0,
+                    width: 40,
+                    height: 40,
+                    minWidth: 40,
+                    minHeight: 40,
+                    fontSize: 18,
+                    border: 'none',
+                    display: 'flex !important',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    visibility: 'visible !important',
+                    opacity: '1 !important',
+                    color: '#2196F3'
+                  }}
+                />
+              )}
             </div>
 
             <div style={{ flexGrow: 1 }} />
@@ -2351,9 +2353,9 @@ const Sidebar = React.memo(({
                     padding: 0
                   }}
                 >
-                  <span style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                  <span style={{
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'center',
                     width: '20px',
                     height: '20px',
@@ -2394,10 +2396,10 @@ const Sidebar = React.memo(({
           </div>
 
           {/* Botones de menú de aplicación y configuración en la parte inferior */}
-          <div style={{ 
-            position: 'absolute', 
-            bottom: 8, 
-            left: 0, 
+          <div style={{
+            position: 'absolute',
+            bottom: 8,
+            left: 0,
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
@@ -2412,12 +2414,12 @@ const Sidebar = React.memo(({
               onClick={() => setShowSettingsDialog(true)}
               tooltip={t('tooltips.settings')}
               tooltipOptions={{ position: 'right' }}
-              style={{ 
-                margin: 0, 
-                width: 40, 
-                height: 40, 
-                minWidth: 40, 
-                minHeight: 40, 
+              style={{
+                margin: 0,
+                width: 40,
+                height: 40,
+                minWidth: 40,
+                minHeight: 40,
                 border: 'none',
                 display: 'flex !important',
                 alignItems: 'center',
@@ -2425,11 +2427,11 @@ const Sidebar = React.memo(({
                 visibility: 'visible !important',
                 opacity: '1 !important',
                 padding: 0
-              }} 
+              }}
             >
-              <span style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+              <span style={{
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
                 width: '20px',
                 height: '20px',
@@ -2445,12 +2447,12 @@ const Sidebar = React.memo(({
               }}
               tooltip={t('tooltips.appMenu')}
               tooltipOptions={{ position: 'right' }}
-              style={{ 
-                margin: 0, 
-                width: 40, 
-                height: 40, 
-                minWidth: 40, 
-                minHeight: 40, 
+              style={{
+                margin: 0,
+                width: 40,
+                height: 40,
+                minWidth: 40,
+                minHeight: 40,
                 border: 'none',
                 display: 'flex !important',
                 alignItems: 'center',
@@ -2458,11 +2460,11 @@ const Sidebar = React.memo(({
                 visibility: 'visible !important',
                 opacity: '1 !important',
                 padding: 0
-              }} 
+              }}
             >
-              <span style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+              <span style={{
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
                 width: '20px',
                 height: '20px',
@@ -2480,10 +2482,10 @@ const Sidebar = React.memo(({
             // Vista de conexiones (árbol normal)
             <>
               {FUTURISTIC_UI_KEYS.includes(uiTheme) && (
-                <div style={{ 
-                  width: '100%', 
-                  height: '0.5px', 
-                  backgroundColor: 'var(--ui-sidebar-border)', 
+                <div style={{
+                  width: '100%',
+                  height: '0.5px',
+                  backgroundColor: 'var(--ui-sidebar-border)',
                   opacity: 0.6,
                   margin: 0,
                   padding: 0,
@@ -2493,38 +2495,38 @@ const Sidebar = React.memo(({
                 }} />
               )}
               <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
-                <Button 
-                  className="p-button-rounded p-button-text sidebar-action-button glass-button" 
-                  onClick={() => setSidebarCollapsed(v => !v)} 
-                  tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')} 
-                  tooltipOptions={{ position: 'bottom' }} 
-                  style={{ 
+                <Button
+                  className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                  onClick={() => setSidebarCollapsed(v => !v)}
+                  tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')}
+                  tooltipOptions={{ position: 'bottom' }}
+                  style={{
                     marginRight: 8,
-                    display: 'flex', 
-                    alignItems: 'center', 
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'center',
                     width: '40px',
                     height: '40px',
                     padding: 0
-                  }} 
+                  }}
                 >
-                  <span style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                  <span style={{
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'center',
                     width: '20px',
                     height: '20px',
                     color: 'var(--ui-sidebar-text)'
                   }}>
-                    {sidebarCollapsed 
+                    {sidebarCollapsed
                       ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
                       : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft
                     }
                   </span>
                 </Button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
-                  <Button 
-                    className="p-button-rounded p-button-text sidebar-action-button glass-button" 
+                  <Button
+                    className="p-button-rounded p-button-text sidebar-action-button glass-button"
                     onClick={() => {
                       // Abrir diálogo de selección de protocolo
                       if (sidebarCallbacksRef?.current?.showProtocolSelection) {
@@ -2533,21 +2535,21 @@ const Sidebar = React.memo(({
                         // Fallback: usar evento personalizado
                         window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
                       }
-                    }} 
-                    tooltip={t('tooltips.newConnection')} 
+                    }}
+                    tooltip={t('tooltips.newConnection')}
                     tooltipOptions={{ position: 'bottom' }}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'center',
                       width: '40px',
                       height: '40px',
                       padding: 0
                     }}
                   >
-                    <span style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    <span style={{
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'center',
                       width: '20px',
                       height: '20px',
@@ -2556,23 +2558,23 @@ const Sidebar = React.memo(({
                       {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
                     </span>
                   </Button>
-                  <Button 
-                    className="p-button-rounded p-button-text sidebar-action-button glass-button" 
-                    onClick={() => setShowFolderDialog(true)} 
-                    tooltip={t('tooltips.createFolder')} 
+                  <Button
+                    className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                    onClick={() => setShowFolderDialog(true)}
+                    tooltip={t('tooltips.createFolder')}
                     tooltipOptions={{ position: 'bottom' }}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'center',
                       width: '40px',
                       height: '40px',
                       padding: 0
                     }}
                   >
-                    <span style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    <span style={{
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'center',
                       width: '20px',
                       height: '20px',
@@ -2581,23 +2583,23 @@ const Sidebar = React.memo(({
                       {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
                     </span>
                   </Button>
-                  <Button 
-                    className="p-button-rounded p-button-text sidebar-action-button glass-button" 
-                    onClick={() => setShowCreateGroupDialog(true)} 
-                    tooltip={t('tooltips.createGroup')} 
+                  <Button
+                    className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                    onClick={() => setShowCreateGroupDialog(true)}
+                    tooltip={t('tooltips.createGroup')}
                     tooltipOptions={{ position: 'bottom' }}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'center',
                       width: '40px',
                       height: '40px',
                       padding: 0
                     }}
                   >
-                    <span style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    <span style={{
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'center',
                       width: '20px',
                       height: '20px',
@@ -2606,23 +2608,23 @@ const Sidebar = React.memo(({
                       {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
                     </span>
                   </Button>
-                  <Button 
-                    className="p-button-rounded p-button-text sidebar-action-button glass-button key-button" 
-                    onClick={() => setViewMode('passwords')} 
-                    tooltip={t('tooltips.passwordManager')} 
+                  <Button
+                    className="p-button-rounded p-button-text sidebar-action-button glass-button key-button"
+                    onClick={() => setViewMode('passwords')}
+                    tooltip={t('tooltips.passwordManager')}
                     tooltipOptions={{ position: 'bottom' }}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'center',
                       width: '40px',
                       height: '40px',
                       padding: 0
                     }}
                   >
-                    <span style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    <span style={{
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'center',
                       width: '20px',
                       height: '20px',
@@ -2660,12 +2662,12 @@ const Sidebar = React.memo(({
                 </div>
               </div>
               <Divider className="my-2" />
-              
-              <div 
-                style={{ 
-                  flex: 1, 
-                  minHeight: 0, 
-                  overflowY: 'auto', 
+
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  overflowY: 'auto',
                   overflowX: 'auto',
                   position: 'relative',
                   fontSize: `${explorerFontSize}px`,
@@ -2677,7 +2679,7 @@ const Sidebar = React.memo(({
               >
                 {nodes.length === 0 ? (
                   <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
-                    No hay elementos en el árbol.<br/>Usa el botón "+" para crear una carpeta o conexión.
+                    No hay elementos en el árbol.<br />Usa el botón "+" para crear una carpeta o conexión.
                   </div>
                 ) : (
                   <Tree
@@ -2687,7 +2689,7 @@ const Sidebar = React.memo(({
                     selectionKeys={selectedNodeKey}
                     onSelectionChange={e => {
                       setSelectedNodeKey(e.value);
-                      
+
                       // Encontrar el nodo completo para el panel de detalles
                       const findNode = (nodeList, key) => {
                         for (const node of nodeList) {
@@ -2699,7 +2701,7 @@ const Sidebar = React.memo(({
                         }
                         return null;
                       };
-                      
+
                       // e.value puede ser un objeto { "key": true } o directamente un string "key"
                       let selectedKey = null;
                       if (typeof e.value === 'string') {
@@ -2707,7 +2709,7 @@ const Sidebar = React.memo(({
                       } else if (e.value && typeof e.value === 'object') {
                         selectedKey = Object.keys(e.value)[0];
                       }
-                      
+
                       const node = selectedKey ? findNode(nodes, selectedKey) : null;
                       setSelectedNodeForDetails(node);
                     }}
@@ -2724,12 +2726,12 @@ const Sidebar = React.memo(({
                           label: e.node.label,
                           data: e.node.data
                         };
-                        
+
                         // Almacenar en ref global (más confiable que dataTransfer con PrimeReact)
                         if (window.draggedSSHNodeRef && window.draggedSSHNodeRef.current !== undefined) {
                           window.draggedSSHNodeRef.current = sshNodeData;
                         }
-                        
+
                         // También intentar establecer en dataTransfer (fallback)
                         try {
                           const nativeEvent = e.originalEvent || e.nativeEvent || e;
@@ -2749,16 +2751,15 @@ const Sidebar = React.memo(({
                         window.draggedSSHNodeRef.current = null;
                       }
                     }}
-                    onDragEnd={() => {}}
                     className={`sidebar-tree tree-theme-${treeTheme}`}
                     data-icon-theme={iconTheme}
                     data-tree-theme={treeTheme}
                     data-font-color={explorerFontColor || ''}
-                    style={{ 
+                    style={{
                       fontSize: `${explorerFontSize}px`,
                       color: explorerFontColor || undefined,
                       '--icon-size': `${iconSize}px`,
-                      ...(explorerFontColor ? { 
+                      ...(explorerFontColor ? {
                         '--ui-sidebar-text': explorerFontColor,
                         '--tree-text-color': explorerFontColor
                       } : {})
@@ -2767,23 +2768,24 @@ const Sidebar = React.memo(({
                   />
                 )}
               </div>
-              
+
               {/* Panel de detalles de conexión */}
-              <ConnectionDetailsPanel 
+              <ConnectionDetailsPanel
                 selectedNode={selectedNodeForDetails}
                 uiTheme={uiTheme}
                 sessionActionIconTheme={sessionActionIconTheme}
                 onNodeUpdate={updateNodeInTree}
               />
-              
-              <SidebarFooter 
-                onConfigClick={() => setShowSettingsDialog(true)} 
+
+              <SidebarFooter
+                onConfigClick={() => setShowSettingsDialog(true)}
                 allExpanded={allExpanded}
                 toggleExpandAll={toggleExpandAll}
                 collapsed={sidebarCollapsed}
                 onShowImportDialog={onShowImportDialog || setShowImportDialog}
                 onShowExportDialog={onShowExportDialog}
                 onShowImportExportDialog={onShowImportExportDialog}
+                onShowImportWizard={onShowImportWizard}
                 sessionActionIconTheme={sessionActionIconTheme}
               />
             </>
@@ -2870,7 +2872,7 @@ const Sidebar = React.memo(({
         themeName={iconThemes[iconTheme]?.name || 'Material'}
       />
       {/* Los diálogos de edición SSH y RDP ahora se manejan en DialogsManager */}
-      
+
       <ImportDialog
         visible={showImportDialog}
         onHide={() => setShowImportDialog(false)}
