@@ -96,15 +96,22 @@ function toSerializable(connection) {
     };
   }
 
-  const host = connection.hostname || connection.host || '';
-  const username = connection.username || connection.user || '';
-  const port = normalizePort(type, connection.port);
-  const id = connection.id || buildId({ type, host, username, port });
+  // Campos base para ID y nombre
+  const host = (type === 'ssh-tunnel' ? (connection.sshHost || connection.host) : (connection.hostname || connection.host)) || '';
+  const username = (type === 'ssh-tunnel' ? (connection.sshUser || connection.username || connection.user) : (connection.username || connection.user)) || '';
+  const port = normalizePort(type, type === 'ssh-tunnel' ? (connection.sshPort || connection.port) : connection.port);
+
+  // ID para túneles considera puertos locales/remotos para unicidad
+  const id = connection.id || (type === 'ssh-tunnel'
+    ? `ssh-tunnel:${host}:${username}:${port}:${connection.localPort || 0}:${connection.remotePort || 0}`
+    : buildId({ type, host, username, port }));
 
   return {
     id,
     type,
-    name: connection.name || connection.label || `${username}@${host}`,
+    name: connection.name || connection.label || (type === 'ssh-tunnel'
+      ? `Tunnel ${connection.localPort || '?'}\u2192${host}:${connection.remotePort || '?'}`
+      : `${username}@${host}`),
     host,
     username,
     port,
@@ -173,10 +180,11 @@ function toSerializable(connection) {
 function fromSidebarNode(node, typeOverride = null) {
   if (!node) return null;
   const isSSH = node.data && node.data.type === 'ssh';
+  const isSSHTunnel = node.data && node.data.type === 'ssh-tunnel';
   const isRDP = node.data && (node.data.type === 'rdp' || node.data.type === 'rdp-guacamole');
   const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
   const isFileConnection = node.data && (node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp');
-  const type = typeOverride || (isSSH ? 'ssh' : (isRDP ? 'rdp-guacamole' : (isVNC ? 'vnc-guacamole' : (isFileConnection ? node.data.type : (node.data?.type || 'ssh')))));
+  const type = typeOverride || (isSSH ? 'ssh' : (isSSHTunnel ? 'ssh-tunnel' : (isRDP ? 'rdp-guacamole' : (isVNC ? 'vnc-guacamole' : (isFileConnection ? node.data.type : (node.data?.type || 'ssh'))))));
   const base = {
     type,
     name: node.label,

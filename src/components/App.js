@@ -2336,6 +2336,7 @@ const App = () => {
   const memoizedContentRendererProps = useMemo(() => ({
     // HomeTab props
     onCreateSSHConnection: onOpenSSHConnection,
+    onOpenSSHTunnel,
     openFolderDialog,
     onOpenRdpConnection,
     handleLoadGroupFromFavorites,

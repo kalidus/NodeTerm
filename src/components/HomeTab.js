@@ -32,6 +32,7 @@ const HomeTab = ({
   onCreateVncConnection,
   onEditConnection,
   onLoadGroup,
+  onOpenSSHTunnel,
   sidebarNodes = null,
   setShowCreateGroupDialog,
   activeIds = new Set(),
@@ -414,6 +415,11 @@ const HomeTab = ({
     } else if (connection.type === 'vnc-guacamole') {
       // Manejar conexiones VNC-Guacamole
       handleCreateVncConnection(connection);
+    } else if (connection.type === 'ssh-tunnel') {
+      // Manejar túneles SSH
+      if (onOpenSSHTunnel) {
+        onOpenSSHTunnel(connection);
+      }
     } else if (onCreateSSHConnection) {
       // Manejar conexiones SSH tradicionales
       onCreateSSHConnection(connection);

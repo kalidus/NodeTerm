@@ -11,13 +11,13 @@ export const useConnectionManagement = ({
   setLastOpenedTabKey,
   setOnCreateActivateTabKey,
   setOpenTabOrder,
-  
+
   // Estados de pestañas
   sshTabs,
   setSshTabs,
   rdpTabs,
   setRdpTabs,
-  
+
   // Toast para notificaciones
   toast
 }) => {
@@ -28,7 +28,7 @@ export const useConnectionManagement = ({
     const nodeType = fileNode.data?.type || 'ssh';
     const isFileConnection = nodeType === 'sftp' || nodeType === 'ftp' || nodeType === 'scp';
     const protocol = fileNode.data?.protocol || nodeType;
-    
+
     // Registrar reciente
     try {
       connectionStore.recordRecent({
@@ -49,19 +49,19 @@ export const useConnectionManagement = ({
     } catch (e) { /* noop */ }
 
     // Buscar si ya existe un explorador para este host+usuario+protocolo
-    const existingExplorerIndex = sshTabs.findIndex(tab => 
-      tab.isExplorerInSSH && 
-      tab.sshConfig.host === fileNode.data.host && 
+    const existingExplorerIndex = sshTabs.findIndex(tab =>
+      tab.isExplorerInSSH &&
+      tab.sshConfig.host === fileNode.data.host &&
       tab.sshConfig.username === (fileNode.data.user || fileNode.data.username) &&
       tab.sshConfig.protocol === (isFileConnection ? protocol : undefined)
     );
-    
+
     if (existingExplorerIndex !== -1) {
       // Activar la pestaña existente del explorador
       setActiveTabIndex(existingExplorerIndex);
       return;
     }
-    
+
     // Crear el explorador
     const explorerTabId = `explorer_${fileNode.key}_${Date.now()}`;
     const config = {
@@ -77,7 +77,7 @@ export const useConnectionManagement = ({
       bastionHost: fileNode.data.bastionHost || '',
       bastionUser: fileNode.data.bastionUser || ''
     };
-    
+
     const nowTs = Date.now();
     const newExplorerTab = {
       key: explorerTabId,
@@ -90,7 +90,7 @@ export const useConnectionManagement = ({
       isExplorerInSSH: true,
       groupId: null
     };
-    
+
     // Insertar y activar como última abierta
     setSshTabs(prevSshTabs => [newExplorerTab, ...prevSshTabs]);
     setLastOpenedTabKey(explorerTabId);
@@ -139,7 +139,7 @@ export const useConnectionManagement = ({
   }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, openFileExplorer]);
 
   // === FUNCIÓN PARA ABRIR TÚNELES SSH ===
-  const onOpenSSHTunnel = useCallback((node, nodes) => {
+  const onOpenSSHTunnel = useCallback((nodeOrConn, nodes) => {
     // Si no estamos en el grupo Home, cambiar a Home primero
     if (activeGroupId !== null) {
       const currentGroupKey = activeGroupId || 'no-group';
@@ -150,38 +150,66 @@ export const useConnectionManagement = ({
       setActiveGroupId(null);
     }
 
+    // Permitir recibir un nodo de sidebar (con .data) o un objeto de conexión directo (desde Home/Favoritos)
+    const isSidebarNode = !!(nodeOrConn && nodeOrConn.data);
+    const data = isSidebarNode ? nodeOrConn.data : nodeOrConn;
+    const label = isSidebarNode ? nodeOrConn.label : nodeOrConn.name;
+    const key = isSidebarNode ? nodeOrConn.key : (nodeOrConn.id || `tunnel_${Date.now()}`);
+
     // Preparar configuración del túnel
     const tunnelConfig = {
-      name: node.label,
-      tunnelType: node.data?.tunnelType || 'local',
-      sshHost: node.data?.sshHost || '',
-      sshPort: node.data?.sshPort || 22,
-      sshUser: node.data?.sshUser || '',
-      sshPassword: node.data?.sshPassword || '',
-      authType: node.data?.authType || 'password',
-      privateKeyPath: node.data?.privateKeyPath || '',
-      passphrase: node.data?.passphrase || '',
-      localHost: node.data?.localHost || '127.0.0.1',
-      localPort: node.data?.localPort || 0,
-      remoteHost: node.data?.remoteHost || '',
-      remotePort: node.data?.remotePort || 0,
-      bindHost: node.data?.bindHost || '0.0.0.0',
-      nodeKey: node.key
+      name: label,
+      tunnelType: data?.tunnelType || 'local',
+      sshHost: data?.sshHost || '',
+      sshPort: data?.sshPort || 22,
+      sshUser: data?.sshUser || '',
+      sshPassword: data?.sshPassword || '',
+      authType: data?.authType || 'password',
+      privateKeyPath: data?.privateKeyPath || '',
+      passphrase: data?.passphrase || '',
+      localHost: data?.localHost || '127.0.0.1',
+      localPort: data?.localPort || 0,
+      remoteHost: data?.remoteHost || '',
+      remotePort: data?.remotePort || 0,
+      bindHost: data?.bindHost || '0.0.0.0',
+      nodeKey: key
     };
+
+    // Registrar como reciente (SSH Tunnel)
+    try {
+      connectionStore.recordRecent({
+        type: 'ssh-tunnel',
+        name: tunnelConfig.name,
+        tunnelType: tunnelConfig.tunnelType,
+        sshHost: tunnelConfig.sshHost,
+        sshPort: tunnelConfig.sshPort,
+        sshUser: tunnelConfig.sshUser,
+        sshPassword: tunnelConfig.sshPassword,
+        authType: tunnelConfig.authType,
+        privateKeyPath: tunnelConfig.privateKeyPath,
+        passphrase: tunnelConfig.passphrase,
+        localHost: tunnelConfig.localHost,
+        localPort: tunnelConfig.localPort,
+        remoteHost: tunnelConfig.remoteHost,
+        remotePort: tunnelConfig.remotePort,
+        bindHost: tunnelConfig.bindHost,
+        customIcon: data?.customIcon || null
+      }, 200);
+    } catch (e) { /* noop */ }
 
     // Crear nueva pestaña de túnel SSH
     const nowTs = Date.now();
-    const tunnelTabId = `ssh-tunnel-${node.key}-${nowTs}`;
-    
+    const tunnelTabId = `ssh-tunnel-${key}-${nowTs}`;
+
     const newTunnelTab = {
       key: tunnelTabId,
       type: 'ssh-tunnel',
       tunnelConfig: tunnelConfig,
-      label: node.label || 'Túnel SSH',
+      label: label || 'Túnel SSH',
       createdAt: nowTs,
-      nodeKey: node.key
+      nodeKey: key
     };
-    
+
     // Insertar y activar
     setSshTabs(prevSshTabs => [newTunnelTab, ...prevSshTabs]);
     setLastOpenedTabKey(tunnelTabId);
@@ -223,7 +251,7 @@ export const useConnectionManagement = ({
         targetServer: nodeOrConn.targetServer || '',
         remoteFolder: nodeOrConn.remoteFolder || ''
       };
-      
+
       // Solo si no hay información completa guardada, buscar en la sidebar como fallback
       if (!favoriteData.password && !favoriteData.useBastionWallix) {
         const matchesConn = (node) => {
@@ -236,9 +264,9 @@ export const useConnectionManagement = ({
         const dfs = (list) => {
           if (!Array.isArray(list)) return;
           for (const n of list) {
-            if (matchesConn(n)) { 
-              matchedSidebarNode = n; 
-              return; 
+            if (matchesConn(n)) {
+              matchedSidebarNode = n;
+              return;
             }
             if (n.children && n.children.length > 0) dfs(n.children);
             if (matchedSidebarNode) return;
@@ -262,7 +290,7 @@ export const useConnectionManagement = ({
     // Obtener password y verificar si debe copiarse automáticamente
     const password = isSidebarNode ? nodeOrConn.data.password : (nodeOrConn.password || matchedSidebarNode?.data?.password || '');
     const autoCopyPassword = isSidebarNode ? (nodeOrConn.data.autoCopyPassword || false) : (matchedSidebarNode?.data?.autoCopyPassword || false);
-    
+
     // Copiar password automáticamente si está configurado
     if (autoCopyPassword && password) {
       try {
@@ -271,21 +299,21 @@ export const useConnectionManagement = ({
         } else {
           navigator.clipboard.writeText(password);
         }
-        
+
         // Mostrar notificación si está disponible
         if (window.toast?.current?.show) {
-          window.toast.current.show({ 
-            severity: 'success', 
-            summary: 'Password copiado', 
-            detail: 'Contraseña copiada al portapapeles automáticamente', 
-            life: 2000 
+          window.toast.current.show({
+            severity: 'success',
+            summary: 'Password copiado',
+            detail: 'Contraseña copiada al portapapeles automáticamente',
+            life: 2000
           });
         }
       } catch (err) {
         console.error('Error copiando password automáticamente:', err);
       }
     }
-    
+
     // Registrar como reciente (SSH) - incluir todas las credenciales y configuración
     try {
       connectionStore.recordRecent({
@@ -343,7 +371,7 @@ export const useConnectionManagement = ({
       if (autoRecordingEnabled && window.electron?.ipcRenderer) {
         const recordingQuality = localStorage.getItem('audit_recording_quality') || 'medium';
         const encryptRecordings = localStorage.getItem('audit_encrypt_recordings') === 'true';
-        
+
         const recordingMetadata = {
           host: sshConfig.useBastionWallix ? sshConfig.bastionHost : sshConfig.host,
           username: sshConfig.useBastionWallix ? sshConfig.bastionUser : sshConfig.username,
@@ -442,7 +470,7 @@ export const useConnectionManagement = ({
         span: node.span || false,
         admin: node.admin || false
       };
-      
+
       // Solo si no hay password guardado, intentar buscar en la sidebar como fallback
       if (!baseRdp.password) {
         const matchesRdp = (n) => {
@@ -460,7 +488,7 @@ export const useConnectionManagement = ({
         const dfs = (list) => {
           if (!Array.isArray(list)) return;
           for (const n of list) {
-            if (matchesRdp(n)) { 
+            if (matchesRdp(n)) {
               // Usar la información de la sidebar para completar los campos faltantes
               baseRdp.password = n.data.password || baseRdp.password;
               baseRdp.clientType = n.data.clientType || baseRdp.clientType;
@@ -490,7 +518,7 @@ export const useConnectionManagement = ({
               baseRdp.smartSizing = n.data.smartSizing !== undefined ? n.data.smartSizing : baseRdp.smartSizing;
               baseRdp.span = n.data.span !== undefined ? n.data.span : baseRdp.span;
               baseRdp.admin = n.data.admin !== undefined ? n.data.admin : baseRdp.admin;
-              return; 
+              return;
             }
             if (n.children && n.children.length > 0) dfs(n.children);
           }
@@ -499,7 +527,7 @@ export const useConnectionManagement = ({
       }
     }
     const isGuacamoleRDP = baseRdp.clientType === 'guacamole' || baseRdp.type === 'rdp-guacamole';
-    
+
     // Registrar como reciente (RDP) - incluir todas las credenciales y configuración
     try {
       connectionStore.recordRecent({
@@ -540,19 +568,19 @@ export const useConnectionManagement = ({
         customIcon: node.data?.customIcon || null
       }, 200);
     } catch (e) { /* noop */ }
-    
+
     if (isGuacamoleRDP) {
       // === NUEVA LÓGICA: RDP-Guacamole como pestañas independientes ===
       // Calcular resolución dinámica si autoResize está activado
       let dynamicWidth = parseInt(baseRdp.resolution?.split('x')[0]) || 1024;
       let dynamicHeight = parseInt(baseRdp.resolution?.split('x')[1]) || 768;
-      
+
       if (baseRdp.autoResize) {
         // Usar dimensiones dinámicas basadas en la ventana
         dynamicWidth = Math.floor(window.innerWidth * 0.8);
         dynamicHeight = Math.floor(window.innerHeight * 0.7);
       }
-      
+
 
       const rdpConfig = {
         hostname: baseRdp.server || baseRdp.host || baseRdp.hostname,
@@ -594,7 +622,7 @@ export const useConnectionManagement = ({
         const tabId = `${node.key || node.id || 'rdp'}_${Date.now()}`;
         const connectionName = node.label || node.name || 'RDP Connection';
         const originalKey = node.key || node.id || tabId;
-        
+
         const newTab = {
           key: tabId,
           label: connectionName,
@@ -611,7 +639,7 @@ export const useConnectionManagement = ({
         setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
         return [newTab, ...prevTabs];
       });
-      
+
       return; // Salir aquí para RDP-Guacamole
     }
 
@@ -637,21 +665,21 @@ export const useConnectionManagement = ({
     };
 
     // Verificar si ya existe una pestaña RDP para la misma conexión
-    const existingRdpTab = rdpTabs.find(tab => 
-      tab.type === 'rdp' && 
-      tab.rdpConfig && 
-      tab.rdpConfig.server === rdpConfig.server && 
+    const existingRdpTab = rdpTabs.find(tab =>
+      tab.type === 'rdp' &&
+      tab.rdpConfig &&
+      tab.rdpConfig.server === rdpConfig.server &&
       tab.rdpConfig.username === rdpConfig.username &&
       tab.rdpConfig.port === rdpConfig.port
     );
-    
+
     if (existingRdpTab) {
       // Si ya existe una pestaña RDP para esta conexión, solo activarla
       const allTabs = [...sshTabs, ...rdpTabs];
       const tabIndex = allTabs.findIndex(tab => tab.key === existingRdpTab.key);
       if (tabIndex !== -1) {
         setActiveTabIndex(tabIndex);
-        
+
         toast.current?.show({
           severity: 'info',
           summary: 'Conexión RDP',
@@ -672,7 +700,7 @@ export const useConnectionManagement = ({
         node: node,
         groupId: null
       };
-      
+
       // Agregar la pestaña RDP y marcar para activar/mostrar tras Inicio
       setRdpTabs(prevTabs => [{ ...newRdpTab, createdAt: Date.now() }, ...prevTabs]);
       setLastOpenedTabKey(tabId);
@@ -716,31 +744,31 @@ export const useConnectionManagement = ({
                 return tab;
               });
             });
-          
-          toast.current?.show({
-            severity: 'success',
-            summary: 'Conexión RDP',
-            detail: 'Conexión RDP iniciada correctamente',
-            life: 3000
-          });
-        } else {
+
+            toast.current?.show({
+              severity: 'success',
+              summary: 'Conexión RDP',
+              detail: 'Conexión RDP iniciada correctamente',
+              life: 3000
+            });
+          } else {
+            toast.current?.show({
+              severity: 'error',
+              summary: 'Error',
+              detail: result.error || 'Error al conectar RDP',
+              life: 3000
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error al conectar RDP:', error);
           toast.current?.show({
             severity: 'error',
             summary: 'Error',
-            detail: result.error || 'Error al conectar RDP',
+            detail: 'Error al conectar RDP',
             life: 3000
           });
-        }
-      })
-      .catch(error => {
-        console.error('Error al conectar RDP:', error);
-        toast.current?.show({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Error al conectar RDP',
-          life: 3000
         });
-      });
     }
   }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, setRdpTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setOpenTabOrder, rdpTabs, sshTabs, toast]);
 
@@ -783,7 +811,7 @@ export const useConnectionManagement = ({
         redirectClipboard: node.redirectClipboard !== false,
         guacDpi: node.guacDpi || 96
       };
-      
+
       // Solo si no hay password guardado, intentar buscar en la sidebar como fallback
       if (!baseVnc.password) {
         const matchesVnc = (n) => {
@@ -799,7 +827,7 @@ export const useConnectionManagement = ({
         const dfs = (list) => {
           if (!Array.isArray(list)) return;
           for (const n of list) {
-            if (matchesVnc(n)) { 
+            if (matchesVnc(n)) {
               // Usar la información de la sidebar para completar los campos faltantes
               baseVnc.password = n.data.password || baseVnc.password;
               baseVnc.clientType = n.data.clientType || baseVnc.clientType;
@@ -812,7 +840,7 @@ export const useConnectionManagement = ({
               baseVnc.autoResize = n.data.autoResize !== undefined ? n.data.autoResize : baseVnc.autoResize;
               baseVnc.redirectClipboard = n.data.redirectClipboard !== undefined ? n.data.redirectClipboard : baseVnc.redirectClipboard;
               baseVnc.guacDpi = n.data.guacDpi || baseVnc.guacDpi;
-              return; 
+              return;
             }
             if (n.children && n.children.length > 0) dfs(n.children);
           }
@@ -821,7 +849,7 @@ export const useConnectionManagement = ({
       }
     }
     const isGuacamoleVNC = baseVnc.clientType === 'guacamole' || baseVnc.type === 'vnc-guacamole';
-    
+
     // Registrar como reciente (VNC) - incluir todas las credenciales y configuración
     try {
       connectionStore.recordRecent({
@@ -844,19 +872,19 @@ export const useConnectionManagement = ({
         customIcon: node.data?.customIcon || null
       }, 200);
     } catch (e) { /* noop */ }
-    
+
     if (isGuacamoleVNC) {
       // === VNC-Guacamole como pestañas independientes ===
       // Calcular resolución dinámica si autoResize está activado
       let dynamicWidth = parseInt(baseVnc.resolution?.split('x')[0]) || 1024;
       let dynamicHeight = parseInt(baseVnc.resolution?.split('x')[1]) || 768;
-      
+
       if (baseVnc.autoResize) {
         // Usar dimensiones dinámicas basadas en la ventana
         dynamicWidth = Math.floor(window.innerWidth * 0.8);
         dynamicHeight = Math.floor(window.innerHeight * 0.7);
       }
-      
+
       const vncConfig = {
         connectionType: 'vnc', // Indicar que es VNC
         hostname: baseVnc.server || baseVnc.host || baseVnc.hostname,
@@ -881,7 +909,7 @@ export const useConnectionManagement = ({
         const tabId = `${node.key || node.id || 'vnc'}_${Date.now()}`;
         const connectionName = node.label || node.name || 'VNC Connection';
         const originalKey = node.key || node.id || tabId;
-        
+
         const newTab = {
           key: tabId,
           label: connectionName,
@@ -898,7 +926,7 @@ export const useConnectionManagement = ({
         setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
         return [newTab, ...prevTabs];
       });
-      
+
       return; // Salir aquí para VNC-Guacamole
     }
   }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, setRdpTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setOpenTabOrder, toast]);
