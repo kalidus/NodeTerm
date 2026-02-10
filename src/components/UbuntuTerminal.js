@@ -8,9 +8,9 @@ import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 
-const UbuntuTerminal = forwardRef(({ 
-    fontFamily = 'Consolas, "Courier New", monospace', 
-    fontSize = 14, 
+const UbuntuTerminal = forwardRef(({
+    fontFamily = 'Consolas, "Courier New", monospace',
+    fontSize = 14,
     theme = {},
     tabId = 'default',
     ubuntuInfo = null, // Mantener nombre por compatibilidad, pero puede ser cualquier distribución WSL
@@ -63,11 +63,11 @@ const UbuntuTerminal = forwardRef(({
                         const match = text.match(/\bID=("?)([^"\n]+)\1/);
                         if (match && match[2]) setDistroId(match[2].toLowerCase());
                     }
-                } catch {}
+                } catch { }
             };
             const unsubscribe = window.electron?.ipcRenderer.on(`${channelPrefix}:data:${tabId}`, handler);
             window.electron?.ipcRenderer.send(`${channelPrefix}:data:${tabId}`, 'cat /etc/os-release\n');
-            setTimeout(() => { try { if (typeof unsubscribe === 'function') unsubscribe(); } catch {} }, 1200);
+            setTimeout(() => { try { if (typeof unsubscribe === 'function') unsubscribe(); } catch { } }, 1200);
         } else {
             setDistroId((ubuntuInfo.category || 'ubuntu').toLowerCase());
         }
@@ -81,7 +81,7 @@ const UbuntuTerminal = forwardRef(({
         const getIntervalMs = () => {
             try { return Math.max(1, parseInt(localStorage.getItem(POLL_KEY) || '3', 10)) * 1000; } catch { return 3000; } // Reducido de 5s a 3s para locales
         };
-        
+
         // Optimización: pausar polling cuando la ventana pierda foco
         const handleFocus = () => {
             if (window.electronAPI?.send) {
@@ -93,7 +93,7 @@ const UbuntuTerminal = forwardRef(({
                 window.electronAPI.send('window:focus-changed', false);
             }
         };
-        
+
         window.addEventListener('focus', handleFocus);
         window.addEventListener('blur', handleBlur);
         const fetchStats = async () => {
@@ -127,15 +127,15 @@ const UbuntuTerminal = forwardRef(({
                 setIsLoadingStats(false);
                 const cpuVal = typeof payload.cpu === 'number' ? payload.cpu : null;
                 if (cpuVal !== null && !isNaN(cpuVal)) setCpuHistory(prev => [...prev, cpuVal].slice(-30));
-            } catch {}
+            } catch { }
         };
         const loop = () => {
             if (stopped) return;
             fetchStats().finally(() => { timer = setTimeout(loop, getIntervalMs()); });
         };
         loop();
-        return () => { 
-            stopped = true; 
+        return () => {
+            stopped = true;
             if (timer) clearTimeout(timer);
             window.removeEventListener('focus', handleFocus);
             window.removeEventListener('blur', handleBlur);
@@ -275,8 +275,8 @@ const UbuntuTerminal = forwardRef(({
         // ResizeObserver for dynamic resizing
         const resizeObserver = new ResizeObserver((entries) => {
             if (fitAddon.current) {
-                try { 
-                    fitAddon.current.fit(); 
+                try {
+                    fitAddon.current.fit();
                 } catch (e) {
                     console.error(`UbuntuTerminal resize observer error for tab ${tabId}:`, e);
                 }
@@ -306,27 +306,27 @@ const UbuntuTerminal = forwardRef(({
         if (window.electron) {
             // Initialize Ubuntu session
             term.current.clear();
-            
+
             // Delay pequeño solo para tab-1 inicial para dar tiempo al backend
             const delay = tabId === 'tab-1' ? 300 : 0;
-            
+
             setTimeout(() => {
                 const channelPrefix = getChannelPrefix();
-                
+
                 // Usar el nombre de parámetro correcto según el canal
                 const dataToSend = {
                     cols: term.current.cols,
                     rows: term.current.rows
                 };
-                
+
                 if (channelPrefix === 'ubuntu') {
                     dataToSend.ubuntuInfo = ubuntuInfo;
                 } else {
                     dataToSend.distroInfo = ubuntuInfo; // Para wsl-distro, usar distroInfo
                 }
-                
+
                 window.electron.ipcRenderer.send(`${channelPrefix}:start:${tabId}`, dataToSend);
-                
+
                 const distroLabel = ubuntuInfo?.label || 'WSL Distribution';
                 // Starting terminal session
             }, delay);
@@ -411,13 +411,13 @@ const UbuntuTerminal = forwardRef(({
             return () => {
                 resizeObserver.disconnect();
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
-                
+
                 // Solo enviar stop cuando realmente se cierra el tab (no durante reloads)
                 const isReloading = performance.navigation?.type === 1 || document.readyState === 'loading';
                 if (!isReloading) {
                     window.electron.ipcRenderer.send(`${getChannelPrefix()}:stop:${tabId}`);
                 }
-                
+
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onReadyUnsubscribe) onReadyUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();
@@ -441,7 +441,7 @@ const UbuntuTerminal = forwardRef(({
                 }
             };
         }
-    }, [tabId]);
+    }, [tabId, ubuntuInfo?.name, ubuntuInfo?.category]);
 
     // Update font family dynamically
     useEffect(() => {
@@ -470,8 +470,8 @@ const UbuntuTerminal = forwardRef(({
     useEffect(() => {
         if (fitAddon.current) {
             setTimeout(() => {
-                try { 
-                    fitAddon.current.fit(); 
+                try {
+                    fitAddon.current.fit();
                 } catch (e) {
                     console.error(`UbuntuTerminal auto-fit error for tab ${tabId}:`, e);
                 }
@@ -490,7 +490,7 @@ const UbuntuTerminal = forwardRef(({
                 }
             }
         };
-        
+
         // Intentar múltiples veces después del montaje
         forceResize();
         setTimeout(forceResize, 50);
@@ -509,7 +509,7 @@ const UbuntuTerminal = forwardRef(({
                 }
             }
         };
-        
+
         // Aplicar focus múltiples veces para asegurar que se aplique correctamente
         setTimeout(ensureFocus, 100);
         setTimeout(ensureFocus, 250);
@@ -519,18 +519,18 @@ const UbuntuTerminal = forwardRef(({
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: theme.background || '#300A24' }}>
-            <div 
-                ref={terminalRef} 
-                style={{ 
+            <div
+                ref={terminalRef}
+                style={{
                     flex: 1,
-                    width: '100%', 
+                    width: '100%',
                     minWidth: 0,
                     minHeight: 0,
                     overflow: 'hidden',
                     position: 'relative',
                     padding: '0 0 0 8px',
                     margin: 0
-                }} 
+                }}
             />
             {!hideStatusBar && (
                 <div style={{ ...getScopedStatusBarCssVars() }}>

@@ -84,35 +84,24 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
 
     // Múltiples configuraciones para mayor compatibilidad con WSL
     const wslConfigurations = [
-      // Configuración 1: Por defecto con ConPTY deshabilitado y WinPTY forzado
+      // Configuración 1: Por defecto con ConPTY deshabilitado y WinPTY forzado (Misma que Ubuntu)
       {
-        env,
+        name: 'xterm-256color',
+        cols: cols || 120,
+        rows: rows || 30,
         cwd: os.homedir(),
-        name: 'xterm-color',
-        cols: cols,
-        rows: rows,
-        encoding: null,
+        env: {
+          ...process.env,
+          TERM: 'xterm-256color',
+          COLORTERM: 'truecolor'
+        },
         useConpty: false,
         conptyLegacy: false,
         experimentalUseConpty: false,
         backend: 'winpty',
         windowsHide: false
       },
-      // Configuración 2: Conservativa sin ConPTY 
-      {
-        env,
-        cwd: os.homedir(),
-        name: 'xterm',
-        cols: cols || 80,
-        rows: rows || 24,
-        encoding: null,
-        useConpty: false,
-        conptyLegacy: false,
-        experimentalUseConpty: false,
-        backend: 'winpty',
-        windowsHide: false
-      },
-      // Configuración 3: Mínima con WinPTY
+      // Configuración 2: Conservativa
       {
         env,
         cwd: os.homedir(),
@@ -153,12 +142,6 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
       throw new Error(`No se pudo iniciar WSL ${shell} para ${tabId} después de probar todas las configuraciones: ${lastError?.message || 'Error desconocido'}`);
     }
 
-    // Send ready signal immediately after successful spawn (consistent with Ubuntu manager)
-    if (!isAppQuitting.value && mainWindow && !mainWindow.isDestroyed()) {
-      const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
-      mainWindow.webContents.send(`${channelName}:ready:${tabId}`);
-    }
-
     // Handle distribution output
     wslDistroProcesses[tabId].onData((data) => {
       // Proteger acceso si el proceso ya no existe
@@ -169,6 +152,16 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
         mainWindow.webContents.send(`${channelName}:data:${tabId}`, data);
       }
     });
+
+    // Send ready signal AFTER registering onData (consistent with Ubuntu manager)
+    if (!isAppQuitting.value && mainWindow && !mainWindow.isDestroyed()) {
+      const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+      mainWindow.webContents.send(`${channelName}:ready:${tabId}`);
+
+      // Enviar mensaje de bienvenida para confirmar que el backend está respondiendo
+      const welcomeMsg = `\r\n\x1b[36m🚀 Starting ${distroInfo?.label || distroInfo?.name || 'WSL Distribution'}...\x1b[0m\r\n`;
+      mainWindow.webContents.send(`${channelName}:data:${tabId}`, welcomeMsg);
+    }
 
     // Handle distribution exit  
     wslDistroProcesses[tabId].onExit((exitCode, signal) => {
