@@ -466,6 +466,7 @@ const ConnectionHistory = ({
 
 	const getConnectionTypeIcon = (type) => {
 		switch (type) {
+			case 'ssh-tunnel': return 'pi pi-share-alt';
 			case 'ssh': return 'pi pi-server';
 			case 'rdp-guacamole':
 			case 'rdp': return 'pi pi-desktop';
@@ -495,6 +496,7 @@ const ConnectionHistory = ({
 		const icons = (iconThemes[theme] || iconThemes['nord']).icons || {};
 		switch (type) {
 			case 'ssh': return icons.ssh;
+			case 'ssh-tunnel': return icons.ssh; // Usar icono SSH por defecto si no hay específico
 			case 'rdp':
 			case 'rdp-guacamole': return icons.rdp;
 			case 'vnc':
@@ -509,6 +511,7 @@ const ConnectionHistory = ({
 
 	const getConnectionTypeColor = (type) => {
 		switch (type) {
+			case 'ssh-tunnel': return '#ab47bc'; // Purple equivalent
 			case 'ssh': return '#4fc3f7';
 			case 'rdp-guacamole':
 			case 'rdp': return '#ff6b35';
@@ -530,6 +533,7 @@ const ConnectionHistory = ({
 
 	const getProtocolLabel = (type) => {
 		switch (type) {
+			case 'ssh-tunnel': return 'TUNNEL';
 			case 'rdp-guacamole':
 			case 'rdp': return 'RDP';
 			case 'vnc-guacamole':

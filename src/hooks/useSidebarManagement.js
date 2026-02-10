@@ -706,7 +706,36 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         }
       });
 
-      // Opción para copiar contraseña
+
+      items.push({
+        label: 'Agregar/Quitar de Favoritos',
+        icon: 'pi pi-star',
+        command: () => {
+          try {
+            const connection = {
+              type: 'ssh-tunnel',
+              name: node.label,
+              tunnelType: node.data?.tunnelType,
+              sshHost: node.data?.sshHost,
+              sshPort: node.data?.sshPort || 22,
+              sshUser: node.data?.sshUser,
+              sshPassword: node.data?.sshPassword || '',
+              authType: node.data?.authType || 'password',
+              privateKeyPath: node.data?.privateKeyPath || '',
+              passphrase: node.data?.passphrase || '',
+              localHost: node.data?.localHost || '127.0.0.1',
+              localPort: node.data?.localPort || 0,
+              remoteHost: node.data?.remoteHost || '',
+              remotePort: node.data?.remotePort || 0,
+              bindHost: node.data?.bindHost || '0.0.0.0'
+            };
+            window.dispatchEvent(new CustomEvent('request-add-favorite-with-groups', {
+              detail: { connection }
+            }));
+          } catch (e) { /* noop */ }
+        }
+      });
+
       if (node.data?.sshPassword) {
         items.push({
           label: 'Copiar contraseña',
