@@ -798,8 +798,7 @@ const NodeTermStatus = ({
 
 			const otherDistros = wslDistributions.filter(distro => {
 				const isUbuntu = distro.name && distro.name.toLowerCase().includes('ubuntu');
-				const isBasicDebian = distro.name && distro.name.toLowerCase().includes('debian');
-				return !isUbuntu && !isBasicDebian;
+				return !isUbuntu;
 			});
 
 			// Agregar el resto de distribuciones (Kali Linux, etc.) - Ubuntu se maneja por separado
@@ -1281,7 +1280,13 @@ const NodeTermStatus = ({
 							let terminalType = t.value;
 							let distroInfo = t.distroInfo || null;
 							if (t.value === 'linux-terminal') { terminalType = 'linux-terminal'; distroInfo = null; }
-							else if (t.value.startsWith('wsl-') && t.distroInfo) { terminalType = t.distroInfo.category === 'ubuntu' ? 'ubuntu' : 'wsl'; distroInfo = t.distroInfo; }
+							else if (t.value.startsWith('wsl-') && t.distroInfo) {
+								const cat = t.distroInfo.category;
+								const lowerName = (t.distroInfo.name || '').toLowerCase();
+								terminalType = (cat === 'ubuntu' || lowerName.includes('ubuntu')) ? 'ubuntu' :
+									((cat === 'debian' || lowerName.includes('debian')) ? 'debian' : 'wsl');
+								distroInfo = t.distroInfo;
+							}
 							items.push({ label: t.label, terminalType, distroInfo, icon: t.icon, color: t.color || '#4fc3f7', isDocker: false });
 						});
 						// 2) Distribuciones Ubuntu (no están en availableTerminals)
@@ -1298,6 +1303,7 @@ const NodeTermStatus = ({
 							if (it.icon === 'docker' || it.isDocker) return <SiDocker style={{ color: it.color, fontSize: '1rem' }} />;
 							if (it.terminalType === 'powershell') return <FaWindows style={{ color: it.color, fontSize: '1rem' }} />;
 							if (it.terminalType === 'ubuntu' || (it.distroInfo && (it.distroInfo.category === 'ubuntu' || (it.distroInfo.name || '').toLowerCase().includes('ubuntu')))) return <FaUbuntu style={{ color: it.color, fontSize: '1rem' }} />;
+							if (it.terminalType === 'debian' || (it.distroInfo && (it.distroInfo.category === 'debian' || (it.distroInfo.name || '').toLowerCase().includes('debian')))) return <SiDebian style={{ color: it.color, fontSize: '1rem' }} />;
 							if (it.terminalType === 'wsl') return <FaLinux style={{ color: it.color, fontSize: '1rem' }} />;
 							if (it.terminalType === 'cygwin') return <i className="pi pi-code" style={{ color: it.color, fontSize: '1rem' }} />;
 							if (it.terminalType === 'linux-terminal') return <i className="pi pi-desktop" style={{ color: it.color, fontSize: '1rem' }} />;
