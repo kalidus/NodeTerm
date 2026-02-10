@@ -73,10 +73,50 @@ export const useSplitManagement = ({
       type: 'terminal'
     };
 
-    // Verificar límite de 4 terminales
-    const tab = sshTabs.find(t => t.key === existingTab.key);
-    const currentTerminalCount = tab?.type === 'split' ? countTerminals(tab) : 1;
-    
+    // Helper para encontrar el path hacia un nodo específico
+    const findPathToNode = (node, targetKey, currentPath = []) => {
+      if (!node) return null;
+      if (node.key === targetKey) return currentPath;
+
+      if (node.type === 'split') {
+        const firstPath = findPathToNode(node.first, targetKey, [...currentPath, 'first']);
+        if (firstPath) return firstPath;
+
+        const secondPath = findPathToNode(node.second, targetKey, [...currentPath, 'second']);
+        if (secondPath) return secondPath;
+      }
+      return null;
+    };
+
+    // Encontrar la pestaña raíz que contiene el terminal objetivo
+    let targetRootTab = null;
+    let calculatedPath = targetPath;
+
+    // Primero buscar si alguna pestaña coincide directamente
+    targetRootTab = sshTabs.find(t => t.key === existingTab.key);
+
+    // Si no, buscar dentro de los árboles de splits
+    if (!targetRootTab) {
+      for (const tab of sshTabs) {
+        if (tab.type === 'split') {
+          const path = findPathToNode(tab, existingTab.key);
+          if (path) {
+            targetRootTab = tab;
+            calculatedPath = path; // Guardar el path encontrado
+            break;
+          }
+        }
+      }
+    }
+
+    if (!targetRootTab) {
+      console.warn('No se encontró la pestaña raíz para el split');
+      return;
+    }
+
+    // Verificar límite de 4 terminales en la pestaña raíz encontrada
+    const currentTerminalCount = targetRootTab.type === 'split' ? countTerminals(targetRootTab) : 1;
+
     if (currentTerminalCount >= 4) {
       toast.current.show({
         severity: 'warn',
@@ -89,7 +129,7 @@ export const useSplitManagement = ({
 
     // Calcular el índice de la pestaña dentro del grupo actual ANTES de actualizar
     // Esto asegura que el índice sea correcto para el grupo actual
-    const splitTabKey = existingTab.key;
+    const splitTabKey = targetRootTab.key;
     let splitTabIndex = -1;
     if (getFilteredTabs) {
       const filteredTabs = getFilteredTabs();
@@ -111,7 +151,7 @@ export const useSplitManagement = ({
           second: newTerm
         };
       }
-      
+
       // Navegar más profundo en el árbol
       const [next, ...rest] = path;
       if (node.type === 'split') {
@@ -132,20 +172,21 @@ export const useSplitManagement = ({
 
     setSshTabs(prevTabs => {
       const updatedTabs = prevTabs.map(tab => {
-        if (tab.key === existingTab.key) {
+        if (tab.key === targetRootTab.key) {
           // Si ya es un split, dividir el nodo especificado
           if (tab.type === 'split') {
-            const newSplitTree = splitNode(tab, targetPath, newTerminal, orientation);
+            const pathToUse = targetPath || calculatedPath;
+            const newSplitTree = splitNode(tab, pathToUse, newTerminal, orientation);
             const termCount = countTerminals(newSplitTree);
             const allTerms = getAllTerminals(newSplitTree);
-            
+
             return {
               ...tab,
               ...newSplitTree,
               label: `Split (${termCount}/4): ${allTerms.map(t => t.label).slice(0, 2).join(' | ')}${termCount > 2 ? '...' : ''}`
             };
           }
-          
+
           // Si es una pestaña normal, convertirla en split simple
           const existingTerminal = {
             key: tab.key,
@@ -154,7 +195,7 @@ export const useSplitManagement = ({
             sshConfig: tab.sshConfig,
             type: 'terminal'
           };
-          
+
           return {
             ...tab,
             type: 'split',
@@ -166,7 +207,7 @@ export const useSplitManagement = ({
         }
         return tab;
       });
-      
+
       return updatedTabs;
     });
 
@@ -181,7 +222,7 @@ export const useSplitManagement = ({
     }
 
     const newTerminalCount = currentTerminalCount + 1;
-    
+
     toast.current.show({
       severity: 'success',
       summary: 'Split creado',
@@ -193,7 +234,7 @@ export const useSplitManagement = ({
   // Función helper para encontrar el terminal que se va a cerrar
   const findTerminalToClose = useCallback((node, nodePath) => {
     if (!node || !nodePath || nodePath.length === 0) return null;
-    
+
     if (nodePath.length === 1) {
       const direction = nodePath[0];
       if (node.type === 'split') {
@@ -211,7 +252,7 @@ export const useSplitManagement = ({
       }
       return null;
     }
-    
+
     // Navegar más profundo
     const [next, ...rest] = nodePath;
     if (node.type === 'split') {
@@ -221,7 +262,7 @@ export const useSplitManagement = ({
         return findTerminalToClose(node.second, rest);
       }
     }
-    
+
     return null;
   }, []);
 
@@ -231,22 +272,22 @@ export const useSplitManagement = ({
     const tab = sshTabs.find(t => t.key === splitTabKey && t.type === 'split');
     if (tab && disconnectSSHSession) {
       const terminalToClose = findTerminalToClose(tab, path);
-      
+
       if (terminalToClose && terminalToClose.key) {
         // Desconectar solo el terminal que se está cerrando
         disconnectSSHSession(terminalToClose.key);
       }
     }
-    
+
     // Función helper para remover un nodo del árbol
     const removeNode = (node, nodePath) => {
       if (!node) return null;
-      
+
       if (!nodePath || nodePath.length === 0) {
         // Este nodo debe ser removido, retornar null
         return null;
       }
-      
+
       if (nodePath.length === 1) {
         // El próximo nivel es el que se debe remover
         const direction = nodePath[0];
@@ -258,7 +299,7 @@ export const useSplitManagement = ({
         // Si no es split, no debería pasar, pero retornar null
         return null;
       }
-      
+
       // Navegar más profundo
       const [next, ...rest] = nodePath;
       if (node.type === 'split') {
@@ -278,7 +319,7 @@ export const useSplitManagement = ({
           return { ...node, second: newSecond };
         }
       }
-      
+
       return node;
     };
 
@@ -286,12 +327,12 @@ export const useSplitManagement = ({
       return prevTabs.map(tab => {
         if (tab.key === splitTabKey && tab.type === 'split') {
           const newTree = removeNode(tab, path);
-          
+
           // Si newTree es null, retornar el tab sin cambios
           if (!newTree) {
             return tab;
           }
-          
+
           // Si el resultado es un solo terminal, convertir a pestaña normal
           if (newTree && newTree.type === 'terminal') {
             // Cuando queda un solo terminal, el tab debe convertirse en ese terminal
@@ -306,23 +347,23 @@ export const useSplitManagement = ({
               groupId: tab.groupId,
             };
           }
-          
+
           // Si queda un split, actualizar
           if (newTree && newTree.type === 'split') {
             const termCount = countTerminals(newTree);
             const allTerms = getAllTerminals(newTree);
-            
+
             return {
               ...tab,
               ...newTree,
               label: `Split (${termCount}): ${allTerms.map(t => t.label).slice(0, 3).join(' | ')}${termCount > 3 ? '...' : ''}`
             };
           }
-          
+
           // Si llegamos aquí, newTree tiene un tipo inesperado, retornar el tab sin cambios
           return tab;
         }
-        
+
         // Compatibilidad legacy: manejar leftTerminal/rightTerminal
         if (tab.key === splitTabKey && tab.type === 'split' && tab.leftTerminal && tab.rightTerminal) {
           if (path === 'left' || (Array.isArray(path) && path[0] === 'first')) {
@@ -332,7 +373,7 @@ export const useSplitManagement = ({
             return { ...tab.leftTerminal, type: 'terminal', key: tab.key };
           }
         }
-        
+
         return tab;
       });
     });
