@@ -1184,7 +1184,6 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             // En Windows: mostrar PowerShell, WSL, Cygwin y cada distribución WSL detectada
             const options = [
                 { label: 'PowerShell', value: 'powershell', icon: 'pi pi-desktop' },
-                { label: 'WSL', value: 'wsl', icon: 'pi pi-server' },
                 // Cygwin siempre visible en Windows (se instalará bajo demanda si no existe)
                 {
                     label: cygwinAvailable ? 'Cygwin' : 'Cygwin (instalar)',

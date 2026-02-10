@@ -758,15 +758,7 @@ const NodeTermStatus = ({
 				color: '#0078D4',
 				action: () => handleOpenTerminal('powershell')
 			});
-			// Usar el color primario del tema para WSL genérico
-			const wslColor = themeColors?.primaryColor || '#4fc3f7';
-			terminals.push({
-				label: 'WSL',
-				value: 'wsl',
-				icon: 'pi pi-server',
-				color: wslColor,
-				action: () => handleOpenTerminal('wsl')
-			});
+
 			if (cygwinAvailable) {
 				terminals.push({
 					label: 'Cygwin',

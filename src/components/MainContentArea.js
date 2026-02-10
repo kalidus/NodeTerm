@@ -478,16 +478,6 @@ const MainContentArea = ({
           }
         },
         {
-          label: 'WSL',
-          icon: getTerminalMenuIcon('wsl'),
-          command: () => {
-            setLastLocalTerminalType('wsl');
-            if (createLocalTerminalTabRef.current) {
-              createLocalTerminalTabRef.current('wsl');
-            }
-          }
-        },
-        {
           label: 'Cygwin',
           icon: getTerminalMenuIcon('cygwin'),
           command: () => {

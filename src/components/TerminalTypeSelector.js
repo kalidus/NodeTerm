@@ -3,8 +3,7 @@ import { Button } from 'primereact/button';
 
 const TerminalTypeSelector = ({ value, onChange }) => {
     const terminalOptions = [
-        { label: 'PowerShell', value: 'powershell', icon: 'pi pi-desktop', color: '#4fc3f7' },
-        { label: 'WSL', value: 'wsl', icon: 'pi pi-server', color: '#8ae234' }
+        { label: 'PowerShell', value: 'powershell', icon: 'pi pi-desktop', color: '#4fc3f7' }
     ];
 
     return (
@@ -28,8 +27,8 @@ const TerminalTypeSelector = ({ value, onChange }) => {
                         style={{
                             color: value === option.value ? option.color : 'rgba(255, 255, 255, 0.7)',
                             borderColor: value === option.value ? option.color : 'transparent',
-                            backgroundColor: value === option.value ? 
-                                (option.value === 'wsl' ? 'rgba(138, 226, 52, 0.1)' : 'rgba(79, 195, 247, 0.1)') 
+                            backgroundColor: value === option.value ?
+                                (option.value === 'wsl' ? 'rgba(138, 226, 52, 0.1)' : 'rgba(79, 195, 247, 0.1)')
                                 : 'transparent',
                             fontSize: '12px',
                             padding: '4px 8px',
