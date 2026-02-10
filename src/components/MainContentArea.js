@@ -848,7 +848,7 @@ const MainContentArea = ({
       } else if (finalDistroInfo) {
         // Si hay distroInfo, usamos sus datos (resuelto arriba o pasado explícitamente)
         label = finalDistroInfo.label;
-        finalTerminalType = finalDistroInfo.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+        finalTerminalType = finalDistroInfo.category === 'ubuntu' ? 'ubuntu' : (finalDistroInfo.category === 'debian' ? 'debian' : 'wsl-distro');
       } else {
         // Si no hay distroInfo, usar lógica anterior
         switch (terminalType) {

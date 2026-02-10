@@ -1418,7 +1418,7 @@ const TabContentRenderer = React.memo(({
     }
 
     // Ubuntu o distribución WSL con información completa desde tab.distroInfo
-    if (terminalType === 'ubuntu' || terminalType === 'wsl-distro') {
+    if (terminalType === 'ubuntu' || terminalType === 'wsl-distro' || terminalType === 'debian') {
       // Obtener el tema correcto
       const linuxTheme = themes[localLinuxTerminalTheme]?.theme || themes['Default Dark']?.theme;
 

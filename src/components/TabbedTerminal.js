@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
-import { FaWindows } from 'react-icons/fa';
+import { FaWindows, FaUbuntu, FaLinux } from 'react-icons/fa';
+import { SiDebian, SiDocker } from 'react-icons/si';
 import PowerShellTerminal from './PowerShellTerminal';
 import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
@@ -30,42 +31,42 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     const tabsContainerRef = useRef(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
-    
+
     // Funciones para controlar el scroll de pestañas
     const checkScrollButtons = () => {
         if (!tabsContainerRef.current) return;
-        
+
         const container = tabsContainerRef.current;
         const scrollLeft = container.scrollLeft;
         const scrollWidth = container.scrollWidth;
         const clientWidth = container.clientWidth;
-        
-        
+
+
         setCanScrollLeft(scrollLeft > 0);
         setCanScrollRight(scrollWidth > clientWidth && scrollLeft < scrollWidth - clientWidth - 1); // Solo mostrar si hay overflow
     };
-    
+
     const scrollTabs = (direction) => {
         if (!tabsContainerRef.current) return;
-        
+
         const container = tabsContainerRef.current;
         const scrollAmount = 200; // Píxeles a desplazar
-        const newScrollLeft = direction === 'left' 
+        const newScrollLeft = direction === 'left'
             ? Math.max(0, container.scrollLeft - scrollAmount)
             : Math.min(container.scrollWidth - container.clientWidth, container.scrollLeft + scrollAmount);
-        
+
         container.scrollTo({
             left: newScrollLeft,
             behavior: 'smooth'
         });
     };
-    
+
     // Determinar la pestaña inicial según el SO y configuración
     const getInitialTab = (useCygwin = false, availableDistributions = []) => {
         // Leer configuración de terminal por defecto
         const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
         const platform = window.electron?.platform || 'unknown';
-        
+
         // Si hay configuración guardada, usarla
         if (defaultTerminal) {
             const terminalTitles = {
@@ -74,7 +75,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 'cygwin': 'Cygwin',
                 'linux-terminal': platform === 'darwin' ? 'Terminal macOS' : 'Terminal Linux'
             };
-            
+
             // Si es Docker
             if (defaultTerminal.startsWith('docker-')) {
                 return {
@@ -84,12 +85,12 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     active: true
                 };
             }
-            
+
             // Si es una distribución WSL (puede ser nombre directo como "Ubuntu-24.04")
             // Buscar en las distribuciones WSL disponibles (si están disponibles)
             if (availableDistributions && availableDistributions.length > 0) {
-                const wslDistro = availableDistributions.find(d => 
-                    d.name === defaultTerminal || 
+                const wslDistro = availableDistributions.find(d =>
+                    d.name === defaultTerminal ||
                     d.label === defaultTerminal ||
                     d.name.toLowerCase() === defaultTerminal.toLowerCase() ||
                     d.label.toLowerCase() === defaultTerminal.toLowerCase()
@@ -98,13 +99,13 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     return {
                         id: 'tab-1',
                         title: wslDistro.label || wslDistro.name,
-                        type: wslDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro',
+                        type: wslDistro.category === 'ubuntu' ? 'ubuntu' : (wslDistro.category === 'debian' ? 'debian' : 'wsl-distro'),
                         distroInfo: wslDistro, // Agregar información completa de la distribución
                         active: true
                     };
                 }
             }
-            
+
             // Si es un tipo de terminal conocido
             if (terminalTitles[defaultTerminal]) {
                 return {
@@ -114,7 +115,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     active: true
                 };
             }
-            
+
             // Fallback: usar el valor tal cual
             return {
                 id: 'tab-1',
@@ -154,14 +155,14 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             active: true
         };
     };
-    
+
     const [tabs, setTabs] = useState([getInitialTab(false, [])]);
     const [nextTabId, setNextTabId] = useState(2);
-    
+
     // Actualizar la pestaña inicial cuando se carguen las distribuciones WSL
     useEffect(() => {
         const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
-        
+
         // Si no hay distribuciones WSL o no hay pestañas, esperar
         if (wslDistributions.length === 0 || tabs.length === 0 || tabs[0].id !== 'tab-1') {
             // if (wslDistributions.length === 0) {
@@ -171,10 +172,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         }
 
         const firstTab = tabs[0];
-        
+
         // Si la pestaña ya tiene distroInfo correcto Y el tipo es correcto, no hacer nada
-        if (firstTab.distroInfo && 
-            (firstTab.type === 'ubuntu' || firstTab.type === 'wsl-distro') &&
+        if (firstTab.distroInfo &&
+            (firstTab.type === 'ubuntu' || firstTab.type === 'wsl-distro' || firstTab.type === 'debian') &&
             firstTab.type !== 'powershell') {
             // console.log('ℹ️ [useEffect WSL] Pestaña ya está correcta con distroInfo y tipo correcto');
             return;
@@ -189,25 +190,27 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         //     distroInfoName: firstTab.distroInfo?.name
         // });
 
-        // Buscar distribución WSL por defaultTerminal O por el título de la pestaña
         const searchTerms = [];
-        if (defaultTerminal) {
+        if (defaultTerminal && typeof defaultTerminal === 'string') {
             searchTerms.push(defaultTerminal);
         }
-        if (firstTab.title && firstTab.title !== 'Windows PowerShell') {
+        if (firstTab.title && typeof firstTab.title === 'string' && firstTab.title !== 'Windows PowerShell') {
             searchTerms.push(firstTab.title);
         }
 
         let wslDistro = null;
         for (const term of searchTerms) {
-            wslDistro = wslDistributions.find(d => 
-                d.name === term || 
-                d.label === term ||
-                d.name.toLowerCase() === term.toLowerCase() ||
-                d.label.toLowerCase() === term.toLowerCase()
-            );
+            const normalizedTerm = String(term).toLowerCase();
+            wslDistro = wslDistributions.find(d => {
+                const name = d.name ? String(d.name).toLowerCase() : '';
+                const label = d.label ? String(d.label).toLowerCase() : '';
+                return d.name === term ||
+                    d.label === term ||
+                    name === normalizedTerm ||
+                    label === normalizedTerm;
+            });
             if (wslDistro) {
-                console.log('✅ [useEffect WSL] Distribución encontrada por término:', term, wslDistro);
+                // console.log('✅ [useEffect WSL] Distribución encontrada por término:', term, wslDistro);
                 break;
             }
         }
@@ -215,10 +218,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         if (wslDistro) {
             const expectedType = wslDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
             const expectedTitle = wslDistro.label || wslDistro.name;
-            const needsUpdate = firstTab.type !== expectedType || 
-                               !firstTab.distroInfo ||
-                               (firstTab.distroInfo && firstTab.distroInfo.name !== wslDistro.name) ||
-                               firstTab.title !== expectedTitle;
+            const needsUpdate = firstTab.type !== expectedType ||
+                !firstTab.distroInfo ||
+                (firstTab.distroInfo && firstTab.distroInfo.name !== wslDistro.name) ||
+                firstTab.title !== expectedTitle;
 
             // console.log('🔍 [useEffect WSL] Distribución encontrada:', {
             //     wslDistro: { name: wslDistro.name, label: wslDistro.label, category: wslDistro.category },
@@ -239,7 +242,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 setTabs(prevTabs => {
                     const currentFirstTab = prevTabs[0];
                     // Verificar de nuevo para evitar actualizaciones innecesarias
-                    if (currentFirstTab.distroInfo?.name === wslDistro.name && 
+                    if (currentFirstTab.distroInfo?.name === wslDistro.name &&
                         currentFirstTab.type === expectedType &&
                         currentFirstTab.type !== 'powershell') {
                         // console.log('ℹ️ [useEffect WSL] Pestaña ya actualizada, saltando');
@@ -248,7 +251,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     const updatedTab = {
                         ...currentFirstTab,
                         title: expectedTitle,
-                        type: expectedType, // CRÍTICO: Cambiar el tipo de 'powershell' a 'ubuntu' o 'wsl-distro'
+                        type: wslDistro.category === 'ubuntu' ? 'ubuntu' : (wslDistro.category === 'debian' ? 'debian' : 'wsl-distro'), // Corregido: incluir debian
                         distroInfo: wslDistro, // Agregar información completa de la distribución
                         _updateKey: Date.now() // Forzar re-render
                     };
@@ -262,15 +265,24 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 // console.log('ℹ️ [useEffect WSL] No se necesita actualizar, la pestaña ya está correcta');
             }
         } else if (defaultTerminal || (firstTab.title && firstTab.title !== 'Windows PowerShell')) {
-            console.warn('⚠️ [useEffect WSL] No se encontró distribución WSL para:', {
-                defaultTerminal,
-                currentTitle: firstTab.title,
-                searchTerms,
-                availableDistros: wslDistributions.map(d => ({ name: d.name, label: d.label, category: d.category }))
-            });
+            // Solo loguear si realmente parece que debería haber sido una distro WSL
+            const isWSLCandidate = (term) => {
+                if (!term || typeof term !== 'string') return false;
+                const l = term.toLowerCase();
+                return l.includes('ubuntu') || l.includes('debian') || l.includes('wsl') || l.includes('kali') || l.includes('linux');
+            };
+
+            if (isWSLCandidate(defaultTerminal) || isWSLCandidate(firstTab.title)) {
+                console.warn('⚠️ [useEffect WSL] No se encontró distribución WSL para:', {
+                    defaultTerminal,
+                    currentTitle: firstTab.title,
+                    searchTerms,
+                    availableDistros: wslDistributions.map(d => ({ name: d.name, label: d.label, category: d.category }))
+                });
+            }
         }
     }, [wslDistributions, tabs.length, tabs[0]?.type, tabs[0]?.title]); // Depender de cambios específicos en tabs
-    
+
     // useEffect adicional para corregir pestañas que tienen el título correcto pero el tipo incorrecto
     // Este es un fallback en caso de que el useEffect principal no haya funcionado
     useEffect(() => {
@@ -278,23 +290,23 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         if (wslDistributions.length === 0 || tabs.length === 0 || tabs[0].id !== 'tab-1') {
             return;
         }
-        
+
         const firstTab = tabs[0];
         const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
-        
+
         // Si la pestaña ya tiene distroInfo correcto Y el tipo es correcto, no hacer nada
-        if (firstTab.distroInfo && 
-            (firstTab.type === 'ubuntu' || firstTab.type === 'wsl-distro') &&
+        if (firstTab.distroInfo &&
+            (firstTab.type === 'ubuntu' || firstTab.type === 'wsl-distro' || firstTab.type === 'debian') &&
             firstTab.type !== 'powershell') {
             return;
         }
-        
+
         // Si el tipo es 'powershell' pero el título o defaultTerminal sugiere una distribución WSL, corregirlo
         // Incluso si tiene distroInfo, si el tipo sigue siendo 'powershell', hay que corregirlo
-        const isPowerShellButShouldBeWSL = firstTab.type === 'powershell' && 
-                                           firstTab.title && 
-                                           firstTab.title !== 'Windows PowerShell';
-        
+        const isPowerShellButShouldBeWSL = firstTab.type === 'powershell' &&
+            firstTab.title &&
+            firstTab.title !== 'Windows PowerShell';
+
         if (isPowerShellButShouldBeWSL) {
             // console.log('🔍 [useEffect Corrección] Buscando distribución para corregir tipo:', {
             //     defaultTerminal,
@@ -302,27 +314,30 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             //     currentType: firstTab.type,
             //     availableDistros: wslDistributions.map(d => ({ name: d.name, label: d.label, category: d.category }))
             // });
-            
+
             // Buscar por defaultTerminal o por título de la pestaña
             const searchTerms = [];
-            if (defaultTerminal) {
+            if (defaultTerminal && typeof defaultTerminal === 'string') {
                 searchTerms.push(defaultTerminal);
             }
-            if (firstTab.title) {
+            if (firstTab.title && typeof firstTab.title === 'string') {
                 searchTerms.push(firstTab.title);
             }
-            
+
             let wslDistro = null;
             for (const term of searchTerms) {
-                wslDistro = wslDistributions.find(d => 
-                    d.name === term || 
-                    d.label === term ||
-                    d.name.toLowerCase() === term.toLowerCase() ||
-                    d.label.toLowerCase() === term.toLowerCase()
-                );
+                const normalizedTerm = String(term).toLowerCase();
+                wslDistro = wslDistributions.find(d => {
+                    const name = d.name ? String(d.name).toLowerCase() : '';
+                    const label = d.label ? String(d.label).toLowerCase() : '';
+                    return d.name === term ||
+                        d.label === term ||
+                        name === normalizedTerm ||
+                        label === normalizedTerm;
+                });
                 if (wslDistro) break;
             }
-            
+
             if (wslDistro) {
                 const expectedType = wslDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
                 const expectedTitle = wslDistro.label || wslDistro.name;
@@ -338,14 +353,14 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 setTabs(prevTabs => {
                     const currentFirstTab = prevTabs[0];
                     // Verificar de nuevo para evitar actualizaciones innecesarias
-                    if (currentFirstTab.distroInfo?.name === wslDistro.name && 
+                    if (currentFirstTab.distroInfo?.name === wslDistro.name &&
                         currentFirstTab.type === expectedType) {
                         // console.log('ℹ️ [useEffect Corrección] Pestaña ya corregida, saltando');
                         return prevTabs;
                     }
                     const updatedTab = {
                         ...currentFirstTab,
-                        type: expectedType, // Cambiar el tipo
+                        type: wslDistro.category === 'ubuntu' ? 'ubuntu' : (wslDistro.category === 'debian' ? 'debian' : 'wsl-distro'), // Corregido: incluir debian
                         title: expectedTitle, // Actualizar título también
                         distroInfo: wslDistro, // Agregar distroInfo
                         _updateKey: Date.now() // Forzar re-render
@@ -365,7 +380,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             }
         }
     }, [wslDistributions, tabs]);
-    
+
     // Determinar el tipo de terminal por defecto según el SO y configuración
     const getDefaultTerminalType = () => {
         // Leer configuración de terminal por defecto
@@ -373,7 +388,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         if (defaultTerminal) {
             return defaultTerminal;
         }
-        
+
         // Fallback a lógica anterior
         const platform = window.electron?.platform || 'unknown';
         if (platform === 'linux' || platform === 'darwin') {
@@ -381,9 +396,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         }
         return 'powershell';
     };
-    
+
     const [selectedTerminalType, setSelectedTerminalType] = useState(getDefaultTerminalType());
-    
+
     // Escuchar cambios en la configuración de terminal por defecto
     useEffect(() => {
         const handleDefaultTerminalChange = (e) => {
@@ -391,23 +406,23 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             console.log('📢 Evento default-terminal-changed recibido:', newDefaultTerminal);
             if (newDefaultTerminal) {
                 setSelectedTerminalType(newDefaultTerminal);
-                
+
                 // Buscar la distribución WSL correspondiente
                 const findAndUpdateDistro = () => {
                     if (wslDistributions.length > 0 && tabs.length > 0 && tabs[0].id === 'tab-1') {
-                        const wslDistro = wslDistributions.find(d => 
-                            d.name === newDefaultTerminal || 
+                        const wslDistro = wslDistributions.find(d =>
+                            d.name === newDefaultTerminal ||
                             d.label === newDefaultTerminal ||
                             d.name.toLowerCase() === newDefaultTerminal.toLowerCase() ||
                             d.label.toLowerCase() === newDefaultTerminal.toLowerCase()
                         );
-                        
+
                         if (wslDistro) {
                             const expectedType = wslDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
                             const expectedTitle = wslDistro.label || wslDistro.name;
-                            console.log('🔄 Actualizando pestaña por evento:', { 
-                                expectedType, 
-                                expectedTitle, 
+                            console.log('🔄 Actualizando pestaña por evento:', {
+                                expectedType,
+                                expectedTitle,
                                 distroInfo: wslDistro,
                                 currentType: tabs[0].type,
                                 currentTitle: tabs[0].title
@@ -416,7 +431,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 const updatedTab = {
                                     ...prevTabs[0],
                                     title: expectedTitle,
-                                    type: expectedType,
+                                    type: wslDistro.category === 'ubuntu' ? 'ubuntu' : (wslDistro.category === 'debian' ? 'debian' : 'wsl-distro'), // Corregido: incluir debian
                                     distroInfo: wslDistro, // Agregar información completa de la distribución
                                     _updateKey: Date.now() // Forzar re-render
                                 };
@@ -432,11 +447,11 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                         setTimeout(findAndUpdateDistro, 500);
                     }
                 };
-                
+
                 findAndUpdateDistro();
             }
         };
-        
+
         window.addEventListener('default-terminal-changed', handleDefaultTerminalChange);
         return () => {
             window.removeEventListener('default-terminal-changed', handleDefaultTerminalChange);
@@ -480,10 +495,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         },
         createAndSwitchToTerminal: (terminalType, command) => {
             console.log('🆕 createAndSwitchToTerminal:', { terminalType, command });
-            
+
             // Buscar si ya existe una pestaña de este tipo
             const existingTab = tabs.find(t => t.type === terminalType);
-            
+
             if (existingTab) {
                 // Activar la pestaña existente
                 console.log('✅ Pestaña existente encontrada:', existingTab.title);
@@ -491,21 +506,21 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     ...t,
                     active: t.id === existingTab.id
                 })));
-                
-            // Enviar comando después de cambiar de pestaña
-            setTimeout(() => {
-                if (command) {
-                    const finalCommand = (terminalType === 'powershell' || terminalType === 'linux-terminal') 
-                        ? command + '\r' 
-                        : command + '\n';
-                    console.log('📤 Enviando comando a pestaña existente:', { terminalType, id: existingTab.id, command });
-                    window.electron?.ipcRenderer.send(`${terminalType}:data:${existingTab.id}`, finalCommand);
-                }
-            }, 500); // Aumentado de 200ms a 500ms
-                
+
+                // Enviar comando después de cambiar de pestaña
+                setTimeout(() => {
+                    if (command) {
+                        const finalCommand = (terminalType === 'powershell' || terminalType === 'linux-terminal')
+                            ? command + '\r'
+                            : command + '\n';
+                        console.log('📤 Enviando comando a pestaña existente:', { terminalType, id: existingTab.id, command });
+                        window.electron?.ipcRenderer.send(`${terminalType}:data:${existingTab.id}`, finalCommand);
+                    }
+                }, 500); // Aumentado de 200ms a 500ms
+
                 return existingTab.id;
             }
-            
+
             // Crear nueva pestaña del tipo especificado
             const newTabId = `tab-${nextTabId}`;
             const terminalTitles = {
@@ -515,48 +530,48 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 'ubuntu': 'Ubuntu',
                 'linux-terminal': 'Terminal Linux'
             };
-            
+
             const newTab = {
                 id: newTabId,
                 title: terminalTitles[terminalType] || terminalType,
                 type: terminalType,
                 active: true
             };
-            
+
             console.log('🆕 Creando nueva pestaña:', newTab);
-            
+
             // 🔧 CRÍTICO: Registrar eventos IPC para la nueva pestaña ANTES de crear el tab
             if (window.electron) {
                 console.log('📝 Registrando eventos IPC para tab:', newTabId);
                 window.electron.ipcRenderer.send('register-tab-events', newTabId);
                 console.log('✅ Eventos IPC registrados para tab:', newTabId);
             }
-            
+
             setTabs(prevTabs => [
                 ...prevTabs.map(t => ({ ...t, active: false })),
                 newTab
             ]);
             setNextTabId(prev => prev + 1);
-            
+
             // Enviar comando después de un delay y forzar fit del terminal
             if (command) {
                 console.log('📝 Programando envío de comando:', { newTabId, command });
-                
+
                 // Esperar el primer output del proceso (el prompt) antes de enviar el comando
                 let promptReceived = false;
                 let fitDone = false;
-                
+
                 const promptListener = (data) => {
                     if (promptReceived) return; // Ya procesado
-                    
-                    console.log('🎯 Primer output del terminal recibido:', { 
-                        newTabId, 
+
+                    console.log('🎯 Primer output del terminal recibido:', {
+                        newTabId,
                         dataLength: data?.length,
                         dataPreview: data?.substring(0, 50)
                     });
-                    
+
                     promptReceived = true;
-                    
+
                     // Hacer fit cuando el prompt aparece
                     if (!fitDone) {
                         fitDone = true;
@@ -568,63 +583,63 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             }
                         }, 100);
                     }
-                    
+
                     // Enviar comando 300ms después del primer output
                     setTimeout(() => {
-                        const finalCommand = (terminalType === 'powershell' || terminalType === 'linux-terminal') 
-                            ? command + '\r' 
+                        const finalCommand = (terminalType === 'powershell' || terminalType === 'linux-terminal')
+                            ? command + '\r'
                             : command + '\n';
-                        
-                        console.log('📤 Enviando comando después del prompt:', { 
-                            terminalType, 
-                            newTabId, 
-                            command, 
+
+                        console.log('📤 Enviando comando después del prompt:', {
+                            terminalType,
+                            newTabId,
+                            command,
                             channel: `${terminalType}:data:${newTabId}`,
-                            finalCommand 
+                            finalCommand
                         });
-                        
+
                         window.electron?.ipcRenderer.send(`${terminalType}:data:${newTabId}`, finalCommand);
                         console.log('✅ Comando IPC enviado');
-                        
+
                         // Remover listener después de enviar el comando
                         window.electron.ipcRenderer.removeListener(`${terminalType}:data:${newTabId}`, promptListener);
                     }, 300);
                 };
-                
+
                 // Escuchar el primer output del proceso
                 const channel = `${terminalType}:data:${newTabId}`;
                 console.log('👂 Registrando listener en canal:', channel);
                 window.electron.ipcRenderer.on(channel, promptListener);
                 console.log('✅ Listener registrado correctamente');
-                
+
                 // Safety timeout: si no hay prompt en 5 segundos, enviar de todos modos
                 setTimeout(() => {
                     if (!promptReceived) {
                         console.warn('⏰ Timeout: prompt no recibido, enviando comando de todos modos');
                         promptReceived = true;
-                        
+
                         // Hacer fit primero
                         const termRef = terminalRefs.current[newTabId];
                         if (termRef && termRef.fit) {
                             console.log('📐 Haciendo fit del terminal (timeout):', newTabId);
                             termRef.fit();
                         }
-                        
+
                         // Enviar comando
                         setTimeout(() => {
-                            const finalCommand = (terminalType === 'powershell' || terminalType === 'linux-terminal') 
-                                ? command + '\r' 
+                            const finalCommand = (terminalType === 'powershell' || terminalType === 'linux-terminal')
+                                ? command + '\r'
                                 : command + '\n';
-                            
+
                             window.electron?.ipcRenderer.send(`${terminalType}:data:${newTabId}`, finalCommand);
                             console.log('✅ Comando IPC enviado (timeout)');
-                            
+
                             window.electron.ipcRenderer.removeListener(`${terminalType}:data:${newTabId}`, promptListener);
                         }, 100);
                     }
                 }, 5000);
             }
-            
+
             return newTabId;
         },
         sendCommand: (command) => {
@@ -634,19 +649,19 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 console.warn('⚠️ No hay terminal activo para enviar comando');
                 return;
             }
-            
+
             const tabId = activeTab.id;
             const terminalRef = terminalRefs.current[tabId];
             if (!terminalRef) {
                 console.warn('⚠️ Terminal ref no encontrado para:', tabId);
                 return;
             }
-            
+
             console.log('🖥️ Enviando comando a terminal:', { tab: activeTab.title, tabId, command });
-            
+
             // Determinar el tipo de terminal y enviar el comando apropiadamente
             const terminalType = activeTab.type || 'powershell';
-            
+
             // Agregar Enter al final según el tipo de terminal
             let finalCommand = command;
             if (terminalType === 'powershell' || terminalType === 'linux-terminal') {
@@ -654,17 +669,18 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             } else {
                 finalCommand = command + '\n'; // Unix usa \n
             }
-            
+
             console.log('📤 Enviando a IPC:', { channel: `${terminalType}:data:${tabId}`, finalCommand });
-            
+
             // Enviar comando vía IPC al backend
             if (window.electron) {
                 if (terminalType === 'powershell' || terminalType === 'linux-terminal') {
                     window.electron.ipcRenderer.send(`powershell:data:${tabId}`, finalCommand);
                 } else if (terminalType === 'wsl') {
                     window.electron.ipcRenderer.send(`wsl:data:${tabId}`, finalCommand);
-                } else if (terminalType === 'ubuntu' || terminalType === 'wsl-distro') {
-                    const channelPrefix = activeTab.distroInfo ? 'ubuntu' : 'wsl';
+                } else if (terminalType === 'ubuntu' || terminalType === 'wsl-distro' || terminalType === 'debian') {
+                    // Mapear 'debian' al canal 'wsl-distro' si es el tipo guardado en el tab
+                    const channelPrefix = terminalType === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
                     window.electron.ipcRenderer.send(`${channelPrefix}:data:${tabId}`, finalCommand);
                 } else if (terminalType === 'cygwin') {
                     window.electron.ipcRenderer.send(`cygwin:data:${tabId}`, finalCommand);
@@ -678,15 +694,15 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             let override = terminalType;
             if (terminalType === 'docker' && distroInfo?.containerName) {
                 override = 'docker-' + distroInfo.containerName;
-            } else if ((terminalType === 'ubuntu' || terminalType === 'wsl') && distroInfo?.name) {
+            } else if ((terminalType === 'ubuntu' || terminalType === 'wsl' || terminalType === 'debian') && distroInfo?.name) {
                 override = distroInfo.name.startsWith('wsl-') ? distroInfo.name : 'wsl-' + distroInfo.name;
-            } else if ((terminalType === 'ubuntu' || terminalType === 'wsl') && distroInfo) {
+            } else if ((terminalType === 'ubuntu' || terminalType === 'wsl' || terminalType === 'debian') && distroInfo) {
                 const n = distroInfo.name || distroInfo.label;
                 override = n ? 'wsl-' + n : 'wsl';
-            } else if (terminalType === 'ubuntu' || terminalType === 'wsl') {
-                override = 'wsl';
+            } else if (terminalType === 'ubuntu' || terminalType === 'wsl' || terminalType === 'debian') {
+                override = terminalType === 'debian' ? 'wsl-debian' : 'wsl';
             }
-            createNewTabRef.current?.(override);
+            createNewTabRef.current?.(override, distroInfo);
         }
     }), [tabs, selectedTerminalType]); // Agregar tabs y selectedTerminalType como dependencias
 
@@ -694,82 +710,82 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     useEffect(() => {
         // Diferir detección 500ms para que la UI aparezca primero
         const timer = setTimeout(() => {
-        const detectWSLDistributions = async () => {
-            try {
-                if (window.electron && window.electron.ipcRenderer) {
-                    // console.log('🔍 [Detectar WSL] Invocando IPC detect-wsl-distributions...');
-                    const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
-                    // console.log('✅ [Detectar WSL] Respuesta recibida:', {
-                    //     isArray: Array.isArray(distributions),
-                    //     length: Array.isArray(distributions) ? distributions.length : 'N/A',
-                    //     data: distributions
-                    // });
-                    
-                    // Verificar que recibimos un array válido
-                    if (Array.isArray(distributions)) {
-                        // console.log('✅ [Detectar WSL] Distribuciones WSL detectadas:', distributions.map(d => ({ name: d.name, label: d.label, category: d.category })));
-                        setWSLDistributions(distributions);
-                        // Forzar actualización inmediata de la pestaña después de un pequeño delay
-                        // para asegurar que el estado se haya actualizado
-                        setTimeout(() => {
-                            const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
-                            if (defaultTerminal && distributions.length > 0) {
-                                setTabs(prevTabs => {
-                                    if (prevTabs.length === 0 || prevTabs[0].id !== 'tab-1') {
+            const detectWSLDistributions = async () => {
+                try {
+                    if (window.electron && window.electron.ipcRenderer) {
+                        // console.log('🔍 [Detectar WSL] Invocando IPC detect-wsl-distributions...');
+                        const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
+                        // console.log('✅ [Detectar WSL] Respuesta recibida:', {
+                        //     isArray: Array.isArray(distributions),
+                        //     length: Array.isArray(distributions) ? distributions.length : 'N/A',
+                        //     data: distributions
+                        // });
+
+                        // Verificar que recibimos un array válido
+                        if (Array.isArray(distributions)) {
+                            // console.log('✅ [Detectar WSL] Distribuciones WSL detectadas:', distributions.map(d => ({ name: d.name, label: d.label, category: d.category })));
+                            setWSLDistributions(distributions);
+                            // Forzar actualización inmediata de la pestaña después de un pequeño delay
+                            // para asegurar que el estado se haya actualizado
+                            setTimeout(() => {
+                                const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
+                                if (defaultTerminal && distributions.length > 0) {
+                                    setTabs(prevTabs => {
+                                        if (prevTabs.length === 0 || prevTabs[0].id !== 'tab-1') {
+                                            return prevTabs;
+                                        }
+                                        const firstTab = prevTabs[0];
+                                        // Si ya está correcto, no hacer nada
+                                        if (firstTab.distroInfo &&
+                                            (firstTab.type === 'ubuntu' || firstTab.type === 'wsl-distro') &&
+                                            firstTab.type !== 'powershell') {
+                                            return prevTabs;
+                                        }
+                                        // Buscar distribución
+                                        const wslDistro = distributions.find(d =>
+                                            d.name === defaultTerminal ||
+                                            d.label === defaultTerminal ||
+                                            d.name === firstTab.title ||
+                                            d.label === firstTab.title ||
+                                            d.name.toLowerCase() === defaultTerminal.toLowerCase() ||
+                                            d.label.toLowerCase() === defaultTerminal.toLowerCase() ||
+                                            (firstTab.title && d.name.toLowerCase() === firstTab.title.toLowerCase()) ||
+                                            (firstTab.title && d.label.toLowerCase() === firstTab.title.toLowerCase())
+                                        );
+                                        if (wslDistro && (firstTab.type === 'powershell' || !firstTab.distroInfo || firstTab.distroInfo.name !== wslDistro.name)) {
+                                            const expectedType = wslDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+                                            const expectedTitle = wslDistro.label || wslDistro.name;
+                                            // console.log('🔧 [Detectar WSL] Actualización inmediata de pestaña:', {
+                                            //     antes: { type: firstTab.type, title: firstTab.title },
+                                            //     despues: { type: expectedType, title: expectedTitle }
+                                            // });
+                                            return [{
+                                                ...firstTab,
+                                                type: wslDistro.category === 'ubuntu' ? 'ubuntu' : (wslDistro.category === 'debian' ? 'debian' : 'wsl-distro'),
+                                                title: expectedTitle,
+                                                distroInfo: wslDistro,
+                                                _updateKey: Date.now()
+                                            }, ...prevTabs.slice(1)];
+                                        }
                                         return prevTabs;
-                                    }
-                                    const firstTab = prevTabs[0];
-                                    // Si ya está correcto, no hacer nada
-                                    if (firstTab.distroInfo && 
-                                        (firstTab.type === 'ubuntu' || firstTab.type === 'wsl-distro') &&
-                                        firstTab.type !== 'powershell') {
-                                        return prevTabs;
-                                    }
-                                    // Buscar distribución
-                                    const wslDistro = distributions.find(d => 
-                                        d.name === defaultTerminal || 
-                                        d.label === defaultTerminal ||
-                                        d.name === firstTab.title ||
-                                        d.label === firstTab.title ||
-                                        d.name.toLowerCase() === defaultTerminal.toLowerCase() ||
-                                        d.label.toLowerCase() === defaultTerminal.toLowerCase() ||
-                                        (firstTab.title && d.name.toLowerCase() === firstTab.title.toLowerCase()) ||
-                                        (firstTab.title && d.label.toLowerCase() === firstTab.title.toLowerCase())
-                                    );
-                                    if (wslDistro && (firstTab.type === 'powershell' || !firstTab.distroInfo || firstTab.distroInfo.name !== wslDistro.name)) {
-                                        const expectedType = wslDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
-                                        const expectedTitle = wslDistro.label || wslDistro.name;
-                                        // console.log('🔧 [Detectar WSL] Actualización inmediata de pestaña:', {
-                                        //     antes: { type: firstTab.type, title: firstTab.title },
-                                        //     despues: { type: expectedType, title: expectedTitle }
-                                        // });
-                                        return [{
-                                            ...firstTab,
-                                            type: expectedType,
-                                            title: expectedTitle,
-                                            distroInfo: wslDistro,
-                                            _updateKey: Date.now()
-                                        }, ...prevTabs.slice(1)];
-                                    }
-                                    return prevTabs;
-                                });
-                            }
-                        }, 100);
+                                    });
+                                }
+                            }, 100);
+                        } else {
+                            console.warn('⚠️ [Detectar WSL] Respuesta no es un array, fallback a array vacío. Tipo recibido:', typeof distributions);
+                            setWSLDistributions([]);
+                        }
                     } else {
-                        console.warn('⚠️ [Detectar WSL] Respuesta no es un array, fallback a array vacío. Tipo recibido:', typeof distributions);
+                        console.error('❌ [Detectar WSL] No hay acceso a electron IPC');
                         setWSLDistributions([]);
                     }
-                } else {
-                    console.error('❌ [Detectar WSL] No hay acceso a electron IPC');
+                } catch (error) {
+                    console.error('❌ [Detectar WSL] Error en detección de distribuciones WSL:', error);
                     setWSLDistributions([]);
                 }
-            } catch (error) {
-                console.error('❌ [Detectar WSL] Error en detección de distribuciones WSL:', error);
-                setWSLDistributions([]);
-            }
-        };
-        
-        detectWSLDistributions();
+            };
+
+            detectWSLDistributions();
         }, 500); // 🚀 Diferir 500ms
         return () => clearTimeout(timer);
     }, []);
@@ -777,55 +793,55 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     // 🚀 OPTIMIZACIÓN: Detectar disponibilidad de Cygwin DIFERIDO
     useEffect(() => {
         const timer = setTimeout(() => {
-        const detectCygwin = async () => {
-            if (window.electron && window.electron.platform === 'win32') {
-                try {
-                    // Usar window.electronAPI.invoke que definimos en preload.js
-                    const result = await window.electronAPI.invoke('cygwin:detect');
-                    if (result && typeof result.available === 'boolean') {
-                        setCygwinAvailable(result.available);
-                        // NO actualizar el tab inicial si hay una configuración guardada
-                        // Solo actualizar si no hay configuración y el tab actual es PowerShell (el inicial)
-                        const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
-                        if (result.available && !defaultTerminal) {
-                            // Esperar más tiempo para asegurar que las distribuciones WSL se hayan cargado primero
-                            setTimeout(() => {
-                                setTabs(prevTabs => {
-                                    // Solo actualizar si el tab actual es PowerShell (el inicial)
-                                    // Y no es una distribución WSL ni Ubuntu
-                                    const firstTab = prevTabs[0];
-                                    const isDefaultPowerShell = firstTab && 
-                                        firstTab.type === 'powershell' && 
-                                        firstTab.id === 'tab-1' &&
-                                        firstTab.title === 'Windows PowerShell';
-                                    
-                                    // Verificar que no haya configuración guardada (doble verificación)
-                                    const currentDefaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
-                                    if (isDefaultPowerShell && !currentDefaultTerminal) {
-                                        return [{
-                                            id: 'tab-1',
-                                            title: 'Cygwin',
-                                            type: 'cygwin',
-                                            active: true
-                                        }];
-                                    }
-                                    return prevTabs;
-                                });
-                            }, 1000); // Delay más largo para dar tiempo a que se carguen las distribuciones WSL
+            const detectCygwin = async () => {
+                if (window.electron && window.electron.platform === 'win32') {
+                    try {
+                        // Usar window.electronAPI.invoke que definimos en preload.js
+                        const result = await window.electronAPI.invoke('cygwin:detect');
+                        if (result && typeof result.available === 'boolean') {
+                            setCygwinAvailable(result.available);
+                            // NO actualizar el tab inicial si hay una configuración guardada
+                            // Solo actualizar si no hay configuración y el tab actual es PowerShell (el inicial)
+                            const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
+                            if (result.available && !defaultTerminal) {
+                                // Esperar más tiempo para asegurar que las distribuciones WSL se hayan cargado primero
+                                setTimeout(() => {
+                                    setTabs(prevTabs => {
+                                        // Solo actualizar si el tab actual es PowerShell (el inicial)
+                                        // Y no es una distribución WSL ni Ubuntu
+                                        const firstTab = prevTabs[0];
+                                        const isDefaultPowerShell = firstTab &&
+                                            firstTab.type === 'powershell' &&
+                                            firstTab.id === 'tab-1' &&
+                                            firstTab.title === 'Windows PowerShell';
+
+                                        // Verificar que no haya configuración guardada (doble verificación)
+                                        const currentDefaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
+                                        if (isDefaultPowerShell && !currentDefaultTerminal) {
+                                            return [{
+                                                id: 'tab-1',
+                                                title: 'Cygwin',
+                                                type: 'cygwin',
+                                                active: true
+                                            }];
+                                        }
+                                        return prevTabs;
+                                    });
+                                }, 1000); // Delay más largo para dar tiempo a que se carguen las distribuciones WSL
+                            }
+                            // Cygwin detectado silenciosamente
+                        } else {
+                            console.warn('⚠️ Cygwin: Respuesta inválida');
+                            setCygwinAvailable(false);
                         }
-                        // Cygwin detectado silenciosamente
-                    } else {
-                        console.warn('⚠️ Cygwin: Respuesta inválida');
+                    } catch (error) {
+                        console.error('❌ Cygwin: Error de detección');
                         setCygwinAvailable(false);
                     }
-                } catch (error) {
-                    console.error('❌ Cygwin: Error de detección');
-                    setCygwinAvailable(false);
                 }
-            }
-        };
-        
-        detectCygwin();
+            };
+
+            detectCygwin();
         }, 600); // 🚀 Diferir 600ms (después de WSL)
         return () => clearTimeout(timer);
     }, []);
@@ -833,27 +849,27 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     // 🚀 OPTIMIZACIÓN: Detectar contenedores Docker DIFERIDO
     useEffect(() => {
         let mounted = true;
-        
+
         const timer = setTimeout(() => {
-        const detectDocker = async () => {
-            try {
-                if (window.electron && window.electronAPI && mounted) {
-                    const result = await window.electronAPI.invoke('docker:list');
-                    if (mounted && result && result.success && Array.isArray(result.containers)) {
-                        setDockerContainers(result.containers);
-                    } else {
-                        setDockerContainers([]);
+            const detectDocker = async () => {
+                try {
+                    if (window.electron && window.electronAPI && mounted) {
+                        const result = await window.electronAPI.invoke('docker:list');
+                        if (mounted && result && result.success && Array.isArray(result.containers)) {
+                            setDockerContainers(result.containers);
+                        } else {
+                            setDockerContainers([]);
+                        }
                     }
+                } catch (error) {
+                    // Docker no disponible - silencioso
+                    setDockerContainers([]);
                 }
-            } catch (error) {
-                // Docker no disponible - silencioso
-                setDockerContainers([]);
-            }
-        };
-        
-        detectDocker();
+            };
+
+            detectDocker();
         }, 700); // 🚀 Diferir 700ms (después de Cygwin)
-        
+
         return () => {
             mounted = false;
             clearTimeout(timer);
@@ -864,7 +880,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     const installCygwin = async () => {
         try {
             console.log('🚀 Cygwin: Iniciando instalación...');
-            
+
             // Mostrar notificación de inicio
             const proceed = window.confirm(
                 '⏳ ¿Instalar Cygwin Portable?\n\n' +
@@ -874,19 +890,19 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 'Se abrirá una ventana de PowerShell mostrando el progreso.\n\n' +
                 '¿Continuar?'
             );
-            
+
             if (!proceed) {
                 console.log('❌ Instalación cancelada por el usuario');
                 return;
             }
-            
+
             // Llamar al handler de instalación
             console.log('📥 Cygwin: Descargando...');
             const result = await window.electronAPI.invoke('cygwin:install');
-            
+
             if (result.success) {
                 console.log('✅ Cygwin: Instalación completada');
-                
+
                 // Re-detectar Cygwin
                 const detectResult = await window.electronAPI.invoke('cygwin:detect');
                 if (detectResult && detectResult.available) {
@@ -923,7 +939,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             // console.log('Registering tab-1 events');
             window.electron.ipcRenderer.send('register-tab-events', 'tab-1');
         }
-        
+
         // Listener para redimensionamiento de ventana
         const handleResize = () => {
             const activeTab = tabs.find(tab => tab.active);
@@ -941,7 +957,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 }, 100);
             }
         };
-        
+
         // Listener para cambios de visibilidad
         const handleVisibilityChange = () => {
             if (!document.hidden) {
@@ -961,15 +977,15 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 }
             }
         };
-        
+
         window.addEventListener('resize', handleResize);
         document.addEventListener('visibilitychange', handleVisibilityChange);
-        
+
         // Cleanup al desmontar el componente
         return () => {
             window.removeEventListener('resize', handleResize);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
-            
+
             // Solo limpiar procesos cuando se cierra realmente la aplicación, no durante reloads
             const isReloading = performance.navigation?.type === 1;
             if (!isReloading && window.electron) {
@@ -1037,42 +1053,42 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         setDraggedTabIndex(null);
         setDragOverTabIndex(null);
     };
-    
+
     // Efecto para verificar botones de scroll cuando cambian las pestañas
     useEffect(() => {
         // Pequeño delay para asegurar que el DOM se haya actualizado
         const timer = setTimeout(() => {
             checkScrollButtons();
         }, 100);
-        
+
         return () => clearTimeout(timer);
     }, [tabs]);
-    
+
     // Efecto para verificar botones de scroll cuando se redimensiona la ventana
     useEffect(() => {
         const handleResize = () => {
             setTimeout(checkScrollButtons, 100); // Pequeño delay para asegurar que el DOM se haya actualizado
         };
-        
+
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
-    
+
     // Efecto para verificar scroll cuando el componente se monta
     useEffect(() => {
         const timer = setTimeout(() => {
             checkScrollButtons();
         }, 200);
-        
+
         return () => clearTimeout(timer);
     }, []);
-    
+
     // Efecto para redimensionar terminales cuando cambian las pestañas
     useEffect(() => {
         const activeTab = tabs.find(tab => tab.active);
         if (activeTab) {
             // console.log(`Tab change effect triggered for tab: ${activeTab.id}, key: ${activeTabKey}`);
-            
+
             // Forzar re-render del terminal activo con múltiples intentos
             const resizeTerminal = () => {
                 const terminalRef = terminalRefs.current[activeTab.id];
@@ -1087,7 +1103,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     // console.warn(`Terminal ref not found for tab ${activeTab.id}`);
                 }
             };
-            
+
             // Intentar redimensionar con diferentes delays para asegurar que el DOM esté listo
             resizeTerminal();
             setTimeout(resizeTerminal, 10);
@@ -1095,7 +1111,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             setTimeout(resizeTerminal, 100);
             setTimeout(resizeTerminal, 200);
             setTimeout(resizeTerminal, 500);
-            
+
             // También intentar después de que el navegador haya procesado el cambio de visibilidad
             requestAnimationFrame(() => {
                 setTimeout(resizeTerminal, 0);
@@ -1109,7 +1125,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         const activeTab = tabs.find(tab => tab.active);
         if (activeTab && activeTabKey > 0) {
             // console.log(`Active tab key changed to ${activeTabKey}, forcing resize for tab: ${activeTab.id}`);
-            
+
             const forceResize = () => {
                 const terminalRef = terminalRefs.current[activeTab.id];
                 if (terminalRef && terminalRef.fit) {
@@ -1121,7 +1137,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     }
                 }
             };
-            
+
             // Forzar redimensionamiento inmediato y con delays
             forceResize();
             setTimeout(forceResize, 0);
@@ -1146,7 +1162,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     }
                 }
             };
-            
+
             // Redimensionar cuando cambia el estado del terminal
             // Usar requestAnimationFrame para asegurar que el layout se haya actualizado
             requestAnimationFrame(() => {
@@ -1163,21 +1179,21 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     // Opciones para el selector de tipo de terminal (dinámicas basadas en SO y distribuciones disponibles)
     const getTerminalOptions = () => {
         const platform = window.electron?.platform || 'unknown';
-        
+
         if (platform === 'win32') {
             // En Windows: mostrar PowerShell, WSL, Cygwin y cada distribución WSL detectada
             const options = [
                 { label: 'PowerShell', value: 'powershell', icon: 'pi pi-desktop' },
                 { label: 'WSL', value: 'wsl', icon: 'pi pi-server' },
                 // Cygwin siempre visible en Windows (se instalará bajo demanda si no existe)
-                { 
-                    label: cygwinAvailable ? 'Cygwin' : 'Cygwin (instalar)', 
-                    value: 'cygwin', 
+                {
+                    label: cygwinAvailable ? 'Cygwin' : 'Cygwin (instalar)',
+                    value: 'cygwin',
                     icon: 'pi pi-code',
                     color: '#00FF00'
                 },
             ];
-            
+
             // Agregar cada distribución WSL como opción separada
             options.push(...wslDistributions.map(distro => ({
                 label: distro.label,
@@ -1199,7 +1215,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     dockerContainer: container
                 })));
             }
-            
+
             return options;
         } else if (platform === 'linux' || platform === 'darwin') {
             // En Linux/macOS: mostrar terminal nativo y Docker si disponible
@@ -1226,22 +1242,22 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             ];
         }
     };
-    
+
     const terminalOptions = getTerminalOptions();
-    
+
 
     // Función para crear una pestaña RDP con configuración específica
     const createRdpTab = (title, rdpConfig) => {
         const newTabId = `tab-${nextTabId}`;
-        
+
         // Registrar eventos para la nueva pestaña
         if (window.electron) {
             window.electron.ipcRenderer.send('register-tab-events', newTabId);
         }
-        
+
         // Desactivar todas las pestañas
         setTabs(prevTabs => prevTabs.map(tab => ({ ...tab, active: false })));
-        
+
         // Agregar nueva pestaña RDP
         setTabs(prevTabs => {
             const newTabs = [...prevTabs, {
@@ -1253,9 +1269,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             }];
             return newTabs;
         });
-        
+
         setNextTabId(prev => prev + 1);
-        
+
         // Redimensionar y dar focus al terminal de la nueva pestaña después de que se renderice
         setTimeout(() => {
             const terminalRef = terminalRefs.current[newTabId];
@@ -1267,7 +1283,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 terminalRef.focus();
             }
         }, 200);
-        
+
         // Intentos adicionales para asegurar el focus
         setTimeout(() => {
             const terminalRef = terminalRefs.current[newTabId];
@@ -1275,7 +1291,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 terminalRef.focus();
             }
         }, 300);
-        
+
         setTimeout(() => {
             const terminalRef = terminalRefs.current[newTabId];
             if (terminalRef && terminalRef.focus) {
@@ -1285,15 +1301,15 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     };
 
     // Función para crear una nueva pestaña
-    const createNewTab = async (terminalTypeOverride = null) => {
+    const createNewTab = async (terminalTypeOverride = null, explicitDistroInfo = null) => {
         // Usar siempre el terminal por defecto (configuración guardada). El dropdown sigue pudiendo pasar un override.
         const defaultTerminalType = getDefaultTerminalType();
         const terminalTypeToUse = terminalTypeOverride || defaultTerminalType || selectedTerminalType;
         // console.log('Creating new tab, type:', terminalTypeToUse);
         const newTabId = `tab-${nextTabId}`;
-        
+
         // Determinar título y tipo basado en la selección
-        let title, terminalType, distroInfo = null;
+        let title, terminalType, distroInfo = explicitDistroInfo;
 
         // Detectar si el valor seleccionado es directamente el nombre/label de una distro WSL
         const findDistroByValue = (value) => {
@@ -1306,8 +1322,8 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 d.label?.toLowerCase?.() === normalized.toLowerCase()
             );
         };
-        const matchedDistro = findDistroByValue(terminalTypeToUse);
-        
+        const matchedDistro = distroInfo || findDistroByValue(terminalTypeToUse);
+
         if (terminalTypeToUse === 'powershell') {
             title = 'Windows PowerShell';
             terminalType = 'powershell';
@@ -1355,13 +1371,13 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 setCygwinAvailable(false);
                 return;
             }
-        } else if (terminalTypeToUse.startsWith('wsl-') || matchedDistro) {
+        } else if (terminalTypeToUse.startsWith('wsl-') || terminalTypeToUse === 'debian' || matchedDistro) {
             // Extraer información de la distribución WSL seleccionada (permite tanto "wsl-<name>" como "<name>")
             const selectedDistro = matchedDistro || findDistroByValue(terminalTypeToUse);
 
             if (selectedDistro) {
                 title = selectedDistro.label;
-                terminalType = selectedDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+                terminalType = selectedDistro.category === 'ubuntu' ? 'ubuntu' : (selectedDistro.category === 'debian' ? 'debian' : 'wsl-distro');
                 distroInfo = {
                     name: selectedDistro.name,
                     executable: selectedDistro.executable,
@@ -1369,6 +1385,11 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     icon: selectedDistro.icon,
                     category: selectedDistro.category
                 };
+            } else if (terminalTypeToUse === 'debian' || terminalTypeToUse === 'wsl-debian') {
+                title = 'Debian';
+                terminalType = 'debian';
+                // Fallback distroInfo si no se encontró en la lista
+                distroInfo = { name: 'Debian', label: 'Debian', category: 'debian', executable: 'debian.exe' };
             } else {
                 title = 'WSL';
                 terminalType = 'wsl-distro';
@@ -1377,14 +1398,14 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             // Extraer información del contenedor Docker seleccionado
             const containerName = terminalTypeToUse.replace('docker-', '');
             console.log('🐳 Buscando contenedor:', containerName, 'en', dockerContainers.map(c => c.name));
-            const selectedContainer = dockerContainers.find(c => c.name === containerName);
-            
+            const selectedContainer = distroInfo || dockerContainers.find(c => c.name === containerName);
+
             if (selectedContainer) {
-                title = `🐳 ${selectedContainer.name}`;
+                title = `🐳 ${selectedContainer.name || containerName}`;
                 terminalType = 'docker';
                 distroInfo = {
-                    containerName: selectedContainer.name,
-                    containerId: selectedContainer.id,
+                    containerName: selectedContainer.name || containerName,
+                    containerId: selectedContainer.id || selectedContainer.containerId,
                     shortId: selectedContainer.shortId
                 };
                 console.log('🐳 Contenedor encontrado:', distroInfo);
@@ -1402,17 +1423,17 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             title = 'Terminal';
             terminalType = terminalTypeToUse;
         }
-        
-        
+
+
         // Registrar eventos para la nueva pestaña
         if (window.electron) {
             // console.log('Registering events for new tab:', newTabId);
             window.electron.ipcRenderer.send('register-tab-events', newTabId);
         }
-        
+
         // Desactivar todas las pestañas
         setTabs(prevTabs => prevTabs.map(tab => ({ ...tab, active: false })));
-        
+
         // Agregar nueva pestaña
         setTabs(prevTabs => {
             const newTabs = [...prevTabs, {
@@ -1425,9 +1446,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             // console.log('New tabs state:', newTabs);
             return newTabs;
         });
-        
+
         setNextTabId(prev => prev + 1);
-        
+
         // Redimensionar y dar focus al terminal de la nueva pestaña después de que se renderice
         setTimeout(() => {
             const terminalRef = terminalRefs.current[newTabId];
@@ -1439,7 +1460,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 terminalRef.focus();
             }
         }, 200);
-        
+
         // Intentos adicionales para asegurar el focus
         setTimeout(() => {
             const terminalRef = terminalRefs.current[newTabId];
@@ -1447,7 +1468,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 terminalRef.focus();
             }
         }, 300);
-        
+
         setTimeout(() => {
             const terminalRef = terminalRefs.current[newTabId];
             if (terminalRef && terminalRef.focus) {
@@ -1460,16 +1481,16 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     // Función para cambiar de pestaña activa
     const switchTab = (tabId) => {
         // console.log(`Switching to tab: ${tabId}`);
-        setTabs(prevTabs => 
+        setTabs(prevTabs =>
             prevTabs.map(tab => ({
                 ...tab,
                 active: tab.id === tabId
             }))
         );
-        
+
         // Incrementar la key para forzar re-render
         setActiveTabKey(prev => prev + 1);
-        
+
         // Forzar redimensionamiento agresivo
         setTimeout(() => {
             const terminalRef = terminalRefs.current[tabId];
@@ -1492,7 +1513,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     // Función para cerrar una pestaña
     const closeTab = (tabId) => {
         // console.log('Cerrando pestaña:', tabId);
-        
+
         // Detener procesos del terminal antes de cerrar
         if (window.electron) {
             window.electron.ipcRenderer.send(`powershell:stop:${tabId}`);
@@ -1500,10 +1521,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             window.electron.ipcRenderer.send(`ubuntu:stop:${tabId}`);
             window.electron.ipcRenderer.send(`cygwin:stop:${tabId}`);
         }
-        
+
         setTabs(prevTabs => {
             const filteredTabs = prevTabs.filter(tab => tab.id !== tabId);
-            
+
             // Si cerramos la pestaña activa, activar otra
             const closedTab = prevTabs.find(tab => tab.id === tabId);
             if (closedTab && closedTab.active && filteredTabs.length > 0) {
@@ -1511,10 +1532,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 const newActiveIndex = activeIndex > 0 ? activeIndex - 1 : 0;
                 filteredTabs[newActiveIndex].active = true;
             }
-            
+
             return filteredTabs;
         });
-        
+
         // Limpiar referencia del terminal
         delete terminalRefs.current[tabId];
     };
@@ -1529,7 +1550,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
     // Obtener el tema UI actual
     const currentUITheme = themeManager.getCurrentTheme() || uiThemes['Light'];
-    
+
     // Crear objetos de tema diferenciados para cada tipo de terminal
     const powershellXtermTheme = {
         background: currentUITheme.colors?.powershellTerminalBackground || '#1e1e1e',
@@ -1537,10 +1558,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         cursor: '#FFFFFF',
         selection: 'rgba(255,255,255,0.3)'
     };
-    
+
     const linuxXtermTheme = {
         background: currentUITheme.colors?.linuxTerminalBackground || '#2d112b',
-        foreground: '#FFFFFF', 
+        foreground: '#FFFFFF',
         cursor: '#FFFFFF',
         selection: 'rgba(255,255,255,0.3)'
     };
@@ -1549,16 +1570,16 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     const getTabColors = () => {
         // Obtener estilos computados del documento (que incluyen los temas de pestañas)
         const rootStyles = getComputedStyle(document.documentElement);
-        
+
         // Leer las variables CSS del tema de pestañas
         const tabBg = rootStyles.getPropertyValue('--ui-tab-bg')?.trim() || '#2d3138';
         const tabActiveBg = rootStyles.getPropertyValue('--ui-tab-active-bg')?.trim() || '#1f2329';
         const tabText = rootStyles.getPropertyValue('--ui-tab-text')?.trim() || '#d6d8db';
         const tabActiveText = rootStyles.getPropertyValue('--ui-tab-active-text')?.trim() || '#ffffff';
-        
+
         return { tabBg, tabActiveBg, tabText, tabActiveText };
     };
-    
+
     const { tabBg, tabActiveBg, tabText, tabActiveText } = getTabColors();
 
     return (
@@ -1608,9 +1629,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             title="Desplazar pestañas a la izquierda"
                         />
                     )}
-                    
+
                     {/* Pestañas */}
-                    <div 
+                    <div
                         ref={tabsContainerRef}
                         style={{
                             display: 'flex',
@@ -1679,22 +1700,34 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 onDragEnd={handleLocalTabDragEnd}
                             >
                                 {tab.type === 'powershell' ? (
-                                    <FaWindows style={{ 
+                                    <FaWindows style={{
                                         color: '#4fc3f7',
                                         fontSize: '12px',
                                         marginRight: '6px'
                                     }} />
+                                ) : tab.type === 'ubuntu' ? (
+                                    <FaUbuntu style={{
+                                        color: '#E95420',
+                                        fontSize: '12px',
+                                        marginRight: '6px'
+                                    }} />
+                                ) : tab.type === 'debian' ? (
+                                    <SiDebian style={{
+                                        color: '#D70A53',
+                                        fontSize: '12px',
+                                        marginRight: '6px'
+                                    }} />
                                 ) : (
-                                    <i 
-                                        className={tab.type === 'wsl' ? 'pi pi-server' : 
-                                                  tab.type === 'cygwin' ? 'pi pi-code' :
-                                                  tab.type === 'docker' ? 'pi pi-box' :
-                                                  tab.type === 'rdp-guacamole' ? 'pi pi-desktop' : 'pi pi-circle'} 
-                                        style={{ 
-                                            color: tab.type === 'wsl' ? '#8ae234' : 
-                                                   tab.type === 'cygwin' ? '#00FF00' :
-                                                   tab.type === 'docker' ? '#2496ED' :
-                                                   tab.type === 'rdp-guacamole' ? '#ff6b35' : '#e95420',
+                                    <i
+                                        className={tab.type === 'wsl' || tab.type === 'wsl-distro' ? 'pi pi-server' :
+                                            tab.type === 'cygwin' ? 'pi pi-code' :
+                                                tab.type === 'docker' ? 'pi pi-box' :
+                                                    tab.type === 'rdp-guacamole' ? 'pi pi-desktop' : 'pi pi-circle'}
+                                        style={{
+                                            color: (tab.type === 'wsl' || tab.type === 'wsl-distro') ? '#8ae234' :
+                                                tab.type === 'cygwin' ? '#00FF00' :
+                                                    tab.type === 'docker' ? '#2496ED' :
+                                                        tab.type === 'rdp-guacamole' ? '#ff6b35' : '#e95420',
                                             fontSize: '12px',
                                             marginRight: '6px'
                                         }}
@@ -1732,7 +1765,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             </div>
                         ))}
                     </div>
-                    
+
                     {/* Flecha derecha */}
                     {(canScrollRight || tabs.length > 3) && (
                         <Button
@@ -1755,264 +1788,264 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             title="Desplazar pestañas a la derecha"
                         />
                     )}
-                        
-                        {/* Botones estilo PowerShell al lado de las pestañas */}
-                        <div style={{ display: 'flex', alignItems: 'center', marginLeft: '6px', gap: '4px' }}>
-                            {/* Botón para nueva pestaña */}
-                            <Button
-                                icon="pi pi-plus"
-                                className="p-button-text p-button-sm tab-action-button"
-                                style={{
-                                    color: 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    padding: '0',
-                                    minWidth: '18px',
-                                    width: '18px',
-                                    height: '18px',
-                                    fontSize: '9px',
-                                    borderRadius: '2px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}
-                                onClick={() => {
-                                    // Usar el tipo de terminal actualmente seleccionado
-                                    createNewTab();
-                                }}
-                                aria-label="Nueva pestaña"
-                                title="Nueva pestaña"
-                            />
-                            
-                            {/* Botón dropdown para seleccionar tipo de terminal */}
-                            <Button
-                                icon="pi pi-chevron-down"
-                                className="p-button-text p-button-sm tab-action-button"
-                                style={{
-                                    color: 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    padding: '0',
-                                    minWidth: '18px',
-                                    width: '18px',
-                                    height: '18px',
-                                    fontSize: '8px',
-                                    borderRadius: '2px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}
-                                onClick={(e) => {
-                                    // Crear un menú contextual
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    
-                                    // Recalcular terminalOptions en el momento del click para asegurar que Docker esté incluido
-                                    const currentTerminalOptions = getTerminalOptions();
-                                    
-                                    // Crear un menú desplegable temporal
-                                    const menu = document.createElement('div');
-                                    menu.style.position = 'absolute';
-                                    menu.style.top = (e.target.getBoundingClientRect().bottom + 5) + 'px';
-                                    menu.style.left = e.target.getBoundingClientRect().left + 'px';
-                                    menu.style.background = '#2a4a6b';
-                                    menu.style.border = '1px solid #3a5a7b';
-                                    menu.style.borderRadius = '4px';
-                                    menu.style.padding = '4px 0';
-                                    menu.style.minWidth = '180px';
-                                    menu.style.zIndex = '1000';
-                                    menu.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
-                                    
-                                    // Separar opciones locales y Docker
-                                    const localOptions = currentTerminalOptions.filter(opt => !opt.value.startsWith('docker-'));
-                                    const dockerOptions = currentTerminalOptions.filter(opt => opt.value.startsWith('docker-'));
-                                    
-                                    // Agregar opciones locales
-                                    localOptions.forEach((option) => {
-                                        const item = document.createElement('div');
-                                        item.style.padding = '8px 12px';
-                                        item.style.cursor = 'pointer';
-                                        item.style.display = 'flex';
-                                        item.style.alignItems = 'center';
-                                        item.style.gap = '8px';
-                                        item.style.color = '#ffffff';
-                                        item.style.fontSize = '12px';
-                                        item.style.transition = 'background-color 0.2s';
-                                        
-                                        const iconColor = option.value === 'powershell' ? '#4fc3f7' : 
-                                                        option.value === 'wsl' ? '#8ae234' : 
-                                                        option.value === 'cygwin' ? '#00FF00' : '#e95420';
-                                        
-                                        // Usar icono de Windows para PowerShell, icono de PrimeReact para otros
-                                        const iconHTML = option.value === 'powershell' 
-                                            ? `<svg width="12" height="12" viewBox="0 0 448 512" fill="${iconColor}" style="margin-right: 0;"><path d="M0 93.7l183.6-25.3v177.4H0V93.7zm0 324.6l183.6 25.3V268.4H0v149.9zm203.8 28L448 480V268.4H203.8v177.9zm0-380.6v180.1H448V32L203.8 65.7z"/></svg>`
-                                            : `<i class="${option.icon}" style="color: ${iconColor}; font-size: 12px;"></i>`;
-                                        
-                                        item.innerHTML = `
+
+                    {/* Botones estilo PowerShell al lado de las pestañas */}
+                    <div style={{ display: 'flex', alignItems: 'center', marginLeft: '6px', gap: '4px' }}>
+                        {/* Botón para nueva pestaña */}
+                        <Button
+                            icon="pi pi-plus"
+                            className="p-button-text p-button-sm tab-action-button"
+                            style={{
+                                color: 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))',
+                                background: 'transparent',
+                                border: 'none',
+                                padding: '0',
+                                minWidth: '18px',
+                                width: '18px',
+                                height: '18px',
+                                fontSize: '9px',
+                                borderRadius: '2px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                            onClick={() => {
+                                // Usar el tipo de terminal actualmente seleccionado
+                                createNewTab();
+                            }}
+                            aria-label="Nueva pestaña"
+                            title="Nueva pestaña"
+                        />
+
+                        {/* Botón dropdown para seleccionar tipo de terminal */}
+                        <Button
+                            icon="pi pi-chevron-down"
+                            className="p-button-text p-button-sm tab-action-button"
+                            style={{
+                                color: 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))',
+                                background: 'transparent',
+                                border: 'none',
+                                padding: '0',
+                                minWidth: '18px',
+                                width: '18px',
+                                height: '18px',
+                                fontSize: '8px',
+                                borderRadius: '2px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                            onClick={(e) => {
+                                // Crear un menú contextual
+                                e.preventDefault();
+                                e.stopPropagation();
+
+                                // Recalcular terminalOptions en el momento del click para asegurar que Docker esté incluido
+                                const currentTerminalOptions = getTerminalOptions();
+
+                                // Crear un menú desplegable temporal
+                                const menu = document.createElement('div');
+                                menu.style.position = 'absolute';
+                                menu.style.top = (e.target.getBoundingClientRect().bottom + 5) + 'px';
+                                menu.style.left = e.target.getBoundingClientRect().left + 'px';
+                                menu.style.background = '#2a4a6b';
+                                menu.style.border = '1px solid #3a5a7b';
+                                menu.style.borderRadius = '4px';
+                                menu.style.padding = '4px 0';
+                                menu.style.minWidth = '180px';
+                                menu.style.zIndex = '1000';
+                                menu.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+
+                                // Separar opciones locales y Docker
+                                const localOptions = currentTerminalOptions.filter(opt => !opt.value.startsWith('docker-'));
+                                const dockerOptions = currentTerminalOptions.filter(opt => opt.value.startsWith('docker-'));
+
+                                // Agregar opciones locales
+                                localOptions.forEach((option) => {
+                                    const item = document.createElement('div');
+                                    item.style.padding = '8px 12px';
+                                    item.style.cursor = 'pointer';
+                                    item.style.display = 'flex';
+                                    item.style.alignItems = 'center';
+                                    item.style.gap = '8px';
+                                    item.style.color = '#ffffff';
+                                    item.style.fontSize = '12px';
+                                    item.style.transition = 'background-color 0.2s';
+
+                                    const iconColor = option.value === 'powershell' ? '#4fc3f7' :
+                                        option.value === 'wsl' ? '#8ae234' :
+                                            option.value === 'cygwin' ? '#00FF00' : '#e95420';
+
+                                    // Usar icono de Windows para PowerShell, icono de PrimeReact para otros
+                                    const iconHTML = option.value === 'powershell'
+                                        ? `<svg width="12" height="12" viewBox="0 0 448 512" fill="${iconColor}" style="margin-right: 0;"><path d="M0 93.7l183.6-25.3v177.4H0V93.7zm0 324.6l183.6 25.3V268.4H0v149.9zm203.8 28L448 480V268.4H203.8v177.9zm0-380.6v180.1H448V32L203.8 65.7z"/></svg>`
+                                        : `<i class="${option.icon}" style="color: ${iconColor}; font-size: 12px;"></i>`;
+
+                                    item.innerHTML = `
                                             ${iconHTML}
                                             <span>${option.label}</span>
                                         `;
-                                        
-                                        item.addEventListener('mouseenter', () => {
-                                            item.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                                        });
-                                        
-                                        item.addEventListener('mouseleave', () => {
-                                            item.style.backgroundColor = 'transparent';
-                                        });
-                                        
-                                        item.addEventListener('click', () => {
-                                            setSelectedTerminalType(option.value);
-                                            createNewTab(option.value);
-                                            document.body.removeChild(menu);
-                                        });
-                                        
-                                        menu.appendChild(item);
+
+                                    item.addEventListener('mouseenter', () => {
+                                        item.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
                                     });
-                                    
-                                    // Agregar Docker submenu si hay contenedores
-                                    if (dockerOptions.length > 0) {
-                                        const divider = document.createElement('div');
-                                        divider.style.height = '1px';
-                                        divider.style.background = 'rgba(255, 255, 255, 0.1)';
-                                        divider.style.margin = '4px 0';
-                                        menu.appendChild(divider);
-                                        
-                                        const dockerItem = document.createElement('div');
-                                        dockerItem.style.padding = '8px 12px';
-                                        dockerItem.style.cursor = 'pointer';
-                                        dockerItem.style.display = 'flex';
-                                        dockerItem.style.alignItems = 'center';
-                                        dockerItem.style.gap = '8px';
-                                        dockerItem.style.color = '#ffffff';
-                                        dockerItem.style.fontSize = '12px';
-                                        dockerItem.style.transition = 'background-color 0.2s';
-                                        dockerItem.style.position = 'relative';
-                                        
-                                        dockerItem.innerHTML = `
+
+                                    item.addEventListener('mouseleave', () => {
+                                        item.style.backgroundColor = 'transparent';
+                                    });
+
+                                    item.addEventListener('click', () => {
+                                        setSelectedTerminalType(option.value);
+                                        createNewTab(option.value);
+                                        document.body.removeChild(menu);
+                                    });
+
+                                    menu.appendChild(item);
+                                });
+
+                                // Agregar Docker submenu si hay contenedores
+                                if (dockerOptions.length > 0) {
+                                    const divider = document.createElement('div');
+                                    divider.style.height = '1px';
+                                    divider.style.background = 'rgba(255, 255, 255, 0.1)';
+                                    divider.style.margin = '4px 0';
+                                    menu.appendChild(divider);
+
+                                    const dockerItem = document.createElement('div');
+                                    dockerItem.style.padding = '8px 12px';
+                                    dockerItem.style.cursor = 'pointer';
+                                    dockerItem.style.display = 'flex';
+                                    dockerItem.style.alignItems = 'center';
+                                    dockerItem.style.gap = '8px';
+                                    dockerItem.style.color = '#ffffff';
+                                    dockerItem.style.fontSize = '12px';
+                                    dockerItem.style.transition = 'background-color 0.2s';
+                                    dockerItem.style.position = 'relative';
+
+                                    dockerItem.innerHTML = `
                                             <i class="pi pi-box" style="color: #2496ED; font-size: 12px;"></i>
                                             <span>🐳 Docker</span>
                                             <i class="pi pi-chevron-right" style="margin-left: auto; font-size: 10px; color: rgba(255,255,255,0.6);"></i>
                                         `;
-                                        
-                                        let submenuVisible = false;
-                                        let submenu = null;
-                                        let hideTimeout = null;
-                                        
-                                        const showSubmenu = () => {
-                                            // Cancelar el timeout de ocultamiento si existe
-                                            if (hideTimeout) {
-                                                clearTimeout(hideTimeout);
-                                                hideTimeout = null;
-                                            }
-                                            
-                                            if (submenuVisible && submenu) return;
-                                            
-                                            submenu = document.createElement('div');
-                                            submenu.style.position = 'absolute';
-                                            submenu.style.left = '100%';
-                                            submenu.style.top = '0';
-                                            submenu.style.background = '#2a4a6b';
-                                            submenu.style.border = '1px solid #3a5a7b';
-                                            submenu.style.borderRadius = '4px';
-                                            submenu.style.padding = '4px 0';
-                                            submenu.style.minWidth = '200px';
-                                            submenu.style.zIndex = '1001';
-                                            submenu.style.marginLeft = '4px';
-                                            
-                                            dockerOptions.forEach(option => {
-                                                const subItem = document.createElement('div');
-                                                subItem.style.padding = '8px 12px';
-                                                subItem.style.cursor = 'pointer';
-                                                subItem.style.color = '#ffffff';
-                                                subItem.style.fontSize = '12px';
-                                                subItem.style.transition = 'background-color 0.2s';
-                                                subItem.style.display = 'flex';
-                                                subItem.style.alignItems = 'center';
-                                                subItem.style.gap = '8px';
-                                                
-                                                subItem.innerHTML = `
+
+                                    let submenuVisible = false;
+                                    let submenu = null;
+                                    let hideTimeout = null;
+
+                                    const showSubmenu = () => {
+                                        // Cancelar el timeout de ocultamiento si existe
+                                        if (hideTimeout) {
+                                            clearTimeout(hideTimeout);
+                                            hideTimeout = null;
+                                        }
+
+                                        if (submenuVisible && submenu) return;
+
+                                        submenu = document.createElement('div');
+                                        submenu.style.position = 'absolute';
+                                        submenu.style.left = '100%';
+                                        submenu.style.top = '0';
+                                        submenu.style.background = '#2a4a6b';
+                                        submenu.style.border = '1px solid #3a5a7b';
+                                        submenu.style.borderRadius = '4px';
+                                        submenu.style.padding = '4px 0';
+                                        submenu.style.minWidth = '200px';
+                                        submenu.style.zIndex = '1001';
+                                        submenu.style.marginLeft = '4px';
+
+                                        dockerOptions.forEach(option => {
+                                            const subItem = document.createElement('div');
+                                            subItem.style.padding = '8px 12px';
+                                            subItem.style.cursor = 'pointer';
+                                            subItem.style.color = '#ffffff';
+                                            subItem.style.fontSize = '12px';
+                                            subItem.style.transition = 'background-color 0.2s';
+                                            subItem.style.display = 'flex';
+                                            subItem.style.alignItems = 'center';
+                                            subItem.style.gap = '8px';
+
+                                            subItem.innerHTML = `
                                                     <i class="pi pi-box" style="color: #2496ED; font-size: 12px;"></i>
                                                     <span>${option.label.replace('Docker: ', '')}</span>
                                                 `;
-                                                
-                                                subItem.addEventListener('mouseenter', () => {
-                                                    subItem.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                                                });
-                                                
-                                                subItem.addEventListener('mouseleave', () => {
-                                                    subItem.style.backgroundColor = 'transparent';
-                                                });
-                                                
-                                                subItem.addEventListener('click', () => {
-                                                    setSelectedTerminalType(option.value);
-                                                    createNewTab(option.value);
-                                                    document.body.removeChild(menu);
-                                                });
-                                                
-                                                submenu.appendChild(subItem);
+
+                                            subItem.addEventListener('mouseenter', () => {
+                                                subItem.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
                                             });
-                                            
-                                            dockerItem.appendChild(submenu);
-                                            submenuVisible = true;
-                                        };
-                                        
-                                        const hideSubmenu = () => {
-                                            hideTimeout = setTimeout(() => {
-                                                if (submenu && dockerItem.contains(submenu)) {
-                                                    dockerItem.removeChild(submenu);
-                                                }
-                                                submenuVisible = false;
-                                                submenu = null;
-                                            }, 200); // Esperar 200ms antes de ocultarlo
-                                        };
-                                        
-                                        dockerItem.addEventListener('mouseenter', showSubmenu);
-                                        dockerItem.addEventListener('mouseleave', hideSubmenu);
-                                        
-                                        // Cuando el mouse entra al submenu, cancelar el ocultamiento
-                                        dockerItem.addEventListener('mouseenter', () => {
-                                            if (submenu) {
-                                                submenu.addEventListener('mouseenter', showSubmenu);
-                                                submenu.addEventListener('mouseleave', hideSubmenu);
-                                            }
+
+                                            subItem.addEventListener('mouseleave', () => {
+                                                subItem.style.backgroundColor = 'transparent';
+                                            });
+
+                                            subItem.addEventListener('click', () => {
+                                                setSelectedTerminalType(option.value);
+                                                createNewTab(option.value);
+                                                document.body.removeChild(menu);
+                                            });
+
+                                            submenu.appendChild(subItem);
                                         });
-                                        
-                                        menu.appendChild(dockerItem);
-                                    }
-                                    
-                                    // Agregar listener para cerrar el menú al hacer click fuera
-                                    const handleClickOutside = (event) => {
-                                        if (!menu.contains(event.target)) {
-                                            if (menu.parentNode) {
-                                                menu.parentNode.removeChild(menu);
-                                            }
-                                            document.removeEventListener('click', handleClickOutside);
-                                        }
+
+                                        dockerItem.appendChild(submenu);
+                                        submenuVisible = true;
                                     };
-                                    
-                                    document.body.appendChild(menu);
-                                    setTimeout(() => {
-                                        document.addEventListener('click', handleClickOutside);
-                                    }, 0);
-                                }}
-                                aria-label="Seleccionar tipo de terminal"
-                                title="Seleccionar tipo de terminal"
-                            />
-                        </div>
+
+                                    const hideSubmenu = () => {
+                                        hideTimeout = setTimeout(() => {
+                                            if (submenu && dockerItem.contains(submenu)) {
+                                                dockerItem.removeChild(submenu);
+                                            }
+                                            submenuVisible = false;
+                                            submenu = null;
+                                        }, 200); // Esperar 200ms antes de ocultarlo
+                                    };
+
+                                    dockerItem.addEventListener('mouseenter', showSubmenu);
+                                    dockerItem.addEventListener('mouseleave', hideSubmenu);
+
+                                    // Cuando el mouse entra al submenu, cancelar el ocultamiento
+                                    dockerItem.addEventListener('mouseenter', () => {
+                                        if (submenu) {
+                                            submenu.addEventListener('mouseenter', showSubmenu);
+                                            submenu.addEventListener('mouseleave', hideSubmenu);
+                                        }
+                                    });
+
+                                    menu.appendChild(dockerItem);
+                                }
+
+                                // Agregar listener para cerrar el menú al hacer click fuera
+                                const handleClickOutside = (event) => {
+                                    if (!menu.contains(event.target)) {
+                                        if (menu.parentNode) {
+                                            menu.parentNode.removeChild(menu);
+                                        }
+                                        document.removeEventListener('click', handleClickOutside);
+                                    }
+                                };
+
+                                document.body.appendChild(menu);
+                                setTimeout(() => {
+                                    document.addEventListener('click', handleClickOutside);
+                                }, 0);
+                            }}
+                            aria-label="Seleccionar tipo de terminal"
+                            title="Seleccionar tipo de terminal"
+                        />
                     </div>
-                    
-                    {/* Controles del lado derecho - Solo botones de control de ventana */}
-                    <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '8px', 
-                        padding: '0 16px' 
-                    }}>
+                </div>
+
+                {/* Controles del lado derecho - Solo botones de control de ventana */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '0 16px'
+                }}>
                     {/* Botones de control de ventana - EXACTAMENTE como la imagen */}
                     <div style={{ display: 'flex', gap: '8px', marginLeft: '8px' }}>
                         {/* Botón Minimizar */}
-                        <div 
+                        <div
                             style={{
                                 width: '12px',
                                 height: '12px',
@@ -2042,9 +2075,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 background: '#ffffff'
                             }}></div>
                         </div>
-                        
+
                         {/* Botón Maximizar */}
-                        <div 
+                        <div
                             style={{
                                 width: '12px',
                                 height: '12px',
@@ -2116,7 +2149,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                             background: '#ffffff'
                                         }}></div>
                                     </div>
-                                    
+
                                     {/* Cuadrado de frente - líneas en posición original */}
                                     <div style={{
                                         position: 'absolute',
@@ -2210,8 +2243,8 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             </div>
 
             {/* Contenido de las pestañas */}
-            <div style={{ 
-                flex: 1, 
+            <div style={{
+                flex: 1,
                 position: 'relative',
                 overflow: 'hidden'
             }}>
@@ -2261,7 +2294,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 hideStatusBar={hideStatusBar}
                             />
                         ) : tab.type === 'wsl' ? (
-                            <WSLTerminal 
+                            <WSLTerminal
                                 key={`${tab.id}-terminal-wsl-${tab._updateKey || ''}`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
@@ -2270,7 +2303,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
                                 hideStatusBar={hideStatusBar}
                             />
-                        ) : (tab.type === 'ubuntu' || tab.type === 'wsl-distro') ? (
+                        ) : (tab.type === 'ubuntu' || tab.type === 'debian' || tab.type === 'wsl-distro') ? (
                             (() => {
                                 const ubuntuInfo = tab.distroInfo || tab.ubuntuInfo;
                                 if (!ubuntuInfo) {
@@ -2282,13 +2315,14 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     });
                                 }
                                 return (
-                                    <UbuntuTerminal 
+                                    <UbuntuTerminal
                                         key={`${tab.id}-terminal-${tab.type}-${ubuntuInfo?.name || 'no-info'}-${tab._updateKey || ''}`}
                                         ref={(ref) => {
                                             if (ref) terminalRefs.current[tab.id] = ref;
                                         }}
                                         tabId={tab.id}
                                         ubuntuInfo={ubuntuInfo}
+                                        tabType={tab.type} // Pasar el tipo explícitamente si es necesario
                                         fontFamily={localFontFamily}
                                         fontSize={localFontSize}
                                         theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
@@ -2297,7 +2331,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 );
                             })()
                         ) : tab.type === 'cygwin' ? (
-                            <CygwinTerminal 
+                            <CygwinTerminal
                                 key={`${tab.id}-terminal`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
@@ -2309,7 +2343,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 hideStatusBar={hideStatusBar}
                             />
                         ) : tab.type === 'docker' ? (
-                            <DockerTerminal 
+                            <DockerTerminal
                                 key={`${tab.id}-terminal`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
@@ -2322,7 +2356,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 hideStatusBar={hideStatusBar}
                             />
                         ) : tab.type === 'rdp-guacamole' ? (
-                            <GuacamoleTerminal 
+                            <GuacamoleTerminal
                                 key={`${tab.id}-terminal`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
