@@ -937,7 +937,59 @@ const ConnectionHistory = ({
 		const activeDotIndex = Math.round((scrollPos / (totalWidth - visibleWidth || 1)) * (dotsCount - 1)) || 0;
 
 		return (
-			<div className="favorites-ribbon-section">
+			<div
+				className="favorites-ribbon-section"
+				onDragOver={(e) => {
+					if (e.dataTransfer.types.includes('application/nodeterm-connection') || e.dataTransfer.types.includes('application/nodeterm-ssh-node')) {
+						e.preventDefault();
+						e.dataTransfer.dropEffect = 'copy';
+					}
+				}}
+				onDrop={(e) => {
+					const data = e.dataTransfer.getData('application/nodeterm-connection') || e.dataTransfer.getData('application/nodeterm-ssh-node');
+					if (data) {
+						e.preventDefault();
+						e.stopPropagation();
+						try {
+							const nodeData = JSON.parse(data);
+							const connection = nodeData.data;
+							if (connection) {
+								// Usar el label del nodo como nombre de la conexión si no tiene uno o para asegurar que sea el correcto
+								if (nodeData.label) {
+									connection.name = nodeData.label;
+								}
+
+								if (!connection.id) {
+									connection.id = helpers.buildId(connection);
+								}
+								if (!isFavorite(connection)) {
+									toggleFavorite(connection);
+									loadConnectionHistory();
+									if (window.toast?.current?.show) {
+										window.toast.current.show({
+											severity: 'success',
+											summary: 'Agregado a Favoritos',
+											detail: connection.name || 'Conexión agregada',
+											life: 2000
+										});
+									}
+								} else {
+									if (window.toast?.current?.show) {
+										window.toast.current.show({
+											severity: 'info',
+											summary: 'Ya existe',
+											detail: 'Esta conexión ya está en favoritos',
+											life: 2000
+										});
+									}
+								}
+							}
+						} catch (err) {
+							console.error('Error processing drop:', err);
+						}
+					}
+				}}
+			>
 				<div className="modern-section-header header-favorites">
 					<button
 						className="section-collapse-btn"
@@ -1057,8 +1109,22 @@ const ConnectionHistory = ({
 											onToggleFav={(conn) => { toggleFavorite(conn); loadConnectionHistory(); }}
 											onEditGroups={handleEditFavoriteGroups}
 											onDragStart={handleDragStart}
-											onDragOver={handleDragOver}
-											onDrop={handleDrop}
+											onDragOver={(e) => {
+												if (e.dataTransfer.types.includes('application/nodeterm-connection') || e.dataTransfer.types.includes('application/nodeterm-ssh-node')) {
+													e.preventDefault();
+													e.dataTransfer.dropEffect = 'copy';
+												} else {
+													handleDragOver(e);
+												}
+											}}
+											onDrop={(e, targetItem) => {
+												const data = e.dataTransfer.getData('application/nodeterm-connection') || e.dataTransfer.getData('application/nodeterm-ssh-node');
+												if (data) {
+													// Permitir que el evento suba al contenedor
+													return;
+												}
+												handleDrop(e, targetItem);
+											}}
 										/>
 									))
 								) : (

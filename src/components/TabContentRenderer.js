@@ -75,7 +75,8 @@ const TabContentRenderer = React.memo(({
   activeTabIndex,
   // Tab group props
   setShowCreateGroupDialog,
-  activeIds
+  activeIds,
+  openInSplit,
 }) => {
   if (tab.type === 'home') {
     return (
@@ -1292,6 +1293,7 @@ const TabContentRenderer = React.memo(({
         onCloseLeft={() => handleCloseSplitPanel(tab.key, 'left')}
         onCloseRight={() => handleCloseSplitPanel(tab.key, 'right')}
         path={[]}
+        openInSplit={openInSplit}
       />
     );
   }
@@ -1595,6 +1597,66 @@ const TabContentRenderer = React.memo(({
         active={isActiveTab}
         stats={terminalSshStatsByTabId[tab.key]}
         statusBarIconTheme={statusBarIconTheme}
+        onDrop={(e) => {
+          // Manejador de Drop para convertir pestaña simple en split
+          const draggedNode = (window.draggedConnectionNodeRef && window.draggedConnectionNodeRef.current) ||
+            (window.draggedSSHNodeRef && window.draggedSSHNodeRef.current);
+
+          let isSupportedType = false;
+          if (!draggedNode && e.dataTransfer.types) {
+            isSupportedType = e.dataTransfer.types.includes('application/nodeterm-connection') ||
+              e.dataTransfer.types.includes('application/nodeterm-ssh-node');
+          }
+
+          if ((draggedNode || isSupportedType) && openInSplit) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            let nodeData = draggedNode;
+            if (!nodeData) {
+              try {
+                if (e.dataTransfer.types.includes('application/nodeterm-connection')) {
+                  nodeData = JSON.parse(e.dataTransfer.getData('application/nodeterm-connection'));
+                } else if (e.dataTransfer.types.includes('application/nodeterm-ssh-node')) {
+                  nodeData = JSON.parse(e.dataTransfer.getData('application/nodeterm-ssh-node'));
+                }
+              } catch (err) {
+                console.warn('Error parsing drop data:', err);
+              }
+            }
+
+            if (nodeData && (nodeData.type === 'ssh-node' || nodeData.connectionType === 'ssh')) {
+              const sshNode = {
+                key: nodeData.key,
+                label: nodeData.label,
+                data: nodeData.data
+              };
+
+              const rect = e.currentTarget.getBoundingClientRect();
+              const isVerticalSplit = rect.width > rect.height;
+              const splitOrientation = isVerticalSplit ? 'vertical' : 'horizontal';
+
+              openInSplit(sshNode, tab, splitOrientation);
+
+              if (window.draggedConnectionNodeRef) window.draggedConnectionNodeRef.current = null;
+              if (window.draggedSSHNodeRef) window.draggedSSHNodeRef.current = null;
+            }
+          }
+        }}
+        onDragOver={(e) => {
+          const hasNode = (window.draggedConnectionNodeRef && window.draggedConnectionNodeRef.current) ||
+            (window.draggedSSHNodeRef && window.draggedSSHNodeRef.current);
+          const hasType = e.dataTransfer.types && (
+            e.dataTransfer.types.includes('application/nodeterm-connection') ||
+            e.dataTransfer.types.includes('application/nodeterm-ssh-node')
+          );
+
+          if (hasNode || hasType) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'copy';
+          }
+        }}
       />
     );
   }

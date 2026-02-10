@@ -2372,6 +2372,7 @@ const App = () => {
     terminalRefs,
     statusBarIconTheme,
     handleCloseSplitPanel,
+    openInSplit,
     // RDP props
     rdpTabs,
     findNodeByKey,
@@ -2387,7 +2388,7 @@ const App = () => {
     localLinuxTerminalTheme, localPowerShellTheme, localDockerTerminalTheme, dockerFontFamily, dockerFontSize, iconTheme, explorerFont,
     explorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
     handleTerminalContextMenu, showTerminalContextMenu, sshStatsByTabId,
-    terminalRefs, statusBarIconTheme, handleCloseSplitPanel, rdpTabs, findNodeByKey,
+    terminalRefs, statusBarIconTheme, handleCloseSplitPanel, openInSplit, rdpTabs, findNodeByKey,
     setSshTabs, setShowCreateGroupDialog, activeIds
   ]);
 
