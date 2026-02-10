@@ -2,6 +2,7 @@
 // GESTOR DE PROCESOS WSL DISTRO
 // Gestiona el ciclo de vida de procesos de distribuciones WSL
 // ============================================
+const os = require('os');
 
 let wslDistroProcesses = {};
 let isAppQuitting = { value: false };
@@ -51,21 +52,29 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
 
     // Determine shell and arguments for WSL distribution
     let shell, args;
+    const platform = os.platform();
 
-    // Usar el ejecutable específico de la distribución
-    if (distroInfo && distroInfo.executable) {
-      shell = distroInfo.executable;
+    if (platform === 'win32') {
+      // Prefer wsl -d <name> --cd ~ which works much more reliably than the specific executable
+      if (distroInfo && distroInfo.name) {
+        shell = 'wsl.exe';
+        args = ['-d', distroInfo.name, '--cd', '~'];
+        console.log(`🎯 Usando wsl.exe -d ${distroInfo.name} para ${distroInfo.label || distroInfo.name}`);
+      } else if (distroInfo && distroInfo.executable) {
+        // Fallback to specific executable if name is somehow missing
+        shell = distroInfo.executable;
+        args = [];
+        console.log(`🎯 Usando ejecutable específico: ${shell}`);
+      } else {
+        // Fallback to generic wsl.exe
+        shell = 'wsl.exe';
+        args = ['--cd', '~'];
+        console.log('⚠️ Sin info específica, usando wsl.exe genérico');
+      }
     } else {
-      // Fallback a wsl.exe genérico
-      shell = 'wsl.exe';
-      console.log('⚠️ Sin info específica, usando wsl.exe genérico');
-    }
-
-    // Configurar argumentos para iniciar en el directorio home de WSL
-    if (shell === 'wsl.exe' || (distroInfo && distroInfo.executable && distroInfo.executable.includes('wsl'))) {
-      args = ['--cd', '~']; // Iniciar en el directorio home de WSL
-    } else {
-      args = []; // Para otros shells, no usar argumentos específicos
+      // Non-Windows platform (rare for this specific manager)
+      shell = '/bin/bash';
+      args = ['--login'];
     }
 
     // Environment variables
@@ -78,7 +87,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
       // Configuración 1: Por defecto con ConPTY deshabilitado y WinPTY forzado
       {
         env,
-        cwd: undefined,
+        cwd: os.homedir(),
         name: 'xterm-color',
         cols: cols,
         rows: rows,
@@ -92,7 +101,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
       // Configuración 2: Conservativa sin ConPTY 
       {
         env,
-        cwd: undefined,
+        cwd: os.homedir(),
         name: 'xterm',
         cols: cols || 80,
         rows: rows || 24,
@@ -106,7 +115,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
       // Configuración 3: Mínima con WinPTY
       {
         env,
-        cwd: undefined,
+        cwd: os.homedir(),
         name: 'xterm',
         cols: cols || 80,
         rows: rows || 24,
@@ -144,18 +153,16 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
       throw new Error(`No se pudo iniciar WSL ${shell} para ${tabId} después de probar todas las configuraciones: ${lastError?.message || 'Error desconocido'}`);
     }
 
+    // Send ready signal immediately after successful spawn (consistent with Ubuntu manager)
+    if (!isAppQuitting.value && mainWindow && !mainWindow.isDestroyed()) {
+      const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+      mainWindow.webContents.send(`${channelName}:ready:${tabId}`);
+    }
+
     // Handle distribution output
     wslDistroProcesses[tabId].onData((data) => {
       // Proteger acceso si el proceso ya no existe
       if (!wslDistroProcesses[tabId]) return;
-      // Send ready only on first data reception
-      if (!wslDistroProcesses[tabId]._hasReceivedData) {
-        wslDistroProcesses[tabId]._hasReceivedData = true;
-        if (!isAppQuitting.value && mainWindow && !mainWindow.isDestroyed()) {
-          const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
-          mainWindow.webContents.send(`${channelName}:ready:${tabId}`);
-        }
-      }
 
       if (!isAppQuitting.value && mainWindow && !mainWindow.isDestroyed()) {
         const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
