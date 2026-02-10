@@ -30,6 +30,7 @@ const TabContentRenderer = React.memo(({
   onCreateSSHConnection,
   openFolderDialog,
   onOpenRdpConnection,
+  onOpenSSHTunnel,
   onOpenVncConnection,
   handleLoadGroupFromFavorites,
   openEditRdpDialog,
@@ -84,6 +85,7 @@ const TabContentRenderer = React.memo(({
         isActiveTab={isActiveTab}
         activeIds={activeIds}
         onCreateSSHConnection={onCreateSSHConnection}
+        onOpenSSHTunnel={onOpenSSHTunnel}
         onCreateFolder={() => openFolderDialog(null)}
         onCreateRdpConnection={onOpenRdpConnection}
         onCreateVncConnection={onOpenVncConnection}
