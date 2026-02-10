@@ -5,10 +5,19 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.6.3] - 2025-02-04
+## [1.6.3] - 2026-02-10
+
+### ✨ Nuevas Características
+- **Múltiples Instancias**: Soporte para ejecutar múltiples instancias de la aplicación simultáneamente con sincronización de datos en tiempo real.
+- **Favoritos desde Sidebar**: Ahora puedes añadir o quitar conexiones de favoritos directamente desde el menú contextual de la sidebar.
+
+### 🎨 Mejoras de UI/UX
+- **Refactor de Diálogo de Importación**: Rediseño completo del asistente de importación para una experiencia más intuitiva y robusta.
 
 ### 🔧 Mejoras y Correcciones
-- **Actualización de Versión**: Release v1.6.3
+- **Correcciones Varias**: Multitud de fixes de estabilidad, correcciones visuales y mejoras de rendimiento general.
+- **Fix de Favoritos en Túneles**: Corregido el error al conectar a túneles SSH desde la lista de favoritos.
+- **Actualización de Versión**: Release v1.6.3 con todas las funcionalidades integradas.
 
 ## [1.6.2] - Por definir
 

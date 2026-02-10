@@ -1,18 +1,40 @@
 # 🚀 NodeTerm v1.6.3 - Release Notes
 
-**Fecha de Release**: 2025-02-04  
-**Tipo de Release**: Patch Release  
+**Fecha de Release**: 2026-02-10  
+**Tipo de Release**: Feature & Patch Release  
 **Versión Anterior**: v1.6.2
 
 ---
 
 ## 🎉 ¡Bienvenido a NodeTerm v1.6.3!
 
-Esta es una **versión patch** que incluye mejoras y correcciones generales. Esta actualización mejora la estabilidad y confiabilidad de la aplicación.
+Esta actualización es un gran salto adelante que incluye soporte para **múltiples instancias**, un **asistente de importación rediseñado** y la posibilidad de gestionar **favoritos directamente desde la sidebar**, además de multitud de correcciones de estabilidad.
 
 ---
 
 ## ✨ Características Principales
+
+### 🔄 Soporte para Múltiples Instancias
+- **Ejecución Simultánea**: Ahora puedes abrir varias ventanas de NodeTerm al mismo tiempo.
+- **Sincronización en Tiempo Real**: Los cambios en conexiones, favoritos o configuraciones se sincronizan instantáneamente entre todas las instancias abiertas.
+- **Gestión de Recursos**: Optimización del uso de memoria al detectar procesos compartidos.
+
+### 📥 Refactor del Asistente de Importación
+- **Nueva Interfaz**: Rediseño completo del diálogo de importación para mayor claridad.
+- **Asistente Paso a Paso**: Proceso de importación más guiado y robusto.
+- **Mejor Compatibilidad**: Mejoras en la detección e importación de formatos externos.
+
+### ⭐ Favoritos desde la Sidebar
+- **Acceso Rápido**: Añade o quita cualquier conexión de favoritos directamente desde el menú contextual.
+- **Gestión Unificada**: Los cambios se reflejan inmediatamente en la pestaña Home.
+- **Soporte para Túneles**: Ahora los túneles SSH también pueden ser marcados como favoritos y lanzados desde la UI central.
+
+### 🔧 Multitud de Fixes y Mejoras
+- **Estabilidad de Túneles**: Corregido el error que impedía conectar a túneles guardados en favoritos.
+- **Correcciones Visuales**: Ajustes en el layout y temas para una experiencia más pulida.
+- **Rendimiento**: Optimizaciones en la carga de listas grandes de conexiones.
+
+---
 
 ### 🔌 Túneles SSH Mejorados
 - **Verificación de Puertos**: Verificación automática de puertos libres antes de crear túneles SSH

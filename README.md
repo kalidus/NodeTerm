@@ -138,27 +138,33 @@ npm run build:win
 
 ---
 
-## 🎉 Versión Actual: v1.6.3
+## 🎉 Versión Actual: v1.6.3 (10 Febrero 2026)
+
+### 🚀 Múltiples Instancias y Sincronización
+- **Soporte Multi-Instancia**: Abre múltiples ventanas de NodeTerm simultáneamente.
+- **Auto-Sync**: Sincronización en tiempo real de favoritos, conexiones y temas entre todas las instancias.
+
+### 📥 Importación y Gestión de Favoritos
+- **Refactor de Importación**: Nuevo asistente de importación más intuitivo y robusto.
+- **Favoritos desde Sidebar**: Añade/Elimina favoritos directamente desde el menú contextual de la sidebar.
+- **Soporte de Túneles**: Los túneles SSH ahora se pueden guardar en favoritos y conectar desde el Hub.
 
 ### 🎨 Rediseño de HomeTab y UI
 - **Nuevo Panel de Filtros**: Sistema de filtrado avanzado con diseño *glassmorphism*, selección múltiple y búsqueda de grupos.
-- **Estética Refinada**: Botones de acciones y opciones completamente rediseñados con efectos de cristal y mejor accesibilidad.
-- **Integración de Temas**: Mejoras visuales en temas claros y oscuros para todos los elementos de la interfaz.
+- **Estética Refinada**: Botones de acciones y opciones completamente rediseñados con efectos de cristal.
 
 ### 🚀 Performance y Arranque
-- **Arranque Instantáneo**: Implementación de `StartupProfiler` y optimización de carga de servicios.
-- **Carga Diferida**: Los módulos pesados ahora se cargan proactivamente en segundo plano sin bloquear la UI.
-- **Fluid UI**: Animaciones más suaves y renderizado optimizado en listas de conexiones.
+- **Arranque Instantáneo**: Implementación de `StartupProfiler` y optimización de carga de servicios (lazy loading).
+- **Fluid UI**: Animaciones más suaves y renderizado optimizado en procesos compartidos.
 
 ### 🛠️ Nuevas Funcionalidades
 - **Accesos Rápidos de Servicio**: Configura Guacd, Ollama y Vault directamente desde los botones de estado.
-- **Gestión de PowerShell**: Nuevo `PowerShellProcessManager` para una mejor experiencia con terminales locales en Windows.
-- **Drag & Drop Mejorado**: Reordenamiento de favoritos más fluido y estable.
+- **Gestión de PowerShell**: Mejor soporte para terminales locales en Windows.
 
-### 🐛 Correcciones de Bugs
+### 🐛 Correcciones de Bugs (Multitud de fixes)
+- **Fix de Túneles**: Corregido error al conectar a túneles desde la sección de favoritos.
 - **Fix de Superposición**: Corregido error visual donde el terminal cubría diálogos modales.
-- **Contadores de Filtros**: Lógica corregida para mostrar conteos precisos en filtros y grupos.
-- **Mejoras de Estabilidad**: Optimizaciones varias en el manejo de sesiones y eventos.
+- **Contadores de Filtros**: Lógica corregida para mostrar conteos precisos.
 
 ---
 
