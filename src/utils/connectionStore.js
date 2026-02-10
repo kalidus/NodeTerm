@@ -149,6 +149,20 @@ function toSerializable(connection) {
     // Campos adicionales para conexiones de archivos (SFTP/FTP/SCP)
     protocol: connection.protocol || (type === 'sftp' || type === 'ftp' || type === 'scp' ? type : undefined),
     targetFolder: connection.targetFolder || '',
+    // Campos adicionales para SSH Tunnel
+    tunnelType: connection.tunnelType || undefined,
+    sshHost: connection.sshHost || undefined,
+    sshPort: connection.sshPort || undefined,
+    sshUser: connection.sshUser || undefined,
+    sshPassword: connection.sshPassword || undefined,
+    authType: connection.authType || undefined,
+    privateKeyPath: connection.privateKeyPath || undefined,
+    passphrase: connection.passphrase || undefined,
+    localHost: connection.localHost || undefined,
+    localPort: connection.localPort || undefined,
+    remoteHost: connection.remoteHost || undefined,
+    remotePort: connection.remotePort || undefined,
+    bindHost: connection.bindHost || undefined,
     // Guardar icono personalizado si existe
     customIcon: connection.customIcon || null,
     lastConnected: connection.lastConnected ? new Date(connection.lastConnected).toISOString() : new Date().toISOString()
@@ -213,6 +227,20 @@ function fromSidebarNode(node, typeOverride = null) {
     targetFolder: node.data?.targetFolder || '',
     // Incluir icono personalizado si existe
     customIcon: node.data?.customIcon || null,
+    // Campos específicos para SSH Tunnel
+    tunnelType: node.data?.tunnelType || undefined,
+    sshHost: node.data?.sshHost || undefined,
+    sshPort: node.data?.sshPort || undefined,
+    sshUser: node.data?.sshUser || undefined,
+    sshPassword: node.data?.sshPassword || undefined,
+    authType: node.data?.authType || undefined,
+    privateKeyPath: node.data?.privateKeyPath || undefined,
+    passphrase: node.data?.passphrase || undefined,
+    localHost: node.data?.localHost || undefined,
+    localPort: node.data?.localPort || undefined,
+    remoteHost: node.data?.remoteHost || undefined,
+    remotePort: node.data?.remotePort || undefined,
+    bindHost: node.data?.bindHost || undefined
   };
   return toSerializable(base);
 }
