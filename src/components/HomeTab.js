@@ -92,6 +92,28 @@ const HomeTab = ({
 
   const versionInfo = getVersionInfo();
   const tabbedTerminalRef = useRef();
+  const containerRef = useRef(null);
+  const [containerHeight, setContainerHeight] = useState(window.innerHeight - 100);
+
+  // Medir el tamaño real del contenedor
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        setContainerHeight(containerRef.current.offsetHeight);
+      }
+    };
+
+    updateSize(); // Medición inicial
+
+    const observer = new ResizeObserver(updateSize);
+    if (containerRef.current) observer.observe(containerRef.current);
+
+    window.addEventListener('resize', updateSize);
+    return () => {
+      window.removeEventListener('resize', updateSize);
+      observer.disconnect();
+    };
+  }, []);
 
   // Estado para forzar re-render al cambiar el tema
   const [themeVersion, setThemeVersion] = useState(0);
@@ -590,17 +612,15 @@ const HomeTab = ({
 
   // Determinar el tamaño del panel superior
   const getTopPanelSize = () => {
-    // Si el terminal está oculto, el dashboard ocupa toda la pantalla
-    if (terminalHidden) {
-      return window.innerHeight - 20; // Ocupar casi toda la pantalla, dejando un pequeño margen
-    }
-
-    const containerHeight = window.innerHeight;
     const statusBarHeight = statusBarVisible ? 40 : 0;
     const availableHeight = containerHeight - statusBarHeight;
 
+    // Si el terminal está oculto, el dashboard ocupa toda la pantalla disponible
+    if (terminalHidden) {
+      return availableHeight;
+    }
+
     // Si hay un tamaño manual guardado y estamos en modo normal, usarlo
-    // No limitar el tamaño manual - permitir hasta el 100%
     if (manualPaneSize !== null && terminalState === 'normal') {
       return Math.min(manualPaneSize, availableHeight);
     }
@@ -609,16 +629,14 @@ const HomeTab = ({
 
     switch (terminalState) {
       case 'minimized':
-        // Cuando está minimizado, el panel superior ocupa casi todo, dejando solo 40px para el terminal
-        size = Math.max(availableHeight - 40, availableHeight * 0.95);
+        // Cuando está minimizado, el panel superior ocupa casi todo, dejando exactamente 40px para el terminal
+        size = Math.max(0, availableHeight - 40);
         break;
       case 'maximized':
         size = 0;
         break;
       default:
-        // Para 'normal', la terminal ocupa un poco menos de la mitad (45%)
-        // Esto significa que el panel superior ocupa 55% de la altura disponible
-        // Usar 55% de la altura disponible para el panel superior (terminal ocupa 45%)
+        // Para 'normal', el panel superior ocupa 55% de la altura disponible
         size = Math.max(availableHeight * 0.55, 400);
         break;
     }
@@ -817,101 +835,18 @@ const HomeTab = ({
     return currentTheme.colors?.splitter || localTerminalBg || dashboardBg || '#2d2d2d';
   }, [currentTheme, localTerminalBg, dashboardBg]);
 
-  // Si el terminal está oculto, renderizar solo el panel superior
-  if (terminalHidden) {
-    return (
-      <div style={{
-        height: '100%',
-        width: '100%',
-        background: dashboardBg,
-        overflow: 'hidden',
-        position: 'relative'
-      }}>
-        <div style={{
-          height: statusBarVisible ? 'calc(100% - 40px)' : '100%',
-          width: '100%',
-          overflow: 'auto'
-        }}>
-          {topPanel}
-        </div>
-        <StandaloneStatusBar visible={statusBarVisible} />
-      </div>
-    );
-  }
-
-  // Cuando el terminal está maximizado, renderizar SOLO el terminal ocupando todo el espacio
-  if (terminalState === 'maximized') {
-    return (
-      <div style={{
-        height: '100%',
-        width: '100%',
-        position: 'relative',
-        background: localTerminalBg,
-        overflow: 'hidden'
-      }}>
-        <div style={{
-          height: statusBarVisible ? 'calc(100% - 40px)' : '100%',
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden'
-        }}>
-          {bottomPanel}
-        </div>
-        <StandaloneStatusBar visible={statusBarVisible} />
-      </div>
-    );
-  }
-
-  // Cuando el terminal está minimizado, renderizar SOLO el panel superior ocupando casi todo el espacio
-  if (terminalState === 'minimized') {
-    return (
-      <div style={{
-        height: '100%',
-        width: '100%',
-        position: 'relative',
-        background: dashboardBg,
-        overflow: 'hidden'
-      }}>
-        <div style={{
-          height: statusBarVisible ? 'calc(100% - 40px)' : '100%',
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            flex: '1 1 auto',
-            minHeight: 0,
-            overflow: 'auto',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            {topPanel}
-          </div>
-          <div style={{
-            height: '40px',
-            minHeight: '40px',
-            width: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            background: localTerminalBg
-          }}>
-            {bottomPanel}
-          </div>
-        </div>
-        <StandaloneStatusBar visible={statusBarVisible} />
-      </div>
-    );
-  }
+  const topPanelSize = getTopPanelSize();
 
   return (
-    <div style={{
-      height: '100%',
-      width: '100%',
-      position: 'relative'
-    }}>
+    <div
+      ref={containerRef}
+      style={{
+        height: '100%',
+        width: '100%',
+        position: 'relative',
+        background: dashboardBg,
+        overflow: 'hidden'
+      }}>
       <div
         style={{
           height: statusBarVisible ? 'calc(100% - 40px)' : '100%',
@@ -934,7 +869,7 @@ const HomeTab = ({
           terminalRefs={{ current: {} }}
           statusBarIconTheme="classic"
           isHomeTab={true}
-          externalPaneSize={getTopPanelSize()}
+          externalPaneSize={topPanelSize}
           onManualResize={handleManualResize}
           onPaneSizeChange={handlePaneSizeChange}
           splitterColor={splitterColor}
