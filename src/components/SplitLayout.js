@@ -1255,7 +1255,7 @@ const SplitLayout = ({
 
         {/* Handle de resize horizontal - FUERA del panel primario para evitar problemas de overflow */}
         {(() => {
-          const shouldShow = finalPrimaryPaneSize > 0;
+          const shouldShow = finalPrimaryPaneSize > 0 && !shouldHideTerminal;
           return shouldShow;
         })() && (
             <div
