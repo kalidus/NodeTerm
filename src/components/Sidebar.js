@@ -1913,27 +1913,37 @@ const Sidebar = React.memo(({
         title={title}
         data-connection-type={isSSH ? 'ssh' : (isRDP ? 'rdp' : (isVNC ? 'vnc' : (isSSHTunnel ? 'ssh-tunnel' : null)))}
         data-node-type={isFolder ? 'folder' : 'connection'}
-        draggable={isSSH ? true : undefined}
+        draggable={isSSH || isRDP || isVNC || isFileConnection || isSSHTunnel ? true : undefined}
         onDragStart={(e) => {
-          // Evento nativo de drag para nodos SSH
-          if (isSSH) {
-            const sshNodeData = {
-              type: 'ssh-node',
+          // Detectar tipo de conexión para drag and drop
+          const isDraggableConnection = isSSH || isRDP || isVNC || isFileConnection || isSSHTunnel;
+
+          if (isDraggableConnection) {
+            const nodeType = isSSH ? 'ssh' : (isRDP ? 'rdp' : (isVNC ? 'vnc' : (isSSHTunnel ? 'ssh-tunnel' : (isFileConnection ? 'file-connection' : 'unknown'))));
+
+            const connectionNodeData = {
+              type: 'connection-node', // Tipo genérico para el drop handler
+              connectionType: nodeType,
               key: node.key,
               label: node.label,
               data: node.data
             };
 
-            // Almacenar en ref global
-            if (window.draggedSSHNodeRef && window.draggedSSHNodeRef.current !== undefined) {
-              window.draggedSSHNodeRef.current = sshNodeData;
+            // Almacenar en ref global (por si acaso)
+            if (window.draggedConnectionNodeRef) {
+              window.draggedConnectionNodeRef.current = connectionNodeData;
             }
 
-            // También establecer en dataTransfer
+            // Establecer dataTransfer
             try {
               e.dataTransfer.effectAllowed = 'copy';
-              e.dataTransfer.setData('application/nodeterm-ssh-node', JSON.stringify(sshNodeData));
-              e.dataTransfer.setData('text/plain', `ssh:${node.key}`);
+              // Usar un MIME type específico para nuestra app
+              e.dataTransfer.setData('application/nodeterm-connection', JSON.stringify(connectionNodeData));
+              // Mantener compatibilidad con el formato anterior SSH por si acaso
+              if (isSSH) {
+                e.dataTransfer.setData('application/nodeterm-ssh-node', JSON.stringify(connectionNodeData));
+              }
+              e.dataTransfer.setData('text/plain', `${nodeType}:${node.key}`);
             } catch (err) {
               console.warn('Error setting dataTransfer:', err);
             }
@@ -1941,7 +1951,7 @@ const Sidebar = React.memo(({
         }}
         onDragEnd={() => {
           // NO limpiar aquí - el drop puede ocurrir después del dragEnd
-          // Se limpiará en handleTabDrop después de procesar
+          // Se limpiará en el componente receptor después de procesar
         }}
       >
         <span style={{

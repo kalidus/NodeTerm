@@ -8,7 +8,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 
-const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu, active, stats, hideStatusBar = false, statusBarIconTheme = 'classic' }, ref) => {
+const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu, active, stats, hideStatusBar = false, statusBarIconTheme = 'classic', onDrop, onDragOver }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
@@ -34,7 +34,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     useImperativeHandle(ref, () => ({
         fit: () => {
             try {
-                 fitAddon.current?.fit();
+                fitAddon.current?.fit();
             } catch (e) {
                 // Elimina cualquier console.log de depuración restante.
             }
@@ -149,13 +149,13 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
 
         term.current.open(terminalRef.current);
         fitAddon.current.fit();
-        
+
         // Restaurar el buffer preservado si existe (cuando el componente se remonta)
         if (window.__terminalBuffers && window.__terminalBuffers[tabId]) {
             try {
                 const savedBuffer = window.__terminalBuffers[tabId];
                 const timeSinceSaved = Date.now() - savedBuffer.timestamp;
-                
+
                 // Solo restaurar si fue guardado recientemente (menos de 3 segundos)
                 if (timeSinceSaved < 3000) {
                     // Restaurar cada línea con salto de línea entre ellas
@@ -167,7 +167,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                         }
                     });
                 }
-                
+
                 // Siempre limpiar el buffer guardado
                 delete window.__terminalBuffers[tabId];
             } catch (error) {
@@ -176,9 +176,9 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 }
             }
         }
-        
+
         term.current.focus();
-        
+
         // ResizeObserver con debounce para evitar desplazamientos al hacer split
         // CRÍTICO: No hacer fit() inmediatamente cuando cambia el tamaño, esperar a que el DOM se estabilice
         let resizeRaf = null;
@@ -193,7 +193,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 if (resizeTimeout) {
                     clearTimeout(resizeTimeout);
                 }
-                
+
                 // Usar RAF + timeout para asegurar que el DOM está completamente estable
                 // RAF para el siguiente frame, timeout adicional para splits complejos
                 resizeRaf = requestAnimationFrame(() => {
@@ -214,7 +214,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         // --- Clipboard and Event Handling ---
         // We wrap this in a check to ensure the electron API is ready.
         if (window.electron) {
-             // Custom keyboard handling for copy/paste
+            // Custom keyboard handling for copy/paste
             term.current.onKey(({ key, domEvent }) => {
                 const isMac = window.electron.platform === 'darwin';
                 const modifierKey = isMac ? domEvent.metaKey : domEvent.ctrlKey;
@@ -229,23 +229,23 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     domEvent.preventDefault(); // Prevenir el comportamiento por defecto primero
                     window.electron.clipboard.readText().then(text => {
                         if (text) {
-                           // Asegurar que el terminal tenga el foco y esté listo
-                           term.current.focus();
-                           setTimeout(() => {
-                               // Para terminales SSH, enviar datos al servidor SSH
-                               if (sshConfig && sshConfig.host) {
-                                   window.electron.ipcRenderer.send('ssh:data', { tabId, data: text });
-                               } else {
-                                   // Para terminales locales, usar write directamente
-                                   term.current.write(text);
-                               }
-                               // Restaurar el foco después de pegar y asegurar que los eventos funcionen
-                               setTimeout(() => {
-                                   term.current.focus();
-                                   // Forzar un evento de foco para asegurar que el terminal esté completamente activo
-                                   term.current.element?.dispatchEvent(new Event('focus', { bubbles: true }));
-                               }, 5);
-                           }, 10);
+                            // Asegurar que el terminal tenga el foco y esté listo
+                            term.current.focus();
+                            setTimeout(() => {
+                                // Para terminales SSH, enviar datos al servidor SSH
+                                if (sshConfig && sshConfig.host) {
+                                    window.electron.ipcRenderer.send('ssh:data', { tabId, data: text });
+                                } else {
+                                    // Para terminales locales, usar write directamente
+                                    term.current.write(text);
+                                }
+                                // Restaurar el foco después de pegar y asegurar que los eventos funcionen
+                                setTimeout(() => {
+                                    term.current.focus();
+                                    // Forzar un evento de foco para asegurar que el terminal esté completamente activo
+                                    term.current.element?.dispatchEvent(new Event('focus', { bubbles: true }));
+                                }, 5);
+                            }, 10);
                         }
                     });
                 }
@@ -272,16 +272,16 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 }
             };
             terminalRef.current.addEventListener('contextmenu', contextMenuHandler);
-            
+
             // Cleanup for context menu
             const cleanupContextMenu = () => {
                 if (terminalRef.current) {
                     terminalRef.current.removeEventListener('contextmenu', contextMenuHandler);
                 }
             };
-            
+
             // --- End of Clipboard Handling ---
-            
+
             // IMPORTANTE: Registrar listeners ANTES de conectar para no perder datos iniciales
             // After the SSH connection is ready, send an initial resize so programs like vim/htop get the correct size
             const onReady = () => {
@@ -311,14 +311,14 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 term.current?.writeln(`\r\n\x1b[31mConnection Error: ${message}\x1b[0m`);
             };
             const onErrorUnsubscribe = window.electron.ipcRenderer.on(`ssh:error:${tabId}`, errorListener);
-            
+
             // Ahora sí, verificar y conectar DESPUÉS de registrar los listeners
             // Verificar si ya existe una conexión SSH activa para este tabId
             // Esto evita reconectar cuando un terminal se convierte en parte de un split
             const checkExistingConnection = async () => {
                 try {
                     const hasConnection = await window.electron.ipcRenderer.invoke('ssh:check-connection', tabId);
-                    
+
                     if (!hasConnection) {
                         // Solo conectar si no existe una conexión activa
                         window.electron.ipcRenderer.send('ssh:connect', { tabId, config: sshConfig });
@@ -338,7 +338,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     window.electron.ipcRenderer.send('ssh:connect', { tabId, config: sshConfig });
                 }
             };
-            
+
             checkExistingConnection();
 
             // Handle user input
@@ -355,7 +355,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             return () => {
                 resizeObserver.disconnect();
                 cleanupContextMenu();
-                
+
                 // Preservar el buffer del terminal antes de desmontarlo
                 // Guardar las últimas 500 líneas del buffer (o todo si hay menos)
                 // Esto asegura preservar suficiente historial sin el scrollback antiguo completo
@@ -363,24 +363,24 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     try {
                         const buffer = term.current.buffer.active;
                         const lines = [];
-                        
+
                         // Guardar las últimas 1500 líneas (historial extenso)
                         const linesToSave = 1500;
                         const startLine = Math.max(0, buffer.length - linesToSave);
                         const endLine = buffer.length;
-                        
+
                         for (let i = startLine; i < endLine; i++) {
                             const line = buffer.getLine(i);
                             if (line) {
                                 lines.push(line.translateToString(true));
                             }
                         }
-                        
+
                         // Eliminar líneas vacías al final para evitar espaciado extra
                         while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
                             lines.pop();
                         }
-                        
+
                         if (!window.__terminalBuffers) window.__terminalBuffers = {};
                         window.__terminalBuffers[tabId] = {
                             lines,
@@ -394,7 +394,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                         // Silenciar error
                     }
                 }
-                
+
                 // Delay para desconectar SSH: evita desconexión innecesaria cuando el componente
                 // se desmonta temporalmente (ej: al convertir un terminal en split)
                 // Si el componente se vuelve a montar rápidamente, no se desconectará
@@ -409,11 +409,11 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                         delete window.__terminalBuffers[tabId];
                     }
                 }, 2000); // Aumentado a 2000ms para dar más margen en splits complejos
-                
+
                 // Guardar el timer en una variable global para poder cancelarlo si se remonta
                 if (!window.__sshDisconnectTimers) window.__sshDisconnectTimers = {};
                 window.__sshDisconnectTimers[tabId] = disconnectTimer;
-                
+
                 // Limpiar RAF y timeout del ResizeObserver
                 if (resizeRaf) {
                     cancelAnimationFrame(resizeRaf);
@@ -421,7 +421,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 if (resizeTimeout) {
                     clearTimeout(resizeTimeout);
                 }
-                
+
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();
                 if (onReadyUnsubscribe) onReadyUnsubscribe();
@@ -480,22 +480,22 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     useEffect(() => {
         if (fitAddon.current) {
             setTimeout(() => {
-                try { fitAddon.current.fit(); } catch (e) {}
+                try { fitAddon.current.fit(); } catch (e) { }
             }, 0);
         }
     });
 
     return (
         <>
-            <div 
-                ref={terminalRef} 
+            <div
+                ref={terminalRef}
                 className={'terminal-outer-padding'}
-                style={{ 
+                style={{
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'stretch',
-                    flex: 1, 
-                    width: '100%', 
+                    flex: 1,
+                    width: '100%',
                     minWidth: 0,
                     minHeight: 0,
                     height: '100%',
@@ -503,9 +503,11 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     position: 'relative',
                     padding: 0,
                     margin: 0
-                }} 
+                }}
+                onDrop={onDrop}
+                onDragOver={onDragOver}
             />
-            {!hideStatusBar && <StatusBar stats={{...stats, cpuHistory: cpuHistory}} active={active} statusBarIconTheme={statusBarIconTheme} />}
+            {!hideStatusBar && <StatusBar stats={{ ...stats, cpuHistory: cpuHistory }} active={active} statusBarIconTheme={statusBarIconTheme} />}
         </>
     );
 });
