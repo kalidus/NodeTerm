@@ -108,9 +108,12 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
             // Si es un tipo de terminal conocido
             if (terminalTitles[defaultTerminal]) {
+                const title = defaultTerminal === 'linux-terminal'
+                    ? (platform === 'darwin' ? 'Terminal macOS' : 'Terminal Linux')
+                    : terminalTitles[defaultTerminal];
                 return {
                     id: 'tab-1',
-                    title: terminalTitles[defaultTerminal],
+                    title: title,
                     type: defaultTerminal === 'linux-terminal' ? 'powershell' : defaultTerminal,
                     active: true
                 };
@@ -523,12 +526,13 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
             // Crear nueva pestaña del tipo especificado
             const newTabId = `tab-${nextTabId}`;
+            const isMac = window.electron?.platform === 'darwin';
             const terminalTitles = {
-                'powershell': 'Windows PowerShell',
+                'powershell': isMac ? 'Terminal macOS' : (window.electron?.platform === 'linux' ? 'Terminal Linux' : 'Windows PowerShell'),
                 'wsl': 'WSL',
                 'cygwin': 'Cygwin',
                 'ubuntu': 'Ubuntu',
-                'linux-terminal': 'Terminal Linux'
+                'linux-terminal': isMac ? 'Terminal macOS' : 'Terminal Linux'
             };
 
             const newTab = {

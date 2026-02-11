@@ -2,8 +2,11 @@ import React from 'react';
 import { Button } from 'primereact/button';
 
 const TerminalTypeSelector = ({ value, onChange }) => {
+    const isWindows = window.electron?.platform === 'win32';
+    const terminalLabel = isWindows ? 'PowerShell' : 'Terminal';
+
     const terminalOptions = [
-        { label: 'PowerShell', value: 'powershell', icon: 'pi pi-desktop', color: '#4fc3f7' }
+        { label: terminalLabel, value: 'powershell', icon: 'pi pi-desktop', color: '#4fc3f7' }
     ];
 
     return (

@@ -8,9 +8,9 @@ import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 
-const PowerShellTerminal = forwardRef(({ 
-    fontFamily = 'Consolas, "Courier New", monospace', 
-    fontSize = 14, 
+const PowerShellTerminal = forwardRef(({
+    fontFamily = 'Consolas, "Courier New", monospace',
+    fontSize = 14,
     theme = {},
     tabId = 'default',
     hideStatusBar = false
@@ -58,7 +58,7 @@ const PowerShellTerminal = forwardRef(({
         const getIntervalMs = () => {
             try { return Math.max(1, parseInt(localStorage.getItem(POLL_KEY) || '3', 10)) * 1000; } catch { return 3000; } // Reducido de 5s a 3s para locales
         };
-        
+
         // Optimización: pausar polling cuando la ventana pierda foco
         const handleFocus = () => {
             if (window.electronAPI?.send) {
@@ -70,7 +70,7 @@ const PowerShellTerminal = forwardRef(({
                 window.electronAPI.send('window:focus-changed', false);
             }
         };
-        
+
         window.addEventListener('focus', handleFocus);
         window.addEventListener('blur', handleBlur);
 
@@ -101,7 +101,7 @@ const PowerShellTerminal = forwardRef(({
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
                     hostname: systemStats.hostname || undefined,
                     ip: systemStats.ip || undefined,
-                    distro: 'windows',
+                    distro: window.electron?.platform === 'win32' ? 'windows' : (window.electron?.platform === 'darwin' ? 'macos' : 'linux'),
                     // Optional fields omitted for local PS (hostname/distro/uptime/ip)
                     cpuHistory
                 };
@@ -127,8 +127,8 @@ const PowerShellTerminal = forwardRef(({
             });
         };
         loop();
-        return () => { 
-            stopped = true; 
+        return () => {
+            stopped = true;
             if (timer) clearTimeout(timer);
             window.removeEventListener('focus', handleFocus);
             window.removeEventListener('blur', handleBlur);
@@ -254,7 +254,7 @@ const PowerShellTerminal = forwardRef(({
 
         // Open terminal in DOM
         term.current.open(terminalRef.current);
-        
+
         // Try fit with error handling for React 18
         try {
             fitAddon.current.fit();
@@ -274,8 +274,8 @@ const PowerShellTerminal = forwardRef(({
         // ResizeObserver for dynamic resizing
         const resizeObserver = new ResizeObserver((entries) => {
             // console.log(`PowerShellTerminal resize observer triggered for tab ${tabId}`);
-            try { 
-                fitAddon.current?.fit(); 
+            try {
+                fitAddon.current?.fit();
                 // console.log(`PowerShellTerminal resize observer fit successful for tab ${tabId}`);
             } catch (e) {
                 // console.error(`PowerShellTerminal resize observer error for tab ${tabId}:`, e);
@@ -305,13 +305,13 @@ const PowerShellTerminal = forwardRef(({
         if (window.electron) {
             // Initialize PowerShell session
             // term.current.writeln('\x1b[36mInitializing PowerShell...\x1b[0m');
-            
+
             // Limpiar el terminal antes de iniciar
             term.current.clear();
-            
+
             // Delay pequeño solo para tab-1 inicial para dar tiempo al backend
             const delay = tabId === 'tab-1' ? 300 : 0;
-            
+
             setTimeout(() => {
                 window.electron.ipcRenderer.send(`powershell:start:${tabId}`, {
                     cols: term.current.cols,
@@ -375,7 +375,8 @@ const PowerShellTerminal = forwardRef(({
 
             // Listen for PowerShell errors
             const errorListener = (error) => {
-                term.current?.writeln(`\x1b[31mPowerShell Error: ${error}\x1b[0m`);
+                const termName = window.electron?.platform === 'win32' ? 'PowerShell' : 'Terminal';
+                term.current?.writeln(`\x1b[31m${termName} Error: ${error}\x1b[0m`);
             };
             const onErrorUnsubscribe = window.electron.ipcRenderer.on(`powershell:error:${tabId}`, errorListener);
 
@@ -395,13 +396,13 @@ const PowerShellTerminal = forwardRef(({
             return () => {
                 resizeObserver.disconnect();
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
-                
+
                 // Solo enviar stop cuando realmente se cierra el tab (no durante reloads)
                 const isReloading = performance.navigation?.type === 1 || document.readyState === 'loading';
                 if (!isReloading) {
                     window.electron.ipcRenderer.send(`powershell:stop:${tabId}`);
                 }
-                
+
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onReadyUnsubscribe) onReadyUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();
@@ -416,7 +417,8 @@ const PowerShellTerminal = forwardRef(({
             };
         } else {
             // Fallback when Electron API is not available
-            term.current.writeln('\x1b[31mError: Electron API not available. PowerShell integration will not work.\x1b[0m');
+            const termName = window.electron?.platform === 'win32' ? 'PowerShell' : 'Terminal';
+            term.current.writeln(`\x1b[31mError: Electron API not available. ${termName} integration will not work.\x1b[0m`);
             return () => {
                 resizeObserver.disconnect();
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -454,8 +456,8 @@ const PowerShellTerminal = forwardRef(({
     useEffect(() => {
         if (fitAddon.current) {
             setTimeout(() => {
-                try { 
-                    fitAddon.current?.fit(); 
+                try {
+                    fitAddon.current?.fit();
                     // console.log(`PowerShellTerminal auto-fit successful for tab ${tabId}`);
                 } catch (e) {
                     // console.error(`PowerShellTerminal auto-fit error for tab ${tabId}:`, e);
@@ -476,7 +478,7 @@ const PowerShellTerminal = forwardRef(({
                 }
             }
         };
-        
+
         // Intentar múltiples veces después del montaje
         forceResize();
         setTimeout(forceResize, 50);
@@ -496,7 +498,7 @@ const PowerShellTerminal = forwardRef(({
                 }
             }
         };
-        
+
         // Aplicar focus múltiples veces para asegurar que se aplique correctamente
         setTimeout(ensureFocus, 100);
         setTimeout(ensureFocus, 250);
@@ -506,18 +508,18 @@ const PowerShellTerminal = forwardRef(({
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', flex: 1, width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: theme?.background || '#012456' }}>
-            <div 
-                ref={terminalRef} 
-                style={{ 
-                    flex: 1, 
-                    width: '100%', 
+            <div
+                ref={terminalRef}
+                style={{
+                    flex: 1,
+                    width: '100%',
                     minWidth: 0,
                     minHeight: 0,
                     overflow: 'hidden',
                     position: 'relative',
                     padding: '0 0 0 8px',
                     margin: 0
-                }} 
+                }}
             />
             {!hideStatusBar && (
                 <div style={{ ...getScopedStatusBarCssVars() }}>
