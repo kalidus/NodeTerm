@@ -1249,7 +1249,7 @@ const NodeTermStatus = ({
 							</button>
 							{setShowCreateGroupDialog && (
 								<button style={btnStyle()} onClick={() => setShowCreateGroupDialog(true)} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-									<i className="pi pi-th-large" style={{ color: '#4fc3f7', fontSize: '1rem' }} /><span>Nuevo grupo de pestañas</span>
+									<i className="pi pi-th-large" style={{ color: '#4fc3f7', fontSize: '1rem' }} /><span>{tDialogs('group.title.new')}</span>
 								</button>
 							)}
 							<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
