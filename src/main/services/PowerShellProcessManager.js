@@ -31,21 +31,43 @@ function setAppQuitting(quitting) {
 }
 
 /**
- * Detecta el mejor shell disponible en Linux
+ * Detecta el mejor shell disponible en Unix (Linux/macOS)
  */
-function getLinuxShell() {
+function getUnixShell() {
   const { execSync } = require('child_process');
-  const shells = ['bash', 'zsh', 'fish', 'sh'];
+  const fs = require('fs');
+  const platform = os.platform();
 
-  for (const shell of shells) {
-    try {
-      execSync(`which ${shell}`, { stdio: 'ignore' });
-      return shell;
-    } catch (e) {
-      // Shell no disponible, probar siguiente
-    }
+  // 1. Intentar el shell de la variable de entorno
+  if (process.env.SHELL && fs.existsSync(process.env.SHELL)) {
+    return process.env.SHELL;
   }
-  return 'sh'; // Fallback
+
+  if (platform === 'darwin') {
+    try {
+      // 2. Intentar obtener el shell por defecto del usuario en macOS
+      const dsclOutput = execSync('dscl . -read "/Users/$(whoami)" UserShell', { encoding: 'utf8' }).trim();
+      const userShell = dsclOutput.replace('UserShell: ', '').trim();
+      if (userShell && userShell.startsWith('/') && fs.existsSync(userShell)) {
+        return userShell;
+      }
+    } catch (e) {
+      // Ignorar error y seguir con fallbacks
+    }
+
+    // 3. Fallbacks comunes en macOS
+    if (fs.existsSync('/bin/zsh')) return '/bin/zsh';
+    if (fs.existsSync('/bin/bash')) return '/bin/bash';
+    return '/bin/sh';
+  }
+
+  // Linux fallbacks
+  const shells = ['/bin/bash', '/bin/zsh', '/usr/bin/zsh', '/usr/bin/bash', '/bin/sh'];
+  for (const s of shells) {
+    if (fs.existsSync(s)) return s;
+  }
+
+  return '/bin/sh'; // Fallback universal
 }
 
 /**
@@ -71,23 +93,6 @@ function startPowerShellSession(tabId, { cols, rows }) {
       const shellName = platform === 'win32' ? 'PowerShell' : 'Terminal';
       console.log(`${shellName} ya existe para ${tabId}, reutilizando proceso existente`);
 
-      // Simular mensaje de bienvenida y refrescar prompt para procesos reutilizados
-      if (mainWindow && mainWindow.webContents) {
-        const welcomeMsg = `\r\n\x1b[32m=== Sesión ${shellName} reutilizada ===\x1b[0m\r\n`;
-        mainWindow.webContents.send(`powershell:data:${tabId}`, welcomeMsg);
-      }
-
-      // Refrescar prompt para mostrar estado actual
-      setTimeout(() => {
-        if (powershellProcesses[tabId]) {
-          try {
-            powershellProcesses[tabId].write('\r');
-          } catch (e) {
-            console.log(`Error refrescando prompt para ${tabId}:`, e.message);
-          }
-        }
-      }, 300);
-
       return;
     }
 
@@ -99,14 +104,14 @@ function startPowerShellSession(tabId, { cols, rows }) {
       shell = 'powershell.exe';
       args = ['-NoExit'];
     } else if (platform === 'linux' || platform === 'darwin') {
-      shell = getLinuxShell();
+      shell = getUnixShell();
       args = [];
     } else {
-      shell = 'pwsh';
-      args = ['-NoExit'];
+      shell = '/bin/sh';
+      args = [];
     }
 
-    // Spawn PowerShell process con configuración ultra-conservative
+    // Spawn process con configuración limpia
     const spawnOptions = {
       name: 'xterm-256color',
       cols: cols || 120,
@@ -116,25 +121,20 @@ function startPowerShellSession(tabId, { cols, rows }) {
         ...process.env,
         TERM: 'xterm-256color',
         COLORTERM: 'truecolor'
-      },
-      windowsHide: false
+      }
     };
 
-    // Platform-specific configurations
-    if (os.platform() === 'win32') {
+    // Ajustes por plataforma
+    if (platform === 'win32') {
+      spawnOptions.windowsHide = false;
       spawnOptions.useConpty = false;
       spawnOptions.conptyLegacy = false;
       spawnOptions.experimentalUseConpty = false;
       spawnOptions.backend = 'winpty';
-    } else if (os.platform() === 'linux' || os.platform() === 'darwin') {
-      spawnOptions.windowsHide = undefined;
-      spawnOptions.env = {
-        ...process.env,
-        TERM: 'xterm-256color',
-        COLORTERM: 'truecolor',
-        LANG: process.env.LANG || 'en_US.UTF-8',
-        LC_ALL: process.env.LC_ALL || 'en_US.UTF-8'
-      };
+    } else {
+      // En macOS/Linux no queremos windowsHide ni opciones de Conpty
+      spawnOptions.env.LANG = process.env.LANG || 'en_US.UTF-8';
+      spawnOptions.env.LC_ALL = process.env.LC_ALL || 'en_US.UTF-8';
     }
 
     // Intentar crear el proceso con manejo de errores robusto
@@ -145,8 +145,8 @@ function startPowerShellSession(tabId, { cols, rows }) {
       spawnOptions
     ];
 
-    // Solo añadir configuraciones alternativas si están disponibles
-    if (alternativePtyConfig) {
+    // Solo añadir configuraciones alternativas si están disponibles (principalmente para Windows)
+    if (alternativePtyConfig && platform === 'win32') {
       if (alternativePtyConfig.conservative) {
         configsToTry.push({ ...alternativePtyConfig.conservative, cwd: os.homedir() });
       }
@@ -164,7 +164,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
         spawnSuccess = true;
       } catch (spawnError) {
         lastError = spawnError;
-        console.warn(`Configuración ${i + 1} falló para PowerShell ${tabId}:`, spawnError.message);
+        console.warn(`Configuración ${i + 1} falló para ${tabId}:`, spawnError.message);
 
         if (powershellProcesses[tabId]) {
           try {
@@ -196,7 +196,8 @@ function startPowerShellSession(tabId, { cols, rows }) {
       }
 
       if (!spawnSuccess) {
-        throw new Error(`No se pudo iniciar PowerShell para ${tabId} después de probar todas las configuraciones: ${lastError?.message || 'Error desconocido'}`);
+        const platformName = os.platform() === 'win32' ? 'PowerShell' : 'Terminal';
+        throw new Error(`No se pudo iniciar ${platformName} para ${tabId} después de probar todas las configuraciones: ${lastError?.message || 'Error desconocido'}`);
       }
     }
 
