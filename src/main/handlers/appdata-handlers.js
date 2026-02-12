@@ -64,7 +64,39 @@ const SYNC_KEYS = [
     'nodeterm_linux_font_size',
 
     // Master key (backup)
-    'nodeterm_master_key'
+    'nodeterm_master_key',
+
+    // Configuración General y UI
+    'lock_home_button',
+    'home_tab_icon',
+    'sidebar_start_collapsed',
+    'nodeterm_default_local_terminal',
+    'nodeterm_ui_anim_speed',
+    'nodeterm_language',
+    'nodeterm_ai_provider',
+    'nodeterm_ai_model',
+    'nodeterm_guacd_preferred_method',
+    'rdp_freeze_timeout_ms',
+    'update_auto_check',
+    'update_channel',
+    'nodeterm_remember_password',
+
+    // Configuración de Auditoría
+    'audit_auto_recording',
+    'audit_recording_quality',
+    'audit_encrypt_recordings',
+    'audit_auto_cleanup',
+    'audit_retention_days',
+    'audit_max_storage_size',
+    'audit_cleanup_on_startup',
+    'audit_cleanup_frequency',
+
+    // Configuración HomeTab
+    'homeTab_localTerminalVisible',
+    'homeTab_statusBarVisible',
+    'homeTabFont',
+    'homeTabFontSize',
+    'actionBarIconTheme'
 ];
 
 /**
