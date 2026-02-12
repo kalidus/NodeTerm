@@ -269,6 +269,7 @@ function getProcesses() {
 
 module.exports = {
   initialize,
+  setDependencies: initialize,
   setAppQuitting,
   startWSLDistroSession,
   writeToWSLDistro,

@@ -120,8 +120,13 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
       }
 
       if (actualExitCode !== 0 && signal !== 'SIGTERM' && signal !== 'SIGKILL') {
-        // Silenciar el mensaje de error de proceso cerrado inesperadamente
-        // No enviar mensaje de error al frontend para evitar mostrar errores al usuario
+        // Silenciar el mensaje de error si estamos cerrando la aplicación
+        if (!isAppQuitting.value) {
+          console.log(`Ubuntu ${tabId} terminó con error (código ${actualExitCode})`);
+          if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send(`ubuntu:error:${tabId}`, `Ubuntu process exited with code ${actualExitCode}`);
+          }
+        }
       }
 
       // Cleanup
@@ -244,6 +249,7 @@ function getProcesses() {
 
 module.exports = {
   initialize,
+  setDependencies: initialize,
   setAppQuitting,
   startUbuntuSession,
   writeToUbuntu,
