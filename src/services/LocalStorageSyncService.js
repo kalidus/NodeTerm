@@ -79,10 +79,28 @@ const SYNC_KEYS = [
     'nodeterm_language',
     'nodeterm_ai_provider',
     'nodeterm_ai_model',
+    'nodeterm_guacd_preferred_method',
+    'rdp_freeze_timeout_ms',
+    'update_auto_check',
+    'update_channel',
+    'update_channel',
+
+    // Configuración de Auditoría
+    'audit_auto_recording',
+    'audit_recording_quality',
+    'audit_encrypt_recordings',
+    'audit_auto_cleanup',
+    'audit_retention_days',
+    'audit_max_storage_size',
+    'audit_cleanup_on_startup',
+    'audit_cleanup_frequency',
 
     // Configuración HomeTab
     'homeTab_localTerminalVisible',
     'homeTab_statusBarVisible',
+    'homeTabFont',
+    'homeTabFontSize',
+    'actionBarIconTheme',
     'homeTab_rightColumnCollapsed',
     'homeTab_rightColumn_sections',
     'homeTabFont',

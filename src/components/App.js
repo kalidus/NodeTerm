@@ -251,6 +251,35 @@ const App = () => {
     initializeApp();
   }, [secureStorage]);
 
+  // Inicializar preferencias de Guacamole desde localStorage sincronizado
+  useEffect(() => {
+    const initGuacamolePrefs = async () => {
+      try {
+        if (window.electron?.ipcRenderer) {
+          // 1. Método preferido
+          const method = localStorage.getItem('nodeterm_guacd_preferred_method');
+          if (method) {
+            await window.electron.ipcRenderer.invoke('guacamole:set-preferred-method', method).catch(() => { });
+          }
+
+          // 2. Timeout de inactividad
+          const timeout = localStorage.getItem('rdp_freeze_timeout_ms');
+          if (timeout) {
+            const ms = parseInt(timeout, 10);
+            if (!isNaN(ms)) {
+              await window.electron.ipcRenderer.invoke('guacamole:set-guacd-timeout-ms', ms).catch(() => { });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[App] Error inicializando preferencias de Guacamole:', error);
+      }
+    };
+
+    // Ejecutar con un pequeño delay para asegurar que LocalStorageSync haya terminado
+    setTimeout(initGuacamolePrefs, 1000);
+  }, []);
+
   // Handler para unlock exitoso
   const handleUnlockSuccess = useCallback((key) => {
     setMasterKey(key);
