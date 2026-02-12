@@ -783,7 +783,15 @@ const NodeTermStatus = ({
 				color: getColorForCategory(distro.category),
 				action: () => handleOpenTerminal(`wsl-${distro.name}`, distro),
 				distroInfo: distro
-			}));
+			})).sort((a, b) => {
+				const aLabel = (a.label || '').trim();
+				const bLabel = (b.label || '').trim();
+				// Poner "Ubuntu" exacto al principio
+				if (aLabel.toLowerCase() === 'ubuntu' && bLabel.toLowerCase() !== 'ubuntu') return -1;
+				if (bLabel.toLowerCase() === 'ubuntu' && aLabel.toLowerCase() !== 'ubuntu') return 1;
+				// Luego ordenar por nombre (esto pondrá 24.04, 22.04, etc. en orden)
+				return aLabel.localeCompare(bLabel, undefined, { numeric: true });
+			});
 
 			// Guardar distribuciones Ubuntu en estado separado para el menú agrupado
 			setUbuntuDistributions(allUbuntuDistros);
@@ -1267,6 +1275,8 @@ const NodeTermStatus = ({
 					<SectionHeader id="terminales" label="TERMINALES LOCALES" onRefresh={refreshTerminalsCache} />
 					{!sc.terminales && (() => {
 						const items = [];
+						const otherDistroItems = [];
+
 						// 1) De availableTerminals: PowerShell, WSL, Cygwin, otras distros (Kali etc.)
 						availableTerminals.forEach(t => {
 							let terminalType = t.value;
@@ -1279,14 +1289,27 @@ const NodeTermStatus = ({
 									((cat === 'debian' || lowerName.includes('debian')) ? 'debian' : 'wsl');
 								distroInfo = t.distroInfo;
 							}
-							items.push({ label: t.label, terminalType, distroInfo, icon: t.icon, color: t.color || '#4fc3f7', isDocker: false });
+
+							const item = { label: t.label, terminalType, distroInfo, icon: t.icon, color: t.color || '#4fc3f7', isDocker: false };
+
+							// Agrupar PowerShell y Cygwin por separado para ponerlos al inicio
+							if (t.value === 'powershell' || t.value === 'cygwin') {
+								items.push(item);
+							} else {
+								otherDistroItems.push(item);
+							}
 						});
-						// 2) Distribuciones Ubuntu (no están en availableTerminals)
+
+						// 2) Distribuciones Ubuntu (insertar después de Cygwin, según petición del usuario)
 						(ubuntuDistributions || []).forEach(d => {
 							const raw = d.distroInfo || d;
 							items.push({ label: d.label, terminalType: raw?.category === 'ubuntu' ? 'ubuntu' : 'wsl', distroInfo: raw, icon: 'ubuntu', color: d.color || '#e95420', isDocker: false });
 						});
-						// 3) Contenedores Docker
+
+						// 3) Agregar el resto de distribuciones (Debian, etc.) de availableTerminals
+						items.push(...otherDistroItems);
+
+						// 4) Contenedores Docker
 						(dockerContainers || []).forEach(c => {
 							items.push({ label: `🐳 ${c.name}`, terminalType: 'docker', distroInfo: { containerName: c.name, containerId: c.id, shortId: c.shortId }, icon: 'docker', color: '#2496ed', isDocker: true });
 						});
