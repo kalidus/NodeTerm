@@ -276,28 +276,36 @@ export const useConnectionManagement = ({
       }
     }
 
+
+    // Obtener password y verificar si debe copiarse automáticamente
+    // MOVED UP to be available for SFTP block
+    const password = isSidebarNode ? nodeOrConn.data.password : (nodeOrConn.password || matchedSidebarNode?.data?.password || '');
+    const autoCopyPassword = isSidebarNode ? (nodeOrConn.data.autoCopyPassword || false) : (matchedSidebarNode?.data?.autoCopyPassword || false);
+
     // Si es un favorito de tipo Explorer o de transferencia de archivos, abrir explorador
     if (['explorer', 'sftp', 'ftp', 'scp'].includes(conn.type)) {
+      // Prepare comprehensive data merging matched sidebar node if available (fallback) and the favorite data
+      const sourceData = isSidebarNode ? nodeOrConn.data : nodeOrConn;
+      const fallbackData = (!isSidebarNode && matchedSidebarNode) ? matchedSidebarNode.data : {};
+
       const pseudoNode = {
         label: conn.name,
         data: {
+          ...fallbackData, // Base data from sidebar if matched
+          ...sourceData,   // Overrides from favorite
           host: conn.host,
           user: conn.username,
           port: conn.port,
           type: conn.type === 'explorer' ? 'ssh' : conn.type,
           protocol: conn.type === 'explorer' ? 'sftp' : conn.type,
-          password: conn.password || '', // Include password if available
-          ...conn // Include other properties
+          password: password, // Explicitly set password
+          ...conn // Include processed properties
         },
         key: conn.originalKey
       };
       openFileExplorer(pseudoNode);
       return;
     }
-
-    // Obtener password y verificar si debe copiarse automáticamente
-    const password = isSidebarNode ? nodeOrConn.data.password : (nodeOrConn.password || matchedSidebarNode?.data?.password || '');
-    const autoCopyPassword = isSidebarNode ? (nodeOrConn.data.autoCopyPassword || false) : (matchedSidebarNode?.data?.autoCopyPassword || false);
 
     // Copiar password automáticamente si está configurado
     if (autoCopyPassword && password) {
