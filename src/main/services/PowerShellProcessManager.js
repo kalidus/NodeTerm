@@ -244,10 +244,13 @@ function startPowerShellSession(tabId, { cols, rows }) {
         if (actualExitCode === 0) {
           console.log(`PowerShell ${tabId} terminó normalmente (código ${actualExitCode})`);
         } else {
-          console.log(`PowerShell ${tabId} terminó con error (código ${actualExitCode})`);
-          if (mainWindow && mainWindow.webContents) {
-            const exitCodeStr = typeof exitCode === 'object' ? JSON.stringify(exitCode) : String(exitCode);
-            mainWindow.webContents.send(`powershell:error:${tabId}`, `PowerShell process exited with code ${exitCodeStr}`);
+          // Solo enviar error si no estamos cerrando la aplicación
+          if (!isAppQuitting.value) {
+            console.log(`PowerShell ${tabId} terminó con error (código ${actualExitCode})`);
+            if (mainWindow && mainWindow.webContents) {
+              const exitCodeStr = typeof exitCode === 'object' ? JSON.stringify(exitCode) : String(exitCode);
+              mainWindow.webContents.send(`powershell:error:${tabId}`, `PowerShell process exited with code ${exitCodeStr}`);
+            }
           }
         }
       }
@@ -356,6 +359,7 @@ function getProcesses() {
 
 module.exports = {
   initialize,
+  setDependencies: initialize,
   setAppQuitting,
   startPowerShellSession,
   writeToPowerShell,

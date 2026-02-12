@@ -18,17 +18,21 @@ const { cleanupTunnels } = require('./ssh-tunnel-handlers');
  * @param {Function} dependencies.cleanupOrphanedConnections - Función para limpiar conexiones
  * @param {Object} dependencies.isAppQuitting - Variable de estado de cierre
  */
-function registerAppHandlers({ 
-  mainWindow, 
-  disconnectAllGuacamoleConnections,
-  packageJson,
-  sshConnections,
-  cleanupOrphanedConnections,
-  isAppQuitting
-}) {
-  
+function registerAppHandlers(dependencies) {
+  const {
+    mainWindow,
+    disconnectAllGuacamoleConnections,
+    packageJson,
+    sshConnections,
+    cleanupOrphanedConnections
+  } = dependencies;
+
+  // Asegurar que isAppQuitting sea un objeto válido con propiedad value
+  const isAppQuitting = dependencies.isAppQuitting || { value: false };
+
+
   // === HANDLERS DE INTERFAZ DE USUARIO ===
-  
+
   // Handler para recargar la ventana
   ipcMain.handle('app:reload', () => {
     if (mainWindow) {
@@ -43,7 +47,7 @@ function registerAppHandlers({
       try {
         // Not awaited on purpose; quick cleanup then reload
         disconnectAllGuacamoleConnections();
-      } catch {}
+      } catch { }
       mainWindow.webContents.reloadIgnoringCache();
     }
   });
@@ -108,7 +112,7 @@ function registerAppHandlers({
   // Permite cerrar la app desde el renderer (React) usando ipcRenderer
   ipcMain.on('app-quit', async () => {
     isAppQuitting.value = true;
-    
+
     // Close all SSH connections and clear timeouts before quitting
     Object.values(sshConnections).forEach(conn => {
       if (conn.statsTimeout) {
@@ -122,25 +126,25 @@ function registerAppHandlers({
         }
       }
     });
-    
+
     // Clear SSH connections
     Object.keys(sshConnections).forEach(key => {
       delete sshConnections[key];
     });
-    
+
     // Cleanup orphaned connections
     cleanupOrphanedConnections(sshConnections, sshConnections);
-    
+
     // Disconnect all Guacamole connections
     disconnectAllGuacamoleConnections();
-    
+
     // Cerrar todos los túneles SSH activos
     try {
       await cleanupTunnels();
     } catch (err) {
       console.error('[app-quit] Error cerrando túneles SSH:', err);
     }
-    
+
     // Quit the app
     app.quit();
   });

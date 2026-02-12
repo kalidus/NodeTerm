@@ -1110,6 +1110,11 @@ function createWindow() {
     setImmediate(() => {
       try {
         WSL.setMainWindow(mainWindow);
+        WSL.setDependencies({
+          mainWindow,
+          isAppQuitting
+        });
+
         PowerShell.setDependencies({
           mainWindow,
           getPty,
@@ -1117,6 +1122,19 @@ function createWindow() {
           SafeWindowsTerminal,
           isAppQuitting
         });
+
+        UbuntuProcessManager.setDependencies({
+          mainWindow,
+          getPty,
+          isAppQuitting
+        });
+
+        WSLDistroProcessManager.setDependencies({
+          mainWindow,
+          getPty,
+          isAppQuitting
+        });
+
         Cygwin.setMainWindow(mainWindow);
         const docker = getDocker();
         if (docker && docker.setMainWindow) {

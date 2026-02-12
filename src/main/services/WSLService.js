@@ -14,8 +14,12 @@ let wslProcesses = {};
 let wslDistroProcesses = {};
 let ubuntuProcesses = {};
 
-// Referencia a la ventana principal (se establecerá desde main.js)
-let mainWindow = null;
+// Caché para distribuciones detectadas
+let cachedDistributions = null;
+let detectionPromise = null;
+
+// Flag para indicar si la aplicación se está cerrando
+let isAppQuitting = { value: false };
 
 /**
  * Establece la referencia a la ventana principal
@@ -26,18 +30,32 @@ function setMainWindow(window) {
 }
 
 /**
+ * Establece dependencias del servicio
+ */
+function setDependencies(dependencies) {
+  if (dependencies.mainWindow) mainWindow = dependencies.mainWindow;
+  if (dependencies.isAppQuitting) isAppQuitting = dependencies.isAppQuitting;
+}
+
+/**
  * Detecta todas las distribuciones WSL disponibles en el sistema
  * @returns {Promise<Array>} Array de distribuciones WSL disponibles
  */
 async function detectAllWSLDistributions() {
-  return new Promise((resolve) => {
+  // Si ya hay una detección en curso, retornar la promesa existente
+  if (detectionPromise) return detectionPromise;
+
+  // Si ya tenemos caché, retornar los datos cacheados
+  if (cachedDistributions) return Promise.resolve(cachedDistributions);
+
+  detectionPromise = new Promise((resolve) => {
     const availableDistributions = [];
-    
+
     // Helper para mapear nombre de distro a metadata
     const mapDistro = (rawName) => {
       const name = rawName.replace('*', '').trim();
       const lower = name.toLowerCase();
-      
+
       // Ubuntu con versión (incluye subversiones como 24.04.1)
       const ubuntuMatch = name.match(/^Ubuntu-([0-9]{2})\.([0-9]{2})(?:\.[0-9]+)?$/i);
       if (ubuntuMatch) {
@@ -75,7 +93,7 @@ async function detectAllWSLDistributions() {
       // Genérico
       return { executable: 'wsl.exe', label: name, icon: 'pi pi-desktop', category: 'generic' };
     };
-    
+
     // Mapeo de distribuciones WSL a sus ejecutables y metadata
     const distroMapping = {
       // Ubuntu
@@ -83,36 +101,36 @@ async function detectAllWSLDistributions() {
       'Ubuntu-20.04': { executable: 'ubuntu2004.exe', label: 'Ubuntu 20.04 LTS', icon: 'pi pi-circle', category: 'ubuntu' },
       'Ubuntu-22.04': { executable: 'ubuntu2204.exe', label: 'Ubuntu 22.04 LTS', icon: 'pi pi-circle', category: 'ubuntu' },
       'Ubuntu-24.04': { executable: 'ubuntu2404.exe', label: 'Ubuntu 24.04 LTS', icon: 'pi pi-circle', category: 'ubuntu' },
-      
+
       // Debian
       'Debian': { executable: 'debian.exe', label: 'Debian', icon: 'pi pi-server', category: 'debian' },
-      
+
       // Kali Linux
       'kali-linux': { executable: 'kali.exe', label: 'Kali Linux', icon: 'pi pi-shield', category: 'kali' },
       'Kali': { executable: 'kali.exe', label: 'Kali Linux', icon: 'pi pi-shield', category: 'kali' },
-      
+
       // Alpine
       'Alpine': { executable: 'alpine.exe', label: 'Alpine Linux', icon: 'pi pi-cloud', category: 'alpine' },
-      
+
       // openSUSE
       'openSUSE-Leap-15.1': { executable: 'opensuse-15.exe', label: 'openSUSE Leap 15.1', icon: 'pi pi-cog', category: 'opensuse' },
       'openSUSE-Leap-15.2': { executable: 'opensuse-15.exe', label: 'openSUSE Leap 15.2', icon: 'pi pi-cog', category: 'opensuse' },
       'openSUSE-Leap-15.3': { executable: 'opensuse-15.exe', label: 'openSUSE Leap 15.3', icon: 'pi pi-cog', category: 'opensuse' },
       'openSUSE-Leap-15.4': { executable: 'opensuse-15.exe', label: 'openSUSE Leap 15.4', icon: 'pi pi-cog', category: 'opensuse' },
       'openSUSE-Tumbleweed': { executable: 'opensuse-tumbleweed.exe', label: 'openSUSE Tumbleweed', icon: 'pi pi-cog', category: 'opensuse' },
-      
+
       // Fedora
       'Fedora': { executable: 'fedora.exe', label: 'Fedora', icon: 'pi pi-bookmark', category: 'fedora' },
-      
+
       // Oracle Linux
       'OracleLinux_7_9': { executable: 'oraclelinux.exe', label: 'Oracle Linux 7.9', icon: 'pi pi-database', category: 'oracle' },
       'OracleLinux_8_7': { executable: 'oraclelinux.exe', label: 'Oracle Linux 8.7', icon: 'pi pi-database', category: 'oracle' },
-      
+
       // CentOS
       'CentOS7': { executable: 'centos7.exe', label: 'CentOS 7', icon: 'pi pi-server', category: 'centos' },
       'CentOS8': { executable: 'centos8.exe', label: 'CentOS 8', icon: 'pi pi-server', category: 'centos' }
     };
-    
+
     // 1) Enumeración primaria: nombres puros sin cabeceras
     exec('wsl.exe -l -q', { timeout: 5000, windowsHide: true }, (listError, listStdout) => {
       if (!listError && listStdout) {
@@ -181,10 +199,18 @@ async function detectAllWSLDistributions() {
           }
         });
       } else {
+        cachedDistributions = availableDistributions;
+        detectionPromise = null;
         resolve(availableDistributions);
       }
     });
+  }).then(distros => {
+    cachedDistributions = distros;
+    detectionPromise = null;
+    return distros;
   });
+
+  return detectionPromise;
 }
 
 /**
@@ -195,21 +221,21 @@ function detectUbuntuAvailability() {
   return new Promise((resolve) => {
     const platform = os.platform();
     // Detectando Ubuntu
-    
+
     if (platform !== 'win32') {
       // En sistemas no Windows, verificar si bash está disponible
       const bashCheck = spawn('bash', ['--version'], { stdio: 'pipe' });
-      
+
       bashCheck.on('close', (code) => {
         console.log('🐧 Bash check completed with code:', code);
         resolve(code === 0);
       });
-      
+
       bashCheck.on('error', (error) => {
         console.log('❌ Bash check error:', error.message);
         resolve(false);
       });
-      
+
       // Timeout de 2 segundos
       setTimeout(() => {
         console.log('⏰ Bash check timeout');
@@ -220,17 +246,17 @@ function detectUbuntuAvailability() {
       // En Windows, verificar si ubuntu está disponible
       // Verificando ubuntu en Windows
       const ubuntuCheck = spawn('ubuntu.exe', ['--help'], { stdio: 'pipe' });
-      
+
       ubuntuCheck.on('close', (code) => {
         console.log('🐧 Ubuntu check completed with code:', code);
         resolve(code === 0);
       });
-      
+
       ubuntuCheck.on('error', (error) => {
         console.log('❌ Ubuntu check error:', error.message);
         resolve(false);
       });
-      
+
       // Timeout de 2 segundos
       setTimeout(() => {
         console.log('⏰ Ubuntu check timeout');
@@ -247,7 +273,7 @@ function detectUbuntuAvailability() {
  */
 function getLinuxShell() {
   const platform = os.platform();
-  
+
   if (platform === 'win32') {
     // En Windows, usar WSL
     return 'wsl.exe';
@@ -281,13 +307,13 @@ function startWSLSession(tabId, { cols, rows }) {
   try {
     const shell = getLinuxShell();
     const platform = os.platform();
-    
+
     // Determinar argumentos según la plataforma
     let args = [];
     if (platform === 'win32' && shell === 'wsl.exe') {
       args = ['--cd', '~']; // Iniciar en el directorio home de WSL
     }
-    
+
     wslProcesses[tabId] = pty.spawn(shell, args, {
       name: 'xterm-color',
       cols: cols || 80,
@@ -303,7 +329,8 @@ function startWSLSession(tabId, { cols, rows }) {
     });
 
     wslProcesses[tabId].on('exit', (exitCode) => {
-      if (mainWindow && mainWindow.webContents) {
+      // Solo notificar si no estamos cerrando la aplicación
+      if (!isAppQuitting.value && mainWindow && mainWindow.webContents) {
         const exitCodeStr = exitCode ? exitCode.toString() : '0';
         mainWindow.webContents.send(`wsl:exit:${tabId}`, exitCodeStr);
       }
@@ -334,7 +361,7 @@ function startWSLSession(tabId, { cols, rows }) {
  */
 const WSLHandlers = {
   start: (tabId, { cols, rows }) => startWSLSession(tabId, { cols, rows }),
-  
+
   data: (tabId, data) => {
     if (wslProcesses[tabId]) {
       try {
@@ -349,7 +376,7 @@ const WSLHandlers = {
       console.warn(`No WSL process found for ${tabId}`);
     }
   },
-  
+
   resize: (tabId, { cols, rows }) => {
     if (wslProcesses[tabId]) {
       try {
@@ -359,23 +386,23 @@ const WSLHandlers = {
       }
     }
   },
-  
+
   stop: (tabId) => {
     if (wslProcesses[tabId]) {
       try {
         const process = wslProcesses[tabId];
         const pid = process.pid;
-        
+
         // Remover listeners antes de terminar el proceso
         process.removeAllListeners();
-        
+
         // En Windows, usar taskkill directamente para evitar errores de AttachConsole
         if (os.platform() === 'win32') {
           try {
             const { execSync } = require('child_process');
             // Usar taskkill directamente sin llamar a destroy() para evitar
             // el error "AttachConsole failed" de node-pty
-            execSync(`taskkill /F /PID ${pid} /T`, { 
+            execSync(`taskkill /F /PID ${pid} /T`, {
               stdio: 'ignore',
               windowsHide: true
             });
@@ -390,7 +417,7 @@ const WSLHandlers = {
             // Ignorar errores de kill
           }
         }
-        
+
         delete wslProcesses[tabId];
       } catch (error) {
         console.error(`Error stopping WSL ${tabId}:`, error);
@@ -401,6 +428,7 @@ const WSLHandlers = {
 
 module.exports = {
   setMainWindow,
+  setDependencies,
   detectAllWSLDistributions,
   detectUbuntuAvailability,
   getLinuxShell,

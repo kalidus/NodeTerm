@@ -18,6 +18,12 @@ let mainWindow = null;
 // Flag para evitar logs repetidos de errores Docker
 let dockerErrorLogged = false;
 
+// Caché para contenedores detectados (60s de TTL para evitar bloqueos continuos)
+let cachedContainers = null;
+let lastDetectionTime = 0;
+const CACHE_TTL = 60000; // 60 segundos
+let isDetectionInProgress = false;
+
 /**
  * Establece la referencia a la ventana principal
  */
@@ -30,7 +36,7 @@ function setMainWindow(window) {
  */
 function isDockerAvailable() {
   try {
-    execSync('docker --version', { encoding: 'utf8', stdio: 'pipe', shell: true });
+    execSync('docker --version', { encoding: 'utf8', stdio: 'pipe', shell: true, timeout: 2000 });
     return true;
   } catch (error) {
     return false;
@@ -42,22 +48,39 @@ function isDockerAvailable() {
  * @returns {Array} Lista de contenedores con nombre e ID
  */
 function getRunningContainers() {
+  // Retornar caché si es válido (menos de 60s)
+  const now = Date.now();
+  if (cachedContainers !== null && (now - lastDetectionTime) < CACHE_TTL) {
+    return cachedContainers;
+  }
+
+  // Prevenir múltiples detecciones simultáneas (aunque sea sincrónico por execSync,
+  // evita reentradas si se llama desde diferentes handlers)
+  if (isDetectionInProgress) {
+    return cachedContainers || [];
+  }
+
   try {
+    isDetectionInProgress = true;
+
     if (!isDockerAvailable()) {
+      cachedContainers = [];
+      lastDetectionTime = now;
+      isDetectionInProgress = false;
       return [];
     }
 
     // Intentar múltiples formatos para máxima compatibilidad
     let output = '';
     let containers = [];
-    
+
     try {
       // Intento 1: Formato JSON (más confiable)
       const jsonOutput = execSync(
         'docker ps --format "table{{json .}}"',
-        { encoding: 'utf8', stdio: 'pipe', shell: true, maxBuffer: 1024 * 1024 * 10 }
+        { encoding: 'utf8', stdio: 'pipe', shell: true, maxBuffer: 1024 * 1024 * 5, timeout: 5000 }
       );
-      
+
       if (jsonOutput.trim()) {
         const lines = jsonOutput.trim().split('\n');
         containers = lines
@@ -74,20 +97,23 @@ function getRunningContainers() {
             }
           })
           .filter(c => c && c.id);
-        
+
         if (containers.length > 0) {
+          cachedContainers = containers;
+          lastDetectionTime = now;
+          isDetectionInProgress = false;
           return containers;
         }
       }
     } catch (jsonError) {
       // Intento 1 falló, continuar
     }
-    
+
     try {
       // Intento 2: Formato simple con separadores
       output = execSync(
         'docker ps --no-trunc --format "{{.Names}} {{.ID}}"',
-        { encoding: 'utf8', stdio: 'pipe', shell: true, maxBuffer: 1024 * 1024 * 10 }
+        { encoding: 'utf8', stdio: 'pipe', shell: true, maxBuffer: 1024 * 1024 * 5, timeout: 5000 }
       );
 
       if (output.trim()) {
@@ -107,8 +133,11 @@ function getRunningContainers() {
             return null;
           })
           .filter(c => c && c.id);
-        
+
         if (containers.length > 0) {
+          cachedContainers = containers;
+          lastDetectionTime = now;
+          isDetectionInProgress = false;
           return containers;
         }
       }
@@ -120,7 +149,7 @@ function getRunningContainers() {
       // Intento 3: Comando básico sin formato
       output = execSync(
         'docker ps',
-        { encoding: 'utf8', stdio: 'pipe', shell: true, maxBuffer: 1024 * 1024 * 10 }
+        { encoding: 'utf8', stdio: 'pipe', shell: true, maxBuffer: 1024 * 1024 * 5, timeout: 5000 }
       );
 
       if (output.trim()) {
@@ -144,8 +173,11 @@ function getRunningContainers() {
             return null;
           })
           .filter(c => c && c.id && c.name);
-        
+
         if (containers.length > 0) {
+          cachedContainers = containers;
+          lastDetectionTime = now;
+          isDetectionInProgress = false;
           return containers;
         }
       }
@@ -156,12 +188,16 @@ function getRunningContainers() {
       }
     }
 
+    cachedContainers = [];
+    lastDetectionTime = now;
+    isDetectionInProgress = false;
     return [];
   } catch (error) {
     if (!dockerErrorLogged) {
       console.error('❌ Error obteniendo contenedores Docker:', error.message);
       dockerErrorLogged = true;
     }
+    isDetectionInProgress = false;
     return [];
   }
 }
@@ -192,7 +228,7 @@ async function startDockerSession(tabId, containerName, { cols, rows }) {
 
     // Comando para entrar al contenedor
     let cmd, args;
-    
+
     if (os.platform() === 'win32') {
       cmd = 'powershell.exe';
       args = ['-Command', `docker exec -it ${containerName} /bin/bash`];
@@ -258,7 +294,7 @@ async function startDockerSession(tabId, containerName, { cols, rows }) {
   } catch (error) {
     console.error(`❌ Error iniciando Docker en '${containerName}': ${error.message}`);
     if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send(`docker:error:${tabId}`, 
+      mainWindow.webContents.send(`docker:error:${tabId}`,
         `No se pudo iniciar sesión en '${containerName}': ${error.message}`
       );
     }
@@ -294,7 +330,7 @@ const DockerHandlers = {
     try {
       const available = isDockerAvailable();
       const containers = available ? getRunningContainers() : [];
-      
+
       return {
         available: available,
         containerCount: containers.length,
@@ -344,16 +380,16 @@ const DockerHandlers = {
       try {
         const process = dockerProcesses[tabId];
         const pid = process.pid;
-        
+
         process.removeAllListeners();
-        
+
         // En Windows, usar taskkill directamente para evitar errores de AttachConsole
         if (os.platform() === 'win32') {
           try {
             const { execSync } = require('child_process');
             // Usar taskkill directamente sin llamar a destroy() para evitar
             // el error "AttachConsole failed" de node-pty
-            execSync(`taskkill /F /PID ${pid} /T`, { 
+            execSync(`taskkill /F /PID ${pid} /T`, {
               stdio: 'ignore',
               windowsHide: true
             });
@@ -367,7 +403,7 @@ const DockerHandlers = {
             // Ignorar errores de kill
           }
         }
-        
+
         delete dockerProcesses[tabId];
       } catch (error) {
         console.error(`❌ Docker ${tabId}: Error deteniendo`);
