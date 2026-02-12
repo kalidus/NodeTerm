@@ -431,11 +431,11 @@ const HomeTab = ({
     if (connection.type === 'group') {
       // Manejar grupos - cargar todas las sesiones del grupo
       handleLoadGroup(connection);
-    } else if (connection.type === 'rdp-guacamole') {
-      // Manejar conexiones RDP-Guacamole
+    } else if (connection.type === 'rdp-guacamole' || connection.type === 'rdp') {
+      // Manejar conexiones RDP-Guacamole y RDP
       handleCreateRdpConnection(connection);
-    } else if (connection.type === 'vnc-guacamole') {
-      // Manejar conexiones VNC-Guacamole
+    } else if (connection.type === 'vnc-guacamole' || connection.type === 'vnc') {
+      // Manejar conexiones VNC-Guacamole y VNC
       handleCreateVncConnection(connection);
     } else if (connection.type === 'ssh-tunnel') {
       // Manejar túneles SSH

@@ -276,11 +276,19 @@ export const useConnectionManagement = ({
       }
     }
 
-    // Si es un favorito de tipo Explorer, abrir explorador en lugar de terminal
-    if (conn.type === 'explorer') {
+    // Si es un favorito de tipo Explorer o de transferencia de archivos, abrir explorador
+    if (['explorer', 'sftp', 'ftp', 'scp'].includes(conn.type)) {
       const pseudoNode = {
         label: conn.name,
-        data: { host: conn.host, user: conn.username, port: conn.port, type: 'ssh' },
+        data: {
+          host: conn.host,
+          user: conn.username,
+          port: conn.port,
+          type: conn.type === 'explorer' ? 'ssh' : conn.type,
+          protocol: conn.type === 'explorer' ? 'sftp' : conn.type,
+          password: conn.password || '', // Include password if available
+          ...conn // Include other properties
+        },
         key: conn.originalKey
       };
       openFileExplorer(pseudoNode);
@@ -432,15 +440,16 @@ export const useConnectionManagement = ({
     let baseRdp = nodeData;
     if (!node.data) {
       // Para conexiones de favoritos, usar la información guardada directamente
-      const hostValue = node.host || node.hostname || '';
+      const hostValue = node.host || node.hostname || node.server || '';
       baseRdp = {
+        ...node, // Preserve all original properties first
         server: hostValue,
         host: hostValue,
         hostname: hostValue,
-        username: node.username,
-        user: node.username,
+        username: node.username || node.user,
+        user: node.username || node.user,
         password: node.password || '',
-        port: node.port || 3389,
+        port: parseInt(node.port || 3389, 10),
         clientType: node.clientType || 'guacamole',
         type: node.type || 'rdp-guacamole',
         domain: node.domain || '',
@@ -582,6 +591,7 @@ export const useConnectionManagement = ({
       }
 
 
+      // Ensure username is set in rdpConfig, falling back to empty string if undefined
       const rdpConfig = {
         hostname: baseRdp.server || baseRdp.host || baseRdp.hostname,
         username: baseRdp.username || baseRdp.user,
@@ -645,23 +655,23 @@ export const useConnectionManagement = ({
 
     // === LÓGICA EXISTENTE: RDP Nativo (mstsc) ===
     const rdpConfig = {
-      name: node.label,
-      server: node.data.server,
-      username: node.data.username,
-      password: node.data.password,
-      port: node.data.port || 3389,
-      clientType: node.data.clientType || 'guacamole',
-      resolution: node.data.resolution || '1920x1080',
-      colorDepth: node.data.colorDepth || 32,
-      redirectFolders: node.data.redirectFolders === true,
-      redirectClipboard: node.data.redirectClipboard === true,
-      redirectPrinters: node.data.redirectPrinters === true,
-      redirectAudio: node.data.redirectAudio === true,
-      fullscreen: node.data.fullscreen === true,
-      smartSizing: node.data.smartSizing === true,
-      span: node.data.span === true,
-      admin: node.data.admin === true,
-      public: node.data.public === true
+      name: node.label || baseRdp.name,
+      server: baseRdp.server || baseRdp.host || baseRdp.hostname,
+      username: baseRdp.username || baseRdp.user,
+      password: baseRdp.password,
+      port: baseRdp.port || 3389,
+      clientType: baseRdp.clientType || 'guacamole',
+      resolution: baseRdp.resolution || '1920x1080',
+      colorDepth: baseRdp.colorDepth || baseRdp.colors || 32,
+      redirectFolders: baseRdp.redirectFolders === true,
+      redirectClipboard: baseRdp.redirectClipboard === true,
+      redirectPrinters: baseRdp.redirectPrinters === true,
+      redirectAudio: baseRdp.redirectAudio === true,
+      fullscreen: baseRdp.fullscreen === true,
+      smartSizing: baseRdp.smartSizing === true,
+      span: baseRdp.span === true,
+      admin: baseRdp.admin === true,
+      public: baseRdp.public === true
     };
 
     // Verificar si ya existe una pestaña RDP para la misma conexión
@@ -791,13 +801,14 @@ export const useConnectionManagement = ({
     let baseVnc = nodeData;
     if (!node.data) {
       // Para conexiones de favoritos, usar la información guardada directamente
-      const hostValue = node.host || node.hostname || '';
+      const hostValue = node.host || node.hostname || node.server || '';
       baseVnc = {
+        ...node, // Preserve all original properties first
         server: hostValue,
         host: hostValue,
         hostname: hostValue,
         password: node.password || '',
-        port: node.port || 5900,
+        port: parseInt(node.port || 5900, 10),
         clientType: node.clientType || 'guacamole',
         type: node.type || 'vnc-guacamole',
         resolution: node.resolution || '1024x768',
