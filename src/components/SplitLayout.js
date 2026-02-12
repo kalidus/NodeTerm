@@ -400,7 +400,7 @@ const SplitLayout = ({
   if (terminalsArray.length > 0 && terminalsArray.length <= 4 && !isLegacySystem) {
     const terminalCount = terminalsArray.length;
     // Usar el mismo color que el scroll para consistencia visual
-    const visibleLineColor = 'var(--ui-sidebar-border, #3e3e42)';
+    const visibleLineColor = splitterColor || 'var(--ui-sidebar-border, #3e3e42)';
 
     const [verticalSplit, setVerticalSplit] = useState(50); // % para división vertical (T1/T2)
     const [horizontalSplit, setHorizontalSplit] = useState(50); // % para división horizontal (arriba/abajo)
@@ -655,8 +655,8 @@ const SplitLayout = ({
                 height: '8px',
                 flexShrink: 0,
                 position: 'relative',
-                backgroundColor: theme?.background || '#2d2d2d', // Fondo sólido del tema para evitar transparencia
-                backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
+                backgroundColor: 'transparent', // Sin fondo sólido para evitar "doble línea"
+                backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 1px), transparent calc(50% + 1px))`,
                 backgroundRepeat: 'no-repeat',
                 backgroundSize: '100% 100%',
                 backgroundPosition: 'center',
@@ -741,8 +741,8 @@ const SplitLayout = ({
               height: '8px',
               flexShrink: 0,
               position: 'relative',
-              backgroundColor: theme?.background || '#2d2d2d', // Fondo sólido del tema para evitar transparencia
-              backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
+              backgroundColor: 'transparent', // Sin fondo sólido para evitar "doble línea"
+              backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 1px), transparent calc(50% + 1px))`,
               backgroundRepeat: 'no-repeat',
               backgroundSize: '100% 100%',
               backgroundPosition: 'center',
@@ -898,13 +898,12 @@ const SplitLayout = ({
       zIndex: 1000,
       transition: 'filter 0.15s ease',
       userSelect: 'none',
-      backgroundColor: isVertical ? 'transparent' : (theme?.background || '#2d2d2d'), // Fondo sólido para separadores horizontales
+      backgroundColor: 'transparent', // Sin fondo sólido para evitar "doble línea"
       backgroundImage: isVertical
-        ? `linear-gradient(to right, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`
-        : `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
+        ? `linear-gradient(to right, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 1px), transparent calc(50% + 1px))`
+        : `linear-gradient(to bottom, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 1px), transparent calc(50% + 1px))`,
       backgroundRepeat: 'no-repeat',
       backgroundSize: '100% 100%',
-      opacity: isVertical ? 0.6 : 1 // Opacidad completa para separadores horizontales con fondo
     };
 
     const handleMouseDown = (e) => {
@@ -1200,8 +1199,8 @@ const SplitLayout = ({
       }
     }, [isDragging, handleMouseMove, handleMouseUp]);
 
-    // Usar el mismo color que el scroll para consistencia visual
-    const visibleHorizontalColor = 'var(--ui-sidebar-border, #3e3e42)';
+    // Usar el color del prop splitterColor si existe, sino el de la barra lateral
+    const visibleHorizontalColor = splitterColor || 'var(--ui-sidebar-border, #3e3e42)';
 
     // Estilo del handle horizontal (área de 8px con línea central de 2px)
     const horizontalHandleStyle = {
@@ -1265,13 +1264,12 @@ const SplitLayout = ({
                 left: 0,
                 width: '100%',
                 height: '8px', // Área de click más pequeña pero aún fácil de usar
-                backgroundColor: theme?.background || '#2d2d2d', // Fondo sólido del tema para evitar transparencia
+                backgroundColor: 'transparent', // Sin fondo sólido para evitar "doble línea"
                 cursor: 'row-resize',
-                zIndex: 10000, // Muy alto para asegurar que esté por encima
+                zIndex: 10000,
                 userSelect: 'none',
-                pointerEvents: 'auto', // Asegurar que capture eventos
-                // Línea visual sutil en el centro
-                backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleHorizontalColor} calc(50% - 1px), ${visibleHorizontalColor} calc(50% + 1px), transparent calc(50% + 1px))`,
+                pointerEvents: 'auto',
+                backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleHorizontalColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleHorizontalColor}) calc(50% + 1px), transparent calc(50% + 1px))`,
                 backgroundRepeat: 'no-repeat',
                 backgroundSize: '100% 100%',
                 opacity: 1 // Opacidad completa para el fondo

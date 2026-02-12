@@ -1229,7 +1229,7 @@ const MainContentArea = ({
                         navContainer: {
                           ref: tabsContainerRef,
                           style: {
-                            borderBottom: '0.5px solid var(--ui-tabgroup-border, #444)',
+                            borderBottom: 'none',
                             opacity: 1.0
                           }
                         }
