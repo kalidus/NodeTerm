@@ -566,7 +566,15 @@ const ConnectionHistory = ({
 
 	const activeKey = (c) => {
 		if (c.type === 'group') return `group:${c.id}`;
-		return `${c.type}:${c.host || ''}:${c.username || ''}:${c.port || ''}`;
+		// Usar el ID del objeto si lo tiene, o regenerarlo usando buildId para consistencia
+		if (c.id && !c.id.startsWith('group:')) return c.id;
+
+		return helpers.buildId({
+			type: c.type,
+			host: c.host || c.hostname || c.server || '',
+			username: c.username || c.user || '',
+			port: c.port
+		});
 	};
 
 	const handleFilterChange = (key) => {
