@@ -67,44 +67,70 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
   // === Active connections set for Home hub ===
   const getActiveConnectionIds = useCallback((sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs) => {
     const result = new Set();
+
+    // Función recursiva para procesar cualquier nodo de pestaña (terminal, explorer, split, etc.)
+    const processTabNode = (node) => {
+      if (!node) return;
+
+      // 1. Manejar splits (recursivo)
+      if (node.type === 'split') {
+        processTabNode(node.first);
+        processTabNode(node.second);
+        // Compatibilidad con formato antiguo si existe
+        if (node.leftTerminal) processTabNode(node.leftTerminal);
+        if (node.rightTerminal) processTabNode(node.rightTerminal);
+        return;
+      }
+
+      // 2. Manejar terminales y exploradores (SSH, SFTP, FTP, SCP)
+      if (node.type === 'terminal' || node.type === 'ssh' || node.type === 'explorer') {
+        const config = node.sshConfig || node.data || node;
+        if (!config || (!config.host && !config.hostname && !config.server)) return;
+
+        // Determinar protocolo para buildId
+        // Prioridad: protocolo explícito > tipo explorer > ssh por defecto
+        let type = config.protocol;
+        if (!type) {
+          type = node.type === 'explorer' ? 'explorer' : 'ssh';
+        }
+
+        const id = connectionHelpers.buildId({
+          type,
+          host: config.host || config.hostname || config.server,
+          username: config.username || config.user,
+          port: config.port
+        });
+        result.add(id);
+      }
+      // 3. Manejar RDP, VNC y Guacamole genérico
+      else if (node.type === 'rdp-guacamole' || node.type === 'rdp' || node.type === 'vnc-guacamole' || node.type === 'vnc' || node.type === 'guacamole') {
+        const config = node.rdpConfig || node.config || node.data || node;
+        if (!config || (!config.hostname && !config.host && !config.server)) return;
+
+        let type = node.type;
+        // Normalizar tipos a los que usa connectionStore/buildId
+        if (type === 'rdp' || type === 'guacamole') type = 'rdp-guacamole';
+        if (type === 'vnc') type = 'vnc-guacamole';
+
+        const id = connectionHelpers.buildId({
+          type: type,
+          host: config.hostname || config.host || config.server,
+          username: config.username || config.user,
+          port: config.port
+        });
+        result.add(id);
+      }
+    };
+
     try {
-      sshTabs.forEach(tab => {
-        const id = connectionHelpers.buildId({
-          type: 'ssh',
-          host: tab.sshConfig?.host,
-          username: tab.sshConfig?.username,
-          port: tab.sshConfig?.port
-        });
-        result.add(id);
-      });
-      rdpTabs.forEach(tab => {
-        const id = connectionHelpers.buildId({
-          type: 'rdp-guacamole',
-          host: tab.rdpConfig?.hostname,
-          username: tab.rdpConfig?.username,
-          port: tab.rdpConfig?.port
-        });
-        result.add(id);
-      });
-      guacamoleTabs.forEach(tab => {
-        const id = connectionHelpers.buildId({
-          type: 'rdp-guacamole',
-          host: tab.rdpConfig?.hostname,
-          username: tab.rdpConfig?.username,
-          port: tab.rdpConfig?.port
-        });
-        result.add(id);
-      });
-      fileExplorerTabs.forEach(tab => {
-        const id = connectionHelpers.buildId({
-          type: 'explorer',
-          host: tab.sshConfig?.host,
-          username: tab.sshConfig?.username,
-          port: tab.sshConfig?.port
-        });
-        result.add(id);
-      });
-    } catch (_) { }
+      if (Array.isArray(sshTabs)) sshTabs.forEach(processTabNode);
+      if (Array.isArray(rdpTabs)) rdpTabs.forEach(processTabNode);
+      if (Array.isArray(guacamoleTabs)) guacamoleTabs.forEach(processTabNode);
+      if (Array.isArray(fileExplorerTabs)) fileExplorerTabs.forEach(processTabNode);
+    } catch (e) {
+      console.error('[getActiveConnectionIds] Error:', e);
+    }
+
     return result;
   }, []);
 
