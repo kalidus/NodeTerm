@@ -1961,7 +1961,7 @@ const App = () => {
       const hasChildren = !!(nodeInfo.node && Array.isArray(nodeInfo.node.children) && nodeInfo.node.children.length);
       confirmDeleteNode(nodeKey, nodeLabel, hasChildren, nodes, setNodes);
     };
-  }, [sidebarCallbacksRef.current, openEditFileConnectionDialog, onOpenSSHTunnel, openEditSSHTunnelDialog, duplicateSSHTunnel]);
+  }, [nodes, setNodes, findParentNodeAndIndex, confirmDeleteNode, sidebarCallbacksRef, openEditFileConnectionDialog, onOpenSSHTunnel, openEditSSHTunnelDialog, duplicateSSHTunnel]);
 
   // Listener para evento personalizado de guardar conexión de archivos (fallback)
   useEffect(() => {
