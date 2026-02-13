@@ -1,25 +1,25 @@
-/* Modern Connection Details Panel */
+/* Modern Professional Connection Details Panel */
 .connection-details-panel {
   background-color: var(--ui-sidebar-bg) !important;
   border-top: 1px solid var(--ui-sidebar-border) !important;
   width: 100%;
   max-height: 500px;
-  min-height: 40px;
+  min-height: 32px;
+  /* Reducido de 40px */
   display: flex;
   flex-direction: column;
-  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: max-height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   overflow: hidden;
   position: relative;
   z-index: 10;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
   /* Container query setup */
   container-type: inline-size;
   container-name: details-panel;
 }
 
 .connection-details-panel.collapsed {
-  max-height: 40px !important;
-  height: 40px !important;
+  max-height: 32px !important;
+  height: 32px !important;
   overflow: hidden;
 }
 
@@ -34,7 +34,8 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 6px;
+  height: 4px;
+  /* Más sutil */
   cursor: row-resize;
   z-index: 20;
   background: transparent;
@@ -47,16 +48,15 @@
   opacity: 0.5;
 }
 
-/* Header */
+/* Header Compacto */
 .details-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
-  min-height: 40px;
-  height: 40px;
+  padding: 0 8px 0 12px;
+  min-height: 32px;
+  height: 32px;
   background-color: var(--ui-sidebar-bg);
-  /* Match sidebar background */
   border-bottom: 1px solid var(--ui-sidebar-border);
   cursor: pointer;
   user-select: none;
@@ -69,50 +69,51 @@
 .details-title {
   display: flex;
   align-items: center;
-  font-size: 13px;
+  font-size: 11px;
+  /* Más pequeño */
   font-weight: 600;
   color: var(--ui-sidebar-text);
   gap: 8px;
+  letter-spacing: 0.3px;
 }
 
-/* Minimize/Collapse Button - Specific Styling */
+/* Toggle Button Style */
 .panel-toggle-button {
-  width: 24px !important;
-  height: 24px !important;
-  min-width: 24px !important;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
   padding: 0 !important;
   background: transparent !important;
   border: none !important;
   color: var(--ui-sidebar-text) !important;
-  opacity: 0.6;
+  opacity: 0.5;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  border-radius: 4px !important;
-  transition: background-color 0.2s, opacity 0.2s !important;
+  border-radius: 3px !important;
 }
 
 .panel-toggle-button:hover {
-  background-color: var(--ui-sidebar-hover) !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
   opacity: 1;
 }
 
 .panel-toggle-button .pi {
-  font-size: 12px !important;
+  font-size: 10px !important;
 }
 
 /* Content Area */
 .details-content {
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 12px;
+  padding: 8px 10px;
   flex: 1;
   background-color: var(--ui-sidebar-bg);
 }
 
-/* Scrollbar styling */
+/* Fine Scrollbar */
 .details-content::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .details-content::-webkit-scrollbar-track {
@@ -121,44 +122,56 @@
 
 .details-content::-webkit-scrollbar-thumb {
   background-color: var(--ui-sidebar-border);
-  border-radius: 3px;
+  border-radius: 2px;
 }
 
 .details-content::-webkit-scrollbar-thumb:hover {
   background-color: var(--ui-primary-color);
 }
 
-/* Sections */
+/* Pro Section Titles */
 .details-section {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   animation: fadeIn 0.3s ease-out;
 }
 
 .section-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--ui-sidebar-text);
-  opacity: 0.5;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  margin-bottom: 8px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--ui-sidebar-border);
   display: flex;
   align-items: center;
-  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ui-primary-color, #64b5f6);
+  /* Color de acento */
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 8px 0 6px 0;
+  padding: 0;
+  border: none;
+  opacity: 0.9;
 }
 
-/* Grid Layout for Rows */
+/* Línea decorativa después del título */
+.section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--ui-sidebar-border);
+  margin-left: 8px;
+  opacity: 0.4;
+}
+
+/* Compact Grid Layout */
 .detail-row {
   display: grid;
-  grid-template-columns: minmax(100px, 30%) 1fr;
-  gap: 12px;
+  grid-template-columns: minmax(80px, 28%) 1fr;
+  gap: 8px;
   align-items: center;
-  padding: 6px 8px;
-  border-radius: 6px;
-  transition: background-color 0.2s;
-  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+  font-size: 11.5px;
+  /* Fuente más pequeña y técnica */
+  min-height: 22px;
 }
 
 .detail-row:hover {
@@ -168,11 +181,12 @@
 .detail-label {
   font-weight: 500;
   color: var(--ui-sidebar-text);
-  opacity: 0.7;
+  opacity: 0.6;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   user-select: none;
+  font-size: 11px;
 }
 
 .detail-value {
@@ -181,13 +195,13 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 24px;
+  min-height: 22px;
 }
 
-/* Editable specific styling */
+/* Editable specific styling - Ultra compacto */
 .editable-value {
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 1px 4px;
+  border-radius: 3px;
   border: 1px solid transparent;
   transition: all 0.2s;
   cursor: text;
@@ -195,53 +209,53 @@
 
 .detail-row:hover .editable-value {
   border-color: var(--ui-sidebar-border);
-  background-color: rgba(0, 0, 0, 0.05);
-  /* Very subtle background on hover */
+  background-color: rgba(0, 0, 0, 0.03);
 }
 
 [data-theme="dark"] .detail-row:hover .editable-value {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 .editable-input {
   width: 100%;
-  font-size: 13px !important;
-  padding: 4px 8px !important;
+  font-size: 11.5px !important;
+  padding: 2px 6px !important;
   background-color: var(--ui-bg) !important;
-  /* Slightly distinct from sidebar bg */
   border: 1px solid var(--ui-primary-color) !important;
   color: var(--ui-text) !important;
-  border-radius: 4px !important;
-  height: 28px !important;
+  border-radius: 3px !important;
+  height: 22px !important;
+  line-height: 1 !important;
 }
 
 .editable-input:focus {
-  box-shadow: 0 0 0 2px rgba(var(--ui-primary-color-rgb), 0.2) !important;
+  box-shadow: 0 0 0 1px rgba(var(--ui-primary-color-rgb), 0.2) !important;
 }
 
 /* Notes specific */
 .detail-value.notes-value {
   grid-column: 1 / -1;
-  /* Full width */
   margin-top: 4px;
-  padding: 8px;
-  background-color: rgba(0, 0, 0, 0.2);
-  border-radius: 6px;
-  max-height: 100px;
+  padding: 6px;
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  max-height: 80px;
   overflow-y: auto;
-  font-family: monospace;
-  font-size: 12px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  border-left: 2px solid var(--ui-sidebar-border);
 }
 
 [data-theme="light"] .detail-value.notes-value {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(0, 0, 0, 0.04);
 }
 
 /* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(2px);
   }
 
   to {
@@ -251,26 +265,23 @@
 }
 
 /* Responsive (Container Queries) */
-@container details-panel (max-width: 250px) {
+@container details-panel (max-width: 200px) {
   .detail-row {
     grid-template-columns: 1fr;
-    /* Stack vertically */
-    gap: 4px;
+    gap: 2px;
     align-items: flex-start;
+    padding: 4px 6px;
   }
 
   .detail-label {
-    font-size: 11px;
-    opacity: 0.6;
+    font-size: 10px;
+    opacity: 0.5;
     margin-bottom: 0;
   }
 
   .detail-value {
-    padding-left: 2px;
-    font-size: 13px;
-  }
-
-  .editable-input {
-    font-size: 13px !important;
+    padding-left: 0;
+    font-size: 11.5px;
+    min-height: 18px;
   }
 }
