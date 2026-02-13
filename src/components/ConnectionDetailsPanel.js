@@ -6,15 +6,15 @@ import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/connection-details-panel.css';
 
 // Componente para campos editables
-const EditableField = ({ 
-  label, 
-  value, 
-  onEdit, 
-  isEditing, 
-  editValue, 
-  onValueChange, 
-  onSave, 
-  onCancel, 
+const EditableField = ({
+  label,
+  value,
+  onEdit,
+  isEditing,
+  editValue,
+  onValueChange,
+  onSave,
+  onCancel,
   onKeyDown,
   fieldKey,
   inputRefs,
@@ -73,10 +73,10 @@ const EditableField = ({
       <div className="detail-value editable-value" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
         <span style={{ flex: 1 }}>{value || <span style={{ opacity: 0.5 }}>Click para editar</span>}</span>
         {onCopy && copyValue && (
-          <i 
-            className="pi pi-copy" 
-            style={{ 
-              fontSize: '10px', 
+          <i
+            className="pi pi-copy"
+            style={{
+              fontSize: '10px',
               opacity: 0.5,
               cursor: 'pointer',
               padding: '2px',
@@ -94,11 +94,13 @@ const EditableField = ({
   );
 };
 
-const ConnectionDetailsPanel = ({ 
-  selectedNode, 
+const ConnectionDetailsPanel = ({
+  selectedNode,
   uiTheme = 'Light',
   sessionActionIconTheme = 'modern',
-  onNodeUpdate = null // Función para actualizar el nodo
+  onNodeUpdate = null, // Función para actualizar el nodo
+  onOpenSSHConnection,
+  onOpenVncConnection
 }) => {
   // TODOS LOS HOOKS DEBEN IR AL PRINCIPIO, ANTES DE CUALQUIER RETORNO CONDICIONAL
   const { t } = useTranslation('common');
@@ -128,7 +130,7 @@ const ConnectionDetailsPanel = ({
 
   const handleResizeMove = useCallback((e) => {
     if (!isResizing) return;
-    
+
     const delta = resizeStartY.current - e.clientY; // Invertido porque arrastramos hacia arriba
     const newHeight = Math.max(150, Math.min(500, resizeStartHeight.current + delta));
     setPanelHeight(newHeight);
@@ -149,7 +151,7 @@ const ConnectionDetailsPanel = ({
     if (isResizing) {
       document.addEventListener('mousemove', handleResizeMove);
       document.addEventListener('mouseup', handleResizeEnd);
-      
+
       return () => {
         document.removeEventListener('mousemove', handleResizeMove);
         document.removeEventListener('mouseup', handleResizeEnd);
@@ -183,7 +185,7 @@ const ConnectionDetailsPanel = ({
 
     const { section, field } = editingField;
     const updatedNode = { ...selectedNode };
-    
+
     // Mapear campos a la estructura del nodo
     if (section === 'display' && field === 'name') {
       updatedNode.label = editValue;
@@ -251,7 +253,7 @@ const ConnectionDetailsPanel = ({
   // Función para copiar al portapapeles
   const copyToClipboard = useCallback(async (text, fieldName) => {
     if (!text) return;
-    
+
     try {
       if (window.electron && window.electron.clipboard) {
         // Electron
@@ -270,7 +272,7 @@ const ConnectionDetailsPanel = ({
         document.execCommand('copy');
         document.body.removeChild(textArea);
       }
-      
+
       // Mostrar notificación (si hay un sistema de toast disponible)
       if (window.toast?.current?.show) {
         window.toast.current.show({
@@ -293,6 +295,39 @@ const ConnectionDetailsPanel = ({
     }
   }, []);
 
+  // DEFINICIONES DE VARIABLES (Movidas antes de los retornos condicionales)
+  const data = selectedNode?.data;
+  const label = selectedNode?.label;
+  const isFolder = selectedNode?.droppable;
+  const isSSH = data && data.type === 'ssh';
+  const isRDP = data && (data.type === 'rdp' || data.type === 'rdp-guacamole');
+  const isVNC = data && (data.type === 'vnc' || data.type === 'vnc-guacamole');
+  const isPassword = data && data.type === 'password';
+
+  // Handler for connecting (Movido antes de los retornos condicionales)
+  const handleConnect = useCallback((e) => {
+    e.stopPropagation();
+    if (!selectedNode || !selectedNode.data) return;
+
+    if (isSSH && onOpenSSHConnection) {
+      onOpenSSHConnection(selectedNode);
+    } else if (isVNC && onOpenVncConnection) {
+      onOpenVncConnection(selectedNode);
+    } else if (isRDP) {
+      // Dispatch event for RDP as Sidebar does
+      const newTab = {
+        key: selectedNode.key,
+        title: selectedNode.label || selectedNode.data.host || 'RDP Session',
+        type: 'rdp',
+        data: selectedNode.data,
+        id: selectedNode.key // Ensure ID is passed
+      };
+      window.dispatchEvent(new CustomEvent('create-rdp-tab', {
+        detail: { tab: newTab }
+      }));
+    }
+  }, [selectedNode, isSSH, isVNC, isRDP, onOpenSSHConnection, onOpenVncConnection]);
+
   // AHORA SÍ PODEMOS HACER RETORNOS CONDICIONALES
   if (!selectedNode) {
     return null;
@@ -303,52 +338,35 @@ const ConnectionDetailsPanel = ({
     return null;
   }
 
-  const { data, label } = selectedNode;
-  const isFolder = selectedNode.droppable;
-  const isSSH = data && data.type === 'ssh';
-  const isRDP = data && (data.type === 'rdp' || data.type === 'rdp-guacamole');
-  const isVNC = data && (data.type === 'vnc' || data.type === 'vnc-guacamole');
-  const isPassword = data && data.type === 'password';
-
   // Si es una carpeta, mostrar información básica
   if (isFolder) {
     return (
-      <div 
+      <div
         ref={panelRef}
         className={`connection-details-panel ${collapsed ? 'collapsed' : ''} ${isResizing ? 'resizing' : ''}`}
         style={!collapsed ? { height: `${panelHeight}px`, maxHeight: `${panelHeight}px` } : {}}
       >
         {!collapsed && (
-          <div 
+          <div
             className="panel-resizer"
             onMouseDown={handleResizeStart}
           />
         )}
-        <div className="details-header">
-        <div className="details-title">
-          <i className="pi pi-folder" style={{ marginRight: '6px', fontSize: '12px', color: selectedNode.color || '#ffa726' }}></i>
-          <span>{label}</span>
-        </div>
+        <div className="details-header" onClick={() => setCollapsed(!collapsed)}>
+          <div className="details-title">
+            <i className="pi pi-folder" style={{ fontSize: '14px', color: selectedNode.color || 'var(--ui-folder-color, #ffa726)' }}></i>
+            <span>{label}</span>
+          </div>
           <Button
             icon={collapsed ? "pi pi-chevron-up" : "pi pi-chevron-down"}
             className="p-button-text p-button-sm"
-            onClick={() => setCollapsed(!collapsed)}
-            style={{ 
-              minWidth: '20px', 
-              width: '20px',
-              height: '20px',
-              padding: 0,
-              fontSize: '10px'
-            }}
+            onClick={(e) => { e.stopPropagation(); setCollapsed(!collapsed); }}
           />
         </div>
         {!collapsed && (
           <div className="details-content">
             <div className="details-section">
-              <div className="section-title">
-                <i className="pi pi-palette" style={{ marginRight: '6px' }}></i>
-                Display
-              </div>
+              <div className="section-title">Display</div>
               <div className="detail-row">
                 <div className="detail-label">Name</div>
                 <div className="detail-value">{label}</div>
@@ -356,9 +374,9 @@ const ConnectionDetailsPanel = ({
               <div className="detail-row">
                 <div className="detail-label">Icon</div>
                 <div className="detail-value">
-                  {selectedNode.icon ? 
-                    <span style={{ fontSize: '16px' }}>{selectedNode.icon.emoji}</span> : 
-                    'Carpeta'
+                  {selectedNode.icon ?
+                    <span style={{ fontSize: '16px' }}>{selectedNode.icon.emoji}</span> :
+                    'Folder'
                   }
                 </div>
               </div>
@@ -366,8 +384,8 @@ const ConnectionDetailsPanel = ({
                 <div className="detail-row">
                   <div className="detail-label">Color</div>
                   <div className="detail-value">
-                    <span 
-                      className="color-indicator" 
+                    <span
+                      className="color-indicator"
                       style={{ backgroundColor: selectedNode.color }}
                     ></span>
                     {selectedNode.color}
@@ -384,42 +402,32 @@ const ConnectionDetailsPanel = ({
   // Si es un password, mostrar información del password manager
   if (isPassword) {
     return (
-      <div 
+      <div
         ref={panelRef}
         className={`connection-details-panel ${collapsed ? 'collapsed' : ''} ${isResizing ? 'resizing' : ''}`}
         style={!collapsed ? { height: `${panelHeight}px`, maxHeight: `${panelHeight}px` } : {}}
       >
         {!collapsed && (
-          <div 
+          <div
             className="panel-resizer"
             onMouseDown={handleResizeStart}
           />
         )}
-        <div className="details-header">
-        <div className="details-title">
-          <i className="pi pi-key" style={{ marginRight: '6px', fontSize: '12px', color: '#ffc107' }}></i>
-          <span>{label}</span>
-        </div>
+        <div className="details-header" onClick={() => setCollapsed(!collapsed)}>
+          <div className="details-title">
+            <i className="pi pi-key" style={{ fontSize: '14px', color: '#ffc107' }}></i>
+            <span>{label}</span>
+          </div>
           <Button
             icon={collapsed ? "pi pi-chevron-up" : "pi pi-chevron-down"}
             className="p-button-text p-button-sm"
-            onClick={() => setCollapsed(!collapsed)}
-            style={{ 
-              minWidth: '20px', 
-              width: '20px',
-              height: '20px',
-              padding: 0,
-              fontSize: '10px'
-            }}
+            onClick={(e) => { e.stopPropagation(); setCollapsed(!collapsed); }}
           />
         </div>
         {!collapsed && (
           <div className="details-content">
             <div className="details-section">
-              <div className="section-title">
-                <i className="pi pi-palette" style={{ marginRight: '6px' }}></i>
-                Display
-              </div>
+              <div className="section-title">Display</div>
               <div className="detail-row">
                 <div className="detail-label">Name</div>
                 <div className="detail-value">{label}</div>
@@ -451,25 +459,24 @@ const ConnectionDetailsPanel = ({
 
   // Para conexiones SSH, RDP, VNC
   return (
-    <div 
+    <div
       ref={panelRef}
       className={`connection-details-panel ${collapsed ? 'collapsed' : ''} ${isResizing ? 'resizing' : ''}`}
       style={!collapsed ? { height: `${panelHeight}px`, maxHeight: `${panelHeight}px` } : {}}
     >
       {!collapsed && (
-        <div 
+        <div
           className="panel-resizer"
           onMouseDown={handleResizeStart}
         />
       )}
-      <div className="details-header">
+      <div className="details-header" onClick={() => setCollapsed(!collapsed)}>
         <div className="details-title">
-          <i 
-            className={`pi ${isSSH ? 'pi-desktop' : isRDP ? 'pi-window-maximize' : 'pi-eye'}`} 
-            style={{ 
-              marginRight: '6px',
-              fontSize: '12px',
-              color: isSSH ? '#4caf50' : isRDP ? '#2196f3' : '#ff9800' 
+          <i
+            className={`pi ${isSSH ? 'pi-desktop' : isRDP ? 'pi-window-maximize' : 'pi-eye'}`}
+            style={{
+              fontSize: '14px',
+              color: isSSH ? '#4caf50' : isRDP ? '#2196f3' : '#ff9800'
             }}
           ></i>
           <span>{label}</span>
@@ -477,25 +484,24 @@ const ConnectionDetailsPanel = ({
         <Button
           icon={collapsed ? "pi pi-chevron-up" : "pi pi-chevron-down"}
           className="p-button-text p-button-sm"
-          onClick={() => setCollapsed(!collapsed)}
-          style={{ 
-            minWidth: '20px', 
-            width: '20px',
-            height: '20px',
-            padding: 0,
-            fontSize: '10px'
-          }}
+          onClick={(e) => { e.stopPropagation(); setCollapsed(!collapsed); }}
         />
       </div>
-      
+
       {!collapsed && (
         <div className="details-content">
+          <div className="connect-button-container">
+            <Button
+              label="Quick Connect"
+              icon="pi pi-play"
+              className="p-button-outlined p-button-sm connect-button"
+              onClick={handleConnect}
+            />
+          </div>
+
           {/* Sección Display */}
           <div className="details-section">
-            <div className="section-title">
-              <i className="pi pi-palette" style={{ marginRight: '6px' }}></i>
-              Display
-            </div>
+            <div className="section-title">Display</div>
             <EditableField
               label="Name"
               value={label}
@@ -526,10 +532,7 @@ const ConnectionDetailsPanel = ({
 
           {/* Sección Connection */}
           <div className="details-section">
-            <div className="section-title">
-              <i className="pi pi-link" style={{ marginRight: '6px' }}></i>
-              Connection
-            </div>
+            <div className="section-title">Connection</div>
             <EditableField
               label="Hostname/IP"
               value={data?.useBastionWallix ? data?.targetServer : (data?.host || data?.hostname || data?.server || '')}
@@ -595,10 +598,7 @@ const ConnectionDetailsPanel = ({
 
           {/* Sección Protocol */}
           <div className="details-section">
-            <div className="section-title">
-              <i className="pi pi-cog" style={{ marginRight: '6px' }}></i>
-              Protocol
-            </div>
+            <div className="section-title">Protocol</div>
             <div className="detail-row">
               <div className="detail-label">Protocol</div>
               <div className="detail-value">
@@ -618,7 +618,7 @@ const ConnectionDetailsPanel = ({
               fieldKey="protocol-port"
               inputRefs={inputRefs}
             />
-            
+
             {isRDP && (
               <>
                 <div className="detail-row">
@@ -638,10 +638,7 @@ const ConnectionDetailsPanel = ({
           {/* Sección RDP - Resolution */}
           {isRDP && (
             <div className="details-section">
-              <div className="section-title">
-                <i className="pi pi-desktop" style={{ marginRight: '6px' }}></i>
-                RDP
-              </div>
+              <div className="section-title">RDP Settings</div>
               <div className="detail-row">
                 <div className="detail-label">Resolution</div>
                 <div className="detail-value">{data?.resolution || '1024x768'}</div>
@@ -664,10 +661,7 @@ const ConnectionDetailsPanel = ({
           {/* Sección SSH - Bastion Wallix */}
           {isSSH && data?.useBastionWallix && (
             <div className="details-section">
-              <div className="section-title">
-                <i className="pi pi-shield" style={{ marginRight: '6px' }}></i>
-                Bastion Wallix
-              </div>
+              <div className="section-title">Bastion Wallix</div>
               <div className="detail-row">
                 <div className="detail-label">Use Bastion</div>
                 <div className="detail-value">Yes</div>
@@ -690,10 +684,7 @@ const ConnectionDetailsPanel = ({
           {/* Sección SSH - Folders */}
           {isSSH && (
             <div className="details-section">
-              <div className="section-title">
-                <i className="pi pi-folder-open" style={{ marginRight: '6px' }}></i>
-                Folders
-              </div>
+              <div className="section-title">Folders</div>
               <EditableField
                 label="Remote Folder"
                 value={data?.remoteFolder || ''}
@@ -726,10 +717,7 @@ const ConnectionDetailsPanel = ({
           {/* Sección VNC */}
           {isVNC && (
             <div className="details-section">
-              <div className="section-title">
-                <i className="pi pi-eye" style={{ marginRight: '6px' }}></i>
-                VNC
-              </div>
+              <div className="section-title">VNC Settings</div>
               <div className="detail-row">
                 <div className="detail-label">Color Depth</div>
                 <div className="detail-value">{data?.vncColorDepth || 'Default'}</div>
