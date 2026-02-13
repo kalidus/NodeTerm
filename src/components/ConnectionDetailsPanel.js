@@ -359,7 +359,7 @@ const ConnectionDetailsPanel = ({
           </div>
           <Button
             icon={collapsed ? "pi pi-chevron-up" : "pi pi-chevron-down"}
-            className="p-button-text p-button-sm"
+            className="p-button-text p-button-sm panel-toggle-button"
             onClick={(e) => { e.stopPropagation(); setCollapsed(!collapsed); }}
           />
         </div>
@@ -420,7 +420,7 @@ const ConnectionDetailsPanel = ({
           </div>
           <Button
             icon={collapsed ? "pi pi-chevron-up" : "pi pi-chevron-down"}
-            className="p-button-text p-button-sm"
+            className="p-button-text p-button-sm panel-toggle-button"
             onClick={(e) => { e.stopPropagation(); setCollapsed(!collapsed); }}
           />
         </div>
@@ -483,22 +483,13 @@ const ConnectionDetailsPanel = ({
         </div>
         <Button
           icon={collapsed ? "pi pi-chevron-up" : "pi pi-chevron-down"}
-          className="p-button-text p-button-sm"
+          className="p-button-text p-button-sm panel-toggle-button"
           onClick={(e) => { e.stopPropagation(); setCollapsed(!collapsed); }}
         />
       </div>
 
       {!collapsed && (
         <div className="details-content">
-          <div className="connect-button-container">
-            <Button
-              label="Quick Connect"
-              icon="pi pi-play"
-              className="p-button-outlined p-button-sm connect-button"
-              onClick={handleConnect}
-            />
-          </div>
-
           {/* Sección Display */}
           <div className="details-section">
             <div className="section-title">Display</div>
