@@ -2785,6 +2785,8 @@ const Sidebar = React.memo(({
                 uiTheme={uiTheme}
                 sessionActionIconTheme={sessionActionIconTheme}
                 onNodeUpdate={updateNodeInTree}
+                onOpenSSHConnection={onOpenSSHConnection}
+                onOpenVncConnection={onOpenVncConnection}
               />
 
               <SidebarFooter
