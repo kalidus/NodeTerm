@@ -566,8 +566,8 @@ const ConnectionDetailsPanel = ({
             />
             <EditableField
               label="Description"
-              value={data?.description || 'mRemoteNG'}
-              onEdit={() => startEdit('display', 'description', data?.description || 'mRemoteNG')}
+              value={data?.description || ''}
+              onEdit={() => startEdit('display', 'description', data?.description || '')}
               isEditing={editingField?.section === 'display' && editingField?.field === 'description'}
               editValue={editValue}
               onValueChange={setEditValue}
