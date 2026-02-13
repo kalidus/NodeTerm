@@ -125,6 +125,7 @@ class LocalStorageSyncService {
     constructor() {
         this._initialized = false;
         this._debounceTimer = null;
+        this._lastSyncDataStr = null;
     }
 
     /**
@@ -147,6 +148,14 @@ class LocalStorageSyncService {
                 console.log('[LocalStorageSync] Cargando datos desde archivo compartido...');
                 this._importToLocalStorage(sharedData);
                 console.log('[LocalStorageSync] Datos cargados correctamente');
+
+                // Inicializar el estado de sincronización con los datos cargados
+                const initialSyncData = {};
+                for (const key of SYNC_KEYS) {
+                    const value = localStorage.getItem(key);
+                    if (value !== null) initialSyncData[key] = value;
+                }
+                this._lastSyncDataStr = JSON.stringify(initialSyncData);
             } else {
                 console.log('[LocalStorageSync] No hay datos compartidos.');
 
@@ -167,7 +176,7 @@ class LocalStorageSyncService {
             // 🔄 Auto-sync cuando la ventana pierde el foco (para que otras instancias vean cambios)
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'hidden') {
-                    console.log('[LocalStorageSync] Ventana oculta, sincronizando datos...');
+                    // console.log('[LocalStorageSync] Ventana oculta, sincronizando datos...');
                     this.syncToFile();
                 }
             });
@@ -211,10 +220,8 @@ class LocalStorageSyncService {
      */
     async syncToFile() {
         try {
-            console.log('[LocalStorageSync] Iniciando syncToFile...');
-
             if (!window.electron?.appdata) {
-                console.warn('[LocalStorageSync] API appdata no disponible');
+                // console.warn('[LocalStorageSync] API appdata no disponible');
                 return;
             }
 
@@ -228,15 +235,24 @@ class LocalStorageSyncService {
                 }
             }
 
-            console.log(`[LocalStorageSync] Encontradas ${count} claves para sincronizar`);
-
             if (count === 0) {
-                console.log('[LocalStorageSync] No hay datos que sincronizar (localStorage vacío)');
+                // console.log('[LocalStorageSync] No hay datos que sincronizar (localStorage vacío)');
                 return;
             }
 
+            // --- DETECCIÓN DE CAMBIOS ---
+            const currentDataStr = JSON.stringify(data);
+            if (this._lastSyncDataStr === currentDataStr) {
+                console.log('[LocalStorageSync] Sin cambios detectados. Saltando sincronización.');
+                return;
+            }
+
+            console.log('[LocalStorageSync] 🔄 Cambios detectados. Iniciando syncToFile...');
+            console.log(`[LocalStorageSync] Encontradas ${count} claves para sincronizar`);
+
             const result = await window.electron.appdata.saveAll(data);
             if (result.success) {
+                this._lastSyncDataStr = currentDataStr;
                 console.log('[LocalStorageSync] ✅ Datos sincronizados a archivo compartido');
             } else {
                 console.error('[LocalStorageSync] ❌ Error guardando:', result.error);
