@@ -2783,6 +2783,7 @@ const Sidebar = React.memo(({
               <ConnectionDetailsPanel
                 selectedNode={selectedNodeForDetails}
                 uiTheme={uiTheme}
+                iconTheme={iconTheme}
                 sessionActionIconTheme={sessionActionIconTheme}
                 onNodeUpdate={updateNodeInTree}
                 onOpenSSHConnection={onOpenSSHConnection}

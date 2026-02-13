@@ -4,6 +4,7 @@ import { InputText } from 'primereact/inputtext';
 import { Password } from 'primereact/password';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/connection-details-panel.css';
+import { SSHIconPresets, FolderIconPresets, SSHIconRenderer, FolderIconRenderer, iconThemes } from '../themes/icon-themes';
 
 // Componente para campos editables
 const EditableField = ({
@@ -97,6 +98,7 @@ const EditableField = ({
 const ConnectionDetailsPanel = ({
   selectedNode,
   uiTheme = 'Light',
+  iconTheme = 'modern',
   sessionActionIconTheme = 'modern',
   onNodeUpdate = null, // Función para actualizar el nodo
   onOpenSSHConnection,
@@ -472,20 +474,76 @@ const ConnectionDetailsPanel = ({
       )}
       <div className="details-header" onClick={() => setCollapsed(!collapsed)}>
         <div className="details-title">
-          <i
-            className={`pi ${isSSH ? 'pi-desktop' : isRDP ? 'pi-window-maximize' : 'pi-eye'}`}
-            style={{
-              fontSize: '14px',
-              color: isSSH ? '#4caf50' : isRDP ? '#2196f3' : '#ff9800'
-            }}
-          ></i>
+          {(() => {
+            const themeIcons = (iconThemes[iconTheme] || iconThemes['nord'])?.icons || iconThemes['nord'].icons;
+            const iconSize = 14;
+
+            if (selectedNode.icon && selectedNode.icon.emoji) {
+              return <span style={{ fontSize: `${iconSize}px`, lineHeight: '1' }}>{selectedNode.icon.emoji}</span>;
+            }
+
+            if (data?.customIcon && data.customIcon !== 'default' && SSHIconPresets && SSHIconPresets[data.customIcon.toUpperCase()]) {
+              const preset = SSHIconPresets[data.customIcon.toUpperCase()];
+              return <SSHIconRenderer preset={preset} pixelSize={iconSize} />;
+            }
+
+            if (isFolder && selectedNode.folderIcon && selectedNode.folderIcon !== 'general' && FolderIconPresets && FolderIconPresets[selectedNode.folderIcon.toUpperCase()]) {
+              const preset = FolderIconPresets[selectedNode.folderIcon.toUpperCase()];
+              return <FolderIconRenderer preset={preset} pixelSize={iconSize} />;
+            }
+
+            if (isSSH) {
+              const sshIcon = themeIcons.ssh;
+              if (sshIcon) {
+                return React.cloneElement(sshIcon, { width: iconSize, height: iconSize, style: { width: `${iconSize}px`, height: `${iconSize}px` } });
+              }
+              return <i className="pi pi-desktop" style={{ fontSize: `${iconSize}px`, color: '#4caf50' }}></i>;
+            } else if (isRDP) {
+              const rdpIcon = themeIcons.rdp;
+              if (rdpIcon) {
+                return React.cloneElement(rdpIcon, { width: iconSize, height: iconSize, style: { width: `${iconSize}px`, height: `${iconSize}px` } });
+              }
+              return <i className="pi pi-window-maximize" style={{ fontSize: `${iconSize}px`, color: '#2196f3' }}></i>;
+            } else if (isVNC) {
+              const vncIcon = themeIcons.vnc || themeIcons.rdp;
+              if (vncIcon) {
+                return React.cloneElement(vncIcon, { width: iconSize, height: iconSize, style: { width: `${iconSize}px`, height: `${iconSize}px` } });
+              }
+              return <i className="pi pi-eye" style={{ fontSize: `${iconSize}px`, color: '#ff9800' }}></i>;
+            } else if (isFolder) {
+              const folderIcon = themeIcons.folder;
+              const folderColor = selectedNode.color || 'var(--ui-folder-color, #ffa726)';
+              if (folderIcon) {
+                return React.cloneElement(folderIcon, {
+                  width: iconSize,
+                  height: iconSize,
+                  style: { width: `${iconSize}px`, height: `${iconSize}px`, color: folderColor, fill: folderColor, '--icon-color': folderColor }
+                });
+              }
+              return <i className="pi pi-folder" style={{ fontSize: `${iconSize}px`, color: folderColor }}></i>;
+            } else if (isPassword) {
+              return <i className="pi pi-key" style={{ fontSize: `${iconSize}px`, color: '#ffc107' }}></i>;
+            }
+
+            return <i className={`pi ${selectedNode.icon && typeof selectedNode.icon === 'string' ? selectedNode.icon : 'pi-file'}`} style={{ fontSize: `${iconSize}px` }}></i>;
+          })()}
           <span>{label}</span>
         </div>
-        <Button
-          icon={collapsed ? "pi pi-chevron-up" : "pi pi-chevron-down"}
-          className="p-button-text p-button-sm panel-toggle-button"
-          onClick={(e) => { e.stopPropagation(); setCollapsed(!collapsed); }}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+          <Button
+            icon="pi pi-play"
+            className="p-button-text p-button-sm panel-toggle-button"
+            onClick={handleConnect}
+            tooltip="Connect"
+            tooltipOptions={{ showDelay: 500, position: 'bottom' }}
+            style={{ color: 'var(--ui-primary-color, #4caf50)', opacity: 0.8 }}
+          />
+          <Button
+            icon={collapsed ? "pi pi-chevron-up" : "pi pi-chevron-down"}
+            className="p-button-text p-button-sm panel-toggle-button"
+            onClick={(e) => { e.stopPropagation(); setCollapsed(!collapsed); }}
+          />
+        </div>
       </div>
 
       {!collapsed && (
