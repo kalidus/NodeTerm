@@ -4,7 +4,9 @@ import { InputText } from 'primereact/inputtext';
 import { Password } from 'primereact/password';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/connection-details-panel.css';
-import { SSHIconPresets, FolderIconPresets, SSHIconRenderer, FolderIconRenderer, iconThemes } from '../themes/icon-themes';
+import { iconThemes } from '../themes/icon-themes';
+import { FolderIconPresets, FolderIconRenderer } from './FolderIconSelector';
+import { SSHIconPresets, SSHIconRenderer } from './SSHIconSelector';
 
 // Componente para campos editables
 const EditableField = ({
