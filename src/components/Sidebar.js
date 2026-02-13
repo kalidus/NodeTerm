@@ -1143,17 +1143,6 @@ const Sidebar = React.memo(({
           setParentNodeKey(parentKey);
           setShowFolderDialog(true);
         },
-        editRDP: (node) => {
-          // Esta función debe ser pasada desde App.js
-          if (window.editRDP) {
-            window.editRDP(node);
-          }
-        },
-
-        editSSH: (node) => {
-          // Llamar a la función de edición SSH que viene como prop
-          openEditSSHDialog(node);
-        },
 
         duplicateSSH: (node) => {
           // Duplicar conexión SSH
