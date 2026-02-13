@@ -1927,6 +1927,9 @@ const App = () => {
     sidebarCallbacksRef.current.editRDP = (node) => {
       openEditRdpDialog(node);
     };
+    sidebarCallbacksRef.current.editSSH = (node) => {
+      openEditSSHDialog(node);
+    };
     sidebarCallbacksRef.current.connectRDP = (node) => {
       onOpenRdpConnection(node);
     };
