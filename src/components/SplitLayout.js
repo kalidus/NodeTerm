@@ -977,6 +977,7 @@ const SplitLayout = ({
 
   // CÓDIGO LEGACY: Sistema original de 2 paneles con leftTerminal/rightTerminal
   // Se mantiene para compatibilidad durante la transición
+  /* 
   if (isLegacySystem) {
     console.log('🔍 SplitLayout: Sistema LEGACY detectado', {
       leftTerminal: !!leftTerminal,
@@ -985,6 +986,7 @@ const SplitLayout = ({
       externalPaneSize
     });
   }
+  */
 
   const gutterStyle = {
     transition: 'none',
@@ -1101,7 +1103,7 @@ const SplitLayout = ({
 
     // Handlers de resize horizontal
     const handleMouseDown = useCallback((e) => {
-      console.log('🖱️ SplitLayout: handleMouseDown INICIADO');
+      // console.log('🖱️ SplitLayout: handleMouseDown INICIADO');
       e.preventDefault();
       e.stopPropagation();
       setIsDragging(true);
@@ -1111,7 +1113,7 @@ const SplitLayout = ({
         size: finalPrimaryPaneSize
       });
       latestDragSizeRef.current = finalPrimaryPaneSize;
-      console.log('🖱️ SplitLayout: isDragging = true, tamaño inicial:', finalPrimaryPaneSize);
+      // console.log('🖱️ SplitLayout: isDragging = true, tamaño inicial:', finalPrimaryPaneSize);
 
       if (externalPaneSize !== null && onManualResize) {
         onManualResize();
@@ -1145,19 +1147,20 @@ const SplitLayout = ({
       const maxSize = containerHeight; // Permitir el 100% del contenedor
 
       const clampedSize = Math.max(minSize, Math.min(maxSize, newSize));
-
-      // Log para debugging - mostrar siempre para ver qué está pasando
-      console.log('🔧 SplitLayout drag:', {
-        newSize,
-        clampedSize,
-        containerHeight,
-        maxSize,
-        delta,
-        terminalHeight: containerHeight - clampedSize,
-        percentage: ((clampedSize / containerHeight) * 100).toFixed(2) + '%',
-        wrapper: !!wrapper,
-        container: !!container
-      });
+      /* 
+            // Log para debugging - mostrar siempre para ver qué está pasando
+            console.log('🔧 SplitLayout drag:', {
+              newSize,
+              clampedSize,
+              containerHeight,
+              maxSize,
+              delta,
+              terminalHeight: containerHeight - clampedSize,
+              percentage: ((clampedSize / containerHeight) * 100).toFixed(2) + '%',
+              wrapper: !!wrapper,
+              container: !!container
+            });
+      */
       // Guardar y aplicar el tamaño a 1 update por frame (más suave)
       latestDragSizeRef.current = clampedSize;
       if (dragRafRef.current) return;
@@ -1219,12 +1222,14 @@ const SplitLayout = ({
       transition: 'filter 0.2s ease'
     };
 
+    /* 
     console.log('🔍 SplitLayout: Renderizando sistema legacy', {
       finalPrimaryPaneSize,
       containerHeight,
       shouldHideTerminal,
       isDragging
     });
+    */
 
     return (
       <div style={containerStyle} data-split-container="true">
