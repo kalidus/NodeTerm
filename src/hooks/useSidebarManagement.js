@@ -1,5 +1,7 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import connectionStore, { helpers as connectionHelpers } from '../utils/connectionStore';
+import { unblockAllInputs } from '../utils/formDebugger';
+import localStorageSyncService from '../services/LocalStorageSyncService';
 import { STORAGE_KEYS } from '../utils/constants';
 
 export const useSidebarManagement = (toast, tabManagementProps = {}) => {
@@ -15,17 +17,82 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     }
   });
 
+  // Ref para el flag de reload externo (evita que Sidebar re-persista datos importados)
+  const isExternalReloadRef = useRef(false);
+
+  // Ref para controlar el último mtime conocido del archivo
+  const lastKnownMtimeRef = useRef(0);
+
+  // Ref para comparar contenido y evitar re-renders innecesarios
+  const lastContentHashRef = useRef(localStorage.getItem(STORAGE_KEYS.TREE_DATA) || '');
+
   // Función para recargar nodos desde localStorage (para multi-instancia tras sync)
   const reloadNodes = useCallback(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.TREE_DATA);
       if (saved) {
         console.log('[useSidebarManagement] Recargando nodos desde localStorage...');
+        isExternalReloadRef.current = true;
         setNodes(JSON.parse(saved));
       }
     } catch (e) {
       console.error('[useSidebarManagement] Error recargando nodos:', e);
     }
+  }, []);
+
+  // 🔄 ROBUST POLLING: Check mtime every 2s
+  useEffect(() => {
+    if (!window.electron?.appdata?.getLastModified) return;
+
+    // Inicializar lastKnownMtime
+    window.electron.appdata.getLastModified().then(mtime => {
+      lastKnownMtimeRef.current = mtime;
+    });
+
+    const interval = setInterval(async () => {
+      try {
+        const mtime = await window.electron.appdata.getLastModified();
+
+        // Si el archivo no ha cambiado, no hacer nada
+        if (mtime <= lastKnownMtimeRef.current) return;
+
+        console.log(`[Polling] 🔔 Cambio detectado: mtime ${mtime} > last ${lastKnownMtimeRef.current}`);
+        lastKnownMtimeRef.current = mtime;
+
+        const allData = await window.electron.appdata.getAll();
+        if (!allData || !allData[STORAGE_KEYS.TREE_DATA]) return;
+
+        const remoteJson = allData[STORAGE_KEYS.TREE_DATA];
+
+        // Evitar loop: si el contenido es idéntico al último conocido, ignorar
+        if (remoteJson === lastContentHashRef.current) {
+          return;
+        }
+
+        console.log('[Polling] 📥 Datos nuevos recibidos. Actualizando sidebar...');
+        lastContentHashRef.current = remoteJson;
+
+        // Actualizar localStorage
+        localStorage.setItem(STORAGE_KEYS.TREE_DATA, remoteJson);
+
+        // Actualizar caché de memoria para proteger contra lecturas fallidas
+        localStorageSyncService.updateCache(STORAGE_KEYS.TREE_DATA, remoteJson);
+
+        // Marcar como externo y actualizar estado
+        isExternalReloadRef.current = true;
+        setNodes(JSON.parse(remoteJson));
+
+      } catch (err) {
+        console.error('[Polling] ❌ Error en intervalo:', err);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Función para actualizar hash localmente (llamada por Sidebar cuando guarda)
+  const updateTreeHash = useCallback((jsonStr) => {
+    lastContentHashRef.current = jsonStr;
   }, []);
   const [selectedNode, setSelectedNode] = useState(null);
   const [isGeneralTreeMenu, setIsGeneralTreeMenu] = useState(false);
@@ -922,6 +989,8 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     // Funciones de menú contextual
     getTreeContextMenuItems,
     getGeneralTreeContextMenuItems,
-    reloadNodes
+    reloadNodes,
+    isExternalReloadRef,
+    updateTreeHash
   };
 };
