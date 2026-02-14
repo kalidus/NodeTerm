@@ -53,6 +53,7 @@ const SYNC_KEYS = [
     'folderIconSize',
     'connectionIconSize',
     'nodeterm_interactive_icon',
+    'nodeterm_expanded_keys', // Estado de expansión del sidebar
 
     // Grupos de favoritos
     'nodeterm_favorite_groups',
