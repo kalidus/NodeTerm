@@ -101,6 +101,7 @@ const App = () => {
   const [showImportDialog, setShowImportDialog] = React.useState(false);
   const [showExportDialog, setShowExportDialog] = React.useState(false);
   const [showImportExportDialog, setShowImportExportDialog] = React.useState(false);
+  const resizeTimeoutRef = useRef(null);
   const [showImportWizard, setShowImportWizard] = React.useState(false);
   const [isAppReady, setIsAppReady] = React.useState(false);
   const [importPreset, setImportPreset] = React.useState(null);
@@ -1098,7 +1099,11 @@ const App = () => {
     getActiveConnectionIds,
     findAllConnections,
     getTreeContextMenuItems,
-    getGeneralTreeContextMenuItems
+    getGeneralTreeContextMenuItems,
+    // Expansion state (moved from useWindowManagement)
+    expandedKeys, setExpandedKeys,
+    allExpanded, setAllExpanded,
+    toggleExpandAll
   } = useSidebarManagement(toast, {
     activeGroupId, setActiveGroupId, activeTabIndex, setActiveTabIndex,
     setGroupActiveIndices, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey,
@@ -1254,19 +1259,16 @@ const App = () => {
     // Estados de ventana y sidebar
     sidebarVisible, setSidebarVisible,
     sidebarCollapsed, setSidebarCollapsed,
-    allExpanded, setAllExpanded,
-    expandedKeys, setExpandedKeys,
-    // Referencias
-    resizeTimeoutRef,
     // Funciones de resize
-    handleResize, handleResizeThrottled,
-    // Funciones de expansión
-    toggleExpandAll
+    handleResize, handleResizeThrottled
+    // Funciones de expansión (moved to useSidebarManagement)
+    // toggleExpandAll
   } = useWindowManagement({
     getFilteredTabs,
     activeTabIndex,
     resizeTerminals,
-    nodes
+    nodes,
+    resizeTimeoutRef // Pasar referencia compartida
   });
 
   // Tree management hook

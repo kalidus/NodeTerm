@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import connectionStore, { helpers as connectionHelpers } from '../utils/connectionStore';
 import { unblockAllInputs } from '../utils/formDebugger';
 import localStorageSyncService from '../services/LocalStorageSyncService';
-import { STORAGE_KEYS } from '../utils/constants';
+import { STORAGE_KEYS, GROUP_KEYS } from '../utils/constants';
 
 export const useSidebarManagement = (toast, tabManagementProps = {}) => {
   // === ESTADO DEL SIDEBAR ===
@@ -95,11 +95,94 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     lastContentHashRef.current = jsonStr;
   }, []);
   const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedNodeKey, setSelectedNodeKey] = useState(null);
   const [isGeneralTreeMenu, setIsGeneralTreeMenu] = useState(false);
 
-  // === ESTADO DE SELECCIÓN Y FILTRO ===
-  const [selectedNodeKey, setSelectedNodeKey] = useState(null);
   const [sidebarFilter, setSidebarFilter] = useState('');
+
+  // === ESTADO DE EXPANSIÓN (Sincronizado) ===
+  const [expandedKeys, setExpandedKeys] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.EXPANDED_KEYS);
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  const lastExpandedKeysHashRef = useRef(localStorage.getItem(STORAGE_KEYS.EXPANDED_KEYS) || '');
+  const isExternalExpandedKeysReloadRef = useRef(false);
+
+  // Escuchar eventos de sincronización para actualizar expandedKeys
+  useEffect(() => {
+    const handleSettingsUpdate = (event) => {
+      // Si el evento viene del sync service o es storage event
+      if (event.detail?.source === 'sync' || event.key === STORAGE_KEYS.EXPANDED_KEYS) {
+        try {
+          const remoteExpanded = localStorage.getItem(STORAGE_KEYS.EXPANDED_KEYS);
+          if (remoteExpanded && remoteExpanded !== lastExpandedKeysHashRef.current) {
+            console.log('[Sidebar] 📥 Reloading expanded keys from sync');
+            lastExpandedKeysHashRef.current = remoteExpanded;
+            isExternalExpandedKeysReloadRef.current = true;
+            setExpandedKeys(JSON.parse(remoteExpanded));
+          }
+        } catch (e) {
+          console.error('Error reloading expanded keys', e);
+        }
+      }
+    };
+
+    window.addEventListener('settings-updated', handleSettingsUpdate);
+    window.addEventListener('storage', handleSettingsUpdate);
+
+    return () => {
+      window.removeEventListener('settings-updated', handleSettingsUpdate);
+      window.removeEventListener('storage', handleSettingsUpdate);
+    };
+  }, []);
+
+  // Persistencia de expandedKeys
+  useEffect(() => {
+    if (isExternalExpandedKeysReloadRef.current) {
+      isExternalExpandedKeysReloadRef.current = false;
+      return;
+    }
+
+    const jsonStr = JSON.stringify(expandedKeys);
+    if (jsonStr === lastExpandedKeysHashRef.current) return;
+
+    lastExpandedKeysHashRef.current = jsonStr;
+    localStorage.setItem(STORAGE_KEYS.EXPANDED_KEYS, jsonStr);
+    // Usar updateCache para asegurar que esté disponible para el sync service
+    if (localStorageSyncService && localStorageSyncService.updateCache) {
+      localStorageSyncService.updateCache(STORAGE_KEYS.EXPANDED_KEYS, jsonStr);
+    }
+  }, [expandedKeys]);
+
+  // === ESTADO DE EXPANSIÓN GLOBAL ===
+  const [allExpanded, setAllExpanded] = useState(false);
+
+  // Función para expandir o plegar solo las carpetas de primer nivel
+  const toggleExpandAll = useCallback(() => {
+    if (allExpanded) {
+      setExpandedKeys({});
+      setAllExpanded(false);
+    } else {
+      // Solo expandir carpetas de primer nivel
+      const newExpandedKeys = {};
+
+      // Solo recorrer los nodos de primer nivel (no recursivo)
+      for (const node of nodes || []) {
+        if (node.droppable || node.children) {
+          newExpandedKeys[node.key] = true;
+        }
+      }
+
+      setExpandedKeys(newExpandedKeys);
+      setAllExpanded(true);
+    }
+  }, [allExpanded, nodes]);
+
 
   // === REFERENCIAS ===
   const sidebarCallbacksRef = useRef({});
@@ -991,6 +1074,10 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     getGeneralTreeContextMenuItems,
     reloadNodes,
     isExternalReloadRef,
-    updateTreeHash
+    updateTreeHash,
+    // Expansion exports
+    expandedKeys, setExpandedKeys,
+    allExpanded, setAllExpanded,
+    toggleExpandAll
   };
 };

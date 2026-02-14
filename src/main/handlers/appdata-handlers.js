@@ -38,11 +38,19 @@ const SYNC_KEYS = [
     'basicapp_statusbar_theme',
     'basicapp_terminal_theme',
     'iconTheme',
+    'iconThemeSidebar',
+    'sessionActionIconTheme',
+    'nodeterm_tab_theme', // Tema de pestañas
+    'nodeterm_expanded_keys', // Estado de expansión del sidebar
     'explorerFont',
     'explorerFontSize',
     'explorerColorTheme',
     'sidebarFont',
     'sidebarFontSize',
+    'sidebarFontColor',
+    'iconSize',
+    'folderIconSize',
+    'connectionIconSize',
 
     // Configuración de terminal
     'basicapp_statusbar_height',
