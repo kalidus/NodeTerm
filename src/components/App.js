@@ -1088,7 +1088,7 @@ const App = () => {
 
   // Usar el hook de gestión del sidebar
   const {
-    nodes, setNodes, reloadNodes,
+    nodes, setNodes, reloadNodes, isExternalReloadRef, updateTreeHash,
     selectedNode, setSelectedNode,
     isGeneralTreeMenu, setIsGeneralTreeMenu,
     selectedNodeKey, setSelectedNodeKey,
@@ -2318,7 +2318,9 @@ const App = () => {
     onShowImportDialog: setShowImportDialog,
     onShowExportDialog: setShowExportDialog,
     onShowImportExportDialog: setShowImportExportDialog,
-    onShowImportWizard: setShowImportWizard
+    onShowImportWizard: setShowImportWizard,
+    isExternalReloadRef,
+    updateTreeHash
   }), [
     nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,

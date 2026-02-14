@@ -16,6 +16,7 @@ import LocalFileExplorerSidebar from './LocalFileExplorerSidebar';
 import ConnectionDetailsPanel from './ConnectionDetailsPanel';
 import { unblockAllInputs, detectBlockedInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
+import localStorageSyncService from '../services/LocalStorageSyncService';
 import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorite as isFavoriteConn } from '../utils/connectionStore';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { STORAGE_KEYS } from '../utils/constants';
@@ -135,7 +136,9 @@ const Sidebar = React.memo(({
   onShowImportDialog,
   onShowExportDialog,
   onShowImportExportDialog,
-  onShowImportWizard
+  onShowImportWizard,
+  isExternalReloadRef, // Nuevo prop para control de polling sync
+  updateTreeHash       // Nuevo prop para actualizar hash tras cambios locales
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
@@ -1097,12 +1100,29 @@ const Sidebar = React.memo(({
       setNodes(() => logSetNodes('Sidebar', [...value]));
     }
   };
-  // Guardar en localStorage cuando cambian
+  // Guardar en localStorage cuando cambian + trigger sync rápido
   useEffect(() => {
     if (nodes && nodes.length > 0) {
-      localStorage.setItem(STORAGE_KEYS.TREE_DATA, JSON.stringify(nodes));
+      // Usar el ref pasado por prop si existe, sino usar uno local (fallback)
+      const isExternal = isExternalReloadRef ? isExternalReloadRef.current : false;
+
+      if (isExternal) {
+        // Viene de un reload externo: no guardar ni sincronizar para evitar loop
+        if (isExternalReloadRef) isExternalReloadRef.current = false;
+        return;
+      }
+
+      const nodesStr = JSON.stringify(nodes);
+      localStorage.setItem(STORAGE_KEYS.TREE_DATA, nodesStr);
+
+      // Actualizar el hash en el hook para que el polling no detecte esto como cambio externo
+      if (updateTreeHash) updateTreeHash(nodesStr);
+
+      // Propagar cambios al archivo compartido rápidamente (debounce 2s)
+      // Pasamos explícitamente los datos para asegurar que no se pierdan por problemas de lectura de localStorage
+      localStorageSyncService.debouncedSync({ [STORAGE_KEYS.TREE_DATA]: nodesStr });
     }
-  }, [nodes]);
+  }, [nodes, isExternalReloadRef, updateTreeHash]);
 
   // Eventos globales para acciones de acceso rápido desde Home
   useEffect(() => {

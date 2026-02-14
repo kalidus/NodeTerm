@@ -166,6 +166,19 @@ function registerAppDataHandlers(dependencies) {
         }
     });
 
+    // Handler para obtener la última fecha de modificación del archivo
+    ipcMain.handle('appdata:get-last-modified', async () => {
+        try {
+            if (fs.existsSync(APP_DATA_PATH)) {
+                return fs.statSync(APP_DATA_PATH).mtimeMs;
+            }
+            return 0;
+        } catch (error) {
+            console.error('Error obteniendo mtime:', error);
+            return 0;
+        }
+    });
+
     // Handler para obtener la lista de claves que deben sincronizarse
     ipcMain.handle('appdata:get-sync-keys', async () => {
         return SYNC_KEYS;

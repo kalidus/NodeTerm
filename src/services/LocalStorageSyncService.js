@@ -216,34 +216,68 @@ class LocalStorageSyncService {
     }
 
     /**
-     * Exporta localStorage a archivo compartido
+     * Actualiza la caché en memoria para una clave específica.
+     * Útil para asegurar que datos críticos (como el árbol) no se pierdan
+     * si localStorage falla al leerlos en el momento del sync.
      */
-    async syncToFile() {
+    updateCache(key, value) {
+        if (!this._memoryCache) this._memoryCache = {};
+        this._memoryCache[key] = value;
+    }
+
+    /**
+     * Exporta localStorage a archivo compartido
+     * @param {Object} explicitOverrides - Datos explícitos para sincronizar (tienen prioridad sobre localStorage)
+     */
+    async syncToFile(explicitOverrides = {}) {
         try {
             if (!window.electron?.appdata) {
-                // console.warn('[LocalStorageSync] API appdata no disponible');
                 return;
             }
 
+            const keys = await window.electron.appdata.getSyncKeys();
+
             const data = {};
             let count = 0;
-            for (const key of SYNC_KEYS) {
-                const value = localStorage.getItem(key);
-                if (value !== null) {
-                    data[key] = value;
+
+            // Si el argumento NO es un objeto de overrides (es null o undefined), tratarlo como vacío
+            const overrides = explicitOverrides || {};
+
+            // Inicializar caché si no existe
+            if (!this._memoryCache) this._memoryCache = {};
+
+            for (const key of keys) {
+                // PRIMERO: Intentar usar el override explícito si existe
+                if (overrides[key] !== undefined) {
+                    data[key] = overrides[key];
+                    this._memoryCache[key] = overrides[key]; // Actualizar caché
                     count++;
+                }
+                // SEGUNDO: Fallback a localStorage
+                else {
+                    const value = localStorage.getItem(key);
+                    if (value !== null) {
+                        data[key] = value;
+                        this._memoryCache[key] = value; // Actualizar caché
+                        count++;
+                    }
+                    // TERCERO: Fallback a caché en memoria (para evitar borrados accidentales si localStorage falla)
+                    else if (this._memoryCache[key] !== undefined) {
+                        data[key] = this._memoryCache[key];
+                        count++;
+                        console.log(`[LocalStorageSync] ⚠️ Usando caché en memoria para clave perdida: ${key}`);
+                    }
                 }
             }
 
             if (count === 0) {
-                // console.log('[LocalStorageSync] No hay datos que sincronizar (localStorage vacío)');
                 return;
             }
 
             // --- DETECCIÓN DE CAMBIOS ---
             const currentDataStr = JSON.stringify(data);
             if (this._lastSyncDataStr === currentDataStr) {
-                console.log('[LocalStorageSync] Sin cambios detectados. Saltando sincronización.');
+                // console.log('[LocalStorageSync] Sin cambios detectados. Saltando sincronización.');
                 return;
             }
 
@@ -263,14 +297,23 @@ class LocalStorageSyncService {
     }
 
     /**
-     * Sincroniza después de un cambio con debounce para evitar escrituras frecuentes
+     * Programa una sincronización diferida
+     * @param {Object} overrides - Datos opcionales para pasar al sync
      */
-    debouncedSync() {
-        if (this._debounceTimer) {
-            clearTimeout(this._debounceTimer);
+    debouncedSync(overrides = {}) {
+        // Acumular overrides si se llama varias veces rápido
+        if (overrides) {
+            this._pendingOverrides = { ...this._pendingOverrides, ...overrides };
         }
-        this._debounceTimer = setTimeout(() => {
-            this.syncToFile();
+
+        if (this._syncTimeout) {
+            clearTimeout(this._syncTimeout);
+        }
+
+        this._syncTimeout = setTimeout(() => {
+            const finalOverrides = this._pendingOverrides || {};
+            this._pendingOverrides = {}; // Limpiar pendientes
+            this.syncToFile(finalOverrides);
         }, 2000); // Esperar 2 segundos después del último cambio
     }
 }
