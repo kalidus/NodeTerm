@@ -41,6 +41,7 @@ const MainContentArea = ({
   setGroupActiveIndices,
   setLastOpenedTabKey,
   setOnCreateActivateTabKey,
+  setOpenTabOrder,
   GROUP_KEYS,
 
   // Tab rendering props
@@ -888,6 +889,10 @@ const MainContentArea = ({
       // Activar como última abierta (índice 1) y registrar orden de apertura
       setLastOpenedTabKey(tabId);
       setOnCreateActivateTabKey(tabId);
+      // Actualizar el orden de pestañas explícito para asegurar que aparezca en el índice 1
+      if (setOpenTabOrder) {
+        setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
+      }
       setActiveTabIndex(1);
       setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
 
