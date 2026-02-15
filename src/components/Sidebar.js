@@ -411,6 +411,10 @@ const Sidebar = React.memo(({
             updatedNode.color = newColor;
           }
 
+          // Asegurar que las carpetas no sean consideradas hojas para permitir drops
+          updatedNode.leaf = false;
+
+
           // Si tiene children, actualizarlos recursivamente
           if (node.children && node.children.length > 0) {
             updatedNode.children = updateExistingFoldersColor(node.children, newColor);
@@ -709,7 +713,8 @@ const Sidebar = React.memo(({
           createdAt: new Date().toISOString(),
           isUserCreated: true,
           imported: true,
-          importedFrom: 'mRemoteNG'
+          importedFrom: 'mRemoteNG',
+          leaf: false // Asegurar que contenedores acepten drops
         });
 
         if (baseTargetKey === ROOT_VALUE) {
@@ -1026,7 +1031,8 @@ const Sidebar = React.memo(({
         createdAt: new Date().toISOString(),
         isUserCreated: true,
         color: folderColor,
-        folderIcon: folderIcon || 'general'
+        folderIcon: folderIcon || 'general',
+        leaf: false // Asegurar que nuevas carpetas acepten drops
       };
 
       if (parentNodeKey === null) {
@@ -1071,33 +1077,111 @@ const Sidebar = React.memo(({
       return node;
     });
   }
-  // Drag and drop con validación de carpetas
+  // Drag and drop con manipulación explícita del árbol para asegurar funcionamiento robusto
   const onDragDrop = (event) => {
     const { dragNode, dropNode, dropPoint, value } = event;
-    // Solo permitir drag and drop si el nodo de destino es una carpeta (droppable = true)
-    // Esto evita que se pueda arrastrar cualquier cosa a una sesión SSH
-    const isDropNodeFolder = dropNode && dropNode.droppable === true;
-    const isDropNodeSession = dropNode && dropNode.data && dropNode.data.type === 'ssh';
-    if (dropPoint === 0 && isDropNodeFolder) {
-      // Permitir arrastrar cualquier cosa (carpetas o sesiones) a una carpeta
-      const newValue = cloneTreeWithUpdatedNode(value, dropNode.key, (parent) => {
-        // Eliminar cualquier instancia del nodo movido
-        parent.children = parent.children.filter(n => n.key !== dragNode.key);
-        // Insertar al principio
-        parent.children = [dragNode, ...parent.children];
-        return parent;
-      });
-      setNodes(() => logSetNodes('Sidebar', newValue));
-    } else if (dropPoint === 0 && isDropNodeSession) {
-      // Si se intenta arrastrar algo a una sesión SSH, mostrar mensaje de error
+
+    // Validar nodo destino
+    const isDropOverNode = dropPoint === 0;
+    const isDropTargetFolder = dropNode && dropNode.droppable === true;
+
+    if (isDropOverNode && !isDropTargetFolder) {
       showToast && showToast({
         severity: 'warn',
         summary: 'Operación no permitida',
-        detail: 'No se puede arrastrar elementos dentro de una sesión SSH. Solo las carpetas pueden contener otros elementos.',
-        life: 4000
+        detail: 'No se puede arrastrar dentro de este elemento.',
+        life: 3000
       });
+      return;
+    }
+
+    // Función pura para eliminar nodo del árbol
+    const removeNode = (nodes, key) => {
+      let filtered = [];
+      for (let node of nodes) {
+        if (node.key === key) continue;
+        if (node.children) {
+          node.children = removeNode(node.children, key);
+        }
+        filtered.push(node);
+      }
+      return filtered;
+    };
+
+    // Función pura para insertar nodo (traverse)
+    const insertNode = (nodes, targetKey, nodeToInsert) => {
+      let inserted = false;
+
+      const traverse = (list) => {
+        return list.map(node => {
+          if (node.key === targetKey) {
+            console.log('[Sidebar] insertNode: Found target folder', node.label);
+            // Insertar dentro
+            const children = node.children || [];
+            // Evitar duplicados si por alguna razón falla el remove
+            if (children.some(c => c.key === nodeToInsert.key)) {
+              console.warn('[Sidebar] insertNode: Node already exists in target');
+              return node;
+            }
+            inserted = true;
+            return { ...node, children: [nodeToInsert, ...children], expanded: true };
+          }
+          if (node.children) {
+            return { ...node, children: traverse(node.children) };
+          }
+          return node;
+        });
+      };
+
+      const newNodes = traverse(nodes);
+      return { newNodes, inserted };
+    };
+
+    // Si es dropPoint === 0 (dentro de carpeta), hacemos la lógica manual
+    // A veces PrimeReact puede no dar dropPoint 0 si se suelta justo en el borde, pero asumimos que el usuario
+    // quiere soltar dentro si el nodo destino es carpeta y se suelta "sobre" él.
+    if (isDropOverNode && isDropTargetFolder) {
+      console.log('[Sidebar] onDragDrop: Detected drop INSIDE folder', {
+        drag: dragNode.label,
+        drop: dropNode.label,
+        nodesTotal: nodes.length
+      });
+
+      // Clonación profunda manual ya que deepCopy no está en scope aquí
+      const nodesParams = JSON.parse(JSON.stringify(nodes));
+
+      // 1. Obtener árbol sin el nodo
+      let newTree = removeNode(nodesParams, dragNode.key);
+
+      // 2. Insertar en destino
+      // Usamos dragNode directamente, pero asegurando que es una copia limpia
+      const nodeToMove = JSON.parse(JSON.stringify(dragNode));
+      const insertResult = insertNode(newTree, dropNode.key, nodeToMove);
+
+      if (insertResult.inserted) {
+        // Forzar actualización
+        setNodes(insertResult.newNodes);
+        // Log de confirmación
+        console.log('[Sidebar] Manual drop complete. New tree set.');
+      } else {
+        console.error('[Sidebar] Manual drop FAILED: Target folder not found in new tree');
+      }
+
     } else {
-      setNodes(() => logSetNodes('Sidebar', [...value]));
+      console.log('[Sidebar] onDragDrop: Standard reorder (PrimeReact)', {
+        value: value ? 'Valid Tree' : 'Null',
+        point: dropPoint,
+        isFolder: isDropTargetFolder
+      });
+
+      // Para reordenar (arriba/abajo), confiamos en event.value de PrimeReact
+      // pero verificamos que sea válido
+      if (value) {
+        // IMPORTANTE: A veces value viene sin la expansión correcta
+        // o con nodos perdidos si la validación interna falló.
+        // Pero para reordenar suele funcionar.
+        setNodes(value);
+      }
     }
   };
   // Guardar en localStorage cuando cambian + trigger sync rápido
@@ -1943,16 +2027,32 @@ const Sidebar = React.memo(({
               window.draggedConnectionNodeRef.current = connectionNodeData;
             }
 
+            // Compatibilidad con draggedSSHNodeRef para el hook antiguo
+            if (window.draggedSSHNodeRef && isSSH) {
+              window.draggedSSHNodeRef.current = {
+                type: 'ssh-node',
+                key: node.key,
+                label: node.label,
+                data: node.data
+              };
+            }
+
             // Establecer dataTransfer
             try {
-              e.dataTransfer.effectAllowed = 'copy';
+              // IMPORTANTE: Permitir el burbujeo para que PrimeReact también inicie su drag interno
+              // No usar stopPropagation aquí.
+
+              // Permitir copyMove para que funcione tanto interna (move) como externamente (copy)
+              e.dataTransfer.effectAllowed = 'copyMove';
+
               // Usar un MIME type específico para nuestra app
               e.dataTransfer.setData('application/nodeterm-connection', JSON.stringify(connectionNodeData));
               // Mantener compatibilidad con el formato anterior SSH por si acaso
               if (isSSH) {
                 e.dataTransfer.setData('application/nodeterm-ssh-node', JSON.stringify(connectionNodeData));
               }
-              e.dataTransfer.setData('text/plain', `${nodeType}:${node.key}`);
+              // NO establecer text/plain para no interferir con PrimeReact
+              // e.dataTransfer.setData('text/plain', `${nodeType}:${node.key}`);
             } catch (err) {
               console.warn('Error setting dataTransfer:', err);
             }
@@ -2734,36 +2834,8 @@ const Sidebar = React.memo(({
                     }}
                     expandedKeys={expandedKeys}
                     onToggle={e => setExpandedKeys(e.value)}
-                    dragdropScope="files"
+                    dragdropScope="sidebar"
                     onDragDrop={onDragDrop}
-                    onDragStart={e => {
-                      // Establecer datos en dataTransfer y en almacenamiento global para permitir arrastrar nodos SSH a pestañas
-                      if (e.node && e.node.data && e.node.data.type === 'ssh') {
-                        const sshNodeData = {
-                          type: 'ssh-node',
-                          key: e.node.key,
-                          label: e.node.label,
-                          data: e.node.data
-                        };
-
-                        // Almacenar en ref global (más confiable que dataTransfer con PrimeReact)
-                        if (window.draggedSSHNodeRef && window.draggedSSHNodeRef.current !== undefined) {
-                          window.draggedSSHNodeRef.current = sshNodeData;
-                        }
-
-                        // También intentar establecer en dataTransfer (fallback)
-                        try {
-                          const nativeEvent = e.originalEvent || e.nativeEvent || e;
-                          if (nativeEvent && nativeEvent.dataTransfer) {
-                            nativeEvent.dataTransfer.effectAllowed = 'copy';
-                            nativeEvent.dataTransfer.setData('application/nodeterm-ssh-node', JSON.stringify(sshNodeData));
-                            nativeEvent.dataTransfer.setData('text/plain', `ssh:${e.node.key}`);
-                          }
-                        } catch (err) {
-                          console.warn('Error setting dataTransfer:', err);
-                        }
-                      }
-                    }}
                     onDragEnd={() => {
                       // Limpiar el nodo SSH arrastrado al finalizar el drag
                       if (window.draggedSSHNodeRef) {
