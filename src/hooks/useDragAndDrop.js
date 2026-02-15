@@ -95,9 +95,14 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
 
     if (!getFilteredTabs) return;
 
+    // Verificar si el drop ocurrió sobre una pestaña válida y no en otro componente
+    // Esto es crucial para evitar que drops en la sidebar (carpetas) sean procesados aquí
+    const isTabElement = e.target.closest('.p-tabview-nav-link') || e.target.closest('li[role="presentation"]');
+    if (!isTabElement) {
+      return;
+    }
+
     // Verificar si se está arrastrando un nodo SSH desde la sidebar
-    // Primero intentar desde el almacenamiento global (más confiable con PrimeReact)
-    // CHECK BOTH LOCAL MODULE REF AND WINDOW REFS
     let sshNodeData = draggedSSHNodeRef.current ||
       (window.draggedConnectionNodeRef && window.draggedConnectionNodeRef.current) ||
       (window.draggedSSHNodeRef && window.draggedSSHNodeRef.current);
