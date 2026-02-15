@@ -2828,6 +2828,7 @@ const App = () => {
           // Tab rendering props
           renderGroupTabs={renderGroupTabs}
           filteredTabs={filteredTabs}
+          setOpenTabOrder={setOpenTabOrder}
 
           // Tab header props
           memoizedTabProps={memoizedTabProps}
