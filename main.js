@@ -2149,7 +2149,8 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
         sendToRenderer(event.sender, `ssh:ready:${tabId}`);
         sendToRenderer(event.sender, 'ssh-connection-ready', {
           originalKey: conn.originalKey || tabId,
-          tabId: tabId
+          tabId: tabId,
+          password: password // Incluir password para que el renderer lo guarde
         });
       } else {
         // ✅ REFACTORIZADO: Reconexión SSH directa usando SSHAuthService
@@ -2173,7 +2174,8 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
             },
             onError: null,
             getSessionRecorder: () => getSessionRecorder()
-          }
+          },
+          password // Pasar password capturado manualmente
         );
 
         // Conectar con password

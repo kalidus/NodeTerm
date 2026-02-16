@@ -2145,6 +2145,74 @@ const App = () => {
     };
   }, []);
 
+  // Listener para cuando un password manual es correcto (auto-save)
+  useEffect(() => {
+    const handlePasswordCorrect = (event) => {
+      const { originalKey, password } = event.detail;
+      if (!originalKey || !password) return;
+
+      console.log(`🔐 [App] Capturado password correcto para nodo ${originalKey}. Guardando...`);
+
+      // 1. Actualizar en el árbol de nodos
+      setNodes(prevNodes => {
+        const updatePasswordInNodes = (nodesList) => {
+          return nodesList.map(node => {
+            if (node.key === originalKey) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  password: password
+                }
+              };
+            }
+            if (node.children && node.children.length > 0) {
+              return {
+                ...node,
+                children: updatePasswordInNodes(node.children)
+              };
+            }
+            return node;
+          });
+        };
+        return updatePasswordInNodes(prevNodes);
+      });
+
+      // 2. Actualizar en Favorites y Recents
+      try {
+        // Encontrar el nodo para obtener su info completa (opcional, connectionStore suele basarse en ID)
+        const node = findNodeByKey(nodes, originalKey);
+        if (node && node.data) {
+          // Actualizar favorito si existe
+          connectionStore.updateFavoriteOnEdit(originalKey, {
+            ...node.data,
+            password: password
+          });
+
+          // Registrar como reciente (esto actualizará el password en la lista de recientes)
+          connectionStore.recordRecent({
+            ...node.data,
+            password: password
+          });
+        }
+      } catch (e) {
+        console.warn('Error actualizando stores de conexión tras password manual:', e);
+      }
+
+      if (toast?.current?.show) {
+        toast.current.show({
+          severity: 'success',
+          summary: 'Password guardado',
+          detail: 'El password se ha actualizado automáticamente.',
+          life: 3000
+        });
+      }
+    };
+
+    window.addEventListener('ssh:password-correct', handlePasswordCorrect);
+    return () => window.removeEventListener('ssh:password-correct', handlePasswordCorrect);
+  }, [nodes, setNodes, findNodeByKey, toast]);
+
   // Listener global para Ctrl + rueda del ratón para cambiar tamaño de fuente de terminales
   useEffect(() => {
     const handleWheel = (e) => {

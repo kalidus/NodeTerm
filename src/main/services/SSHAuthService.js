@@ -33,7 +33,7 @@ class SSHAuthService {
    */
   enableManualPasswordMode(conn, sender, tabId, message = 'Por favor, introduce el password') {
     if (!conn) return;
-    
+
     conn.manualPasswordMode = true;
     conn.manualPasswordBuffer = '';
     sendToRenderer(sender, `ssh:data:${tabId}`, `\r\n${message}:\r\nPassword: `);
@@ -44,7 +44,7 @@ class SSHAuthService {
    */
   disableManualPasswordMode(conn) {
     if (!conn) return;
-    
+
     conn.manualPasswordMode = false;
     conn.manualPasswordBuffer = '';
   }
@@ -54,12 +54,12 @@ class SSHAuthService {
    */
   isAuthenticationError(error) {
     if (!error) return false;
-    
+
     const errorMessage = typeof error === 'string' ? error : error.message || '';
-    
+
     return errorMessage.includes('authentication') ||
-           errorMessage.includes('Authentication failed') ||
-           errorMessage.includes('All configured authentication methods failed');
+      errorMessage.includes('Authentication failed') ||
+      errorMessage.includes('All configured authentication methods failed');
   }
 
   /**
@@ -67,12 +67,12 @@ class SSHAuthService {
    */
   handleAuthError(conn, sender, tabId, error) {
     const isAuthError = this.isAuthenticationError(error);
-    
+
     if (isAuthError && conn) {
       this.enableManualPasswordMode(conn, sender, tabId, 'Autenticación fallida. Por favor, introduce el password');
       return true;
     }
-    
+
     // No es error de autenticación
     const errorMsg = error?.message || error || 'Error desconocido';
     sendToRenderer(sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${errorMsg}\r\n`);
@@ -95,7 +95,7 @@ class SSHAuthService {
     // Detectar Enter (envío del password)
     if (data.includes('\r') || data.includes('\n')) {
       const password = (conn.manualPasswordBuffer + data.replace(/[\r\n]/g, '')).trim();
-      
+
       if (password) {
         return password;
       } else {
@@ -164,7 +164,7 @@ class SSHAuthService {
     // Detectar Enter (envío de respuesta)
     if (data.includes('\r') || data.includes('\n')) {
       const response = (conn._currentResponse + data.replace(/[\r\n]/g, '')).trim();
-      
+
       if (response) {
         conn.keyboardInteractiveResponses.push(response);
       } else if (conn.keyboardInteractiveResponses.length < conn.keyboardInteractivePrompts.length) {
@@ -190,8 +190,8 @@ class SSHAuthService {
       } else {
         // Mostrar el siguiente prompt
         const nextIndex = conn.keyboardInteractiveResponses.length;
-        if (nextIndex < conn.keyboardInteractivePrompts.length && 
-            conn.keyboardInteractivePrompts[nextIndex].prompt) {
+        if (nextIndex < conn.keyboardInteractivePrompts.length &&
+          conn.keyboardInteractivePrompts[nextIndex].prompt) {
           sendToRenderer(sender, `ssh:data:${tabId}`, '\r\n' + conn.keyboardInteractivePrompts[nextIndex].prompt);
         }
       }
@@ -242,7 +242,7 @@ class SSHAuthService {
           }
 
           let output = '';
-          
+
           stream.on('data', (data) => {
             output += data.toString('utf-8');
           });
@@ -266,7 +266,7 @@ class SSHAuthService {
   /**
    * Configura los listeners de eventos para una conexión SSH2 con autenticación interactiva
    */
-  setupSSH2ClientListeners(ssh2Client, conn, tabId, config, sender, callbacks) {
+  setupSSH2ClientListeners(ssh2Client, conn, tabId, config, sender, callbacks, manualPassword = null) {
     const {
       onReady,
       onError,
@@ -282,7 +282,7 @@ class SSHAuthService {
         if (err) {
           sendToRenderer(sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
           ssh2Client.end();
-          
+
           // Activar modo manual para reintentar
           this.enableManualPasswordMode(conn, sender, tabId, 'Password incorrecto. Intenta de nuevo');
           return;
@@ -295,7 +295,7 @@ class SSHAuthService {
         // Obtener información del servidor
         let realHostname = 'unknown';
         let osRelease = '';
-        
+
         try {
           realHostname = (await execWrapper('hostname')).trim() || 'unknown';
         } catch (e) {
@@ -321,26 +321,26 @@ class SSHAuthService {
         // Configurar listeners del stream
         shellStream.on('data', (data) => {
           const dataStr = data.toString('utf-8');
-          
+
           if (getSessionRecorder && getSessionRecorder().isRecording(tabId)) {
             getSessionRecorder().recordOutput(tabId, dataStr);
           }
-          
+
           sendToRenderer(sender, `ssh:data:${tabId}`, dataStr);
         });
 
         shellStream.on('close', () => {
           sendToRenderer(sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
-          
+
           if (conn && conn.statsTimeout) {
             clearTimeout(conn.statsTimeout);
           }
-          
+
           sendToRenderer(sender, 'ssh-connection-disconnected', {
             originalKey: conn.originalKey || tabId,
             tabId: tabId
           });
-          
+
           ssh2Client.end();
         });
 
@@ -352,7 +352,8 @@ class SSHAuthService {
         sendToRenderer(sender, `ssh:ready:${tabId}`);
         sendToRenderer(sender, 'ssh-connection-ready', {
           originalKey: conn.originalKey || tabId,
-          tabId: tabId
+          tabId: tabId,
+          password: manualPassword // Incluir password si se proporcionó manualmente
         });
 
         // Callback de éxito
@@ -365,14 +366,14 @@ class SSHAuthService {
     // Evento error
     ssh2Client.on('error', (err) => {
       const isAuthError = this.isAuthenticationError(err);
-      
+
       if (isAuthError) {
         this.enableManualPasswordMode(conn, sender, tabId, 'Password incorrecto. Intenta de nuevo');
         return;
       }
 
       sendToRenderer(sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
-      
+
       if (onError) {
         onError(err);
       }
