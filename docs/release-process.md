@@ -15,15 +15,14 @@ En esta fase se deja el código listo para ser integrado en la versión oficial.
 
 ### Etapa 2: Integración (Merge a Main)
 Nada se publica si no está consolidado en la rama principal.
-*   **Switch a Main**: El script cambia automáticamente a la rama `main`.
 *   **Merge**: Se fusionan los cambios de tu rama en `main`. Esto garantiza que `main` siempre sea el reflejo exacto de lo que está en producción.
 
 ### Etapa 3: Despliegue (En la rama Main)
 Una vez el código está en `main`, se procede a la construcción y entrega.
-*   **Build**: Compilación de producción para maximizar rendimiento.
-*   **Dist**: Generación de los instaladores (`.exe`) y la **versión portable** (`.exe`). Los encontrarás en la carpeta `dist/`.
-*   **GitHub Publishing**: El script te pedirá el `GH_TOKEN` si no está configurado, permitiendo subir los binarios directamente a GitHub Releases.
-*   **Git Tag**: Se crea una etiqueta inmutable (ej. `v1.6.4`) que apunta a este release.
+*   **Build Unificado**: El script compila el código y genera los ejecutables en un solo paso eficiente, evitando compilaciones duplicadas.
+*   **Artefactos**: Se genera el **Instalador** (`-Setup.exe`) y la **Versión Portable** (`.exe` sin Setup).
+*   **GitHub Publishing**: Sube binarios y el archivo de actualización (**`latest.yml`**) directamente. Si no tienes el token configurado, el script te lo pedirá.
+*   **Git Tag**: Crea una etiqueta oficial (ej. `v1.6.4`) y la sube al repositorio.
 
 ---
 
@@ -36,6 +35,6 @@ npm run release
 ```
 
 ### Consejos para un buen release:
-1.  **Revisa tus cambios**: Antes de empezar, asegúrate de que todo funciona localmente.
-2.  **GH_TOKEN**: Si no tienes configurada la variable de entorno, el script te pedirá el token interactivamente para subirlo a GitHub.
-3.  **Versión Portable**: Recuerda que la versión portable se genera automáticamente en `dist/` junto al instalador.
+1.  **GH_TOKEN**: El script te permite pegar el token en el momento, no es necesario configurar variables de entorno antes.
+2.  **Timeouts**: Si la subida a GitHub falla por tiempo de espera (debido al tamaño del archivo), el script te informará; en ese caso, puedes intentar relanzar la Etapa 3.
+3.  **Archivos**: Todos los archivos finales se encuentran en la carpeta `dist/`.

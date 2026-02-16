@@ -110,7 +110,6 @@
         "portable"
       ],
       "icon": "src/assets/app-icon.png",
-      "artifactName": "${productName}-Setup-${version}.${ext}",
       "verifyUpdateCodeSignature": false,
       "requestedExecutionLevel": "asInvoker"
     },
@@ -119,6 +118,7 @@
       "es"
     ],
     "nsis": {
+      "artifactName": "${productName}-Setup-${version}.${ext}",
       "oneClick": true,
       "perMachine": false,
       "allowToChangeInstallationDirectory": false,
