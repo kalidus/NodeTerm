@@ -19,7 +19,7 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - **Fix de Favoritos en Túneles**: Corregido el error al conectar a túneles SSH desde la lista de favoritos.
 - **Actualización de Versión**: Release v1.6.3 con todas las funcionalidades integradas.
 
-## [1.6.2] - Por definir
+## [1.6.3] - 2026-02-16
 
 ### 🔧 Mejoras y Correcciones
 - **Actualización de Versión**: Actualización a versión 1.6.2 con mejoras generales
