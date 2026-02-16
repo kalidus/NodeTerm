@@ -137,7 +137,8 @@
     "publish": {
       "provider": "github",
       "owner": "kalidus",
-      "repo": "NodeTerm"
+      "repo": "NodeTerm",
+      "releaseType": "release"
     },
     "mac": {
       "target": [

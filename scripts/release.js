@@ -29,6 +29,20 @@ function getOutput(command) {
     }
 }
 
+function getReleaseNotes(version) {
+    const changelogPath = path.join(__dirname, '..', 'CHANGELOG.md');
+    if (!fs.existsSync(changelogPath)) return '';
+    const content = fs.readFileSync(changelogPath, 'utf8');
+
+    // Buscar la sección de la versión [x.y.z]
+    const versionMatch = content.match(new RegExp(`## \\[${version.replace(/\./g, '\\.')}\\][^\n]*\n([\\s\\S]*?)(?=\\n## \\[|\\n\\[|$)`));
+
+    if (versionMatch && versionMatch[1]) {
+        return versionMatch[1].trim();
+    }
+    return '';
+}
+
 async function main() {
     console.log('\n\x1b[1m\x1b[35m═══════════════════════════════════════════════════\x1b[0m');
     console.log('\x1b[1m\x1b[35m       ASISTENTE DE RELEASE PROFESIONAL (v2)       \x1b[0m');
@@ -161,10 +175,20 @@ async function main() {
 
     // 2. Electron-builder (Build de ejecutables + opcional Publish)
     let ebCommand = 'npx electron-builder';
+    let tempNotesPath = null;
+
     if (process.env.GH_TOKEN) {
         const confirmPublish = await question('\n¿Confirmas subir a GitHub Releases ahora? (S/n): ');
         if (confirmPublish.toLowerCase() !== 'n') {
-            ebCommand += ' --publish always';
+            const notes = getReleaseNotes(nextVersion);
+            if (notes) {
+                tempNotesPath = path.join(__dirname, '..', `temp-notes-${nextVersion}.md`);
+                fs.writeFileSync(tempNotesPath, notes);
+                ebCommand += ` --publish always -c.releaseInfo.releaseNotesFile="${tempNotesPath}"`;
+                console.log('\x1b[32m📝 Notas de release extraídas del CHANGELOG.md\x1b[0m');
+            } else {
+                ebCommand += ' --publish always';
+            }
         }
     }
 
@@ -174,6 +198,10 @@ async function main() {
         console.log('     - Instalador: NodeTerm-Setup-*.exe');
         console.log('     - Portable:   NodeTerm-*.exe');
         console.log('     - Update:     latest.yml');
+
+        if (tempNotesPath && fs.existsSync(tempNotesPath)) {
+            fs.unlinkSync(tempNotesPath);
+        }
     }
 
     // Tags finales
