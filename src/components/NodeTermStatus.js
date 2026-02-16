@@ -6,6 +6,7 @@ import SecureStorage from '../services/SecureStorage';
 import { aiService } from '../services/AIService';
 import { FaWindows, FaUbuntu, FaLinux, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian, SiDocker } from 'react-icons/si';
+import { TbLayoutSidebarRightCollapse, TbLayoutSidebarRightExpand, TbChevronsLeft, TbChevronsRight } from 'react-icons/tb';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { getActionBarIcon, actionBarIconColors } from '../themes/action-bar-icon-themes';
 import { STORAGE_KEYS } from '../utils/constants';
@@ -1056,29 +1057,36 @@ const NodeTermStatus = ({
 							onClick={onCollapse}
 							title="Expandir columna"
 							style={{
-								width: '32px',
-								height: '32px',
+								width: '36px',
+								height: '36px',
 								display: 'flex',
 								alignItems: 'center',
 								justifyContent: 'center',
-								background: themeColors.itemBackground || 'rgba(255,255,255,0.05)',
-								border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
-								borderRadius: '6px',
+								background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+								backdropFilter: 'blur(10px)',
+								WebkitBackdropFilter: 'blur(10px)',
+								border: '1px solid rgba(255, 255, 255, 0.15)',
+								borderRadius: '10px',
 								cursor: 'pointer',
-								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-								transition: 'all 0.2s ease',
+								color: themeColors.primaryColor || '#4fc3f7',
+								transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+								boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
 								flexShrink: 0
 							}}
 							onMouseEnter={e => {
-								e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)';
-								e.currentTarget.style.color = themeColors.textPrimary || 'rgba(255,255,255,0.9)';
+								e.currentTarget.style.transform = 'scale(1.1)';
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%)';
+								e.currentTarget.style.boxShadow = `0 0 15px ${(themeColors.primaryColor || '#4fc3f7')}40, 0 6px 20px rgba(0, 0, 0, 0.4)`;
+								e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
 							}}
 							onMouseLeave={e => {
-								e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)';
-								e.currentTarget.style.color = themeColors.textSecondary || 'rgba(255,255,255,0.7)';
+								e.currentTarget.style.transform = 'scale(1)';
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)';
+								e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+								e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
 							}}
 						>
-							<i className="pi pi-chevron-left" style={{ fontSize: '0.9rem' }} />
+							<TbChevronsLeft style={{ fontSize: '1.4rem' }} />
 						</button>
 					)}
 
@@ -1359,27 +1367,34 @@ const NodeTermStatus = ({
 							title="Colapsar columna"
 							style={{
 								width: '100%',
-								height: '32px',
+								height: '36px',
 								display: 'flex',
 								alignItems: 'center',
 								justifyContent: 'center',
-								background: themeColors.itemBackground || 'rgba(255,255,255,0.05)',
-								border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
-								borderRadius: '6px',
+								background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%)',
+								backdropFilter: 'blur(10px)',
+								WebkitBackdropFilter: 'blur(10px)',
+								border: '1px solid rgba(255, 255, 255, 0.12)',
+								borderRadius: '10px',
 								cursor: 'pointer',
-								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-								transition: 'all 0.2s ease'
+								color: themeColors.primaryColor || '#4fc3f7',
+								transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+								boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
 							}}
 							onMouseEnter={e => {
-								e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)';
-								e.currentTarget.style.color = themeColors.textPrimary || 'rgba(255,255,255,0.9)';
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%)';
+								e.currentTarget.style.boxShadow = `0 0 15px ${(themeColors.primaryColor || '#4fc3f7')}30, 0 6px 20px rgba(0, 0, 0, 0.3)`;
+								e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+								e.currentTarget.style.transform = 'translateY(-1px)';
 							}}
 							onMouseLeave={e => {
-								e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)';
-								e.currentTarget.style.color = themeColors.textSecondary || 'rgba(255,255,255,0.7)';
+								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%)';
+								e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+								e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+								e.currentTarget.style.transform = 'translateY(0)';
 							}}
 						>
-							<i className="pi pi-chevron-right" style={{ fontSize: '1rem' }} />
+							<TbChevronsRight style={{ fontSize: '1.4rem' }} />
 						</button>
 					</div>
 				)}
