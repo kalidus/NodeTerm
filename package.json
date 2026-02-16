@@ -1,6 +1,6 @@
 {
   "name": "nodeterm",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

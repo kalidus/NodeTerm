@@ -5,24 +5,26 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.4] - 2026-02-16
+
+### 🚀 Mejoras de Release y GitHub
+- **GitHub Release Notes**: Implementado script `post-release.js` para forzar la publicación de notas de release vía API de GitHub.
+- **Automatización**: Mejora en el proceso de release con verificación de tags y ramas.
+
+### 🔐 Seguridad y Conexiones
+- **SSH Password Saving**: Corregido el error que impedía guardar la contraseña SSH cuando se introducía tras un fallo inicial de autenticación.
+- **SecureStorage**: Mejoras en la persistencia de credenciales durante el reintento.
+
+### 🎨 UI/UX y Estética
+- **Iconos Modernos**: Sustitución de iconos de colapso/expansión del sidebar por versiones premium con mejor outline.
+- **Protocol Tags**: Ajuste de posición y tamaño de los indicadores de protocolo (SSH, RDP) en los iconos de favoritos.
+- **Drag & Drop Sidebar**: Fix del error que impedía soltar conexiones dentro de carpetas en la barra lateral.
+
+### 🔧 Correcciones y Sistema
+- **Tab Flash Bug**: Solucionado el parpadeo visual que mostraba brevemente la primera pestaña al abrir terminales locales adicionales.
+- **Detección de Hardware**: Mejora en la detección de gráficas integradas Intel en la barra de estado para usuarios no administradores.
+
 ## [1.6.3] - 2026-02-10
-
-### ✨ Nuevas Características
-- **Múltiples Instancias**: Soporte para ejecutar múltiples instancias de la aplicación simultáneamente con sincronización de datos en tiempo real.
-- **Favoritos desde Sidebar**: Ahora puedes añadir o quitar conexiones de favoritos directamente desde el menú contextual de la sidebar.
-
-### 🎨 Mejoras de UI/UX
-- **Refactor de Diálogo de Importación**: Rediseño completo del asistente de importación para una experiencia más intuitiva y robusta.
-
-### 🔧 Mejoras y Correcciones
-- **Correcciones Varias**: Multitud de fixes de estabilidad, correcciones visuales y mejoras de rendimiento general.
-- **Fix de Favoritos en Túneles**: Corregido el error al conectar a túneles SSH desde la lista de favoritos.
-- **Actualización de Versión**: Release v1.6.3 con todas las funcionalidades integradas.
-
-## [1.6.3] - 2026-02-16
-
-### 🔧 Mejoras y Correcciones
-- **Actualización de Versión**: Actualización a versión 1.6.2 con mejoras generales
 
 ### 🔌 Mejoras de Túneles SSH
 - **Verificación de Puertos**: Verificación automática de puertos libres antes de crear túneles
@@ -244,6 +246,8 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - **Mejor Manejo de Errores**: Enhanced error handling para futuros problemas de checksum
 - **Nota Importante**: Usuarios deben actualizar de v1.5.4 → v1.5.6 (saltar v1.5.5)
 
+
+---
 
 ## [1.5.5] - 2024-12-21
 

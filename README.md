@@ -5,7 +5,7 @@
   <br>
   <b>Cliente SSH moderno y multiplataforma para administradores y devs</b>
   <br><br>
-  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.6.3-blue.svg"/></a>
+  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.6.4-blue.svg"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg"/></a>
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/electron-latest-brightgreen.svg"/></a>
   <a href="#donaciones"><img src="https://img.shields.io/badge/💰-Donate_Crypto-yellow.svg"/></a>
@@ -138,7 +138,20 @@ npm run build:win
 
 ---
 
-## 🎉 Versión Actual: v1.6.3 (10 Febrero 2026)
+## 🎉 Versión Actual: v1.6.4 (16 Febrero 2026)
+
+### 🔧 Fixes y Mejoras de Release
+- **GitHub Release Notes**: Sistema mejorado para forzar notas de release vía API.
+- **SSH Password Saving**: Fix en el guardado automático de contraseñas tras login manual.
+- **Modernización de Iconos**: Nuevos iconos premium en el sidebar con mejor visibilidad.
+- **Tags de Protocolo**: Ajuste de posición y tamaño de tags para no ocultar iconos.
+- **Drag & Drop**: Fix en el movimiento de conexiones a carpetas en el sidebar.
+- **Tab Flash Bug**: Corrección definitiva del parpadeo visual al abrir terminales locales.
+- **Monitoreo de GPU**: Soporte para detección de gráficas integradas Intel en Windows.
+
+---
+
+## 🎉 Versión Anterior: v1.6.3 (10 Febrero 2026)
 
 ### 🚀 Múltiples Instancias y Sincronización
 - **Soporte Multi-Instancia**: Abre múltiples ventanas de NodeTerm simultáneamente.
@@ -252,7 +265,8 @@ NodeTerm/
 
 | Versión | Características | Estado |
 |---------|----------------|--------|
-| **v1.6.3** | 🔧 Mejoras y Correcciones | ✅ Actual |
+| **v1.6.4** | 🔧 Fixes y Mejoras de Release | ✅ Actual |
+| **v1.6.3** | 🔄 Múltiples Instancias e Importación | ✅ Completado |
 | **v1.6.1** | 🐛 Fix de Conexión WALLIX | ✅ Completado |
 | **v1.6.0** | 🔄 Sistema de Actualización Automática + Configuración Avanzada + Canales Stable/Beta | ✅ Completado |
 | **v1.5.9** | 🔐 Password Manager Integrado + KeePass + Auto-completado de Credenciales | ✅ Completado |
@@ -267,7 +281,15 @@ NodeTerm/
 
 ## 📝 Changelog
 
-### v1.6.3 (4 Febrero 2025) - ACTUAL
+### v1.6.4 (16 Febrero 2026) - ACTUAL
+- 🚀 **GitHub Release Fix** - Implementado script de post-release para garantizar notas en GitHub
+- 🔐 **SSH Password Fix** - Corregido el guardado de contraseñas tras reintento manual
+- 🎨 **Iconos Premium** - Nuevos iconos de colapso/expansión más modernos
+- 🏷️ **Protocol Tags** - Ajuste estético de tags de protocolo en favoritos
+- 🐛 **Bug Fixes** - Corrección de drag-and-drop a carpetas y parpadeo de pestañas
+- 📊 **System Stats** - Detección mejorada de Intel GPU para todos los usuarios
+
+### v1.6.3 (10 Febrero 2026)
 - 🎨 **Rediseño Total de HomeTab** - Nueva barra de filtros, diseño glassmorphism y panel de opciones moderno
 - 🚀 **Arranque Optimizado** - Reducción drástica del tiempo de carga con `StartupProfiler`
 - ✨ **Mejoras de UX** - Botones de servicio interactivos (Guacd, Ollama, Vault) y visualización refinada

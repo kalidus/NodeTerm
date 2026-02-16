@@ -1,3 +1,38 @@
+# 🚀 NodeTerm v1.6.4 - Release Notes
+
+**Fecha de Release**: 2026-02-16  
+**Tipo de Release**: Maintenance & UX Release  
+**Versión Anterior**: v1.6.3
+
+---
+
+## 🎉 ¡Bienvenido a NodeTerm v1.6.4!
+
+Esta versión se centra en la **estabilidad, la pulcritud visual y la corrección de errores críticos** reportados por la comunidad, además de mejorar nuestro pipeline de lanzamientos.
+
+---
+
+## ✨ Características Principales
+
+### 🚀 Mejoras en el Proceso de Release
+- **GitHub Release Notes Fix**: Hemos resuelto el problema donde las notas de release no aparecían en GitHub. Ahora usamos un script post-release que garantiza que toda la información llegue a su destino.
+- **Automatización Robusta**: Mejoras en los scripts de despliegue para asegurar versiones consistentes.
+
+### 🔐 Seguridad y Autenticación
+- **Fix de Guardado de Password SSH**: Se ha corregido un bug molesto donde la contraseña no se guardaba si se introducía manualmente tras un primer intento fallido. ¡Ahora tus credenciales se guardan a la primera!
+- **Persistencia Confiable**: Mejoras en `SecureStorage` para garantizar que tus datos sensibles estén siempre donde deben estar.
+
+### 🎨 Refinamiento Visual (Premium UI)
+- **Nuevos Iconos de Sidebar**: Hemos modernizado los iconos de colapso y expansión del sidebar con un diseño más premium y legible.
+- **Optimización de Protocol Tags**: Los indicadores de SSH/RDP en favoritos ahora son más pequeños y están mejor posicionados, permitiendo ver el icono principal sin distracciones.
+
+### 🔧 Correcciones de Experiencia (UX)
+- **Fin del "Tab Flash Bug"**: Se ha eliminado el parpadeo visual que ocurría al abrir nuevos terminales locales, mejorando la fluidez de la interfaz.
+- **Drag & Drop Reestablecido**: Ahora soltar conexiones en carpetas del sidebar funciona de nuevo como la seda.
+- **Stats para Todos**: La detección de gráficas Intel en la barra de estado ahora funciona correctamente para todos los usuarios, no solo para administradores.
+
+---
+
 # 🚀 NodeTerm v1.6.3 - Release Notes
 
 **Fecha de Release**: 2026-02-10  
