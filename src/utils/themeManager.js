@@ -63,7 +63,7 @@ class ThemeManager {
       if (window.electron && window.electron.theme) {
         const sharedConfig = await window.electron.theme.get();
         if (sharedConfig && sharedConfig.themeName) {
-          console.log('[ThemeManager] Cargando tema compartido:', sharedConfig.themeName);
+          // console.log('[ThemeManager] Cargando tema compartido:', sharedConfig.themeName);
           // Aplicar sin guardar para evitar bucle infinito si fuera bidireccional
           this._applyThemeInternal(sharedConfig.themeName, false);
           return;

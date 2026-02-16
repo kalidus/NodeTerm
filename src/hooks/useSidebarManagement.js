@@ -56,7 +56,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         // Si el archivo no ha cambiado, no hacer nada
         if (mtime <= lastKnownMtimeRef.current) return;
 
-        console.log(`[Polling] 🔔 Cambio detectado: mtime ${mtime} > last ${lastKnownMtimeRef.current}`);
+        // console.log(`[Polling] 🔔 Cambio detectado: mtime ${mtime} > last ${lastKnownMtimeRef.current}`);
         lastKnownMtimeRef.current = mtime;
 
         const allData = await window.electron.appdata.getAll();
@@ -69,7 +69,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           return;
         }
 
-        console.log('[Polling] 📥 Datos nuevos recibidos. Actualizando sidebar...');
+        // console.log('[Polling] 📥 Datos nuevos recibidos. Actualizando sidebar...');
         lastContentHashRef.current = remoteJson;
 
         // Actualizar localStorage
@@ -121,7 +121,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         try {
           const remoteExpanded = localStorage.getItem(STORAGE_KEYS.EXPANDED_KEYS);
           if (remoteExpanded && remoteExpanded !== lastExpandedKeysHashRef.current) {
-            console.log('[Sidebar] 📥 Reloading expanded keys from sync');
+            // console.log('[Sidebar] 📥 Reloading expanded keys from sync');
             lastExpandedKeysHashRef.current = remoteExpanded;
             isExternalExpandedKeysReloadRef.current = true;
             setExpandedKeys(JSON.parse(remoteExpanded));

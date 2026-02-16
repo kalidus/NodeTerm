@@ -213,7 +213,7 @@ const App = () => {
   // Detectar si necesita unlock al iniciar (o auto-unlock si está recordado)
   useEffect(() => {
     const initializeApp = async () => {
-      console.log('[App] ✅ initializeApp() iniciado');
+      // console.log('[App] ✅ initializeApp() iniciado');
 
       // NOTA: La sincronización de localStorage se hace en index.js ANTES del render
       // para asegurar que los datos estén disponibles cuando los hooks se inicializan

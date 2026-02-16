@@ -1018,13 +1018,13 @@ const NodeTermStatus = ({
 
 		// Debug: Log del estado de IA (temporal para depuración)
 		if (process.env.NODE_ENV === 'development') {
-			console.log('[NodeTermStatus] Calculando hasActiveAIClients:', {
-				nodeterm: aiClientsState.nodeterm,
-				anythingllm: aiClientsState.anythingllm,
-				openwebui: aiClientsState.openwebui,
-				result,
-				'variant': variant
-			});
+			// console.log('[NodeTermStatus] Calculando hasActiveAIClients:', {
+			// 	nodeterm: aiClientsState.nodeterm,
+			// 	anythingllm: aiClientsState.anythingllm,
+			// 	openwebui: aiClientsState.openwebui,
+			// 	result,
+			// 	'variant': variant
+			// });
 		}
 
 		return result;

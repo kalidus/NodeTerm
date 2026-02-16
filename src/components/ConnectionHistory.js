@@ -1334,11 +1334,11 @@ const ConnectionHistory = ({
 
 	// Debug: Log theme colors to see what we're getting
 	React.useEffect(() => {
-		console.log('🎨 ConnectionHistory themeColors:', {
-			itemBackground: themeColors.itemBackground,
-			cardBackground: themeColors.cardBackground,
-			textPrimary: themeColors.textPrimary
-		});
+		// console.log('🎨 ConnectionHistory themeColors:', {
+		// 	itemBackground: themeColors.itemBackground,
+		// 	cardBackground: themeColors.cardBackground,
+		// 	textPrimary: themeColors.textPrimary
+		// });
 	}, [themeColors]);
 
 	return (
