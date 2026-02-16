@@ -208,9 +208,11 @@ async function main() {
                 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
                 const buildConfig = pkg.build || {};
 
-                // Inyectamos las notas de release
+                // --- CAMBIO RADICAL ---
+                // En lugar de usar releaseNotesFile (que puede fallar por rutas), metemos el contenido DIRECTAMENTE
+                // Esto es infalible si la config se carga correctamente.
                 buildConfig.releaseInfo = {
-                    releaseNotesFile: tempNotesFilename
+                    releaseNotes: notes
                 };
 
                 // Aseguramos que el publish use releaseType: release
@@ -230,7 +232,7 @@ async function main() {
                 tempConfigFilename = `temp-release-config.json`;
                 const tempConfigPath = path.join(__dirname, '..', tempConfigFilename);
                 fs.writeFileSync(tempConfigPath, JSON.stringify(buildConfig, null, 2));
-                console.log(`\x1b[32m✅ Archivo de configuración COMPLETO creado: ${tempConfigFilename}\x1b[0m`);
+                console.log(`\x1b[32m✅ Archivo de configuración COMPLETO (con notas incrustadas) creado: ${tempConfigFilename}\x1b[0m`);
 
                 // Usar --config con la configuración completa
                 ebCommand = `npx electron-builder --publish always --config ${tempConfigFilename}`;
