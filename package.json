@@ -16,7 +16,8 @@
     "version:patch": "npm version patch --no-git-tag-version",
     "version:minor": "npm version minor --no-git-tag-version",
     "version:major": "npm version major --no-git-tag-version",
-    "version:build": "npm run build && npm run pack"
+    "version:build": "npm run build && npm run pack",
+    "release": "node scripts/release.js"
   },
   "build": {
     "appId": "com.electron.nodeterm",
