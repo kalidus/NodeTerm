@@ -206,10 +206,20 @@ async function main() {
 
     // Tags finales
     const activeBranch = getOutput('git rev-parse --abbrev-ref HEAD');
-    const doTag = await question(`\n¿Crear y subir tag v${nextVersion} a GitHub? (S/n): `);
-    if (doTag.toLowerCase() !== 'n') {
-        await runCommand(`git tag v${nextVersion}`, `Creando tag v${nextVersion}`);
-        await runCommand(`git push origin ${activeBranch} --tags`, 'Sincronizando con GitHub');
+    const tagExists = getOutput(`git tag -l v${nextVersion}`);
+
+    if (tagExists) {
+        console.log(`\n\x1b[33mℹ️  La etiqueta v${nextVersion} ya existe localmente.\x1b[0m`);
+        const doPushTags = await question('¿Deseas intentar subir las etiquetas a GitHub de todos modos? (S/n): ');
+        if (doPushTags.toLowerCase() !== 'n') {
+            await runCommand(`git push origin ${activeBranch} --tags`, 'Subiendo etiquetas');
+        }
+    } else {
+        const doTag = await question(`\n¿Crear y subir tag v${nextVersion} a GitHub? (S/n): `);
+        if (doTag.toLowerCase() !== 'n') {
+            await runCommand(`git tag v${nextVersion}`, `Creando tag v${nextVersion}`);
+            await runCommand(`git push origin ${activeBranch} --tags`, 'Sincronizando con GitHub');
+        }
     }
 
     console.log('\n\x1b[1m\x1b[32m═══════════════════════════════════════════════════\x1b[0m');
