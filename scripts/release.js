@@ -32,15 +32,24 @@ function getOutput(command) {
 function getReleaseNotes(version) {
     const changelogPath = path.join(__dirname, '..', 'CHANGELOG.md');
     if (!fs.existsSync(changelogPath)) return '';
-    const content = fs.readFileSync(changelogPath, 'utf8');
+    let content = fs.readFileSync(changelogPath, 'utf8');
 
-    // Buscar la sección de la versión [x.y.z]
-    const versionMatch = content.match(new RegExp(`## \\[${version.replace(/\./g, '\\.')}\\][^\n]*\n([\\s\\S]*?)(?=\\n## \\[|\\n\\[|$)`));
+    // Normalizar finales de línea
+    content = content.replace(/\r\n/g, '\n');
 
-    if (versionMatch && versionMatch[1]) {
-        return versionMatch[1].trim();
+    // Buscar todas las secciones de la versión [x.y.z]
+    const escapedVersion = version.replace(/\./g, '\\.');
+    const regex = new RegExp(`## \\[${escapedVersion}\\][^\n]*\n([\\s\\S]*?)(?=\n## \\[|$)`, 'g');
+
+    let allNotes = [];
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+        if (match[1]) {
+            allNotes.push(match[1].trim());
+        }
     }
-    return '';
+
+    return allNotes.length > 0 ? allNotes.join('\n\n---\n\n') : '';
 }
 
 async function main() {
@@ -181,13 +190,18 @@ async function main() {
         const confirmPublish = await question('\n¿Confirmas subir a GitHub Releases ahora? (S/n): ');
         if (confirmPublish.toLowerCase() !== 'n') {
             const notes = getReleaseNotes(nextVersion);
+            console.log('\n\x1b[36m[Info]\x1b[0m Extrayendo notas de release...');
             if (notes) {
+                console.log('-------------------------------------------');
+                console.log(notes);
+                console.log('-------------------------------------------');
                 tempNotesPath = path.join(__dirname, '..', `temp-notes-${nextVersion}.md`);
                 fs.writeFileSync(tempNotesPath, notes);
                 ebCommand += ` --publish always -c.releaseInfo.releaseNotesFile="${tempNotesPath}" -c.publish.releaseType=release`;
-                console.log('\x1b[32m📝 Notas de release extraídas del CHANGELOG.md\x1b[0m');
+                console.log('\x1b[32m✅ Notas de release preparadas.\x1b[0m');
             } else {
                 ebCommand += ' --publish always -c.publish.releaseType=release';
+                console.log('\x1b[33m⚠️  No se encontraron notas para esta versión en CHANGELOG.md\x1b[0m');
             }
         }
     }
