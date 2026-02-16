@@ -184,21 +184,25 @@ async function main() {
 
     // 2. Electron-builder (Build de ejecutables + opcional Publish)
     let ebCommand = 'npx electron-builder';
-    let tempNotesPath = null;
+    let tempNotesFilename = null;
 
     if (process.env.GH_TOKEN) {
         const confirmPublish = await question('\n¿Confirmas subir a GitHub Releases ahora? (S/n): ');
         if (confirmPublish.toLowerCase() !== 'n') {
             const notes = getReleaseNotes(nextVersion);
-            console.log('\n\x1b[36m[Info]\x1b[0m Extrayendo notas de release...');
+            console.log('\n\x1b[36m[Info]\x1b[0m Buscando notas de release...');
             if (notes) {
-                console.log('-------------------------------------------');
+                console.log('\x1b[33m--- NOTAS ENCONTRADAS ---\x1b[0m');
                 console.log(notes);
-                console.log('-------------------------------------------');
-                tempNotesPath = path.join(__dirname, '..', `temp-notes-${nextVersion}.md`);
+                console.log('\x1b[33m-------------------------\x1b[0m');
+
+                tempNotesFilename = `temp-notes-${nextVersion}.md`;
+                const tempNotesPath = path.join(__dirname, '..', tempNotesFilename);
                 fs.writeFileSync(tempNotesPath, notes);
-                ebCommand += ` --publish always -c.releaseInfo.releaseNotesFile="${tempNotesPath}" -c.publish.releaseType=release`;
-                console.log('\x1b[32m✅ Notas de release preparadas.\x1b[0m');
+
+                // Usar ruta relativa y asegurar que no haya problemas de escapes
+                ebCommand += ` --publish always -c.releaseInfo.releaseNotesFile="${tempNotesFilename}" -c.publish.releaseType=release`;
+                console.log(`\x1b[32m✅ Archivo de notas creado: ${tempNotesFilename}\x1b[0m`);
             } else {
                 ebCommand += ' --publish always -c.publish.releaseType=release';
                 console.log('\x1b[33m⚠️  No se encontraron notas para esta versión en CHANGELOG.md\x1b[0m');
@@ -206,15 +210,17 @@ async function main() {
         }
     }
 
+    console.log(`\x1b[34m[Debug]\x1b[0m Comando final: ${ebCommand}`);
+
     if (await runCommand(ebCommand, 'Generando paquetes y gestionando publicación')) {
         console.log('\n\x1b[32m✅ Proceso de binarios finalizado.\x1b[0m');
-        console.log('   Archivos en "dist/":');
-        console.log('     - Instalador: NodeTerm-Setup-*.exe');
-        console.log('     - Portable:   NodeTerm-*.exe');
-        console.log('     - Update:     latest.yml');
 
-        if (tempNotesPath && fs.existsSync(tempNotesPath)) {
-            fs.unlinkSync(tempNotesPath);
+        if (tempNotesFilename) {
+            const tempNotesPath = path.join(__dirname, '..', tempNotesFilename);
+            if (fs.existsSync(tempNotesPath)) {
+                fs.unlinkSync(tempNotesPath);
+                console.log(`\x1b[34m[Debug]\x1b[0m Archivo temporal ${tempNotesFilename} eliminado.`);
+            }
         }
     }
 
