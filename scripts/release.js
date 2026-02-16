@@ -13,7 +13,7 @@ const question = (query) => new Promise((resolve) => rl.question(query, resolve)
 async function runCommand(command, description) {
     console.log(`\n\x1b[36m[Ejecutando]\x1b[0m ${description}...`);
     try {
-        execSync(command, { stdio: 'inherit' });
+        execSync(command, { stdio: 'inherit', env: { ...process.env } });
         return true;
     } catch (error) {
         console.error(`\x1b[31m[Error]\x1b[0m Error al ejecutar "${command}": ${error.message}`);
@@ -51,23 +51,18 @@ async function main() {
     // ETAPA 1: PREPARACIÓN (Versión y Changelog)
     // =========================================================================
     console.log('\n\x1b[1m\x1b[36m--- ETAPA 1: PREPARACIÓN ---\x1b[0m');
-    console.log('  • Validación de Git');
-    console.log('  • Incremento de versión (opcional)');
-    console.log('  • Actualización de CHANGELOG.md');
 
     const startStage1 = await question('\n¿Deseas comenzar la preparación? (S/n): ');
-    if (startStage1.toLowerCase() === 'n') {
-        process.exit(0);
-    }
+    if (startStage1.toLowerCase() === 'n') process.exit(0);
 
     if (gitStatus) {
-        const proceedGit = await question('Hay cambios pendientes. ¿Continuar de todos modos? (s/N): ');
+        const proceedGit = await question('Hay cambios pendientes en el repositorio. ¿Continuar? (s/N): ');
         if (proceedGit.toLowerCase() !== 's') process.exit(0);
     }
 
     // Selección de Versión
     console.log('\n¿Qué tipo de release es?');
-    console.log(`  0) Mantener v${oldVersion} (solo corrección de build/metadata)`);
+    console.log(`  0) Mantener v${oldVersion}`);
     console.log(`  1) Patch (v${oldVersion} -> Arreglo de bugs)`);
     console.log(`  2) Minor (v${oldVersion} -> Funcionalidad nueva)`);
     console.log(`  3) Major (v${oldVersion} -> Cambio disruptivo)`);
@@ -124,86 +119,73 @@ async function main() {
     // ETAPA 2: INTEGRACIÓN (Merge a Main)
     // =========================================================================
     console.log('\n\x1b[1m\x1b[36m--- ETAPA 2: INTEGRACIÓN ---\x1b[0m');
-    console.log(`  • Salto de ${currentBranch} ➔ main`);
-    console.log(`  • Consolidación de cambios en main`);
 
     if (currentBranch === 'main' || currentBranch === 'master') {
-        console.log('  ℹ️ Ya estás en la rama principal. Saltando etapa de merge.');
+        console.log('  ℹ️ Ya estás en la rama principal. Saltando merge.');
     } else {
-        const doMerge = await question(`\n¿Deseas fusionar "${currentBranch}" en "main" ahora? (S/n): `);
+        const doMerge = await question(`\n¿Mezclar "${currentBranch}" en "main" ahora? (S/n): `);
         if (doMerge.toLowerCase() !== 'n') {
             if (await runCommand('git checkout main', 'Cambiando a main')) {
                 if (await runCommand(`git merge ${currentBranch}`, 'Fusionando cambios')) {
                     console.log('\x1b[32m✅ Integración completada.\x1b[0m');
                 } else {
-                    console.log('\x1b[31m❌ Error en el merge. Resuelve los conflictos y vuelve a empezar.\x1b[0m');
+                    console.log('\x1b[31m❌ Error en el merge. Resuélvelo manualmente.\x1b[0m');
                     process.exit(1);
                 }
-            } else {
-                console.error('\x1b[31m❌ No se pudo cambiar a la rama main.\x1b[0m');
-                process.exit(1);
             }
         }
     }
 
     // =========================================================================
-    // ETAPA 3: DESPLIEGUE (Build, Tag y Push)
+    // ETAPA 3: DESPLIEGUE (Build y Publicación)
     // =========================================================================
     console.log('\n\x1b[1m\x1b[36m--- ETAPA 3: DESPLIEGUE ---\x1b[0m');
-    console.log('  • Build de producción');
-    console.log('  • Generación de binarios (dist)');
-    console.log('  • Creación de Tag de Git');
-    console.log('  • Push a GitHub');
 
-    const startStage3 = await question('\n¿Deseas lanzar el despliegue final? (S/n): ');
-    if (startStage3.toLowerCase() === 'n') {
-        console.log('\nRelease pausado. Los cambios están guardados en el repo.');
+    const doEverything = await question('\n¿Deseas generar binarios y PUBLICAR en GitHub? (S/n): ');
+    if (doEverything.toLowerCase() === 'n') {
+        console.log('\nRelease pausado.');
         rl.close();
         return;
     }
 
-    // Build y Dist
-    const runBuild = await question('\n¿Ejecutar BUILD y generar BINARIOS (Installer + Portable)? (S/n): ');
-    if (runBuild.toLowerCase() !== 'n') {
-        await runCommand('npm run build', 'Build de producción');
-        await runCommand('npm run dist', 'Generando instaladores y versión portable');
-        console.log('\n\x1b[32m✅ Binarios generados en el directorio "dist/":\x1b[0m');
-        console.log('   - Instalador: dist/NodeTerm-Setup-*.exe');
-        console.log('   - Portable:   dist/NodeTerm-*.exe (sin "Setup" en el nombre)');
+    // Token interactivo
+    if (!process.env.GH_TOKEN) {
+        console.log('\n\x1b[33m⚠️  No se detectó GH_TOKEN.\x1b[0m');
+        const token = await question('Pega tu GitHub Personal Access Token (Enter para omitir subida): ');
+        if (token) process.env.GH_TOKEN = token;
     }
 
-    // Tag y Push
-    const finalBranch = getOutput('git rev-parse --abbrev-ref HEAD');
-    const doTag = await question(`\n¿Crear tag v${nextVersion}? (S/n): `);
+    // Proceso unificado para evitar doble build
+    // 1. Build de React/Webpack (necesario siempre)
+    await runCommand('npm run build', 'Compilando código fuente (Webpack)');
+
+    // 2. Electron-builder (Build de ejecutables + opcional Publish)
+    let ebCommand = 'npx electron-builder';
+    if (process.env.GH_TOKEN) {
+        const confirmPublish = await question('\n¿Confirmas subir a GitHub Releases ahora? (S/n): ');
+        if (confirmPublish.toLowerCase() !== 'n') {
+            ebCommand += ' --publish always';
+        }
+    }
+
+    if (await runCommand(ebCommand, 'Generando paquetes y gestionando publicación')) {
+        console.log('\n\x1b[32m✅ Proceso de binarios finalizado.\x1b[0m');
+        console.log('   Archivos en "dist/":');
+        console.log('     - Instalador: NodeTerm-Setup-*.exe');
+        console.log('     - Portable:   NodeTerm-*.exe');
+        console.log('     - Update:     latest.yml');
+    }
+
+    // Tags finales
+    const activeBranch = getOutput('git rev-parse --abbrev-ref HEAD');
+    const doTag = await question(`\n¿Crear y subir tag v${nextVersion} a GitHub? (S/n): `);
     if (doTag.toLowerCase() !== 'n') {
-        await runCommand(`git tag v${nextVersion}`, `Creando etiqueta v${nextVersion}`);
-    }
-
-    const doPublish = await question('\n¿Deseas PUBLICAR este release en GitHub? (S/n): ');
-    if (doPublish.toLowerCase() !== 'n') {
-        let ghToken = process.env.GH_TOKEN;
-        if (!ghToken) {
-            console.log('\n\x1b[33m⚠️  No se detectó la variable de entorno GH_TOKEN.\x1b[0m');
-            ghToken = await question('Introduce tu GitHub Personal Access Token (o presiona Enter para omitir): ');
-            if (ghToken) {
-                process.env.GH_TOKEN = ghToken;
-            }
-        }
-
-        if (process.env.GH_TOKEN) {
-            await runCommand('npx electron-builder --publish always', 'Publicando en GitHub');
-        } else {
-            console.log('\x1b[31m❌ Publicación cancelada por falta de token.\x1b[0m');
-        }
-    } else {
-        const doPush = await question(`\n¿Hacer PUSH de la rama ${finalBranch} a GitHub sin publicar release? (S/n): `);
-        if (doPush.toLowerCase() !== 'n') {
-            await runCommand(`git push origin ${finalBranch} --tags`, 'Subiendo a GitHub');
-        }
+        await runCommand(`git tag v${nextVersion}`, `Creando tag v${nextVersion}`);
+        await runCommand(`git push origin ${activeBranch} --tags`, 'Sincronizando con GitHub');
     }
 
     console.log('\n\x1b[1m\x1b[32m═══════════════════════════════════════════════════\x1b[0m');
-    console.log(`\x1b[1m\x1b[32m   🚀 ¡RELEASE v${nextVersion} COMPLETADO CON ÉXITO!   \x1b[0m`);
+    console.log(`\x1b[1m\x1b[32m   🚀 ¡RELEASE v${nextVersion} FINALIZADO!   \x1b[0m`);
     console.log('\x1b[1m\x1b[32m═══════════════════════════════════════════════════\x1b[0m\n');
     rl.close();
 }
