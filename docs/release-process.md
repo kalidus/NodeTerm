@@ -21,9 +21,9 @@ Nada se publica si no está consolidado en la rama principal.
 ### Etapa 3: Despliegue (En la rama Main)
 Una vez el código está en `main`, se procede a la construcción y entrega.
 *   **Build**: Compilación de producción para maximizar rendimiento.
-*   **Dist**: Generación de los instaladores (`.exe`, `.dmg`, etc.).
+*   **Dist**: Generación de los instaladores (`.exe`) y la **versión portable** (`.exe`). Los encontrarás en la carpeta `dist/`.
+*   **GitHub Publishing**: El script te pedirá el `GH_TOKEN` si no está configurado, permitiendo subir los binarios directamente a GitHub Releases.
 *   **Git Tag**: Se crea una etiqueta inmutable (ej. `v1.6.4`) que apunta a este release.
-*   **Push**: Se suben los cambios y los tags a GitHub.
 
 ---
 
@@ -37,5 +37,5 @@ npm run release
 
 ### Consejos para un buen release:
 1.  **Revisa tus cambios**: Antes de empezar, asegúrate de que todo funciona localmente.
-2.  **Changelog claro**: Escribe descripciones útiles en el `CHANGELOG.md` para que los usuarios sepan qué hay de nuevo.
-3.  **Tags**: Nunca borres o muevas un tag una vez subido a GitHub; los tags deben ser permanentes.
+2.  **GH_TOKEN**: Si no tienes configurada la variable de entorno, el script te pedirá el token interactivamente para subirlo a GitHub.
+3.  **Versión Portable**: Recuerda que la versión portable se genera automáticamente en `dist/` junto al instalador.
