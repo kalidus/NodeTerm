@@ -740,67 +740,23 @@ const HomeTab = ({
                 </>
               )}
             </div>
-            {rightColumnCollapsed ? (
-              <div
-                style={{
-                  width: '40px',
-                  minWidth: '40px',
-                  flexShrink: 0,
-                  background: themeColors.cardBackground || 'rgba(16, 20, 28, 0.95)',
-                  borderLeft: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}`,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'flex-start',
-                  paddingTop: '1rem'
-                }}
-              >
-                <button
-                  onClick={handleToggleRightColumn}
-                  title="Expandir columna"
-                  style={{
-                    background: themeColors.itemBackground || 'rgba(255,255,255,0.05)',
-                    border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
-                    borderRadius: '6px',
-                    width: '28px',
-                    height: '28px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)';
-                    e.currentTarget.style.color = themeColors.textPrimary || 'rgba(255,255,255,0.9)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)';
-                    e.currentTarget.style.color = themeColors.textSecondary || 'rgba(255,255,255,0.7)';
-                  }}
-                >
-                  <i className="pi pi-chevron-left" style={{ fontSize: '0.9rem' }} />
-                </button>
-              </div>
-            ) : (
-              <NodeTermStatus
-                variant="rightColumn"
-                sshConnectionsCount={sshConnectionsCount}
-                foldersCount={foldersCount}
-                rdpConnectionsCount={rdpConnectionsCount}
-                themeColors={themeColors}
-                onOpenFileExplorer={onOpenFileExplorer}
-                onOpenSettings={onOpenSettings}
-                onToggleTerminalVisibility={handleToggleTerminalVisibility}
-                onToggleAIChat={handleToggleAIChat}
-                onToggleStatusBar={handleToggleStatusBar}
-                onCollapse={handleToggleRightColumn}
-                showAIChat={showAIChat}
-                statusBarVisible={statusBarVisible}
-                setShowCreateGroupDialog={setShowCreateGroupDialog}
-              />
-            )}
+            <NodeTermStatus
+              variant="rightColumn"
+              collapsed={rightColumnCollapsed}
+              sshConnectionsCount={sshConnectionsCount}
+              foldersCount={foldersCount}
+              rdpConnectionsCount={rdpConnectionsCount}
+              themeColors={themeColors}
+              onOpenFileExplorer={onOpenFileExplorer}
+              onOpenSettings={onOpenSettings}
+              onToggleTerminalVisibility={handleToggleTerminalVisibility}
+              onToggleAIChat={handleToggleAIChat}
+              onToggleStatusBar={handleToggleStatusBar}
+              onCollapse={handleToggleRightColumn}
+              showAIChat={showAIChat}
+              statusBarVisible={statusBarVisible}
+              setShowCreateGroupDialog={setShowCreateGroupDialog}
+            />
           </div>
         </div >
       </div >
