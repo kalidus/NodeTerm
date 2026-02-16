@@ -185,6 +185,7 @@ async function main() {
     // 2. Electron-builder (Build de ejecutables + opcional Publish)
     let ebCommand = 'npx electron-builder';
     let tempNotesFilename = null;
+    let tempConfigFilename = null;
 
     if (process.env.GH_TOKEN) {
         const confirmPublish = await question('\n¿Confirmas subir a GitHub Releases ahora? (S/n): ');
@@ -196,13 +197,29 @@ async function main() {
                 console.log(notes);
                 console.log('\x1b[33m-------------------------\x1b[0m');
 
+                // 1. Crear archivo de notas
                 tempNotesFilename = `temp-notes-${nextVersion}.md`;
                 const tempNotesPath = path.join(__dirname, '..', tempNotesFilename);
                 fs.writeFileSync(tempNotesPath, notes);
-
-                // Usar ruta relativa y asegurar que no haya problemas de escapes
-                ebCommand += ` --publish always -c.releaseInfo.releaseNotesFile="${tempNotesFilename}" -c.publish.releaseType=release`;
                 console.log(`\x1b[32m✅ Archivo de notas creado: ${tempNotesFilename}\x1b[0m`);
+
+                // 2. Crear archivo de configuración temporal para electron-builder
+                // Esto es mucho más fiable que pasar argumentos por CLI
+                tempConfigFilename = `temp-release-config.json`;
+                const tempConfigPath = path.join(__dirname, '..', tempConfigFilename);
+                const releaseConfig = {
+                    releaseInfo: {
+                        releaseNotesFile: tempNotesFilename
+                    },
+                    publish: {
+                        releaseType: "release"
+                    }
+                };
+                fs.writeFileSync(tempConfigPath, JSON.stringify(releaseConfig, null, 2));
+                console.log(`\x1b[32m✅ Archivo de configuración creado: ${tempConfigFilename}\x1b[0m`);
+
+                // Usar --config para fusionar la configuración
+                ebCommand += ` --publish always --config ${tempConfigFilename}`;
             } else {
                 ebCommand += ' --publish always -c.publish.releaseType=release';
                 console.log('\x1b[33m⚠️  No se encontraron notas para esta versión en CHANGELOG.md\x1b[0m');
@@ -215,11 +232,19 @@ async function main() {
     if (await runCommand(ebCommand, 'Generando paquetes y gestionando publicación')) {
         console.log('\n\x1b[32m✅ Proceso de binarios finalizado.\x1b[0m');
 
+        // Limpieza
         if (tempNotesFilename) {
             const tempNotesPath = path.join(__dirname, '..', tempNotesFilename);
             if (fs.existsSync(tempNotesPath)) {
                 fs.unlinkSync(tempNotesPath);
                 console.log(`\x1b[34m[Debug]\x1b[0m Archivo temporal ${tempNotesFilename} eliminado.`);
+            }
+        }
+        if (tempConfigFilename) {
+            const tempConfigPath = path.join(__dirname, '..', tempConfigFilename);
+            if (fs.existsSync(tempConfigPath)) {
+                fs.unlinkSync(tempConfigPath);
+                console.log(`\x1b[34m[Debug]\x1b[0m Archivo temporal ${tempConfigFilename} eliminado.`);
             }
         }
     }
