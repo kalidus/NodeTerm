@@ -1,5 +1,5 @@
 {
-  "name": "NodeTerm",
+  "name": "nodeterm",
   "version": "1.6.3",
   "main": "main.js",
   "scripts": {
