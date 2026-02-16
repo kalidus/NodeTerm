@@ -11,121 +11,144 @@ const rl = readline.createInterface({
 const question = (query) => new Promise((resolve) => rl.question(query, resolve));
 
 async function runCommand(command, description) {
-    console.log(`\x1b[36m[NodeTerm Release]\x1b[0m ${description}...`);
+    console.log(`\n\x1b[36m[Ejecutando]\x1b[0m ${description}...`);
     try {
         execSync(command, { stdio: 'inherit' });
         return true;
     } catch (error) {
-        console.error(`\x1b[31m[Error]\x1b[0m Error executing ${command}: ${error.message}`);
+        console.error(`\x1b[31m[Error]\x1b[0m Error al ejecutar "${command}": ${error.message}`);
         return false;
     }
 }
 
-async function main() {
-    console.log('\n\x1b[1m\x1b[35m--- ASISTENTE DE RELEASE DE NODETERM ---\x1b[0m\n');
+function getOutput(command) {
+    try {
+        return execSync(command).toString().trim();
+    } catch (e) {
+        return '';
+    }
+}
 
-    // 1. Verificar Git Status
-    const gitStatus = execSync('git status --porcelain').toString();
+async function main() {
+    console.log('\n\x1b[1m\x1b[35m--- ASISTENTE DE RELEASE INTERACTIVO DE NODETERM ---\x1b[0m\n');
+
+    // 1. Detección de Rama y Estado
+    const currentBranch = getOutput('git rev-parse --abbrev-ref HEAD');
+    console.log(`Rama actual: \x1b[33m${currentBranch}\x1b[0m`);
+
+    const gitStatus = getOutput('git status --porcelain');
     if (gitStatus) {
-        console.log('\x1b[33m[Advertencia]\x1b[0m Tienes cambios sin commitear en el repositorio:');
+        console.log('\n\x1b[33m[Advertencia]\x1b[0m Tienes cambios sin commitear:');
         console.log(gitStatus);
-        const proceed = await question('¿Deseas continuar de todos modos? (s/N): ');
-        if (proceed.toLowerCase() !== 's') {
-            console.log('Release cancelado.');
+        const proceedGit = await question('\n¿Deseas continuar con estos cambios? (s/N): ');
+        if (proceedGit.toLowerCase() !== 's') {
+            console.log('Cancelado.');
             process.exit(0);
         }
     }
 
-    // 2. Obtener versión actual
+    // 2. Gestión de Versión
     const pkgPath = path.join(__dirname, '..', 'package.json');
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
     const oldVersion = pkg.version;
 
-    console.log('\nSelecciona el tipo de actualización de versión:');
+    console.log('\n--- GESTIÓN DE VERSIÓN ---');
     console.log(`0) Mantener versión actual (v${oldVersion})`);
-    console.log(`1) Patch (v${oldVersion} -> 1.6.4) - Correcciones de bugs`);
-    console.log(`2) Minor (v${oldVersion} -> 1.7.0) - Nuevas funcionalidades`);
-    console.log(`3) Major (v${oldVersion} -> 2.0.0) - Cambios disruptivos`);
+    console.log(`1) Patch (v${oldVersion} -> 1.6.4)`);
+    console.log(`2) Minor (v${oldVersion} -> 1.7.0)`);
+    console.log(`3) Major (v${oldVersion} -> 2.0.0)`);
 
-    const typeChoice = await question('\nOpción: ');
+    const typeChoice = await question('\nSelecciona opción: ');
     let npmVersionCmd = '';
     switch (typeChoice) {
         case '0': npmVersionCmd = 'none'; break;
         case '1': npmVersionCmd = 'patch'; break;
         case '2': npmVersionCmd = 'minor'; break;
         case '3': npmVersionCmd = 'major'; break;
-        default:
-            console.log('Opción inválida. Cancelando.');
-            process.exit(1);
+        default: console.log('Opción inválida.'); process.exit(1);
     }
 
-    // 3. Calcular nueva versión
     let newVersion = oldVersion;
-
     if (npmVersionCmd !== 'none') {
-        console.log(`\nActualizando versión desde v${oldVersion}...`);
-
-        // Ejecutamos npm version para que haga el trabajo sucio en package.json
-        if (!await runCommand(`npm version ${npmVersionCmd} --no-git-tag-version`, 'Actualizando package.json')) {
-            process.exit(1);
+        const confirmBump = await question(`\n¿Confirmas incrementar a la versión ${npmVersionCmd}? (s/N): `);
+        if (confirmBump.toLowerCase() === 's') {
+            if (await runCommand(`npm version ${npmVersionCmd} --no-git-tag-version`, 'Incrementando versión en package.json')) {
+                newVersion = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version;
+            }
         }
-
-        const newPkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-        newVersion = newPkg.version;
     }
 
-    console.log(`\x1b[32m[Éxito]\x1b[0m Versión a liberar: v${newVersion}`);
-
-    // 4. Actualizar CHANGELOG.md
+    // 3. Actualizar CHANGELOG
     const changelogPath = path.join(__dirname, '..', 'CHANGELOG.md');
     if (fs.existsSync(changelogPath)) {
-        console.log('Actualizando CHANGELOG.md...');
-        let changelog = fs.readFileSync(changelogPath, 'utf8');
-        const today = new Date().toISOString().split('T')[0];
+        const updateLog = await question(`\n¿Deseas actualizar el CHANGELOG.md para la v${newVersion}? (s/N): `);
+        if (updateLog.toLowerCase() === 's') {
+            let changelog = fs.readFileSync(changelogPath, 'utf8');
+            const today = new Date().toISOString().split('T')[0];
+            const versionHeader = `## [${newVersion}] - ${today}`;
 
-        // Buscar la línea "## [V.V.V] - Por definir" o similar
-        // Si no existe, insertamos una nueva cabecera
-        const versionHeader = `## [${newVersion}] - ${today}`;
-
-        // Intentamos reemplazar el placeholder de "Por definir" si existe
-        if (changelog.includes('Por definir')) {
-            changelog = changelog.replace(/## \[\d+\.\d+\.\d+\] - Por definir/, versionHeader);
-        } else {
-            // Insertamos después de la línea 6 (después de la intro del changelog)
-            const lines = changelog.split('\n');
-            lines.splice(7, 0, '\n' + versionHeader + '\n');
-            changelog = lines.join('\n');
+            if (changelog.includes('Por definir')) {
+                changelog = changelog.replace(/## \[\d+\.\d+\.\d+\] - Por definir/, versionHeader);
+            } else {
+                const lines = changelog.split('\n');
+                lines.splice(7, 0, '\n' + versionHeader + '\n');
+                changelog = lines.join('\n');
+            }
+            fs.writeFileSync(changelogPath, changelog);
+            console.log('\x1b[32m[OK]\x1b[0m CHANGELOG.md actualizado.');
         }
-
-        fs.writeFileSync(changelogPath, changelog);
-        console.log('\x1b[32m[Éxito]\x1b[0m CHANGELOG.md actualizado.');
     }
 
-    // 5. Build
-    const runBuild = await question('\n¿Deseas ejecutar el build de producción ahora? (s/N): ');
+    // 4. Commitear cambios de versión si existen
+    if (newVersion !== oldVersion || gitStatus) {
+        const doCommit = await question('\n¿Deseas hacer commit de los cambios actuales? (s/N): ');
+        if (doCommit.toLowerCase() === 's') {
+            await runCommand('git add .', 'Añadiendo archivos');
+            await runCommand(`git commit -m "release: v${newVersion}"`, 'Haciendo commit');
+        }
+    }
+
+    // 5. Flujo de Merge a Main
+    if (currentBranch !== 'main' && currentBranch !== 'master') {
+        const doMerge = await question('\n¿Deseas hacer MERGE de esta rama en "main"? (s/N): ');
+        if (doMerge.toLowerCase() === 's') {
+            if (await runCommand('git checkout main', 'Cambiando a rama main')) {
+                if (await runCommand(`git merge ${currentBranch}`, `Mezclando ${currentBranch} en main`)) {
+                    console.log('\x1b[32m[OK]\x1b[0m Merge completado en main.');
+                } else {
+                    console.log('\x1b[31m[Error]\x1b[0m Conflicto en el merge. Resuélvelo manualmente.');
+                    process.exit(1);
+                }
+            }
+        }
+    }
+
+    // 6. Build y Dist
+    const activeBranch = getOutput('git rev-parse --abbrev-ref HEAD');
+    console.log(`\nEstás en la rama: \x1b[33m${activeBranch}\x1b[0m`);
+
+    const runBuild = await question('\n¿Deseas ejecutar el BUILD de producción ahora? (s/N): ');
     if (runBuild.toLowerCase() === 's') {
-        if (!await runCommand('npm run build', 'Ejecutando Build')) {
-            console.log('El build falló. Por favor corrige los errores antes de continuar.');
-            process.exit(1);
-        }
+        await runCommand('npm run build', 'Ejecutando Build');
     }
 
-    // 6. Dist y VirusTotal
-    const runDist = await question('\n¿Deseas generar los binarios (dist) y escanear con VirusTotal? (s/N): ');
+    const runDist = await question('\n¿Deseas generar los BINARIOS (dist)? (s/N): ');
     if (runDist.toLowerCase() === 's') {
-        await runCommand('npm run dist:scan', 'Generando binarios y escaneando');
+        await runCommand('npm run dist', 'Generando binarios');
     }
 
-    // 7. Instrucciones finales
-    console.log('\n\x1b[1m\x1b[32m--- PROCESO CASI COMPLETADO ---\x1b[0m');
-    console.log('\nPara finalizar el release, ejecuta estos comandos:');
-    console.log(`\x1b[36m  git add package.json package-lock.json CHANGELOG.md\x1b[0m`);
-    console.log(`\x1b[36m  git commit -m "release: v${newVersion}"\x1b[0m`);
-    console.log(`\x1b[36m  git tag v${newVersion}\x1b[0m`);
-    console.log(`\x1b[36m  git push origin main --tags\x1b[0m`);
+    // 7. Tags y Push
+    const doTag = await question(`\n¿Deseas crear el tag v${newVersion}? (s/N): `);
+    if (doTag.toLowerCase() === 's') {
+        await runCommand(`git tag v${newVersion}`, `Creando tag v${newVersion}`);
+    }
 
-    console.log('\n\x1b[1m¡Buen trabajo!\x1b[0m\n');
+    const doPush = await question(`\n¿Deseas hacer PUSH de la rama y los tags a GitHub? (s/N): `);
+    if (doPush.toLowerCase() === 's') {
+        await runCommand(`git push origin ${activeBranch} --tags`, 'Subiendo cambios a GitHub');
+    }
 
+    console.log('\n\x1b[1m\x1b[32m--- PROCESO FINALIZADO ---\x1b[0m\n');
     rl.close();
 }
 
