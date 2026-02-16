@@ -1149,6 +1149,23 @@ const NodeTermStatus = ({
 							</button>
 						))}
 					</div>
+
+					{/* Separador */}
+					<div style={{ width: '20px', height: '1px', background: 'rgba(255,255,255,0.1)', marginTop: 'auto' }} />
+
+					{/* TOGGLES */}
+					<div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center', paddingBottom: '0.5rem' }}>
+						{onToggleTerminalVisibility && (
+							<button onClick={onToggleTerminalVisibility} title="Mostrar/ocultar terminal" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+								<i className="pi pi-desktop" style={{ color: '#60a5fa', fontSize: '1.1rem' }} />
+							</button>
+						)}
+						{onToggleStatusBar && (
+							<button onClick={onToggleStatusBar} title="Mostrar/ocultar status bar" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+								<i className="pi pi-bars" style={{ color: '#c084fc', fontSize: '1.1rem' }} />
+							</button>
+						)}
+					</div>
 				</div>
 			);
 		}
