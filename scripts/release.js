@@ -163,18 +163,40 @@ async function main() {
     }
 
     // Build y Dist
-    const runBuild = await question('\n¿Ejecutar BUILD y generar BINARIOS (dist)? (S/n): ');
+    const runBuild = await question('\n¿Ejecutar BUILD y generar BINARIOS (Installer + Portable)? (S/n): ');
     if (runBuild.toLowerCase() !== 'n') {
         await runCommand('npm run build', 'Build de producción');
-        await runCommand('npm run dist', 'Generando instaladores');
+        await runCommand('npm run dist', 'Generando instaladores y versión portable');
     }
 
     // Tag y Push
     const finalBranch = getOutput('git rev-parse --abbrev-ref HEAD');
-    const doFinal = await question(`\n¿Crear tag v${nextVersion} y subir TODO a GitHub? (S/n): `);
-    if (doFinal.toLowerCase() !== 'n') {
+    const doTag = await question(`\n¿Crear tag v${nextVersion}? (S/n): `);
+    if (doTag.toLowerCase() !== 'n') {
         await runCommand(`git tag v${nextVersion}`, `Creando etiqueta v${nextVersion}`);
-        await runCommand(`git push origin ${finalBranch} --tags`, 'Subiendo a GitHub');
+    }
+
+    const doPublish = await question('\n¿Deseas PUBLICAR este release en GitHub? (S/n): ');
+    if (doPublish.toLowerCase() !== 'n') {
+        const ghToken = process.env.GH_TOKEN;
+        if (!ghToken) {
+            console.log('\n\x1b[33m⚠️  No se detectó la variable de entorno GH_TOKEN.\x1b[0m');
+            console.log('   Para publicar automáticamente, necesitas un token de acceso de GitHub.');
+            console.log('   Si continúas, usaremos "electron-builder --publish always" que podría fallar sin token.');
+            const continueAnyway = await question('¿Intentar publicar de todos modos? (s/N): ');
+            if (continueAnyway.toLowerCase() !== 's') {
+                console.log('Publicación omitida. Puedes hacerlo manualmente luego.');
+            } else {
+                await runCommand('npx electron-builder --publish always', 'Publicando en GitHub');
+            }
+        } else {
+            await runCommand('npx electron-builder --publish always', 'Publicando en GitHub');
+        }
+    } else {
+        const doPush = await question(`\n¿Hacer PUSH de la rama ${finalBranch} a GitHub sin publicar release? (S/n): `);
+        if (doPush.toLowerCase() !== 'n') {
+            await runCommand(`git push origin ${finalBranch} --tags`, 'Subiendo a GitHub');
+        }
     }
 
     console.log('\n\x1b[1m\x1b[32m═══════════════════════════════════════════════════\x1b[0m');

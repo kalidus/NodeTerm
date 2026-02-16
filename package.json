@@ -105,7 +105,10 @@
       }
     ],
     "win": {
-      "target": "nsis",
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "src/assets/app-icon.png",
       "artifactName": "${productName}-Setup-${version}.${ext}",
       "verifyUpdateCodeSignature": false,
