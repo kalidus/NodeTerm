@@ -7,7 +7,8 @@ const SystemStats = () => {
     cpu: { usage: 0, cores: 0, model: 'Cargando...' },
     memory: { used: 0, total: 0, percentage: 0 },
     disks: [],
-    network: { download: 0, upload: 0 }
+    network: { download: 0, upload: 0 },
+    gpu: null
   });
   const [isLoading, setIsLoading] = useState(true);
   // Sticky stats para todas las métricas
@@ -31,6 +32,19 @@ const SystemStats = () => {
           if (systemStats.memory && systemStats.memory.total > 0) mergedStats.memory = systemStats.memory;
           if (systemStats.disks && systemStats.disks.length > 0) mergedStats.disks = systemStats.disks;
           if (systemStats.network && (systemStats.network.download > 0 || systemStats.network.upload > 0)) mergedStats.network = systemStats.network;
+
+          // Obtener datos de GPU
+          try {
+            const gpuData = await window.electron.system?.getGPUStats();
+            if (gpuData && gpuData.ok) {
+              mergedStats.gpu = gpuData;
+            } else {
+              mergedStats.gpu = null;
+            }
+          } catch (gpuErr) {
+            mergedStats.gpu = null;
+          }
+
           lastStatsRef.current = mergedStats;
           setStats(mergedStats);
           setDownloadHistory(prev => ([...prev, mergedStats.network.download].slice(-HISTORY_LENGTH)));
@@ -68,8 +82,8 @@ const SystemStats = () => {
 
   if (isLoading) {
     return (
-      <div style={{ 
-        display: 'grid', 
+      <div style={{
+        display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
         gap: '1rem',
         padding: '1rem'
@@ -87,16 +101,16 @@ const SystemStats = () => {
   }
 
   return (
-    <div style={{ 
-      display: 'grid', 
+    <div style={{
+      display: 'grid',
       gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
       gap: '1rem',
       padding: '1rem'
     }}>
       {/* CPU */}
-      <Card 
+      <Card
         className="system-stat-card"
-        style={{ 
+        style={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
           border: 'none',
@@ -110,8 +124,8 @@ const SystemStats = () => {
             <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', opacity: 0.8 }}>
               {stats.cpu.cores} núcleos
             </p>
-            <ProgressBar 
-              value={stats.cpu.usage} 
+            <ProgressBar
+              value={stats.cpu.usage}
               style={{ height: '8px' }}
               color="rgba(255,255,255,0.9)"
             />
@@ -123,9 +137,9 @@ const SystemStats = () => {
       </Card>
 
       {/* Memoria */}
-      <Card 
+      <Card
         className="system-stat-card"
-        style={{ 
+        style={{
           background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
           color: 'white',
           border: 'none',
@@ -139,8 +153,8 @@ const SystemStats = () => {
             <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', opacity: 0.8 }}>
               {stats.memory.used.toFixed(1)} GB / {stats.memory.total} GB
             </p>
-            <ProgressBar 
-              value={stats.memory.percentage} 
+            <ProgressBar
+              value={stats.memory.percentage}
               style={{ height: '8px' }}
               color="rgba(255,255,255,0.9)"
             />
@@ -152,9 +166,9 @@ const SystemStats = () => {
       </Card>
 
       {/* Discos */}
-      <Card 
+      <Card
         className="system-stat-card"
-        style={{ 
+        style={{
           background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
           color: 'white',
           border: 'none',
@@ -171,8 +185,8 @@ const SystemStats = () => {
                   <span>{disk.name}</span>
                   <span>{disk.used} GB / {disk.total} GB</span>
                 </div>
-                <ProgressBar 
-                  value={disk.percentage} 
+                <ProgressBar
+                  value={disk.percentage}
                   style={{ height: '6px', marginTop: '0.2rem' }}
                   color="rgba(255,255,255,0.9)"
                 />
@@ -183,9 +197,9 @@ const SystemStats = () => {
       </Card>
 
       {/* Red */}
-      <Card 
+      <Card
         className="system-stat-card"
-        style={{ 
+        style={{
           background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
           color: 'white',
           border: 'none',
@@ -203,7 +217,7 @@ const SystemStats = () => {
             {/* Barras de progreso de red */}
             <div style={{ marginBottom: '0.3rem' }}>
               <div style={{ fontSize: '0.8rem', marginBottom: 2 }}>Descarga</div>
-              <ProgressBar 
+              <ProgressBar
                 value={stats.network.download}
                 showValue={false}
                 style={{ height: '6px', background: '#fff2', marginBottom: 4 }}
@@ -211,7 +225,7 @@ const SystemStats = () => {
                 max={Math.max(100, Math.max(...downloadHistory, 0), stats.network.download, 1000)}
               />
               <div style={{ fontSize: '0.8rem', marginBottom: 2 }}>Subida</div>
-              <ProgressBar 
+              <ProgressBar
                 value={stats.network.upload}
                 showValue={false}
                 style={{ height: '6px', background: '#fff2', marginBottom: 0 }}
@@ -222,6 +236,46 @@ const SystemStats = () => {
           </div>
         </div>
       </Card>
+
+      {/* GPU */}
+      {stats.gpu && stats.gpu.ok && (
+        <Card
+          className="system-stat-card"
+          style={{
+            background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+            color: 'white',
+            border: 'none',
+            minHeight: '120px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <i className="pi pi-bolt" style={{ fontSize: '2.5rem', opacity: 0.8 }}></i>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>GPU</h3>
+              <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', opacity: 0.8 }}>
+                {stats.gpu.name || (stats.gpu.type ? stats.gpu.type.toUpperCase() : 'Desconocida')}
+              </p>
+              {stats.gpu.totalMB && (
+                <>
+                  <ProgressBar
+                    value={stats.gpu.usedMB ? Math.round(stats.gpu.usedMB / stats.gpu.totalMB * 100) : 0}
+                    style={{ height: '8px' }}
+                    color="rgba(255,255,255,0.9)"
+                  />
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', opacity: 0.7 }}>
+                    {stats.gpu.usedMB ? `${(stats.gpu.usedMB / 1024).toFixed(1)} GB / ` : ''} {(stats.gpu.totalMB / 1024).toFixed(1)} GB
+                  </p>
+                </>
+              )}
+              {!stats.gpu.totalMB && stats.gpu.type && (
+                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', opacity: 0.7 }}>
+                  Tipo: {stats.gpu.type.toUpperCase()}
+                </p>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
     </div>
   );
 };
