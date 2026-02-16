@@ -36,15 +36,21 @@ async function main() {
         }
     }
 
-    // 2. Preguntar tipo de incremento
+    // 2. Obtener versión actual
+    const pkgPath = path.join(__dirname, '..', 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    const oldVersion = pkg.version;
+
     console.log('\nSelecciona el tipo de actualización de versión:');
-    console.log('1) Patch (1.6.3 -> 1.6.4) - Correcciones de bugs');
-    console.log('2) Minor (1.6.3 -> 1.7.0) - Nuevas funcionalidades');
-    console.log('3) Major (1.6.3 -> 2.0.0) - Cambios disruptivos');
+    console.log(`0) Mantener versión actual (v${oldVersion})`);
+    console.log(`1) Patch (v${oldVersion} -> 1.6.4) - Correcciones de bugs`);
+    console.log(`2) Minor (v${oldVersion} -> 1.7.0) - Nuevas funcionalidades`);
+    console.log(`3) Major (v${oldVersion} -> 2.0.0) - Cambios disruptivos`);
 
     const typeChoice = await question('\nOpción: ');
     let npmVersionCmd = '';
     switch (typeChoice) {
+        case '0': npmVersionCmd = 'none'; break;
         case '1': npmVersionCmd = 'patch'; break;
         case '2': npmVersionCmd = 'minor'; break;
         case '3': npmVersionCmd = 'major'; break;
@@ -53,22 +59,22 @@ async function main() {
             process.exit(1);
     }
 
-    // 3. Obtener versión actual y calcular nueva
-    const pkgPath = path.join(__dirname, '..', 'package.json');
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-    const oldVersion = pkg.version;
+    // 3. Calcular nueva versión
+    let newVersion = oldVersion;
 
-    console.log(`\nActualizando versión desde v${oldVersion}...`);
+    if (npmVersionCmd !== 'none') {
+        console.log(`\nActualizando versión desde v${oldVersion}...`);
 
-    // Ejecutamos npm version para que haga el trabajo sucio en package.json
-    // Usamos --no-git-tag-version para manejar los tags nosotros
-    if (!await runCommand(`npm version ${npmVersionCmd} --no-git-tag-version`, 'Actualizando package.json')) {
-        process.exit(1);
+        // Ejecutamos npm version para que haga el trabajo sucio en package.json
+        if (!await runCommand(`npm version ${npmVersionCmd} --no-git-tag-version`, 'Actualizando package.json')) {
+            process.exit(1);
+        }
+
+        const newPkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+        newVersion = newPkg.version;
     }
 
-    const newPkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-    const newVersion = newPkg.version;
-    console.log(`\x1b[32m[Éxito]\x1b[0m Nueva versión: v${newVersion}`);
+    console.log(`\x1b[32m[Éxito]\x1b[0m Versión a liberar: v${newVersion}`);
 
     // 4. Actualizar CHANGELOG.md
     const changelogPath = path.join(__dirname, '..', 'CHANGELOG.md');
