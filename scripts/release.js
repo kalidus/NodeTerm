@@ -234,6 +234,10 @@ async function main() {
                 fs.writeFileSync(tempConfigPath, JSON.stringify(buildConfig, null, 2));
                 console.log(`\x1b[32m✅ Archivo de configuración COMPLETO (con notas incrustadas) creado: ${tempConfigFilename}\x1b[0m`);
 
+                // DEPURACIÓN: Mostrar qué se ha escrito
+                console.log('\n\x1b[35m[DEBUG] Contenido de releaseInfo en config:\x1b[0m');
+                console.log(JSON.stringify(buildConfig.releaseInfo, null, 2));
+
                 // Usar --config con la configuración completa
                 ebCommand = `npx electron-builder --publish always --config ${tempConfigFilename}`;
             } else {
