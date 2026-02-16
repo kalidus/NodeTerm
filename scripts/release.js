@@ -208,14 +208,9 @@ async function main() {
                 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
                 const buildConfig = pkg.build || {};
 
-                // --- CAMBIO RADICAL ---
-                // En lugar de usar releaseNotesFile (que puede fallar por rutas), metemos el contenido DIRECTAMENTE
-                // Esto es infalible si la config se carga correctamente.
-                buildConfig.releaseInfo = {
-                    releaseNotes: notes
-                };
-
                 // Aseguramos que el publish use releaseType: release
+                // NOTA: Ya no intentamos pasar las notas por aquí porque electron-builder las ignora.
+                // Las subiremos directamente a la API de GitHub después.
                 if (buildConfig.publish) {
                     if (Array.isArray(buildConfig.publish)) {
                         buildConfig.publish = buildConfig.publish.map(p => ({ ...p, releaseType: "release" }));
@@ -232,11 +227,7 @@ async function main() {
                 tempConfigFilename = `temp-release-config.json`;
                 const tempConfigPath = path.join(__dirname, '..', tempConfigFilename);
                 fs.writeFileSync(tempConfigPath, JSON.stringify(buildConfig, null, 2));
-                console.log(`\x1b[32m✅ Archivo de configuración COMPLETO (con notas incrustadas) creado: ${tempConfigFilename}\x1b[0m`);
-
-                // DEPURACIÓN: Mostrar qué se ha escrito
-                console.log('\n\x1b[35m[DEBUG] Contenido de releaseInfo en config:\x1b[0m');
-                console.log(JSON.stringify(buildConfig.releaseInfo, null, 2));
+                console.log(`\x1b[32m✅ Archivo de configuración COMPLETO (sin notas) creado: ${tempConfigFilename}\x1b[0m`);
 
                 // Usar --config con la configuración completa
                 ebCommand = `npx electron-builder --publish always --config ${tempConfigFilename}`;
@@ -251,6 +242,90 @@ async function main() {
 
     if (await runCommand(ebCommand, 'Generando paquetes y gestionando publicación')) {
         console.log('\n\x1b[32m✅ Proceso de binarios finalizado.\x1b[0m');
+
+        // --- PLAN B: ACTUALIZAR NOTAS VÍA API GITHUB ---
+        // Si teníamos notas, las forzamos ahora usando curl o fetch
+        if (tempNotesFilename && process.env.GH_TOKEN) {
+            console.log('\n\x1b[1m\x1b[35m--- ACTUALIZANDO NOTAS EN GITHUB (PLAN B) ---\x1b[0m');
+            const notes = fs.readFileSync(path.join(__dirname, '..', tempNotesFilename), 'utf8');
+            const repoOwner = 'kalidus'; // Hardcoded based on package.json
+            const repoName = 'NodeTerm';
+
+            // Usamos un script auxiliar para hacer la petición HTTPS
+            const updateScript = `
+const https = require('https');
+const token = process.env.GH_TOKEN;
+const version = 'v${nextVersion}';
+const notes = ${JSON.stringify(notes)};
+
+const options = {
+    hostname: 'api.github.com',
+    path: '/repos/${repoOwner}/${repoName}/releases/tags/' + version,
+    method: 'GET',
+    headers: {
+        'User-Agent': 'NodeTerm-Release-Script',
+        'Authorization': 'token ' + token
+    }
+};
+
+console.log('Buscando release ' + version + '...');
+
+const req = https.request(options, res => {
+    let data = '';
+    res.on('data', chunk => data += chunk);
+    res.on('end', () => {
+        if (res.statusCode !== 200) {
+            console.error('Error buscando release:', data);
+            process.exit(1);
+        }
+        const release = JSON.parse(data);
+        const releaseId = release.id;
+        
+        console.log('Encontrado Release ID:', releaseId);
+        console.log('Actualizando body...');
+        
+        const updateOptions = {
+            hostname: 'api.github.com',
+            path: '/repos/${repoOwner}/${repoName}/releases/' + releaseId,
+            method: 'PATCH',
+            headers: {
+                'User-Agent': 'NodeTerm-Release-Script',
+                'Authorization': 'token ' + token,
+                'Content-Type': 'application/json'
+            }
+        };
+        
+        const updateReq = https.request(updateOptions, updateRes => {
+            let updateData = '';
+            updateRes.on('data', chunk => updateData += chunk);
+            updateRes.on('end', () => {
+                if (updateRes.statusCode === 200) {
+                    console.log('✅ ¡Notas actualizadas correctamente en GitHub!');
+                } else {
+                    console.error('❌ Error actualizando notas:', updateData);
+                    process.exit(1);
+                }
+            });
+        });
+        
+        updateReq.write(JSON.stringify({ body: notes }));
+        updateReq.end();
+    });
+});
+
+req.on('error', error => {
+    console.error(error);
+    process.exit(1);
+});
+
+req.end();
+`;
+            const scriptPath = path.join(__dirname, '..', 'update-notes.js');
+            fs.writeFileSync(scriptPath, updateScript);
+
+            await runCommand(`node "${scriptPath}"`, 'Forzando actualización de notas en GitHub');
+            fs.unlinkSync(scriptPath);
+        }
 
         // Limpieza
         if (tempNotesFilename) {
