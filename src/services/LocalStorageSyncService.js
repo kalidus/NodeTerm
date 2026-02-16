@@ -206,7 +206,7 @@ class LocalStorageSyncService {
             }
         }
 
-        console.log(`[LocalStorageSync] Importados ${importedCount} items a localStorage`);
+        // console.log(`[LocalStorageSync] Importados ${importedCount} items a localStorage`);
 
         // Notificar a la aplicación que hubo cambios
         if (importedCount > 0) {
