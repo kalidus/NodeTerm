@@ -16,12 +16,12 @@ const os = require('os');
  * @param {string} path - Ruta del archivo
  * @returns {Object|null} - Estadísticas del archivo o null si hay error
  */
-function safeStatSync(path) { 
-  try { 
-    return fs.statSync(path); 
-  } catch { 
-    return null; 
-  } 
+function safeStatSync(path) {
+  try {
+    return fs.statSync(path);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -43,9 +43,9 @@ function hashFileSync(path) {
  * Solo incluye Clipboard y Dialog que son esenciales para el funcionamiento básico
  */
 function registerSystemHandlers() {
-  
+
   // === CLIPBOARD HANDLERS ===
-  
+
   // Handler para leer texto del clipboard
   ipcMain.handle('clipboard:readText', () => {
     return clipboard.readText();
@@ -57,7 +57,7 @@ function registerSystemHandlers() {
   });
 
   // === DIALOG HANDLERS ===
-  
+
   // Handler para mostrar el diálogo de guardado
   ipcMain.handle('dialog:show-save-dialog', async (event, options) => {
     const win = BrowserWindow.getFocusedWindow();
@@ -88,9 +88,9 @@ function registerSystemHandlers() {
  * - Esto evita errores "No handler registered" sin ralentizar el arranque
  */
 function registerSystemMonitoringHandlers() {
-  
+
   // === IMPORT HANDLERS ===
-  
+
   // Handler para obtener información de archivo
   ipcMain.handle('import:get-file-info', async (event, filePath) => {
     // ✅ VALIDACIÓN CRÍTICA: Validar input antes de procesar
@@ -151,7 +151,7 @@ function registerSystemMonitoringHandlers() {
   // IMPORTANTE: Este handler SIEMPRE debe retornar un string válido
   ipcMain.handle('get-user-home', async (event) => {
     console.log('🏠 [get-user-home] Handler INVOCADO');
-    
+
     // Método 1: app.getPath('home') - MÁS CONFIABLE en Electron
     try {
       const homePath = app.getPath('home');
@@ -163,7 +163,7 @@ function registerSystemMonitoringHandlers() {
     } catch (e) {
       console.warn('⚠️ [get-user-home] app.getPath falló:', e.message);
     }
-    
+
     // Método 2: os.homedir() - fallback
     try {
       const homePath = os.homedir();
@@ -175,7 +175,7 @@ function registerSystemMonitoringHandlers() {
     } catch (e) {
       console.warn('⚠️ [get-user-home] os.homedir() falló:', e.message);
     }
-    
+
     // Método 3: Variables de entorno (Windows)
     if (process.platform === 'win32') {
       // Primero intentar USERPROFILE que es la más confiable
@@ -186,7 +186,7 @@ function registerSystemMonitoringHandlers() {
           return homePath;
         }
       }
-      
+
       // Segundo: construir desde HOMEDRIVE + HOMEPATH
       if (process.env.HOMEDRIVE && process.env.HOMEPATH) {
         const homePath = (process.env.HOMEDRIVE + process.env.HOMEPATH).trim();
@@ -195,7 +195,7 @@ function registerSystemMonitoringHandlers() {
           return homePath;
         }
       }
-      
+
       // Tercero: construir desde USERNAME
       if (process.env.USERNAME) {
         const homePath = `C:\\Users\\${process.env.USERNAME}`;
@@ -211,14 +211,14 @@ function registerSystemMonitoringHandlers() {
           return homePath;
         }
       }
-      
+
       if (process.env.USER) {
         const homePath = `/home/${process.env.USER}`;
         console.log('✅ [get-user-home] Home obtenido de USER:', homePath);
         return homePath;
       }
     }
-    
+
     // Último recurso: path por defecto (no debería llegar aquí nunca)
     const defaultPath = process.platform === 'win32' ? 'C:\\Users\\User' : '/home/user';
     console.error('❌ [get-user-home] Usando path por defecto:', defaultPath);
@@ -238,7 +238,7 @@ function registerSystemMonitoringHandlers() {
   ipcMain.handle('local:list-files', async (event, dirPath) => {
     try {
       console.log('📁 [local:list-files] Handler INVOCADO con path:', dirPath);
-      
+
       if (!dirPath || typeof dirPath !== 'string') {
         console.error('❌ [local:list-files] Path inválido:', dirPath);
         return { success: false, error: 'Path inválido' };
@@ -268,12 +268,12 @@ function registerSystemMonitoringHandlers() {
         try {
           const fullPath = path.join(normalizedPath, entry.name);
           const stat = fs.statSync(fullPath);
-          
+
           // Detectar si el archivo está oculto
           // En Windows y Unix: archivos que empiezan con punto están ocultos
           // También verificar atributo hidden en Windows si está disponible
           let isHidden = entry.name.startsWith('.');
-          
+
           // En Windows, también verificar el atributo del sistema
           if (process.platform === 'win32' && !isHidden) {
             try {
@@ -286,7 +286,7 @@ function registerSystemMonitoringHandlers() {
               // Ignorar errores de verificación
             }
           }
-          
+
           return {
             name: entry.name,
             type: entry.isDirectory() ? 'directory' : 'file',
@@ -326,20 +326,20 @@ function registerSystemMonitoringHandlers() {
       const downloadsDir = app.getPath('downloads');
       const entries = fs.readdirSync(downloadsDir).filter(name => name.toLowerCase().endsWith('.xml'));
       let latest = null;
-      
+
       for (const name of entries) {
         const fullPath = require('path').join(downloadsDir, name);
         const stat = safeStatSync(fullPath);
         if (!stat) continue;
-        
+
         // Si se especifica sinceMs, filtrar por fecha
         if (sinceMs && stat.mtimeMs <= sinceMs) continue;
-        
+
         if (!latest || stat.mtimeMs > latest.mtimeMs) {
           latest = { name, path: fullPath, mtimeMs: stat.mtimeMs };
         }
       }
-      
+
       return { ok: true, latest };
     } catch (e) {
       return { ok: false, error: e?.message };
@@ -347,18 +347,18 @@ function registerSystemMonitoringHandlers() {
   });
 
   // === FILE DROP HANDLERS ===
-  
+
   // Handler para obtener el path de un archivo usando webUtils.getPathForFile
   // En Electron con contextIsolation, necesitamos usar webUtils desde el main process
   ipcMain.handle('file:get-path-for-file', async (event, fileIndex) => {
     try {
       const { webContents } = require('electron');
       const sender = webContents.fromId(event.sender.id);
-      
+
       if (!sender || !sender.webUtils) {
         return { ok: false, error: 'webUtils not available' };
       }
-      
+
       // Ejecutar código en el renderer para obtener el objeto File y usar webUtils
       // webUtils.getPathForFile solo está disponible en el main process
       const pathResult = await sender.executeJavaScript(`
@@ -423,13 +423,13 @@ function registerSystemMonitoringHandlers() {
           }
         })()
       `);
-      
+
       return pathResult;
     } catch (e) {
       return { ok: false, error: e?.message };
     }
   });
-  
+
   // Handler para guardar archivo temporalmente desde ArrayBuffer
   // Esto permite subir archivos arrastrados sin necesidad de tener el path
   ipcMain.handle('file:save-temp-file', async (event, { fileName, arrayBuffer }) => {
@@ -437,14 +437,14 @@ function registerSystemMonitoringHandlers() {
       const path = require('path');
       const os = require('os');
       const fs = require('fs').promises;
-      
+
       const tempDir = os.tmpdir();
       const tempFilePath = path.join(tempDir, `nodeterm-upload-${Date.now()}-${fileName}`);
-      
+
       // Convertir ArrayBuffer a Buffer y escribir
       const buffer = Buffer.from(arrayBuffer);
       await fs.writeFile(tempFilePath, buffer);
-      
+
       return { ok: true, path: tempFilePath };
     } catch (e) {
       return { ok: false, error: e?.message };
@@ -468,8 +468,8 @@ function registerSystemMonitoringHandlers() {
         usagePercent: Math.round((usedMemory / totalMemory) * 100)
       };
     } catch (e) {
-      return { 
-        ok: false, 
+      return {
+        ok: false,
         error: e?.message,
         // Fallback en caso de error
         totalMB: 16000,
@@ -561,7 +561,7 @@ function registerSystemMonitoringHandlers() {
               } catch (e) {
                 // No se pudo obtener nombre
               }
-              
+
               if (total && !isNaN(used) && !isNaN(total)) {
                 // Solo loguear la primera vez que se detecta
                 if (!gpuDetectionLogged || detectedGpuType !== 'amd' || detectedGpuName !== gpuName) {
@@ -589,40 +589,66 @@ function registerSystemMonitoringHandlers() {
           }
         }
 
-        // AMD en Windows (usando wmic)
+        // Windows (AMD e Intel)
         if (platform === 'win32') {
           try {
-            const output = execSync('wmic path win32_VideoController get name', {
+            // Obtener todas las controladoras de video con su VRAM (aproximada)
+            const output = execSync('wmic path win32_VideoController get name,AdapterRAM /format:csv', {
               encoding: 'utf-8',
-              timeout: 2000
-            });
-            const lines = output.split('\n').filter(l => l.trim() && !l.includes('Name') && !l.includes('----'));
-            const amdGpus = lines.filter(l => l.toLowerCase().includes('amd') || l.toLowerCase().includes('radeon'));
-            if (amdGpus.length > 0) {
-              const gpuName = amdGpus[0].trim();
-              // Solo loguear la primera vez que se detecta
-              if (!gpuDetectionLogged || detectedGpuType !== 'amd' || detectedGpuName !== gpuName) {
-                console.log('[GPU Handler] ✅ GPU AMD detectada en Windows:', gpuName);
-                gpuDetectionLogged = true;
-                detectedGpuType = 'amd';
-                detectedGpuName = gpuName;
+              timeout: 3000
+            }).trim();
+
+            if (output) {
+              const lines = output.split('\n').filter(l => l.trim() && !l.includes('AdapterRAM') && !l.includes('Node'));
+              const gpus = lines.map(line => {
+                const parts = line.split(',');
+                if (parts.length >= 3) {
+                  return {
+                    name: parts[2].trim(),
+                    ram: parseInt(parts[1]) || 0
+                  };
+                }
+                return null;
+              }).filter(g => g && g.name);
+
+              if (gpus.length > 0) {
+                // Filtrar para evitar duplicar NVIDIA si ya se detectó arriba (aunque nvidia-smi tiene prioridad)
+                // Priorizar AMD/ATI o Intel
+                const gpu = gpus.find(g => (g.name.toLowerCase().includes('amd') || g.name.toLowerCase().includes('radeon') || g.name.toLowerCase().includes('ati'))) ||
+                  gpus.find(g => g.name.toLowerCase().includes('intel')) ||
+                  gpus[0];
+
+                if (gpu) {
+                  const gpuName = gpu.name;
+                  const totalMB = Math.round(gpu.ram / 1024 / 1024);
+                  const isIntel = gpuName.toLowerCase().includes('intel');
+                  const isAmd = gpuName.toLowerCase().includes('amd') || gpuName.toLowerCase().includes('radeon') || gpuName.toLowerCase().includes('ati');
+                  const type = isIntel ? 'intel' : (isAmd ? 'amd' : 'integrated');
+
+                  if (!gpuDetectionLogged || detectedGpuType !== type || detectedGpuName !== gpuName) {
+                    console.log(`[GPU Handler] ✅ GPU ${type.toUpperCase()} detectada en Windows:`, gpuName);
+                    gpuDetectionLogged = true;
+                    detectedGpuType = type;
+                    detectedGpuName = gpuName;
+                  }
+
+                  return {
+                    ok: true,
+                    type: type,
+                    name: gpuName,
+                    totalMB: totalMB > 0 ? totalMB : null,
+                    usedMB: null,
+                    freeMB: totalMB > 0 ? totalMB : null,
+                    usagePercent: null,
+                    gpuUtilization: null,
+                    temperature: null,
+                    note: totalMB > 0 ? null : 'VRAM no detectada (memoria compartida)'
+                  };
+                }
               }
-              // Windows no expone VRAM fácilmente sin drivers específicos
-              return {
-                ok: true,
-                type: 'amd',
-                name: gpuName,
-                totalMB: null,
-                usedMB: null,
-                freeMB: null,
-                usagePercent: null,
-                gpuUtilization: null,
-                temperature: null,
-                note: 'AMD en Windows requiere drivers AMD para mostrar VRAM'
-              };
             }
           } catch (e) {
-            // No se pudo detectar AMD en Windows
+            // No se pudo detectar vía wmic
           }
         }
 
