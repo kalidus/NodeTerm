@@ -28,7 +28,8 @@ const NodeTermStatus = ({
 	onCollapse, // colapsar columna derecha (solo variant rightColumn)
 	showAIChat = false,
 	statusBarVisible = true,
-	setShowCreateGroupDialog
+	setShowCreateGroupDialog,
+	collapsed = false
 }) => {
 	const { t, locale } = useTranslation('common');
 	const { t: tDialogs } = useTranslation('dialogs');
@@ -1031,6 +1032,127 @@ const NodeTermStatus = ({
 	// Layout columna derecha (variant rightColumn) - sustituye barra superior en HomeTab
 	if (variant === 'rightColumn') {
 		const colBg = themeColors.cardBackground || 'rgba(16, 20, 28, 0.95)';
+
+		// Estilos para modo colapsado
+		if (collapsed) {
+			return (
+				<div style={{
+					width: '48px',
+					minWidth: '48px',
+					flexShrink: 0,
+					background: colBg,
+					borderLeft: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}`,
+					padding: '0.75rem 0',
+					display: 'flex',
+					flexDirection: 'column',
+					alignItems: 'center',
+					gap: '0.75rem',
+					overflowY: 'auto',
+					overflowX: 'hidden'
+				}}>
+					{/* Botón expandir */}
+					{onCollapse && (
+						<button
+							onClick={onCollapse}
+							title="Expandir columna"
+							style={{
+								width: '32px',
+								height: '32px',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								background: themeColors.itemBackground || 'rgba(255,255,255,0.05)',
+								border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+								borderRadius: '6px',
+								cursor: 'pointer',
+								color: themeColors.textSecondary || 'rgba(255,255,255,0.7)',
+								transition: 'all 0.2s ease',
+								flexShrink: 0
+							}}
+							onMouseEnter={e => {
+								e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)';
+								e.currentTarget.style.color = themeColors.textPrimary || 'rgba(255,255,255,0.9)';
+							}}
+							onMouseLeave={e => {
+								e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)';
+								e.currentTarget.style.color = themeColors.textSecondary || 'rgba(255,255,255,0.7)';
+							}}
+						>
+							<i className="pi pi-chevron-left" style={{ fontSize: '0.9rem' }} />
+						</button>
+					)}
+
+					{/* Separador */}
+					<div style={{ width: '20px', height: '1px', background: 'rgba(255,255,255,0.1)' }} />
+
+					{/* ACCIONES RÁPIDAS (Solo Iconos) */}
+					<div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
+						<button title="Nueva Conexión" onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+							<i className="pi pi-plus" style={{ color: '#22c55e', fontSize: '1.1rem' }} />
+						</button>
+						<button title="Nuevo Secreto" onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog', { detail: { initialCategory: secretsManagementCategory } }))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+							<i className="pi pi-key" style={{ color: '#ffc107', fontSize: '1.1rem' }} />
+						</button>
+						{setShowCreateGroupDialog && (
+							<button title={tDialogs('group.title.new')} onClick={() => setShowCreateGroupDialog(true)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+								<i className="pi pi-th-large" style={{ color: '#4fc3f7', fontSize: '1.1rem' }} />
+							</button>
+						)}
+						<button title="Herramientas" onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+							<i className="pi pi-wrench" style={{ color: '#06b6d4', fontSize: '1.1rem' }} />
+						</button>
+						<button title="Configuración" onClick={onOpenSettings} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+							<i className="pi pi-cog" style={{ color: '#b0bec5', fontSize: '1.1rem' }} />
+						</button>
+					</div>
+
+					{/* Separador */}
+					<div style={{ width: '20px', height: '1px', background: 'rgba(255,255,255,0.1)' }} />
+
+					{/* TERMINALES LOCALES (Solo Iconos) */}
+					<div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
+						{availableTerminals.map((t, idx) => {
+							// Simplificación de lógica de iconos para modo colapsado
+							let iconElement = <i className={t.icon || 'pi pi-terminal'} style={{ color: t.color || '#4fc3f7', fontSize: '1.1rem' }} />;
+
+							if (t.value === 'powershell') iconElement = <FaWindows style={{ color: t.color || '#0078D4', fontSize: '1.1rem' }} />;
+							else if (t.value === 'cygwin') iconElement = <i className="pi pi-code" style={{ color: t.color || '#00FF00', fontSize: '1.1rem' }} />;
+							else if (t.value.startsWith('wsl-') && t.distroInfo) {
+								const cat = t.distroInfo.category;
+								const lowerName = (t.distroInfo.name || '').toLowerCase();
+								if (cat === 'ubuntu' || lowerName.includes('ubuntu')) iconElement = <FaUbuntu style={{ color: t.color || '#E95420', fontSize: '1.1rem' }} />;
+								else if (cat === 'debian' || lowerName.includes('debian')) iconElement = <SiDebian style={{ color: t.color, fontSize: '1.1rem' }} />;
+								else iconElement = <FaLinux style={{ color: t.color, fontSize: '1.1rem' }} />;
+							} else if (t.value === 'linux-terminal') iconElement = <i className="pi pi-desktop" style={{ color: t.color, fontSize: '1.1rem' }} />;
+
+							// Manejar acción
+							const handleClick = t.action ? t.action : () => {
+								window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: t.value, distroInfo: t.distroInfo } }));
+							};
+
+							return (
+								<button key={`term-${idx}`} title={t.label} onClick={handleClick} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+									{iconElement}
+								</button>
+							);
+						})}
+						{/* Ubuntus adicionales */}
+						{(ubuntuDistributions || []).map((d, idx) => (
+							<button key={`ubuntu-${idx}`} title={d.label} onClick={() => window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: 'ubuntu', distroInfo: d.distroInfo || d } }))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+								<FaUbuntu style={{ color: d.color || '#E95420', fontSize: '1.1rem' }} />
+							</button>
+						))}
+						{/* Docker containers */}
+						{(dockerContainers || []).map((c, idx) => (
+							<button key={`docker-${idx}`} title={`🐳 ${c.name}`} onClick={() => window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: 'docker', distroInfo: { containerName: c.name, containerId: c.id, shortId: c.shortId } } }))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+								<SiDocker style={{ color: '#2496ed', fontSize: '1.1rem' }} />
+							</button>
+						))}
+					</div>
+				</div>
+			);
+		}
+
 		const cardStyle = (color) => ({
 			background: themeColors.itemBackground || 'rgba(255,255,255,0.05)',
 			border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
