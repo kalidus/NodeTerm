@@ -840,7 +840,23 @@ const ConnectionHistory = ({
 					</div>
 
 					{/* Protocol Badge (Integrated) */}
-					<div className="ribbon-card__protocol-badge">
+					<div
+						className="ribbon-card__protocol-badge"
+						style={{
+							color: typeColor,
+							borderColor: typeColor,
+							top: 'auto',
+							bottom: '2px',
+							left: '2px',
+							right: 'auto',
+							transform: 'none',
+							background: 'rgba(0, 0, 0, 0.7)',
+							boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+							fontSize: '0.5rem',
+							padding: '1px 4px',
+							borderRadius: '4px'
+						}}
+					>
 						{protocolLabel}
 					</div>
 				</div>
