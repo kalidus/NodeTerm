@@ -184,10 +184,10 @@ async function main() {
             if (notes) {
                 tempNotesPath = path.join(__dirname, '..', `temp-notes-${nextVersion}.md`);
                 fs.writeFileSync(tempNotesPath, notes);
-                ebCommand += ` --publish always -c.releaseInfo.releaseNotesFile="${tempNotesPath}"`;
+                ebCommand += ` --publish always -c.releaseInfo.releaseNotesFile="${tempNotesPath}" -c.publish.releaseType=release`;
                 console.log('\x1b[32m📝 Notas de release extraídas del CHANGELOG.md\x1b[0m');
             } else {
-                ebCommand += ' --publish always';
+                ebCommand += ' --publish always -c.publish.releaseType=release';
             }
         }
     }
