@@ -168,7 +168,7 @@ const initAndRender = async () => {
   try {
     // Inicializar sincronización de localStorage (carga datos del archivo compartido)
     await localStorageSyncService.initialize();
-    console.log('[Index] ✅ LocalStorageSync completado antes del render');
+    // console.log('[Index] ✅ LocalStorageSync completado antes del render');
   } catch (err) {
     console.warn('[Index] Error en sincronización inicial:', err);
   }

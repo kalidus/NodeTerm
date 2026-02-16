@@ -22,7 +22,7 @@ class SessionRecordingManager {
         console.error('Error cargando SecureStorage:', error);
       }
     }
-    
+
     // Cargar índice de grabaciones
     await this.loadRecordingsIndex();
   }
@@ -36,7 +36,7 @@ class SessionRecordingManager {
   async saveRecording(recording, encrypt = true) {
     try {
       const recordingId = recording.id;
-      
+
       // Preparar metadata para el índice
       const metadata = {
         id: recordingId,
@@ -60,7 +60,7 @@ class SessionRecordingManager {
 
       // Guardar el archivo de grabación
       const storageKey = `recording_${recordingId}`;
-      
+
       if (encrypt && this.secureStorage) {
         // Guardar cifrado
         const recordingData = JSON.stringify(recording);
@@ -111,7 +111,7 @@ class SessionRecordingManager {
         if (!masterKey) {
           throw new Error('Se requiere master key para cargar grabación cifrada');
         }
-        
+
         const decryptedData = await this.secureStorage.decryptData(recordingData, masterKey);
         recordingData = JSON.parse(decryptedData);
       }
@@ -132,10 +132,10 @@ class SessionRecordingManager {
     try {
       const storageKey = `recording_${recordingId}`;
       await this._deleteFromStorage(storageKey);
-      
+
       this.recordings.delete(recordingId);
       await this._saveRecordingsIndex();
-      
+
       console.log(`🗑️ Grabación eliminada: ${recordingId}`);
     } catch (error) {
       console.error('Error eliminando grabación:', error);
@@ -181,13 +181,13 @@ class SessionRecordingManager {
     let results = this.getAllRecordings();
 
     if (filters.host) {
-      results = results.filter(r => 
+      results = results.filter(r =>
         r.host.toLowerCase().includes(filters.host.toLowerCase())
       );
     }
 
     if (filters.username) {
-      results = results.filter(r => 
+      results = results.filter(r =>
         r.username.toLowerCase().includes(filters.username.toLowerCase())
       );
     }
@@ -217,7 +217,7 @@ class SessionRecordingManager {
    */
   getStats() {
     const recordings = this.getAllRecordings();
-    
+
     return {
       total: recordings.length,
       totalDuration: recordings.reduce((sum, r) => sum + r.duration, 0),
@@ -236,7 +236,7 @@ class SessionRecordingManager {
    */
   async exportToAsciicast(recordingId) {
     const recording = await this.loadRecording(recordingId);
-    
+
     const header = {
       version: 2,
       width: recording.metadata.width,
@@ -274,7 +274,7 @@ class SessionRecordingManager {
     if (typeof window !== 'undefined') {
       const data = localStorage.getItem(key);
       if (!data) return null;
-      
+
       try {
         return JSON.parse(data);
       } catch (e) {
@@ -305,7 +305,7 @@ class SessionRecordingManager {
         indexData.forEach(metadata => {
           this.recordings.set(metadata.id, metadata);
         });
-        console.log(`📑 Índice de grabaciones cargado: ${indexData.length} entradas`);
+        // console.log(`📑 Índice de grabaciones cargado: ${indexData.length} entradas`);
       }
     } catch (error) {
       console.error('Error cargando índice de grabaciones:', error);
