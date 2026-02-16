@@ -1,41 +1,41 @@
-# Proceso de Release - NodeTerm
+# Proceso de Release Profesional - NodeTerm
 
-Este documento detalla los pasos necesarios para realizar un nuevo lanzamiento (release) de NodeTerm.
+Este documento detalla el flujo de trabajo estándar para realizar lanzamientos oficiales de NodeTerm utilizando el asistente automatizado.
 
-## Pre-requisitos
-- Tener una rama limpia (sin cambios pendientes por commitear).
-- Estar en la rama principal (`main` o `master`).
-- Tener instaladas todas las dependencias (`npm install`).
+## Flujo de Release Estándar
 
-## Pasos del Release (Manuales)
+El proceso se divide en tres etapas lógicas para asegurar que el código publicado sea estable y esté correctamente documentado.
 
-1.  **Revisar Versión Actual**: Comprueba la versión actual en `package.json`.
-2.  **Actualizar Changelog**: Asegúrate de que `CHANGELOG.md` tenga los últimos cambios bajo una nueva cabecera de versión.
-3.  **Compilar y Probar**: Ejecuta `npm run build` para asegurar que el código compila correctamente.
-4.  **Generar Binarios**: Ejecuta `npm run dist` para crear los instaladores.
-5.  **Scan de Virus**: Ejecuta `npm run scan:virustotal` para verificar la seguridad del binario.
-6.  **Git Tag**: Crea un tag de git con la nueva versión (ej. `v1.6.4`).
-7.  **Subir a GitHub**: Sube los cambios y el tag a GitHub.
+### Etapa 1: Preparación (En tu rama de trabajo)
+En esta fase se deja el código listo para ser integrado en la versión oficial.
+*   **Verificación de Git**: Se asegura que no haya cambios accidentales.
+*   **Versionado Semántico**: Se elige el tipo de incremento (`Patch`, `Minor` o `Major`).
+*   **CHANGELOG.md**: Se actualiza el historial de cambios con la nueva versión y fecha.
+*   **Commit de Release**: Se crea un commit que marca el fin del desarrollo de esa versión.
+
+### Etapa 2: Integración (Merge a Main)
+Nada se publica si no está consolidado en la rama principal.
+*   **Switch a Main**: El script cambia automáticamente a la rama `main`.
+*   **Merge**: Se fusionan los cambios de tu rama en `main`. Esto garantiza que `main` siempre sea el reflejo exacto de lo que está en producción.
+
+### Etapa 3: Despliegue (En la rama Main)
+Una vez el código está en `main`, se procede a la construcción y entrega.
+*   **Build**: Compilación de producción para maximizar rendimiento.
+*   **Dist**: Generación de los instaladores (`.exe`, `.dmg`, etc.).
+*   **Git Tag**: Se crea una etiqueta inmutable (ej. `v1.6.4`) que apunta a este release.
+*   **Push**: Se suben los cambios y los tags a GitHub.
 
 ---
 
-## Proceso Automatizado (Recomendado)
+## Cómo ejecutar el asistente
 
-Se ha implementado un script interactivo que te guía por todo este proceso:
+Simplemente ejecuta el siguiente comando y sigue las instrucciones en pantalla:
 
 ```bash
 npm run release
 ```
 
-### ¿Qué hace el script?
-1.  **Verificación de Git**: Comprueba que no hay archivos sin guardar.
-2.  **Selección de Versión**: Te permite elegir si es un cambio de parche (patch), menor (minor) o mayor (major).
-3.  **Actualización Automática**:
-    *   Actualiza la versión en `package.json`.
-    *   Actualiza la fecha y versión en `CHANGELOG.md`.
-4.  **Compilación**: Ejecuta el build de producción.
-5.  **Empaquetado y Escaneo (Opcional)**: Te pregunta si quieres generar los binarios y enviarlos a VirusTotal.
-6.  **Guía Final**: Te proporciona los comandos de Git necesarios para finalizar el proceso.
-
-## Publicación
-Una vez subidos los tags a GitHub, el sistema de publicación configurado en `package.json` se encargará de crear el borrador de la release en el repositorio.
+### Consejos para un buen release:
+1.  **Revisa tus cambios**: Antes de empezar, asegúrate de que todo funciona localmente.
+2.  **Changelog claro**: Escribe descripciones útiles en el `CHANGELOG.md` para que los usuarios sepan qué hay de nuevo.
+3.  **Tags**: Nunca borres o muevas un tag una vez subido a GitHub; los tags deben ser permanentes.
