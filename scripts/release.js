@@ -167,6 +167,9 @@ async function main() {
     if (runBuild.toLowerCase() !== 'n') {
         await runCommand('npm run build', 'Build de producción');
         await runCommand('npm run dist', 'Generando instaladores y versión portable');
+        console.log('\n\x1b[32m✅ Binarios generados en el directorio "dist/":\x1b[0m');
+        console.log('   - Instalador: dist/NodeTerm-Setup-*.exe');
+        console.log('   - Portable:   dist/NodeTerm-*.exe (sin "Setup" en el nombre)');
     }
 
     // Tag y Push
@@ -178,19 +181,19 @@ async function main() {
 
     const doPublish = await question('\n¿Deseas PUBLICAR este release en GitHub? (S/n): ');
     if (doPublish.toLowerCase() !== 'n') {
-        const ghToken = process.env.GH_TOKEN;
+        let ghToken = process.env.GH_TOKEN;
         if (!ghToken) {
             console.log('\n\x1b[33m⚠️  No se detectó la variable de entorno GH_TOKEN.\x1b[0m');
-            console.log('   Para publicar automáticamente, necesitas un token de acceso de GitHub.');
-            console.log('   Si continúas, usaremos "electron-builder --publish always" que podría fallar sin token.');
-            const continueAnyway = await question('¿Intentar publicar de todos modos? (s/N): ');
-            if (continueAnyway.toLowerCase() !== 's') {
-                console.log('Publicación omitida. Puedes hacerlo manualmente luego.');
-            } else {
-                await runCommand('npx electron-builder --publish always', 'Publicando en GitHub');
+            ghToken = await question('Introduce tu GitHub Personal Access Token (o presiona Enter para omitir): ');
+            if (ghToken) {
+                process.env.GH_TOKEN = ghToken;
             }
-        } else {
+        }
+
+        if (process.env.GH_TOKEN) {
             await runCommand('npx electron-builder --publish always', 'Publicando en GitHub');
+        } else {
+            console.log('\x1b[31m❌ Publicación cancelada por falta de token.\x1b[0m');
         }
     } else {
         const doPush = await question(`\n¿Hacer PUSH de la rama ${finalBranch} a GitHub sin publicar release? (S/n): `);
