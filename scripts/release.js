@@ -204,22 +204,36 @@ async function main() {
                 console.log(`\x1b[32m✅ Archivo de notas creado: ${tempNotesFilename}\x1b[0m`);
 
                 // 2. Crear archivo de configuración temporal para electron-builder
-                // Esto es mucho más fiable que pasar argumentos por CLI
+                // Leemos la configuración de build existente del package.json para no romper nada
+                const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+                const buildConfig = pkg.build || {};
+
+                // Inyectamos las notas de release
+                buildConfig.releaseInfo = {
+                    releaseNotesFile: tempNotesFilename
+                };
+
+                // Aseguramos que el publish use releaseType: release
+                if (buildConfig.publish) {
+                    if (Array.isArray(buildConfig.publish)) {
+                        buildConfig.publish = buildConfig.publish.map(p => ({ ...p, releaseType: "release" }));
+                    } else {
+                        buildConfig.publish = { ...buildConfig.publish, releaseType: "release" };
+                    }
+                } else {
+                    buildConfig.publish = {
+                        provider: "github",
+                        releaseType: "release"
+                    };
+                }
+
                 tempConfigFilename = `temp-release-config.json`;
                 const tempConfigPath = path.join(__dirname, '..', tempConfigFilename);
-                const releaseConfig = {
-                    releaseInfo: {
-                        releaseNotesFile: tempNotesFilename
-                    },
-                    publish: {
-                        releaseType: "release"
-                    }
-                };
-                fs.writeFileSync(tempConfigPath, JSON.stringify(releaseConfig, null, 2));
-                console.log(`\x1b[32m✅ Archivo de configuración creado: ${tempConfigFilename}\x1b[0m`);
+                fs.writeFileSync(tempConfigPath, JSON.stringify(buildConfig, null, 2));
+                console.log(`\x1b[32m✅ Archivo de configuración COMPLETO creado: ${tempConfigFilename}\x1b[0m`);
 
-                // Usar --config para fusionar la configuración
-                ebCommand += ` --publish always --config ${tempConfigFilename}`;
+                // Usar --config con la configuración completa
+                ebCommand = `npx electron-builder --publish always --config ${tempConfigFilename}`;
             } else {
                 ebCommand += ' --publish always -c.publish.releaseType=release';
                 console.log('\x1b[33m⚠️  No se encontraron notas para esta versión en CHANGELOG.md\x1b[0m');
