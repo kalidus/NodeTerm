@@ -12,13 +12,13 @@ export const useSessionManagement = (toast, {
   // Referencias para terminales
   const terminalRefs = useRef({});
   const activeListenersRef = useRef(new Set());
-  
+
   // Session Manager
   const sessionManager = useRef(new SessionManager()).current;
-  
+
   // Estado global para stats por tabId
   const [sshStatsByTabId, setSshStatsByTabId] = useState({});
-  
+
   // Estado para trackear conexiones SSH
   const [sshConnectionStatus, setSshConnectionStatus] = useState({});
 
@@ -84,7 +84,7 @@ export const useSessionManagement = (toast, {
         }
       }
     });
-    
+
     // Remover listeners de pestañas que ya no existen
     activeListenersRef.current.forEach(tabId => {
       if (!currentTerminalTabs.includes(tabId)) {
@@ -105,7 +105,7 @@ export const useSessionManagement = (toast, {
             setTabDistros(prev => ({ ...prev, [tabId]: stats.distro }));
           }
         };
-        
+
         window.electron.ipcRenderer.on(eventName, listener);
         activeListenersRef.current.add(tabId);
       }
@@ -118,7 +118,7 @@ export const useSessionManagement = (toast, {
         window.electron.ipcRenderer.removeAllListeners(eventName);
       });
       activeListenersRef.current.clear();
-      
+
       // Limpiar timeout de resize si existe
       if (resizeTimeoutRef?.current) {
         clearTimeout(resizeTimeoutRef.current);
@@ -142,6 +142,16 @@ export const useSessionManagement = (toast, {
     const handleSSHReady = (data) => {
       if (data?.originalKey) {
         handleConnectionStatus(data.originalKey, CONNECTION_STATUS.CONNECTED);
+
+        // Si hay un password proporcionado (de login manual), disparar evento para guardarlo
+        if (data.password) {
+          window.dispatchEvent(new CustomEvent('ssh:password-correct', {
+            detail: {
+              originalKey: data.originalKey,
+              password: data.password
+            }
+          }));
+        }
       }
     };
 
@@ -195,17 +205,17 @@ export const useSessionManagement = (toast, {
         const text = await window.electron.clipboard.readText();
         if (text) {
           const terminal = terminalRefs.current[tabKey];
-          
+
           // Asegurar que el terminal tenga el foco antes de pegar
           terminal.focus();
-          
+
           // Usar un pequeño delay para asegurar que el terminal esté listo
           setTimeout(() => {
             terminal.paste(text);
             // Restaurar el foco después de pegar
             terminal.focus();
           }, 10);
-          
+
           if (toast?.current?.show) {
             toast.current.show({
               severity: 'info',
@@ -287,7 +297,7 @@ export const useSessionManagement = (toast, {
       clearTimeout(window.__sshDisconnectTimers[tabKey]);
       delete window.__sshDisconnectTimers[tabKey];
     }
-    
+
     if (window.electron && window.electron.ipcRenderer) {
       window.electron.ipcRenderer.send('ssh:disconnect', tabKey);
     }
@@ -398,28 +408,28 @@ export const useSessionManagement = (toast, {
     terminalRefs,
     activeListenersRef,
     sessionManager,
-    
+
     // Estados
     sshStatsByTabId,
     setSshStatsByTabId,
     sshConnectionStatus,
     setSshConnectionStatus,
-    
+
     // Funciones de terminal
     handleCopyFromTerminal,
     handlePasteToTerminal,
     handleSelectAllTerminal,
     handleClearTerminal,
-    
+
     // Funciones wrapper de terminal
     handleCopyFromTerminalWrapper,
     handlePasteToTerminalWrapper,
     handleSelectAllTerminalWrapper,
     handleClearTerminalWrapper,
-    
+
     // Funciones wrapper adicionales
     handleUnblockFormsWrapper,
-    
+
     // Funciones de gestión de sesiones
     cleanupTerminalRef,
     disconnectSSHSession,
