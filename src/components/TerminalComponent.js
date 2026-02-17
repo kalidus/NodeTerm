@@ -476,14 +476,15 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         }
     }, [active]);
 
-    // Forzar fit tras cada render (por si el layout cambia después del render)
+    // Forzar fit tras el primer render (por si el layout cambia después del render)
     useEffect(() => {
         if (fitAddon.current) {
-            setTimeout(() => {
+            const timer = setTimeout(() => {
                 try { fitAddon.current.fit(); } catch (e) { }
-            }, 0);
+            }, 100);
+            return () => clearTimeout(timer);
         }
-    });
+    }, []); // Solo al montar
 
     return (
         <>

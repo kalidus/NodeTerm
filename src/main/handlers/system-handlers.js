@@ -482,13 +482,23 @@ function registerSystemMonitoringHandlers() {
 
   // === GPU MEMORY HANDLERS ===
 
-  // Variable estática para cachear la detección de GPU (evitar logs repetidos)
+  // Variable estática para cachear la detección de GPU (evitar logs repetidos y mejorar performance)
   let gpuDetectionLogged = false;
   let detectedGpuType = null;
   let detectedGpuName = null;
+  let cachedGpuStats = null;
+  let lastGpuCheck = 0;
+  const GPU_CACHE_TTL = 15000; // 15 segundos de caché para evitar bloqueos del Main Process
 
   // Handler para obtener estadísticas de GPU (mejorado con más información)
   ipcMain.handle('system:get-gpu-stats', async () => {
+    const now = Date.now();
+
+    // 🚀 OPTIMIZACIÓN: Retornar caché si es reciente
+    if (cachedGpuStats && (now - lastGpuCheck < GPU_CACHE_TTL)) {
+      return cachedGpuStats;
+    }
+
     try {
       const { execSync } = require('child_process');
       const platform = process.platform;
@@ -499,7 +509,7 @@ function registerSystemMonitoringHandlers() {
           // Intenta nvidia-smi con más información (nombre, memoria, temperatura, uso)
           const output = execSync('nvidia-smi --query-gpu=name,memory.total,memory.used,utilization.gpu,temperature.gpu --format=csv,nounits,noheader', {
             encoding: 'utf-8',
-            timeout: 3000
+            timeout: 2000 // Reducido de 3000ms a 2000ms
           }).trim();
 
           if (output) {
@@ -519,7 +529,7 @@ function registerSystemMonitoringHandlers() {
                   detectedGpuType = 'nvidia';
                   detectedGpuName = name;
                 }
-                return {
+                const stats = {
                   ok: true,
                   type: 'nvidia',
                   name: name || 'NVIDIA GPU',
@@ -531,6 +541,9 @@ function registerSystemMonitoringHandlers() {
                   temperature: temperature, // Temperatura en °C
                   driverVersion: null // Se puede obtener con otro comando si es necesario
                 };
+                cachedGpuStats = stats;
+                lastGpuCheck = now;
+                return stats;
               }
             }
           }
@@ -570,7 +583,7 @@ function registerSystemMonitoringHandlers() {
                   detectedGpuType = 'amd';
                   detectedGpuName = gpuName;
                 }
-                return {
+                const stats = {
                   ok: true,
                   type: 'amd',
                   name: gpuName,
@@ -582,6 +595,9 @@ function registerSystemMonitoringHandlers() {
                   temperature: null, // Se puede obtener con otro comando
                   driverVersion: null
                 };
+                cachedGpuStats = stats;
+                lastGpuCheck = now;
+                return stats;
               }
             }
           } catch (e) {
@@ -632,7 +648,7 @@ function registerSystemMonitoringHandlers() {
                     detectedGpuName = gpuName;
                   }
 
-                  return {
+                  const stats = {
                     ok: true,
                     type: type,
                     name: gpuName,
@@ -642,8 +658,11 @@ function registerSystemMonitoringHandlers() {
                     usagePercent: null,
                     gpuUtilization: null,
                     temperature: null,
-                    note: totalMB > 0 ? null : 'VRAM no detectada (memoria compartida)'
+                    note: 'Estadísticas limitadas en Windows WMIC'
                   };
+                  cachedGpuStats = stats;
+                  lastGpuCheck = now;
+                  return stats;
                 }
               }
             }
@@ -652,26 +671,44 @@ function registerSystemMonitoringHandlers() {
           }
         }
 
-        // Apple Silicon (Metal)
+        // Apple Silicon (Metal) - 🚀 OPTIMIZACIÓN: Si ya se detectó, no volver a ejecutar system_profiler
         if (platform === 'darwin') {
           try {
+            if (detectedGpuType === 'apple-metal' && detectedGpuName) {
+              const stats = {
+                ok: true,
+                type: 'apple-metal',
+                name: detectedGpuName,
+                totalMB: null,
+                usedMB: null,
+                freeMB: null,
+                usagePercent: null,
+                gpuUtilization: null,
+                temperature: null,
+                note: 'Apple Metal no expone datos de VRAM'
+              };
+              cachedGpuStats = stats;
+              lastGpuCheck = now;
+              return stats;
+            }
+
             const output = execSync('system_profiler SPDisplaysDataType', {
               encoding: 'utf-8',
-              timeout: 3000
+              timeout: 2000 // Reducido para evitar cuelgues largos
             });
             if (output.includes('GPU')) {
               // Intentar extraer nombre del GPU
               const nameMatch = output.match(/Chipset Model:\s*(.+)/);
               const gpuName = nameMatch ? nameMatch[1].trim() : 'Apple Silicon GPU';
-              // Solo loguear la primera vez que se detecta
+
               if (!gpuDetectionLogged || detectedGpuType !== 'apple-metal' || detectedGpuName !== gpuName) {
                 console.log('[GPU Handler] ✅ GPU Apple Silicon detectada:', gpuName);
                 gpuDetectionLogged = true;
                 detectedGpuType = 'apple-metal';
                 detectedGpuName = gpuName;
               }
-              // Apple Silicon no expone VRAM de forma directa
-              return {
+
+              const stats = {
                 ok: true,
                 type: 'apple-metal',
                 name: gpuName,
@@ -683,6 +720,9 @@ function registerSystemMonitoringHandlers() {
                 temperature: null,
                 note: 'Apple Metal no expone datos de VRAM'
               };
+              cachedGpuStats = stats;
+              lastGpuCheck = now;
+              return stats;
             }
           } catch (e) {
             // No disponible
@@ -691,7 +731,8 @@ function registerSystemMonitoringHandlers() {
       }
 
       // Si no hay GPU detectada
-      return {
+      // Si no hay GPU detectada, cachear el resultado negativo
+      const finalStats = {
         ok: false,
         type: null,
         name: null,
@@ -702,12 +743,17 @@ function registerSystemMonitoringHandlers() {
         gpuUtilization: null,
         temperature: null
       };
+      cachedGpuStats = finalStats;
+      lastGpuCheck = now;
+      return finalStats;
     } catch (e) {
-      return {
+      const errorStats = {
         ok: false,
         error: e?.message,
         type: null
       };
+      // No cachear errores fatales por si son temporales
+      return errorStats;
     }
   });
 }

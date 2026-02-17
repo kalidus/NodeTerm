@@ -66,7 +66,7 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
 
     resizeTimeoutRef.current = setTimeout(() => {
       handleResize();
-    }, 16); // ~60fps
+    }, 32); // ~30fps - Optimización para macOS donde el redimensionamiento es más pesado
   }, [handleResize]);
 
 
