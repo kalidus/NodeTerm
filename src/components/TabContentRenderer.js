@@ -23,6 +23,8 @@ import { TAB_TYPES } from '../utils/constants';
 import { recordRecentPassword } from '../utils/connectionStore';
 import { getNetworkById } from '../utils/cryptoNetworks';
 
+import { countConnections } from '../utils/connectionCounter';
+
 const TabContentRenderer = React.memo(({
   tab,
   isActiveTab,
@@ -79,6 +81,12 @@ const TabContentRenderer = React.memo(({
   activeIds,
   openInSplit,
 }) => {
+  // 🚀 OPTIMIZACIÓN: Calcular conteos una sola vez cuando cambian los nodos o pestañas RDP
+  const counts = React.useMemo(() => {
+    if (tab.type !== 'home') return null;
+    return countConnections(nodes, rdpTabs);
+  }, [tab.type, nodes, rdpTabs]);
+
   if (tab.type === 'home') {
     return (
       <HomeTab
@@ -113,7 +121,6 @@ const TabContentRenderer = React.memo(({
           }
           if (connection.type === 'ssh' || connection.type === 'explorer') {
             // Reutilizar diálogo de edición SSH
-            // Incluir todos los campos de la conexión para que la edición muestre la información correcta
             const tempNode = {
               key: `temp_ssh_${Date.now()}`,
               label: connection.name || `${connection.username}@${connection.host}`,
@@ -125,12 +132,10 @@ const TabContentRenderer = React.memo(({
                 password: connection.password || '',
                 port: connection.port || 22,
                 remoteFolder: connection.remoteFolder || '',
-                // Campos para conexiones Wallix/Bastion
                 useBastionWallix: connection.useBastionWallix || false,
                 bastionHost: connection.bastionHost || '',
                 bastionUser: connection.bastionUser || '',
                 targetServer: connection.targetServer || '',
-                // Campos adicionales
                 description: connection.description || '',
                 customIcon: connection.customIcon || null
               }
@@ -138,92 +143,15 @@ const TabContentRenderer = React.memo(({
             openEditSSHDialog(tempNode);
           }
         }}
-        // Pasar ids activos al hub para mostrar estado en los listados
-        // (ConnectionHistory acepta activeIds desde HomeTab; aquí lo calculamos y lo inyectamos a través del DOM global)
-        sshConnectionsCount={(() => {
-          // Contar sesiones SSH únicas (sin incluir exploradores)
-          const uniqueSSHSessions = new Set();
-          nodes.forEach(node => {
-            if (node.data && node.data.type === 'ssh') {
-              uniqueSSHSessions.add(node.key);
-            }
-            // Función recursiva para contar en hijos
-            const countInChildren = (children) => {
-              if (children && children.length > 0) {
-                children.forEach(child => {
-                  if (child.data && child.data.type === 'ssh') {
-                    uniqueSSHSessions.add(child.key);
-                  }
-                  countInChildren(child.children);
-                });
-              }
-            };
-            countInChildren(node.children);
-          });
-          return uniqueSSHSessions.size;
-        })()}
-        foldersCount={(() => {
-          // Contar carpetas únicas
-          let folderCount = 0;
-          const countFolders = (nodeList) => {
-            nodeList.forEach(node => {
-              if (node.droppable && (!node.data || node.data.type !== 'ssh')) {
-                folderCount++;
-              }
-              if (node.children && node.children.length > 0) {
-                countFolders(node.children);
-              }
-            });
-          };
-          countFolders(nodes);
-          return folderCount;
-        })()}
-        rdpConnectionsCount={(() => {
-          // Contar RDP guardados en el árbol + RDP abiertos en pestañas (únicos por host:port+user)
-          const unique = new Set();
-          const add = (host, port, user) => {
-            const h = host || '';
-            const p = port || 3389;
-            const u = user || '';
-            unique.add(`${h}:${p}|${u}`);
-          };
-          const looksLikeRdp = (data) => {
-            if (!data) return false;
-            if (data.type === 'rdp' || data.type === 'rdp-guacamole' || data.type === 'vnc' || data.type === 'vnc-guacamole') return true;
-            // Fallback heurística: servidor+puerto/clientType guacamole y NO ssh
-            const hasServer = (data.server || data.hostname || data.host);
-            const maybeRdpPort = (data.port && Number(data.port) === 3389);
-            const isGuac = (data.clientType === 'guacamole');
-            const nameLooksRdp = typeof data.name === 'string' && /rdp|windows|server|desktop|win/i.test(data.name);
-            return ((hasServer && (maybeRdpPort || isGuac)) || nameLooksRdp) && data.type !== 'ssh';
-          };
-
-          const countRdpNodes = (nodeList) => {
-            if (!Array.isArray(nodeList)) return;
-            nodeList.forEach(node => {
-              if (node && looksLikeRdp(node.data)) {
-                add(node.data.host || node.data.server || node.data.hostname, node.data.port, node.data.user || node.data.username);
-              }
-              if (node.children && node.children.length > 0) countRdpNodes(node.children);
-            });
-          };
-          countRdpNodes(nodes);
-          // Incluir pestañas RDP activas
-          if (Array.isArray(rdpTabs)) {
-            rdpTabs.forEach(tab => {
-              const cfg = tab.rdpConfig || {};
-              add(cfg.server || cfg.host || cfg.hostname, cfg.port, cfg.username || cfg.user);
-            });
-          }
-          return unique.size;
-        })()}
+        sshConnectionsCount={counts?.ssh || 0}
+        foldersCount={counts?.folders || 0}
+        rdpConnectionsCount={counts?.rdp || 0}
         localFontFamily={localFontFamily}
         localFontSize={localFontSize}
         localTerminalTheme={localLinuxTerminalTheme}
         localPowerShellTheme={localPowerShellTheme}
         localLinuxTerminalTheme={localLinuxTerminalTheme}
         onOpenFileExplorer={() => {
-          // Emit global intent; Sidebar/useConnectionManagement will handle actual opening
           try {
             window.dispatchEvent(new CustomEvent('open-explorer-dialog'));
           } catch (e) { /* noop */ }

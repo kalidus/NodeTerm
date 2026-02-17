@@ -234,59 +234,30 @@ function registerSystemMonitoringHandlers() {
   });
 
 
-  // Handler para listar archivos locales
+  // Handler para listar archivos locales - 🚀 OPTIMIZACIÓN: Totalmente asíncrono y no bloqueante
   ipcMain.handle('local:list-files', async (event, dirPath) => {
     try {
-      console.log('📁 [local:list-files] Handler INVOCADO con path:', dirPath);
-
       if (!dirPath || typeof dirPath !== 'string') {
-        console.error('❌ [local:list-files] Path inválido:', dirPath);
         return { success: false, error: 'Path inválido' };
       }
 
-      // Normalizar el path (asegurar que exista)
       const normalizedPath = path.normalize(dirPath);
-      console.log('📁 [local:list-files] Path normalizado:', normalizedPath);
 
-      // Verificar que el directorio existe
-      try {
-        const stat = fs.statSync(normalizedPath);
-        if (!stat.isDirectory()) {
-          console.error('❌ [local:list-files] Path no es un directorio:', normalizedPath);
-          return { success: false, error: 'El path no es un directorio' };
-        }
-      } catch (statError) {
-        console.error('❌ [local:list-files] Error verificando directorio:', statError.message);
-        return { success: false, error: `El directorio no existe o no es accesible: ${statError.message}` };
+      // Verificar directorio de forma asíncrona
+      const stats = await fs.promises.stat(normalizedPath);
+      if (!stats.isDirectory()) {
+        return { success: false, error: 'El path no es un directorio' };
       }
 
-      console.log('📁 [local:list-files] Leyendo directorio...');
       const entries = await fs.promises.readdir(normalizedPath, { withFileTypes: true });
-      console.log('📁 [local:list-files] Entradas encontradas:', entries.length);
 
-      const files = entries.map(entry => {
+      // 🚀 Procesar stats en paralelo y de forma asíncrona para no bloquear el Main Process
+      const files = await Promise.all(entries.map(async (entry) => {
+        const fullPath = path.join(normalizedPath, entry.name);
+        const isHidden = entry.name.startsWith('.');
+
         try {
-          const fullPath = path.join(normalizedPath, entry.name);
-          const stat = fs.statSync(fullPath);
-
-          // Detectar si el archivo está oculto
-          // En Windows y Unix: archivos que empiezan con punto están ocultos
-          // También verificar atributo hidden en Windows si está disponible
-          let isHidden = entry.name.startsWith('.');
-
-          // En Windows, también verificar el atributo del sistema
-          if (process.platform === 'win32' && !isHidden) {
-            try {
-              // Usar fs.constants para verificar atributos (más eficiente)
-              const fs = require('fs');
-              // Los archivos ocultos en Windows tienen el bit FILE_ATTRIBUTE_HIDDEN
-              // Por ahora, usamos solo la heurística del punto para ser más rápido
-              // Si necesitamos verificar atributos reales, habría que usar otra API
-            } catch {
-              // Ignorar errores de verificación
-            }
-          }
-
+          const stat = await fs.promises.stat(fullPath);
           return {
             name: entry.name,
             type: entry.isDirectory() ? 'directory' : 'file',
@@ -295,48 +266,51 @@ function registerSystemMonitoringHandlers() {
             path: fullPath,
             hidden: isHidden
           };
-        } catch (entryError) {
-          console.warn('⚠️ [local:list-files] Error procesando entrada:', entry.name, entryError.message);
-          // Retornar entrada básica si hay error al obtener stat
-          const isHidden = entry.name.startsWith('.');
+        } catch (e) {
+          // Fallback para archivos sin permisos o errores de stat
           return {
             name: entry.name,
             type: entry.isDirectory() ? 'directory' : 'file',
             size: 0,
             modified: new Date().toISOString(),
-            path: path.join(normalizedPath, entry.name),
+            path: fullPath,
             hidden: isHidden
           };
         }
-      });
+      }));
 
-      console.log('✅ [local:list-files] Archivos procesados:', files.length);
       return { success: true, files };
     } catch (error) {
-      console.error('❌ [local:list-files] Error completo:', error);
-      console.error('❌ [local:list-files] Stack:', error.stack);
-      return { success: false, error: error.message || 'Error desconocido al listar archivos' };
+      console.error('❌ [local:list-files] Error:', error.message);
+      return { success: false, error: error.message || 'Error al listar archivos' };
     }
   });
 
 
-  // Handler para encontrar el archivo XML más reciente en descargas
+  // Handler para encontrar el archivo XML más reciente en descargas - 🚀 OPTIMIZACIÓN: Asíncrono
   ipcMain.handle('import:find-latest-xml-download', async (event, { sinceMs } = {}) => {
     try {
       const downloadsDir = app.getPath('downloads');
-      const entries = fs.readdirSync(downloadsDir).filter(name => name.toLowerCase().endsWith('.xml'));
+      const entries = await fs.promises.readdir(downloadsDir);
+      const xmlFiles = entries.filter(name => name.toLowerCase().endsWith('.xml'));
+
       let latest = null;
 
-      for (const name of entries) {
-        const fullPath = require('path').join(downloadsDir, name);
-        const stat = safeStatSync(fullPath);
-        if (!stat) continue;
+      // Procesar de forma asíncrona pero secuencial para no sobrecargar el sistema de archivos
+      // (usualmente hay pocos XML en descargas)
+      for (const name of xmlFiles) {
+        const fullPath = path.join(downloadsDir, name);
+        try {
+          const stat = await fs.promises.stat(fullPath);
 
-        // Si se especifica sinceMs, filtrar por fecha
-        if (sinceMs && stat.mtimeMs <= sinceMs) continue;
+          // Si se especifica sinceMs, filtrar por fecha
+          if (sinceMs && stat.mtimeMs <= sinceMs) continue;
 
-        if (!latest || stat.mtimeMs > latest.mtimeMs) {
-          latest = { name, path: fullPath, mtimeMs: stat.mtimeMs };
+          if (!latest || stat.mtimeMs > latest.mtimeMs) {
+            latest = { name, path: fullPath, mtimeMs: stat.mtimeMs };
+          }
+        } catch (e) {
+          continue;
         }
       }
 
