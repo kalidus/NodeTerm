@@ -56,16 +56,30 @@ import './styles/fonts.css';
 const applyEarlyBootTheme = () => {
   try {
     const saved = localStorage.getItem('ui_theme');
+    // Detectar preferencia oscura del sistema
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const isDarkDefault = saved ? saved !== 'Light' : prefersDark;
+
+    // Lista de temas claros conocidos (sincronizada con ThemeManager)
+    const lightThemes = ['Light', 'Solarized Light', 'Atom One Light', 'Paper', 'Silver', 'Soft Gray', 'Minimal Gray'];
+
+    // Determinar si es tema claro
+    let isLight = false;
+    if (saved) {
+      isLight = lightThemes.includes(saved);
+    } else {
+      isLight = !prefersDark;
+    }
+
     const root = document.documentElement;
     // Asignar atributos de velocidad para animaciones antes del render
     const ANIM_SPEED_KEY = 'nodeterm_ui_anim_speed';
     const animSpeed = localStorage.getItem(ANIM_SPEED_KEY) || 'normal';
     root.setAttribute('data-ui-anim-speed', animSpeed);
     root.setAttribute('data-tab-anim-speed', animSpeed);
-    // Fondo base acorde para evitar flash
-    document.body.style.backgroundColor = isDarkDefault ? '#0e1116' : '#fafafa';
+
+    // Fondo base acorde para evitar flash (blanco o oscuro)
+    // Esto debe coincidir con el color de fondo del tema para ser imperceptible
+    document.body.style.backgroundColor = isLight ? '#ffffff' : '#0e1116';
   } catch { }
 };
 applyEarlyBootTheme();
@@ -161,26 +175,22 @@ import localStorageSyncService from './services/LocalStorageSyncService';
 const container = document.getElementById('root');
 const root = createRoot(container);
 
-// 🚀 MULTI-INSTANCIA: Sincronizar localStorage ANTES de renderizar React
-// Esto asegura que las instancias secundarias tengan acceso a los datos compartidos
-// antes de que los hooks de React inicialicen sus estados
-const initAndRender = async () => {
-  try {
-    // Inicializar sincronización de localStorage (carga datos del archivo compartido)
-    await localStorageSyncService.initialize();
-    // console.log('[Index] ✅ LocalStorageSync completado antes del render');
-  } catch (err) {
-    console.warn('[Index] Error en sincronización inicial:', err);
-  }
+// 🚀 MULTI-INSTANCIA: Sincronización de localStorage en SEGUNDO PLANO
+// Esto permite que React renderice inmediatamente con los datos locales existentes
+// Si hay cambios en el archivo compartido, se aplicarán asíncronamente (trigger de settings-updated)
+const initAndRender = () => {
+  // 1. Iniciar sincronización en background (sin await)
+  localStorageSyncService.initialize().catch(err => {
+    console.warn('[Index] Error en sincronización inicial (background):', err);
+  });
 
-  // Inicializar temas globales DESPUÉS de la sincronización
-  // Esto asegura que solo se apliquen valores por defecto si no vinieron de la sincronización
+  // 2. Inicializar temas globales inmediatamente (usando datos locales)
   initializeGlobalThemes();
 
-  // Renderizar React DESPUÉS de la sincronización y temas
+  // 3. Renderizar React inmediatamente
   root.render(<App />);
 
-  // Marcar que React está renderizado
+  // 4. Marcar que React está renderizado
   requestAnimationFrame(() => {
     document.documentElement.classList.add('app-ready');
   });
