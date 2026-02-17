@@ -87,10 +87,10 @@
 
 /* Asegurar que los terminales se rendericen correctamente */
 .terminal-splitter .p-splitter-panel .terminal-outer-padding {
-  height: 100% !important;
   width: 100% !important;
   min-height: 0 !important;
   min-width: 0 !important;
+  box-sizing: border-box !important;
 }
 
 /* === ESTILOS DE SCROLL PARA TERMINALES === */
@@ -178,7 +178,8 @@
 }
 
 .terminal-outer-padding {
-  padding: 10px !important;
+  padding: 10px 10px 0 10px !important;
+  box-sizing: border-box !important;
 }
 
 /* Elimina el recuadro azul de foco en el terminal */
