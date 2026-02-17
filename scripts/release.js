@@ -54,7 +54,7 @@ function getReleaseNotes(version) {
 
 async function main() {
     console.log('\n\x1b[1m\x1b[35m═══════════════════════════════════════════════════\x1b[0m');
-    console.log('\x1b[1m\x1b[35m       ASISTENTE DE RELEASE PROFESIONAL (v2)       \x1b[0m');
+    console.log('\x1b[1m\x1b[35m       ASISTENTE DE RELEASE PROFESIONAL (v2.1)     \x1b[0m');
     console.log('\x1b[1m\x1b[35m═══════════════════════════════════════════════════\x1b[0m\n');
 
     // --- ESTADO INICIAL ---
@@ -75,67 +75,65 @@ async function main() {
     // =========================================================================
     console.log('\n\x1b[1m\x1b[36m--- ETAPA 1: PREPARACIÓN ---\x1b[0m');
 
-    const startStage1 = await question('\n¿Deseas comenzar la preparación? (S/n): ');
-    if (startStage1.toLowerCase() === 'n') process.exit(0);
-
-    if (gitStatus) {
-        const proceedGit = await question('Hay cambios pendientes en el repositorio. ¿Continuar? (s/N): ');
-        if (proceedGit.toLowerCase() !== 's') process.exit(0);
-    }
-
-    // Selección de Versión
-    console.log('\n¿Qué tipo de release es?');
-    console.log(`  0) Mantener v${oldVersion}`);
-    console.log(`  1) Patch (v${oldVersion} -> Arreglo de bugs)`);
-    console.log(`  2) Minor (v${oldVersion} -> Funcionalidad nueva)`);
-    console.log(`  3) Major (v${oldVersion} -> Cambio disruptivo)`);
-
-    const typeChoice = await question('\nSelecciona opción: ');
-    let npmVersionCmd = '';
-    switch (typeChoice) {
-        case '0': npmVersionCmd = 'none'; break;
-        case '1': npmVersionCmd = 'patch'; break;
-        case '2': npmVersionCmd = 'minor'; break;
-        case '3': npmVersionCmd = 'major'; break;
-        default: console.log('Opción inválida.'); process.exit(1);
-    }
-
+    const startStage1 = await question('\n¿Deseas preparar una nueva versión? (S/n): ');
     let nextVersion = oldVersion;
-    if (npmVersionCmd !== 'none') {
-        if (await runCommand(`npm version ${npmVersionCmd} --no-git-tag-version`, 'Actualizando versión')) {
-            nextVersion = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version;
+
+    if (startStage1.toLowerCase() !== 'n') {
+        // Selección de Versión
+        console.log('\n¿Qué tipo de release es?');
+        console.log(`  0) Mantener v${oldVersion}`);
+        console.log(`  1) Patch (v${oldVersion} -> Arreglo de bugs)`);
+        console.log(`  2) Minor (v${oldVersion} -> Funcionalidad nueva)`);
+        console.log(`  3) Major (v${oldVersion} -> Cambio disruptivo)`);
+
+        const typeChoice = await question('\nSelecciona opción: ');
+        let npmVersionCmd = '';
+        switch (typeChoice) {
+            case '0': npmVersionCmd = 'none'; break;
+            case '1': npmVersionCmd = 'patch'; break;
+            case '2': npmVersionCmd = 'minor'; break;
+            case '3': npmVersionCmd = 'major'; break;
+            default: console.log('Opción inválida.'); process.exit(1);
         }
-    }
 
-    // Changelog
-    const changelogPath = path.join(__dirname, '..', 'CHANGELOG.md');
-    if (fs.existsSync(changelogPath)) {
-        const updateLog = await question(`\n¿Actualizar CHANGELOG.md para la v${nextVersion}? (S/n): `);
-        if (updateLog.toLowerCase() !== 'n') {
-            let changelog = fs.readFileSync(changelogPath, 'utf8');
-            const today = new Date().toISOString().split('T')[0];
-            const versionHeader = `## [${nextVersion}] - ${today}`;
-
-            if (changelog.includes('Por definir')) {
-                changelog = changelog.replace(/## \[\d+\.\d+\.\d+\] - Por definir/, versionHeader);
-            } else if (!changelog.includes(versionHeader)) {
-                const lines = changelog.split('\n');
-                lines.splice(7, 0, '\n' + versionHeader + '\n');
-                changelog = lines.join('\n');
+        if (npmVersionCmd !== 'none') {
+            if (await runCommand(`npm version ${npmVersionCmd} --no-git-tag-version`, 'Actualizando versión')) {
+                nextVersion = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version;
             }
-            fs.writeFileSync(changelogPath, changelog);
-            console.log('\x1b[32m✅ CHANGELOG.md actualizado.\x1b[0m');
         }
-    }
 
-    // Commit de Preparación
-    const needsCommit = getOutput('git status --porcelain');
-    if (needsCommit) {
-        const doCommit = await question('\n¿Hacer commit de la preparación de release? (S/n): ');
-        if (doCommit.toLowerCase() !== 'n') {
-            await runCommand('git add .', 'Añadiendo cambios');
-            await runCommand(`git commit -m "release: preparación v${nextVersion}"`, 'Haciendo commit');
+        // Changelog
+        const changelogPath = path.join(__dirname, '..', 'CHANGELOG.md');
+        if (fs.existsSync(changelogPath)) {
+            const updateLog = await question(`\n¿Actualizar CHANGELOG.md para la v${nextVersion}? (S/n): `);
+            if (updateLog.toLowerCase() !== 'n') {
+                let changelog = fs.readFileSync(changelogPath, 'utf8');
+                const today = new Date().toISOString().split('T')[0];
+                const versionHeader = `## [${nextVersion}] - ${today}`;
+
+                if (changelog.includes('Por definir')) {
+                    changelog = changelog.replace(/## \[\d+\.\d+\.\d+\] - Por definir/, versionHeader);
+                } else if (!changelog.includes(versionHeader)) {
+                    const lines = changelog.split('\n');
+                    lines.splice(7, 0, '\n' + versionHeader + '\n');
+                    changelog = lines.join('\n');
+                }
+                fs.writeFileSync(changelogPath, changelog);
+                console.log('\x1b[32m✅ CHANGELOG.md actualizado.\x1b[0m');
+            }
         }
+
+        // Commit de Preparación
+        const needsCommit = getOutput('git status --porcelain');
+        if (needsCommit) {
+            const doCommit = await question('\n¿Hacer commit de la preparación de release? (S/n): ');
+            if (doCommit.toLowerCase() !== 'n') {
+                await runCommand('git add .', 'Añadiendo cambios');
+                await runCommand(`git commit -m "release: preparación v${nextVersion}"`, 'Haciendo commit');
+            }
+        }
+    } else {
+        console.log('  ℹ️ Saltando preparación de versión.');
     }
 
     // =========================================================================
@@ -143,227 +141,132 @@ async function main() {
     // =========================================================================
     console.log('\n\x1b[1m\x1b[36m--- ETAPA 2: INTEGRACIÓN ---\x1b[0m');
 
+    let branchForBuild = currentBranch;
     if (currentBranch === 'main' || currentBranch === 'master') {
-        console.log('  ℹ️ Ya estás en la rama principal. Saltando merge.');
+        console.log('  ℹ️ Ya estás en la rama principal.');
     } else {
-        const doMerge = await question(`\n¿Mezclar "${currentBranch}" en "main" ahora? (S/n): `);
-        if (doMerge.toLowerCase() !== 'n') {
+        console.log('\x1b[33m💡 Si quieres probar solo en esta rama, elige "n".\x1b[0m');
+        const doMerge = await question(`\n¿Mezclar "${currentBranch}" en "main" antes de compilar? (s/N): `);
+        if (doMerge.toLowerCase() === 's') {
             if (await runCommand('git checkout main', 'Cambiando a main')) {
                 if (await runCommand(`git merge ${currentBranch}`, 'Fusionando cambios')) {
                     console.log('\x1b[32m✅ Integración completada.\x1b[0m');
+                    branchForBuild = 'main';
                 } else {
                     console.log('\x1b[31m❌ Error en el merge. Resuélvelo manualmente.\x1b[0m');
                     process.exit(1);
                 }
             }
+        } else {
+            console.log(`  ℹ️ Continuando en la rama actual: ${currentBranch}`);
         }
     }
 
     // =========================================================================
-    // ETAPA 3: DESPLIEGUE (Build y Publicación)
+    // ETAPA 3: COMPILACIÓN Y DESPLIEGUE
     // =========================================================================
-    console.log('\n\x1b[1m\x1b[36m--- ETAPA 3: DESPLIEGUE ---\x1b[0m');
+    console.log('\n\x1b[1m\x1b[36m--- ETAPA 3: COMPILACIÓN ---\x1b[0m');
 
-    const doEverything = await question('\n¿Deseas generar binarios y PUBLICAR en GitHub? (S/n): ');
-    if (doEverything.toLowerCase() === 'n') {
-        console.log('\nRelease pausado.');
+    // 1. Elegir Tareas
+    console.log('\n¿Qué deseas hacer?');
+    console.log('  1) Solo Compilar localmente (No publica nada)');
+    console.log('  2) Compilar y Publicar en GitHub');
+    console.log('  n) Salir');
+
+    const actionChoice = await question('\nSelecciona opción: ');
+    if (actionChoice.toLowerCase() === 'n') {
         rl.close();
         return;
     }
 
-    // Token interactivo
-    if (!process.env.GH_TOKEN) {
-        console.log('\n\x1b[33m⚠️  No se detectó GH_TOKEN.\x1b[0m');
-        const token = await question('Pega tu GitHub Personal Access Token (Enter para omitir subida): ');
-        if (token) process.env.GH_TOKEN = token;
+    const isPublish = actionChoice === '2';
+
+    // 2. Elegir Plataformas
+    console.log('\n¿Para qué plataformas deseas compilar?');
+    console.log('  w) Windows');
+    console.log('  m) macOS');
+    console.log('  l) Linux');
+    console.log('  a) Todas (W+M+L)');
+    console.log('  c) Solo plataforma actual');
+
+    const platChoice = (await question('\nSelecciona plataformas (ej: ml para Mac y Linux): ')).toLowerCase();
+
+    let platforms = [];
+    if (platChoice.includes('a')) platforms = ['--win', '--mac', '--linux'];
+    else if (platChoice.includes('c')) platforms = []; // Default platform
+    else {
+        if (platChoice.includes('w')) platforms.push('--win');
+        if (platChoice.includes('m')) platforms.push('--mac');
+        if (platChoice.includes('l')) platforms.push('--linux');
     }
 
-    // Proceso unificado para evitar doble build
-    // 1. Build de React/Webpack (necesario siempre)
-    await runCommand('npm run build', 'Compilando código fuente (Webpack)');
-
-    // 2. Electron-builder (Build de ejecutables + opcional Publish)
-    let ebCommand = 'npx electron-builder';
-    let tempNotesFilename = null;
-    let tempConfigFilename = null;
-
-    if (process.env.GH_TOKEN) {
-        const confirmPublish = await question('\n¿Confirmas subir a GitHub Releases ahora? (S/n): ');
-        if (confirmPublish.toLowerCase() !== 'n') {
-            const notes = getReleaseNotes(nextVersion);
-            console.log('\n\x1b[36m[Info]\x1b[0m Buscando notas de release...');
-            if (notes) {
-                console.log('\x1b[33m--- NOTAS ENCONTRADAS ---\x1b[0m');
-                console.log(notes);
-                console.log('\x1b[33m-------------------------\x1b[0m');
-
-                // 1. Crear archivo de notas
-                tempNotesFilename = `temp-notes-${nextVersion}.md`;
-                const tempNotesPath = path.join(__dirname, '..', tempNotesFilename);
-                fs.writeFileSync(tempNotesPath, notes);
-                console.log(`\x1b[32m✅ Archivo de notas creado: ${tempNotesFilename}\x1b[0m`);
-
-                // 2. Crear archivo de configuración temporal para electron-builder
-                // Leemos la configuración de build existente del package.json para no romper nada
-                const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
-                const buildConfig = pkg.build || {};
-
-                // Aseguramos que el publish use releaseType: release
-                // NOTA: Ya no intentamos pasar las notas por aquí porque electron-builder las ignora.
-                // Las subiremos directamente a la API de GitHub después.
-                if (buildConfig.publish) {
-                    if (Array.isArray(buildConfig.publish)) {
-                        buildConfig.publish = buildConfig.publish.map(p => ({ ...p, releaseType: "release" }));
-                    } else {
-                        buildConfig.publish = { ...buildConfig.publish, releaseType: "release" };
-                    }
-                } else {
-                    buildConfig.publish = {
-                        provider: "github",
-                        releaseType: "release"
-                    };
-                }
-
-                tempConfigFilename = `temp-release-config.json`;
-                const tempConfigPath = path.join(__dirname, '..', tempConfigFilename);
-                fs.writeFileSync(tempConfigPath, JSON.stringify(buildConfig, null, 2));
-                console.log(`\x1b[32m✅ Archivo de configuración COMPLETO (sin notas) creado: ${tempConfigFilename}\x1b[0m`);
-
-                // Usar --config con la configuración completa
-                ebCommand = `npx electron-builder --publish always --config ${tempConfigFilename}`;
-            } else {
-                ebCommand += ' --publish always -c.publish.releaseType=release';
-                console.log('\x1b[33m⚠️  No se encontraron notas para esta versión en CHANGELOG.md\x1b[0m');
-            }
-        }
+    if (platforms.length === 0 && !platChoice.includes('c')) {
+        console.log('No has seleccionado ninguna plataforma válida.');
+        process.exit(1);
     }
 
-    console.log(`\x1b[34m[Debug]\x1b[0m Comando final: ${ebCommand}`);
+    // 3. Preparar comando electron-builder
+    let ebCommand = `npx electron-builder ${platforms.join(' ')}`;
 
-    if (await runCommand(ebCommand, 'Generando paquetes y gestionando publicación')) {
-        console.log('\n\x1b[32m✅ Proceso de binarios finalizado.\x1b[0m');
-
-        // --- PLAN B: ACTUALIZAR NOTAS VÍA API GITHUB ---
-        // Si teníamos notas, las forzamos ahora usando curl o fetch
-        if (tempNotesFilename && process.env.GH_TOKEN) {
-            console.log('\n\x1b[1m\x1b[35m--- ACTUALIZANDO NOTAS EN GITHUB (PLAN B) ---\x1b[0m');
-            const notes = fs.readFileSync(path.join(__dirname, '..', tempNotesFilename), 'utf8');
-            const repoOwner = 'kalidus'; // Hardcoded based on package.json
-            const repoName = 'NodeTerm';
-
-            // Usamos un script auxiliar para hacer la petición HTTPS
-            const updateScript = `
-const https = require('https');
-const token = process.env.GH_TOKEN;
-const version = 'v${nextVersion}';
-const notes = ${JSON.stringify(notes)};
-
-const options = {
-    hostname: 'api.github.com',
-    path: '/repos/${repoOwner}/${repoName}/releases/tags/' + version,
-    method: 'GET',
-    headers: {
-        'User-Agent': 'NodeTerm-Release-Script',
-        'Authorization': 'token ' + token
-    }
-};
-
-console.log('Buscando release ' + version + '...');
-
-const req = https.request(options, res => {
-    let data = '';
-    res.on('data', chunk => data += chunk);
-    res.on('end', () => {
-        if (res.statusCode !== 200) {
-            console.error('Error buscando release:', data);
-            process.exit(1);
-        }
-        const release = JSON.parse(data);
-        const releaseId = release.id;
-        
-        console.log('Encontrado Release ID:', releaseId);
-        console.log('Actualizando body...');
-        
-        const updateOptions = {
-            hostname: 'api.github.com',
-            path: '/repos/${repoOwner}/${repoName}/releases/' + releaseId,
-            method: 'PATCH',
-            headers: {
-                'User-Agent': 'NodeTerm-Release-Script',
-                'Authorization': 'token ' + token,
-                'Content-Type': 'application/json'
-            }
-        };
-        
-        const updateReq = https.request(updateOptions, updateRes => {
-            let updateData = '';
-            updateRes.on('data', chunk => updateData += chunk);
-            updateRes.on('end', () => {
-                if (updateRes.statusCode === 200) {
-                    console.log('✅ ¡Notas actualizadas correctamente en GitHub!');
-                } else {
-                    console.error('❌ Error actualizando notas:', updateData);
-                    process.exit(1);
-                }
-            });
-        });
-        
-        updateReq.write(JSON.stringify({ body: notes }));
-        updateReq.end();
-    });
-});
-
-req.on('error', error => {
-    console.error(error);
-    process.exit(1);
-});
-
-req.end();
-`;
-            const scriptPath = path.join(__dirname, '..', 'update-notes.js');
-            fs.writeFileSync(scriptPath, updateScript);
-
-            await runCommand(`node "${scriptPath}"`, 'Forzando actualización de notas en GitHub');
-            fs.unlinkSync(scriptPath);
+    if (isPublish) {
+        if (!process.env.GH_TOKEN) {
+            console.log('\n\x1b[33m⚠️  No se detectó GH_TOKEN.\x1b[0m');
+            const token = await question('Pega tu GitHub Personal Access Token (Enter para omitir subida): ');
+            if (token) process.env.GH_TOKEN = token;
         }
 
-        // Limpieza
-        if (tempNotesFilename) {
-            const tempNotesPath = path.join(__dirname, '..', tempNotesFilename);
-            if (fs.existsSync(tempNotesPath)) {
-                fs.unlinkSync(tempNotesPath);
-                console.log(`\x1b[34m[Debug]\x1b[0m Archivo temporal ${tempNotesFilename} eliminado.`);
-            }
-        }
-        if (tempConfigFilename) {
-            const tempConfigPath = path.join(__dirname, '..', tempConfigFilename);
-            if (fs.existsSync(tempConfigPath)) {
-                fs.unlinkSync(tempConfigPath);
-                console.log(`\x1b[34m[Debug]\x1b[0m Archivo temporal ${tempConfigFilename} eliminado.`);
-            }
-        }
-    }
-
-    // Tags finales
-    const activeBranch = getOutput('git rev-parse --abbrev-ref HEAD');
-    const tagExists = getOutput(`git tag -l v${nextVersion}`);
-
-    if (tagExists) {
-        console.log(`\n\x1b[33mℹ️  La etiqueta v${nextVersion} ya existe localmente.\x1b[0m`);
-        const doPushTags = await question('¿Deseas intentar subir las etiquetas a GitHub de todos modos? (S/n): ');
-        if (doPushTags.toLowerCase() !== 'n') {
-            await runCommand(`git push origin ${activeBranch} --tags`, 'Subiendo etiquetas');
+        if (process.env.GH_TOKEN) {
+            ebCommand += ' --publish always -c.publish.releaseType=release';
+        } else {
+            console.log('\n\x1b[31m❌ No se puede publicar sin Token. Cambiando a modo local.\x1b[0m');
+            ebCommand += ' --publish never';
         }
     } else {
-        const doTag = await question(`\n¿Crear y subir tag v${nextVersion} a GitHub? (S/n): `);
-        if (doTag.toLowerCase() !== 'n') {
-            await runCommand(`git tag v${nextVersion}`, `Creando tag v${nextVersion}`);
-            await runCommand(`git push origin ${activeBranch} --tags`, 'Sincronizando con GitHub');
+        ebCommand += ' --publish never';
+    }
+
+    // 4. Ejecución
+    console.log(`\x1b[34m[Debug]\x1b[0m Rama: ${branchForBuild} | Plataformas: ${platforms.length ? platforms.join(' ') : 'Actual'}`);
+
+    // Build de React/Webpack (necesario siempre)
+    await runCommand('npm run build', 'Compilando código fuente (Webpack)');
+
+    if (await runCommand(ebCommand, isPublish ? 'Generando paquetes y publicando' : 'Generando paquetes locales')) {
+        console.log('\n\x1b[32m✅ Compilación finalizada correctamente.\x1b[0m');
+
+        if (isPublish && process.env.GH_TOKEN) {
+            // Lógica de Notas (Opcional, similar a tu script anterior)
+            const notes = getReleaseNotes(nextVersion);
+            if (notes) {
+                console.log('\n\x1b[33mℹ️  Sugerencia: Puedes actualizar las notas en GitHub usando las de CHANGELOG.md\x1b[0m');
+            }
+        }
+    }
+
+    // =========================================================================
+    // ETAPA FINAL: TAGS (Solo si es publicación)
+    // =========================================================================
+    if (isPublish) {
+        console.log('\n\x1b[1m\x1b[36m--- ETAPA FINAL: ETIQUETADO ---\x1b[0m');
+        const tagExists = getOutput(`git tag -l v${nextVersion}`);
+
+        if (tagExists) {
+            console.log(`\n\x1b[33mℹ️  La etiqueta v${nextVersion} ya existe.\x1b[0m`);
+            const doPushTags = await question('¿Sincronizar etiquetas con GitHub de todos modos? (S/n): ');
+            if (doPushTags.toLowerCase() !== 'n') {
+                await runCommand(`git push origin ${branchForBuild} --tags`, 'Subiendo etiquetas');
+            }
+        } else {
+            const doTag = await question(`\n¿Crear y subir tag v${nextVersion}? (S/n): `);
+            if (doTag.toLowerCase() !== 'n') {
+                await runCommand(`git tag v${nextVersion}`, `Creando tag v${nextVersion}`);
+                await runCommand(`git push origin ${branchForBuild} --tags`, 'Sincronizando con GitHub');
+            }
         }
     }
 
     console.log('\n\x1b[1m\x1b[32m═══════════════════════════════════════════════════\x1b[0m');
-    console.log(`\x1b[1m\x1b[32m   🚀 ¡RELEASE v${nextVersion} FINALIZADO!   \x1b[0m`);
+    console.log(`\x1b[1m\x1b[32m   🚀 PROCESO FINALIZADO   \x1b[0m`);
     console.log('\x1b[1m\x1b[32m═══════════════════════════════════════════════════\x1b[0m\n');
     rl.close();
 }
