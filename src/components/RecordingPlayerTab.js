@@ -3,9 +3,9 @@
  * Usa xterm.js para renderizar la reproducción en formato asciicast
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
-import 'xterm/css/xterm.css';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import '@xterm/xterm/css/xterm.css';
 
 const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
   const terminalRef = useRef(null);
@@ -19,7 +19,7 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
     duration: 0,
     speed: 1
   });
-  
+
   const playbackData = useRef({
     events: [],
     currentEventIndex: 0,
@@ -70,7 +70,7 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
     fitAddon.current = new FitAddon();
     term.loadAddon(fitAddon.current);
     term.open(terminalRef.current);
-    
+
     try {
       fitAddon.current.fit();
     } catch (e) {
@@ -89,7 +89,7 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
           event.preventDefault();
           event.stopPropagation();
           event.stopImmediatePropagation();
-          
+
           if (window.electron?.clipboard?.writeText) {
             window.electron.clipboard.writeText(selection);
             console.log('✅ Texto copiado al portapapeles');
@@ -103,7 +103,7 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
 
     // Añadir listener a nivel del documento con captura
     document.addEventListener('keydown', handleKeyDown, true);
-    
+
     // También añadir al contenedor del terminal como respaldo
     terminalRef.current.addEventListener('keydown', handleKeyDown, true);
 
@@ -123,7 +123,7 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
         menu.style.padding = '4px 0';
         menu.style.zIndex = '10000';
         menu.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
-        
+
         const copyOption = document.createElement('div');
         copyOption.textContent = '📋 Copiar';
         copyOption.style.padding = '8px 16px';
@@ -138,10 +138,10 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
           }
           document.body.removeChild(menu);
         };
-        
+
         menu.appendChild(copyOption);
         document.body.appendChild(menu);
-        
+
         // Cerrar menú al hacer clic fuera
         const closeMenu = (e) => {
           if (!menu.contains(e.target)) {
@@ -189,12 +189,12 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
 
       // Primera línea: header
       const header = JSON.parse(lines[0]);
-      
+
       // Resto: eventos [time, type, data]
       const events = lines.slice(1).map(line => JSON.parse(line));
 
       playbackData.current.events = events;
-      
+
       const duration = events.length > 0 ? events[events.length - 1][0] : 0;
       setPlaybackState(prev => ({ ...prev, duration }));
 
@@ -225,11 +225,11 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
     // Si estamos en pausa, reanudar desde donde estábamos
     if (playbackData.current.isPaused) {
       playbackData.current.isPaused = false;
-      
+
       // Ajustar startTime para continuar desde el tiempo actual
       const currentTimeMs = playbackState.currentTime * 1000;
       playbackData.current.startTime = Date.now() - (currentTimeMs / playbackState.speed);
-      
+
       setPlaybackState(prev => ({ ...prev, isPlaying: true }));
       scheduleNextEvent();
       return;
@@ -247,9 +247,9 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
     playbackData.current.startTime = Date.now();
     playbackData.current.currentEventIndex = 0;
     playbackData.current.isPaused = false;
-    
+
     setPlaybackState(prev => ({ ...prev, isPlaying: true, currentTime: 0 }));
-    
+
     scheduleNextEvent();
   };
 
@@ -269,12 +269,12 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
     }
     playbackData.current.currentEventIndex = 0;
     playbackData.current.isPaused = false;
-    
+
     if (terminalInstance.current) {
       terminalInstance.current.clear();
       terminalInstance.current.writeln('\x1b[33mReproducción detenida\x1b[0m');
     }
-    
+
     setPlaybackState(prev => ({ ...prev, isPlaying: false, currentTime: 0 }));
   };
 
@@ -293,16 +293,16 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
    */
   const seekTo = (targetTime) => {
     if (!terminalInstance.current || playbackData.current.events.length === 0) return;
-    
+
     // Limpiar timeout actual
     if (playbackData.current.timeout) {
       clearTimeout(playbackData.current.timeout);
       playbackData.current.timeout = null;
     }
-    
+
     // Asegurar que el tiempo está dentro del rango válido
     const clampedTime = Math.max(0, Math.min(targetTime, playbackState.duration));
-    
+
     // Encontrar el índice del evento más cercano al tiempo objetivo
     let targetIndex = 0;
     for (let i = 0; i < playbackData.current.events.length; i++) {
@@ -313,10 +313,10 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
         break;
       }
     }
-    
+
     // Limpiar terminal y reconstruir estado hasta el punto objetivo
     terminalInstance.current.clear();
-    
+
     // Reproducir todos los eventos hasta el índice objetivo
     for (let i = 0; i < targetIndex; i++) {
       const [eventTime, eventType, eventData] = playbackData.current.events[i];
@@ -324,13 +324,13 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
         terminalInstance.current.write(eventData);
       }
     }
-    
+
     // Actualizar estado
     playbackData.current.currentEventIndex = targetIndex;
-    
+
     // Actualizar tiempo actual
     setPlaybackState(prev => ({ ...prev, currentTime: clampedTime }));
-    
+
     // Si estaba reproduciendo, continuar desde aquí
     if (playbackState.isPlaying && !playbackData.current.isPaused) {
       playbackData.current.startTime = Date.now() - (clampedTime * 1000 / playbackState.speed);
@@ -344,7 +344,7 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
 
   const scheduleNextEvent = () => {
     const { events, currentEventIndex, startTime, isPaused } = playbackData.current;
-    
+
     if (isPaused || currentEventIndex >= events.length) {
       if (currentEventIndex >= events.length) {
         setPlaybackState(prev => ({ ...prev, isPlaying: false }));
@@ -382,23 +382,23 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
     if (playbackData.current.timeout) {
       clearTimeout(playbackData.current.timeout);
     }
-    
+
     // Remover event listeners
     if (terminalInstance.current) {
       if (terminalInstance.current._customKeyHandler) {
         // Remover del documento
         document.removeEventListener('keydown', terminalInstance.current._customKeyHandler, true);
-        
+
         // Remover del contenedor del terminal si existe
         if (terminalRef.current) {
           terminalRef.current.removeEventListener('keydown', terminalInstance.current._customKeyHandler, true);
         }
       }
-      
+
       if (terminalInstance.current._contextMenuHandler && terminalRef.current) {
         terminalRef.current.removeEventListener('contextmenu', terminalInstance.current._contextMenuHandler);
       }
-      
+
       terminalInstance.current.dispose();
     }
   };
@@ -586,7 +586,7 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
       </div>
 
       {/* Barra de progreso interactiva */}
-      <div 
+      <div
         data-progress-bar
         style={{
           height: '12px',
@@ -597,29 +597,29 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
         }}
         onMouseDown={(e) => {
           if (!playbackState.duration) return;
-          
+
           e.preventDefault();
           playbackData.current.isDragging = true;
-          
+
           const rect = e.currentTarget.getBoundingClientRect();
           const clickX = e.clientX - rect.left;
           const percentage = Math.max(0, Math.min(1, clickX / rect.width));
           const targetTime = percentage * playbackState.duration;
-          
+
           playbackData.current.lastSeekTime = targetTime;
           seekTo(targetTime);
-          
+
           // Agregar listeners globales para arrastre fluido
           const handleGlobalMouseMove = (moveEvent) => {
             if (!playbackData.current.isDragging) return;
-            
+
             const progressBar = document.querySelector('[data-progress-bar]');
             if (progressBar) {
               const barRect = progressBar.getBoundingClientRect();
               const mouseX = moveEvent.clientX - barRect.left;
               const newPercentage = Math.max(0, Math.min(1, mouseX / barRect.width));
               const newTargetTime = newPercentage * playbackState.duration;
-              
+
               // Actualizar solo si hay cambio significativo para evitar llamadas excesivas
               if (Math.abs(newTargetTime - playbackData.current.lastSeekTime) > 0.05) {
                 playbackData.current.lastSeekTime = newTargetTime;
@@ -645,7 +645,7 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
             const mouseX = e.clientX - rect.left;
             const percentage = Math.max(0, Math.min(1, mouseX / rect.width));
             const targetTime = percentage * playbackState.duration;
-            
+
             // Actualizar inmediatamente
             if (Math.abs(targetTime - playbackData.current.lastSeekTime) > 0.05) {
               playbackData.current.lastSeekTime = targetTime;
@@ -678,7 +678,7 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
       </div>
 
       {/* Terminal */}
-      <div 
+      <div
         ref={terminalRef}
         style={{
           flex: 1,

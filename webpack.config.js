@@ -75,6 +75,12 @@ module.exports = {
         }
       },
       {
+        test: /\.m?js$/,
+        resolve: {
+          fullySpecified: false
+        }
+      },
+      {
         test: /\.css$/,
         use: ['style-loader', 'css-loader']
       },
@@ -99,8 +105,8 @@ module.exports = {
       patterns: [
         { from: 'preload.js', to: 'preload.js' },
         { from: 'node_modules/kdbxweb/dist/kdbxweb.min.js', to: 'vendor/kdbxweb.min.js' },
-        { 
-          from: 'src/assets/fonts', 
+        {
+          from: 'src/assets/fonts',
           to: 'assets/fonts',
           noErrorOnMissing: true,
           globOptions: {
@@ -117,7 +123,7 @@ module.exports = {
       'globalThis': 'window'
     }),
     new webpack.ProvidePlugin({
-      process: 'process/browser',
+      process: 'process/browser.js',
       Buffer: ['buffer', 'Buffer'],
       global: 'globalThis'
     })
@@ -125,7 +131,7 @@ module.exports = {
   resolve: {
     extensions: ['.js', '.jsx'],
     fallback: {
-      "process": require.resolve("process/browser"),
+      "process": require.resolve("process/browser.js"),
       "buffer": require.resolve("buffer"),
       "path": require.resolve("path-browserify"),
       "os": require.resolve("os-browserify/browser"),
