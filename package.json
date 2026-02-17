@@ -225,8 +225,8 @@
     "cross-env": "^10.0.0",
     "crypto-browserify": "^3.12.1",
     "css-loader": "^7.1.4",
-    "electron": "^38.1.2",
-    "electron-builder": "^26.7.0",
+    "electron": "^40.4.1",
+    "electron-builder": "^26.8.1",
     "electron-reloader": "^1.2.3",
     "html-webpack-plugin": "^5.6.6",
     "os-browserify": "^0.3.0",
@@ -249,6 +249,8 @@
     "tar": "7.5.7",
     "elliptic": "6.6.1",
     "ajv": "^8.18.0",
-    "ajv-keywords": "^5.1.0"
+    "ajv-keywords": "^5.1.0",
+    "@electron/asar": "^4.0.1",
+    "glob": "^13.0.5"
   }
 }
