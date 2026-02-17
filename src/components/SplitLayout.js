@@ -151,8 +151,10 @@ const SplitLayout = ({
   onCloseLeft = null,
   onCloseRight = null,
   onClosePanel = null,
+
   path = [], // Path en el árbol para identificar este nodo
-  openInSplit = null
+  openInSplit = null,
+  style = {} // Prop style para pasar estilos entre componentes recursivos
 }) => {
   const leftTerminalRef = useRef(null);
   const rightTerminalRef = useRef(null);
@@ -165,16 +167,23 @@ const SplitLayout = ({
   // Asegurar que siempre haya un color de separador válido desde el inicio
   // Usar transparencia para que el separador sea visible sobre cualquier fondo
   const effectiveSplitterColor = React.useMemo(() => {
-    // Intentar determinar si el tema es oscuro o claro
-    const bgColor = splitterColor || theme?.background || '#2d2d2d';
+    if (splitterColor) return splitterColor;
+    if (!theme) return '#4d4d4d'; // Fallback
 
-    // Si el color de fondo es muy oscuro, usar blanco semi-transparente
-    // Si es claro, usar negro semi-transparente
-    const isLikelyDark = bgColor.includes('#') &&
-      parseInt(bgColor.slice(1, 3), 16) < 128;
+    // Priorizar colores del tema que sirvan como bordes/separadores
+    // 1. splitter/border específicos
+    // 2. brightBlack (gris brillante, común para bordes en temas oscuros)
+    // 3. selectionBackground (común para resaltar áreas)
+    // 4. foreground (con opacidad reducida si fuera necesario, pero aquí lo tomamos directo)
+    const color = theme.splitter ||
+      theme.borderColor ||
+      theme.brightBlack ||
+      theme.selectionBackground ||
+      theme.foreground ||
+      '#4d4d4d';
 
-    return isLikelyDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.15)';
-  }, [splitterColor, theme?.background]);
+    return color;
+  }, [splitterColor, theme]);
 
   // Estado para funcionalidad de colapso (solo para vertical)
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -345,6 +354,7 @@ const SplitLayout = ({
           splitterColor={splitterColor}
           onClosePanel={onClosePanel}
           path={nodePath}
+          style={{ '--terminal-theme-splitter': effectiveSplitterColor }}
         />
       );
     }
@@ -399,8 +409,8 @@ const SplitLayout = ({
   // NO ejecutar si estamos usando el sistema legacy (leftTerminal/rightTerminal)
   if (terminalsArray.length > 0 && terminalsArray.length <= 4 && !isLegacySystem) {
     const terminalCount = terminalsArray.length;
-    // Usar el mismo color que el scroll para consistencia visual
-    const visibleLineColor = splitterColor || 'var(--ui-sidebar-border, #3e3e42)';
+    // Usar el color calculado del tema
+    const visibleLineColor = effectiveSplitterColor;
 
     const [verticalSplit, setVerticalSplit] = useState(50); // % para división vertical (T1/T2)
     const [horizontalSplit, setHorizontalSplit] = useState(50); // % para división horizontal (arriba/abajo)
@@ -455,8 +465,8 @@ const SplitLayout = ({
       position: 'absolute',
       backgroundColor: 'transparent',
       backgroundImage: isVertical
-        ? `linear-gradient(to right, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`
-        : `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
+        ? `linear-gradient(to right, transparent calc(50% - 2px), ${visibleLineColor} calc(50% - 2px), ${visibleLineColor} calc(50% + 2px), transparent calc(50% + 2px))`
+        : `linear-gradient(to bottom, transparent calc(50% - 2px), ${visibleLineColor} calc(50% - 2px), ${visibleLineColor} calc(50% + 2px), transparent calc(50% + 2px))`,
       backgroundRepeat: 'no-repeat',
       backgroundSize: '100% 100%',
       backgroundPosition: 'center',
@@ -464,7 +474,7 @@ const SplitLayout = ({
       zIndex: 1000, // z-index alto para todos los separadores
       transition: 'filter 0.15s ease',
       pointerEvents: 'auto', // Asegurar que capture eventos del mouse
-      opacity: 0.6 // Misma opacidad que el scroll
+      opacity: 1 // Mejor visibilidad
     });
 
     const renderTerminal = (terminal, index) => {
@@ -632,7 +642,14 @@ const SplitLayout = ({
     if (terminalCount === 1) {
       // 1 terminal: ocupa todo
       return (
-        <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          '--terminal-theme-splitter': effectiveSplitterColor
+        }}>
           {renderTerminal(terminalsArray[0], 0)}
         </div>
       );
@@ -645,7 +662,16 @@ const SplitLayout = ({
       if (isHorizontal) {
         // Split horizontal: uno arriba, otro abajo
         return (
-          <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: theme?.background || '#000000' }} data-grid-container>
+          <div style={{
+            width: '100%',
+            height: '100%',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            background: theme?.background || '#000000',
+            '--terminal-theme-splitter': effectiveSplitterColor
+          }} data-grid-container>
             <div style={{ width: '100%', height: `calc(${horizontalSplit}% - 4px)`, position: 'relative', overflow: 'hidden', background: theme?.background || '#000000', display: 'flex', flexDirection: 'column' }}>
               {renderTerminal(terminalsArray[0], 0)}
             </div>
@@ -656,7 +682,7 @@ const SplitLayout = ({
                 flexShrink: 0,
                 position: 'relative',
                 backgroundColor: 'transparent', // Sin fondo sólido para evitar "doble línea"
-                backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 1px), transparent calc(50% + 1px))`,
+                backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 2px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 2px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 2px), transparent calc(50% + 2px))`,
                 backgroundRepeat: 'no-repeat',
                 backgroundSize: '100% 100%',
                 backgroundPosition: 'center',
@@ -685,7 +711,14 @@ const SplitLayout = ({
       } else {
         // Split vertical: uno a la izquierda, otro a la derecha
         return (
-          <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', background: theme?.background || '#000000' }} data-grid-container>
+          <div style={{
+            width: '100%',
+            height: '100%',
+            position: 'relative',
+            display: 'flex',
+            background: theme?.background || '#000000',
+            '--terminal-theme-splitter': effectiveSplitterColor
+          }} data-grid-container>
             <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: theme?.background || '#000000' }}>
               {renderTerminal(terminalsArray[0], 0)}
             </div>
@@ -693,11 +726,9 @@ const SplitLayout = ({
               style={{ ...splitterStyle(true), width: '8px', height: '100%', left: `${verticalSplit}%`, marginLeft: '-4px' }}
               onMouseDown={handleMouseDown('v-top')}
               onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '0.8';
-                e.currentTarget.style.filter = 'brightness(1.15)';
+                e.currentTarget.style.filter = 'brightness(1.5)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '0.6';
                 e.currentTarget.style.filter = 'brightness(1)';
               }}
             />
@@ -712,7 +743,16 @@ const SplitLayout = ({
     if (terminalCount === 3) {
       // 3 terminales: 2 arriba (split vertical) + 1 abajo (toda la fila)
       return (
-        <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: theme?.background || '#000000' }} data-grid-container>
+        <div style={{
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          background: theme?.background || '#000000',
+          '--terminal-theme-splitter': effectiveSplitterColor
+        }} data-grid-container>
           {/* Fila superior: T1 y T2 */}
           <div style={{ width: '100%', height: `calc(${horizontalSplit}% - 4px)`, position: 'relative', display: 'flex', background: theme?.background || '#000000' }}>
             <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden', background: theme?.background || '#000000', display: 'flex', flexDirection: 'column' }}>
@@ -722,11 +762,9 @@ const SplitLayout = ({
               style={{ ...splitterStyle(true), width: '8px', height: '100%', left: `${verticalSplit}%`, marginLeft: '-4px' }}
               onMouseDown={handleMouseDown('v-top')}
               onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '0.8';
-                e.currentTarget.style.filter = 'brightness(1.15)';
+                e.currentTarget.style.filter = 'brightness(1.5)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '0.6';
                 e.currentTarget.style.filter = 'brightness(1)';
               }}
             />
@@ -742,7 +780,7 @@ const SplitLayout = ({
               flexShrink: 0,
               position: 'relative',
               backgroundColor: 'transparent', // Sin fondo sólido para evitar "doble línea"
-              backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 1px), transparent calc(50% + 1px))`,
+              backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 2px), ${visibleLineColor} calc(50% - 2px), ${visibleLineColor} calc(50% + 2px), transparent calc(50% + 2px))`,
               backgroundRepeat: 'no-repeat',
               backgroundSize: '100% 100%',
               backgroundPosition: 'center',
@@ -774,7 +812,16 @@ const SplitLayout = ({
     if (terminalCount === 4) {
       // 4 terminales: Grid 2x2 completo redimensionable
       return (
-        <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: theme?.background || '#000000' }} data-grid-container>
+        <div style={{
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          background: theme?.background || '#000000',
+          '--terminal-theme-splitter': effectiveSplitterColor
+        }} data-grid-container>
           {/* Fila superior: T1 y T2 */}
           <div style={{ width: '100%', height: `calc(${horizontalSplit}% - 4px)`, position: 'relative', display: 'flex', background: theme?.background || '#000000' }}>
             <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden', background: theme?.background || '#000000', display: 'flex', flexDirection: 'column' }}>
@@ -784,11 +831,9 @@ const SplitLayout = ({
               style={{ ...splitterStyle(true), width: '8px', height: '100%', left: `${verticalSplit}%`, marginLeft: '-4px' }}
               onMouseDown={handleMouseDown('v-top')}
               onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '0.8';
-                e.currentTarget.style.filter = 'brightness(1.15)';
+                e.currentTarget.style.filter = 'brightness(1.5)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '0.6';
                 e.currentTarget.style.filter = 'brightness(1)';
               }}
             />
@@ -803,8 +848,8 @@ const SplitLayout = ({
               height: '8px',
               flexShrink: 0,
               position: 'relative',
-              backgroundColor: theme?.background || 'transparent', // Fondo transparente si no hay tema definido
-              backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
+              backgroundColor: 'transparent', // Sin fondo sólido para evitar "doble línea"
+              backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 2px), ${visibleLineColor} calc(50% - 2px), ${visibleLineColor} calc(50% + 2px), transparent calc(50% + 2px))`,
               backgroundRepeat: 'no-repeat',
               backgroundSize: '100% 100%',
               backgroundPosition: 'center',
@@ -819,7 +864,7 @@ const SplitLayout = ({
             }}
             onMouseDown={handleMouseDown('h')}
             onMouseEnter={(e) => {
-              e.currentTarget.style.filter = 'brightness(1.15)';
+              e.currentTarget.style.filter = 'brightness(1.5)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.filter = 'brightness(1)';
@@ -834,11 +879,9 @@ const SplitLayout = ({
               style={{ ...splitterStyle(true), width: '8px', height: '100%', left: `${verticalSplitBottom}%`, marginLeft: '-4px' }}
               onMouseDown={handleMouseDown('v-bottom')}
               onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '0.8';
-                e.currentTarget.style.filter = 'brightness(1.15)';
+                e.currentTarget.style.filter = 'brightness(1.5)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '0.6';
                 e.currentTarget.style.filter = 'brightness(1)';
               }}
             />
@@ -1394,7 +1437,9 @@ const SplitLayout = ({
         display: 'flex',
         flexDirection: 'row',
         overflow: 'hidden',
-        background: theme?.background || 'transparent'
+        background: theme?.background || 'transparent',
+        '--terminal-theme-splitter': effectiveSplitterColor,
+        ...style
       }}>
         {/* Panel izquierdo */}
         <div style={{
@@ -1444,19 +1489,17 @@ const SplitLayout = ({
             transition: 'filter 0.15s ease',
             userSelect: 'none',
             backgroundColor: 'transparent',
-            backgroundImage: `linear-gradient(to right, transparent calc(50% - 1px), ${visibleLineColor} calc(50% - 1px), ${visibleLineColor} calc(50% + 1px), transparent calc(50% + 1px))`,
+            backgroundImage: `linear-gradient(to right, transparent calc(50% - 2px), ${effectiveSplitterColor} calc(50% - 2px), ${effectiveSplitterColor} calc(50% + 2px), transparent calc(50% + 2px))`,
             backgroundRepeat: 'no-repeat',
             backgroundSize: '100% 100%',
-            opacity: 0.6 // Misma opacidad que el scroll
+            opacity: 1
           }}
           ref={gutterRef}
           onMouseDown={handleMouseDown}
           onMouseEnter={(e) => {
-            e.currentTarget.style.opacity = '0.8';
-            e.currentTarget.style.filter = 'brightness(1.15)';
+            e.currentTarget.style.filter = 'brightness(1.5)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = '0.6';
             e.currentTarget.style.filter = 'brightness(1)';
           }}
           title="Arrastra para redimensionar"
@@ -1506,7 +1549,13 @@ const SplitLayout = ({
   // PrimeReact Splitter para horizontal (mantener como estaba)
   return (
     <Splitter
-      style={{ height: '100%', width: '100%', border: 'none' }}
+      style={{
+        height: '100%',
+        width: '100%',
+        border: 'none',
+        '--terminal-theme-splitter': effectiveSplitterColor,
+        ...style
+      }}
       layout={orientation}
       onResize={handleResize}
       className="terminal-splitter"

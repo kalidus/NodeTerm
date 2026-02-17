@@ -54,12 +54,32 @@
   z-index: 10;
 }
 
+/* Splitter Vertical (paneles lado a lado) -> Barra Vertical */
+.terminal-splitter.p-splitter-horizontal>.p-splitter-gutter {
+  background-image: linear-gradient(to right, transparent calc(50% - 1px), var(--terminal-theme-splitter, rgba(128, 128, 128, 0.5)) calc(50% - 1px), var(--terminal-theme-splitter, rgba(128, 128, 128, 0.5)) calc(50% + 1px), transparent calc(50% + 1px)) !important;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+}
+
+/* Splitter Horizontal (paneles arriba/abajo) -> Barra Horizontal */
+.terminal-splitter.p-splitter-vertical>.p-splitter-gutter {
+  background-image: linear-gradient(to bottom, transparent calc(50% - 1px), var(--terminal-theme-splitter, rgba(128, 128, 128, 0.5)) calc(50% - 1px), var(--terminal-theme-splitter, rgba(128, 128, 128, 0.5)) calc(50% + 1px), transparent calc(50% + 1px)) !important;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+}
+
 .terminal-splitter .p-splitter-gutter:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
+  background-color: transparent !important;
+  filter: brightness(1.5);
+  opacity: 1 !important;
 }
 
 .terminal-splitter .p-splitter-gutter:focus,
 .terminal-splitter .p-splitter-gutter:active {
+  background: transparent !important;
+  filter: brightness(1.5);
   outline: none !important;
   box-shadow: none !important;
 }
