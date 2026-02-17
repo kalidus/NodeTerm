@@ -632,7 +632,7 @@ const SplitLayout = ({
     if (terminalCount === 1) {
       // 1 terminal: ocupa todo
       return (
-        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+        <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }}>
           {renderTerminal(terminalsArray[0], 0)}
         </div>
       );
@@ -645,8 +645,8 @@ const SplitLayout = ({
       if (isHorizontal) {
         // Split horizontal: uno arriba, otro abajo
         return (
-          <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: theme?.background || 'transparent' }} data-grid-container>
-            <div style={{ width: '100%', height: `calc(${horizontalSplit}% - 4px)`, position: 'relative', overflow: 'hidden', background: theme?.background || 'transparent' }}>
+          <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: theme?.background || '#000000' }} data-grid-container>
+            <div style={{ width: '100%', height: `calc(${horizontalSplit}% - 4px)`, position: 'relative', overflow: 'hidden', background: theme?.background || '#000000', display: 'flex', flexDirection: 'column' }}>
               {renderTerminal(terminalsArray[0], 0)}
             </div>
             <div
@@ -677,7 +677,7 @@ const SplitLayout = ({
                 e.currentTarget.style.filter = 'brightness(1)';
               }}
             />
-            <div style={{ width: '100%', height: `calc(${100 - horizontalSplit}% - 4px)`, position: 'relative', overflow: 'hidden', background: theme?.background || 'transparent' }}>
+            <div style={{ width: '100%', height: `calc(${100 - horizontalSplit}% - 4px)`, position: 'relative', overflow: 'hidden', background: theme?.background || '#000000', display: 'flex', flexDirection: 'column' }}>
               {renderTerminal(terminalsArray[1], 1)}
             </div>
           </div>
@@ -685,8 +685,8 @@ const SplitLayout = ({
       } else {
         // Split vertical: uno a la izquierda, otro a la derecha
         return (
-          <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex' }} data-grid-container>
-            <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', background: theme?.background || '#000000' }} data-grid-container>
+            <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: theme?.background || '#000000' }}>
               {renderTerminal(terminalsArray[0], 0)}
             </div>
             <div
@@ -701,7 +701,7 @@ const SplitLayout = ({
                 e.currentTarget.style.filter = 'brightness(1)';
               }}
             />
-            <div style={{ width: `${100 - verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ width: `${100 - verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: theme?.background || '#000000' }}>
               {renderTerminal(terminalsArray[1], 1)}
             </div>
           </div>
@@ -712,10 +712,10 @@ const SplitLayout = ({
     if (terminalCount === 3) {
       // 3 terminales: 2 arriba (split vertical) + 1 abajo (toda la fila)
       return (
-        <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: theme?.background || 'transparent' }} data-grid-container>
+        <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: theme?.background || '#000000' }} data-grid-container>
           {/* Fila superior: T1 y T2 */}
-          <div style={{ width: '100%', height: `calc(${horizontalSplit}% - 4px)`, position: 'relative', display: 'flex', background: theme?.background || 'transparent' }}>
-            <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden', background: theme?.background || 'transparent' }}>
+          <div style={{ width: '100%', height: `calc(${horizontalSplit}% - 4px)`, position: 'relative', display: 'flex', background: theme?.background || '#000000' }}>
+            <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden', background: theme?.background || '#000000', display: 'flex', flexDirection: 'column' }}>
               {renderTerminal(terminalsArray[0], 0)}
             </div>
             <div
@@ -730,7 +730,7 @@ const SplitLayout = ({
                 e.currentTarget.style.filter = 'brightness(1)';
               }}
             />
-            <div style={{ width: `${100 - verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden', background: theme?.background || 'transparent' }}>
+            <div style={{ width: `${100 - verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden', background: theme?.background || '#000000', display: 'flex', flexDirection: 'column' }}>
               {renderTerminal(terminalsArray[1], 1)}
             </div>
           </div>
@@ -764,7 +764,7 @@ const SplitLayout = ({
             }}
           />
           {/* Fila inferior: T3 */}
-          <div style={{ width: '100%', height: `calc(${100 - horizontalSplit}% - 4px)`, position: 'relative', overflow: 'hidden', background: theme?.background || 'transparent' }}>
+          <div style={{ width: '100%', height: `calc(${100 - horizontalSplit}% - 4px)`, position: 'relative', overflow: 'hidden', background: theme?.background || '#000000', display: 'flex', flexDirection: 'column' }}>
             {renderTerminal(terminalsArray[2], 2)}
           </div>
         </div>
@@ -774,10 +774,10 @@ const SplitLayout = ({
     if (terminalCount === 4) {
       // 4 terminales: Grid 2x2 completo redimensionable
       return (
-        <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: theme?.background || 'transparent' }} data-grid-container>
+        <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: theme?.background || '#000000' }} data-grid-container>
           {/* Fila superior: T1 y T2 */}
-          <div style={{ width: '100%', height: `calc(${horizontalSplit}% - 4px)`, position: 'relative', display: 'flex', background: theme?.background || 'transparent' }}>
-            <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden', background: theme?.background || 'transparent' }}>
+          <div style={{ width: '100%', height: `calc(${horizontalSplit}% - 4px)`, position: 'relative', display: 'flex', background: theme?.background || '#000000' }}>
+            <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden', background: theme?.background || '#000000', display: 'flex', flexDirection: 'column' }}>
               {renderTerminal(terminalsArray[0], 0)}
             </div>
             <div
@@ -792,7 +792,7 @@ const SplitLayout = ({
                 e.currentTarget.style.filter = 'brightness(1)';
               }}
             />
-            <div style={{ width: `${100 - verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden', background: theme?.background || 'transparent' }}>
+            <div style={{ width: `${100 - verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden', background: theme?.background || '#000000', display: 'flex', flexDirection: 'column' }}>
               {renderTerminal(terminalsArray[1], 1)}
             </div>
           </div>
@@ -826,8 +826,8 @@ const SplitLayout = ({
             }}
           />
           {/* Fila inferior: T3 y T4 */}
-          <div style={{ width: '100%', height: `calc(${100 - horizontalSplit}% - 4px)`, position: 'relative', display: 'flex', background: theme?.background || 'transparent' }}>
-            <div style={{ width: `${verticalSplitBottom}%`, height: '100%', position: 'relative', overflow: 'hidden', background: theme?.background || 'transparent' }}>
+          <div style={{ width: '100%', height: `calc(${100 - horizontalSplit}% - 4px)`, position: 'relative', display: 'flex', background: theme?.background || '#000000' }}>
+            <div style={{ width: `${verticalSplitBottom}%`, height: '100%', position: 'relative', overflow: 'hidden', background: theme?.background || '#000000', display: 'flex', flexDirection: 'column' }}>
               {renderTerminal(terminalsArray[2], 2)}
             </div>
             <div
@@ -842,7 +842,7 @@ const SplitLayout = ({
                 e.currentTarget.style.filter = 'brightness(1)';
               }}
             />
-            <div style={{ width: `${100 - verticalSplitBottom}%`, height: '100%', position: 'relative', overflow: 'hidden', background: theme?.background || 'transparent' }}>
+            <div style={{ width: `${100 - verticalSplitBottom}%`, height: '100%', position: 'relative', overflow: 'hidden', background: theme?.background || '#000000', display: 'flex', flexDirection: 'column' }}>
               {renderTerminal(terminalsArray[3], 3)}
             </div>
           </div>
@@ -863,7 +863,7 @@ const SplitLayout = ({
       width: '100%',
       height: '100%',
       overflow: 'hidden',
-      background: theme?.background || 'transparent'
+      background: theme?.background || '#000000'
     };
 
     const firstPaneStyle = {
