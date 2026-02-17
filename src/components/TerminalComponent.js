@@ -502,7 +502,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     position: 'relative',
                     padding: 0,
                     margin: 0,
-                    backgroundColor: theme?.background || '#000' // Aplicar color de fondo del tema
+                    backgroundColor: theme?.background || 'transparent' // Usar transparente si no hay fondo definido (para terminales locales)
                 }}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
@@ -513,7 +513,8 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                         width: '100%',
                         height: '100%',
                         minHeight: 0,
-                        overflow: 'hidden'
+                        overflow: 'hidden',
+                        backgroundColor: theme?.background || 'transparent' // CRÍTICO: Asegurar que el fondo coincida también aquí
                     }}
                 />
             </div>
