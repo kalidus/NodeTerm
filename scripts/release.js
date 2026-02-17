@@ -228,6 +228,17 @@ async function main() {
     // 4. Ejecución
     console.log(`\x1b[34m[Debug]\x1b[0m Rama: ${branchForBuild} | Plataformas: ${platforms.length ? platforms.join(' ') : 'Actual'}`);
 
+    // --- CONFIGURACIÓN DE RED (Solo para macOS que es donde falla) ---
+    const isMacTarget = platforms.includes('--mac') || (platforms.length === 0 && process.platform === 'darwin');
+
+    if (isMacTarget) {
+        const skipSSL = await question('\n¿Tienes problemas de red/SSL detectados en macOS? (¿Omitir validación?) (s/N): ');
+        if (skipSSL.toLowerCase() === 's') {
+            process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+            console.log('\x1b[33m⚠️  Validación SSL desactivada para esta sesión\x1b[0m');
+        }
+    }
+
     // Build de React/Webpack (necesario siempre)
     await runCommand('npm run build', 'Compilando código fuente (Webpack)');
 
