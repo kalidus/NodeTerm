@@ -43,7 +43,7 @@ async function getSystemStats() {
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
     const usedMem = totalMem - freeMem;
-    
+
     if (totalMem > 0) {
       stats.memory.total = Math.round(totalMem / (1024 * 1024 * 1024) * 10) / 10;
       stats.memory.used = Math.round(usedMem / (1024 * 1024 * 1024) * 10) / 10;
@@ -59,7 +59,7 @@ async function getSystemStats() {
       getSI().currentLoad(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('CPU timeout')), 3000))
     ]);
-    
+
     if (cpuData && typeof cpuData.currentLoad === 'number') {
       stats.cpu.usage = Math.round(cpuData.currentLoad * 10) / 10;
       stats.cpu.cores = cpuData.cpus ? cpuData.cpus.length : os.cpus().length;
@@ -80,10 +80,10 @@ async function getSystemStats() {
       const isWindows = process.platform === 'win32';
       const isMacOS = process.platform === 'darwin';
       let networkLetters = new Set();
-      
+
       if (isWindows) {
         const now = Date.now();
-        
+
         // Usar cache si es válido (TTL de 30 segundos)
         if (now - networkDrivesCache.timestamp < networkDrivesCache.ttl) {
           networkLetters = networkDrivesCache.data;
@@ -93,22 +93,22 @@ async function getSystemStats() {
             const { exec } = require('child_process');
             const { promisify } = require('util');
             const execAsync = promisify(exec);
-            
-                      // Solo PowerShell optimizado con timeout más agresivo en primera ejecución
-          const isFirstRun = networkDrivesCache.timestamp === 0;
-          const timeout = isFirstRun ? 400 : 600; // Más rápido en primera ejecución
-          const ps = 'powershell -NoProfile -NonInteractive -Command "Get-CimInstance Win32_LogicalDisk -Filter \\"DriveType=4\\" | Select-Object -ExpandProperty DeviceID"';
-          const { stdout } = await Promise.race([
-            execAsync(ps, { timeout }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Network detection timeout')), timeout))
-          ]);
-            
+
+            // Solo PowerShell optimizado con timeout más agresivo en primera ejecución
+            const isFirstRun = networkDrivesCache.timestamp === 0;
+            const timeout = isFirstRun ? 400 : 600; // Más rápido en primera ejecución
+            const ps = 'powershell -NoProfile -NonInteractive -Command "Get-CimInstance Win32_LogicalDisk -Filter \\"DriveType=4\\" | Select-Object -ExpandProperty DeviceID"';
+            const { stdout } = await Promise.race([
+              execAsync(ps, { timeout }),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Network detection timeout')), timeout))
+            ]);
+
             const newNetworkLetters = new Set();
             stdout.split(/\r?\n/).forEach(line => {
               const m = line && line.match(/^[A-Z]:/i);
               if (m) newNetworkLetters.add(m[0].toUpperCase());
             });
-            
+
             // Actualizar cache
             networkDrivesCache = {
               data: newNetworkLetters,
@@ -170,7 +170,7 @@ async function getSystemStats() {
       }
       // Si falla o no hay datos, mantener la lista anterior de discos
     }
-  } catch (error) {}
+  } catch (error) { }
 
   // Red
   try {
@@ -188,7 +188,7 @@ async function getSystemStats() {
         stats.ip = primary.ip4 || primary.ip6 || '';
       }
     }
-    
+
     // Actualizar estadísticas de red solo si hay datos válidos
     if (filteredStats && filteredStats.length > 0) {
       let rx = 0, tx = 0;
@@ -209,7 +209,7 @@ async function getSystemStats() {
       lastNetStats = filteredStats.map(s => ({ iface: s.iface, rx_bytes: s.rx_bytes, tx_bytes: s.tx_bytes }));
       lastNetTime = now;
     }
-  } catch (error) {}
+  } catch (error) { }
 
   // Temperatura (solo actualizar si obtenemos datos válidos)
   try {
@@ -217,12 +217,12 @@ async function getSystemStats() {
       getSI().cpuTemperature(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Temperature timeout')), 2000))
     ]);
-    
+
     if (tempData && typeof tempData.main === 'number' && tempData.main > 0) {
       stats.temperature.cpu = tempData.main;
     }
     // Si falla o no hay datos, mantener temperatura anterior
-  } catch (error) {}
+  } catch (error) { }
 
   // Guardar los stats actuales como últimos válidos
   lastValidStats = {
@@ -245,9 +245,13 @@ process.on('message', async (msg) => {
   if (msg === 'get-stats') {
     try {
       const stats = await getSystemStats();
-      process.send({ type: 'stats', data: stats });
+      if (process.connected) {
+        process.send({ type: 'stats', data: stats });
+      }
     } catch (error) {
-      process.send({ type: 'error', error: error.message });
+      if (process.connected) {
+        process.send({ type: 'error', error: error.message });
+      }
     }
   } else if (msg === 'pause-stats') {
     shouldGenerateStats = false;
