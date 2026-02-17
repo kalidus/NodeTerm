@@ -42,16 +42,16 @@ const ThemeSelector = ({ showPreview = false }) => {
   useEffect(() => {
     const savedTheme = localStorage.getItem('ui_theme') || 'Light';
     setCurrentTheme(savedTheme);
-    
+
     const savedTitlebarPreference = localStorage.getItem('use_primary_colors_titlebar') === 'true';
     setUsePrimaryColorsForTitlebar(savedTitlebarPreference);
-    
+
     const savedSpeed = localStorage.getItem(ANIM_SPEED_KEY) || 'normal';
     setAnimSpeed(savedSpeed);
     if (!document.documentElement.hasAttribute('data-ui-anim-speed')) {
       document.documentElement.setAttribute('data-ui-anim-speed', savedSpeed);
     }
-    
+
     const savedReduced = localStorage.getItem(REDUCED_MOTION_KEY);
     let initialReduced = false;
     if (savedReduced === 'true' || savedReduced === 'false') {
@@ -61,7 +61,7 @@ const ThemeSelector = ({ showPreview = false }) => {
     }
     setReducedMotion(initialReduced);
     document.documentElement.setAttribute('data-ui-reduced-motion', initialReduced ? 'true' : 'false');
-    
+
     const savedThemesPerRow = localStorage.getItem(THEMES_PER_ROW_KEY);
     if (savedThemesPerRow) {
       const parsed = parseInt(savedThemesPerRow, 10);
@@ -127,16 +127,16 @@ const ThemeSelector = ({ showPreview = false }) => {
     const category = CATEGORIES.find(c => c.id === selectedCategory);
     if (!category) return [];
     return category.keys
-      .filter(key => uiThemes[key] && uiThemes[key].name !== currentTheme)
+      .filter(key => uiThemes[key])
       .map(key => uiThemes[key]);
-  }, [selectedCategory, currentTheme]);
+  }, [selectedCategory]);
 
   // Preview del tema hero (grande) - Memoizado para evitar re-renders innecesarios
   const HeroPreview = memo(({ theme }) => {
     const colors = theme.colors;
     return (
       <div className="theme-hero-preview">
-        <div 
+        <div
           className="theme-hero-menubar"
           style={{ background: colors.menuBarBackground, color: colors.menuBarText }}
         >
@@ -144,7 +144,7 @@ const ThemeSelector = ({ showPreview = false }) => {
           <span className="theme-hero-menubar-title">NodeTerm</span>
         </div>
         <div className="theme-hero-main">
-          <div 
+          <div
             className="theme-hero-sidebar"
             style={{ background: colors.sidebarBackground, color: colors.sidebarText, borderRight: `1px solid ${colors.sidebarBorder}` }}
           >
@@ -154,11 +154,11 @@ const ThemeSelector = ({ showPreview = false }) => {
             <div className="theme-hero-sidebar-item">📂 Config</div>
           </div>
           <div className="theme-hero-content-area">
-            <div 
+            <div
               className="theme-hero-tabs"
               style={{ background: colors.tabBackground, borderBottom: `1px solid ${colors.tabBorder}` }}
             >
-              <div 
+              <div
                 className="theme-hero-tab active"
                 style={{ background: colors.tabActiveBackground, color: colors.tabActiveText }}
               >
@@ -167,7 +167,7 @@ const ThemeSelector = ({ showPreview = false }) => {
               <div className="theme-hero-tab" style={{ color: colors.tabText }}>Explorer</div>
               <div className="theme-hero-tab" style={{ color: colors.tabText }}>Logs</div>
             </div>
-            <div 
+            <div
               className="theme-hero-terminal"
               style={{ background: colors.contentBackground, color: colors.dialogText }}
             >
@@ -178,7 +178,7 @@ const ThemeSelector = ({ showPreview = false }) => {
             </div>
           </div>
         </div>
-        <div 
+        <div
           className="theme-hero-statusbar"
           style={{ background: colors.statusBarBackground, color: colors.statusBarText, borderTop: `1px solid ${colors.statusBarBorder}` }}
         >
@@ -194,14 +194,14 @@ const ThemeSelector = ({ showPreview = false }) => {
     const colors = theme.colors;
     return (
       <div className="theme-thumbnail-preview">
-        <div 
+        <div
           className="theme-thumbnail-menubar"
           style={{ background: colors.menuBarBackground, color: colors.menuBarText }}
         >
           🏠📁⚙️ NodeTerm
         </div>
         <div className="theme-thumbnail-main">
-          <div 
+          <div
             className="theme-thumbnail-sidebar"
             style={{ background: colors.sidebarBackground, color: colors.sidebarText }}
           >
@@ -209,18 +209,18 @@ const ThemeSelector = ({ showPreview = false }) => {
             <div className="theme-thumbnail-sidebar-item">🖥️ SSH</div>
           </div>
           <div className="theme-thumbnail-content">
-            <div 
+            <div
               className="theme-thumbnail-tabs"
               style={{ background: colors.tabBackground }}
             >
-              <div 
+              <div
                 className="theme-thumbnail-tab"
                 style={{ background: colors.tabActiveBackground, color: colors.tabActiveText }}
               >
                 Term
               </div>
             </div>
-            <div 
+            <div
               className="theme-thumbnail-terminal"
               style={{ background: colors.contentBackground, color: colors.dialogText }}
             >
@@ -228,7 +228,7 @@ const ThemeSelector = ({ showPreview = false }) => {
             </div>
           </div>
         </div>
-        <div 
+        <div
           className="theme-thumbnail-statusbar"
           style={{ background: colors.statusBarBackground, color: colors.statusBarText }}
         >
@@ -251,9 +251,9 @@ const ThemeSelector = ({ showPreview = false }) => {
             <i className="pi pi-check"></i>
           </div>
         )}
-        
+
         <ThumbnailPreview theme={theme} />
-        
+
         <div className="theme-thumbnail-info">
           <span className="theme-thumbnail-name">{theme.name}</span>
           <div className="theme-thumbnail-palette">
@@ -274,8 +274,8 @@ const ThemeSelector = ({ showPreview = false }) => {
     );
   }, (prevProps, nextProps) => {
     // Comparación personalizada: solo re-renderizar si cambia el tema activo o el tema mismo
-    return prevProps.isActive === nextProps.isActive && 
-           prevProps.theme.name === nextProps.theme.name;
+    return prevProps.isActive === nextProps.isActive &&
+      prevProps.theme.name === nextProps.theme.name;
   });
 
   return (
@@ -284,7 +284,7 @@ const ThemeSelector = ({ showPreview = false }) => {
       <div className="theme-hero-section">
         <div className="theme-hero-content">
           <HeroPreview theme={activeTheme} />
-          
+
           <div className="theme-hero-info">
             {/* Panel de opciones a la derecha */}
             <div className="theme-options-wrapper">
@@ -292,8 +292,8 @@ const ThemeSelector = ({ showPreview = false }) => {
               <div className="theme-anim-card">
                 <div className="theme-anim-card-header">
                   <span className="theme-anim-card-title">🎬 Animaciones</span>
-                  <span 
-                    className="theme-anim-card-badge" 
+                  <span
+                    className="theme-anim-card-badge"
                     title="Muestra solo temas con animaciones activas"
                   >
                     Solo animados
@@ -301,7 +301,7 @@ const ThemeSelector = ({ showPreview = false }) => {
                 </div>
                 <div className="theme-anim-card-options">
                   <div className="theme-anim-option-wrapper">
-                    <button 
+                    <button
                       className={`theme-anim-option ${!reducedMotion ? 'active' : ''}`}
                       onClick={handleReducedMotionToggle}
                       title={reducedMotion ? "Activa las animaciones de la interfaz" : "Desactiva las animaciones para mejorar el rendimiento y reducir distracciones"}
@@ -312,9 +312,9 @@ const ThemeSelector = ({ showPreview = false }) => {
                     </button>
                   </div>
                   <div className="theme-anim-speed-wrapper">
-                    <span style={{ 
-                      fontSize: '0.6875rem', 
-                      fontWeight: 500, 
+                    <span style={{
+                      fontSize: '0.6875rem',
+                      fontWeight: 500,
                       color: 'var(--ui-dialog-text)',
                       marginBottom: '0.25rem',
                       display: 'flex',
@@ -325,13 +325,13 @@ const ThemeSelector = ({ showPreview = false }) => {
                       <i className="pi pi-forward" style={{ fontSize: '0.6875rem', opacity: 0.7, width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
                       Velocidad animaciones
                     </span>
-                    <div 
+                    <div
                       className="theme-anim-speed"
                       title="Controla la velocidad de las animaciones de la interfaz"
                     >
-                      <select 
+                      <select
                         className="theme-speed-select-mini"
-                        value={animSpeed} 
+                        value={animSpeed}
                         onChange={handleAnimSpeedChange}
                       >
                         <option value="slow">Lento</option>
@@ -343,10 +343,10 @@ const ThemeSelector = ({ showPreview = false }) => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Botón Titlebar separado */}
               <div className="theme-titlebar-wrapper">
-                <button 
+                <button
                   className={`theme-titlebar-btn ${usePrimaryColorsForTitlebar ? 'active' : ''}`}
                   onClick={handleTitlebarColorPreferenceChange}
                   title="Usa los colores primarios del tema en la barra de título"
@@ -364,13 +364,13 @@ const ThemeSelector = ({ showPreview = false }) => {
               <i className="pi pi-check"></i>
               Tema Activo
             </div>
-            
+
             <h2 className="theme-hero-name">{activeTheme.name}</h2>
-            
+
             <p className="theme-hero-description">
               {THEME_DESCRIPTIONS[activeTheme.name] || THEME_DESCRIPTIONS['default']}
             </p>
-            
+
             <div className="theme-hero-palette">
               <span className="theme-hero-palette-label">Paleta:</span>
               <div className="theme-hero-palette-colors">
@@ -402,7 +402,7 @@ const ThemeSelector = ({ showPreview = false }) => {
             <i className="pi pi-th-large"></i>
             Explorar Temas
           </div>
-          
+
           <div className="theme-category-filters">
             {CATEGORIES.map(category => {
               const count = category.keys.filter(key => uiThemes[key]).length;
@@ -419,7 +419,7 @@ const ThemeSelector = ({ showPreview = false }) => {
               );
             })}
           </div>
-          
+
           <button
             className="theme-per-row-btn"
             onClick={handleThemesPerRowToggle}
@@ -430,7 +430,7 @@ const ThemeSelector = ({ showPreview = false }) => {
         </div>
 
         <div className="theme-thumbnails-container">
-          <div 
+          <div
             className={`theme-thumbnails-grid themes-per-row-${themesPerRow}`}
             style={{
               gridTemplateColumns: `repeat(${themesPerRow}, 1fr)`
