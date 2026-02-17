@@ -7,7 +7,8 @@
   box-sizing: border-box !important;
 }
 
-.xterm, .xterm-viewport {
+.xterm,
+.xterm-viewport {
   height: 100% !important;
   width: 100% !important;
   padding: 0 !important;
@@ -142,29 +143,38 @@
 
 /* --- Ocultar scrollbars en modo split vertical para evitar "doble barra" central --- */
 .split-container .terminal-outer-padding .xterm-viewport {
-  scrollbar-width: none !important; /* Firefox */
+  scrollbar-width: none !important;
+  /* Firefox */
 }
+
 .split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar {
-  width: 0 !important; /* Chrome/Safari/Edge */
+  width: 0 !important;
+  /* Chrome/Safari/Edge */
   height: 0 !important;
 }
+
 .split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar-thumb,
 .split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar-track {
   background: transparent !important;
 }
 
-/* Padding externo opcional para el terminal */
+/* Padding restaurado y color de fondo manejado en JS */
 .terminal-outer-padding .xterm-viewport,
 .terminal-outer-padding .xterm {
-  padding: 10px !important;
   box-sizing: border-box !important;
 }
 
+.terminal-outer-padding {
+  padding: 10px !important;
+}
+
 /* Elimina el recuadro azul de foco en el terminal */
-.xterm.focus, .xterm:focus-within {
+.xterm.focus,
+.xterm:focus-within {
   outline: none !important;
   border: none !important;
-  box-shadow: none !important; /* Asegura que no haya ninguna sombra de foco */
+  box-shadow: none !important;
+  /* Asegura que no haya ninguna sombra de foco */
 }
 
 /* Elimina el borde de foco naranja en elementos de Guacamole RDP */

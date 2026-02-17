@@ -503,7 +503,8 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     overflow: 'hidden',
                     position: 'relative',
                     padding: 0,
-                    margin: 0
+                    margin: 0,
+                    backgroundColor: theme?.background || '#000' // Aplicar color de fondo del tema
                 }}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
