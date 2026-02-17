@@ -502,7 +502,12 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     position: 'relative',
                     padding: 0,
                     margin: 0,
-                    backgroundColor: theme?.background || 'transparent' // Usar transparente si no hay fondo definido (para terminales locales)
+                    backgroundColor: theme?.background || 'transparent', // Usar transparente si no hay fondo definido (para terminales locales)
+                    // Configurar variables CSS para que los scrollbars coincidan con el tema del terminal
+                    '--terminal-bg': theme?.background || 'transparent',
+                    '--terminal-fg': theme?.foreground || 'inherit',
+                    '--terminal-scrollbar-thumb': theme?.brightBlack || theme?.selectionBackground || '#555555',
+                    '--terminal-scrollbar-hover': theme?.white || theme?.foreground || '#cccccc'
                 }}
                 onDrop={onDrop}
                 onDragOver={onDragOver}

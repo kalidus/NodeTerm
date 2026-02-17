@@ -115,7 +115,7 @@
 
 .xterm-viewport::-webkit-scrollbar-thumb,
 .split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar-thumb {
-  background-color: var(--ui-sidebar-border, #3e3e42) !important;
+  background-color: var(--terminal-scrollbar-thumb, var(--ui-sidebar-border, #3e3e42)) !important;
   border-radius: 4px !important;
   border: 2px solid transparent !important;
   background-clip: content-box !important;
@@ -124,7 +124,7 @@
 
 .xterm-viewport::-webkit-scrollbar-thumb:hover,
 .split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background-color: var(--ui-sidebar-text, #cccccc) !important;
+  background-color: var(--terminal-scrollbar-hover, var(--ui-sidebar-text, #cccccc)) !important;
 }
 
 .xterm-viewport::-webkit-scrollbar-corner {
@@ -141,14 +141,14 @@
 .xterm .xterm-scrollable-element>.scrollbar>.slider {
   width: 6px !important;
   /* Ancho visual de la barra */
-  background: var(--ui-sidebar-border, #3e3e42) !important;
+  background: var(--terminal-scrollbar-thumb, var(--ui-sidebar-border, #3e3e42)) !important;
   border-radius: 4px !important;
   left: 2px !important;
   /* Centrado dentro del área de 10px */
 }
 
 .xterm .xterm-scrollable-element>.scrollbar>.slider:hover {
-  background: var(--ui-sidebar-text, #cccccc) !important;
+  background: var(--terminal-scrollbar-hover, var(--ui-sidebar-text, #cccccc)) !important;
   cursor: default !important;
 }
 
@@ -166,7 +166,7 @@
 .xterm-viewport,
 .split-container .terminal-outer-padding .xterm-viewport {
   scrollbar-width: thin !important;
-  scrollbar-color: var(--ui-sidebar-border, #3e3e42) transparent !important;
+  scrollbar-color: var(--terminal-scrollbar-thumb, var(--ui-sidebar-border, #3e3e42)) transparent !important;
 }
 
 /* --- Ocultar scrollbars en modo split vertical si es necesario (ajustar según preferencia) --- */
