@@ -489,7 +489,6 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     return (
         <>
             <div
-                ref={terminalRef}
                 className={'terminal-outer-padding'}
                 style={{
                     display: 'flex',
@@ -507,7 +506,17 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 }}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
-            />
+            >
+                <div
+                    ref={terminalRef}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        minHeight: 0,
+                        overflow: 'hidden'
+                    }}
+                />
+            </div>
             {!hideStatusBar && <StatusBar stats={{ ...stats, cpuHistory: cpuHistory }} active={active} statusBarIconTheme={statusBarIconTheme} />}
         </>
     );
