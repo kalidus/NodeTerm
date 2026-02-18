@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Dropdown } from 'primereact/dropdown';
-import { InputNumber } from 'primereact/inputnumber';
+import { Tooltip } from 'primereact/tooltip';
 import { Checkbox } from 'primereact/checkbox';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Button } from 'primereact/button';
@@ -43,6 +43,17 @@ const CURSOR_STYLES = [
   { id: 'underline', label: 'Subrayado', icon: 'cursor-underline' }
 ];
 
+// Opciones de historial
+const SCROLLBACK_OPTIONS = [
+  { label: '1,000 líneas', value: 1000 },
+  { label: '5,000 líneas', value: 5000 },
+  { label: '10,000 líneas', value: 10000 },
+  { label: '20,000 líneas', value: 20000 },
+  { label: '50,000 líneas', value: 50000 },
+  { label: '100,000 líneas', value: 100000 },
+  { label: '200,000 líneas (Máximo)', value: 200000 }
+];
+
 // Terminal types
 const TERMINAL_TYPES = [
   { id: 'ssh', name: 'SSH', icon: 'pi pi-server', iconClass: 'ssh' },
@@ -80,9 +91,9 @@ const TerminalSettingsTab = ({
   onDefaultTerminalChange
 }) => {
   const { t } = useTranslation('common');
-  
+
   // Cursor settings
-  const [cursorStyle, setCursorStyle] = useState(() => 
+  const [cursorStyle, setCursorStyle] = useState(() =>
     localStorage.getItem(STORAGE_KEYS.CURSOR_STYLE) || 'bar'
   );
   const [cursorBlink, setCursorBlink] = useState(() => {
@@ -91,25 +102,25 @@ const TerminalSettingsTab = ({
   });
   const [scrollbackLines, setScrollbackLines] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SCROLLBACK_LINES);
-    return saved ? parseInt(saved, 10) : 1000;
+    return saved ? parseInt(saved, 10) : 10000;
   });
 
   // Font settings per terminal type
-  const [linuxFontFamily, setLinuxFontFamily] = useState(() => 
+  const [linuxFontFamily, setLinuxFontFamily] = useState(() =>
     localStorage.getItem(STORAGE_KEYS.LINUX_FONT_FAMILY) || localFontFamily || 'Consolas'
   );
   const [linuxFontSize, setLinuxFontSize] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.LINUX_FONT_SIZE);
     return saved ? parseInt(saved, 10) : localFontSize || 14;
   });
-  const [dockerFontFamily, setDockerFontFamily] = useState(() => 
+  const [dockerFontFamily, setDockerFontFamily] = useState(() =>
     localStorage.getItem(STORAGE_KEYS.DOCKER_FONT_FAMILY) || localFontFamily || 'Consolas'
   );
   const [dockerFontSize, setDockerFontSize] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.DOCKER_FONT_SIZE);
     return saved ? parseInt(saved, 10) : localFontSize || 14;
   });
-  const [dockerTheme, setDockerTheme] = useState(() => 
+  const [dockerTheme, setDockerTheme] = useState(() =>
     localStorage.getItem(STORAGE_KEYS.DOCKER_THEME) || 'Default Dark'
   );
 
@@ -121,7 +132,7 @@ const TerminalSettingsTab = ({
   const overlayRefs = useRef({});
 
   // Options
-  const terminalThemeOptions = useMemo(() => 
+  const terminalThemeOptions = useMemo(() =>
     Object.keys(themes).map(name => ({ label: name, value: name })), []
   );
 
@@ -137,12 +148,30 @@ const TerminalSettingsTab = ({
     localStorage.setItem(STORAGE_KEYS.CURSOR_BLINK, value.toString());
   }, []);
 
-  const handleScrollbackChange = useCallback((value) => {
-    if (value >= 100 && value <= 10000) {
-      setScrollbackLines(value);
-      localStorage.setItem(STORAGE_KEYS.SCROLLBACK_LINES, value.toString());
+  const handleScrollbackChange = useCallback((e) => {
+    let val = e.value;
+    // Si el usuario escribe manualmente, puede venir como string
+    if (typeof val === 'string') {
+      val = parseInt(val.replace(/,/g, ''), 10);
+    }
+
+    setScrollbackLines(val);
+
+    // Solo guardamos si es un valor válido y cumple el mínimo
+    if (!isNaN(val) && val >= 1000 && val <= 200000) {
+      localStorage.setItem(STORAGE_KEYS.SCROLLBACK_LINES, val.toString());
     }
   }, []);
+
+  const handleScrollbackBlur = useCallback(() => {
+    if (isNaN(scrollbackLines) || scrollbackLines < 1000) {
+      setScrollbackLines(1000);
+      localStorage.setItem(STORAGE_KEYS.SCROLLBACK_LINES, '1000');
+    } else if (scrollbackLines > 200000) {
+      setScrollbackLines(200000);
+      localStorage.setItem(STORAGE_KEYS.SCROLLBACK_LINES, '200000');
+    }
+  }, [scrollbackLines]);
 
   // Get/Set font for each terminal type
   const getFontForType = useCallback((type) => {
@@ -278,45 +307,45 @@ const TerminalSettingsTab = ({
 
   const getPreviewContent = useCallback((type) => {
     const contents = {
-      ssh: { 
-        prompt: 'user@host:~$', 
-        cmd: 'ls -la', 
+      ssh: {
+        prompt: 'user@host:~$',
+        cmd: 'ls -la',
         out: [
           'total 24',
           'drwxr-xr-x  3 user user 4096 Dec 25 .',
           'drwxr-xr-x 18 user user 4096 Dec 24 ..',
           '-rw-r--r--  1 user user  220 Dec 25 .bashrc'
-        ] 
+        ]
       },
-      powershell: { 
-        prompt: 'PS C:\\Users\\admin>', 
-        cmd: 'Get-Process | Select -First 3', 
+      powershell: {
+        prompt: 'PS C:\\Users\\admin>',
+        cmd: 'Get-Process | Select -First 3',
         out: [
           'Handles  NPM(K)    PM(K)  CPU(s)   Id  ProcessName',
           '-------  ------    -----  ------   --  -----------',
           '    234      12    15432    2.53  1234 chrome',
           '    156       8     8234    0.31  5678 explorer'
-        ] 
+        ]
       },
-      linux: { 
-        prompt: 'ubuntu@wsl:~$', 
-        cmd: 'neofetch --stdout | head -5', 
+      linux: {
+        prompt: 'ubuntu@wsl:~$',
+        cmd: 'neofetch --stdout | head -5',
         out: [
           'OS: Ubuntu 22.04.3 LTS x86_64',
           'Host: Windows Subsystem for Linux',
           'Kernel: 5.15.90-microsoft-WSL2',
           'Shell: bash 5.1.16'
-        ] 
+        ]
       },
-      docker: { 
-        prompt: 'root@container:/#', 
-        cmd: 'docker ps --format "table {{.Names}}\t{{.Status}}"', 
+      docker: {
+        prompt: 'root@container:/#',
+        cmd: 'docker ps --format "table {{.Names}}\t{{.Status}}"',
         out: [
           'NAMES          STATUS',
           'nginx-proxy    Up 2 hours',
           'postgres-db    Up 2 hours',
           'redis-cache    Up 2 hours'
-        ] 
+        ]
       }
     };
     return contents[type] || contents.ssh;
@@ -334,7 +363,7 @@ const TerminalSettingsTab = ({
     TERMINAL_TYPES.forEach((type) => {
       const theme = getPreviewTheme(type.id);
       const styleId = `font-dropdown-styles-${type.id}`;
-      
+
       // Remover estilos anteriores si existen
       const existingStyle = document.getElementById(styleId);
       if (existingStyle) {
@@ -388,7 +417,7 @@ const TerminalSettingsTab = ({
           background: ${theme.foreground}60 !important;
         }
       `;
-      
+
       document.head.appendChild(style);
     });
 
@@ -437,20 +466,31 @@ const TerminalSettingsTab = ({
             </div>
             <div className="terminal-blink-group">
               <span className="terminal-mini-label">Parpadeo</span>
-              <div 
+              <div
                 className={`terminal-toggle-switch ${cursorBlink ? 'active' : ''}`}
                 onClick={() => handleCursorBlinkChange(!cursorBlink)}
               />
             </div>
             <div className="terminal-scrollback-group">
-              <span className="terminal-mini-label">Historial</span>
-              <InputNumber
+              <span
+                className="terminal-mini-label"
+                id="history-label"
+                data-pr-tooltip="Número de líneas a mantener en el historial de la terminal (1,000 - 200,000)"
+                style={{ cursor: 'help' }}
+              >
+                Historial
+                <i className="pi pi-info-circle" style={{ marginLeft: '5px', fontSize: '0.75rem', opacity: 0.7 }}></i>
+              </span>
+              <Tooltip target="#history-label" position="top" />
+              <Dropdown
                 value={scrollbackLines}
-                onValueChange={(e) => handleScrollbackChange(e.value)}
-                min={100}
-                max={10000}
-                step={100}
-                style={{ width: '100px' }}
+                options={SCROLLBACK_OPTIONS}
+                onChange={handleScrollbackChange}
+                onBlur={handleScrollbackBlur}
+                editable
+                placeholder="10000"
+                style={{ width: '130px' }}
+                className="terminal-history-dropdown"
               />
             </div>
           </div>
@@ -540,9 +580,9 @@ const TerminalSettingsTab = ({
               const previewFont = getFontForType(activePreviewTab);
               const previewSize = getFontSizeForType(activePreviewTab);
               return (
-                <div 
+                <div
                   key={`preview-${activePreviewTab}-${previewUpdateKey}`}
-                  className="terminal-preview-window" 
+                  className="terminal-preview-window"
                   style={{
                     background: theme.background,
                     fontFamily: `"${previewFont}", monospace`,
@@ -560,7 +600,7 @@ const TerminalSettingsTab = ({
                   ))}
                   <div className="terminal-preview-line">
                     <span style={{ color: theme.green || '#22c55e' }}>{content.prompt}</span>
-                    <span className="terminal-preview-cursor" style={{ 
+                    <span className="terminal-preview-cursor" style={{
                       background: theme.cursor || theme.foreground,
                       width: cursorStyle === 'bar' ? '2px' : '10px',
                       height: cursorStyle === 'underline' ? '3px' : '18px',
@@ -573,7 +613,7 @@ const TerminalSettingsTab = ({
             })()}
             <div className="terminal-preview-info">
               <span>
-                <i className="pi pi-palette"></i> 
+                <i className="pi pi-palette"></i>
                 {getThemeForType(activePreviewTab)}
               </span>
               <span className="terminal-font-info">
@@ -594,7 +634,7 @@ const TerminalSettingsTab = ({
           <OverlayPanel
             key={type.id}
             ref={(el) => (overlayRefs.current[type.id] = el)}
-            style={{ 
+            style={{
               width: '420px',
               background: currentTheme.background,
               border: `1px solid ${currentTheme.foreground}30`,
@@ -603,15 +643,15 @@ const TerminalSettingsTab = ({
             }}
             className="font-size-overlay"
           >
-            <div style={{ 
+            <div style={{
               padding: '1.25rem 1.5rem',
               background: currentTheme.background,
               color: currentTheme.foreground
             }}>
               {/* Header */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
                 gap: '0.5rem',
                 marginBottom: '1.5rem',
                 paddingBottom: '0.75rem',
@@ -625,8 +665,8 @@ const TerminalSettingsTab = ({
 
               {/* Fuente */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ 
-                  display: 'block', 
+                <label style={{
+                  display: 'block',
                   marginBottom: '0.625rem',
                   fontSize: '0.8125rem',
                   fontWeight: 600,
@@ -644,7 +684,7 @@ const TerminalSettingsTab = ({
                   }}
                   placeholder="Selecciona una fuente"
                   className={`font-dropdown-${type.id}`}
-                  style={{ 
+                  style={{
                     width: '100%',
                     background: `${currentTheme.background}dd`,
                     border: `1px solid ${currentTheme.foreground}30`,
@@ -664,8 +704,8 @@ const TerminalSettingsTab = ({
 
               {/* Tamaño */}
               <div style={{ marginBottom: '0' }}>
-                <label style={{ 
-                  display: 'block', 
+                <label style={{
+                  display: 'block',
                   marginBottom: '0.5rem',
                   fontSize: '0.8125rem',
                   fontWeight: 600,
