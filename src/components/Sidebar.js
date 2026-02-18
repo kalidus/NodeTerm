@@ -2006,62 +2006,7 @@ const Sidebar = React.memo(({
         title={title}
         data-connection-type={isSSH ? 'ssh' : (isRDP ? 'rdp' : (isVNC ? 'vnc' : (isSSHTunnel ? 'ssh-tunnel' : null)))}
         data-node-type={isFolder ? 'folder' : 'connection'}
-        draggable={isSSH || isRDP || isVNC || isFileConnection || isSSHTunnel ? true : undefined}
-        onDragStart={(e) => {
-          // Detectar tipo de conexión para drag and drop
-          const isDraggableConnection = isSSH || isRDP || isVNC || isFileConnection || isSSHTunnel;
-
-          if (isDraggableConnection) {
-            const nodeType = isSSH ? 'ssh' : (isRDP ? 'rdp' : (isVNC ? 'vnc' : (isSSHTunnel ? 'ssh-tunnel' : (isFileConnection ? 'file-connection' : 'unknown'))));
-
-            const connectionNodeData = {
-              type: 'connection-node', // Tipo genérico para el drop handler
-              connectionType: nodeType,
-              key: node.key,
-              label: node.label,
-              data: node.data
-            };
-
-            // Almacenar en ref global (por si acaso)
-            if (window.draggedConnectionNodeRef) {
-              window.draggedConnectionNodeRef.current = connectionNodeData;
-            }
-
-            // Compatibilidad con draggedSSHNodeRef para el hook antiguo
-            if (window.draggedSSHNodeRef && isSSH) {
-              window.draggedSSHNodeRef.current = {
-                type: 'ssh-node',
-                key: node.key,
-                label: node.label,
-                data: node.data
-              };
-            }
-
-            // Establecer dataTransfer
-            try {
-              // IMPORTANTE: Permitir el burbujeo para que PrimeReact también inicie su drag interno
-              // No usar stopPropagation aquí.
-
-              // Permitir copyMove para que funcione tanto interna (move) como externamente (copy)
-              e.dataTransfer.effectAllowed = 'copyMove';
-
-              // Usar un MIME type específico para nuestra app
-              e.dataTransfer.setData('application/nodeterm-connection', JSON.stringify(connectionNodeData));
-              // Mantener compatibilidad con el formato anterior SSH por si acaso
-              if (isSSH) {
-                e.dataTransfer.setData('application/nodeterm-ssh-node', JSON.stringify(connectionNodeData));
-              }
-              // NO establecer text/plain para no interferir con PrimeReact
-              // e.dataTransfer.setData('text/plain', `${nodeType}:${node.key}`);
-            } catch (err) {
-              console.warn('Error setting dataTransfer:', err);
-            }
-          }
-        }}
-        onDragEnd={() => {
-          // NO limpiar aquí - el drop puede ocurrir después del dragEnd
-          // Se limpiará en el componente receptor después de procesar
-        }}
+        data-node-key={node.key}
       >
         <span style={{
           minWidth: 20,
@@ -2138,6 +2083,76 @@ const Sidebar = React.memo(({
       </div>
     );
   };
+  // Manejador global de drag start para el árbol
+  // Esto permite que PrimeReact maneje el drag & drop interno (ordenación, líneas visuales)
+  // mientras nosotros inyectamos los datos necesarios para drops externos (terminales)
+  const handleExternalDragStart = (e) => {
+    // Intentar encontrar el nodo arrastrado buscando la marca data-node-key
+    // El e.target suele ser el elemento arrastraable de PrimeReact (fila) o un hijo
+    let target = e.target;
+    let keyElement = null;
+
+    if (target instanceof Element) {
+      if (target.hasAttribute('data-node-key')) {
+        keyElement = target;
+      } else {
+        keyElement = target.querySelector('[data-node-key]');
+      }
+    }
+
+    if (!keyElement) return;
+
+    const key = keyElement.getAttribute('data-node-key');
+    const node = findNodeByKey(nodes, key);
+
+    if (!node) return;
+
+    // Lógica original de detección de tipos
+    const isSSH = node.data && node.data.type === 'ssh';
+    const isRDP = node.data && node.data.type === 'rdp';
+    const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
+    const isFileConnection = node.data && (node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp');
+    const isSSHTunnel = node.data && node.data.type === 'ssh-tunnel';
+
+    const isDraggableConnection = isSSH || isRDP || isVNC || isFileConnection || isSSHTunnel;
+
+    if (isDraggableConnection) {
+      const nodeType = isSSH ? 'ssh' : (isRDP ? 'rdp' : (isVNC ? 'vnc' : (isSSHTunnel ? 'ssh-tunnel' : (isFileConnection ? 'file-connection' : 'unknown'))));
+
+      const connectionNodeData = {
+        type: 'connection-node',
+        connectionType: nodeType,
+        key: node.key,
+        label: node.label,
+        data: node.data
+      };
+
+      // Almacenar en ref global
+      if (window.draggedConnectionNodeRef) {
+        window.draggedConnectionNodeRef.current = connectionNodeData;
+      }
+
+      if (window.draggedSSHNodeRef && isSSH) {
+        window.draggedSSHNodeRef.current = {
+          type: 'ssh-node',
+          key: node.key,
+          label: node.label,
+          data: node.data
+        };
+      }
+
+      try {
+        e.dataTransfer.effectAllowed = 'copyMove';
+        e.dataTransfer.setData('application/nodeterm-connection', JSON.stringify(connectionNodeData));
+        if (isSSH) {
+          e.dataTransfer.setData('application/nodeterm-ssh-node', JSON.stringify(connectionNodeData));
+        }
+      } catch (err) {
+        console.warn('Error setting dataTransfer in global handler:', err);
+      }
+    }
+  };
+
   return (
     <div
       ref={sidebarRef}
@@ -2795,6 +2810,7 @@ const Sidebar = React.memo(({
                 }}
                 onContextMenu={onTreeAreaContextMenu}
                 className="tree-container"
+                onDragStart={handleExternalDragStart}
               >
                 {nodes.length === 0 ? (
                   <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
