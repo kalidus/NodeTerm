@@ -1026,7 +1026,7 @@ const ConnectionHistory = ({
 						style={{
 							background: 'transparent',
 							border: 'none',
-							padding: '4px 8px',
+							padding: '4px 2px',
 							cursor: 'pointer',
 							fontSize: '0.9rem',
 							transition: 'all 0.2s ease',
@@ -1687,7 +1687,7 @@ const ConnectionHistory = ({
 
 
 			{/* RECIENTES TABLE (Fills remaining space) */}
-			<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginTop: '0.2rem' }}>
+			<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginTop: '0' }}>
 				<div className="modern-section-header header-recents">
 					<button
 						className="section-collapse-btn"
@@ -1696,7 +1696,7 @@ const ConnectionHistory = ({
 						style={{
 							background: 'transparent',
 							border: 'none',
-							padding: '4px 8px',
+							padding: '4px 2px',
 							cursor: 'pointer',
 							fontSize: '0.9rem',
 							transition: 'all 0.2s ease',
