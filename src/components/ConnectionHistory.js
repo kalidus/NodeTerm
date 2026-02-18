@@ -845,9 +845,9 @@ const ConnectionHistory = ({
 						style={{
 							color: typeColor,
 							borderColor: typeColor,
-							top: 'auto',
-							bottom: '2px',
-							left: '2px',
+							top: '0',
+							bottom: 'auto',
+							left: '-12px',
 							right: 'auto',
 							transform: 'none',
 							background: 'rgba(0, 0, 0, 0.7)',
