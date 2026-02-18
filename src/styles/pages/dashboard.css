@@ -1182,7 +1182,8 @@
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  margin-bottom: 0.2rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 1rem !important;
   position: relative;
   gap: 0;
 }
@@ -1239,7 +1240,7 @@
   overflow-x: auto;
   overflow-y: hidden;
   gap: 16px;
-  padding: 12px 24px 16px 24px;
+  padding: 24px 24px 24px 2rem !important;
   /* Increased padding */
   scroll-behavior: smooth;
   scroll-snap-type: x mandatory;
