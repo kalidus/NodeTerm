@@ -1618,9 +1618,9 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  gap: 0.5rem;
+  gap: 4px;
   padding-left: 2rem !important;
-  padding-right: 2px;
+  padding-right: 1.5rem !important;
   /* Slight buffer for scrollbar */
 }
 
@@ -1628,7 +1628,7 @@
 .connection-list-body {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 4px;
   overflow-y: auto;
   flex: 1;
   /* Ensure it takes available space */
@@ -1801,11 +1801,11 @@
 /* Fila/Card de la lista (Glassy) - NEON ACCENT DESIGN (THEME UNIFIED) */
 .connection-card-row {
   display: grid;
-  grid-template-columns: minmax(200px, 1.5fr) minmax(150px, 1.5fr) 100px 120px 80px;
-  gap: 1rem;
+  grid-template-columns: minmax(180px, 1.3fr) minmax(130px, 1.3fr) 80px 100px 70px;
+  gap: 0.5rem;
   align-items: center;
-  padding: 12px 16px 12px 20px;
-  border-radius: 4px 14px 14px 4px;
+  padding: 6px 12px 6px 12px;
+  border-radius: 4px 8px 8px 4px;
   /* Slightly squarer left for neon bar */
 
   /* Fondo base y efecto neón integrados - USANDO COLOR DEL TEMA */
@@ -1814,7 +1814,7 @@
       rgba(255, 255, 255, 0.02) 100px);
 
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-left: 4px solid var(--ui-button-primary, #4fc3f7);
+  border-left: 3px solid var(--ui-button-primary, #4fc3f7);
   /* Barra neón con color del tema */
 
   /* Glow del neón usando sombra interna */
@@ -1877,7 +1877,7 @@
 .col-name {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -1885,9 +1885,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   background:
     radial-gradient(circle at center,
       color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 12%, transparent),
@@ -1895,7 +1895,7 @@
     rgba(255, 255, 255, 0.05);
   border: 1px solid color-mix(in srgb, var(--ui-button-primary, #4fc3f7) 20%, transparent);
   flex-shrink: 0;
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   z-index: 2;
@@ -1937,7 +1937,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   transition: color 0.2s ease;
 }
 
@@ -1947,7 +1947,7 @@
 
 .col-host {
   color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.7));
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1964,9 +1964,9 @@
 .glass-tag {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.6rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1998,7 +1998,7 @@
 
 .col-time {
   color: rgba(255, 255, 255, 0.5);
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   text-align: right;
 }
 
@@ -2015,8 +2015,8 @@
 }
 
 .glass-action-btn {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;

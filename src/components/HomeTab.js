@@ -710,7 +710,7 @@ const HomeTab = ({
                   {/* Columna central: Favoritos y Recientes */}
                   <div style={{
                     flex: 1,
-                    padding: '0.5rem 0.1rem',
+                    padding: '0.5rem 1rem 0.5rem 0.1rem',
                     display: 'flex',
                     flexDirection: 'column',
                     minHeight: 0,
