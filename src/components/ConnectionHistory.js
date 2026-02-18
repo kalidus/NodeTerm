@@ -829,11 +829,11 @@ const ConnectionHistory = ({
 							}
 							if (customIcon && customIcon !== 'default' && SSHIconPresets[customIcon.toUpperCase()]) {
 								const preset = SSHIconPresets[customIcon.toUpperCase()];
-								return <SSHIconRenderer preset={preset} pixelSize={48} />;
+								return <SSHIconRenderer preset={preset} pixelSize={32} />;
 							}
 							const svg = getConnectionTypeIconSVG(connection.type, customIcon);
 							if (svg) {
-								return React.cloneElement(svg, { width: 48, height: 48, style: { width: 48, height: 48 } });
+								return React.cloneElement(svg, { width: 32, height: 32, style: { width: 32, height: 32 } });
 							}
 							return <i className={getConnectionTypeIcon(connection.type)} aria-hidden="true" />;
 						})()}

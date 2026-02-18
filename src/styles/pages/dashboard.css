@@ -1298,8 +1298,8 @@
 
 /* RIBBON CARD - OPTION 3 (Unificado con Recientes Neon Accent - BOTTOM LINE) */
 .ribbon-card {
-  --rc-width: 160px;
-  --rc-height: 190px;
+  --rc-width: 125px;
+  --rc-height: 145px;
 
   flex: 0 0 var(--rc-width);
   height: var(--rc-height);
@@ -1327,7 +1327,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 16px;
+  padding: 8px;
   cursor: pointer;
   scroll-snap-align: start;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -1472,14 +1472,14 @@
 
 /* Icon Wrapper with Gradient */
 .ribbon-card__icon-wrapper {
-  width: 72px;
-  height: 72px;
-  border-radius: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 8px;
-  margin-bottom: 1.5rem;
+  margin-top: 4px;
+  margin-bottom: 0.8rem;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   position: relative;
   backdrop-filter: blur(5px);
@@ -1529,7 +1529,7 @@
 }
 
 .ribbon-card__name {
-  font-size: 1rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--ui-dialog-text);
   letter-spacing: 0.3px;
@@ -1540,13 +1540,13 @@
 }
 
 .ribbon-card__host {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: var(--ui-sidebar-text);
   font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .ribbon-card__time {
