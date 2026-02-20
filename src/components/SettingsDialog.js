@@ -1828,50 +1828,126 @@ const SettingsDialog = ({
     >
       <Toast ref={toastRef} />
 
-      {/* Handles de redimensionamiento - posicionados relativos al contenido */}
+      {/* Handles de redimensionamiento - cobertura total */}
+      {/* Borde Derecho */}
       <div
         className="resize-handle resize-handle-right"
         onMouseDown={(e) => startResize(e, 'right')}
         style={{
           position: 'absolute',
-          right: 0,
+          right: '-5px',
           top: 0,
           bottom: 0,
-          width: '4px',
+          width: '10px',
           cursor: 'ew-resize',
-          zIndex: 1000,
-          backgroundColor: 'transparent',
-          pointerEvents: 'auto'
+          zIndex: 1002,
+          backgroundColor: 'transparent'
         }}
       />
+      {/* Borde Izquierdo - Nuevo */}
+      <div
+        className="resize-handle resize-handle-left"
+        onMouseDown={(e) => startResize(e, 'left')}
+        style={{
+          position: 'absolute',
+          left: '-5px',
+          top: 0,
+          bottom: 0,
+          width: '10px',
+          cursor: 'ew-resize',
+          zIndex: 1002,
+          backgroundColor: 'transparent'
+        }}
+      />
+      {/* Borde Inferior */}
       <div
         className="resize-handle resize-handle-bottom"
         onMouseDown={(e) => startResize(e, 'bottom')}
         style={{
           position: 'absolute',
-          bottom: 0,
+          bottom: '-5px',
           left: 0,
           right: 0,
-          height: '4px',
+          height: '10px',
           cursor: 'ns-resize',
-          zIndex: 1000,
-          backgroundColor: 'transparent',
-          pointerEvents: 'auto'
+          zIndex: 1002,
+          backgroundColor: 'transparent'
         }}
       />
+      {/* Borde Superior - Nuevo */}
+      <div
+        className="resize-handle resize-handle-top"
+        onMouseDown={(e) => startResize(e, 'top')}
+        style={{
+          position: 'absolute',
+          top: '-5px',
+          left: 0,
+          right: 0,
+          height: '10px',
+          cursor: 'ns-resize',
+          zIndex: 1002,
+          backgroundColor: 'transparent'
+        }}
+      />
+
+      {/* Esquina Inferior Derecha */}
       <div
         className="resize-handle resize-handle-bottom-right"
         onMouseDown={(e) => startResize(e, 'bottom-right')}
         style={{
           position: 'absolute',
-          bottom: 0,
-          right: 0,
-          width: '12px',
-          height: '12px',
+          bottom: '-5px',
+          right: '-5px',
+          width: '15px',
+          height: '15px',
           cursor: 'se-resize',
-          zIndex: 1001,
-          backgroundColor: 'transparent',
-          pointerEvents: 'auto'
+          zIndex: 1003,
+          backgroundColor: 'transparent'
+        }}
+      />
+      {/* Esquina Inferior Izquierda - Nuevo */}
+      <div
+        className="resize-handle resize-handle-bottom-left"
+        onMouseDown={(e) => startResize(e, 'bottom-left')}
+        style={{
+          position: 'absolute',
+          bottom: '-5px',
+          left: '-5px',
+          width: '15px',
+          height: '15px',
+          cursor: 'sw-resize',
+          zIndex: 1003,
+          backgroundColor: 'transparent'
+        }}
+      />
+      {/* Esquina Superior Derecha - Nuevo */}
+      <div
+        className="resize-handle resize-handle-top-right"
+        onMouseDown={(e) => startResize(e, 'top-right')}
+        style={{
+          position: 'absolute',
+          top: '-5px',
+          right: '-5px',
+          width: '15px',
+          height: '15px',
+          cursor: 'ne-resize',
+          zIndex: 1003,
+          backgroundColor: 'transparent'
+        }}
+      />
+      {/* Esquina Superior Izquierda - Nuevo */}
+      <div
+        className="resize-handle resize-handle-top-left"
+        onMouseDown={(e) => startResize(e, 'top-left')}
+        style={{
+          position: 'absolute',
+          top: '-5px',
+          left: '-5px',
+          width: '15px',
+          height: '15px',
+          cursor: 'nw-resize',
+          zIndex: 1003,
+          backgroundColor: 'transparent'
         }}
       />
 
