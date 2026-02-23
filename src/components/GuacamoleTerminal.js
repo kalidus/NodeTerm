@@ -4,7 +4,7 @@ import Guacamole from 'guacamole-common-js';
 import ResizeController from '../utils/ResizeController';
 import ErrorMapper from '../utils/guacamoleErrorMapper';
 
-const GuacamoleTerminal = forwardRef(({ 
+const GuacamoleTerminal = forwardRef(({
     tabId = 'default',
     rdpConfig = null,
     isActive = true
@@ -28,10 +28,11 @@ const GuacamoleTerminal = forwardRef(({
     const [errorMessage, setErrorMessage] = useState('');
     const [isGuacamoleLoaded, setIsGuacamoleLoaded] = useState(false);
     const [autoResize, setAutoResize] = useState(true); // Por defecto true para evitar reconexiones
-    const [lastActivityTime, setLastActivityTime] = useState(Date.now());
     const [freezeDetected, setFreezeDetected] = useState(false);
     const [isRdpSessionActive, setIsRdpSessionActive] = useState(false);
-    
+    // ⚡ PERF: debug flag - set window.__rdp_debug__ = true in console to enable verbose logs
+    const _rdpDebug = () => typeof window !== 'undefined' && window.__rdp_debug__;
+
     // Variables persistentes para rate limiting (fuera de useEffect)
     const lastResizeTimeRef = useRef(0);
     const consecutiveResizeCountRef = useRef(0);
@@ -56,6 +57,8 @@ const GuacamoleTerminal = forwardRef(({
     const keepAliveTimerRef = useRef(null);
     const devicePixelRatioRef = useRef(typeof window !== 'undefined' && window.devicePixelRatio ? window.devicePixelRatio : 1);
     const resizeControllerRef = useRef(null);
+    // ⚡ PERF: cache display reference to avoid getDisplay() DOM lookup on every canSend()
+    const displayRef = useRef(null);
     // Ack gating de tamaño
     const awaitingSizeAckRef = useRef(false);
     const sizeAckDeadlineRef = useRef(0);
@@ -74,7 +77,7 @@ const GuacamoleTerminal = forwardRef(({
                 }
                 // Fallback minimal
                 const client = guacamoleClientRef.current;
-                        const container = containerRef.current;
+                const container = containerRef.current;
                 if (!container) return;
                 const rect = container.getBoundingClientRect();
                 const w = Math.floor(rect.width);
@@ -83,16 +86,16 @@ const GuacamoleTerminal = forwardRef(({
                     client.sendSize(w, h);
                     lastDimensionsRef.current = { width: w, height: h };
                     lastResizeTimeRef.current = Date.now();
-                    }
-                } catch (e) {
-                    console.warn(`Guacamole fit() error for tab ${tabId}:`, e);
+                }
+            } catch (e) {
+                console.warn(`Guacamole fit() error for tab ${tabId}:`, e);
             }
         },
         focus: () => {
             try {
                 const el = guacamoleClientRef.current?.getDisplay?.()?.getElement?.();
                 if (el) el.focus({ preventScroll: true });
-            } catch {}
+            } catch { }
         },
         disconnect: () => {
             if (guacamoleClientRef.current) {
@@ -110,8 +113,8 @@ const GuacamoleTerminal = forwardRef(({
 
     // Inicializar conexión Guacamole cuando la librería esté lista
     useEffect(() => {
-        
-        
+
+
         if (!isGuacamoleLoaded || !rdpConfig || connectionState !== 'disconnected') {
             return;
         }
@@ -124,7 +127,7 @@ const GuacamoleTerminal = forwardRef(({
                 // Extraer configuración de autoResize
                 if (rdpConfig && rdpConfig.autoResize !== undefined) {
                     setAutoResize(rdpConfig.autoResize);
-                    
+
                     // Para autoResize, NO CAMBIAR las dimensiones que ya vienen calculadas
                     if (rdpConfig.autoResize) {
                         // Solo agregar el flag para el backend, NO cambiar width/height
@@ -150,28 +153,28 @@ const GuacamoleTerminal = forwardRef(({
                 // Esperar un poco para asegurar que los servicios estén listos (optimizado)
                 await new Promise(resolve => setTimeout(resolve, 300));
 
-                                 // Obtener estado del servicio Guacamole con reintentos
-                 let status = null;
-                 let attempts = 0;
-                 const maxAttempts = 3;
-                 
-                 // Verificar si estamos en modo mock
-                 
-                 // Obtener estado detallado del servicio
-                 const detailedStatus = await window.electron.ipcRenderer.invoke('guacamole:get-status');
-                 if (detailedStatus && detailedStatus.guacd) {
-                     
-                     // Mostrar información adicional según el método
-                     if (detailedStatus.guacd.method === 'docker') {
-                     } else if (detailedStatus.guacd.method === 'native') {
-                     }
-                 }
-                
+                // Obtener estado del servicio Guacamole con reintentos
+                let status = null;
+                let attempts = 0;
+                const maxAttempts = 3;
+
+                // Verificar si estamos en modo mock
+
+                // Obtener estado detallado del servicio
+                const detailedStatus = await window.electron.ipcRenderer.invoke('guacamole:get-status');
+                if (detailedStatus && detailedStatus.guacd) {
+
+                    // Mostrar información adicional según el método
+                    if (detailedStatus.guacd.method === 'docker') {
+                    } else if (detailedStatus.guacd.method === 'native') {
+                    }
+                }
+
                 while (attempts < maxAttempts && !status) {
                     try {
                         attempts++;
                         status = await window.electron.ipcRenderer.invoke('guacamole:get-status');
-                        
+
                         if (status && status.server) {
                             break; // Éxito
                         }
@@ -182,11 +185,11 @@ const GuacamoleTerminal = forwardRef(({
                         }
                     }
                 }
-                
+
                 if (!status || !status.server) {
                     throw new Error(`No se pudo obtener estado del servidor Guacamole después de ${maxAttempts} intentos`);
                 }
-                
+
                 if (!status.server.isRunning) {
                     throw new Error('Servidor Guacamole no está ejecutándose');
                 }
@@ -201,7 +204,7 @@ const GuacamoleTerminal = forwardRef(({
                             await new Promise(resolve => setTimeout(resolve, waitMs));
                         }
                     }
-                } catch {}
+                } catch { }
 
                 // Antes de crear el token, si está activada la congelación inicial,
                 // esperar a que el contenedor tenga tamaño estable y usarlo como resolución fija inicial
@@ -233,7 +236,7 @@ const GuacamoleTerminal = forwardRef(({
                                 probe.style.pointerEvents = 'none';
                                 cont.appendChild(probe);
                             }
-                        } catch {}
+                        } catch { }
                         // Esperar a que el layout se estabilice (optimizado a ~800ms máximo)
                         await wait(100);
                         let last = { w: 0, h: 0 };
@@ -254,7 +257,7 @@ const GuacamoleTerminal = forwardRef(({
                             attempts += 1;
                         }
                         // Quitar probe
-                        try { if (probe && probe.parentNode) probe.parentNode.removeChild(probe); } catch {}
+                        try { if (probe && probe.parentNode) probe.parentNode.removeChild(probe); } catch { }
                         let { w, h } = last;
                         // Si sigue siendo demasiado pequeño, intentar medir ancestros
                         if (w < 320 || h < 240) {
@@ -271,7 +274,7 @@ const GuacamoleTerminal = forwardRef(({
                                     el = el.parentElement;
                                     tries += 1;
                                 }
-                            } catch {}
+                            } catch { }
                         }
                         // Último recurso: usar ventana
                         if (w < 320 || h < 240) {
@@ -285,24 +288,24 @@ const GuacamoleTerminal = forwardRef(({
                             rdpConfig.resolution = `${w}x${h}`;
                         }
                     }
-                } catch {}
+                } catch { }
 
-                 // Asegurar que colorDepth viaje al backend
-                 try {
-                     if (typeof rdpConfig.colorDepth !== 'number') {
-                         const parsed = parseInt(rdpConfig.colorDepth, 10);
-                         if (!isNaN(parsed)) rdpConfig.colorDepth = parsed;
-                     }
-                 } catch {}
+                // Asegurar que colorDepth viaje al backend
+                try {
+                    if (typeof rdpConfig.colorDepth !== 'number') {
+                        const parsed = parseInt(rdpConfig.colorDepth, 10);
+                        if (!isNaN(parsed)) rdpConfig.colorDepth = parsed;
+                    }
+                } catch { }
 
-                 // Crear token de conexión
-                 // Log crítico: verificar configuración antes de enviar al backend
-                 
+                // Crear token de conexión
+                // Log crítico: verificar configuración antes de enviar al backend
+
                 const tokenResponse = await window.electron.ipcRenderer.invoke('guacamole:create-token', rdpConfig);
-                
+
                 if (!tokenResponse.success) {
                     try {
-                        const mapped = ErrorMapper && typeof ErrorMapper.mapGuacamoleError === 'function' 
+                        const mapped = ErrorMapper && typeof ErrorMapper.mapGuacamoleError === 'function'
                             ? ErrorMapper.mapGuacamoleError({ message: tokenResponse.error, type: 'token' })
                             : null;
                         const userMsg = mapped && mapped.userMessage ? mapped.userMessage : (tokenResponse.error || 'Error creando token');
@@ -320,26 +323,26 @@ const GuacamoleTerminal = forwardRef(({
 
                 // Configurar tunnel WebSocket
                 const tunnel = new window.Guacamole.WebSocketTunnel(tokenResponse.websocketUrl);
-                
+
                 // Crear cliente Guacamole
                 const client = new window.Guacamole.Client(tunnel);
                 guacamoleClientRef.current = client;
 
-                                 // Obtener display y elementos de input
-                 const display = client.getDisplay();
-                 
+                // Obtener display y elementos de input
+                const display = client.getDisplay();
+
                 const targetElement = display.getElement();
-                try { targetElement.setAttribute('tabindex', '0'); } catch {}
+                try { targetElement.setAttribute('tabindex', '0'); } catch { }
                 try {
                     targetElement.addEventListener('mousedown', () => {
-                        try { targetElement.focus({ preventScroll: true }); } catch { try { targetElement.focus(); } catch {} }
+                        try { targetElement.focus({ preventScroll: true }); } catch { try { targetElement.focus(); } catch { } }
                     });
-                } catch {}
-                 const mouse = new window.Guacamole.Mouse(targetElement);
-                 const keyboard = new window.Guacamole.Keyboard(targetElement);
-                 mouseRef.current = mouse;
-                 keyboardRef.current = keyboard;
-                try { setTimeout(() => { try { targetElement.focus({ preventScroll: true }); } catch { try { targetElement.focus(); } catch {} } }, 0); } catch {}
+                } catch { }
+                const mouse = new window.Guacamole.Mouse(targetElement);
+                const keyboard = new window.Guacamole.Keyboard(targetElement);
+                mouseRef.current = mouse;
+                keyboardRef.current = keyboard;
+                try { setTimeout(() => { try { targetElement.focus({ preventScroll: true }); } catch { try { targetElement.focus(); } catch { } } }, 0); } catch { }
 
                 // Clipboard integration (remote -> local)
                 try {
@@ -356,11 +359,11 @@ const GuacamoleTerminal = forwardRef(({
                                     if (window.electron && window.electron.clipboard && typeof window.electron.clipboard.writeText === 'function') {
                                         window.electron.clipboard.writeText(data || '');
                                     }
-                                } catch {}
+                                } catch { }
                             };
-                        } catch {}
+                        } catch { }
                     };
-                } catch {}
+                } catch { }
 
                 // Clipboard integration (local -> remote) via Ctrl/Cmd+V
                 try {
@@ -380,95 +383,82 @@ const GuacamoleTerminal = forwardRef(({
                                             const writer = new window.Guacamole.StringWriter(stream);
                                             writer.sendText(text);
                                             writer.sendEnd();
-                                        } catch {}
-                                    }).catch(() => {});
+                                        } catch { }
+                                    }).catch(() => { });
                                 }
                             }
-                        } catch {}
+                        } catch { }
                     };
                     targetElement.addEventListener('keydown', handlePasteKeydown);
-                } catch {}
+                } catch { }
 
-                                 // Configurar display en el contenedor
-                 const container = containerRef.current;
-                 if (container) {
-                     
-                     // Limpiar contenedor
-                     container.innerHTML = '';
-                     
-                     // Obtener elemento display
-                     const displayElement = display.getElement();
-                     
-                                           // Configurar estilos del display
-                      displayElement.style.width = '100%';
-                      displayElement.style.height = '100%';
-                      displayElement.style.display = 'block';
-                      displayElement.style.position = 'relative';
-                      displayElement.style.backgroundColor = '#000000';
-                      displayElement.style.zIndex = '1';
-                      displayElement.style.visibility = 'visible';
-                      displayElement.style.opacity = '1';
-                      
-                      // Agregar clase CSS para eliminar borde de foco
-                      displayElement.classList.add('guacamole-display');
-                      displayElement.setAttribute('data-guacamole-display', 'true');
-                     
-                     // Añadir al contenedor
-                     container.appendChild(displayElement);
-                     
-                     // Forzar un refresco del display (optimizado)
-                     setTimeout(() => {
-                         if (display.onresize) {
-                             display.onresize();
-                         }
-                     }, 50);
-                 } else {
-                     console.error('❌ Contenedor no encontrado');
-                 }
+                // Configurar display en el contenedor
+                const container = containerRef.current;
+                if (container) {
 
-                                                                 // Eventos del mouse
+                    // Limpiar contenedor
+                    container.innerHTML = '';
+
+                    // Obtener elemento display
+                    const displayElement = display.getElement();
+
+                    // Configurar estilos del display
+                    displayElement.style.width = '100%';
+                    displayElement.style.height = '100%';
+                    displayElement.style.display = 'block';
+                    displayElement.style.position = 'relative';
+                    displayElement.style.backgroundColor = '#000000';
+                    displayElement.style.zIndex = '1';
+                    displayElement.style.visibility = 'visible';
+                    displayElement.style.opacity = '1';
+
+                    // Agregar clase CSS para eliminar borde de foco
+                    displayElement.classList.add('guacamole-display');
+                    displayElement.setAttribute('data-guacamole-display', 'true');
+
+                    // Añadir al contenedor
+                    container.appendChild(displayElement);
+
+                    // Forzar un refresco del display (optimizado)
+                    setTimeout(() => {
+                        if (display.onresize) {
+                            display.onresize();
+                        }
+                    }, 50);
+                } else {
+                    console.error('❌ Contenedor no encontrado');
+                }
+
+                // ⚡ PERF: Mouse events must NOT call React setState (causes re-render on every mousemove at 60+ events/s).
+                // Idle detection uses only the ref.
                 mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = (mouseState) => {
-                    // Enviar eventos solo si el display está montado. Los eventos de ratón no deben depender de isActive
-                    // porque pueden ser el disparador para activar la pestaña.
+                    // Enviar eventos solo si el display está montado.
                     if (!document.body.contains(targetElement)) return;
-                    try { client.sendMouseState(mouseState); } catch {}
-                    const nowTs = Date.now();
-                    setLastActivityTime(nowTs); // Registrar actividad
-                    lastActivityTimeRef.current = nowTs;
+                    try { client.sendMouseState(mouseState); } catch { }
+                    lastActivityTimeRef.current = Date.now();
                     wasIdleRef.current = false;
                 };
-                 
-                 // Eventos del display para debug
-                 if (display.onresize) {
-                     // console.log('📺 Display tiene onresize');
-                 }
-                 if (display.scale) {
-                     // console.log('📺 Display tiene scale');
-                 }
-                 
-                 // Agregar eventos para detectar cuando llegan datos
+
+                // Eventos del display (debug only)
+
+                // Agregar eventos para detectar cuando llegan datos
                 if (display.onresize) {
                     const originalOnResize = display.onresize;
                     display.onresize = () => {
                         // Siempre permitir que Guacamole procese su propio onresize
-                        try { originalOnResize(); } catch {}
+                        try { originalOnResize(); } catch { }
                         // No tocar ACK aquí; usar client.onsize como confirmación de servidor
                     };
                 }
 
-                                                                 // Eventos del teclado
                 keyboard.onkeydown = (keysym) => {
                     client.sendKeyEvent(1, keysym);
-                    const nowTs = Date.now();
-                    setLastActivityTime(nowTs); // Registrar actividad
-                    lastActivityTimeRef.current = nowTs;
+                    lastActivityTimeRef.current = Date.now();
                     wasIdleRef.current = false;
                 };
                 keyboard.onkeyup = (keysym) => {
                     client.sendKeyEvent(0, keysym);
-                    const nowTs = Date.now();
-                    setLastActivityTime(nowTs); // Registrar actividad
-                    lastActivityTimeRef.current = nowTs;
+                    lastActivityTimeRef.current = Date.now();
                     wasIdleRef.current = false;
                 };
 
@@ -483,468 +473,468 @@ const GuacamoleTerminal = forwardRef(({
                             client.sendKeyEvent(0, keysym);
                         };
                     }
-                } catch {}
+                } catch { }
 
                 // Eventos de estado de conexión
                 client.onstatechange = (state) => {
                     if (hasFatalErrorRef.current) return; // Mantener pantalla de error hasta que el usuario reintente
                     const stateNames = {
                         0: 'IDLE',
-                        1: 'CONNECTING', 
+                        1: 'CONNECTING',
                         2: 'WAITING',
                         3: 'CONNECTED',
                         4: 'DISCONNECTED',
                         5: 'DISCONNECTING'
                     };
-                    
-                     // console.log(`🔍 Comparando: state=${state}, CONNECTED=${window.Guacamole.Client.CONNECTED}`);
-                     
-                     // Usar constantes directas ya que window.Guacamole.Client.CONNECTED es undefined
-                     if (state === 3) { // CONNECTED
-                         
-                         // Asegurar que el display esté visible
-                         const container = containerRef.current;
-                         if (container) {
-                             container.style.display = 'block';
-                         }
-                         
-                         // Forzar un refresco del display después de conectar (optimizado)
-                         setTimeout(() => {
+
+                    // console.log(`🔍 Comparando: state=${state}, CONNECTED=${window.Guacamole.Client.CONNECTED}`);
+
+                    // Usar constantes directas ya que window.Guacamole.Client.CONNECTED es undefined
+                    if (state === 3) { // CONNECTED
+
+                        // Asegurar que el display esté visible
+                        const container = containerRef.current;
+                        if (container) {
+                            container.style.display = 'block';
+                        }
+
+                        // Forzar un refresco del display después de conectar (optimizado)
+                        setTimeout(() => {
                             if (display && display.onresize) {
                                 // Siempre refrescar el display localmente; esto no envía tamaño
                                 display.onresize();
-                             }
-                         }, 200);
-                         
+                            }
+                        }, 200);
+
                         setConnectionState('connected');
                         setIsRdpSessionActive(true); // Marcar sesión RDP como activa
                         const nowTsConn = Date.now();
-                        setLastActivityTime(nowTsConn); // Registrar actividad inicial
-                        lastActivityTimeRef.current = nowTsConn;
+                        lastActivityTimeRef.current = nowTsConn; // Registrar actividad inicial
                         wasIdleRef.current = false;
                         syncReadyRef.current = false; // esperar primer onsync
                         noFrameReconnectAttemptedRef.current = false;
 
-                         // Enviar un "wake-up" suave si no hay actividad en ~1.5s tras conectar
-                         wakeUpSentRef.current = false;
-                         setTimeout(() => {
-                             try {
-                                 if (wakeUpSentRef.current) return;
-                                 if (connectionStateRef.current !== 'connected') return;
-                                 const idleFor = Date.now() - (lastActivityTimeRef.current || 0);
-                                 if (idleFor < 1200) return; // ya hubo actividad
-                                 const cli = guacamoleClientRef.current;
-                                 if (!cli) return;
-                                 // Nudge de input
-                                 try {
-                                     const disp = cli.getDisplay?.();
-                                     const el = disp?.getElement?.();
-                                     const rect = el?.getBoundingClientRect?.();
-                                     const x = Math.max(1, Math.floor((rect?.width || 10) / 2));
-                                     const y = Math.max(1, Math.floor((rect?.height || 10) / 2));
-                                     const mouse = { x, y, left: false, middle: false, right: false };
-                                     if (cli.sendMouseState) cli.sendMouseState(mouse);
-                                 } catch {}
-                                 try {
-                                     // Tecla Shift (press + release) para despertar
-                                     const SHIFT = 0xffe1;
-                                     if (cli.sendKeyEvent) {
-                                         cli.sendKeyEvent(1, SHIFT);
-                                         cli.sendKeyEvent(0, SHIFT);
-                                     }
-                                 } catch {}
-                                  // Reenviar tamaño actual del contenedor una vez
-                                 try {
-                                     const cont = containerRef.current;
-                                     if (cont) {
-                                         const r = cont.getBoundingClientRect();
-                                         const w = Math.floor(r.width);
-                                         const h = Math.floor(r.height);
+                        // Enviar un "wake-up" suave si no hay actividad en ~1.5s tras conectar
+                        wakeUpSentRef.current = false;
+                        setTimeout(() => {
+                            try {
+                                if (wakeUpSentRef.current) return;
+                                if (connectionStateRef.current !== 'connected') return;
+                                const idleFor = Date.now() - (lastActivityTimeRef.current || 0);
+                                if (idleFor < 1200) return; // ya hubo actividad
+                                const cli = guacamoleClientRef.current;
+                                if (!cli) return;
+                                // Nudge de input
+                                try {
+                                    const disp = cli.getDisplay?.();
+                                    const el = disp?.getElement?.();
+                                    const rect = el?.getBoundingClientRect?.();
+                                    const x = Math.max(1, Math.floor((rect?.width || 10) / 2));
+                                    const y = Math.max(1, Math.floor((rect?.height || 10) / 2));
+                                    const mouse = { x, y, left: false, middle: false, right: false };
+                                    if (cli.sendMouseState) cli.sendMouseState(mouse);
+                                } catch { }
+                                try {
+                                    // Tecla Shift (press + release) para despertar
+                                    const SHIFT = 0xffe1;
+                                    if (cli.sendKeyEvent) {
+                                        cli.sendKeyEvent(1, SHIFT);
+                                        cli.sendKeyEvent(0, SHIFT);
+                                    }
+                                } catch { }
+                                // Reenviar tamaño actual del contenedor una vez
+                                try {
+                                    const cont = containerRef.current;
+                                    if (cont) {
+                                        const r = cont.getBoundingClientRect();
+                                        const w = Math.floor(r.width);
+                                        const h = Math.floor(r.height);
                                         if (w > 0 && h > 0) {
                                             if (!isActive) return;
                                             const disp = cli.getDisplay?.();
                                             const el = disp?.getElement?.();
                                             if (!el || !document.body.contains(el)) return;
-                                             if (allowResizeNow() && cli.sendSize) cli.sendSize(w, h);
-                                             else if (cli.sendInstruction) cli.sendInstruction('size', w, h);
-                                             lastDimensionsRef.current = { width: w, height: h };
-                                             lastResizeTimeRef.current = Date.now();
-                                         }
-                                     }
-                                 } catch {}
-                                 wakeUpSentRef.current = true;
-                                 console.log('🟢 Wake-up inicial enviado');
-                             } catch {}
-                         }, 1500);
-                         
-                          // Si autoResize está activado, hacer resize inicial tras conexión
-                         if (rdpConfig.autoResize && !rdpConfig.freezeInitialResize) {
-                             // Función para intentar resize inicial con reintentos
-                             const attemptInitialResize = (attempt = 1) => {
-                                 const container = containerRef.current;
-                                 if (!container) {
-                                     if (attempt < 5) {
-                                         setTimeout(() => attemptInitialResize(attempt + 1), 200);
-                                     }
+                                            if (allowResizeNow() && cli.sendSize) cli.sendSize(w, h);
+                                            else if (cli.sendInstruction) cli.sendInstruction('size', w, h);
+                                            lastDimensionsRef.current = { width: w, height: h };
+                                            lastResizeTimeRef.current = Date.now();
+                                        }
+                                    }
+                                } catch { }
+                                wakeUpSentRef.current = true;
+                                console.log('🟢 Wake-up inicial enviado');
+                            } catch { }
+                        }, 1500);
 
-                          // Si hay un resize pendiente post-reconexión (por inactividad), enviarlo una vez
-                          try {
-                              if (pendingPostConnectResizeRef.current) {
-                                  const { width: pendW, height: pendH } = pendingPostConnectResizeRef.current;
-                                  setTimeout(() => {
-                                      try {
-                                          const c2 = guacamoleClientRef.current;
-                                          if (!c2) return;
-                                          if (c2.sendSize) c2.sendSize(pendW, pendH);
-                                          else if (c2.sendInstruction) c2.sendInstruction('size', pendW, pendH);
-                                          lastDimensionsRef.current = { width: pendW, height: pendH };
-                                          lastResizeTimeRef.current = Date.now();
-                                      } catch {}
-                                  }, 400);
-                                  pendingPostConnectResizeRef.current = null;
-                              }
-                          } catch {}
-                                     return;
-                                 }
-                                  // Asegurar túnel no esté explícitamente CERRADO y que estemos conectados antes de enviar
-                                  try {
-                                      const t = client.getTunnel ? client.getTunnel() : null;
-                                      const openConst = window.Guacamole?.Tunnel?.OPEN;
-                                      if (t && openConst !== undefined && typeof t.state !== 'undefined' && t.state !== openConst) {
-                                          const nextAttempt = Math.min(attempt + 1, 12);
-                                          const delay = Math.min(250 + attempt * 150, 1500);
-                                          setTimeout(() => attemptInitialResize(nextAttempt), delay);
-                                          return;
-                                      }
-                                      if (connectionStateRef.current !== 'connected') {
-                                          const nextAttempt = Math.min(attempt + 1, 12);
-                                          const delay = Math.min(250 + attempt * 150, 1500);
-                                          setTimeout(() => attemptInitialResize(nextAttempt), delay);
-                                          return;
-                                      }
-                                  } catch { /* noop */ }
-                                 
-                                     const containerRect = container.getBoundingClientRect();
-                                     const newWidth = Math.floor(containerRect.width);
-                                     const newHeight = Math.floor(containerRect.height);
-                                 
-                                 // Verificar que las dimensiones sean válidas
-                                 if (newWidth <= 0 || newHeight <= 0) {
-                                      const nextAttempt = Math.min(attempt + 1, 12);
-                                      const delay = Math.min(400 + attempt * 150, 1600);
-                                      if (attempt < 12) setTimeout(() => attemptInitialResize(nextAttempt), delay);
-                                     return;
-                                 }
-                                 
-                                 
-                                  try {
-                                     // 1) Ajuste local solo para el inicial (no dispara window.resize)
-                                         const display = client.getDisplay();
-                                         if (display) {
-                                             const defaultLayer = display.getDefaultLayer();
-                                             if (defaultLayer) {
-                                                 display.resize(defaultLayer, newWidth, newHeight);
-                                         }
-                                         if (display.scale) display.scale(1.0);
-                                         if (display.onresize) display.onresize();
-                                     }
+                        // Si autoResize está activado, hacer resize inicial tras conexión
+                        if (rdpConfig.autoResize && !rdpConfig.freezeInitialResize) {
+                            // Función para intentar resize inicial con reintentos
+                            const attemptInitialResize = (attempt = 1) => {
+                                const container = containerRef.current;
+                                if (!container) {
+                                    if (attempt < 5) {
+                                        setTimeout(() => attemptInitialResize(attempt + 1), 200);
+                                    }
 
-                                      // 2) Enviar tamaño al servidor
-                                     // IMPORTANTE: El resize inicial SIEMPRE debe enviarse, incluso si la pestaña no está activa
-                                     // Esto es crítico para configurar correctamente la sesión RDP desde el inicio
-                                       if (client.sendSize) {
-                                             console.log(`📡 Resize inicial via sendSize: ${newWidth}x${newHeight} (isActive: ${isActive})`);
-                                             client.sendSize(newWidth, newHeight);
-                                     } else if (client.sendInstruction) {
-                                         console.log(`📡 Resize inicial via sendInstruction: ${newWidth}x${newHeight} (isActive: ${isActive})`);
-                                         client.sendInstruction("size", newWidth, newHeight);
-                                         } else {
-                                             console.log(`⚠️ No se encontró método de resize para resize inicial`);
-                                         }
+                                    // Si hay un resize pendiente post-reconexión (por inactividad), enviarlo una vez
+                                    try {
+                                        if (pendingPostConnectResizeRef.current) {
+                                            const { width: pendW, height: pendH } = pendingPostConnectResizeRef.current;
+                                            setTimeout(() => {
+                                                try {
+                                                    const c2 = guacamoleClientRef.current;
+                                                    if (!c2) return;
+                                                    if (c2.sendSize) c2.sendSize(pendW, pendH);
+                                                    else if (c2.sendInstruction) c2.sendInstruction('size', pendW, pendH);
+                                                    lastDimensionsRef.current = { width: pendW, height: pendH };
+                                                    lastResizeTimeRef.current = Date.now();
+                                                } catch { }
+                                            }, 400);
+                                            pendingPostConnectResizeRef.current = null;
+                                        }
+                                    } catch { }
+                                    return;
+                                }
+                                // Asegurar túnel no esté explícitamente CERRADO y que estemos conectados antes de enviar
+                                try {
+                                    const t = client.getTunnel ? client.getTunnel() : null;
+                                    const openConst = window.Guacamole?.Tunnel?.OPEN;
+                                    if (t && openConst !== undefined && typeof t.state !== 'undefined' && t.state !== openConst) {
+                                        const nextAttempt = Math.min(attempt + 1, 12);
+                                        const delay = Math.min(250 + attempt * 150, 1500);
+                                        setTimeout(() => attemptInitialResize(nextAttempt), delay);
+                                        return;
+                                    }
+                                    if (connectionStateRef.current !== 'connected') {
+                                        const nextAttempt = Math.min(attempt + 1, 12);
+                                        const delay = Math.min(250 + attempt * 150, 1500);
+                                        setTimeout(() => attemptInitialResize(nextAttempt), delay);
+                                        return;
+                                    }
+                                } catch { /* noop */ }
 
-                                     // 3) Actualizar refs y cooldown
-                                     lastDimensionsRef.current = { width: newWidth, height: newHeight };
-                                      lastResizeTimeRef.current = Date.now();
-                                     consecutiveResizeCountRef.current = 0;
-                                      initialResizeCooldownUntilRef.current = Date.now() + 2500;
-                                       // Reiniciar ventana de asentamiento de arranque cada nueva conexión
-                                       startupSettleUntilRef.current = Date.now() + 4000; // ventana más larga
-                                      startupStableCountRef.current = 0;
-                                      startupLastPlanRef.current = { width: newWidth, height: newHeight };
-                                     isInitialResizingRef.current = true;
-                                      initialResizeDoneRef.current = true;
-                                       startupSentOneResizeRef.current = false;
+                                const containerRect = container.getBoundingClientRect();
+                                const newWidth = Math.floor(containerRect.width);
+                                const newHeight = Math.floor(containerRect.height);
 
-                                     // 4) Verificar y reintentar hasta 3 veces si el canvas no adopta el tamaño
-                                     const verifyAndNudge = (attempt = 1) => {
-                                         try {
-                                             const canvas = containerRef.current?.querySelector('canvas');
-                                             if (!canvas) return;
-                                             const cw = canvas.width;
-                                             const ch = canvas.height;
-                                             const ok = Math.abs(cw - newWidth) < 40 && Math.abs(ch - newHeight) < 40;
-                                             if (ok) return;
-                                             if (attempt >= 3) return;
-                                              // Reenviar tamaño una vez más (como parte del resize inicial, NO verificar isActive)
-                                             console.log(`🔄 Reintento ${attempt} de resize inicial: ${newWidth}x${newHeight}`);
-                                               if (client.sendSize && allowResizeNow()) client.sendSize(newWidth, newHeight);
-                                             else if (client.sendInstruction) client.sendInstruction("size", newWidth, newHeight);
-                                             const disp = client.getDisplay?.();
-                                             if (disp?.onresize) disp.onresize();
-                                             setTimeout(() => verifyAndNudge(attempt + 1), 700);
-                                         } catch { /* noop */ }
-                                     };
-                                     setTimeout(() => verifyAndNudge(1), 700);
+                                // Verificar que las dimensiones sean válidas
+                                if (newWidth <= 0 || newHeight <= 0) {
+                                    const nextAttempt = Math.min(attempt + 1, 12);
+                                    const delay = Math.min(400 + attempt * 150, 1600);
+                                    if (attempt < 12) setTimeout(() => attemptInitialResize(nextAttempt), delay);
+                                    return;
+                                }
 
-                                     console.log(`✅ Auto-resize inicial completado exitosamente`);
-                                      initialResizeScheduledRef.current = true;
-                                     } catch (e) {
-                                         console.error('❌ Error en resize inicial:', e);
-                                      if (attempt < 5) {
-                                          setTimeout(() => attemptInitialResize(attempt + 1), 400);
-                                     }
-                                 }
-                              };
-                             
-                              // Disparadores para hacer el resize inicial en el momento más estable
-                              // 1) Retardo inicial (solo programar una vez)
-                              initialResizeAttemptsRef.current = 0;
-                              initialResizeDoneRef.current = false;
-                              initialResizeScheduledRef.current = false;
-                              if (initialResizeTimerRef.current) clearTimeout(initialResizeTimerRef.current);
-                              initialResizeTimerRef.current = setTimeout(() => {
-                                  if (!initialResizeDoneRef.current && !initialResizeScheduledRef.current) {
-                                      initialResizeScheduledRef.current = true;
-                                      attemptInitialResize(1);
-                                  }
-                              }, 900);
-                              // 2) Cuando el servidor reporta tamaño por primera vez
-                              const originalOnSizeForInitial = client.onsize;
-                              client.onsize = (...args) => {
-                                  if (!initialResizeDoneRef.current && !initialResizeScheduledRef.current) {
-                                      initialResizeScheduledRef.current = true;
-                                      setTimeout(() => attemptInitialResize(1), 150);
-                                  }
-                                  if (originalOnSizeForInitial) originalOnSizeForInitial.apply(client, args);
-                              };
-                              // 2b) Al recibir el primer onsync, intentar el resize inicial (gating por sync)
-                              const originalOnSyncForInitial = client.onsync;
-                              client.onsync = (...args) => {
-                                  if (!initialResizeDoneRef.current && !initialResizeScheduledRef.current) {
-                                      initialResizeScheduledRef.current = true;
-                                      setTimeout(() => attemptInitialResize(1), 120);
-                                  }
-                                  if (originalOnSyncForInitial) originalOnSyncForInitial.apply(client, args);
-                              };
-                              // 3) Cuando aparezca el canvas en el DOM
-                              try {
-                                  if (canvasObserverRef.current) {
-                                      canvasObserverRef.current.disconnect();
-                                  }
-                                  const observer = new MutationObserver(() => {
-                                      if (!initialResizeDoneRef.current) {
-                                          attemptInitialResize(1);
-                                      }
-                                  });
-                                  observer.observe(containerRef.current, { childList: true, subtree: true });
-                                  canvasObserverRef.current = observer;
-                              } catch {}
-                              // 4) Reasegurado post-conexión: si tras unos segundos las dimensiones del canvas
-                              // aún no se aproximan al contenedor, reenviar tamaño un par de veces con backoff
-                              const ensureCanvasMatches = (attempt = 1) => {
-                                  try {
-                                      const container = containerRef.current;
-                                      const canvas = container?.querySelector('canvas');
-                                      if (!container || !canvas) {
-                                          if (attempt < 5) setTimeout(() => ensureCanvasMatches(attempt + 1), 400);
-                                          return;
-                                      }
-                                      const rect = container.getBoundingClientRect();
-                                      const targetW = Math.floor(rect.width);
-                                      const targetH = Math.floor(rect.height);
-                                      const cw = canvas.width;
-                                      const ch = canvas.height;
-                                      const diffW = Math.abs(cw - targetW);
-                                      const diffH = Math.abs(ch - targetH);
-                                      const ok = diffW < 40 && diffH < 40;
-                                      if (ok) return;
-                                      // Reenviar tamaño y refrescar display
-                                      if (client.sendSize) client.sendSize(targetW, targetH);
-                                      else if (client.sendInstruction) client.sendInstruction('size', targetW, targetH);
-                                      const disp = client.getDisplay?.();
-                                      if (disp?.onresize) disp.onresize();
-                                      if (attempt < 5) setTimeout(() => ensureCanvasMatches(attempt + 1), 600 + attempt * 150);
-                                  } catch { /* noop */ }
-                              };
-                              setTimeout(() => ensureCanvasMatches(1), 1200);
-                         }
-                         
-                         // Timeout para detectar si no llegan datos visuales
-                         setTimeout(() => {
-                             const displayElement = containerRef.current?.querySelector('canvas');
-                             if (displayElement) {
-                                 
-                                 // Si autoResize está activo, forzar un resize secundario más agresivo
-                                 if (false && rdpConfig.autoResize) {
-                                     const container = containerRef.current;
-                                     if (container) {
-                                         const containerRect = container.getBoundingClientRect();
-                                         const targetWidth = Math.floor(containerRect.width);
-                                         const targetHeight = Math.floor(containerRect.height);
-                                         
-                                         // console.log(`🔄 RESIZE SECUNDARIO FORZADO: ${targetWidth}x${targetHeight}`);
-                                         
-                                         try {
-                                             // desactivado
-                                         } catch (e) {
-                                             console.error('❌ Error en resize secundario:', e);
-                                         }
-                                     }
-                                 }
-                                 
-                                 // Verificar si el canvas tiene datos
-                                 const ctx = displayElement.getContext('2d');
-                                 const imageData = ctx.getImageData(0, 0, displayElement.width, displayElement.height);
-                                 const hasData = imageData.data.some(pixel => pixel !== 0);
-                                 
-                                 // Verificar visibilidad del canvas
-                                 const rect = displayElement.getBoundingClientRect();
-                                 
-                                 // Verificar estilos del canvas
-                                 const styles = window.getComputedStyle(displayElement);
-                                 
-                                 if (!hasData) {
-                                     console.warn('⚠️ Canvas está vacío - no hay datos del servidor RDP');
-                                      try {
-                                          const cli = guacamoleClientRef.current;
-                                          if (cli) {
-                                              // Nudge de input (mouse + Shift) y reenviar tamaño actual
-                                              try {
-                                                  const dispN = cli.getDisplay?.();
-                                                  const elN = dispN?.getElement?.();
-                                                  const rectN = elN?.getBoundingClientRect?.();
-                                                  const xN = Math.max(1, Math.floor((rectN?.width || 10) / 2));
-                                                  const yN = Math.max(1, Math.floor((rectN?.height || 10) / 2));
-                                                  cli.sendMouseState && cli.sendMouseState({ x: xN, y: yN, left: false, middle: false, right: false });
-                                                  const SHIFT = 0xffe1;
-                                                  cli.sendKeyEvent && cli.sendKeyEvent(1, SHIFT);
-                                                  cli.sendKeyEvent && cli.sendKeyEvent(0, SHIFT);
-                                              } catch {}
-                                              try {
-                                                  const contN = containerRef.current;
-                                                  if (contN) {
-                                                      const rN = contN.getBoundingClientRect();
-                                                      const wN = Math.floor(rN.width);
-                                                      const hN = Math.floor(rN.height);
-                                                      if (wN > 0 && hN > 0) {
-                                                          if (cli.sendSize) cli.sendSize(wN, hN);
-                                                          else if (cli.sendInstruction) cli.sendInstruction('size', wN, hN);
-                                                      }
-                                                  }
-                                              } catch {}
-                                              try { if (display && display.onresize) display.onresize(); } catch {}
-                                              // Re-chequear en ~1.4s; si sigue vacío, reconexión única
-                                              setTimeout(() => {
-                                                  try {
-                                                      const de = containerRef.current?.querySelector('canvas');
-                                                      if (!de) return;
-                                                      const ctx2 = de.getContext('2d');
-                                                      const imageData2 = ctx2.getImageData(0, 0, de.width, de.height);
-                                                      const stillEmpty = !imageData2.data.some(pixel => pixel !== 0);
-                                                      if (stillEmpty && connectionStateRef.current === 'connected' && !noFrameReconnectAttemptedRef.current) {
-                                                          console.warn('🚨 Sin datos tras nudge; reconexión única para recuperar frames');
-                                                          noFrameReconnectAttemptedRef.current = true;
-                                                          // Guardar tamaño para reenviarlo tras reconectar
-                                                          try {
-                                                              const cont3 = containerRef.current;
-                                                              if (cont3) {
-                                                                  const r3 = cont3.getBoundingClientRect();
-                                                                  pendingPostConnectResizeRef.current = { width: Math.floor(r3.width), height: Math.floor(r3.height) };
-                                                              }
-                                                          } catch {}
-                                                          try { cli.disconnect && cli.disconnect(); } catch {}
-                                                          setConnectionState('disconnected');
-                                                      }
-                                                  } catch {}
-                                              }, 1400);
-                                          }
-                                      } catch {}
-                                 }
-                             } else {
-                                 console.log('⚠️ No se encontró canvas - posible problema de datos visuales');
-                             }
-                         }, 5000);
-                                          } else if (state === 4) { // DISCONNECTED
-                         setConnectionState('disconnected');
-                         setIsRdpSessionActive(false); // Desactivar sesión RDP
-                          // Resetear timers/refs críticos al desconectar para que próxima conexión tenga estado limpio
-                          try {
-                              lastDimensionsRef.current = { width: 0, height: 0 };
-                               lastResizeTimeRef.current = 0;
-                          } catch {}
-                     } else if (state === 2) { // WAITING
+
+                                try {
+                                    // 1) Ajuste local solo para el inicial (no dispara window.resize)
+                                    const display = client.getDisplay();
+                                    // ⚡ PERF: cache display to avoid repeated DOM lookups in canSend()
+                                    displayRef.current = display; if (display) {
+                                        const defaultLayer = display.getDefaultLayer();
+                                        if (defaultLayer) {
+                                            display.resize(defaultLayer, newWidth, newHeight);
+                                        }
+                                        if (display.scale) display.scale(1.0);
+                                        if (display.onresize) display.onresize();
+                                    }
+
+                                    // 2) Enviar tamaño al servidor
+                                    // IMPORTANTE: El resize inicial SIEMPRE debe enviarse, incluso si la pestaña no está activa
+                                    // Esto es crítico para configurar correctamente la sesión RDP desde el inicio
+                                    if (client.sendSize) {
+                                        console.log(`📡 Resize inicial via sendSize: ${newWidth}x${newHeight} (isActive: ${isActive})`);
+                                        client.sendSize(newWidth, newHeight);
+                                    } else if (client.sendInstruction) {
+                                        console.log(`📡 Resize inicial via sendInstruction: ${newWidth}x${newHeight} (isActive: ${isActive})`);
+                                        client.sendInstruction("size", newWidth, newHeight);
+                                    } else {
+                                        console.log(`⚠️ No se encontró método de resize para resize inicial`);
+                                    }
+
+                                    // 3) Actualizar refs y cooldown
+                                    lastDimensionsRef.current = { width: newWidth, height: newHeight };
+                                    lastResizeTimeRef.current = Date.now();
+                                    consecutiveResizeCountRef.current = 0;
+                                    initialResizeCooldownUntilRef.current = Date.now() + 2500;
+                                    // Reiniciar ventana de asentamiento de arranque cada nueva conexión
+                                    startupSettleUntilRef.current = Date.now() + 4000; // ventana más larga
+                                    startupStableCountRef.current = 0;
+                                    startupLastPlanRef.current = { width: newWidth, height: newHeight };
+                                    isInitialResizingRef.current = true;
+                                    initialResizeDoneRef.current = true;
+                                    startupSentOneResizeRef.current = false;
+
+                                    // 4) Verificar y reintentar hasta 3 veces si el canvas no adopta el tamaño
+                                    const verifyAndNudge = (attempt = 1) => {
+                                        try {
+                                            const canvas = containerRef.current?.querySelector('canvas');
+                                            if (!canvas) return;
+                                            const cw = canvas.width;
+                                            const ch = canvas.height;
+                                            const ok = Math.abs(cw - newWidth) < 40 && Math.abs(ch - newHeight) < 40;
+                                            if (ok) return;
+                                            if (attempt >= 3) return;
+                                            // Reenviar tamaño una vez más (como parte del resize inicial, NO verificar isActive)
+                                            console.log(`🔄 Reintento ${attempt} de resize inicial: ${newWidth}x${newHeight}`);
+                                            if (client.sendSize && allowResizeNow()) client.sendSize(newWidth, newHeight);
+                                            else if (client.sendInstruction) client.sendInstruction("size", newWidth, newHeight);
+                                            const disp = client.getDisplay?.();
+                                            if (disp?.onresize) disp.onresize();
+                                            setTimeout(() => verifyAndNudge(attempt + 1), 700);
+                                        } catch { /* noop */ }
+                                    };
+                                    setTimeout(() => verifyAndNudge(1), 700);
+
+                                    console.log(`✅ Auto-resize inicial completado exitosamente`);
+                                    initialResizeScheduledRef.current = true;
+                                } catch (e) {
+                                    console.error('❌ Error en resize inicial:', e);
+                                    if (attempt < 5) {
+                                        setTimeout(() => attemptInitialResize(attempt + 1), 400);
+                                    }
+                                }
+                            };
+
+                            // Disparadores para hacer el resize inicial en el momento más estable
+                            // 1) Retardo inicial (solo programar una vez)
+                            initialResizeAttemptsRef.current = 0;
+                            initialResizeDoneRef.current = false;
+                            initialResizeScheduledRef.current = false;
+                            if (initialResizeTimerRef.current) clearTimeout(initialResizeTimerRef.current);
+                            initialResizeTimerRef.current = setTimeout(() => {
+                                if (!initialResizeDoneRef.current && !initialResizeScheduledRef.current) {
+                                    initialResizeScheduledRef.current = true;
+                                    attemptInitialResize(1);
+                                }
+                            }, 900);
+                            // 2) Cuando el servidor reporta tamaño por primera vez
+                            const originalOnSizeForInitial = client.onsize;
+                            client.onsize = (...args) => {
+                                if (!initialResizeDoneRef.current && !initialResizeScheduledRef.current) {
+                                    initialResizeScheduledRef.current = true;
+                                    setTimeout(() => attemptInitialResize(1), 150);
+                                }
+                                if (originalOnSizeForInitial) originalOnSizeForInitial.apply(client, args);
+                            };
+                            // 2b) Al recibir el primer onsync, intentar el resize inicial (gating por sync)
+                            const originalOnSyncForInitial = client.onsync;
+                            client.onsync = (...args) => {
+                                if (!initialResizeDoneRef.current && !initialResizeScheduledRef.current) {
+                                    initialResizeScheduledRef.current = true;
+                                    setTimeout(() => attemptInitialResize(1), 120);
+                                }
+                                if (originalOnSyncForInitial) originalOnSyncForInitial.apply(client, args);
+                            };
+                            // 3) Cuando aparezca el canvas en el DOM
+                            try {
+                                if (canvasObserverRef.current) {
+                                    canvasObserverRef.current.disconnect();
+                                }
+                                const observer = new MutationObserver(() => {
+                                    if (!initialResizeDoneRef.current) {
+                                        attemptInitialResize(1);
+                                    }
+                                });
+                                observer.observe(containerRef.current, { childList: true, subtree: true });
+                                canvasObserverRef.current = observer;
+                            } catch { }
+                            // 4) Reasegurado post-conexión: si tras unos segundos las dimensiones del canvas
+                            // aún no se aproximan al contenedor, reenviar tamaño un par de veces con backoff
+                            const ensureCanvasMatches = (attempt = 1) => {
+                                try {
+                                    const container = containerRef.current;
+                                    const canvas = container?.querySelector('canvas');
+                                    if (!container || !canvas) {
+                                        if (attempt < 5) setTimeout(() => ensureCanvasMatches(attempt + 1), 400);
+                                        return;
+                                    }
+                                    const rect = container.getBoundingClientRect();
+                                    const targetW = Math.floor(rect.width);
+                                    const targetH = Math.floor(rect.height);
+                                    const cw = canvas.width;
+                                    const ch = canvas.height;
+                                    const diffW = Math.abs(cw - targetW);
+                                    const diffH = Math.abs(ch - targetH);
+                                    const ok = diffW < 40 && diffH < 40;
+                                    if (ok) return;
+                                    // Reenviar tamaño y refrescar display
+                                    if (client.sendSize) client.sendSize(targetW, targetH);
+                                    else if (client.sendInstruction) client.sendInstruction('size', targetW, targetH);
+                                    const disp = client.getDisplay?.();
+                                    if (disp?.onresize) disp.onresize();
+                                    if (attempt < 5) setTimeout(() => ensureCanvasMatches(attempt + 1), 600 + attempt * 150);
+                                } catch { /* noop */ }
+                            };
+                            setTimeout(() => ensureCanvasMatches(1), 1200);
+                        }
+
+                        // Timeout para detectar si no llegan datos visuales
+                        setTimeout(() => {
+                            const displayElement = containerRef.current?.querySelector('canvas');
+                            if (displayElement) {
+
+                                // Si autoResize está activo, forzar un resize secundario más agresivo
+                                if (false && rdpConfig.autoResize) {
+                                    const container = containerRef.current;
+                                    if (container) {
+                                        const containerRect = container.getBoundingClientRect();
+                                        const targetWidth = Math.floor(containerRect.width);
+                                        const targetHeight = Math.floor(containerRect.height);
+
+                                        // console.log(`🔄 RESIZE SECUNDARIO FORZADO: ${targetWidth}x${targetHeight}`);
+
+                                        try {
+                                            // desactivado
+                                        } catch (e) {
+                                            console.error('❌ Error en resize secundario:', e);
+                                        }
+                                    }
+                                }
+
+                                // Verificar si el canvas tiene datos
+                                const ctx = displayElement.getContext('2d');
+                                const imageData = ctx.getImageData(0, 0, displayElement.width, displayElement.height);
+                                const hasData = imageData.data.some(pixel => pixel !== 0);
+
+                                // Verificar visibilidad del canvas
+                                const rect = displayElement.getBoundingClientRect();
+
+                                // Verificar estilos del canvas
+                                const styles = window.getComputedStyle(displayElement);
+
+                                if (!hasData) {
+                                    console.warn('⚠️ Canvas está vacío - no hay datos del servidor RDP');
+                                    try {
+                                        const cli = guacamoleClientRef.current;
+                                        if (cli) {
+                                            // Nudge de input (mouse + Shift) y reenviar tamaño actual
+                                            try {
+                                                const dispN = cli.getDisplay?.();
+                                                const elN = dispN?.getElement?.();
+                                                const rectN = elN?.getBoundingClientRect?.();
+                                                const xN = Math.max(1, Math.floor((rectN?.width || 10) / 2));
+                                                const yN = Math.max(1, Math.floor((rectN?.height || 10) / 2));
+                                                cli.sendMouseState && cli.sendMouseState({ x: xN, y: yN, left: false, middle: false, right: false });
+                                                const SHIFT = 0xffe1;
+                                                cli.sendKeyEvent && cli.sendKeyEvent(1, SHIFT);
+                                                cli.sendKeyEvent && cli.sendKeyEvent(0, SHIFT);
+                                            } catch { }
+                                            try {
+                                                const contN = containerRef.current;
+                                                if (contN) {
+                                                    const rN = contN.getBoundingClientRect();
+                                                    const wN = Math.floor(rN.width);
+                                                    const hN = Math.floor(rN.height);
+                                                    if (wN > 0 && hN > 0) {
+                                                        if (cli.sendSize) cli.sendSize(wN, hN);
+                                                        else if (cli.sendInstruction) cli.sendInstruction('size', wN, hN);
+                                                    }
+                                                }
+                                            } catch { }
+                                            try { if (display && display.onresize) display.onresize(); } catch { }
+                                            // Re-chequear en ~1.4s; si sigue vacío, reconexión única
+                                            setTimeout(() => {
+                                                try {
+                                                    const de = containerRef.current?.querySelector('canvas');
+                                                    if (!de) return;
+                                                    const ctx2 = de.getContext('2d');
+                                                    const imageData2 = ctx2.getImageData(0, 0, de.width, de.height);
+                                                    const stillEmpty = !imageData2.data.some(pixel => pixel !== 0);
+                                                    if (stillEmpty && connectionStateRef.current === 'connected' && !noFrameReconnectAttemptedRef.current) {
+                                                        console.warn('🚨 Sin datos tras nudge; reconexión única para recuperar frames');
+                                                        noFrameReconnectAttemptedRef.current = true;
+                                                        // Guardar tamaño para reenviarlo tras reconectar
+                                                        try {
+                                                            const cont3 = containerRef.current;
+                                                            if (cont3) {
+                                                                const r3 = cont3.getBoundingClientRect();
+                                                                pendingPostConnectResizeRef.current = { width: Math.floor(r3.width), height: Math.floor(r3.height) };
+                                                            }
+                                                        } catch { }
+                                                        try { cli.disconnect && cli.disconnect(); } catch { }
+                                                        setConnectionState('disconnected');
+                                                    }
+                                                } catch { }
+                                            }, 1400);
+                                        }
+                                    } catch { }
+                                }
+                            } else {
+                                console.log('⚠️ No se encontró canvas - posible problema de datos visuales');
+                            }
+                        }, 5000);
+                    } else if (state === 4) { // DISCONNECTED
+                        setConnectionState('disconnected');
+                        setIsRdpSessionActive(false); // Desactivar sesión RDP
+                        // Resetear timers/refs críticos al desconectar para que próxima conexión tenga estado limpio
+                        try {
+                            lastDimensionsRef.current = { width: 0, height: 0 };
+                            lastResizeTimeRef.current = 0;
+                        } catch { }
+                    } else if (state === 2) { // WAITING
                         setConnectionState('connecting');
                     } else if (state === 1) { // CONNECTING  
                         setConnectionState('connecting');
                     }
                 };
 
-                                 // Eventos de error
+                // Eventos de error
                 client.onerror = (error) => {
-                     console.error('❌ Error en cliente Guacamole:', error);
-                     console.error('❌ Detalles del error:', {
-                         message: error.message,
-                         stack: error.stack,
-                         type: error.type
-                     });
+                    console.error('❌ Error en cliente Guacamole:', error);
+                    console.error('❌ Detalles del error:', {
+                        message: error.message,
+                        stack: error.stack,
+                        type: error.type
+                    });
                     hasFatalErrorRef.current = true;
                     setConnectionState('error');
                     try {
-                        const mapped = ErrorMapper && typeof ErrorMapper.mapGuacamoleError === 'function' 
+                        const mapped = ErrorMapper && typeof ErrorMapper.mapGuacamoleError === 'function'
                             ? ErrorMapper.mapGuacamoleError(error, {
                                 phase: (connectionStateRef.current === 'connected') ? 'connected' : 'connecting',
                                 elapsedMs: Date.now() - connectStartedAt
-                              })
+                            })
                             : null;
-                        const userMsg = mapped && mapped.userMessage 
-                            ? mapped.userMessage 
+                        const userMsg = mapped && mapped.userMessage
+                            ? mapped.userMessage
                             : (`Error de conexión: ${error?.message || 'Error desconocido'}`);
                         setErrorMessage(userMsg);
                     } catch (_) {
                         setErrorMessage(`Error de conexión: ${error?.message || 'Error desconocido'}`);
                     }
-                 };
-                 
-                 // Eventos de datos recibidos (para debug)
+                };
+
+                // Eventos de datos recibidos (para debug)
                 if (tunnel.onerror) {
-                     tunnel.onerror = (error) => {
-                         console.error('❌ Error en tunnel WebSocket:', error);
+                    tunnel.onerror = (error) => {
+                        console.error('❌ Error en tunnel WebSocket:', error);
                         try {
-                            const mapped = ErrorMapper && typeof ErrorMapper.mapGuacamoleError === 'function' 
+                            const mapped = ErrorMapper && typeof ErrorMapper.mapGuacamoleError === 'function'
                                 ? ErrorMapper.mapGuacamoleError(error, {
                                     phase: (connectionStateRef.current === 'connected') ? 'connected' : 'connecting',
                                     elapsedMs: Date.now() - connectStartedAt
-                                  })
+                                })
                                 : null;
                             if (mapped && mapped.userMessage) {
                                 setErrorMessage(mapped.userMessage);
                             }
-                        } catch (_) {}
-                     };
-                 }
-                 
-                 // Eventos de estado del tunnel
-                 if (tunnel.onstatechange) {
-                     const originalStateChange = tunnel.onstatechange;
-                     tunnel.onstatechange = (state) => {
-                         console.log('🌐 Estado del tunnel WebSocket:', state);
-                         // Guardar estado en ref si está disponible
-                         try { quietUntilRef.current = quietUntilRef.current; } catch {}
-                         if (originalStateChange) {
-                             originalStateChange(state);
-                         }
-                     };
-                 }
+                        } catch (_) { }
+                    };
+                }
+
+                // Eventos de estado del tunnel
+                if (tunnel.onstatechange) {
+                    const originalStateChange = tunnel.onstatechange;
+                    tunnel.onstatechange = (state) => {
+                        console.log('🌐 Estado del tunnel WebSocket:', state);
+                        // Guardar estado en ref si está disponible
+                        try { quietUntilRef.current = quietUntilRef.current; } catch { }
+                        if (originalStateChange) {
+                            originalStateChange(state);
+                        }
+                    };
+                }
 
                 // Timeout de conexión (30 segundos)
                 const connectionTimeout = setTimeout(() => {
@@ -967,14 +957,14 @@ const GuacamoleTerminal = forwardRef(({
                 // Conectar
                 const connectStartedAt = Date.now();
                 client.connect();
-                
-                                 // Limpiar timeout cuando se conecte exitosamente
+
+                // Limpiar timeout cuando se conecte exitosamente
                 const originalStateChange = client.onstatechange;
                 client.onstatechange = (state) => {
                     if (hasFatalErrorRef.current) return; // No sobrescribir estado de error
-                     if (state === 3) { // CONNECTED
-                         clearTimeout(connectionTimeout);
-                     }
+                    if (state === 3) { // CONNECTED
+                        clearTimeout(connectionTimeout);
+                    }
                     // Si se desconecta muy pronto tras conectar, hacer un reintento único
                     if (state === 4) { // DISCONNECTED
                         const elapsed = Date.now() - connectStartedAt;
@@ -989,9 +979,9 @@ const GuacamoleTerminal = forwardRef(({
                                     const r = container.getBoundingClientRect();
                                     pendingPostConnectResizeRef.current = { width: Math.floor(r.width), height: Math.floor(r.height) };
                                 }
-                            } catch {}
+                            } catch { }
                             setTimeout(() => {
-                                try { client.disconnect(); } catch {}
+                                try { client.disconnect(); } catch { }
                                 setConnectionState('disconnected');
                             }, 200);
                             return;
@@ -1007,17 +997,17 @@ const GuacamoleTerminal = forwardRef(({
                                 setErrorMessage(mapped.userMessage);
                                 return;
                             }
-                        } catch {}
-                     }
-                     originalStateChange(state);
-                 };
+                        } catch { }
+                    }
+                    originalStateChange(state);
+                };
 
             } catch (error) {
                 console.error('❌ Error inicializando conexión Guacamole:', error);
                 hasFatalErrorRef.current = true;
                 setConnectionState('error');
                 try {
-                    const mapped = ErrorMapper && typeof ErrorMapper.mapGuacamoleError === 'function' 
+                    const mapped = ErrorMapper && typeof ErrorMapper.mapGuacamoleError === 'function'
                         ? ErrorMapper.mapGuacamoleError(error)
                         : null;
                     const userMsg = mapped && mapped.userMessage ? mapped.userMessage : (error?.message || 'Error desconocido');
@@ -1034,7 +1024,7 @@ const GuacamoleTerminal = forwardRef(({
         return () => {
             try {
                 if (guacamoleClientRef.current) {
-                    try { guacamoleClientRef.current.disconnect(); } catch {}
+                    try { guacamoleClientRef.current.disconnect(); } catch { }
                 }
                 if (keepAliveTimerRef.current) {
                     clearInterval(keepAliveTimerRef.current);
@@ -1045,21 +1035,21 @@ const GuacamoleTerminal = forwardRef(({
                     initialResizeTimerRef.current = null;
                 }
                 if (canvasObserverRef.current) {
-                    try { canvasObserverRef.current.disconnect(); } catch {}
+                    try { canvasObserverRef.current.disconnect(); } catch { }
                     canvasObserverRef.current = null;
                 }
                 // Limpiar listeners de teclado/ratón
                 if (keyboardRef.current) {
-                    try { keyboardRef.current.onkeydown = null; keyboardRef.current.onkeyup = null; } catch {}
+                    try { keyboardRef.current.onkeydown = null; keyboardRef.current.onkeyup = null; } catch { }
                     keyboardRef.current = null;
                 }
                 if (mouseRef.current) {
-                    try { mouseRef.current.onmousedown = null; mouseRef.current.onmouseup = null; mouseRef.current.onmousemove = null; } catch {}
+                    try { mouseRef.current.onmousedown = null; mouseRef.current.onmouseup = null; mouseRef.current.onmousemove = null; } catch { }
                     mouseRef.current = null;
                 }
                 // Vaciar contenedor
                 if (containerRef.current) {
-                    try { containerRef.current.innerHTML = ''; } catch {}
+                    try { containerRef.current.innerHTML = ''; } catch { }
                 }
             } finally {
                 guacamoleClientRef.current = null;
@@ -1072,18 +1062,18 @@ const GuacamoleTerminal = forwardRef(({
         const handleBeforeUnload = () => {
             try {
                 if (guacamoleClientRef.current) {
-                    try { guacamoleClientRef.current.disconnect(); } catch {}
+                    try { guacamoleClientRef.current.disconnect(); } catch { }
                 }
                 if (keyboardRef.current) {
-                    try { keyboardRef.current.onkeydown = null; keyboardRef.current.onkeyup = null; } catch {}
+                    try { keyboardRef.current.onkeydown = null; keyboardRef.current.onkeyup = null; } catch { }
                     keyboardRef.current = null;
                 }
                 if (mouseRef.current) {
-                    try { mouseRef.current.onmousedown = null; mouseRef.current.onmouseup = null; mouseRef.current.onmousemove = null; } catch {}
+                    try { mouseRef.current.onmousedown = null; mouseRef.current.onmouseup = null; mouseRef.current.onmousemove = null; } catch { }
                     mouseRef.current = null;
                 }
                 if (containerRef.current) {
-                    try { containerRef.current.innerHTML = ''; } catch {}
+                    try { containerRef.current.innerHTML = ''; } catch { }
                 }
             } finally {
                 guacamoleClientRef.current = null;
@@ -1105,34 +1095,21 @@ const GuacamoleTerminal = forwardRef(({
                 try {
                     const client = guacamoleClientRef.current;
                     if (!client) return;
-                    // Enviar keep-alive si llevamos >15s sin actividad (más agresivo para WSL)
+                    // Send keep-alive only after >15s idle
                     const idleMs = Date.now() - (lastActivityTimeRef.current || 0);
                     if (idleMs < 15000) return;
-                    // Pequeño nudge de ratón y SHIFT, sin clics
-                    const disp = client.getDisplay?.();
+                    // ⚡ PERF FIX: Only send lightweight mouse+key nudge.
+                    // Do NOT sendSize here - it causes a visible frame repaint/glitch every 10s.
+                    // Size changes are handled exclusively by ResizeController + window resize events.
+                    const disp = displayRef.current || client.getDisplay?.();
                     const el = disp?.getElement?.();
                     const rect = el?.getBoundingClientRect?.();
                     const x = Math.max(1, Math.floor((rect?.width || 10) / 2));
                     const y = Math.max(1, Math.floor((rect?.height || 10) / 2));
-                    try { client.sendMouseState && client.sendMouseState({ x, y, left: false, middle: false, right: false }); } catch {}
-                    try { const SHIFT = 0xffe1; client.sendKeyEvent && client.sendKeyEvent(1, SHIFT); client.sendKeyEvent && client.sendKeyEvent(0, SHIFT); } catch {}
-                    // Si no hay ack pendiente, reenviar el tamaño actual como keep-alive liviano
-                    if (!awaitingSizeAckRef.current) {
-                        const cont = containerRef.current;
-                        if (cont) {
-                            const r = cont.getBoundingClientRect();
-                            const w = Math.floor(r.width);
-                            const h = Math.floor(r.height);
-                            if (w > 0 && h > 0 && client.sendSize) {
-                                client.sendSize(w, h);
-                                awaitingSizeAckRef.current = true;
-                                sizeAckDeadlineRef.current = Date.now() + 1500;
-                                lastSentSizeRef.current = { width: w, height: h, at: Date.now() };
-                            }
-                        }
-                    }
-                } catch {}
-            }, 10000); // Cada 10 segundos (más agresivo para WSL)
+                    try { client.sendMouseState && client.sendMouseState({ x, y, left: false, middle: false, right: false }); } catch { }
+                    try { const SHIFT = 0xffe1; client.sendKeyEvent && client.sendKeyEvent(1, SHIFT); client.sendKeyEvent && client.sendKeyEvent(0, SHIFT); } catch { }
+                } catch { }
+            }, 10000); // Cada 10 segundos
         } else {
             if (keepAliveTimerRef.current) {
                 clearInterval(keepAliveTimerRef.current);
@@ -1156,7 +1133,7 @@ const GuacamoleTerminal = forwardRef(({
             }
             // Limpiar resize controller (ResizeController tiene stop(), no destroy())
             if (resizeControllerRef.current) {
-                try { resizeControllerRef.current.stop(); } catch {}
+                try { resizeControllerRef.current.stop(); } catch { }
                 resizeControllerRef.current = null;
             }
             // Desconectar cliente Guacamole
@@ -1171,10 +1148,7 @@ const GuacamoleTerminal = forwardRef(({
         };
     }, []); // Solo ejecutar al desmontar
 
-    // Mantener ref sincronizado con la última actividad
-    useEffect(() => {
-        lastActivityTimeRef.current = lastActivityTime;
-    }, [lastActivityTime]);
+    // (lastActivityTime state removed - ref is updated directly in event handlers)
 
     // Mantener ref sincronizado con el estado de actividad de la pestaña
     useEffect(() => {
@@ -1186,7 +1160,7 @@ const GuacamoleTerminal = forwardRef(({
     useEffect(() => {
         if (!autoResize) {
             if (resizeControllerRef.current) {
-                try { resizeControllerRef.current.stop(); } catch {}
+                try { resizeControllerRef.current.stop(); } catch { }
                 resizeControllerRef.current = null;
             }
             return;
@@ -1200,12 +1174,11 @@ const GuacamoleTerminal = forwardRef(({
             // Restringir envíos durante la congelación inicial
             if (!allowResizeNow()) return false;
             const client = guacamoleClientRef.current;
-            if (!client || !client.getDisplay) return false;
-            const display = client.getDisplay();
-            // Enviar sólo si pestaña está activa y display presente
-            // Esta restricción es correcta para resizes NO iniciales
+            if (!client) return false;
+            // ⚡ PERF: use cached displayRef instead of client.getDisplay() DOM lookup on every resize event
+            const display = displayRef.current || client.getDisplay?.();
             if (!isActiveRef.current) {
-                console.log(`[Guacamole ${tabId}] canSend: false (pestaña inactiva)`);
+                if (_rdpDebug()) console.log(`[Guacamole ${tabId}] canSend: false (pestaña inactiva)`);
                 return false;
             }
             return !!(display && display.getDefaultLayer && display.getDefaultLayer());
@@ -1215,10 +1188,10 @@ const GuacamoleTerminal = forwardRef(({
             if (!client || !client.sendSize) return;
             // Esta restricción es correcta para resizes NO iniciales
             if (!isActiveRef.current) {
-                console.log(`[Guacamole ${tabId}] sendSize bloqueado: pestaña inactiva`);
+                if (_rdpDebug()) console.log(`[Guacamole ${tabId}] sendSize bloqueado: pestaña inactiva`);
                 return;
             }
-            console.log(`[Guacamole ${tabId}] Enviando resize posterior: ${w}x${h}`);
+            if (_rdpDebug()) console.log(`[Guacamole ${tabId}] Enviando resize posterior: ${w}x${h}`);
             client.sendSize(w, h);
         };
         const getContainer = () => containerRef.current;
@@ -1243,14 +1216,14 @@ const GuacamoleTerminal = forwardRef(({
 
         // Apagar instancia previa
         if (resizeControllerRef.current) {
-            try { resizeControllerRef.current.stop(); } catch {}
+            try { resizeControllerRef.current.stop(); } catch { }
             resizeControllerRef.current = null;
         }
         // Quitar listener antiguo si quedara activo
         if (resizeListenerRef.current) {
             try {
                 window.removeEventListener('resize', resizeListenerRef.current);
-            } catch {}
+            } catch { }
             resizeListenerRef.current = null;
         }
 
@@ -1269,13 +1242,13 @@ const GuacamoleTerminal = forwardRef(({
             ackTimeoutMs,
             onLog
         });
-        try { resizeControllerRef.current.start(); } catch {}
+        try { resizeControllerRef.current.start(); } catch { }
         // Notificar tamaño actual al arrancar para alinear con el contenedor
-        try { resizeControllerRef.current.notify(); } catch {}
+        try { resizeControllerRef.current.notify(); } catch { }
 
         return () => {
             if (resizeControllerRef.current) {
-                try { resizeControllerRef.current.stop(); } catch {}
+                try { resizeControllerRef.current.stop(); } catch { }
                 resizeControllerRef.current = null;
             }
         };
@@ -1292,7 +1265,7 @@ const GuacamoleTerminal = forwardRef(({
                 }
                 return;
             }
-        } catch {}
+        } catch { }
         if (!autoResize) {
             // Si autoResize se desactiva, limpiar listener existente
             if (resizeListenerRef.current) {
@@ -1302,15 +1275,15 @@ const GuacamoleTerminal = forwardRef(({
             }
             return;
         }
-        
+
         // Re-crear siempre el listener cuando cambie connectionState/autoResize para garantizar cierre fresco
         if (resizeListenerRef.current) {
             window.removeEventListener('resize', resizeListenerRef.current);
             resizeListenerRef.current = null;
             console.log('🗑️ Removiendo listener anterior para crear uno nuevo');
         }
-        
-        
+
+
         let resizeTimeout = null;
         let isResizing = false; // Protección contra resize simultáneo
         let pendingResize = null; // Para capturar solo el resize final
@@ -1333,19 +1306,19 @@ const GuacamoleTerminal = forwardRef(({
         window.addEventListener('visibilitychange', onVisibilityChange);
         window.addEventListener('focus', onFocus);
         window.addEventListener('blur', onBlur);
-        
+
         const handleWindowResize = () => {
             // Capturar las dimensiones actuales inmediatamente
             const container = containerRef.current;
             if (!container) return;
-            
+
             const rect = container.getBoundingClientRect();
             const dprNow = typeof window !== 'undefined' && window.devicePixelRatio ? window.devicePixelRatio : 1;
             const dprChanged = Math.abs(dprNow - (devicePixelRatioRef.current || 1)) > 0.05;
             devicePixelRatioRef.current = dprNow;
             const currentWidth = Math.floor(rect.width);
             const currentHeight = Math.floor(rect.height);
-            
+
             // Guardar el resize pendiente (siempre el más reciente)
             pendingResize = { width: currentWidth, height: currentHeight };
 
@@ -1361,7 +1334,7 @@ const GuacamoleTerminal = forwardRef(({
                     const client = guacamoleClientRef.current;
                     if (!client) return;
                     let clientStateVal = undefined;
-                    try { clientStateVal = client.currentState; } catch {}
+                    try { clientStateVal = client.currentState; } catch { }
                     const isDisconnected = clientStateVal === 4 || connectionStateRef.current !== 'connected';
                     const tunnel = client.getTunnel ? client.getTunnel() : null;
                     const openConstWU = window.Guacamole?.Tunnel?.OPEN;
@@ -1369,7 +1342,7 @@ const GuacamoleTerminal = forwardRef(({
                     if (isDisconnected || tunnelNotOpen) {
                         // Guardar tamaño y forzar reconexión
                         pendingPostConnectResizeRef.current = { width: currentWidth, height: currentHeight };
-                        try { client.disconnect(); } catch {}
+                        try { client.disconnect(); } catch { }
                         setConnectionState('disconnected');
                         return;
                     }
@@ -1378,14 +1351,14 @@ const GuacamoleTerminal = forwardRef(({
                         const disp = client.getDisplay?.();
                         const defLayer = disp?.getDefaultLayer?.();
                         if (disp && defLayer && currentWidth > 0 && currentHeight > 0) {
-                            try { disp.resize(defLayer, currentWidth, currentHeight); } catch {}
-                            try { disp.onresize && disp.onresize(); } catch {}
+                            try { disp.resize(defLayer, currentWidth, currentHeight); } catch { }
+                            try { disp.onresize && disp.onresize(); } catch { }
                         }
-                    } catch {}
+                    } catch { }
                     try {
                         if (client.sendSize) client.sendSize(currentWidth, currentHeight);
                         else if (client.sendInstruction) client.sendInstruction('size', currentWidth, currentHeight);
-                    } catch {}
+                    } catch { }
                     lastDimensionsRef.current = { width: currentWidth, height: currentHeight };
                     lastResizeTimeRef.current = Date.now();
                     quietUntilRef.current = Date.now() + 1200;
@@ -1403,7 +1376,7 @@ const GuacamoleTerminal = forwardRef(({
                 }, remaining + 50);
                 return;
             }
-            
+
             // Determinar si es un cambio grande (maximizar/minimizar o similar)
             const diffNowW = Math.abs(currentWidth - (lastDimensionsRef.current.width || 0));
             const diffNowH = Math.abs(currentHeight - (lastDimensionsRef.current.height || 0));
@@ -1432,7 +1405,7 @@ const GuacamoleTerminal = forwardRef(({
             if (resizeTimeout) {
                 clearTimeout(resizeTimeout);
             }
-            
+
             resizeTimeout = setTimeout(() => {
                 // Verificar que esté conectado ANTES de procesar - usar ref sincronizada (no cierre obsoleto)
                 const currentConnectionState = connectionStateRef.current;
@@ -1440,13 +1413,13 @@ const GuacamoleTerminal = forwardRef(({
                     console.log(`⏭️ No conectado (${currentConnectionState}), saltando resize`);
                     return;
                 }
-                
+
                 // Protección contra resize simultáneo
                 if (isResizing) {
                     console.log('⏭️ Resize en progreso, saltando...');
                     return;
                 }
-                
+
                 // Usar SIEMPRE el último tamaño observado (snapshot)
                 if (!pendingResize) return;
                 const plannedWidth = pendingResize.width;
@@ -1467,35 +1440,35 @@ const GuacamoleTerminal = forwardRef(({
                         return;
                     }
                 }
-                
+
                 // Verificar cliente
                 const client = guacamoleClientRef.current;
                 if (!client) {
                     console.log('❌ No hay cliente');
                     return;
                 }
-                
+
                 // VERIFICAR ESTADO DIRECTO DEL CLIENTE GUACAMOLE
                 const tunnel = client.getTunnel ? client.getTunnel() : null;
                 const display = client.getDisplay ? client.getDisplay() : null;
                 const hasDisplay = display && display.getDefaultLayer && display.getDefaultLayer();
-                
+
                 // Verificar si está realmente conectado
                 const isReallyConnected = hasDisplay && currentConnectionState === 'connected';
-                
+
                 if (!isReallyConnected) {
                     console.log(`❌ No realmente conectado - Display: ${!!hasDisplay}, Estado: ${currentConnectionState}`);
                     return;
                 }
-                
+
                 if (!client.getDisplay) {
                     console.log('❌ No hay display');
                     return;
                 }
-                
+
                 try {
                     isResizing = true; // Bloquear resize simultáneo
- 
+
                     // Cooldown tras el resize inicial
                     if (Date.now() < initialResizeCooldownUntilRef.current) {
                         // Permitir un único resize si las dimensiones actuales del contenedor
@@ -1556,7 +1529,7 @@ const GuacamoleTerminal = forwardRef(({
                         console.log('⏸️ Ventana oculta/minimizada o tamaño demasiado pequeño, aplazando envío');
                         return;
                     }
-                    
+
                     // Calcular deltas finales
                     const widthDiff = Math.abs(plannedWidth - lastDimensionsRef.current.width);
                     const heightDiff = Math.abs(plannedHeight - lastDimensionsRef.current.height);
@@ -1571,8 +1544,8 @@ const GuacamoleTerminal = forwardRef(({
                         // No enviar resizes de un solo eje durante la ventana de arranque
                         if (isAxisOnly) {
                             console.log('⏭️ Arranque: ignorando cambio de un eje (axis-only)');
-                                return;
-                            }
+                            return;
+                        }
                         // Permitir solo un resize enviado durante la ventana de arranque
                         if (startupSentOneResizeRef.current) {
                             console.log('⏭️ Arranque: ya se envió un resize; ignorando hasta que finalice la ventana');
@@ -1587,8 +1560,8 @@ const GuacamoleTerminal = forwardRef(({
                         }
                         // Requerir dos comprobaciones de estabilidad (2×200ms) sin deriva
                         const sameAsLastPlan =
-                          Math.abs(plannedWidth - startupLastPlanRef.current.width) < 10 &&
-                          Math.abs(plannedHeight - startupLastPlanRef.current.height) < 10;
+                            Math.abs(plannedWidth - startupLastPlanRef.current.width) < 10 &&
+                            Math.abs(plannedHeight - startupLastPlanRef.current.height) < 10;
                         if (!sameAsLastPlan) {
                             startupLastPlanRef.current = { width: plannedWidth, height: plannedHeight };
                             startupStableCountRef.current = 0;
@@ -1637,7 +1610,7 @@ const GuacamoleTerminal = forwardRef(({
                         console.log(`⏸️ Esperando ack onsize (${remainingAck}ms)`);
                         return;
                     }
-                if (isBigChange && !isSystemWindowResize) {
+                    if (isBigChange && !isSystemWindowResize) {
                         const nowTs = now;
                         if (nowTs - lastBigChangeAtRef.current < 2500) {
                             console.log('⏭️ Cooldown big-change activo (<2.5s), saltando');
@@ -1649,10 +1622,10 @@ const GuacamoleTerminal = forwardRef(({
                     // Evitar ping-pong de cambios grandes repetidos iguales en < 1.2s (barra lateral)
                     if (isBigChange) {
                         const sameAsLastBig =
-                          Math.abs(plannedWidth - lastBigChangeSizeRef.current.width) < 10 &&
-                          Math.abs(plannedHeight - lastBigChangeSizeRef.current.height) < 10;
+                            Math.abs(plannedWidth - lastBigChangeSizeRef.current.width) < 10 &&
+                            Math.abs(plannedHeight - lastBigChangeSizeRef.current.height) < 10;
                         const nowTs = now;
-                    if (!isSystemWindowResize && sameAsLastBig && (nowTs - lastBigChangeAtRef.current < 3000)) {
+                        if (!isSystemWindowResize && sameAsLastBig && (nowTs - lastBigChangeAtRef.current < 3000)) {
                             console.log('⏭️ Ignorando big-change repetido (anti ping-pong)');
                             return;
                         }
@@ -1685,12 +1658,12 @@ const GuacamoleTerminal = forwardRef(({
                     }
 
                     // ⏱️ RATE LIMITING: No enviar más de 1 resize cada 2.5 segundos (3s para big-change)
-                let minInterval = isBigChange ? 3000 : 2500;
-                if (isSystemWindowResize) {
-                    // Permitir reacción más inmediata para maximizar/restaurar
-                    minInterval = 0;
-                }
-                if (!isSystemWindowResize && now < adaptiveBackoffUntilRef.current) {
+                    let minInterval = isBigChange ? 3000 : 2500;
+                    if (isSystemWindowResize) {
+                        // Permitir reacción más inmediata para maximizar/restaurar
+                        minInterval = 0;
+                    }
+                    if (!isSystemWindowResize && now < adaptiveBackoffUntilRef.current) {
                         minInterval = Math.max(minInterval, 4000);
                     }
                     if (now - lastResizeTimeRef.current < minInterval) {
@@ -1704,7 +1677,7 @@ const GuacamoleTerminal = forwardRef(({
                         }, Math.max(remaining + 50, 100));
                         return;
                     }
-                    
+
                     // 🚫 PROTECCIÓN ADICIONAL: Si hay más de 2 resizes consecutivos, esperar un poco más
                     if (consecutiveResizeCountRef.current >= 2 && now - lastResizeTimeRef.current < 3500) {
                         const remainingSpam = 3500 - (now - lastResizeTimeRef.current);
@@ -1716,14 +1689,14 @@ const GuacamoleTerminal = forwardRef(({
                         }, Math.max(remainingSpam + 50, 100));
                         return;
                     }
-                    
+
                     // 🎯 THRESHOLD: Solo resize si hay un cambio significativo (>40px)
                     // Evitar resize repetitivo: si las dimensiones son exactamente las mismas, no hacer nada
                     if (plannedWidth === lastDimensionsRef.current.width && plannedHeight === lastDimensionsRef.current.height) {
                         console.log('⏭️ Dimensiones idénticas, saltando resize');
                         return;
                     }
-                    
+
                     // Solo resize si hay un cambio significativo
                     if (!isBigChange && (widthDiff < 40 && heightDiff < 40)) {
                         console.log(`⏭️ Cambio muy pequeño (${widthDiff}x${heightDiff}px), ignorando resize`);
@@ -1739,31 +1712,31 @@ const GuacamoleTerminal = forwardRef(({
                             return;
                         }
                     }
-                    
+
                     console.log(`✅ AutoResize: EJECUTANDO RESIZE FINAL: ${plannedWidth}x${plannedHeight} (cambio: ${widthDiff}x${heightDiff}px)`);
-                    
+
                     // ACTUALIZAR TIEMPO Y CONTADOR ANTES de ejecutar el resize
                     lastResizeTimeRef.current = now;
                     consecutiveResizeCountRef.current++;
-                    
+
                     // Guardar nuevas dimensiones ANTES de ejecutar el resize
                     lastDimensionsRef.current = { width: plannedWidth, height: plannedHeight };
-                    
-                        // Verificar túnel OPEN justo antes de enviar para evitar errores de CLOSED/CLOSING
-                        const t = client.getTunnel ? client.getTunnel() : null;
-                        const openConst2 = window.Guacamole?.Tunnel?.OPEN;
-                        if (t && openConst2 !== undefined && typeof t.state !== 'undefined' && t.state !== openConst2) {
-                            console.log('⏭️ Saltando sendSize: túnel no OPEN');
-                            return;
-                        }
-                        if (connectionStateRef.current !== 'connected') {
-                            console.log('⏭️ Saltando sendSize: estado no conectado');
-                            return;
-                        }
+
+                    // Verificar túnel OPEN justo antes de enviar para evitar errores de CLOSED/CLOSING
+                    const t = client.getTunnel ? client.getTunnel() : null;
+                    const openConst2 = window.Guacamole?.Tunnel?.OPEN;
+                    if (t && openConst2 !== undefined && typeof t.state !== 'undefined' && t.state !== openConst2) {
+                        console.log('⏭️ Saltando sendSize: túnel no OPEN');
+                        return;
+                    }
+                    if (connectionStateRef.current !== 'connected') {
+                        console.log('⏭️ Saltando sendSize: estado no conectado');
+                        return;
+                    }
 
                     // 📡 ENVIAR SOLO UNA VEZ al servidor (método más estable)
                     if (client.sendSize) {
-                            try { client.sendSize(plannedWidth, plannedHeight); } catch {}
+                        try { client.sendSize(plannedWidth, plannedHeight); } catch { }
                         console.log(`📡 sendSize enviado UNA VEZ: ${plannedWidth}x${plannedHeight}`);
                         burstCountRef.current++;
                         // Activar periodo de silencio: 2200 ms para big-change, 900 ms eje único, 600 ms normal
@@ -1820,7 +1793,7 @@ const GuacamoleTerminal = forwardRef(({
                                         if (disp3?.onresize) disp3.onresize();
                                         console.log('🛠️ Watchdog post-big-change: reenviado tamaño por inactividad');
                                     }
-                        } catch { /* noop */ }
+                                } catch { /* noop */ }
                             }, isBigChange ? 1800 : 0);
                         } catch { /* noop */ }
                         // Si seguimos en ventana de arranque, marcar que ya enviamos un resize
@@ -1838,21 +1811,21 @@ const GuacamoleTerminal = forwardRef(({
                     } else {
                         pendingResize = null;
                     }
- 
+
                     console.log(`✅ AutoResize: RESIZE FINAL COMPLETADO`);
                     // Si era parte del inicial, liberar cooldown antes
                     if (isInitialResizingRef.current) {
                         initialResizeCooldownUntilRef.current = 0;
                         isInitialResizingRef.current = false;
                     }
-                    
+
                     // Reset contador después de 10 segundos sin resize
                     setTimeout(() => {
                         if (Date.now() - lastResizeTimeRef.current >= 10000) {
                             consecutiveResizeCountRef.current = 0;
                         }
                     }, 10000);
-                    
+
                 } catch (e) {
                     console.error('❌ Error en resize:', e);
                 } finally {
@@ -1860,12 +1833,12 @@ const GuacamoleTerminal = forwardRef(({
                 }
             }, delayMs);
         };
-        
+
         // Guardar referencia al handler
         resizeListenerRef.current = handleWindowResize;
-        
+
         window.addEventListener('resize', handleWindowResize);
-        
+
         return () => {
             console.log('🗑️ Removiendo listener resize');
             if (resizeTimeout) {
@@ -1884,27 +1857,22 @@ const GuacamoleTerminal = forwardRef(({
         const CHECK_INTERVAL = Math.max(15000, Math.min(300000, Math.floor(FREEZE_TIMEOUT / 12)));
 
         if (connectionState !== 'connected') return;
-        
+
         // console.log('🛡️ Iniciando vigilante anti-congelación');
-        
+
         // Intervalo y timeout dinámicos
-        
+
         let watchdog = null;
-        
+
         const checkForFreeze = () => {
             const now = Date.now();
-            const timeSinceActivity = now - lastActivityTime;
-            
-            // Solo loggear si hay mucho tiempo sin actividad (para debug)
-            if (timeSinceActivity > 1800000) { // Solo loggear después de 30 minutos
-            }
-            
-            // Solo considerar congelación si han pasado más tiempo Y el cliente está en estado connected
-            // Además, verificar que realmente no hay actividad del servidor (no solo del cliente)
+            // ⚡ PERF: use ref (not state) - avoids stale closure issue and never schedules re-renders
+            const timeSinceActivity = now - (lastActivityTimeRef.current || 0);
+
             if (timeSinceActivity > FREEZE_TIMEOUT && !freezeDetected && connectionState === 'connected') {
-                console.warn('🚨 CONGELACIÓN DETECTADA! Iniciando reconexión automática...');
+                console.warn('🚨 CONGRELACIÓN DETECTADA! Iniciando reconexión automática...');
                 setFreezeDetected(true);
-                
+
                 // Reconectar automáticamente
                 if (guacamoleClientRef.current) {
                     try {
@@ -1913,58 +1881,57 @@ const GuacamoleTerminal = forwardRef(({
                         console.warn('Error desconectando cliente congelado:', e);
                     }
                 }
-                
+
                 // Reiniciar la conexión después de un breve delay
                 setTimeout(() => {
                     setConnectionState('connecting');
                     setFreezeDetected(false);
-                    setLastActivityTime(Date.now());
+                    lastActivityTimeRef.current = Date.now(); // reset idle counter via ref
                 }, 2000);
             }
         };
-        
+
         watchdog = setInterval(checkForFreeze, CHECK_INTERVAL);
-        
+
         return () => {
-            // console.log('🗑️ Deteniendo vigilante anti-congelación');
             if (watchdog) {
                 clearInterval(watchdog);
             }
         };
-    }, [connectionState, lastActivityTime, freezeDetected]);
+    }, [connectionState, freezeDetected]); // lastActivityTime removed - we read from ref now
 
     // 🔌 POWER MONITOR: Detectar reanudación del sistema (después de suspensión/pantallas apagadas)
     // WSL puede suspenderse cuando Windows entra en modo de ahorro de energía
     useEffect(() => {
         if (!window?.electron?.ipcRenderer) return;
-        
+
         const handleSystemResume = (data) => {
             const duration = data?.suspendDuration || 0;
             const reason = data?.reason || 'system-resume';
             console.log(`☀️ [Guacamole ${tabId}] Reanudación detectada (${reason}) después de ${duration}s`);
-            
+
             // Si la sesión estaba conectada, verificar si sigue viva
             if (connectionStateRef.current === 'connected') {
                 const client = guacamoleClientRef.current;
                 if (!client) return;
-                
+
                 // Verificar estado del cliente
                 let clientState = null;
-                try { clientState = client.currentState; } catch {}
-                
+                try { clientState = client.currentState; } catch { }
+
                 // Si el cliente está desconectado o en estado inválido, reconectar inmediatamente
                 if (clientState === 4 || clientState === 0) { // DISCONNECTED o IDLE
                     console.warn(`⚠️ [Guacamole ${tabId}] Conexión perdida, reconectando...`);
-                    try { client.disconnect(); } catch {}
+                    try { client.disconnect(); } catch { }
                     setConnectionState('disconnected');
                     setFreezeDetected(false);
-                    setLastActivityTime(Date.now());
+                    lastActivityTimeRef.current = Date.now();
                     return;
                 }
-                
+
                 // Marcar tiempo antes del ping
                 const pingTime = Date.now();
-                
+
                 // Enviar un ping para verificar que la conexión sigue viva
                 console.log(`🔍 [Guacamole ${tabId}] Verificando conexión...`);
                 try {
@@ -1973,54 +1940,53 @@ const GuacamoleTerminal = forwardRef(({
                     const rect = el?.getBoundingClientRect?.();
                     const x = Math.max(1, Math.floor((rect?.width || 10) / 2));
                     const y = Math.max(1, Math.floor((rect?.height || 10) / 2));
-                    
+
                     // Enviar múltiples eventos para asegurar que se detecte actividad
                     client.sendMouseState?.({ x, y, left: false, middle: false, right: false });
                     client.sendMouseState?.({ x: x + 1, y, left: false, middle: false, right: false });
-                    
+
                     // También enviar tecla para más probabilidad de respuesta
                     const SHIFT = 0xffe1;
                     client.sendKeyEvent?.(1, SHIFT);
                     client.sendKeyEvent?.(0, SHIFT);
                 } catch (e) {
                     console.warn(`⚠️ [Guacamole ${tabId}] Error enviando ping:`, e?.message);
-                    // Error enviando = conexión probablemente muerta
-                    try { client.disconnect(); } catch {}
+                    try { client.disconnect(); } catch { }
                     setConnectionState('disconnected');
                     setFreezeDetected(false);
-                    setLastActivityTime(Date.now());
+                    lastActivityTimeRef.current = Date.now();
                     return;
                 }
-                
+
                 // Verificación rápida (3 segundos) para detectar conexiones muertas
                 setTimeout(() => {
                     const timeSinceActivity = Date.now() - (lastActivityTimeRef.current || 0);
                     const timeSincePing = Date.now() - pingTime;
-                    
+
                     // Si lastActivity no se actualizó después del ping, la conexión está muerta
                     if (lastActivityTimeRef.current < pingTime && connectionStateRef.current === 'connected') {
                         console.warn(`🚨 [Guacamole ${tabId}] Sin respuesta en ${timeSincePing}ms, reconectando...`);
-                        try { guacamoleClientRef.current?.disconnect(); } catch {}
+                        try { guacamoleClientRef.current?.disconnect(); } catch { }
                         setConnectionState('disconnected');
                         setFreezeDetected(false);
-                        setLastActivityTime(Date.now());
+                        lastActivityTimeRef.current = Date.now();
                     } else if (connectionStateRef.current === 'connected') {
-                        console.log(`✅ [Guacamole ${tabId}] Conexión verificada OK`);
+                        if (_rdpDebug()) console.log(`✅ [Guacamole ${tabId}] Conexión verificada OK`);
                     }
                 }, 3000); // Reducido a 3 segundos
             }
         };
-        
+
         const handleSystemSuspend = () => {
             console.log(`💤 [Guacamole ${tabId}] Sistema entrando en suspensión...`);
             // Marcar el tiempo de última actividad para detectar congelación después
             lastActivityTimeRef.current = Date.now();
         };
-        
+
         // Escuchar eventos de suspensión/reanudación
         const unsubscribeResume = window.electron.ipcRenderer.on('system:resume', handleSystemResume);
         const unsubscribeSuspend = window.electron.ipcRenderer.on('system:suspend', handleSystemSuspend);
-        
+
         return () => {
             if (typeof unsubscribeResume === 'function') unsubscribeResume();
             if (typeof unsubscribeSuspend === 'function') unsubscribeSuspend();
@@ -2031,16 +1997,17 @@ const GuacamoleTerminal = forwardRef(({
     useEffect(() => {
         const client = guacamoleClientRef.current;
         if (!client || connectionState !== 'connected') return;
-        
+
+        // ⚡ PERF: update only the ref, never React state, to avoid scheduling re-renders from server events
         const updateActivity = () => {
-            setLastActivityTime(Date.now());
+            lastActivityTimeRef.current = Date.now();
         };
-        
+
         // Monitorear eventos que indican que la conexión está viva
         const originalOnSync = client.onsync;
         const originalOnSize = client.onsize;
         const originalOnStateChange = client.onstatechange;
-        
+
         client.onsync = (...args) => {
             updateActivity();
             // Marcar que ya recibimos el primer sync tras conexión para permitir resizes no iniciales
@@ -2049,22 +2016,22 @@ const GuacamoleTerminal = forwardRef(({
             }
             if (originalOnSync) originalOnSync.apply(client, args);
         };
-        
+
         client.onsize = (...args) => {
             updateActivity();
             // ACK de tamaño: liberar gate y permitir enviar pendiente
             awaitingSizeAckRef.current = false;
             sizeAckDeadlineRef.current = 0;
-            try { resizeControllerRef.current && resizeControllerRef.current.handleAck(); } catch {}
+            try { resizeControllerRef.current && resizeControllerRef.current.handleAck(); } catch { }
             if (originalOnSize) originalOnSize.apply(client, args);
         };
-        
+
         // También monitorear cambios de estado
         client.onstatechange = (...args) => {
             updateActivity();
             if (originalOnStateChange) originalOnStateChange.apply(client, args);
         };
-        
+
         // Monitorear también eventos de teclado y ratón para detectar actividad del usuario
         if (client.onkeydown) {
             const originalOnKeyDown = client.onkeydown;
@@ -2073,7 +2040,7 @@ const GuacamoleTerminal = forwardRef(({
                 if (originalOnKeyDown) originalOnKeyDown.apply(client, args);
             };
         }
-        
+
         if (client.onmousedown) {
             const originalOnMouseDown = client.onmousedown;
             client.onmousedown = (...args) => {
@@ -2081,7 +2048,7 @@ const GuacamoleTerminal = forwardRef(({
                 if (originalOnMouseDown) originalOnMouseDown.apply(client, args);
             };
         }
-        
+
         return () => {
             // Restaurar handlers originales
             if (client) {
@@ -2092,9 +2059,9 @@ const GuacamoleTerminal = forwardRef(({
         };
     }, [connectionState]);
 
-         // Renderizar diferentes estados
-     // console.log('🎨 Renderizando con connectionState:', connectionState);
-     const renderContent = () => {
+    // Renderizar diferentes estados
+    // console.log('🎨 Renderizando con connectionState:', connectionState);
+    const renderContent = () => {
         switch (connectionState) {
             case 'connecting':
                 return (
@@ -2128,9 +2095,9 @@ const GuacamoleTerminal = forwardRef(({
                         <i className="pi pi-exclamation-triangle" style={{ fontSize: '48px', marginBottom: '16px', color: '#f44336' }} />
                         <h3>Error de Conexión</h3>
                         <p style={{ textAlign: 'center', marginBottom: '20px' }}>{errorMessage}</p>
-                    <Button 
-                            label="Reintentar" 
-                            icon="pi pi-refresh" 
+                        <Button
+                            label="Reintentar"
+                            icon="pi pi-refresh"
                             onClick={() => {
                                 hasFatalErrorRef.current = false;
                                 setConnectionState('disconnected');
@@ -2158,7 +2125,7 @@ const GuacamoleTerminal = forwardRef(({
                         </div>
                     );
                 }
-                
+
                 return (
                     <div style={{
                         display: 'flex',
@@ -2175,38 +2142,38 @@ const GuacamoleTerminal = forwardRef(({
                     </div>
                 );
 
-                         case 'connected':
-                 return (
-                     <div style={{
-                         position: 'absolute',
-                         top: '10px',
-                         left: '10px',
-                         backgroundColor: 'rgba(0, 255, 0, 0.8)',
-                         color: 'white',
-                         padding: '5px 10px',
-                         borderRadius: '4px',
-                         fontSize: '12px',
-                         zIndex: 100
-                     }}>
-                         ✅ RDP Conectado - {rdpConfig?.hostname}
-                         <br />
-                         <small>Mueve el mouse o presiona teclas para activar</small>
-                         <br />
-                         <small style={{ color: '#4caf50' }}>✅ Conexión RDP real funcionando</small>
-                         <br />
-                         <Button 
-                             label="Probar Conexión" 
-                             icon="pi pi-refresh" 
-                             size="small"
-                             onClick={() => {
-                                 if (guacamoleClientRef.current) {
-                                 }
-                             }}
-                             className="p-button-text p-button-sm"
-                             style={{ marginTop: '5px' }}
-                         />
-                     </div>
-                 );
+            case 'connected':
+                return (
+                    <div style={{
+                        position: 'absolute',
+                        top: '10px',
+                        left: '10px',
+                        backgroundColor: 'rgba(0, 255, 0, 0.8)',
+                        color: 'white',
+                        padding: '5px 10px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        zIndex: 100
+                    }}>
+                        ✅ RDP Conectado - {rdpConfig?.hostname}
+                        <br />
+                        <small>Mueve el mouse o presiona teclas para activar</small>
+                        <br />
+                        <small style={{ color: '#4caf50' }}>✅ Conexión RDP real funcionando</small>
+                        <br />
+                        <Button
+                            label="Probar Conexión"
+                            icon="pi pi-refresh"
+                            size="small"
+                            onClick={() => {
+                                if (guacamoleClientRef.current) {
+                                }
+                            }}
+                            className="p-button-text p-button-sm"
+                            style={{ marginTop: '5px' }}
+                        />
+                    </div>
+                );
 
             default:
                 return null;
@@ -2214,7 +2181,7 @@ const GuacamoleTerminal = forwardRef(({
     };
 
     return (
-        <div 
+        <div
             className={isRdpSessionActive ? 'rdp-session-active' : ''}
             style={{
                 width: '100%',
@@ -2224,24 +2191,24 @@ const GuacamoleTerminal = forwardRef(({
                 backgroundColor: '#1e1e1e'
             }}
         >
-                         {/* Contenedor para el display de Guacamole */}
-                           <div 
-                  ref={containerRef}
-                  style={{
-                      width: '100%',
-                      height: '100%',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      display: connectionState === 'connected' ? 'block' : 'none',
-                      backgroundColor: '#000000',
-                      overflow: 'hidden',
-                      zIndex: 1,
-                      visibility: connectionState === 'connected' ? 'visible' : 'hidden',
-                      opacity: connectionState === 'connected' ? 1 : 0
-                  }}
-              />
-            
+            {/* Contenedor para el display de Guacamole */}
+            <div
+                ref={containerRef}
+                style={{
+                    width: '100%',
+                    height: '100%',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    display: connectionState === 'connected' ? 'block' : 'none',
+                    backgroundColor: '#000000',
+                    overflow: 'hidden',
+                    zIndex: 1,
+                    visibility: connectionState === 'connected' ? 'visible' : 'hidden',
+                    opacity: connectionState === 'connected' ? 1 : 0
+                }}
+            />
+
             {/* Overlay para estados de conexión */}
             {connectionState !== 'connected' && (
                 <div style={{

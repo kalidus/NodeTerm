@@ -8,6 +8,11 @@
 
 const { ipcMain } = require('electron');
 const { saveGuacdInactivityTimeout, loadGuacdInactivityTimeout } = require('../utils/file-utils');
+// ⚡ PERF FIX: require at module level so Node.js caches them before any IPC handler runs.
+// Was previously inline inside the IPC handler, causing synchronous module resolution on every token creation.
+const crypto = require('crypto');
+const Crypt = require('guacamole-lite/lib/Crypt.js');
+
 
 /**
  * Registra todos los handlers IPC de Guacamole
@@ -304,8 +309,8 @@ function registerGuacamoleHandlers({
         throw new Error('Servidor Guacamole no está inicializado');
       }
 
-      const crypto = require('crypto');
       const CIPHER = 'AES-256-CBC';
+      // ⚡ crypto is now required at module level (cached by Node.js)
       // ✅ CRÍTICO: Usar la misma clave que el servidor Guacamole
       // Si no se proporciona la función, usar fallback (solo para compatibilidad)
       let SECRET_KEY;
@@ -392,9 +397,10 @@ function registerGuacamoleHandlers({
           height: finalHeight,
           dpi: config.dpi || 96,
           "color-depth": normalizedColorDepth,
-          // Características visuales optimizadas: desactivadas por defecto para conexión más rápida
-          // Solo se activan si el usuario las habilita explícitamente o si autoResize está activo
-          "enable-desktop-composition": (config.enableDesktopComposition === true || config.autoResize === true) ? true : false,
+          // Características visuales: solo activar si el usuario las habilita explícitamente
+          // ⚡ PERF FIX: desktop-composition is decoupled from autoResize; it enables Aero which
+          // consumes significant GPU on the remote host and increases bandwidth.
+          "enable-desktop-composition": config.enableDesktopComposition === true ? true : false,
           "enable-font-smoothing": config.enableFontSmoothing === true ? true : false,
           "enable-theming": config.enableTheming === true ? true : false,
           "enable-full-window-drag": (config.enableFullWindowDrag === true || config.autoResize === true) ? true : false,
@@ -402,6 +408,9 @@ function registerGuacamoleHandlers({
           // Configuración específica para resize dinámico
           // Usar display-update siempre para evitar reconexiones, incluso con resolución fija
           "resize-method": "display-update",
+          // ⚡ PERF FIX: network-autodetect lets FreeRDP negotiate image quality/compression automatically
+          // based on measured RTT. Reduces lag on slow/high-latency connections automatically.
+          "enable-autodetect": true,
           // Portapapeles: desactivar solo si el usuario lo deshabilitó
           "disable-clipboard": (config.redirectClipboard === false) ? true : undefined,
           // Compatibilidad Windows 11: desactivar GFX cuando se active la casilla
@@ -427,7 +436,7 @@ function registerGuacamoleHandlers({
 
 
       // Encriptar token usando Crypt de guacamole-lite para asegurar compatibilidad de formato
-      const Crypt = require('guacamole-lite/lib/Crypt.js');
+      // ⚡ Crypt is now required at module level (cached by Node.js)
       const crypt = new Crypt(CIPHER, SECRET_KEY);
       const token = crypt.encrypt(tokenObject);
 
