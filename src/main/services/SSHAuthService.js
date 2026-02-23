@@ -214,7 +214,13 @@ class SSHAuthService {
       port: config.port || 22,
       tryKeyboard: true, // Habilitar autenticación interactiva
       readyTimeout: 30000,
-      keepaliveInterval: 60000
+      keepaliveInterval: 30000, // Más frecuente para detectar drops antes
+      keepaliveCountMax: 3,
+      // Priorizar cifrados más rápidos para reducir latencia de cifrado
+      algorithms: {
+        cipher: ['aes128-gcm@openssh.com', 'aes256-gcm@openssh.com', 'aes128-ctr', 'aes192-ctr', 'aes256-ctr'],
+        compress: ['none'] // Sin compresión: menos CPU, menor latencia para datos pequeños
+      }
     };
 
     // Solo incluir password si está disponible y se solicita
@@ -292,20 +298,19 @@ class SSHAuthService {
         const execWrapper = this.createExecWrapper(ssh2Client);
         ssh2Client.exec = execWrapper;
 
-        // Obtener información del servidor
+        // Obtener información del servidor en paralelo (reduce un RTT al conectar)
         let realHostname = 'unknown';
-        let osRelease = '';
+        let osRelease = 'ID=linux';
 
         try {
-          realHostname = (await execWrapper('hostname')).trim() || 'unknown';
+          const [hn, osr] = await Promise.all([
+            execWrapper('hostname').catch(() => 'unknown'),
+            execWrapper('cat /etc/os-release').catch(() => 'ID=linux')
+          ]);
+          realHostname = (hn || 'unknown').trim();
+          osRelease = osr || 'ID=linux';
         } catch (e) {
-          console.warn('[SSH] Error obteniendo hostname:', e);
-        }
-
-        try {
-          osRelease = await execWrapper('cat /etc/os-release');
-        } catch (e) {
-          osRelease = 'ID=linux';
+          // Silenciar: ya tenemos defaults
         }
 
         const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';

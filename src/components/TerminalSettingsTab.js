@@ -14,6 +14,7 @@ const STORAGE_KEYS = {
   CURSOR_STYLE: 'nodeterm_cursor_style',
   CURSOR_BLINK: 'nodeterm_cursor_blink',
   SCROLLBACK_LINES: 'nodeterm_scrollback_lines',
+  SSH_LOCAL_ECHO: 'nodeterm_ssh_local_echo', // Echo local para reducir lag SSH
   // SSH
   SSH_FONT_FAMILY: 'basicapp_terminal_font_family',
   SSH_FONT_SIZE: 'basicapp_terminal_font_size',
@@ -104,6 +105,11 @@ const TerminalSettingsTab = ({
     const saved = localStorage.getItem(STORAGE_KEYS.SCROLLBACK_LINES);
     return saved ? parseInt(saved, 10) : 10000;
   });
+  // Local echo SSH: muestra el carácter localmente antes del echo del servidor
+  const [sshLocalEcho, setSshLocalEcho] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SSH_LOCAL_ECHO);
+    return saved !== null ? saved === 'true' : false; // Desactivado por defecto
+  });
 
   // Font settings per terminal type
   const [linuxFontFamily, setLinuxFontFamily] = useState(() =>
@@ -172,6 +178,13 @@ const TerminalSettingsTab = ({
       localStorage.setItem(STORAGE_KEYS.SCROLLBACK_LINES, '200000');
     }
   }, [scrollbackLines]);
+
+  const handleSshLocalEchoChange = useCallback((value) => {
+    setSshLocalEcho(value);
+    localStorage.setItem(STORAGE_KEYS.SSH_LOCAL_ECHO, value.toString());
+    // Notificar a los terminales SSH abiertos
+    window.dispatchEvent(new CustomEvent('terminal-settings-changed', { detail: { sshLocalEcho: value } }));
+  }, []);
 
   // Get/Set font for each terminal type
   const getFontForType = useCallback((type) => {
@@ -491,6 +504,22 @@ const TerminalSettingsTab = ({
                 placeholder="10000"
                 style={{ width: '130px' }}
                 className="terminal-history-dropdown"
+              />
+            </div>
+            <div className="terminal-blink-group">
+              <span
+                className="terminal-mini-label"
+                id="local-echo-label"
+                data-pr-tooltip="Muestra los caracteres escritos inmediatamente sin esperar el eco del servidor SSH. Reduce la sensación de lag en conexiones remotas lentas (Bastion, WAN). Puede mostrar caracteres dobles en algunos servidores."
+                style={{ cursor: 'help' }}
+              >
+                Echo Local SSH
+                <i className="pi pi-info-circle" style={{ marginLeft: '5px', fontSize: '0.75rem', opacity: 0.7 }}></i>
+              </span>
+              <Tooltip target="#local-echo-label" position="top" />
+              <div
+                className={`terminal-toggle-switch ${sshLocalEcho ? 'active' : ''}`}
+                onClick={() => handleSshLocalEchoChange(!sshLocalEcho)}
               />
             </div>
           </div>

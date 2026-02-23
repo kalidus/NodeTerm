@@ -8,7 +8,7 @@ const { parseDfOutput, parseNetDev, sendToRenderer } = require('../utils');
 class SSHStatsService {
   constructor() {
     this.activeStatsTabId = null;
-    this.statusBarPollingIntervalMs = 3000; // 3 segundos por defecto
+    this.statusBarPollingIntervalMs = 5000; // 5 segundos por defecto (reducir contención SSH)
   }
 
   /**
@@ -45,7 +45,7 @@ class SSHStatsService {
   parseCPU(cpuStatOutput, previousCpu) {
     const cpuTimes = cpuStatOutput.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
     let cpuLoad = '0.00';
-    
+
     if (cpuTimes.length < 8) {
       return { cpuLoad, currentCpu: null };
     }
@@ -68,7 +68,7 @@ class SSHStatsService {
       const currentTotal = Object.values(currentCpu).reduce((a, b) => a + b, 0);
       const totalDiff = currentTotal - prevTotal;
       const idleDiff = currentIdle - prevIdle;
-      
+
       if (totalDiff > 0) {
         cpuLoad = ((totalDiff - idleDiff) * 100 / totalDiff).toFixed(2);
       }
@@ -83,7 +83,7 @@ class SSHStatsService {
   parseMemory(parts) {
     const memLine = parts.find(line => line.startsWith('Mem:')) || '';
     const memParts = memLine.split(/\s+/);
-    
+
     return {
       total: parseInt(memParts[1], 10) || 0,
       used: parseInt(memParts[2], 10) || 0,
@@ -95,7 +95,7 @@ class SSHStatsService {
    */
   parseDisks(parts) {
     const dfIndex = parts.findIndex(line => line.trim().startsWith('Filesystem'));
-    
+
     if (dfIndex < 0) {
       return [];
     }
@@ -109,28 +109,28 @@ class SSHStatsService {
    */
   parseDisksBastion(parts) {
     const dfIndex = parts.findIndex(line => line.trim().startsWith('Filesystem'));
-    
+
     if (dfIndex < 0) {
       return [];
     }
 
     const lines = parts.slice(dfIndex).filter(l => l.trim() !== '');
     lines.shift(); // Eliminar header
-    
+
     return lines.map(line => {
       const p = line.trim().split(/\s+/);
       if (p.length >= 6) {
         const use = parseInt(p[p.length - 2], 10);
         const name = p[p.length - 1];
-        
+
         // Filtrar montajes no relevantes
-        if (name && name.startsWith('/') && !isNaN(use) && 
-            !name.startsWith('/sys') && 
-            !name.startsWith('/opt') && 
-            !name.startsWith('/run') && 
-            name !== '/boot/efi' && 
-            !name.startsWith('/dev') && 
-            !name.startsWith('/var')) {
+        if (name && name.startsWith('/') && !isNaN(use) &&
+          !name.startsWith('/sys') &&
+          !name.startsWith('/opt') &&
+          !name.startsWith('/run') &&
+          name !== '/boot/efi' &&
+          !name.startsWith('/dev') &&
+          !name.startsWith('/var')) {
           return { fs: name, use };
         }
       }
@@ -143,7 +143,7 @@ class SSHStatsService {
    */
   parseUptime(parts) {
     const uptimeLine = parts.find(line => line.includes(' up '));
-    
+
     if (!uptimeLine) {
       return 'N/A';
     }
@@ -157,7 +157,7 @@ class SSHStatsService {
    */
   parseNetwork(parts, previousNet, previousTime) {
     const netIndex = parts.findIndex(line => line.trim().includes('Inter-|   Receive'));
-    
+
     if (netIndex < 0) {
       return { network: { rx_speed: 0, tx_speed: 0 }, currentNet: null };
     }
@@ -165,14 +165,14 @@ class SSHStatsService {
     const netOutput = parts.slice(netIndex).join('\n');
     const currentNet = parseNetDev(netOutput);
     const currentTime = Date.now();
-    
+
     let network = { rx_speed: 0, tx_speed: 0 };
 
     if (previousNet && previousTime) {
       const timeDiff = (currentTime - previousTime) / 1000;
       const rxDiff = currentNet.totalRx - previousNet.totalRx;
       const txDiff = currentNet.totalTx - previousNet.totalTx;
-      
+
       network.rx_speed = Math.max(0, rxDiff / timeDiff);
       network.tx_speed = Math.max(0, txDiff / timeDiff);
     }
@@ -185,14 +185,14 @@ class SSHStatsService {
    */
   parseNetworkBastion(parts, previousNet, previousTime) {
     const netIndex = parts.findIndex(line => line.trim().includes('Inter-|   Receive'));
-    
+
     if (netIndex < 0) {
       return { network: { rx_speed: 0, tx_speed: 0 }, currentNet: null, currentTime: Date.now() };
     }
 
     const netLines = parts.slice(netIndex + 2, netIndex + 4);
     let totalRx = 0, totalTx = 0;
-    
+
     netLines.forEach(line => {
       const p = line.trim().split(/\s+/);
       if (p.length >= 10) {
@@ -208,15 +208,15 @@ class SSHStatsService {
       const timeDiff = (currentTime - previousTime) / 1000;
       const rxDiff = totalRx - previousNet.totalRx;
       const txDiff = totalTx - previousNet.totalTx;
-      
+
       network.rx_speed = Math.max(0, rxDiff / timeDiff);
       network.tx_speed = Math.max(0, txDiff / timeDiff);
     }
 
-    return { 
-      network, 
-      currentNet: { totalRx, totalTx }, 
-      currentTime 
+    return {
+      network,
+      currentNet: { totalRx, totalTx },
+      currentTime
     };
   }
 
@@ -230,7 +230,7 @@ class SSHStatsService {
 
     const ipLine = parts[parts.length - 1].trim();
     const ipCandidates = ipLine.split(/\s+/).filter(s => s && s !== '127.0.0.1' && s !== '::1');
-    
+
     if (ipCandidates.length > 0) {
       return ipCandidates[ipCandidates.length - 1];
     }
@@ -242,17 +242,17 @@ class SSHStatsService {
    * Extrae hostname para Bastion (búsqueda heurística)
    */
   parseHostnameBastion(parts) {
-    const hostnameLineIndex = parts.findIndex(line => 
-      line && 
-      !line.includes('=') && 
-      !line.includes(':') && 
-      !line.includes('/') && 
-      !line.includes('$') && 
-      line.trim().length > 0 && 
+    const hostnameLineIndex = parts.findIndex(line =>
+      line &&
+      !line.includes('=') &&
+      !line.includes(':') &&
+      !line.includes('/') &&
+      !line.includes('$') &&
+      line.trim().length > 0 &&
       line.trim().length < 50 &&
-      !line.includes('cpu') && 
-      !line.includes('Mem') && 
-      !line.includes('total') && 
+      !line.includes('cpu') &&
+      !line.includes('Mem') &&
+      !line.includes('total') &&
       !line.includes('Filesystem')
     );
 
@@ -267,23 +267,23 @@ class SSHStatsService {
    * Extrae IP para Bastion (línea después de hostname)
    */
   parseIPBastion(parts, fallbackHost) {
-    const hostnameLineIndex = parts.findIndex(line => 
-      line && 
-      !line.includes('=') && 
-      !line.includes(':') && 
-      !line.includes('/') && 
-      !line.includes('$') && 
-      line.trim().length > 0 && 
+    const hostnameLineIndex = parts.findIndex(line =>
+      line &&
+      !line.includes('=') &&
+      !line.includes(':') &&
+      !line.includes('/') &&
+      !line.includes('$') &&
+      line.trim().length > 0 &&
       line.trim().length < 50 &&
-      !line.includes('cpu') && 
-      !line.includes('Mem') && 
-      !line.includes('total') && 
+      !line.includes('cpu') &&
+      !line.includes('Mem') &&
+      !line.includes('total') &&
       !line.includes('Filesystem')
     );
 
     if (hostnameLineIndex >= 0 && hostnameLineIndex < parts.length - 4) {
       const ipLine = parts[hostnameLineIndex + 1]?.trim() || '';
-      
+
       if (ipLine) {
         const ipCandidates = ipLine.split(/\s+/).filter(s => s && s !== '127.0.0.1' && s !== '::1');
         if (ipCandidates.length > 0) {
@@ -306,9 +306,9 @@ class SSHStatsService {
       const idLine = parts.find(line => line.trim().startsWith('ID='));
       const idLikeLine = parts.find(line => line.trim().startsWith('ID_LIKE='));
       const versionIdLine = parts.find(line => line.trim().startsWith('VERSION_ID='));
-      
+
       let rawDistro = '';
-      
+
       if (idLine) {
         const match = idLine.match(/^ID=("?)([^"\n]*)\1$/);
         if (match) rawDistro = match[2].toLowerCase();
@@ -320,7 +320,7 @@ class SSHStatsService {
       } else if (rawDistro === 'linux' && idLikeLine) {
         const match = idLikeLine.match(/^ID_LIKE=("?)([^"\n]*)\1$/);
         const idLike = match ? match[2].toLowerCase() : '';
-        
+
         if (idLike.includes('rhel') || idLike.includes('redhat')) {
           finalDistroId = "rhel";
         } else {
@@ -366,7 +366,7 @@ class SSHStatsService {
       // CPU
       const cpuStatOutput = await conn.ssh.exec("grep 'cpu ' /proc/stat");
       const { cpuLoad, currentCpu } = this.parseCPU(cpuStatOutput, conn.previousCpu);
-      
+
       if (currentCpu) {
         conn.previousCpu = currentCpu;
       }
@@ -380,13 +380,13 @@ class SSHStatsService {
       const mem = this.parseMemory(parts);
       const disks = this.parseDisks(parts);
       const uptime = this.parseUptime(parts);
-      
+
       const { network, currentNet, currentTime } = this.parseNetwork(
-        parts, 
-        conn.previousNet, 
+        parts,
+        conn.previousNet,
         conn.previousTime
       );
-      
+
       if (currentNet) {
         conn.previousNet = currentNet;
         conn.previousTime = currentTime;
@@ -421,16 +421,16 @@ class SSHStatsService {
       // CPU
       const cpuLineIndex = parts.findIndex(line => line.trim().startsWith('cpu '));
       let cpuLoad = '0.00';
-      
+
       if (cpuLineIndex >= 0) {
         const cpuLine = parts[cpuLineIndex];
         const { cpuLoad: parsedCpuLoad, currentCpu } = this.parseCPU(
-          cpuLine, 
+          cpuLine,
           bastionStatsState[tabId]?.previousCpu
         );
-        
+
         cpuLoad = parsedCpuLoad;
-        
+
         if (currentCpu) {
           if (!bastionStatsState[tabId]) bastionStatsState[tabId] = {};
           bastionStatsState[tabId].previousCpu = currentCpu;
@@ -497,11 +497,11 @@ class SSHStatsService {
 
     try {
       const stats = await this.processDirectSSHStats(conn, realHostname, finalDistroId, host);
-      
+
       // Actualizar valores en la conexión
       conn.realHostname = realHostname;
       conn.finalDistroId = finalDistroId;
-      
+
       sendToRenderer(mainWindow.webContents, `ssh-stats:update:${tabId}`, stats);
     } catch (e) {
       // Silenciar errores de stats
@@ -521,10 +521,10 @@ class SSHStatsService {
    */
   createBastionStatsLoop(tabId, config, bastionStatsState, sshConnections, sender) {
     const self = this;
-    
+
     function wallixStatsLoop() {
       const connObj = sshConnections[tabId];
-      
+
       if (self.activeStatsTabId !== tabId) {
         if (connObj) {
           connObj.statsTimeout = null;
@@ -546,7 +546,7 @@ class SSHStatsService {
       try {
         if (connObj.ssh.execCommand) {
           const command = 'grep "cpu " /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "" && cat /etc/os-release';
-          
+
           connObj.ssh.execCommand(command, (err, result) => {
             if (err || !result) {
               // Enviar stats básicas en caso de error
@@ -554,8 +554,8 @@ class SSHStatsService {
               sendToRenderer(sender, `ssh-stats:update:${tabId}`, fallbackStats);
 
               // Reintentar en 5 segundos
-              if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && 
-                  !sshConnections[tabId].stream.destroyed && self.activeStatsTabId === tabId) {
+              if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream &&
+                !sshConnections[tabId].stream.destroyed && self.activeStatsTabId === tabId) {
                 sshConnections[tabId].statsLoopRunning = false;
                 sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
               } else {
@@ -572,10 +572,10 @@ class SSHStatsService {
             }
 
             // Programar siguiente ejecución
-            if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && 
-                !sshConnections[tabId].stream.destroyed && self.activeStatsTabId === tabId) {
+            if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream &&
+              !sshConnections[tabId].stream.destroyed && self.activeStatsTabId === tabId) {
               sshConnections[tabId].statsLoopRunning = false;
-              sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 2000);
+              sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000); // 5s para reducir contención en Bastion
             } else {
               if (sshConnections[tabId]) sshConnections[tabId].statsLoopRunning = false;
             }
@@ -587,8 +587,8 @@ class SSHStatsService {
         }
       } catch (e) {
         // Reintentar en 5 segundos
-        if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && 
-            !sshConnections[tabId].stream.destroyed && self.activeStatsTabId === tabId) {
+        if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream &&
+          !sshConnections[tabId].stream.destroyed && self.activeStatsTabId === tabId) {
           sshConnections[tabId].statsLoopRunning = false;
           sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
         } else {

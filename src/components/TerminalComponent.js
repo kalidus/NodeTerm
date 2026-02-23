@@ -12,8 +12,12 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
-    const [forceUpdateCounter, setForceUpdateCounter] = useState(0); // <-- NUEVO
+    const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
     const [cpuHistory, setCpuHistory] = useState([]);
+    // Ref para local echo SSH (se lee de localStorage y se actualiza con eventos)
+    const sshLocalEchoRef = useRef(
+        localStorage.getItem('nodeterm_ssh_local_echo') === 'true'
+    );
 
     // Actualizar cpuHistory cada vez que cambie stats.cpu, pero solo si es válido
     useEffect(() => {
@@ -29,6 +33,17 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             });
         }
     }, [stats?.cpu]);
+
+    // Escuchar cambios del setting de local echo SSH
+    useEffect(() => {
+        const handleSettingsChange = (e) => {
+            if (e.detail && typeof e.detail.sshLocalEcho === 'boolean') {
+                sshLocalEchoRef.current = e.detail.sshLocalEcho;
+            }
+        };
+        window.addEventListener('terminal-settings-changed', handleSettingsChange);
+        return () => window.removeEventListener('terminal-settings-changed', handleSettingsChange);
+    }, []);
 
     // Expose fit method to parent component
     useImperativeHandle(ref, () => ({
@@ -343,6 +358,23 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
 
             // Handle user input
             const dataHandler = term.current.onData(data => {
+                // Local echo SSH: mostrar el carácter localmente ANTES del round-trip al servidor
+                // Solo para terminales SSH, solo si está habilitado, y solo para caracteres imprimibles
+                const isSSH = sshConfig && (sshConfig.host || sshConfig.bastionHost);
+                if (isSSH && sshLocalEchoRef.current) {
+                    // Solo hacer echo de caracteres imprimibles (no secuencias de escape, no control chars)
+                    // - Excluir: ESC (\x1b), caracteres de control (< 0x20), DEL (0x7f), backspace (0x08)
+                    // - Excluir: secuencias de más de 1 carácter (teclas especiales como flechas, F1..)
+                    const code = data.charCodeAt(0);
+                    const isPrintable =
+                        data.length === 1 &&
+                        code >= 0x20 &&   // >= SPACE
+                        code !== 0x7f &&  // no DEL
+                        code < 0x80;     // no bytes multibyte (UTF-8 extendido)
+                    if (isPrintable) {
+                        term.current?.write(data);
+                    }
+                }
                 window.electron.ipcRenderer.send('ssh:data', { tabId, data });
             });
 
