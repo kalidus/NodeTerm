@@ -76,6 +76,8 @@ const MainContentArea = ({
   removeGroupFromFavorites,
   deleteGroup,
   toast,
+  handleToggleBroadcast,
+  getAllTabs,
 
   // Selected node props
   selectedNodeKey,
@@ -1412,6 +1414,8 @@ const MainContentArea = ({
                   getTabsInGroup={getTabsInGroup}
                   deleteGroup={deleteGroup}
                   toast={toast}
+                  handleToggleBroadcast={handleToggleBroadcast}
+                  getAllTabs={getAllTabs}
                 />
 
                 <TerminalContextMenu
@@ -1424,6 +1428,8 @@ const MainContentArea = ({
                   onStartRecording={handleStartRecording}
                   onStopRecording={handleStopRecording}
                   isRecording={terminalContextMenu ? isRecordingTab(terminalContextMenu.tabKey) : false}
+                  handleToggleBroadcast={handleToggleBroadcast}
+                  getAllTabs={getAllTabs}
                 />
 
                 <OverflowMenu

@@ -144,6 +144,8 @@ const SplitLayout = ({
   sshStatsByTabId,
   terminalRefs,
   statusBarIconTheme = 'classic',
+  isBroadcastActive = false,
+  onBroadcastData = null,
   externalPaneSize = null,
   onManualResize = null,
   onPaneSizeChange = null,
@@ -332,6 +334,8 @@ const SplitLayout = ({
             stats={sshStatsByTabId?.[node.key] || {}}
             hideStatusBar={true}
             statusBarIconTheme={statusBarIconTheme}
+            isBroadcastActive={isBroadcastActive}
+            onBroadcastData={onBroadcastData}
           />
         </div>
       );
@@ -354,6 +358,8 @@ const SplitLayout = ({
           splitterColor={splitterColor}
           onClosePanel={onClosePanel}
           path={nodePath}
+          isBroadcastActive={isBroadcastActive}
+          onBroadcastData={onBroadcastData}
           style={{ '--terminal-theme-splitter': effectiveSplitterColor }}
         />
       );
@@ -557,6 +563,8 @@ const SplitLayout = ({
             stats={sshStatsByTabId?.[terminal.key] || {}}
             hideStatusBar={true}
             statusBarIconTheme={statusBarIconTheme}
+            isBroadcastActive={isBroadcastActive}
+            onBroadcastData={onBroadcastData}
             onDrop={(e) => {
               // Manejador de Drop para split
               const draggedNode = (window.draggedConnectionNodeRef && window.draggedConnectionNodeRef.current) ||
@@ -1473,6 +1481,8 @@ const SplitLayout = ({
               stats={sshStatsByTabId?.[leftTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
+              isBroadcastActive={isBroadcastActive}
+              onBroadcastData={onBroadcastData}
             />
           )}
         </div>
@@ -1539,6 +1549,8 @@ const SplitLayout = ({
               stats={sshStatsByTabId?.[rightTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
+              isBroadcastActive={isBroadcastActive}
+              onBroadcastData={onBroadcastData}
             />
           )}
         </div>
@@ -1624,6 +1636,8 @@ const SplitLayout = ({
               stats={sshStatsByTabId?.[leftTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
+              isBroadcastActive={isBroadcastActive}
+              onBroadcastData={onBroadcastData}
             />
           )}
         </div>
@@ -1679,6 +1693,8 @@ const SplitLayout = ({
               stats={sshStatsByTabId?.[rightTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
+              isBroadcastActive={isBroadcastActive}
+              onBroadcastData={onBroadcastData}
             />
           )}
         </div>

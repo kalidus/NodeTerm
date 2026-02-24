@@ -888,7 +888,7 @@ const App = () => {
     tabDistros, setTabDistros,
     GROUP_COLORS, getNextGroupColor, getAllTabs, getTabsInGroup, getFilteredTabs,
     handleLoadGroupFromFavorites, createNewGroup, deleteGroup, moveTabToGroup, cleanupTabDistro,
-    handleTabContextMenu, handleTabClose
+    handleTabContextMenu, handleTabClose, handleToggleBroadcast
   } = useTabManagement(toast, {
     cleanupTabDistro,
     setSshConnectionStatus,
@@ -2302,6 +2302,80 @@ const App = () => {
     }
   }, [activeTab, isHomeTabActive, isHomeAIChatVisible]);
 
+  // Implementación de Broadcast
+  const handleBroadcastData = useCallback((activeTabKey, data) => {
+    if (!activeTabKey || !data) return;
+
+    // Obtener la pestaña activa
+    const allTabs = getAllTabs();
+    const activeBroadcastTab = allTabs.find(t => t.key === activeTabKey && t.isBroadcastActive);
+
+    if (!activeBroadcastTab) return; // Solo transmitir si la pestaña activa tiene broadcast encendido
+
+    // Función auxiliar para buscar termIds en la estructura de splits
+    const extractTerminalIds = (tab) => {
+      const ids = [];
+      if (tab.type === 'split') {
+        const traverseNode = (node) => {
+          if (!node) return;
+          if (node.type === 'terminal' && node.key) {
+            ids.push(node.key);
+          } else if (node.type === 'split') {
+            traverseNode(node.first);
+            traverseNode(node.second);
+          }
+        };
+        // Nuevo sistema
+        if (tab.first || tab.second) {
+          traverseNode(tab.first);
+          traverseNode(tab.second);
+        }
+        // Array de terminales (grid mode)
+        else if (Array.isArray(tab.terminals)) {
+          tab.terminals.forEach(t => ids.push(t.key));
+        }
+        // Sistema legacy
+        else if (tab.leftTerminal && tab.rightTerminal) {
+          ids.push(tab.leftTerminal.key);
+          ids.push(tab.rightTerminal.key);
+        }
+      } else if (tab.type === 'terminal' || tab.type === 'local-terminal') {
+        ids.push(tab.key);
+      }
+      return ids;
+    };
+
+    const termIds = extractTerminalIds(activeBroadcastTab);
+
+    console.log('[Broadcast] Extracted termIds to broadcast:', termIds);
+
+    // Enviar datos a todos los terminales de esta pestaña a través del IPC
+    for (const termId of termIds) {
+      // Buscar si el terminal hijo es ssh o local 
+      // Por ahora, todos mandan a través de ssh:data. Los terminales locales dentro de
+      // splits no son soportados formalmente, pero si existiera, TerminalComponent lo 
+      // ignora si no hay sshConfig y manda write(), o lo podemos reenviar.
+      if (terminalRefs.current && terminalRefs.current[termId]) {
+        const termInst = terminalRefs.current[termId];
+        // Solo escribir si no es el componente que acaba de originar el evento
+        // En realidad, para evitar echo loop o que el terminal origen lo vuelva a enviar,
+        // enviamos a la API directamente. O enviamos data al backend (pero cuidado, ssh:data 
+        // o terminal:data deben pasarse al server)
+        // Lo más seguro es usar el IPC para enviar a cada terminal individual
+        window.electron.ipcRenderer.send('ssh:data', { tabId: termId, data });
+
+        // Si es terminal local (no tiene conexión pero renderiza), lo ideal sería 
+        // que el TerminalComponent reaccione a write. Aquí como es app level,
+        // el IPC 'ssh:data' funciona solo si el backend tiene una instancia ssh conectada.
+        // Si la app permite split de terminales locales, deberíamos usar el termInst.write(data) 
+        // pero ojo que eso NO lo envía al proceso local, solo lo pinta en pantalla.
+        // El envío a un term local es window.electronAPI.sendLocalData(...) que tal vez no está aquí.
+      } else {
+        window.electron.ipcRenderer.send('ssh:data', { tabId: termId, data });
+      }
+    }
+  }, [getAllTabs, terminalRefs]);
+
   // === PROPS MEMOIZADAS PARA SIDEBAR ===
   // Memoizar props que no cambian frecuentemente
   const memoizedSidebarProps = useMemo(() => ({
@@ -2486,7 +2560,9 @@ const App = () => {
     // Tab group props
     setShowCreateGroupDialog,
     // Active connections
-    activeIds
+    activeIds,
+    handleToggleBroadcast,
+    handleBroadcastData
   }), [
     onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, onOpenVncConnection, handleLoadGroupFromFavorites,
     openEditRdpDialog, openEditSSHDialog, nodes, localFontFamily, localFontSize,
@@ -2494,7 +2570,7 @@ const App = () => {
     explorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
     handleTerminalContextMenu, showTerminalContextMenu, sshStatsByTabId,
     terminalRefs, statusBarIconTheme, handleCloseSplitPanel, openInSplit, rdpTabs, findNodeByKey,
-    setSshTabs, setShowCreateGroupDialog, activeIds
+    setSshTabs, setShowCreateGroupDialog, activeIds, handleToggleBroadcast, handleBroadcastData
   ]);
 
   if (!isAppReady) {
@@ -2926,6 +3002,8 @@ const App = () => {
           removeGroupFromFavorites={removeGroupFromFavorites}
           deleteGroup={deleteGroup}
           toast={toast}
+          handleToggleBroadcast={handleToggleBroadcast}
+          getAllTabs={getAllTabs}
 
           // Selected node props
           selectedNodeKey={selectedNodeKey}

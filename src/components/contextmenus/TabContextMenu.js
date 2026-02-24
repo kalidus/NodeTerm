@@ -1,23 +1,29 @@
 import React from 'react';
 
-const TabContextMenu = ({ 
-  tabContextMenu, 
-  setTabContextMenu, 
-  tabGroups, 
-  moveTabToGroup, 
+const TabContextMenu = ({
+  tabContextMenu,
+  setTabContextMenu,
+  tabGroups,
+  moveTabToGroup,
   setShowCreateGroupDialog,
-  isGroupFavorite, 
-  addGroupToFavorites, 
+  isGroupFavorite,
+  addGroupToFavorites,
   removeGroupFromFavorites,
   getTabsInGroup,
   deleteGroup,
-  toast 
+  toast,
+  handleToggleBroadcast,
+  getAllTabs
 }) => {
   if (!tabContextMenu) return null;
 
+  // Encontrar la pestaña actual en base a tabKey
+  const currentTab = getAllTabs ? getAllTabs().find(t => t.key === tabContextMenu.tabKey) : null;
+  const isBroadcasting = currentTab ? currentTab.isBroadcastActive : false;
+
   const handleAddToFavorites = () => {
     const isAlreadyFavorite = isGroupFavorite(tabContextMenu.group.id, tabContextMenu.group.name);
-    
+
     if (isAlreadyFavorite) {
       // Quitar de favoritos
       removeGroupFromFavorites(tabContextMenu.group.id, tabContextMenu.group.name);
@@ -168,12 +174,12 @@ const TabContextMenu = ({
                       setTabContextMenu(null);
                     }}
                   >
-                    <div 
-                      style={{ 
-                        width: '12px', 
-                        height: '12px', 
-                        backgroundColor: group.color, 
-                        borderRadius: '2px' 
+                    <div
+                      style={{
+                        width: '12px',
+                        height: '12px',
+                        backgroundColor: group.color,
+                        borderRadius: '2px'
                       }}
                     ></div>
                     {group.name}
@@ -199,6 +205,29 @@ const TabContextMenu = ({
               <i className="pi pi-plus" style={{ width: '16px' }}></i>
               Crear nuevo grupo
             </div>
+
+            {handleToggleBroadcast && (
+              <>
+                <div className="menu-separator" style={{ height: '1px', margin: '4px 0' }}></div>
+                <div
+                  className="menu-item"
+                  style={{
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                  onClick={() => {
+                    handleToggleBroadcast(tabContextMenu.tabKey);
+                    setTabContextMenu(null);
+                  }}
+                >
+                  <i className={`pi ${isBroadcasting ? 'pi-eye-slash' : 'pi-wifi'}`} style={{ width: '16px' }}></i>
+                  {isBroadcasting ? 'Desactivar Broadcast (Input simultáneo)' : 'Activar Broadcast (Input simultáneo)'}
+                </div>
+              </>
+            )}
           </>
         )}
       </div>

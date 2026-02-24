@@ -8,7 +8,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 
-const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu, active, stats, hideStatusBar = false, statusBarIconTheme = 'classic', onDrop, onDragOver }, ref) => {
+const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu, active, stats, hideStatusBar = false, statusBarIconTheme = 'classic', onDrop, onDragOver, isBroadcastActive, onBroadcastData }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
@@ -18,6 +18,11 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     const sshLocalEchoRef = useRef(
         localStorage.getItem('nodeterm_ssh_local_echo') === 'true'
     );
+    // Ref para evitar regenerar el terminal si cambian los props de broadcast
+    const broadcastPropsRef = useRef({ isBroadcastActive, onBroadcastData });
+    useEffect(() => {
+        broadcastPropsRef.current = { isBroadcastActive, onBroadcastData };
+    }, [isBroadcastActive, onBroadcastData]);
 
     // Actualizar cpuHistory cada vez que cambie stats.cpu, pero solo si es válido
     useEffect(() => {
@@ -358,6 +363,8 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
 
             // Handle user input
             const dataHandler = term.current.onData(data => {
+                const { isBroadcastActive: currentBroadcast, onBroadcastData: currentBroadcastFn } = broadcastPropsRef.current;
+
                 // Local echo SSH: mostrar el carácter localmente ANTES del round-trip al servidor
                 // Solo para terminales SSH, solo si está habilitado, y solo para caracteres imprimibles
                 const isSSH = sshConfig && (sshConfig.host || sshConfig.bastionHost);
@@ -375,7 +382,12 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                         term.current?.write(data);
                     }
                 }
-                window.electron.ipcRenderer.send('ssh:data', { tabId, data });
+
+                if (currentBroadcast && currentBroadcastFn) {
+                    currentBroadcastFn(data);
+                } else {
+                    window.electron.ipcRenderer.send('ssh:data', { tabId, data });
+                }
             });
 
             // Handle resize
@@ -521,7 +533,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     return (
         <>
             <div
-                className={'terminal-outer-padding'}
+                className={`terminal-outer-padding ${isBroadcastActive ? 'broadcast-active' : ''}`}
                 style={{
                     display: 'flex',
                     flexDirection: 'column',

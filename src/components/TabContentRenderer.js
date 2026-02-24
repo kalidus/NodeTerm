@@ -80,6 +80,8 @@ const TabContentRenderer = React.memo(({
   setShowCreateGroupDialog,
   activeIds,
   openInSplit,
+  handleToggleBroadcast,
+  handleBroadcastData
 }) => {
   // 🚀 OPTIMIZACIÓN: Calcular conteos una sola vez cuando cambian los nodos o pestañas RDP
   const counts = React.useMemo(() => {
@@ -1224,6 +1226,8 @@ const TabContentRenderer = React.memo(({
         onCloseRight={() => handleCloseSplitPanel(tab.key, 'right')}
         path={[]}
         openInSplit={openInSplit}
+        isBroadcastActive={tab.isBroadcastActive || false}
+        onBroadcastData={handleBroadcastData ? (data) => handleBroadcastData(tab.key, data) : undefined}
       />
     );
   }
@@ -1587,6 +1591,8 @@ const TabContentRenderer = React.memo(({
             e.dataTransfer.dropEffect = 'copy';
           }
         }}
+        isBroadcastActive={tab.isBroadcastActive || false}
+        onBroadcastData={handleBroadcastData ? (data) => handleBroadcastData(tab.key, data) : undefined}
       />
     );
   }

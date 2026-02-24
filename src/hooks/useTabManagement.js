@@ -61,15 +61,15 @@ export const useTabManagement = (toast, {
     const pool = groupId ? allTabs.filter(tab => tab.groupId === groupId) : allTabs.filter(tab => !tab.groupId);
     const home = pool.filter(t => t.type === 'home');
     const nonHome = pool.filter(t => t.type !== 'home');
-    
+
     // Verificar si el botón de inicio está bloqueado
     const isHomeButtonLocked = localStorage.getItem('lock_home_button') === 'true';
-    
+
     if (isHomeButtonLocked) {
       // Si está bloqueado, mantener las pestañas de inicio al principio
       const byKey = new Map(nonHome.map(t => [t.key, t]));
       const ordered = [];
-      
+
       // Respeta el orden de apertura más reciente a más antiguo
       for (const key of openTabOrder) {
         const t = byKey.get(key);
@@ -78,7 +78,7 @@ export const useTabManagement = (toast, {
           byKey.delete(key);
         }
       }
-      
+
       // Si quedan pestañas sin entrada en openTabOrder, apéndalas por createdAt desc
       const rest = Array.from(byKey.values()).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
       return [...home, ...ordered, ...rest];
@@ -87,7 +87,7 @@ export const useTabManagement = (toast, {
       const allTabsWithHome = [...home, ...nonHome];
       const byKey = new Map(allTabsWithHome.map(t => [t.key, t]));
       const ordered = [];
-      
+
       // Respeta el orden de apertura más reciente a más antiguo
       for (const key of openTabOrder) {
         const t = byKey.get(key);
@@ -96,10 +96,10 @@ export const useTabManagement = (toast, {
           byKey.delete(key);
         }
       }
-      
+
       // Si quedan pestañas sin entrada en openTabOrder, apéndalas por createdAt desc
       const rest = Array.from(byKey.values()).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
-      
+
       // Retornar en el orden respetando openTabOrder (las pestañas de inicio pueden estar en cualquier posición)
       return [...ordered, ...rest];
     }
@@ -135,11 +135,11 @@ export const useTabManagement = (toast, {
 
     // Verificar si ya existe un grupo con el mismo nombre
     const existingGroup = tabGroups.find(group => group.name === groupConnection.name);
-    
+
     if (existingGroup) {
       setActiveGroupId(existingGroup.id);
       setActiveTabIndex(0);
-      
+
       toast.current.show({
         severity: 'info',
         summary: 'Grupo ya existe',
@@ -197,7 +197,7 @@ export const useTabManagement = (toast, {
           bastionHost: session.bastionHost || matchedSidebarNode?.data?.bastionHost || '',
           bastionUser: session.bastionUser || matchedSidebarNode?.data?.bastionUser || ''
         };
-        
+
         const sshTab = {
           key: tabId,
           label: session.label,
@@ -302,7 +302,7 @@ export const useTabManagement = (toast, {
           originalKey: session.key,
           protocol: protocol
         };
-        
+
         const explorerTab = {
           key: tabId,
           label: session.label,
@@ -340,7 +340,7 @@ export const useTabManagement = (toast, {
       });
       return;
     }
-    
+
     const trimmedName = newGroupName.trim();
     const existingGroup = tabGroups.find(group => group.name.toLowerCase() === trimmedName.toLowerCase());
     if (existingGroup) {
@@ -352,7 +352,7 @@ export const useTabManagement = (toast, {
       });
       return;
     }
-    
+
     const colorToUse = selectedGroupColor || getNextGroupColor();
     const newGroup = {
       id: `group_${Date.now()}`,
@@ -374,22 +374,22 @@ export const useTabManagement = (toast, {
 
   const deleteGroup = useCallback((groupId) => {
     // Remover groupId de todas las pestañas
-    setSshTabs(prev => prev.map(tab => 
+    setSshTabs(prev => prev.map(tab =>
       tab.groupId === groupId ? { ...tab, groupId: null } : tab
     ));
-    setRdpTabs(prev => prev.map(tab => 
+    setRdpTabs(prev => prev.map(tab =>
       tab.groupId === groupId ? { ...tab, groupId: null } : tab
     ));
-    setGuacamoleTabs(prev => prev.map(tab => 
+    setGuacamoleTabs(prev => prev.map(tab =>
       tab.groupId === groupId ? { ...tab, groupId: null } : tab
     ));
-    setFileExplorerTabs(prev => prev.map(tab => 
+    setFileExplorerTabs(prev => prev.map(tab =>
       tab.groupId === groupId ? { ...tab, groupId: null } : tab
     ));
-    
+
     // Eliminar el grupo
     setTabGroups(prev => prev.filter(group => group.id !== groupId));
-    
+
     // Si era el grupo activo, desactivar
     if (activeGroupId === groupId) {
       setActiveGroupId(null);
@@ -397,19 +397,19 @@ export const useTabManagement = (toast, {
   }, [activeGroupId]);
 
   const moveTabToGroup = useCallback((tabKey, groupId) => {
-    setHomeTabs(prev => prev.map(tab => 
+    setHomeTabs(prev => prev.map(tab =>
       tab.key === tabKey ? { ...tab, groupId } : tab
     ));
-    setSshTabs(prev => prev.map(tab => 
+    setSshTabs(prev => prev.map(tab =>
       tab.key === tabKey ? { ...tab, groupId } : tab
     ));
-    setRdpTabs(prev => prev.map(tab => 
+    setRdpTabs(prev => prev.map(tab =>
       tab.key === tabKey ? { ...tab, groupId } : tab
     ));
-    setGuacamoleTabs(prev => prev.map(tab => 
+    setGuacamoleTabs(prev => prev.map(tab =>
       tab.key === tabKey ? { ...tab, groupId } : tab
     ));
-    setFileExplorerTabs(prev => prev.map(tab => 
+    setFileExplorerTabs(prev => prev.map(tab =>
       tab.key === tabKey ? { ...tab, groupId } : tab
     ));
   }, []);
@@ -427,7 +427,7 @@ export const useTabManagement = (toast, {
   const handleTabContextMenu = useCallback((e, tabKey) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     setTabContextMenu({
       tabKey,
       x: e.clientX,
@@ -441,19 +441,19 @@ export const useTabManagement = (toast, {
     if (externalCleanupTabDistro) {
       externalCleanupTabDistro(closedTab.key);
     }
-    
+
     const isSSHTab = closedTab.type === 'terminal' || closedTab.type === 'split' || closedTab.isExplorerInSSH;
     const isLocalTerminal = closedTab.type === 'local-terminal';
     const isAuditTab = closedTab.type === 'audit' || closedTab.type === 'recording-player' || closedTab.type === 'audit-global';
     const isAIChatTab = closedTab.type === 'ai-chat' || closedTab.type === 'anything-llm';
-    
+
     if (isHomeTab) {
       // Las pestañas de inicio NUNCA se pueden cerrar, independientemente del estado de bloqueo
       if (closedTab.label === 'Inicio') {
         // No permitir cerrar la pestaña de inicio nunca
         return;
       }
-      
+
       // Manejar cierre de pestañas de inicio según su tipo
       if (closedTab.type === 'powershell' && window.electron && window.electron.ipcRenderer) {
         // PowerShell - usar su handler específico existente
@@ -468,7 +468,7 @@ export const useTabManagement = (toast, {
         // Otras distribuciones WSL - usar handler específico existente
         window.electron.ipcRenderer.send(`wsl-distro:stop:${closedTab.key}`);
       }
-      
+
       const newHomeTabs = homeTabs.filter(t => t.key !== closedTab.key);
       setHomeTabs(newHomeTabs);
     } else if (isLocalTerminal) {
@@ -476,7 +476,7 @@ export const useTabManagement = (toast, {
       if (window.electron && window.electron.ipcRenderer) {
         // Determinar qué comando de stop enviar según el tipo de terminal
         const terminalType = closedTab.terminalType || 'powershell';
-        
+
         if (terminalType === 'powershell' || terminalType === 'linux-terminal') {
           window.electron.ipcRenderer.send(`powershell:stop:${closedTab.key}`);
         } else if (terminalType === 'wsl') {
@@ -491,12 +491,12 @@ export const useTabManagement = (toast, {
           }
         }
       }
-      
+
       // Limpiar referencia del terminal si existe
       if (externalTerminalRefs?.current) {
         delete externalTerminalRefs.current[closedTab.key];
       }
-      
+
       const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
       setSshTabs(newSshTabs);
     } else if (closedTab.type === 'ssh-tunnel') {
@@ -577,7 +577,7 @@ export const useTabManagement = (toast, {
           delete externalTerminalRefs.current[closedTab.key];
         }
       }
-      
+
       const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
       // --- NUEVO: Si ya no quedan pestañas activas con este originalKey, marcar como disconnected ---
       const remainingTabs = newSshTabs.filter(t => t.originalKey === closedTab.originalKey);
@@ -607,7 +607,7 @@ export const useTabManagement = (toast, {
             ref.disconnect();
           }
         }
-      } catch {}
+      } catch { }
       // No usar disconnectAll aquí para evitar cerrar conexiones nuevas en carrera
       // Eliminar pestaña del estado
       const newRdpTabs = rdpTabs.filter(t => t.key !== closedTab.key);
@@ -660,7 +660,7 @@ export const useTabManagement = (toast, {
       const newExplorerTabs = fileExplorerTabs.filter(t => t.key !== closedTab.key);
       setFileExplorerTabs(newExplorerTabs);
     }
-    
+
     // Ajustar índice activo
     if (activeTabIndex === idx) {
       const newIndex = Math.max(0, idx - 1);
@@ -668,7 +668,7 @@ export const useTabManagement = (toast, {
       // Solo actualizar el índice guardado si el grupo actual tiene pestañas después del cierre
       const currentGroupKey = activeGroupId || GROUP_KEYS?.DEFAULT;
       const remainingTabs = getTabsInGroup(activeGroupId);
-      
+
       if (remainingTabs.length > 1) { // > 1 porque la pestaña aún no se ha eliminado completamente
         setGroupActiveIndices(prev => ({
           ...prev,
@@ -681,7 +681,7 @@ export const useTabManagement = (toast, {
       // Solo actualizar el índice guardado si el grupo actual tiene pestañas después del cierre
       const currentGroupKey = activeGroupId || GROUP_KEYS?.DEFAULT;
       const remainingTabs = getTabsInGroup(activeGroupId);
-      
+
       if (remainingTabs.length > 1) { // > 1 porque la pestaña aún no se ha eliminado completamente
         setGroupActiveIndices(prev => ({
           ...prev,
@@ -694,7 +694,7 @@ export const useTabManagement = (toast, {
   // Función para actualizar openTabOrder basado en la configuración de bloqueo
   const updateOpenTabOrderForHomeButton = useCallback(() => {
     const isHomeButtonLocked = localStorage.getItem('lock_home_button') === 'true';
-    
+
     if (!isHomeButtonLocked) {
       // Si no está bloqueado, incluir las pestañas de inicio en openTabOrder para permitir reordenamiento
       const homeKeys = homeTabs.map(t => t.key);
@@ -708,6 +708,27 @@ export const useTabManagement = (toast, {
       setOpenTabOrder(prev => prev.filter(k => !homeKeys.includes(k)));
     }
   }, [homeTabs, setOpenTabOrder]);
+
+  const handleToggleBroadcast = useCallback((tabKey) => {
+    const toggleInArray = (arr, setArr) => {
+      let found = false;
+      const newArr = arr.map(tab => {
+        if (tab.key === tabKey) {
+          found = true;
+          return { ...tab, isBroadcastActive: !tab.isBroadcastActive };
+        }
+        return tab;
+      });
+      if (found) setArr(newArr);
+      return found;
+    };
+
+    if (toggleInArray(sshTabs, setSshTabs)) return;
+    if (toggleInArray(rdpTabs, setRdpTabs)) return;
+    if (toggleInArray(guacamoleTabs, setGuacamoleTabs)) return;
+    if (toggleInArray(fileExplorerTabs, setFileExplorerTabs)) return;
+    toggleInArray(homeTabs, setHomeTabs);
+  }, [sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs, homeTabs]);
 
   // === RETORNO DEL HOOK ===
   return {
@@ -733,10 +754,10 @@ export const useTabManagement = (toast, {
     tabDistros, setTabDistros,
     activeListenersRef,
     terminalRefs,
-    
+
     // Constantes
     GROUP_COLORS,
-    
+
     // Funciones
     getNextGroupColor,
     getAllTabs,
@@ -749,6 +770,7 @@ export const useTabManagement = (toast, {
     cleanupTabDistro,
     handleTabContextMenu,
     handleTabClose,
-    updateOpenTabOrderForHomeButton
+    updateOpenTabOrderForHomeButton,
+    handleToggleBroadcast
   };
 };

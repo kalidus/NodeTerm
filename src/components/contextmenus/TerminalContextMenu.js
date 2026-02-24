@@ -1,7 +1,7 @@
 import React from 'react';
 
-const TerminalContextMenu = ({ 
-  terminalContextMenu, 
+const TerminalContextMenu = ({
+  terminalContextMenu,
   setTerminalContextMenu,
   onCopy,
   onPaste,
@@ -9,9 +9,39 @@ const TerminalContextMenu = ({
   onClear,
   onStartRecording,
   onStopRecording,
-  isRecording = false
+  isRecording = false,
+  handleToggleBroadcast,
+  getAllTabs
 }) => {
   if (!terminalContextMenu) return null;
+
+  const allTabs = getAllTabs ? getAllTabs() : [];
+
+  let parentTab = allTabs.find(t => t.key === terminalContextMenu.tabKey);
+  if (!parentTab) {
+    parentTab = allTabs.find(tab => {
+      if (tab.type !== 'split') return false;
+
+      const hasChild = (node) => {
+        if (!node) return false;
+        if (node.key === terminalContextMenu.tabKey) return true;
+        if (node.type === 'split') return hasChild(node.first) || hasChild(node.second);
+        return false;
+      };
+
+      if (tab.first || tab.second) {
+        return hasChild(tab.first) || hasChild(tab.second);
+      } else if (Array.isArray(tab.terminals)) {
+        return tab.terminals.some(t => t.key === terminalContextMenu.tabKey);
+      } else if (tab.leftTerminal && tab.rightTerminal) {
+        return tab.leftTerminal.key === terminalContextMenu.tabKey ||
+          tab.rightTerminal.key === terminalContextMenu.tabKey;
+      }
+      return false;
+    });
+  }
+
+  const isBroadcasting = parentTab ? parentTab.isBroadcastActive : false;
 
   const handleCopy = () => {
     onCopy(terminalContextMenu.tabKey);
@@ -126,6 +156,30 @@ const TerminalContextMenu = ({
             <i className={isRecording ? 'pi pi-stop-circle' : 'pi pi-circle'} style={{ width: '16px', color: isRecording ? '#d32f2f' : '#4caf50' }}></i>
             {isRecording ? '⏹ Detener grabación' : '⏺ Iniciar grabación'}
           </div>
+        )}
+        {handleToggleBroadcast && (
+          <>
+            <div className="menu-separator" style={{ height: '1px', margin: '4px 0' }}></div>
+            <div
+              className="menu-item"
+              style={{
+                padding: '8px 12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onClick={() => {
+                if (parentTab) {
+                  handleToggleBroadcast(parentTab.key);
+                }
+                setTerminalContextMenu(null);
+              }}
+            >
+              <i className={`pi ${isBroadcasting ? 'pi-eye-slash' : 'pi-wifi'}`} style={{ width: '16px' }}></i>
+              {isBroadcasting ? 'Desactivar Broadcast (Input simultáneo)' : 'Activar Broadcast (Input simultáneo)'}
+            </div>
+          </>
         )}
       </div>
 
