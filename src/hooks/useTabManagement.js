@@ -730,6 +730,39 @@ export const useTabManagement = (toast, {
     toggleInArray(homeTabs, setHomeTabs);
   }, [sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs, homeTabs]);
 
+  const handleToggleBroadcastTarget = useCallback((tabKey, targetId) => {
+    const toggleInArray = (arr, setArr) => {
+      let found = false;
+      const newArr = arr.map(tab => {
+        if (tab.key === tabKey) {
+          found = true;
+          // Una lista de 'targets' excluidos.
+          const currentExcluded = tab.broadcastExcludedTargets || [];
+          let newExcluded;
+
+          if (currentExcluded.includes(targetId)) {
+            // Si ya estaba excluido, lo volvemos a incluir (quitándolo de la lista de exclusiones)
+            newExcluded = currentExcluded.filter(id => id !== targetId);
+          } else {
+            // Si no estaba excluido, lo excluimos
+            newExcluded = [...currentExcluded, targetId];
+          }
+
+          return { ...tab, broadcastExcludedTargets: newExcluded };
+        }
+        return tab;
+      });
+      if (found) setArr(newArr);
+      return found;
+    };
+
+    if (toggleInArray(sshTabs, setSshTabs)) return;
+    if (toggleInArray(rdpTabs, setRdpTabs)) return;
+    if (toggleInArray(guacamoleTabs, setGuacamoleTabs)) return;
+    if (toggleInArray(fileExplorerTabs, setFileExplorerTabs)) return;
+    toggleInArray(homeTabs, setHomeTabs);
+  }, [sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs, homeTabs]);
+
   // === RETORNO DEL HOOK ===
   return {
     // Estado
@@ -771,6 +804,7 @@ export const useTabManagement = (toast, {
     handleTabContextMenu,
     handleTabClose,
     updateOpenTabOrderForHomeButton,
-    handleToggleBroadcast
+    handleToggleBroadcast,
+    handleToggleBroadcastTarget
   };
 };

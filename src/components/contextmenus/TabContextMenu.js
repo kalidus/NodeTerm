@@ -13,6 +13,7 @@ const TabContextMenu = ({
   deleteGroup,
   toast,
   handleToggleBroadcast,
+  handleToggleBroadcastTarget,
   getAllTabs
 }) => {
   if (!tabContextMenu) return null;
@@ -20,6 +21,27 @@ const TabContextMenu = ({
   // Encontrar la pestaña actual en base a tabKey
   const currentTab = getAllTabs ? getAllTabs().find(t => t.key === tabContextMenu.tabKey) : null;
   const isBroadcasting = currentTab ? currentTab.isBroadcastActive : false;
+
+  const extractTerminals = (tab) => {
+    const list = [];
+    if (!tab) return list;
+    if (tab.type === 'terminal' || tab.type === 'local-terminal') {
+      list.push({ key: tab.key, label: tab.label || tab.key });
+    } else if (tab.type === 'split') {
+      if (tab.first || tab.second) {
+        if (tab.first) list.push(...extractTerminals(tab.first));
+        if (tab.second) list.push(...extractTerminals(tab.second));
+      } else if (Array.isArray(tab.terminals)) {
+        tab.terminals.forEach(t => list.push(...extractTerminals(t)));
+      } else if (tab.leftTerminal && tab.rightTerminal) {
+        list.push(...extractTerminals(tab.leftTerminal));
+        list.push(...extractTerminals(tab.rightTerminal));
+      }
+    }
+    return list;
+  };
+
+  const terminalsInGroup = isBroadcasting && currentTab ? extractTerminals(currentTab) : [];
 
   const handleAddToFavorites = () => {
     const isAlreadyFavorite = isGroupFavorite(tabContextMenu.group.id, tabContextMenu.group.name);
@@ -218,14 +240,52 @@ const TabContextMenu = ({
                     alignItems: 'center',
                     gap: '8px'
                   }}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     handleToggleBroadcast(tabContextMenu.tabKey);
-                    setTabContextMenu(null);
                   }}
                 >
                   <i className={`pi ${isBroadcasting ? 'pi-eye-slash' : 'pi-wifi'}`} style={{ width: '16px' }}></i>
                   {isBroadcasting ? 'Desactivar Broadcast (Input simultáneo)' : 'Activar Broadcast (Input simultáneo)'}
                 </div>
+
+                {isBroadcasting && terminalsInGroup.length > 0 && (
+                  <div style={{ marginTop: '4px' }}>
+                    <div className="menu-header" style={{ padding: '8px 12px 4px 12px', fontWeight: 'bold', fontSize: '11px', color: 'var(--ui-context-text)', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Destinos del Broadcast
+                    </div>
+                    {terminalsInGroup.map(term => {
+                      const isExcluded = currentTab.broadcastExcludedTargets?.includes(term.key);
+                      const isChecked = !isExcluded;
+
+                      return (
+                        <div
+                          key={term.key}
+                          className="menu-item"
+                          style={{
+                            padding: '6px 12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '12px'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (handleToggleBroadcastTarget) {
+                              handleToggleBroadcastTarget(currentTab.key, term.key);
+                            }
+                          }}
+                        >
+                          <i className={`pi ${isChecked ? 'pi-check-square' : 'pi-stop'}`} style={{ width: '16px', color: isChecked ? '#4caf50' : 'inherit', opacity: isChecked ? 1 : 0.5 }}></i>
+                          <span style={{ opacity: isChecked ? 1 : 0.6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+                            {term.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </>
             )}
           </>

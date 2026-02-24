@@ -888,7 +888,7 @@ const App = () => {
     tabDistros, setTabDistros,
     GROUP_COLORS, getNextGroupColor, getAllTabs, getTabsInGroup, getFilteredTabs,
     handleLoadGroupFromFavorites, createNewGroup, deleteGroup, moveTabToGroup, cleanupTabDistro,
-    handleTabContextMenu, handleTabClose, handleToggleBroadcast
+    handleTabContextMenu, handleTabClose, handleToggleBroadcast, handleToggleBroadcastTarget
   } = useTabManagement(toast, {
     cleanupTabDistro,
     setSshConnectionStatus,
@@ -2345,7 +2345,15 @@ const App = () => {
       return ids;
     };
 
-    const termIds = extractTerminalIds(activeBroadcastTab);
+    let termIds = extractTerminalIds(activeBroadcastTab);
+
+    // Filtramos los terminales excluidos
+    if (activeBroadcastTab.broadcastExcludedTargets && activeBroadcastTab.broadcastExcludedTargets.length > 0) {
+      termIds = termIds.filter(id => !activeBroadcastTab.broadcastExcludedTargets.includes(id));
+    }
+
+    // Si se excluyeron todos, termIds estará vacío
+    if (termIds.length === 0) return;
 
     console.log('[Broadcast] Extracted termIds to broadcast:', termIds);
 
@@ -2562,6 +2570,7 @@ const App = () => {
     // Active connections
     activeIds,
     handleToggleBroadcast,
+    handleToggleBroadcastTarget,
     handleBroadcastData
   }), [
     onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, onOpenVncConnection, handleLoadGroupFromFavorites,
@@ -2570,7 +2579,7 @@ const App = () => {
     explorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
     handleTerminalContextMenu, showTerminalContextMenu, sshStatsByTabId,
     terminalRefs, statusBarIconTheme, handleCloseSplitPanel, openInSplit, rdpTabs, findNodeByKey,
-    setSshTabs, setShowCreateGroupDialog, activeIds, handleToggleBroadcast, handleBroadcastData
+    setSshTabs, setShowCreateGroupDialog, activeIds, handleToggleBroadcast, handleToggleBroadcastTarget, handleBroadcastData
   ]);
 
   if (!isAppReady) {
@@ -3003,6 +3012,7 @@ const App = () => {
           deleteGroup={deleteGroup}
           toast={toast}
           handleToggleBroadcast={handleToggleBroadcast}
+          handleToggleBroadcastTarget={handleToggleBroadcastTarget}
           getAllTabs={getAllTabs}
 
           // Selected node props

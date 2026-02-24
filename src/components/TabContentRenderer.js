@@ -1228,6 +1228,7 @@ const TabContentRenderer = React.memo(({
         openInSplit={openInSplit}
         isBroadcastActive={tab.isBroadcastActive || false}
         onBroadcastData={handleBroadcastData ? (data) => handleBroadcastData(tab.key, data) : undefined}
+        broadcastExcludedTargets={tab.broadcastExcludedTargets || []}
       />
     );
   }

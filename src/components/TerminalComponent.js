@@ -8,7 +8,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 
-const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu, active, stats, hideStatusBar = false, statusBarIconTheme = 'classic', onDrop, onDragOver, isBroadcastActive, onBroadcastData }, ref) => {
+const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu, active, stats, hideStatusBar = false, statusBarIconTheme = 'classic', onDrop, onDragOver, isBroadcastActive, onBroadcastData, broadcastExcludedTargets = [] }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
@@ -533,7 +533,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     return (
         <>
             <div
-                className={`terminal-outer-padding ${isBroadcastActive ? 'broadcast-active' : ''}`}
+                className={`terminal-outer-padding ${isBroadcastActive && !broadcastExcludedTargets?.includes(tabId) ? 'broadcast-active' : ''}`}
                 style={{
                     display: 'flex',
                     flexDirection: 'column',

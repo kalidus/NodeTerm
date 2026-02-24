@@ -146,6 +146,7 @@ const SplitLayout = ({
   statusBarIconTheme = 'classic',
   isBroadcastActive = false,
   onBroadcastData = null,
+  broadcastExcludedTargets = [],
   externalPaneSize = null,
   onManualResize = null,
   onPaneSizeChange = null,
@@ -336,6 +337,7 @@ const SplitLayout = ({
             statusBarIconTheme={statusBarIconTheme}
             isBroadcastActive={isBroadcastActive}
             onBroadcastData={onBroadcastData}
+            broadcastExcludedTargets={broadcastExcludedTargets}
           />
         </div>
       );
@@ -360,6 +362,7 @@ const SplitLayout = ({
           path={nodePath}
           isBroadcastActive={isBroadcastActive}
           onBroadcastData={onBroadcastData}
+          broadcastExcludedTargets={broadcastExcludedTargets}
           style={{ '--terminal-theme-splitter': effectiveSplitterColor }}
         />
       );
@@ -565,6 +568,7 @@ const SplitLayout = ({
             statusBarIconTheme={statusBarIconTheme}
             isBroadcastActive={isBroadcastActive}
             onBroadcastData={onBroadcastData}
+            broadcastExcludedTargets={broadcastExcludedTargets}
             onDrop={(e) => {
               // Manejador de Drop para split
               const draggedNode = (window.draggedConnectionNodeRef && window.draggedConnectionNodeRef.current) ||
@@ -1483,6 +1487,7 @@ const SplitLayout = ({
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}
               onBroadcastData={onBroadcastData}
+              broadcastExcludedTargets={broadcastExcludedTargets}
             />
           )}
         </div>
@@ -1551,6 +1556,7 @@ const SplitLayout = ({
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}
               onBroadcastData={onBroadcastData}
+              broadcastExcludedTargets={broadcastExcludedTargets}
             />
           )}
         </div>
@@ -1638,6 +1644,7 @@ const SplitLayout = ({
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}
               onBroadcastData={onBroadcastData}
+              broadcastExcludedTargets={broadcastExcludedTargets}
             />
           )}
         </div>
@@ -1689,12 +1696,12 @@ const SplitLayout = ({
               fontSize={fontSize}
               theme={theme}
               onContextMenu={onContextMenu}
-              active={true}
               stats={sshStatsByTabId?.[rightTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}
               onBroadcastData={onBroadcastData}
+              broadcastExcludedTargets={broadcastExcludedTargets}
             />
           )}
         </div>

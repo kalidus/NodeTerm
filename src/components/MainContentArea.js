@@ -77,6 +77,7 @@ const MainContentArea = ({
   deleteGroup,
   toast,
   handleToggleBroadcast,
+  handleToggleBroadcastTarget,
   getAllTabs,
 
   // Selected node props
@@ -1415,6 +1416,7 @@ const MainContentArea = ({
                   deleteGroup={deleteGroup}
                   toast={toast}
                   handleToggleBroadcast={handleToggleBroadcast}
+                  handleToggleBroadcastTarget={handleToggleBroadcastTarget}
                   getAllTabs={getAllTabs}
                 />
 
@@ -1429,6 +1431,7 @@ const MainContentArea = ({
                   onStopRecording={handleStopRecording}
                   isRecording={terminalContextMenu ? isRecordingTab(terminalContextMenu.tabKey) : false}
                   handleToggleBroadcast={handleToggleBroadcast}
+                  handleToggleBroadcastTarget={handleToggleBroadcastTarget}
                   getAllTabs={getAllTabs}
                 />
 
