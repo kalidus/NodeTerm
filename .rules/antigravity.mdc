@@ -1,0 +1,12 @@
+---
+description: Reglas de comportamiento para Antigravity
+globs: 
+alwaysApply: true
+---
+# Reglas de Comportamiento de Antigravity
+
+- **COMMITS**: NUNCA realices un `git commit` o `git push` automáticamente. Debes pedir permiso explícito al usuario antes de realizar cualquier commit, incluso si crees que es lo correcto para completar la tarea.
+- **MENSAJES DE COMMIT**: Cuando se te pida realizar un commit, los mensajes deben ser precisos y técnicos, evitando resúmenes genéricos largos.
+- **EJECUCIÓN**: No lances la aplicación (`npm run dev`) a menos que sea estrictamente necesario para verificar un cambio y el usuario esté de acuerdo.
+- **PLATAFORMA**: Detecta siempre el sistema operativo actual. No asumas que estás en Windows si el usuario está en macOS o Linux.
+- **PROACTIVIDAD**: Sé proactivo proponiendo soluciones, pero mantente dentro de los límites de estas reglas de consentimiento.
