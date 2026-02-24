@@ -1,0 +1,8 @@
+---
+description: Reglas para Git y GitHub
+globs: 
+alwaysApply: true
+---
+- NUNCA realices `git commit` ni `git push` sin consentimiento explícito.
+- Los mensajes de commit deben ser precisos y técnicos.
+- No ejecutes la aplicación de forma automática sin permiso.
