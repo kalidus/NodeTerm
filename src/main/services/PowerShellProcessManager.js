@@ -13,6 +13,34 @@ let alternativePtyConfig = null;
 let SafeWindowsTerminal = null;
 
 /**
+ * Asegura que los archivos de node-pty tengan permisos de ejecución en macOS
+ * Fail-safe para problemas de "posix_spawnp failed" en despliegues.
+ */
+function ensureMacPtyPermissions() {
+  if (os.platform() !== 'darwin') return;
+
+  try {
+    const fs = require('fs');
+    const path = require('path');
+
+    // Buscar la ruta de node-pty
+    // Intentar encontrar el prebuild de la arquitectura actual
+    const arch = process.arch === 'arm64' ? 'darwin-arm64' : 'darwin-x64';
+    const ptyPath = path.join(process.cwd(), 'node_modules', 'node-pty', 'prebuilds', arch, 'spawn-helper');
+
+    if (fs.existsSync(ptyPath)) {
+      const stats = fs.statSync(ptyPath);
+      if (!(stats.mode & 0o111)) {
+        console.log(`[SafeGuard] Corrigiendo permisos para spawn-helper en macOS: ${ptyPath}`);
+        fs.chmodSync(ptyPath, 0o755);
+      }
+    }
+  } catch (e) {
+    console.warn('[SafeGuard] Error verificando permisos de node-pty:', e.message);
+  }
+}
+
+/**
  * Inicializa el gestor con dependencias
  */
 function initialize(dependencies) {
@@ -21,6 +49,9 @@ function initialize(dependencies) {
   alternativePtyConfig = dependencies.alternativePtyConfig;
   SafeWindowsTerminal = dependencies.SafeWindowsTerminal;
   isAppQuitting = dependencies.isAppQuitting || { value: false };
+
+  // Ejecutar salvaguarda para macOS
+  ensureMacPtyPermissions();
 }
 
 /**
