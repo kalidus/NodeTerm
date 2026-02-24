@@ -474,14 +474,14 @@ const SplitLayout = ({
       position: 'absolute',
       backgroundColor: 'transparent',
       backgroundImage: isVertical
-        ? `linear-gradient(to right, transparent calc(50% - 2px), ${visibleLineColor} calc(50% - 2px), ${visibleLineColor} calc(50% + 2px), transparent calc(50% + 2px))`
-        : `linear-gradient(to bottom, transparent calc(50% - 2px), ${visibleLineColor} calc(50% - 2px), ${visibleLineColor} calc(50% + 2px), transparent calc(50% + 2px))`,
+        ? `linear-gradient(to right, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 1px), transparent calc(50% + 1px))`
+        : `linear-gradient(to bottom, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 1px), transparent calc(50% + 1px))`,
       backgroundRepeat: 'no-repeat',
       backgroundSize: '100% 100%',
       backgroundPosition: 'center',
       cursor: isVertical ? 'col-resize' : 'row-resize',
       zIndex: 1000, // z-index alto para todos los separadores
-      transition: 'filter 0.15s ease',
+      transition: 'filter 0.15s ease, background-color 0.15s ease',
       pointerEvents: 'auto', // Asegurar que capture eventos del mouse
       opacity: 1 // Mejor visibilidad
     });
@@ -694,7 +694,7 @@ const SplitLayout = ({
                 flexShrink: 0,
                 position: 'relative',
                 backgroundColor: 'transparent', // Sin fondo sólido para evitar "doble línea"
-                backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 2px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 2px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 2px), transparent calc(50% + 2px))`,
+                backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 1px), transparent calc(50% + 1px))`,
                 backgroundRepeat: 'no-repeat',
                 backgroundSize: '100% 100%',
                 backgroundPosition: 'center',
@@ -792,7 +792,7 @@ const SplitLayout = ({
               flexShrink: 0,
               position: 'relative',
               backgroundColor: 'transparent', // Sin fondo sólido para evitar "doble línea"
-              backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 2px), ${visibleLineColor} calc(50% - 2px), ${visibleLineColor} calc(50% + 2px), transparent calc(50% + 2px))`,
+              backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 1px), transparent calc(50% + 1px))`,
               backgroundRepeat: 'no-repeat',
               backgroundSize: '100% 100%',
               backgroundPosition: 'center',
@@ -1504,7 +1504,7 @@ const SplitLayout = ({
             transition: 'filter 0.15s ease',
             userSelect: 'none',
             backgroundColor: 'transparent',
-            backgroundImage: `linear-gradient(to right, transparent calc(50% - 2px), ${effectiveSplitterColor} calc(50% - 2px), ${effectiveSplitterColor} calc(50% + 2px), transparent calc(50% + 2px))`,
+            backgroundImage: `linear-gradient(to right, transparent calc(50% - 1px), var(--ui-tab-border, ${effectiveSplitterColor}) calc(50% - 1px), var(--ui-tab-border, ${effectiveSplitterColor}) calc(50% + 1px), transparent calc(50% + 1px))`,
             backgroundRepeat: 'no-repeat',
             backgroundSize: '100% 100%',
             opacity: 1

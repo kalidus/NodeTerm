@@ -667,12 +667,12 @@ class ThemeManager {
 
       /* === GUTTER SPLITTER === */
       .p-splitter-gutter {
-        background: var(--ui-sidebar-gutter-bg) !important;
+        background-color: var(--ui-sidebar-gutter-bg) !important;
         border: none !important;
-        transition: background 0.2s;
+        transition: background-color 0.2s;
       }
       .p-splitter-gutter:hover {
-        background: var(--ui-sidebar-hover) !important;
+        background-color: var(--ui-sidebar-hover) !important;
       }
 
       /* === DIVIDER STYLES === */
