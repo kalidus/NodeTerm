@@ -47,8 +47,29 @@ function parseLsOutput(output) {
  * Registra todos los manejadores IPC relacionados con SSH
  * @param {Object} dependencies - Dependencias necesarias para los handlers
  */
+/**
+ * Parsea la salida de 'ps aux' en una lista de objetos de proceso
+ */
+function parseProcessList(output) {
+  const lines = (output || '').trim().split('\n').filter(Boolean);
+  return lines.map(line => {
+    const parts = line.trim().split(/\s+/);
+    if (parts.length < 11) return null;
+    const [user, pid, cpu, mem, vsz, rss, tty, stat, start, time, ...cmdParts] = parts;
+    return {
+      user,
+      pid: parseInt(pid, 10) || 0,
+      cpu: parseFloat(cpu) || 0,
+      mem: parseFloat(mem) || 0,
+      vsz: parseInt(vsz, 10) || 0,
+      rss: parseInt(rss, 10) || 0,
+      command: cmdParts.join(' ').substring(0, 80)
+    };
+  }).filter(Boolean);
+}
+
 function registerSSHHandlers(dependencies = {}) {
-  const { findSSHConnection } = dependencies || {};
+  const { findSSHConnection, sshConnections } = dependencies || {};
 
   // SSH: Obtener directorio home
   ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => {
@@ -275,17 +296,17 @@ function registerSSHHandlers(dependencies = {}) {
       if (!sshConfig || typeof sshConfig !== 'object') {
         return { success: false, error: 'sshConfig inválido' };
       }
-      
+
       // Sanitizar paths (prevenir path traversal)
       const safeRemotePath = remotePath.trim();
       const safeLocalPath = localPath.trim();
-      
+
       if (sshConfig.useBastionWallix) {
         // Construir string de conexión Wallix para SFTP
         // Formato: <USER>@<BASTION>::<TARGET>@<DEVICE>::<SERVICE>
         // En la mayoría de los casos, bastionUser ya tiene el formato correcto
         const sftp = new SftpClient();
-        const         connectConfig = {
+        const connectConfig = {
           host: sshConfig.bastionHost,
           port: sshConfig.port || 22,
           username: sshConfig.bastionUser, // Wallix espera el string especial aquí
@@ -335,16 +356,16 @@ function registerSSHHandlers(dependencies = {}) {
       if (!sshConfig || typeof sshConfig !== 'object') {
         return { success: false, error: 'sshConfig inválido' };
       }
-      
+
       // Sanitizar paths
       const safeLocalPath = localPath.trim();
       const safeRemotePath = remotePath.trim();
-      
+
       // Verificar que el archivo local existe
       if (!fs.existsSync(safeLocalPath)) {
         return { success: false, error: 'El archivo local no existe' };
       }
-      
+
       const sftp = new SftpClient();
       let connectConfig;
       if (sshConfig.useBastionWallix) {
@@ -372,8 +393,8 @@ function registerSSHHandlers(dependencies = {}) {
           readyTimeout: 20000,
         };
       }
-        await sftp.connect(connectConfig);
-        await sftp.fastPut(safeLocalPath, safeRemotePath);
+      await sftp.connect(connectConfig);
+      await sftp.fastPut(safeLocalPath, safeRemotePath);
       await sftp.end();
       return { success: true };
     } catch (err) {
@@ -409,9 +430,9 @@ function registerSSHHandlers(dependencies = {}) {
           readyTimeout: 20000,
         };
       }
-      
+
       await sftp.connect(connectConfig);
-      
+
       if (isDirectory) {
         // Probar diferentes métodos para directorios
         try {
@@ -422,7 +443,7 @@ function registerSSHHandlers(dependencies = {}) {
       } else {
         await sftp.delete(remotePath);
       }
-      
+
       await sftp.end();
       return { success: true };
     } catch (err) {
@@ -513,7 +534,7 @@ function registerSSHHandlers(dependencies = {}) {
       // indicando que debe ser llamado desde el renderer.
       // Sin embargo, si estamos en el main process y tenemos acceso a persistencia,
       // podríamos leer el archivo de configuración.
-      
+
       // De momento, devolvemos un indicador para que se maneje correctamente
       return {
         success: false,
@@ -531,6 +552,26 @@ function registerSSHHandlers(dependencies = {}) {
 
   // Nota: El handler 'app:save-ssh-connections-for-mcp' está registrado directamente en main.js
   // para asegurar que se cargue correctamente sin depender de registerSSHHandlers
+
+  // SSH: Obtener lista de procesos para System Monitor
+  ipcMain.handle('ssh:get-processes', async (event, { tabId }) => {
+    try {
+      const conn = sshConnections && sshConnections[tabId];
+      if (!conn || !conn.ssh) {
+        return { success: false, error: 'No SSH connection found for this tab' };
+      }
+
+      // Use exec wrapper created by SSHAuthService.createExecWrapper
+      // Use portable sort (avoids GNU-only --sort flag and --no-headers)
+      const raw = await conn.ssh.exec(
+        'ps aux 2>/dev/null | tail -n +2 | sort -k3 -rn | head -80'
+      );
+      const processes = parseProcessList(raw);
+      return { success: true, processes };
+    } catch (err) {
+      return { success: false, error: err.message || String(err) };
+    }
+  });
 
   // Todos los handlers SSH registrados exitosamente
 }

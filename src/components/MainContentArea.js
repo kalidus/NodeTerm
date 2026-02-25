@@ -12,6 +12,7 @@ import TabContentRenderer from './TabContentRenderer';
 import TabContextMenu from './contextmenus/TabContextMenu';
 import TerminalContextMenu from './contextmenus/TerminalContextMenu';
 import OverflowMenu from './contextmenus/OverflowMenu';
+import SSHSystemMonitorPanel from './SSHSystemMonitorPanel';
 import { TAB_TYPES } from '../utils/constants';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
@@ -110,6 +111,9 @@ const MainContentArea = ({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const tabsContainerRef = useRef(null);
+
+  // Estado para el panel SSH System Monitor
+  const [sshSystemMonitorTabId, setSshSystemMonitorTabId] = useState(null);
 
   // Función para obtener el terminal por defecto desde configuración
   const getDefaultTerminalFromConfig = () => {
@@ -1433,6 +1437,12 @@ const MainContentArea = ({
                   handleToggleBroadcast={handleToggleBroadcast}
                   handleToggleBroadcastTarget={handleToggleBroadcastTarget}
                   getAllTabs={getAllTabs}
+                  onShowSystemMonitor={(tabKey) => setSshSystemMonitorTabId(tabKey)}
+                  isSSHSession={terminalContextMenu ? (() => {
+                    const allT = getAllTabs ? getAllTabs() : [];
+                    const tab = allT.find(t => t.key === terminalContextMenu.tabKey);
+                    return tab ? (tab.type === 'terminal' || tab.type === TAB_TYPES.TERMINAL) : false;
+                  })() : false}
                 />
 
                 <OverflowMenu
@@ -1497,6 +1507,14 @@ const MainContentArea = ({
                         // Terminal props (específicas)
                         sshStatsByTabId={sshStatsByTabId}
                       />
+                      {/* SSH System Monitor: right-side panel inside per-tab absolute div */}
+                      {tab.type === 'terminal' && sshSystemMonitorTabId === tab.key && (
+                        <SSHSystemMonitorPanel
+                          tabId={tab.key}
+                          stats={sshStatsByTabId?.[tab.key] || {}}
+                          onClose={() => setSshSystemMonitorTabId(null)}
+                        />
+                      )}
                     </div>
                   );
                 })}

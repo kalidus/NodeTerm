@@ -1,0 +1,494 @@
+/* ============================================================
+   SSH System Monitor Panel - Task Manager Style
+   ============================================================ */
+
+.ssh-monitor-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 45%;
+    z-index: 1000;
+    background: transparent;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    animation: ssh-monitor-fade-in 0.22s ease;
+}
+
+@keyframes ssh-monitor-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.ssh-monitor-panel {
+    width: 100%;
+    height: 100%;
+    background: #0d1117;
+    border: none;
+    border-left: 1px solid #30363d;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.6);
+    font-family: 'Consolas', 'Courier New', monospace;
+    animation: ssh-monitor-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes ssh-monitor-slide-in {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* ---- Header ---- */
+
+.ssh-monitor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px 10px;
+    background: #161b22;
+    border-bottom: 1px solid #21262d;
+    flex-shrink: 0;
+}
+
+.ssh-monitor-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ssh-monitor-title-icon {
+    font-size: 18px;
+}
+
+.ssh-monitor-title h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #e6edf3;
+    letter-spacing: 0.3px;
+}
+
+.ssh-monitor-host-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 11px;
+    color: #8b949e;
+}
+
+.ssh-monitor-host-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: #1c2128;
+    border: 1px solid #30363d;
+    border-radius: 5px;
+    padding: 3px 8px;
+    color: #58a6ff;
+}
+
+.ssh-monitor-uptime {
+    color: #3fb950;
+}
+
+.ssh-monitor-close {
+    background: transparent;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #8b949e;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.ssh-monitor-close:hover {
+    background: #da3633;
+    border-color: #da3633;
+    color: #fff;
+}
+
+/* ---- Stats Grid ---- */
+
+.ssh-monitor-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: #21262d;
+    border-bottom: 1px solid #21262d;
+    flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+    .ssh-monitor-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.ssh-monitor-stat-card {
+    background: #0d1117;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ssh-monitor-stat-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8b949e;
+}
+
+.ssh-monitor-stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #e6edf3;
+    line-height: 1;
+}
+
+.ssh-monitor-stat-value.cpu {
+    color: #58a6ff;
+}
+
+.ssh-monitor-stat-value.mem {
+    color: #a371f7;
+}
+
+.ssh-monitor-stat-value.disk {
+    color: #3fb950;
+}
+
+.ssh-monitor-stat-value.net {
+    color: #f0883e;
+}
+
+.ssh-monitor-stat-sub {
+    font-size: 11px;
+    color: #8b949e;
+}
+
+/* ---- Progress Bars ---- */
+
+.ssh-monitor-bar-track {
+    height: 5px;
+    background: #21262d;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 2px;
+}
+
+.ssh-monitor-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.ssh-monitor-bar-fill.cpu {
+    background: linear-gradient(90deg, #1f6feb, #58a6ff);
+}
+
+.ssh-monitor-bar-fill.mem {
+    background: linear-gradient(90deg, #6e40c9, #a371f7);
+}
+
+.ssh-monitor-bar-fill.disk {
+    background: linear-gradient(90deg, #1a7f37, #3fb950);
+}
+
+.ssh-monitor-bar-fill.net {
+    background: linear-gradient(90deg, #b45309, #f0883e);
+}
+
+/* ---- Sparkline mini chart ---- */
+
+.ssh-monitor-sparkline {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 24px;
+    margin-top: 4px;
+}
+
+.ssh-monitor-spark-bar {
+    flex: 1;
+    min-width: 3px;
+    border-radius: 1px;
+    background: #58a6ff;
+    opacity: 0.55;
+    transition: height 0.3s ease;
+}
+
+/* ---- Disks section ---- */
+
+.ssh-monitor-disks {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ssh-monitor-disk-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+}
+
+.ssh-monitor-disk-name {
+    color: #8b949e;
+    width: 50px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.ssh-monitor-disk-bar-track {
+    flex: 1;
+    height: 4px;
+    background: #21262d;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.ssh-monitor-disk-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #1a7f37, #3fb950);
+    transition: width 0.5s ease;
+}
+
+.ssh-monitor-disk-pct {
+    color: #3fb950;
+    font-weight: 600;
+    width: 30px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* ---- Process Table ---- */
+
+.ssh-monitor-process-section {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+}
+
+.ssh-monitor-process-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px 8px;
+    border-bottom: 1px solid #21262d;
+    flex-shrink: 0;
+    gap: 12px;
+}
+
+.ssh-monitor-process-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8b949e;
+    white-space: nowrap;
+}
+
+.ssh-monitor-process-filter {
+    flex: 1;
+    max-width: 260px;
+    padding: 4px 10px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e6edf3;
+    font-size: 12px;
+    font-family: 'Consolas', monospace;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.ssh-monitor-process-filter:focus {
+    border-color: #388bfd;
+}
+
+.ssh-monitor-process-filter::placeholder {
+    color: #484f58;
+}
+
+.ssh-monitor-process-count {
+    font-size: 11px;
+    color: #8b949e;
+    white-space: nowrap;
+}
+
+.ssh-monitor-table-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.ssh-monitor-table-wrapper::-webkit-scrollbar {
+    width: 6px;
+}
+
+.ssh-monitor-table-wrapper::-webkit-scrollbar-track {
+    background: #161b22;
+}
+
+.ssh-monitor-table-wrapper::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 3px;
+}
+
+.ssh-monitor-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.ssh-monitor-table th {
+    position: sticky;
+    top: 0;
+    background: #161b22;
+    color: #8b949e;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid #21262d;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    z-index: 1;
+}
+
+.ssh-monitor-table th:hover {
+    color: #e6edf3;
+}
+
+.ssh-monitor-table th.sorted {
+    color: #58a6ff;
+}
+
+.ssh-monitor-table td {
+    padding: 5px 10px;
+    color: #c9d1d9;
+    border-bottom: 1px solid #161b22;
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 0;
+}
+
+.ssh-monitor-table tr:hover td {
+    background: #161b22;
+}
+
+.ssh-monitor-table td.pid {
+    color: #8b949e;
+    width: 60px;
+}
+
+.ssh-monitor-table td.user {
+    color: #3fb950;
+    width: 90px;
+}
+
+.ssh-monitor-table td.cpu {
+    color: #58a6ff;
+    font-weight: 600;
+    width: 60px;
+}
+
+.ssh-monitor-table td.mem {
+    color: #a371f7;
+    width: 60px;
+}
+
+.ssh-monitor-table td.rss {
+    color: #8b949e;
+    width: 75px;
+}
+
+.ssh-monitor-table td.cmd {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    color: #e6edf3;
+}
+
+.ssh-monitor-cpu-mini-bar {
+    display: inline-block;
+    height: 8px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #1f6feb, #58a6ff);
+    min-width: 2px;
+    vertical-align: middle;
+    margin-left: 6px;
+    opacity: 0.8;
+}
+
+/* ---- Footer ---- */
+
+.ssh-monitor-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 16px;
+    background: #161b22;
+    border-top: 1px solid #21262d;
+    font-size: 11px;
+    color: #8b949e;
+    flex-shrink: 0;
+}
+
+.ssh-monitor-refresh-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ssh-monitor-refresh-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #3fb950;
+    animation: ssh-monitor-pulse 2s ease infinite;
+}
+
+@keyframes ssh-monitor-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(0.8);
+    }
+}
