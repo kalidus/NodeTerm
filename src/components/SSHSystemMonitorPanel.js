@@ -79,35 +79,48 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
     const [sortDir, setSortDir] = useState(SORT_DIRECTIONS.desc);
     const [cpuHistory, setCpuHistory] = useState([]);
     const [lastRefreshed, setLastRefreshed] = useState(null);
+    const [netIfaces, setNetIfaces] = useState([]);
     const intervalRef = useRef(null);
 
     // ── Fetch process list from main process via IPC ──────────────────────────
     const fetchProcesses = useCallback(async () => {
-        if (!window.electronAPI && !window.electron?.ipcRenderer) return;
+        const invoke = window.electron?.ipcRenderer?.invoke;
+        if (!invoke) return;
         try {
-            let result;
-            if (window.electronAPI?.invoke) {
-                result = await window.electronAPI.invoke('ssh:get-processes', { tabId });
-            } else if (window.electron?.ipcRenderer?.invoke) {
-                result = await window.electron.ipcRenderer.invoke('ssh:get-processes', { tabId });
-            }
+            const result = await invoke('ssh:get-processes', { tabId });
             if (result?.success && Array.isArray(result.processes)) {
                 setProcesses(result.processes);
             }
         } catch (e) {
-            // Silently ignore errors
+            // ignore
         } finally {
             setProcessesLoading(false);
             setLastRefreshed(new Date());
         }
     }, [tabId]);
 
+
+
+    // ── Fetch network interfaces once on open ─────────────────────────────────
+    const fetchNetIfaces = useCallback(async () => {
+        try {
+            const invoke = window.electron?.ipcRenderer?.invoke;
+            if (!invoke) return;
+            // ip -br address gives: iface  UP  ip/prefix ...
+            const ifaceResult = await invoke('ssh:get-net-interfaces', { tabId });
+            if (ifaceResult?.success && Array.isArray(ifaceResult.interfaces)) {
+                setNetIfaces(ifaceResult.interfaces);
+            }
+        } catch (e) { /* ignore */ }
+    }, [tabId]);
+
     // ── Start refresh loop ────────────────────────────────────────────────────
     useEffect(() => {
         fetchProcesses();
+        fetchNetIfaces();
         intervalRef.current = setInterval(fetchProcesses, REFRESH_INTERVAL_MS);
         return () => clearInterval(intervalRef.current);
-    }, [fetchProcesses]);
+    }, [fetchProcesses, fetchNetIfaces]);
 
     // ── Track CPU history from incoming stats ─────────────────────────────────
     useEffect(() => {
@@ -220,8 +233,8 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
                         {disks.length === 0 ? (
                             <div className="ssh-monitor-stat-sub" style={{ marginTop: 8 }}>Sin datos</div>
                         ) : (
-                            <div className="ssh-monitor-disks">
-                                {disks.slice(0, 4).map((disk, i) => {
+                            <div className="ssh-monitor-disks" style={{ maxHeight: 90, overflowY: 'auto' }}>
+                                {disks.map((disk, i) => {
                                     const pct = typeof disk.use === 'number' ? disk.use : (disk.percentage || 0);
                                     const name = disk.fs || disk.name || '/';
                                     return (
@@ -241,26 +254,38 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
                     {/* Network */}
                     <div className="ssh-monitor-stat-card">
                         <div className="ssh-monitor-stat-label">Red</div>
-                        <div style={{ display: 'flex', gap: '12px', marginTop: 4 }}>
+                        <div style={{ display: 'flex', gap: '12px', marginTop: 2 }}>
                             <div>
                                 <div className="ssh-monitor-stat-sub">↓ Recv</div>
-                                <div className="ssh-monitor-stat-value net" style={{ fontSize: 16, marginTop: 2 }}>
+                                <div className="ssh-monitor-stat-value net" style={{ fontSize: 15, marginTop: 2 }}>
                                     {formatSpeed(rxSpeed)}
                                 </div>
                             </div>
                             <div>
                                 <div className="ssh-monitor-stat-sub">↑ Send</div>
-                                <div className="ssh-monitor-stat-value net" style={{ fontSize: 16, marginTop: 2, color: '#f78166' }}>
+                                <div className="ssh-monitor-stat-value net" style={{ fontSize: 15, marginTop: 2, color: '#f78166' }}>
                                     {formatSpeed(txSpeed)}
                                 </div>
                             </div>
                         </div>
-                        <div className="ssh-monitor-bar-track" style={{ marginTop: 6 }}>
+                        <div className="ssh-monitor-bar-track" style={{ marginTop: 4 }}>
                             <div
                                 className="ssh-monitor-bar-fill net"
                                 style={{ width: `${Math.min(100, (rxSpeed / 10485760) * 100)}%` }}
                             />
                         </div>
+                        {/* Per-interface list */}
+                        {netIfaces.length > 0 && (
+                            <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 60, overflowY: 'auto' }}>
+                                {netIfaces.map((iface, i) => (
+                                    <div key={i} style={{ display: 'flex', gap: 6, fontSize: 10, color: '#8b949e' }}>
+                                        <span style={{ color: iface.state === 'UP' ? '#3fb950' : '#484f58', width: 8 }}>●</span>
+                                        <span style={{ color: '#58a6ff', minWidth: 60 }}>{iface.name}</span>
+                                        <span>{iface.ip || '—'}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
 

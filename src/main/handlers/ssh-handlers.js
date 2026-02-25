@@ -52,20 +52,35 @@ function parseLsOutput(output) {
  */
 function parseProcessList(output) {
   const lines = (output || '').trim().split('\n').filter(Boolean);
-  return lines.map(line => {
+  const results = [];
+
+  for (const line of lines) {
     const parts = line.trim().split(/\s+/);
-    if (parts.length < 11) return null;
+    if (parts.length < 11) continue;
+
     const [user, pid, cpu, mem, vsz, rss, tty, stat, start, time, ...cmdParts] = parts;
-    return {
+
+    // Skip the ps header line
+    if (user === 'USER' && pid === 'PID') continue;
+
+    const cpuVal = parseFloat(cpu);
+    // Skip lines where pid isn't numeric (malformed)
+    if (isNaN(parseInt(pid, 10))) continue;
+
+    results.push({
       user,
       pid: parseInt(pid, 10) || 0,
-      cpu: parseFloat(cpu) || 0,
+      cpu: isNaN(cpuVal) ? 0 : cpuVal,
       mem: parseFloat(mem) || 0,
       vsz: parseInt(vsz, 10) || 0,
       rss: parseInt(rss, 10) || 0,
       command: cmdParts.join(' ').substring(0, 80)
-    };
-  }).filter(Boolean);
+    });
+  }
+
+  // Sort by CPU descending in JS (no shell pipes needed)
+  results.sort((a, b) => b.cpu - a.cpu);
+  return results.slice(0, 80);
 }
 
 function registerSSHHandlers(dependencies = {}) {
@@ -558,16 +573,44 @@ function registerSSHHandlers(dependencies = {}) {
     try {
       const conn = sshConnections && sshConnections[tabId];
       if (!conn || !conn.ssh) {
-        return { success: false, error: 'No SSH connection found for this tab' };
+        return { success: false, error: `No SSH connection. Keys: ${Object.keys(sshConnections || {}).join(',')}` };
       }
-
-      // Use exec wrapper created by SSHAuthService.createExecWrapper
-      // Use portable sort (avoids GNU-only --sort flag and --no-headers)
-      const raw = await conn.ssh.exec(
-        'ps aux 2>/dev/null | tail -n +2 | sort -k3 -rn | head -80'
-      );
+      const raw = await conn.ssh.exec('ps aux');
       const processes = parseProcessList(raw);
       return { success: true, processes };
+    } catch (err) {
+      return { success: false, error: err.message || String(err) };
+    }
+  });
+
+  // SSH: Obtener lista de interfaces de red para System Monitor
+  ipcMain.handle('ssh:get-net-interfaces', async (event, { tabId }) => {
+    try {
+      const conn = sshConnections && sshConnections[tabId];
+      if (!conn || !conn.ssh) {
+        return { success: false, error: 'No SSH connection found' };
+      }
+
+      // ip -br address is safe (single command, no pipes, always exits 0)
+      const raw = await conn.ssh.exec('ip -br address');
+
+      const interfaces = [];
+      const lines = (raw || '').trim().split('\n').filter(Boolean);
+
+      for (const line of lines) {
+        // ip -br format: eth0  UP  192.168.1.1/24 ...
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 2) {
+          const name = parts[0].replace(/@.*/, '');
+          const state = parts[1] || 'UNKNOWN';
+          const ip = parts.slice(2).find(p => p.includes('.') && !p.startsWith('127.')) || '';
+          if (name !== 'lo') {
+            interfaces.push({ name, state, ip: ip.split('/')[0] });
+          }
+        }
+      }
+
+      return { success: true, interfaces };
     } catch (err) {
       return { success: false, error: err.message || String(err) };
     }
