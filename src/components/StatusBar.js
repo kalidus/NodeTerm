@@ -368,10 +368,9 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
                     )}
                 <div className="status-bar-section version-info-section" style={{ marginLeft: 'auto', opacity: 0.5, fontSize: '0.85em', display: 'flex', alignItems: 'center' }}>
                     {appVersion && appVersion !== '0.0.0' && (
-                        <span title={versionId}>v{appVersion}</span>
-                    )}
-                    {versionId && versionId !== '0.0.0' && versionId !== appVersion && (
-                        <span style={{ marginLeft: '5px', fontSize: '0.9em' }}>({versionId})</span>
+                        <span title={versionId && versionId !== '0.0.0' ? `OS Version: ${versionId}` : undefined}>
+                            v{appVersion}
+                        </span>
                     )}
                 </div>
             </div>

@@ -399,7 +399,7 @@ class SSHStatsService {
 
       // Memoria, disco, uptime, red, IP
       const allStatsRes = await conn.ssh.exec(
-        "free -b && df -P && uptime && cat /proc/net/dev && hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo ''"
+        "free -b && df -P && uptime && cat /proc/net/dev && (cat /etc/os-release 2>/dev/null || cat /usr/lib/os-release 2>/dev/null || echo '') && (hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo '')"
       );
       const parts = allStatsRes.trim().split('\n');
 
