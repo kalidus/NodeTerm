@@ -83,6 +83,9 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
     const [sortDir, setSortDir] = useState(SORT_DIRECTIONS.desc);
     const [cpuHistory, setCpuHistory] = useState([]);
     const [memHistory, setMemHistory] = useState([]);
+    const [netRxHistory, setNetRxHistory] = useState([]);
+    const [netTxHistory, setNetTxHistory] = useState([]);
+    const [diskHistory, setDiskHistory] = useState([]);
     const [lastRefreshed, setLastRefreshed] = useState(null);
     const [netIfaces, setNetIfaces] = useState([]);
 
@@ -191,7 +194,23 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
             const memPctVal = memTotal > 0 ? (memUsed / memTotal) * 100 : 0;
             setMemHistory(prev => [...prev, memPctVal].slice(-MAX_HISTORY));
         }
-    }, [stats?.cpu, stats?.mem?.total, stats?.mem?.used]);
+
+        if (stats?.network) {
+            const rx = stats.network.rx_speed || 0;
+            const tx = stats.network.tx_speed || 0;
+            setNetRxHistory(prev => [...prev, rx].slice(-MAX_HISTORY));
+            setNetTxHistory(prev => [...prev, tx].slice(-MAX_HISTORY));
+        }
+
+        if (Array.isArray(stats?.disk) && stats.disk.length > 0) {
+            let totalUse = 0;
+            stats.disk.forEach(d => {
+                totalUse += typeof d.use === 'number' ? d.use : (d.percentage || 0);
+            });
+            const avgDisk = totalUse / stats.disk.length;
+            setDiskHistory(prev => [...prev, avgDisk].slice(-MAX_HISTORY));
+        }
+    }, [stats?.cpu, stats?.mem?.total, stats?.mem?.used, stats?.network, stats?.disk]);
 
     // ── Close on Escape key ───────────────────────────────────────────────────
     useEffect(() => {
@@ -486,7 +505,7 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                     </div>
 
                     {/* Network */}
-                    <div className="ssh-monitor-stat-card">
+                    <div className="ssh-monitor-stat-card ssh-stat-hoverable">
                         <div className="ssh-monitor-stat-label">Red</div>
                         <div style={{ display: 'flex', gap: '12px', marginTop: 2 }}>
                             <div>
@@ -508,18 +527,39 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                                 style={{ width: `${Math.min(100, (rxSpeed / 10485760) * 100)}%` }}
                             />
                         </div>
-                        {/* Per-interface list */}
-                        {netIfaces.length > 0 && (
-                            <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 60, overflowY: 'auto' }}>
-                                {netIfaces.map((iface, i) => (
-                                    <div key={i} style={{ display: 'flex', gap: 6, fontSize: 10, color: '#8b949e' }}>
-                                        <span style={{ color: iface.state === 'UP' ? '#3fb950' : '#484f58', width: 8 }}>●</span>
-                                        <span style={{ color: '#58a6ff', minWidth: 60 }}>{iface.name}</span>
-                                        <span>{iface.ip || '—'}</span>
+
+                        <div className="ssh-monitor-hover-tooltip" style={{ right: '100%', left: 'auto', transform: 'translateY(-50%) translateX(-10px)', width: 340 }}>
+                            <div style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '8px', color: '#e6edf3', borderBottom: '1px solid #30363d', paddingBottom: '4px' }}>Detalles de Red</div>
+                            {netRxHistory.length > 1 && (
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: '9px', color: '#8b949e', marginBottom: '2px' }}>↓ Recv Historico</div>
+                                        <div style={{ height: '24px', position: 'relative' }}>
+                                            <Sparkline data={netRxHistory} color="#3fb950" maxVal={Math.max(...netRxHistory, 1024)} />
+                                        </div>
                                     </div>
-                                ))}
-                            </div>
-                        )}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: '9px', color: '#8b949e', marginBottom: '2px' }}>↑ Send Historico</div>
+                                        <div style={{ height: '24px', position: 'relative' }}>
+                                            <Sparkline data={netTxHistory} color="#f78166" maxVal={Math.max(...netTxHistory, 1024)} />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Per-interface list */}
+                            {netIfaces.length > 0 && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 110, overflowY: 'auto', overflowX: 'hidden', paddingRight: 4 }}>
+                                    {netIfaces.map((iface, i) => (
+                                        <div key={i} style={{ display: 'flex', gap: 8, fontSize: 10, color: '#8b949e', whiteSpace: 'nowrap' }}>
+                                            <span style={{ color: iface.state === 'UP' ? '#3fb950' : '#484f58', width: 8, flexShrink: 0 }}>●</span>
+                                            <span style={{ color: '#58a6ff', width: 90, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis' }} title={iface.name}>{iface.name}</span>
+                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }} title={iface.ip || '—'}>{iface.ip || '—'}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Disk */}

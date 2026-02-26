@@ -343,14 +343,15 @@
 .ssh-monitor-sparkline {
     display: flex;
     align-items: flex-end;
-    gap: 2px;
+    gap: 1px;
     height: 24px;
+    width: 100%;
     margin-top: 4px;
 }
 
 .ssh-monitor-spark-bar {
     flex: 1;
-    min-width: 3px;
+    min-width: 1px;
     border-radius: 1px;
     background: #58a6ff;
     opacity: 0.55;
