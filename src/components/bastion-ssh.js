@@ -86,6 +86,16 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
     statsConn.connect(statsConnectConfig);
   };
 
+  // ✅ COMPATIBILIDAD: Añadir método exec basado en promesas para que los handlers SSH funcionen
+  conn.exec = function (command) {
+    return new Promise((resolve, reject) => {
+      this.execCommand(command, (err, result) => {
+        if (err) return reject(err);
+        resolve(result.stdout || '');
+      });
+    });
+  };
+
   // Ya no necesitamos procesamiento especial, solo enviar todo al terminal
   // Los comandos de estadísticas van por conexión SSH separada
 

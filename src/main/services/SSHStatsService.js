@@ -216,24 +216,15 @@ class SSHStatsService {
       return { network: { rx_speed: 0, tx_speed: 0 }, currentNet: null, currentTime: Date.now() };
     }
 
-    const netLines = parts.slice(netIndex + 2, netIndex + 4);
-    let totalRx = 0, totalTx = 0;
-
-    netLines.forEach(line => {
-      const p = line.trim().split(/\s+/);
-      if (p.length >= 10) {
-        totalRx += parseInt(p[1], 10) || 0;
-        totalTx += parseInt(p[9], 10) || 0;
-      }
-    });
-
+    const netOutput = parts.slice(netIndex).join('\n');
+    const currentNet = parseNetDev(netOutput);
     const currentTime = Date.now();
     let network = { rx_speed: 0, tx_speed: 0 };
 
     if (previousNet && previousTime) {
       const timeDiff = (currentTime - previousTime) / 1000;
-      const rxDiff = totalRx - previousNet.totalRx;
-      const txDiff = totalTx - previousNet.totalTx;
+      const rxDiff = currentNet.totalRx - previousNet.totalRx;
+      const txDiff = currentNet.totalTx - previousNet.totalTx;
 
       network.rx_speed = Math.max(0, rxDiff / timeDiff);
       network.tx_speed = Math.max(0, txDiff / timeDiff);
@@ -241,7 +232,7 @@ class SSHStatsService {
 
     return {
       network,
-      currentNet: { totalRx, totalTx },
+      currentNet,
       currentTime
     };
   }
