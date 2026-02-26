@@ -785,59 +785,99 @@
 }
 
 /* ============================================================
-   File Explorer Tree Overrides
+   File Explorer Tree Overrides (PrimeReact 10.x)
    ============================================================ */
 
-/* Hide PrimeReact's built-in tree node icon span — we render our own in the nodeTemplate */
-.ssh-monitor-tree .p-tree-node-icon {
+/* ---- Hide built-in icon (we render our own) ---- */
+.ssh-monitor-panel .ssh-monitor-tree .p-treenode-icon,
+.ssh-monitor-panel .ssh-monitor-tree .p-tree-node-icon {
     display: none !important;
 }
 
-/* Remove default toggle icon padding spacing that leaves a gap */
-.ssh-monitor-tree .p-tree-node-content {
+/* ---- Tree root reset ---- */
+.ssh-monitor-panel .ssh-monitor-tree.p-tree {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    color: #e6edf3 !important;
+}
+
+/* ---- ALL node content: force transparent ---- */
+.ssh-monitor-panel .ssh-monitor-tree .p-treenode-content,
+.ssh-monitor-panel .ssh-monitor-tree .p-tree-node-content {
     padding: 1px 2px !important;
     border-radius: 5px !important;
+    background: transparent !important;
+    color: #e6edf3 !important;
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
     transition: background 0.12s ease !important;
 }
 
-/* Hover row highlight */
-.ssh-monitor-tree .p-tree-node-content:hover {
-    background: rgba(139, 148, 158, 0.08) !important;
+/* ---- Hover ---- */
+.ssh-monitor-panel .ssh-monitor-tree .p-treenode-content:hover,
+.ssh-monitor-panel .ssh-monitor-tree .p-tree-node-content:hover {
+    background: rgba(139, 148, 158, 0.1) !important;
+    color: #e6edf3 !important;
 }
 
-/* Selection: replace white with a subtle accent glow */
-.ssh-monitor-tree .p-tree-node-content.p-highlight {
-    background: rgba(88, 166, 255, 0.12) !important;
-    color: inherit !important;
-    border-left: 2px solid #58a6ff !important;
-    padding-left: 0 !important;
-}
-
-/* Local pane selection — green accent */
-.local-pane .ssh-monitor-tree .p-tree-node-content.p-highlight {
-    background: rgba(63, 185, 80, 0.12) !important;
-    border-left-color: #3fb950 !important;
-}
-
-/* Focus ring removal */
-.ssh-monitor-tree .p-tree-node-content:focus {
+/* ---- Focus: kill all focus rings ---- */
+.ssh-monitor-panel .ssh-monitor-tree .p-treenode-content:focus,
+.ssh-monitor-panel .ssh-monitor-tree .p-treenode-content:focus-within,
+.ssh-monitor-panel .ssh-monitor-tree .p-treenode-content:focus-visible,
+.ssh-monitor-panel .ssh-monitor-tree .p-tree-node-content:focus,
+.ssh-monitor-panel .ssh-monitor-tree .p-tree-node-content:focus-within,
+.ssh-monitor-panel .ssh-monitor-tree .p-tree-node-content:focus-visible,
+.ssh-monitor-panel .ssh-monitor-tree *:focus,
+.ssh-monitor-panel .ssh-monitor-tree *:focus-visible {
     box-shadow: none !important;
     outline: none !important;
 }
 
-/* Toggle chevron styling */
-.ssh-monitor-tree .p-tree-node-toggle-button {
+/* ---- Selected state: Remote pane (blue) ---- */
+.remote-pane .ssh-monitor-tree .p-treenode-content.p-highlight,
+.remote-pane .ssh-monitor-tree .p-tree-node-content.p-highlight,
+.remote-pane .ssh-monitor-tree .p-treenode-content.p-highlight:hover,
+.remote-pane .ssh-monitor-tree .p-tree-node-content.p-highlight:hover {
+    background: rgba(88, 166, 255, 0.12) !important;
+    color: #e6edf3 !important;
+    border-left: 2px solid #58a6ff !important;
+    border-radius: 0 5px 5px 0 !important;
+    box-shadow: none !important;
+}
+
+/* ---- Selected state: Local pane (green) ---- */
+.local-pane .ssh-monitor-tree .p-treenode-content.p-highlight,
+.local-pane .ssh-monitor-tree .p-tree-node-content.p-highlight,
+.local-pane .ssh-monitor-tree .p-treenode-content.p-highlight:hover,
+.local-pane .ssh-monitor-tree .p-tree-node-content.p-highlight:hover {
+    background: rgba(63, 185, 80, 0.12) !important;
+    color: #e6edf3 !important;
+    border-left: 2px solid #3fb950 !important;
+    border-radius: 0 5px 5px 0 !important;
+    box-shadow: none !important;
+}
+
+/* ---- Toggle chevron ---- */
+.ssh-monitor-panel .ssh-monitor-tree .p-treenode-toggler,
+.ssh-monitor-panel .ssh-monitor-tree .p-tree-node-toggle-button {
     color: #484f58 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
     width: 16px !important;
     height: 16px !important;
 }
 
-.ssh-monitor-tree .p-tree-node-toggle-button:hover {
+.ssh-monitor-panel .ssh-monitor-tree .p-treenode-toggler:hover,
+.ssh-monitor-panel .ssh-monitor-tree .p-tree-node-toggle-button:hover {
     color: #8b949e !important;
     background: transparent !important;
 }
 
-/* Scrollbar for pane content areas */
+/* ---- Scrollbar for pane content areas ---- */
 .ssh-file-explorer-content::-webkit-scrollbar {
     width: 5px;
 }
