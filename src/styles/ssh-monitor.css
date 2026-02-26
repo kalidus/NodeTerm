@@ -184,7 +184,7 @@
 
 .ssh-monitor-stats-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 1px;
     background: rgba(48, 54, 61, 0.2);
     border-bottom: 1px solid rgba(48, 54, 61, 0.5);
@@ -206,6 +206,11 @@
     position: relative;
 }
 
+.ssh-monitor-stat-card.disks-card {
+    grid-column: 1 / -1;
+    border-top: 1px solid rgba(48, 54, 61, 0.3);
+}
+
 .ssh-monitor-stat-card.ssh-stat-hoverable:hover .ssh-monitor-cpu-tooltip {
     opacity: 1;
     visibility: visible;
@@ -214,9 +219,12 @@
 
 .ssh-monitor-cpu-tooltip {
     position: absolute;
-    top: 100%;
-    left: 10px;
-    background: rgba(22, 27, 34, 0.96);
+    top: 50%;
+    /* Subimos el recuadro para centrarlo verticalmente respecto a la tajeta */
+    left: 80%;
+    /* Lo desplazamos un poco a la derecha */
+    transform: translateY(-50%) translateX(10px);
+    background: rgba(22, 27, 34, 0.98);
     backdrop-filter: blur(8px);
     border: 1px solid #30363d;
     border-radius: 6px;
@@ -352,10 +360,10 @@
 /* ---- Disks section ---- */
 
 .ssh-monitor-disks {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-height: 145px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px 16px;
+    max-height: 120px;
     overflow-y: auto;
     padding-right: 4px;
 }
@@ -382,7 +390,7 @@
 
 .ssh-monitor-disk-name {
     color: #8b949e;
-    width: 50px;
+    width: 65px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

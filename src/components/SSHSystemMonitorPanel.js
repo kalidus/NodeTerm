@@ -463,30 +463,6 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                         </div>
                     </div>
 
-                    {/* Disk */}
-                    <div className="ssh-monitor-stat-card">
-                        <div className="ssh-monitor-stat-label">Disco</div>
-                        {disks.length === 0 ? (
-                            <div className="ssh-monitor-stat-sub" style={{ marginTop: 8 }}>Sin datos</div>
-                        ) : (
-                            <div className="ssh-monitor-disks">
-                                {disks.map((disk, i) => {
-                                    const pct = typeof disk.use === 'number' ? disk.use : (disk.percentage || 0);
-                                    const name = disk.fs || disk.name || '/';
-                                    return (
-                                        <div key={i} className="ssh-monitor-disk-row">
-                                            <span className="ssh-monitor-disk-name" title={name}>{name}</span>
-                                            <div className="ssh-monitor-disk-bar-track">
-                                                <div className="ssh-monitor-disk-bar-fill" style={{ width: `${Math.min(100, pct)}%` }} />
-                                            </div>
-                                            <span className="ssh-monitor-disk-pct">{pct}%</span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-
                     {/* Network */}
                     <div className="ssh-monitor-stat-card">
                         <div className="ssh-monitor-stat-label">Red</div>
@@ -520,6 +496,30 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                                         <span>{iface.ip || '—'}</span>
                                     </div>
                                 ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Disk */}
+                    <div className="ssh-monitor-stat-card disks-card">
+                        <div className="ssh-monitor-stat-label">Discos</div>
+                        {disks.length === 0 ? (
+                            <div className="ssh-monitor-stat-sub" style={{ marginTop: 8 }}>Sin datos</div>
+                        ) : (
+                            <div className="ssh-monitor-disks">
+                                {disks.map((disk, i) => {
+                                    const pct = typeof disk.use === 'number' ? disk.use : (disk.percentage || 0);
+                                    const name = disk.fs || disk.name || '/';
+                                    return (
+                                        <div key={i} className="ssh-monitor-disk-row">
+                                            <span className="ssh-monitor-disk-name" title={name}>{name}</span>
+                                            <div className="ssh-monitor-disk-bar-track">
+                                                <div className="ssh-monitor-disk-bar-fill" style={{ width: `${Math.min(100, pct)}%` }} />
+                                            </div>
+                                            <span className="ssh-monitor-disk-pct">{pct}%</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
