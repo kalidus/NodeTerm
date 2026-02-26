@@ -339,55 +339,61 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
 
                 {/* ── Header ────────────────────────────────────────────────── */}
                 <div className="ssh-monitor-header">
-                    <div className="ssh-monitor-title">
-                        <span className="ssh-monitor-title-icon">📊</span>
-                        <h2>Monitor del Sistema SSH</h2>
-                    </div>
-                    <div className="ssh-monitor-host-info">
-                        {stats?.hostname && (
-                            <span className="ssh-monitor-host-badge">
-                                <i className="pi pi-server" style={{ fontSize: '11px' }} />
-                                {stats.hostname}
-                            </span>
-                        )}
-                        {stats?.ip && stats.ip !== stats?.hostname && (
-                            <span>{stats.ip}</span>
-                        )}
-                        {stats?.distro && (
-                            <span style={{ color: '#8b949e', textTransform: 'capitalize' }}>{stats.distro}</span>
-                        )}
-                        {stats?.uptime && (
-                            <span className="ssh-monitor-uptime">⏱ {stats.uptime}</span>
-                        )}
-                    </div>
+                    <div className="ssh-monitor-header-main">
+                        <div className="ssh-monitor-server-title">
+                            <i className="pi pi-server ssh-monitor-title-icon" />
+                            <h2>{stats?.hostname || 'Servidor SSH'}</h2>
+                            {stats?.ip && stats.ip !== stats?.hostname && (
+                                <span className="ssh-monitor-server-ip">({stats.ip})</span>
+                            )}
 
-                    <div className="ssh-monitor-opacity-container" ref={opacityMenuRef}>
-                        <button
-                            className={`ssh-monitor-opacity-toggle ${isOpacityMenuOpen ? 'active' : ''}`}
-                            onClick={() => setIsOpacityMenuOpen(!isOpacityMenuOpen)}
-                            title="Ajustar opacidad"
-                        >
-                            <i className="pi pi-clone" style={{ fontSize: '12px', transform: 'rotate(45deg)' }} />
-                            <span className="ssh-monitor-opacity-val-text">{Math.round(opacity * 100)}%</span>
-                        </button>
-
-                        {isOpacityMenuOpen && (
-                            <div className="ssh-monitor-opacity-popover">
-                                <span className="ssh-monitor-opacity-label">Opacidad</span>
-                                <input
-                                    type="range"
-                                    className="ssh-monitor-opacity-slider"
-                                    min="0.1"
-                                    max="1"
-                                    step="0.05"
-                                    value={opacity}
-                                    onChange={handleOpacityChange}
-                                />
+                            <div className="ssh-monitor-header-sub">
+                                {stats?.distro && (
+                                    <>
+                                        <span className="ssh-monitor-separator">•</span>
+                                        <span className="ssh-monitor-distro-info">
+                                            <i className="pi pi-linux" />
+                                            <span style={{ textTransform: 'capitalize' }}>{stats.distro}</span>
+                                        </span>
+                                    </>
+                                )}
+                                {stats?.uptime && (
+                                    <>
+                                        <span className="ssh-monitor-separator">•</span>
+                                        <span className="ssh-monitor-uptime">⏱ {stats.uptime}</span>
+                                    </>
+                                )}
                             </div>
-                        )}
-                    </div>
+                        </div>
+                        <div className="ssh-monitor-header-actions">
+                            <div className="ssh-monitor-opacity-container" ref={opacityMenuRef}>
+                                <button
+                                    className={`ssh-monitor-opacity-toggle ${isOpacityMenuOpen ? 'active' : ''}`}
+                                    onClick={() => setIsOpacityMenuOpen(!isOpacityMenuOpen)}
+                                    title="Ajustar opacidad"
+                                >
+                                    <i className="pi pi-clone" style={{ fontSize: '12px', transform: 'rotate(45deg)' }} />
+                                    <span className="ssh-monitor-opacity-val-text">{Math.round(opacity * 100)}%</span>
+                                </button>
 
-                    <button className="ssh-monitor-close" onClick={onClose} title="Cerrar (Esc)">✕</button>
+                                {isOpacityMenuOpen && (
+                                    <div className="ssh-monitor-opacity-popover">
+                                        <span className="ssh-monitor-opacity-label">Opacidad</span>
+                                        <input
+                                            type="range"
+                                            className="ssh-monitor-opacity-slider"
+                                            min="0.1"
+                                            max="1"
+                                            step="0.05"
+                                            value={opacity}
+                                            onChange={handleOpacityChange}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                            <button className="ssh-monitor-close" onClick={onClose} title="Cerrar (Esc)">✕</button>
+                        </div>
+                    </div>
                 </div>
 
                 {/* ── Stats Cards ───────────────────────────────────────────── */}

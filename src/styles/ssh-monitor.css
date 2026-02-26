@@ -81,49 +81,77 @@
 
 .ssh-monitor-header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 6px;
     padding: 12px 18px 10px;
     background: rgba(255, 255, 255, 0.02);
     border-bottom: 1px solid rgba(48, 54, 61, 0.5);
     flex-shrink: 0;
 }
 
-.ssh-monitor-title {
+.ssh-monitor-header-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ssh-monitor-server-title {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
 .ssh-monitor-title-icon {
-    font-size: 18px;
+    font-size: 16px;
+    color: #58a6ff;
 }
 
-.ssh-monitor-title h2 {
+.ssh-monitor-server-title h2 {
     margin: 0;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
     color: #e6edf3;
     letter-spacing: 0.3px;
 }
 
-.ssh-monitor-host-info {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    font-size: 11px;
+.ssh-monitor-server-ip {
     color: #8b949e;
+    font-size: 12px;
+    font-family: 'Consolas', monospace;
 }
 
-.ssh-monitor-host-badge {
+.ssh-monitor-header-actions {
     display: flex;
     align-items: center;
-    gap: 5px;
-    background: #1c2128;
-    border: 1px solid #30363d;
-    border-radius: 5px;
-    padding: 3px 8px;
-    color: #58a6ff;
+    gap: 12px;
+}
+
+.ssh-monitor-header-sub {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #8b949e;
+    margin-left: 4px;
+}
+
+.ssh-monitor-distro-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(48, 54, 61, 0.4);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #c9d1d9;
+}
+
+.ssh-monitor-distro-info i {
+    font-size: 10px;
+}
+
+.ssh-monitor-separator {
+    color: #484f58;
+    font-size: 11px;
 }
 
 .ssh-monitor-uptime {
