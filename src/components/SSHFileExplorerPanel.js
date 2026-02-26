@@ -441,7 +441,8 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         if (!resizeStateRef.current.isResizing) return;
         const { startX, startLeftPx, parentWidth } = resizeStateRef.current;
         const deltaX = e.clientX - startX;
-        const newLeftPx = Math.max(parentWidth * 0.2, Math.min(parentWidth * 0.85, startLeftPx + deltaX));
+        // Allow resizing from 2% to 98% of the screen width
+        const newLeftPx = Math.max(parentWidth * 0.02, Math.min(parentWidth * 0.98, startLeftPx + deltaX));
         const newLeftPct = (newLeftPx / parentWidth) * 100;
         setPanelLeft(newLeftPct);
     }, []);
