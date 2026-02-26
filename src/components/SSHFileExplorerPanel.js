@@ -1163,6 +1163,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         const nodes = isRemote ? remoteNodes : localNodes;
         const defaultRoot = isRemote ? '/' : 'C:\\';
         const separator = isRemote ? '/' : '\\';
+        const accentColor = isRemote ? '#58a6ff' : '#3fb950';
 
         let currentPath = selectedKey ? selectedKey.replace(/^fs\|/, '') : (nodes.length > 0 ? nodes[0].data.path : defaultRoot);
 
@@ -1205,14 +1206,25 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
 
         return (
             <div style={{
-                padding: '6px 14px',
+                padding: '6px 10px',
                 borderBottom: '1px solid #21262d',
-                background: 'rgba(22, 27, 34, 0.4)',
+                background: isRemote ? 'rgba(88,166,255,0.05)' : 'rgba(63,185,80,0.05)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                gap: '6px',
                 flexShrink: 0
             }}>
+                {/* Title */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '4px' }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: accentColor, flexShrink: 0 }} />
+                    <i className={isRemote ? "pi pi-server" : "pi pi-desktop"} style={{ fontSize: '0.7rem', color: accentColor }} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: accentColor, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                        {isRemote ? 'Remoto' : 'Local'}
+                    </span>
+                </div>
+
+                <div style={{ width: '1px', height: '14px', background: '#30363d', margin: '0 2px' }} />
+
                 <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleToggleHidden} title={showHidden ? "Ocultar ocultos" : "Mostrar ocultos"} >
                     <i className={`pi ${showHidden ? 'pi-eye' : 'pi-eye-slash'}`} />
                 </button>
@@ -1223,9 +1235,8 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                     <i className="pi pi-home" />
                 </button>
 
-                <div style={{ flex: 1, margin: '0 8px', display: 'flex', alignItems: 'center' }}>
-                    <i className="pi pi-filter" style={{ color: '#8b949e', fontSize: '11px', marginRight: '6px' }} />
-                    <i className="pi pi-star" style={{ color: '#8b949e', fontSize: '11px', marginRight: '6px' }} />
+                <div style={{ flex: 1, margin: '0 4px', display: 'flex', alignItems: 'center', background: 'rgba(13, 17, 23, 0.4)', padding: '2px 8px', borderRadius: '4px', border: '1px solid #30363d' }}>
+                    <i className="pi pi-folder-open" style={{ color: '#8b949e', fontSize: '11px', marginRight: '6px' }} />
                     <span style={{ color: '#e6edf3', fontSize: '0.75rem', fontFamily: 'Consolas, monospace', letterSpacing: '-0.3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {currentPath}
                     </span>
@@ -1318,23 +1329,6 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, 'remote')}
                     >
-                        {/* Pane Header */}
-                        <div style={{
-                            padding: '10px 14px 8px',
-                            borderBottom: '1px solid #21262d',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '7px',
-                            background: 'rgba(88,166,255,0.05)',
-                            flexShrink: 0
-                        }}>
-                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#58a6ff', flexShrink: 0 }} />
-                            <i className="pi pi-server" style={{ fontSize: '0.7rem', color: '#58a6ff' }} />
-                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#58a6ff', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Remoto</span>
-                            <span style={{ fontSize: '0.7rem', color: '#6e7681', marginLeft: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {tab?.nodeData?.host || sshConfig?.host || ''}
-                            </span>
-                        </div>
                         {renderPaneToolbar('remote')}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
                             {globalLoading && remoteNodes.length === 0 ? (
@@ -1365,20 +1359,6 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, 'local')}
                     >
-                        {/* Pane Header */}
-                        <div style={{
-                            padding: '10px 14px 8px',
-                            borderBottom: '1px solid #21262d',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '7px',
-                            background: 'rgba(63,185,80,0.05)',
-                            flexShrink: 0
-                        }}>
-                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3fb950', flexShrink: 0 }} />
-                            <i className="pi pi-desktop" style={{ fontSize: '0.7rem', color: '#3fb950' }} />
-                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#3fb950', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Local</span>
-                        </div>
                         {renderPaneToolbar('local')}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
                             {globalLoading && localNodes.length === 0 ? (
