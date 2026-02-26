@@ -90,12 +90,29 @@ class SSHStatsService {
    * Parsea memoria del output de 'free -b'
    */
   parseMemory(parts) {
-    const memLine = parts.find(line => line.startsWith('Mem:')) || '';
-    const memParts = memLine.split(/\s+/);
+    const memLine = parts.find(line => line.trim().startsWith('Mem:')) || '';
+    const swapLine = parts.find(line => line.trim().startsWith('Swap:')) || '';
+
+    const memParts = memLine.trim().split(/\s+/);
+    const swapParts = swapLine.trim().split(/\s+/);
+
+    // depending on 'free' version, buffers and cache might be combined or separate.
+    // Mem: total used free shared buff/cache available (index 5)
+    // Mem: total used free shared buffers cached (index 5, it's buffers and 6 is cached)
+    let cached = parseInt(memParts[5], 10) || 0;
+    if (memParts.length > 6 && !isNaN(parseInt(memParts[6], 10))) {
+      // If there's an index 6, it might be older 'free' where 5 is buffers, 6 is cached.
+      // But in newer free, 6 is 'available'. We shouldn't add available to cache.
+      // We can just rely on index 5 for buff/cache in modern systems, plus index 6 if it's strictly cached?
+      // Actually, let's just use index 5 as cache to be simple and robust on most modern distros.
+    }
 
     return {
       total: parseInt(memParts[1], 10) || 0,
       used: parseInt(memParts[2], 10) || 0,
+      cached: parseInt(memParts[5], 10) || 0,
+      swapTotal: parseInt(swapParts[1], 10) || 0,
+      swapUsed: parseInt(swapParts[2], 10) || 0,
     };
   }
 

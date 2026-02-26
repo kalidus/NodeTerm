@@ -358,10 +358,28 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
 
                     {/* Memory */}
                     <div className="ssh-monitor-stat-card">
-                        <div className="ssh-monitor-stat-label">Memoria RAM</div>
+                        <div className="ssh-monitor-stat-label">Memoria</div>
                         <div className="ssh-monitor-stat-value mem">{memPct.toFixed(1)}%</div>
                         <StatBar value={memPct} type="mem" />
-                        <div className="ssh-monitor-stat-sub">{memUsedGB} GB / {memTotalGB} GB</div>
+                        <div className="ssh-monitor-stat-sub" style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#c9d1d9', flexWrap: 'wrap', gap: '4px' }}>
+                                <span>Usada:</span>
+                                <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{memUsedGB} / {memTotalGB} GB</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
+                                <span>Caché:</span>
+                                <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{stats?.mem?.cached ? (stats.mem.cached / 1024 / 1024 / 1024).toFixed(1) : '0.0'} GB</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', borderTop: '1px dotted #30363d', paddingTop: '4px', marginTop: '1px' }}>
+                                <span>Swap:</span>
+                                <div style={{ display: 'flex', flexWrap: 'nowrap', justifyContent: 'flex-end' }}>
+                                    <span style={{ color: stats?.mem?.swapUsed > 0 ? '#d29922' : 'inherit' }}>
+                                        {stats?.mem?.swapUsed ? (stats.mem.swapUsed / 1024 / 1024 / 1024).toFixed(1) : '0.0'}
+                                    </span>
+                                    <span style={{ whiteSpace: 'nowrap' }}>&nbsp;/ {stats?.mem?.swapTotal ? (stats.mem.swapTotal / 1024 / 1024 / 1024).toFixed(1) : '0.0'} GB</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Disk */}
