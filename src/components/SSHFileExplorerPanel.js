@@ -149,10 +149,12 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
     }, [FILE_ICON_MAP, joinPath, makeKey]);
 
     const updateNodeChildren = useCallback((tree, targetPath, childrenNodes) => {
+        let found = false;
         // Required for deep clone to trigger prime react re-renders safely
         const cloneTree = (nodesToClone) => {
             return nodesToClone.map(node => {
                 if (node?.data?.path === targetPath) {
+                    found = true;
                     return {
                         ...node,
                         children: childrenNodes,
@@ -168,8 +170,24 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 return node;
             });
         };
-        return cloneTree(tree);
-    }, []);
+        const updated = cloneTree(tree);
+        if (!found) {
+            // If the folder we just loaded wasn't in our tree, add it as a new root node
+            // This is essential for navigating "Up" beyond the initial root set.
+            return [
+                ...updated,
+                {
+                    key: makeKey(targetPath),
+                    label: targetPath,
+                    data: { path: targetPath, type: 'directory', parentPath: null, isRoot: true },
+                    icon: 'pi pi-folder',
+                    children: childrenNodes,
+                    leaf: childrenNodes.length === 0
+                }
+            ];
+        }
+        return updated;
+    }, [makeKey]);
 
     const findNodeByKey = useCallback((tree, key) => {
         for (const node of tree) {
@@ -222,6 +240,36 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         }
     }, [makeKey, notify, setLoadingForRemotePath, sortEntries, toTreeNode, updateNodeChildren, tabId, sshConfig]);
 
+    const localToTreeNode = useCallback((entry, parentPath) => {
+        // Helper to mimic Windows path joining
+        const localJoinPath = (base, name) => {
+            const sep = base.includes('\\') ? '\\' : '/';
+            if (base.endsWith(sep)) return `${base}${name}`;
+            return `${base}${sep}${name}`;
+        };
+
+        const fullPath = localJoinPath(parentPath, entry.name);
+        const isDir = entry.type === 'directory';
+        const extension = !isDir && entry.name.includes('.') ? entry.name.split('.').pop().toLowerCase() : null;
+        const iconInfo = !isDir && extension ? FILE_ICON_MAP[extension] : null;
+
+        return {
+            key: makeKey(fullPath),
+            label: entry.name,
+            data: {
+                path: fullPath,
+                type: isDir ? 'directory' : 'file',
+                parentPath,
+                raw: entry,
+                iconInfo
+            },
+            style: iconInfo?.color ? { '--fs-node-color': iconInfo.color } : undefined,
+            leaf: !isDir,
+            droppable: isDir,
+            children: isDir ? undefined : undefined
+        };
+    }, [FILE_ICON_MAP, makeKey]);
+
     const loadLocalDirectory = useCallback(async (path, { keepExpanded = false } = {}) => {
         if (!path) return;
         try {
@@ -233,37 +281,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             if (result && result.success) {
                 const validFiles = (result.files || []).filter(f => f.name !== '.' && f.name !== '..');
                 const entries = sortEntries(validFiles);
-
-                // Helper to mimic Windows path joining
-                const localJoinPath = (base, name) => {
-                    const sep = base.includes('\\') ? '\\' : '/';
-                    if (base.endsWith(sep)) return `${base}${name}`;
-                    return `${base}${sep}${name}`;
-                };
-
-                const children = entries.map(entry => {
-                    const fullPath = localJoinPath(path, entry.name);
-                    const isDir = entry.type === 'directory';
-                    const extension = !isDir && entry.name.includes('.') ? entry.name.split('.').pop().toLowerCase() : null;
-                    const iconInfo = !isDir && extension ? FILE_ICON_MAP[extension] : null;
-
-                    return {
-                        key: makeKey(fullPath),
-                        label: entry.name,
-                        data: {
-                            path: fullPath,
-                            type: isDir ? 'directory' : 'file',
-                            parentPath: path,
-                            raw: entry,
-                            iconInfo
-                        },
-                        // NO icon field — handled by nodeTemplate
-                        style: iconInfo?.color ? { '--fs-node-color': iconInfo.color } : undefined,
-                        leaf: !isDir,
-                        droppable: isDir,
-                        children: isDir ? undefined : undefined
-                    };
-                });
+                const children = entries.map(entry => localToTreeNode(entry, path));
 
                 setLocalNodes(prev => updateNodeChildren(prev, path, children));
                 setLocalExpandedKeys(prev => ({ ...prev, [makeKey(path)]: true }));
@@ -275,7 +293,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         } finally {
             setLoadingForLocalPath(path, false);
         }
-    }, [FILE_ICON_MAP, makeKey, notify, setLoadingForLocalPath, sortEntries, updateNodeChildren]);
+    }, [localToTreeNode, makeKey, notify, setLoadingForLocalPath, sortEntries, updateNodeChildren]);
 
     const handleRemoteToggle = useCallback((event) => {
         const newExpanded = event.value || {};
@@ -1395,7 +1413,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                     >
                         {renderPaneToolbar('remote')}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
-                            {globalLoading && (!activeRemoteNodes || activeRemoteNodes.length === 0) ? (
+                            {(remoteLoadingPaths[remoteCurrentPath] || globalLoading) && (!activeRemoteNodes || activeRemoteNodes.length === 0) ? (
                                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                                     <ProgressSpinner style={{ width: '36px', height: '36px' }} strokeWidth="3" fill="transparent" animationDuration=".5s" />
                                 </div>
@@ -1407,8 +1425,9 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                                     selectionKeys={remoteSelectedKey}
                                     onSelectionChange={(e) => setRemoteSelectedKey(e.value)}
                                     className="ssh-monitor-tree list-view-tree"
-                                    loading={globalLoading}
+                                    loading={remoteLoadingPaths[remoteCurrentPath]}
                                     nodeTemplate={remoteNodeRenderer}
+                                    emptyMessage=""
                                     style={{ background: 'transparent', border: 'none', color: '#e6edf3' }}
                                 />
                             )}
@@ -1424,7 +1443,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                     >
                         {renderPaneToolbar('local')}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
-                            {globalLoading && (!activeLocalNodes || activeLocalNodes.length === 0) ? (
+                            {(localLoadingPaths[localCurrentPath] || globalLoading) && (!activeLocalNodes || activeLocalNodes.length === 0) ? (
                                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                                     <ProgressSpinner style={{ width: '36px', height: '36px' }} strokeWidth="3" fill="transparent" animationDuration=".5s" />
                                 </div>
@@ -1436,8 +1455,9 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                                     selectionKeys={localSelectedKey}
                                     onSelectionChange={(e) => setLocalSelectedKey(e.value)}
                                     className="ssh-monitor-tree list-view-tree"
-                                    loading={globalLoading}
+                                    loading={localLoadingPaths[localCurrentPath]}
                                     nodeTemplate={localNodeRenderer}
+                                    emptyMessage=""
                                     style={{ background: 'transparent', border: 'none', color: '#e6edf3' }}
                                 />
                             )}
