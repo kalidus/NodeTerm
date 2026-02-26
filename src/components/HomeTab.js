@@ -676,7 +676,7 @@ const HomeTab = ({
             overflow: 'hidden',
             height: '100%'
           }}>
-            {/* Área central (Chat IA o Favoritos+Recientes) */}
+            {/* Áreas central */}
             <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {/* Mostrar Chat de IA o contenido normal */}
               {showAIChat ? (
@@ -740,23 +740,6 @@ const HomeTab = ({
                 </>
               )}
             </div>
-            <NodeTermStatus
-              variant="rightColumn"
-              collapsed={rightColumnCollapsed}
-              sshConnectionsCount={sshConnectionsCount}
-              foldersCount={foldersCount}
-              rdpConnectionsCount={rdpConnectionsCount}
-              themeColors={themeColors}
-              onOpenFileExplorer={onOpenFileExplorer}
-              onOpenSettings={onOpenSettings}
-              onToggleTerminalVisibility={handleToggleTerminalVisibility}
-              onToggleAIChat={handleToggleAIChat}
-              onToggleStatusBar={handleToggleStatusBar}
-              onCollapse={handleToggleRightColumn}
-              showAIChat={showAIChat}
-              statusBarVisible={statusBarVisible}
-              setShowCreateGroupDialog={setShowCreateGroupDialog}
-            />
           </div>
         </div >
       </div >
@@ -812,24 +795,60 @@ const HomeTab = ({
         }}
         data-split-container-wrapper="true"
       >
-        <SplitLayout
-          key={`home-split-${themeVersion}`}
-          leftTerminal={{ key: 'home_top', content: topPanel }}
-          rightTerminal={{ key: 'home_bottom', content: bottomPanel }}
-          orientation="horizontal"
-          fontFamily={''}
-          fontSize={16}
-          theme={{ background: localTerminalBg }}
-          onContextMenu={() => { }}
-          sshStatsByTabId={{}}
-          terminalRefs={{ current: {} }}
-          statusBarIconTheme="classic"
-          isHomeTab={true}
-          externalPaneSize={topPanelSize}
-          onManualResize={handleManualResize}
-          onPaneSizeChange={handlePaneSizeChange}
-          splitterColor={splitterColor}
-        />
+        <div style={{
+          height: '100%',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'row',
+          overflow: 'hidden'
+        }}>
+          {/* Main area with Dashboard and Terminal */}
+          <div style={{
+            flex: 1,
+            minWidth: 0,
+            height: '100%',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <SplitLayout
+              key={`home-split-${themeVersion}`}
+              leftTerminal={{ key: 'home_top', content: topPanel }}
+              rightTerminal={{ key: 'home_bottom', content: bottomPanel }}
+              orientation="horizontal"
+              fontFamily={''}
+              fontSize={16}
+              theme={{ background: localTerminalBg }}
+              onContextMenu={() => { }}
+              sshStatsByTabId={{}}
+              terminalRefs={{ current: {} }}
+              statusBarIconTheme="classic"
+              isHomeTab={true}
+              externalPaneSize={topPanelSize}
+              onManualResize={handleManualResize}
+              onPaneSizeChange={handlePaneSizeChange}
+              splitterColor={splitterColor}
+            />
+          </div>
+
+          {/* Sidebar Area - Outside the vertical split to remain at full height */}
+          <NodeTermStatus
+            variant="rightColumn"
+            collapsed={rightColumnCollapsed}
+            sshConnectionsCount={sshConnectionsCount}
+            foldersCount={foldersCount}
+            rdpConnectionsCount={rdpConnectionsCount}
+            themeColors={themeColors}
+            onOpenFileExplorer={onOpenFileExplorer}
+            onOpenSettings={onOpenSettings}
+            onToggleTerminalVisibility={handleToggleTerminalVisibility}
+            onToggleAIChat={handleToggleAIChat}
+            onToggleStatusBar={handleToggleStatusBar}
+            onCollapse={handleToggleRightColumn}
+            showAIChat={showAIChat}
+            statusBarVisible={statusBarVisible}
+            setShowCreateGroupDialog={setShowCreateGroupDialog}
+          />
+        </div>
       </div>
       <StandaloneStatusBar visible={statusBarVisible} />
     </div>
