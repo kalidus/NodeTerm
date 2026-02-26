@@ -67,23 +67,69 @@ class SSHStatsService {
       iowait: cpuTimes[4],
       irq: cpuTimes[5],
       softirq: cpuTimes[6],
-      steal: cpuTimes[7]
+      steal: cpuTimes[7],
+      coresData: []
     };
+
+    // Calculate core by core
+    for (let i = 1; i < lines.length; i++) {
+      const coreCpuTimes = lines[i].trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
+      if (coreCpuTimes.length >= 8) {
+        currentCpu.coresData.push({
+          user: coreCpuTimes[0],
+          nice: coreCpuTimes[1],
+          system: coreCpuTimes[2],
+          idle: coreCpuTimes[3],
+          iowait: coreCpuTimes[4],
+          irq: coreCpuTimes[5],
+          softirq: coreCpuTimes[6],
+          steal: coreCpuTimes[7]
+        });
+      }
+    }
+
+    let coreLoads = [];
 
     if (previousCpu) {
       const prevIdle = (previousCpu.idle || 0) + (previousCpu.iowait || 0);
       const currentIdle = currentCpu.idle + currentCpu.iowait;
-      const prevTotal = Object.values(previousCpu).reduce((a, b) => a + (typeof b === 'number' ? b : 0), 0);
-      const currentTotal = Object.values(currentCpu).reduce((a, b) => a + b, 0);
-      const totalDiff = currentTotal - prevTotal;
+      const prevTotal = Object.keys(currentCpu).filter(k => typeof currentCpu[k] === 'number').reduce((a, k) => a + currentCpu[k], 0);
+      const prevObjTotal = previousCpu
+        ? Object.keys(previousCpu).filter(k => typeof previousCpu[k] === 'number').reduce((a, k) => a + (previousCpu[k] || 0), 0)
+        : 0;
+
+      const totalDiff = prevTotal - prevObjTotal;
       const idleDiff = currentIdle - prevIdle;
 
       if (totalDiff > 0) {
         cpuLoad = ((totalDiff - idleDiff) * 100 / totalDiff).toFixed(2);
       }
+
+      // Calculate per core
+      if (previousCpu.coresData && currentCpu.coresData.length === previousCpu.coresData.length) {
+        for (let i = 0; i < currentCpu.coresData.length; i++) {
+          const prevCore = previousCpu.coresData[i];
+          const currCore = currentCpu.coresData[i];
+
+          const prevCoreIdle = prevCore.idle + prevCore.iowait;
+          const currCoreIdle = currCore.idle + currCore.iowait;
+
+          const prevCoreTotal = Object.values(prevCore).reduce((a, b) => a + b, 0);
+          const currCoreTotal = Object.values(currCore).reduce((a, b) => a + b, 0);
+
+          const totalCoreDiff = currCoreTotal - prevCoreTotal;
+          const idleCoreDiff = currCoreIdle - prevCoreIdle;
+
+          let coreLoad = '0.00';
+          if (totalCoreDiff > 0) {
+            coreLoad = ((totalCoreDiff - idleCoreDiff) * 100 / totalCoreDiff).toFixed(2);
+          }
+          coreLoads.push(parseFloat(coreLoad));
+        }
+      }
     }
 
-    return { cpuLoad, currentCpu, cores };
+    return { cpuLoad, currentCpu, cores, coreLoads };
   }
 
   /**
@@ -171,11 +217,9 @@ class SSHStatsService {
         // Filtrar montajes no relevantes
         if (name && name.startsWith('/') && !isNaN(use) &&
           !name.startsWith('/sys') &&
-          !name.startsWith('/opt') &&
           !name.startsWith('/run') &&
-          name !== '/boot/efi' &&
           !name.startsWith('/dev') &&
-          !name.startsWith('/var')) {
+          !name.includes('/snap/')) {
           return { fs: name, use };
         }
       }
@@ -401,7 +445,7 @@ class SSHStatsService {
     try {
       // CPU (ahora obtenemos todas las líneas para contar cores)
       const cpuStatOutput = await conn.ssh.exec("grep '^cpu' /proc/stat");
-      const { cpuLoad, currentCpu, cores } = this.parseCPU(cpuStatOutput, conn.previousCpu);
+      const { cpuLoad, currentCpu, cores, coreLoads } = this.parseCPU(cpuStatOutput, conn.previousCpu);
 
       if (currentCpu) {
         conn.previousCpu = currentCpu;
@@ -441,6 +485,7 @@ class SSHStatsService {
         versionId,
         ip,
         cores,
+        coreLoads: coreLoads || null,
         hostname: realHostname
       };
     } catch (error) {
@@ -462,13 +507,14 @@ class SSHStatsService {
 
       if (cpuLineIndex >= 0) {
         // En Bastion el output viene mezclado, parseCPU ahora sabe buscar prefijo 'cpu'
-        const { cpuLoad: parsedCpuLoad, currentCpu, cores: detectedCores } = this.parseCPU(
+        const { cpuLoad: parsedCpuLoad, currentCpu, cores: detectedCores, coreLoads: parsedCoreLoads } = this.parseCPU(
           output, // Pasamos el output completo a parseCPU
           bastionStatsState[tabId]?.previousCpu
         );
 
         cpuLoad = parsedCpuLoad;
         cores = detectedCores;
+        var coreLoads = parsedCoreLoads;
 
         if (currentCpu) {
           if (!bastionStatsState[tabId]) bastionStatsState[tabId] = {};
@@ -513,6 +559,7 @@ class SSHStatsService {
         versionId,
         ip,
         cores,
+        coreLoads: typeof coreLoads !== 'undefined' ? coreLoads : null,
         hostname
       };
     } catch (error) {

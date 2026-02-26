@@ -412,12 +412,28 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                 <div className="ssh-monitor-stats-grid">
 
                     {/* CPU */}
-                    <div className="ssh-monitor-stat-card">
+                    <div className="ssh-monitor-stat-card ssh-stat-hoverable">
                         <div className="ssh-monitor-stat-label">CPU {stats?.cores ? `(${stats.cores} cores)` : ''}</div>
                         <div className={`ssh-monitor-stat-value cpu`}>{cpuPct.toFixed(1)}%</div>
                         <StatBar value={cpuPct} type="cpu" />
                         {cpuHistory.length > 1 && (
                             <Sparkline data={cpuHistory} color="#58a6ff" maxVal={100} />
+                        )}
+                        {stats?.coreLoads && stats.coreLoads.length > 0 && (
+                            <div className="ssh-monitor-cpu-tooltip">
+                                <div style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '8px', color: '#e6edf3', borderBottom: '1px solid #30363d', paddingBottom: '4px' }}>Utilización por Núcleo</div>
+                                <div className="ssh-monitor-cpu-cores-grid">
+                                    {stats.coreLoads.map((load, idx) => (
+                                        <div key={idx} className="ssh-monitor-core-item">
+                                            <span style={{ color: '#8b949e', width: '30px' }}>CPU{idx}</span>
+                                            <div className="ssh-monitor-bar-track" style={{ flex: 1, margin: '0 8px', height: '4px' }}>
+                                                <div className="ssh-monitor-bar-fill cpu" style={{ width: `${Math.min(100, load)}%` }} />
+                                            </div>
+                                            <span style={{ color: '#58a6ff', width: '36px', textAlign: 'right' }}>{load.toFixed(1)}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         )}
                     </div>
 
@@ -453,7 +469,7 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                         {disks.length === 0 ? (
                             <div className="ssh-monitor-stat-sub" style={{ marginTop: 8 }}>Sin datos</div>
                         ) : (
-                            <div className="ssh-monitor-disks" style={{ maxHeight: 90, overflowY: 'auto' }}>
+                            <div className="ssh-monitor-disks">
                                 {disks.map((disk, i) => {
                                     const pct = typeof disk.use === 'number' ? disk.use : (disk.percentage || 0);
                                     const name = disk.fs || disk.name || '/';

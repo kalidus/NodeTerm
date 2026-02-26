@@ -17,14 +17,11 @@ function parseDfOutput(dfOutput) {
     if (parts.length >= 6) {
       const use = parseInt(parts[parts.length - 2], 10);
       const name = parts[parts.length - 1];
-      // Filter out unwanted mount points
-      if (name && name.startsWith('/') && !isNaN(use) && 
-          !name.startsWith('/sys') && 
-          !name.startsWith('/opt') && 
-          !name.startsWith('/run') && 
-          name !== '/boot/efi' && 
-          !name.startsWith('/dev') &&
-          !name.startsWith('/var')) {
+      if (name && name.startsWith('/') && !isNaN(use) &&
+        !name.startsWith('/sys') &&
+        !name.startsWith('/run') &&
+        !name.startsWith('/dev') &&
+        !name.includes('/snap/')) {
         return { fs: name, use };
       }
     }

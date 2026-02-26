@@ -203,6 +203,63 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+    position: relative;
+}
+
+.ssh-monitor-stat-card.ssh-stat-hoverable:hover .ssh-monitor-cpu-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.ssh-monitor-cpu-tooltip {
+    position: absolute;
+    top: 100%;
+    left: 10px;
+    background: rgba(22, 27, 34, 0.96);
+    backdrop-filter: blur(8px);
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 10px 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    width: 210px;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+}
+
+.ssh-monitor-cpu-cores-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.ssh-monitor-cpu-cores-grid::-webkit-scrollbar {
+    width: 4px;
+}
+
+.ssh-monitor-cpu-cores-grid::-webkit-scrollbar-track {
+    background: #161b22;
+}
+
+.ssh-monitor-cpu-cores-grid::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 2px;
+}
+
+.ssh-monitor-core-item {
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+    font-family: 'Consolas', monospace;
 }
 
 .ssh-monitor-stat-label {
@@ -297,7 +354,23 @@
 .ssh-monitor-disks {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
+    max-height: 145px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.ssh-monitor-disks::-webkit-scrollbar {
+    width: 4px;
+}
+
+.ssh-monitor-disks::-webkit-scrollbar-track {
+    background: #161b22;
+}
+
+.ssh-monitor-disks::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 2px;
 }
 
 .ssh-monitor-disk-row {
