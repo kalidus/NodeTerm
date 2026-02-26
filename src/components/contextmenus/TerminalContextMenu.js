@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useLayoutEffect } from 'react';
 
 const TerminalContextMenu = ({
   terminalContextMenu,
@@ -16,6 +16,36 @@ const TerminalContextMenu = ({
   onShowSystemMonitor,
   isSSHSession = false
 }) => {
+  const menuRef = useRef(null);
+  const [position, setPosition] = useState({ left: -9999, top: -9999 });
+
+  useLayoutEffect(() => {
+    if (terminalContextMenu && menuRef.current) {
+      const rect = menuRef.current.getBoundingClientRect();
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+
+      let left = terminalContextMenu.mouseX;
+      let top = terminalContextMenu.mouseY;
+
+      // Ajustar horizontalmente si se sale por la derecha
+      if (left + rect.width > windowWidth) {
+        left = windowWidth - rect.width - 8;
+      }
+
+      // Ajustar verticalmente si se sale por abajo
+      if (top + rect.height > windowHeight) {
+        top = windowHeight - rect.height - 8;
+      }
+
+      // Asegurar que no se salga por arriba o por la izquierda
+      left = Math.max(8, left);
+      top = Math.max(8, top);
+
+      setPosition({ left, top });
+    }
+  }, [terminalContextMenu]);
+
   if (!terminalContextMenu) return null;
 
   const allTabs = getAllTabs ? getAllTabs() : [];
@@ -94,16 +124,23 @@ const TerminalContextMenu = ({
   return (
     <>
       <div
+        ref={menuRef}
         className="terminal-context-menu"
         style={{
           position: 'fixed',
-          left: terminalContextMenu.mouseX,
-          top: terminalContextMenu.mouseY,
+          left: position.left,
+          top: position.top,
           zIndex: 9999,
-          minWidth: '180px',
-          overflow: 'hidden'
+          minWidth: '200px',
+          maxWidth: '300px',
+          maxHeight: 'calc(100vh - 16px)',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          visibility: position.left === -9999 ? 'hidden' : 'visible',
+          boxShadow: '0 8px 16px rgba(0,0,0,0.4)',
+          borderRadius: '6px'
         }}
-        onMouseLeave={() => setTerminalContextMenu(null)}
+        onContextMenu={(e) => e.preventDefault()}
       >
         <div
           className="menu-item"

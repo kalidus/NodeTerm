@@ -27,6 +27,7 @@
     opacity: 0;
     transform: translateY(-8px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -70,7 +71,8 @@
 }
 
 /* Estilos para el menú personalizado de la aplicación (sidebar, etc.) */
-.app-context-menu, .app-submenu {
+.app-context-menu,
+.app-submenu {
   font-family: var(--font-family, 'Public Sans', Arial, sans-serif) !important;
   color: var(--ui-text-primary) !important;
   background: var(--ui-sidebar-bg) !important;
@@ -120,6 +122,7 @@
     opacity: 0;
     transform: translateX(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -165,6 +168,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .app-context-menu,
   .app-submenu {
     animation: none !important;
@@ -255,4 +259,44 @@
 
 .context-menu-themed.p-contextmenu .p-menuitem-link:hover .p-menuitem-icon {
   opacity: 1;
+}
+
+/* Custom Terminal Context Menu */
+.terminal-context-menu {
+  background: var(--ui-context-bg, #1a1b1e) !important;
+  border: 1px solid var(--ui-context-border, rgba(255, 255, 255, 0.1)) !important;
+  color: var(--ui-context-text, #e1e1e1) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.terminal-context-menu .menu-item {
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.terminal-context-menu .menu-item:hover {
+  background-color: var(--ui-context-hover, rgba(255, 255, 255, 0.1)) !important;
+}
+
+.terminal-context-menu .menu-separator {
+  background-color: var(--ui-context-border, rgba(255, 255, 255, 0.1)) !important;
+}
+
+/* Custom Scrollbar for context menus */
+.terminal-context-menu::-webkit-scrollbar {
+  width: 4px;
+}
+
+.terminal-context-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.terminal-context-menu::-webkit-scrollbar-thumb {
+  background: var(--ui-context-border, rgba(255, 255, 255, 0.2));
+  border-radius: 10px;
+}
+
+.terminal-context-menu::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-button-primary, #6366f1);
 }
