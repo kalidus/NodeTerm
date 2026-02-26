@@ -312,7 +312,7 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
 
                     {/* CPU */}
                     <div className="ssh-monitor-stat-card">
-                        <div className="ssh-monitor-stat-label">CPU</div>
+                        <div className="ssh-monitor-stat-label">CPU {stats?.cores ? `(${stats.cores} cores)` : ''}</div>
                         <div className={`ssh-monitor-stat-value cpu`}>{cpuPct.toFixed(1)}%</div>
                         <StatBar value={cpuPct} type="cpu" />
                         {cpuHistory.length > 1 && (
@@ -445,22 +445,27 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredProcesses.map(proc => (
-                                            <tr key={proc.pid}>
-                                                <td className="pid">{proc.pid}</td>
-                                                <td className="user">{proc.user}</td>
-                                                <td className="cpu">
-                                                    {proc.cpu.toFixed(1)}%
-                                                    <span
-                                                        className="ssh-monitor-cpu-mini-bar"
-                                                        style={{ width: `${Math.min(40, proc.cpu * 2)}px` }}
-                                                    />
-                                                </td>
-                                                <td className="mem">{proc.mem.toFixed(1)}%</td>
-                                                <td className="rss">{formatBytes(proc.rss)}</td>
-                                                <td className="cmd" title={proc.command}>{proc.command}</td>
-                                            </tr>
-                                        ))
+                                        filteredProcesses.map(proc => {
+                                            const numCores = stats?.cores || 1;
+                                            const normalizedCpu = proc.cpu / numCores;
+
+                                            return (
+                                                <tr key={proc.pid}>
+                                                    <td className="pid">{proc.pid}</td>
+                                                    <td className="user">{proc.user}</td>
+                                                    <td className="cpu">
+                                                        {normalizedCpu.toFixed(1)}%
+                                                        <span
+                                                            className="ssh-monitor-cpu-mini-bar"
+                                                            style={{ width: `${Math.min(40, normalizedCpu * 2.5)}px` }}
+                                                        />
+                                                    </td>
+                                                    <td className="mem">{normalizedCpu > 0 ? proc.mem.toFixed(1) : proc.mem.toFixed(1)}%</td>
+                                                    <td className="rss">{formatBytes(proc.rss)}</td>
+                                                    <td className="cmd" title={proc.command}>{proc.command}</td>
+                                                </tr>
+                                            );
+                                        })
                                     )}
                                 </tbody>
                             </table>

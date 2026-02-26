@@ -41,13 +41,22 @@ class SSHStatsService {
 
   /**
    * Parsea CPU del output de /proc/stat
+   * El output puede contener varias líneas (grep '^cpu' /proc/stat)
    */
   parseCPU(cpuStatOutput, previousCpu) {
-    const cpuTimes = cpuStatOutput.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
+    const lines = (cpuStatOutput || '').trim().split('\n').filter(l => l.startsWith('cpu'));
+    if (lines.length === 0) return { cpuLoad: '0.00', currentCpu: null, cores: 1 };
+
+    // La primera línea es la agregada ("cpu  ...")
+    const cpuStatLine = lines[0];
+    // El resto son líneas por core ("cpu0 ...", "cpu1 ...")
+    const cores = Math.max(1, lines.length - 1);
+
+    const cpuTimes = cpuStatLine.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
     let cpuLoad = '0.00';
 
     if (cpuTimes.length < 8) {
-      return { cpuLoad, currentCpu: null };
+      return { cpuLoad, currentCpu: null, cores };
     }
 
     const currentCpu = {
@@ -62,9 +71,9 @@ class SSHStatsService {
     };
 
     if (previousCpu) {
-      const prevIdle = previousCpu.idle + previousCpu.iowait;
+      const prevIdle = (previousCpu.idle || 0) + (previousCpu.iowait || 0);
       const currentIdle = currentCpu.idle + currentCpu.iowait;
-      const prevTotal = Object.values(previousCpu).reduce((a, b) => a + b, 0);
+      const prevTotal = Object.values(previousCpu).reduce((a, b) => a + (typeof b === 'number' ? b : 0), 0);
       const currentTotal = Object.values(currentCpu).reduce((a, b) => a + b, 0);
       const totalDiff = currentTotal - prevTotal;
       const idleDiff = currentIdle - prevIdle;
@@ -74,7 +83,7 @@ class SSHStatsService {
       }
     }
 
-    return { cpuLoad, currentCpu };
+    return { cpuLoad, currentCpu, cores };
   }
 
   /**
@@ -363,9 +372,9 @@ class SSHStatsService {
    */
   async processDirectSSHStats(conn, realHostname, finalDistroId, host) {
     try {
-      // CPU
-      const cpuStatOutput = await conn.ssh.exec("grep 'cpu ' /proc/stat");
-      const { cpuLoad, currentCpu } = this.parseCPU(cpuStatOutput, conn.previousCpu);
+      // CPU (ahora obtenemos todas las líneas para contar cores)
+      const cpuStatOutput = await conn.ssh.exec("grep '^cpu' /proc/stat");
+      const { cpuLoad, currentCpu, cores } = this.parseCPU(cpuStatOutput, conn.previousCpu);
 
       if (currentCpu) {
         conn.previousCpu = currentCpu;
@@ -401,10 +410,10 @@ class SSHStatsService {
         disk: disks,
         uptime,
         network,
-        hostname: realHostname,
         distro,
         versionId,
-        ip
+        ip,
+        cores
       };
     } catch (error) {
       throw error;
@@ -421,15 +430,17 @@ class SSHStatsService {
       // CPU
       const cpuLineIndex = parts.findIndex(line => line.trim().startsWith('cpu '));
       let cpuLoad = '0.00';
+      let cores = 1;
 
       if (cpuLineIndex >= 0) {
-        const cpuLine = parts[cpuLineIndex];
-        const { cpuLoad: parsedCpuLoad, currentCpu } = this.parseCPU(
-          cpuLine,
+        // En Bastion el output viene mezclado, parseCPU ahora sabe buscar prefijo 'cpu'
+        const { cpuLoad: parsedCpuLoad, currentCpu, cores: detectedCores } = this.parseCPU(
+          output, // Pasamos el output completo a parseCPU
           bastionStatsState[tabId]?.previousCpu
         );
 
         cpuLoad = parsedCpuLoad;
+        cores = detectedCores;
 
         if (currentCpu) {
           if (!bastionStatsState[tabId]) bastionStatsState[tabId] = {};
@@ -470,10 +481,10 @@ class SSHStatsService {
         disk: disks,
         uptime,
         network,
-        hostname,
         distro,
         versionId,
-        ip
+        ip,
+        cores
       };
     } catch (error) {
       throw error;
@@ -545,7 +556,7 @@ class SSHStatsService {
 
       try {
         if (connObj.ssh.execCommand) {
-          const command = 'grep "cpu " /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "" && cat /etc/os-release';
+          const command = 'grep "^cpu" /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "" && cat /etc/os-release';
 
           connObj.ssh.execCommand(command, (err, result) => {
             if (err || !result) {
