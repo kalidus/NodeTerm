@@ -1511,6 +1511,7 @@ const MainContentArea = ({
                       {tab.type === 'terminal' && sshSystemMonitorTabId === tab.key && (
                         <SSHSystemMonitorPanel
                           tabId={tab.key}
+                          tab={tab}
                           stats={sshStatsByTabId?.[tab.key] || {}}
                           onClose={() => setSshSystemMonitorTabId(null)}
                         />

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import '../styles/ssh-monitor.css';
 
 /**
@@ -70,10 +71,11 @@ const MAX_HISTORY = 40;
  *
  * Props:
  *   tabId      - SSH tab identifier
+ *   tab        - The actual tab object to fetch icon info
  *   stats      - Live stats object from sshStatsByTabId (cpu, mem, disk, network, uptime, hostname, ip, distro)
  *   onClose    - Callback to close the panel
  */
-const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
+const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
     const [processes, setProcesses] = useState([]);
     const [processesLoading, setProcessesLoading] = useState(true);
     const [processFilter, setProcessFilter] = useState('');
@@ -341,17 +343,21 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
                 <div className="ssh-monitor-header">
                     <div className="ssh-monitor-header-main">
                         <div className="ssh-monitor-server-title">
-                            <i className="pi pi-server ssh-monitor-title-icon" />
-                            <h2>{stats?.hostname || 'Servidor SSH'}</h2>
-                            {stats?.ip && stats.ip !== stats?.hostname && (
-                                <span className="ssh-monitor-server-ip">({stats.ip})</span>
+                            {tab?.iconId || tab?.nodeData?.iconId ? (
+                                <SSHIconRenderer
+                                    preset={SSHIconPresets[Object.keys(SSHIconPresets).find(k => SSHIconPresets[k].id === (tab?.iconId || tab?.nodeData?.iconId))] || SSHIconPresets.DEFAULT}
+                                    pixelSize={20}
+                                />
+                            ) : (
+                                <i className="pi pi-server ssh-monitor-title-icon" />
                             )}
+                            <h2>{stats?.hostname || 'Servidor SSH'}</h2>
 
                             <div className="ssh-monitor-header-sub">
                                 {stats?.distro && (
                                     <>
                                         <span className="ssh-monitor-separator">•</span>
-                                        <span className="ssh-monitor-distro-info">
+                                        <span className="ssh-monitor-distro-info" title="Sistema Operativo">
                                             <i className="pi pi-linux" />
                                             <span style={{ textTransform: 'capitalize' }}>{stats.distro}</span>
                                         </span>
@@ -360,7 +366,13 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
                                 {stats?.uptime && (
                                     <>
                                         <span className="ssh-monitor-separator">•</span>
-                                        <span className="ssh-monitor-uptime">⏱ {stats.uptime}</span>
+                                        <span className="ssh-monitor-uptime" title="Tiempo de actividad">⏱ {stats.uptime}</span>
+                                    </>
+                                )}
+                                {stats?.ip && stats.ip !== stats?.hostname && (
+                                    <>
+                                        <span className="ssh-monitor-separator">•</span>
+                                        <span className="ssh-monitor-server-ip" title="Dirección IP">{stats.ip}</span>
                                     </>
                                 )}
                             </div>

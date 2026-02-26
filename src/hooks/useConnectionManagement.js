@@ -229,14 +229,16 @@ export const useConnectionManagement = ({
       host: nodeOrConn.data?.useBastionWallix ? nodeOrConn.data?.targetServer : nodeOrConn.data?.host,
       username: nodeOrConn.data?.user,
       port: nodeOrConn.data?.port || 22,
-      originalKey: nodeOrConn.key
+      originalKey: nodeOrConn.key,
+      iconId: nodeOrConn.data?.iconId || nodeOrConn.data?.customIcon || nodeOrConn.data?.sshIcon
     } : {
       type: nodeOrConn?.type || 'ssh',
       name: nodeOrConn?.name,
       host: nodeOrConn?.host,
       username: nodeOrConn?.username,
       port: nodeOrConn?.port || 22,
-      originalKey: nodeOrConn?.id || `manual_${Date.now()}`
+      originalKey: nodeOrConn?.id || `manual_${Date.now()}`,
+      iconId: nodeOrConn?.iconId || nodeOrConn?.customIcon || nodeOrConn?.sshIcon
     };
 
     // Si viene desde Favoritos/Recientes (sin .data), usar la información guardada como primera opción
@@ -376,6 +378,7 @@ export const useConnectionManagement = ({
         key: tabId,
         label: conn.name,
         originalKey: conn.originalKey,
+        iconId: conn.iconId,
         sshConfig: sshConfig,
         type: 'terminal',
         createdAt: nowTs,
