@@ -84,8 +84,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px 18px 10px;
-    background: rgba(22, 27, 34, var(--ssh-monitor-opacity, 0.9));
-    border-bottom: 1px solid #21262d;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(48, 54, 61, 0.5);
     flex-shrink: 0;
 }
 
@@ -158,8 +158,8 @@
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 1px;
-    background: rgba(48, 54, 61, 0.4);
-    border-bottom: 1px solid #21262d;
+    background: rgba(48, 54, 61, 0.2);
+    border-bottom: 1px solid rgba(48, 54, 61, 0.5);
     flex-shrink: 0;
 }
 
@@ -170,7 +170,7 @@
 }
 
 .ssh-monitor-stat-card {
-    background: rgba(13, 17, 23, 0.3);
+    background: transparent;
     padding: 14px 16px;
     display: flex;
     flex-direction: column;
@@ -327,9 +327,10 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px 16px 8px;
-    border-bottom: 1px solid #21262d;
+    border-bottom: 1px solid rgba(48, 54, 61, 0.5);
     flex-shrink: 0;
     gap: 12px;
+    background: rgba(255, 255, 255, 0.01);
 }
 
 .ssh-monitor-process-title {
@@ -397,7 +398,8 @@
 .ssh-monitor-table th {
     position: sticky;
     top: 0;
-    background: rgba(22, 27, 34, var(--ssh-monitor-opacity, 0.9));
+    background: rgba(22, 27, 34, 0.8);
+    backdrop-filter: blur(4px);
     color: #8b949e;
     font-size: 10px;
     font-weight: 700;
@@ -405,7 +407,7 @@
     letter-spacing: 0.8px;
     padding: 6px 10px;
     text-align: left;
-    border-bottom: 1px solid #21262d;
+    border-bottom: 1px solid rgba(48, 54, 61, 0.8);
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
@@ -483,8 +485,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 6px 16px;
-    background: rgba(22, 27, 34, var(--ssh-monitor-opacity, 0.9));
-    border-top: 1px solid #21262d;
+    background: rgba(255, 255, 255, 0.02);
+    border-top: 1px solid rgba(48, 54, 61, 0.5);
     font-size: 11px;
     color: #8b949e;
     flex-shrink: 0;
