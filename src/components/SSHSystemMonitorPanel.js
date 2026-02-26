@@ -176,9 +176,110 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
         return <span style={{ color: '#58a6ff' }}>{sortDir === 'desc' ? ' ↓' : ' ↑'}</span>;
     };
 
+    // ── Resizing Logic ────────────────────────────────────────────────────────
+    const [panelLeft, setPanelLeft] = useState(() => {
+        const saved = localStorage.getItem('ssh_monitor_panel_left');
+        const parsed = saved ? parseFloat(saved) : 45;
+        return isNaN(parsed) ? 45 : parsed;
+    });
+    const [isResizing, setIsResizing] = useState(false);
+    const [hasMounted, setHasMounted] = useState(false);
+
+    // Use refs for stable values in event listeners
+    const panelLeftRef = useRef(panelLeft);
+    const resizeStateRef = useRef({ isResizing: false, startX: 0, startLeftPx: 0, parentWidth: 0 });
+
+    useEffect(() => {
+        panelLeftRef.current = panelLeft;
+    }, [panelLeft]);
+
+    useEffect(() => {
+        // Marcamos como montado después de un ciclo para permitir la animación inicial
+        const timer = setTimeout(() => setHasMounted(true), 300);
+        return () => clearTimeout(timer);
+    }, []);
+
+    const handleMouseMoveResizer = useCallback((e) => {
+        if (!resizeStateRef.current.isResizing) return;
+
+        const { startX, startLeftPx, parentWidth } = resizeStateRef.current;
+        const deltaX = e.clientX - startX;
+
+        // Nuevo posicionamiento en píxeles (min 20%, max 85%)
+        const newLeftPx = Math.max(parentWidth * 0.2, Math.min(parentWidth * 0.85, startLeftPx + deltaX));
+        const newLeftPct = (newLeftPx / parentWidth) * 100;
+
+        setPanelLeft(newLeftPct);
+    }, []);
+
+    const handleMouseUpResizer = useCallback((e) => {
+        if (resizeStateRef.current.isResizing) {
+            localStorage.setItem('ssh_monitor_panel_left', panelLeftRef.current.toString());
+            // Prevenir que el click se propague si estamos terminando un resize
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }
+
+        resizeStateRef.current.isResizing = false;
+        setIsResizing(false);
+        document.removeEventListener('mousemove', handleMouseMoveResizer);
+        document.removeEventListener('mouseup', handleMouseUpResizer);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    }, [handleMouseMoveResizer]);
+
+    const handleMouseDownResizer = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const overlay = e.currentTarget.closest('.ssh-monitor-overlay');
+        if (!overlay) return;
+
+        const parentRect = overlay.parentElement.getBoundingClientRect();
+        const currentLeftPx = (panelLeftRef.current / 100) * parentRect.width;
+
+        resizeStateRef.current = {
+            isResizing: true,
+            startX: e.clientX,
+            startLeftPx: currentLeftPx,
+            parentWidth: parentRect.width
+        };
+
+        setIsResizing(true);
+        document.addEventListener('mousemove', handleMouseMoveResizer);
+        document.addEventListener('mouseup', handleMouseUpResizer);
+        document.body.style.cursor = 'ew-resize';
+        document.body.style.userSelect = 'none';
+    };
+
+    // Clean up event listeners on unmount
+    useEffect(() => {
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMoveResizer);
+            document.removeEventListener('mouseup', handleMouseUpResizer);
+        };
+    }, [handleMouseMoveResizer, handleMouseUpResizer]);
+
     return (
-        <div className="ssh-monitor-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
-            <div className="ssh-monitor-panel" onClick={(e) => e.stopPropagation()}>
+        <div
+            className="ssh-monitor-overlay"
+            style={{ '--ssh-monitor-left': `${panelLeft}%` }}
+            onClick={(e) => {
+                // Solo cerrar si el click es exactamente en el overlay (fondo transparente)
+                // y NO estamos redimensionando
+                if (e.target === e.currentTarget && !isResizing) onClose?.();
+            }}
+        >
+            {/* Resize handle */}
+            <div
+                className={`ssh-monitor-resize-handle ${isResizing ? 'is-resizing' : ''}`}
+                onMouseDown={handleMouseDownResizer}
+                onClick={(e) => e.stopPropagation()} // Importante: evitar que el click cierre el monitor
+            />
+
+            <div className={`ssh-monitor-panel ${hasMounted || isResizing ? 'no-animation' : ''}`} onClick={(e) => e.stopPropagation()}>
 
                 {/* ── Header ────────────────────────────────────────────────── */}
                 <div className="ssh-monitor-header">

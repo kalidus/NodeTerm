@@ -7,13 +7,31 @@
     top: 0;
     right: 0;
     bottom: 0;
-    left: 45%;
+    left: var(--ssh-monitor-left, 45%);
     z-index: 1000;
     background: transparent;
     display: flex;
     align-items: stretch;
     justify-content: stretch;
     animation: ssh-monitor-fade-in 0.22s ease;
+}
+
+.ssh-monitor-resize-handle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    cursor: ew-resize;
+    z-index: 1010;
+    transition: background-color 0.2s;
+    background: transparent;
+}
+
+.ssh-monitor-resize-handle:hover,
+.ssh-monitor-resize-handle.is-resizing {
+    background: rgba(88, 166, 255, 0.3);
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.4);
 }
 
 @keyframes ssh-monitor-fade-in {
@@ -39,6 +57,10 @@
     box-shadow: -8px 0 32px rgba(0, 0, 0, 0.6);
     font-family: 'Consolas', 'Courier New', monospace;
     animation: ssh-monitor-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ssh-monitor-panel.no-animation {
+    animation: none !important;
 }
 
 @keyframes ssh-monitor-slide-in {
