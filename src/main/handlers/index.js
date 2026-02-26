@@ -26,6 +26,7 @@ let _sshTunnelHandlers = null;
 let _themeHandlers = null;
 let _securityHandlers = null;
 let _appdataHandlers = null;
+let _localFsHandlers = null;
 
 function getAppHandlers() {
   if (!_appHandlers) _appHandlers = require('./app-handlers');
@@ -107,6 +108,11 @@ function getAppDataHandlers() {
   return _appdataHandlers;
 }
 
+function getLocalFsHandlers() {
+  if (!_localFsHandlers) _localFsHandlers = require('./local-fs-handlers');
+  return _localFsHandlers;
+}
+
 /**
  * Registra handlers CRÍTICOS inmediatamente (necesarios para mostrar la UI)
  */
@@ -180,8 +186,9 @@ function registerSecondaryHandlers(dependencies) {
   getMCPHandlers().registerMCPHandlers();
   getNextcloudHandlers().registerNextcloudHandlers();
 
-  // Handlers de archivos (SFTP/FTP/SCP)
+  // Handlers de archivos (SFTP/FTP/SCP y Local)
   getFileHandlers().registerFileHandlers();
+  getLocalFsHandlers().registerLocalFsHandlers();
 
   // Handlers de herramientas de red
   getNetworkToolsHandlers().registerNetworkToolsHandlers();
@@ -248,5 +255,6 @@ module.exports = {
   getSSHTunnelHandlers,
   getThemeHandlers,
   getSecurityHandlers,
-  getAppDataHandlers
+  getAppDataHandlers,
+  getLocalFsHandlers
 };

@@ -783,3 +783,74 @@
     box-shadow: 0 0 0 1px #30363d;
     transition: transform 0.1s ease;
 }
+
+/* ============================================================
+   File Explorer Tree Overrides
+   ============================================================ */
+
+/* Hide PrimeReact's built-in tree node icon span — we render our own in the nodeTemplate */
+.ssh-monitor-tree .p-tree-node-icon {
+    display: none !important;
+}
+
+/* Remove default toggle icon padding spacing that leaves a gap */
+.ssh-monitor-tree .p-tree-node-content {
+    padding: 1px 2px !important;
+    border-radius: 5px !important;
+    transition: background 0.12s ease !important;
+}
+
+/* Hover row highlight */
+.ssh-monitor-tree .p-tree-node-content:hover {
+    background: rgba(139, 148, 158, 0.08) !important;
+}
+
+/* Selection: replace white with a subtle accent glow */
+.ssh-monitor-tree .p-tree-node-content.p-highlight {
+    background: rgba(88, 166, 255, 0.12) !important;
+    color: inherit !important;
+    border-left: 2px solid #58a6ff !important;
+    padding-left: 0 !important;
+}
+
+/* Local pane selection — green accent */
+.local-pane .ssh-monitor-tree .p-tree-node-content.p-highlight {
+    background: rgba(63, 185, 80, 0.12) !important;
+    border-left-color: #3fb950 !important;
+}
+
+/* Focus ring removal */
+.ssh-monitor-tree .p-tree-node-content:focus {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* Toggle chevron styling */
+.ssh-monitor-tree .p-tree-node-toggle-button {
+    color: #484f58 !important;
+    width: 16px !important;
+    height: 16px !important;
+}
+
+.ssh-monitor-tree .p-tree-node-toggle-button:hover {
+    color: #8b949e !important;
+    background: transparent !important;
+}
+
+/* Scrollbar for pane content areas */
+.ssh-file-explorer-content::-webkit-scrollbar {
+    width: 5px;
+}
+
+.ssh-file-explorer-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ssh-file-explorer-content::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 3px;
+}
+
+.ssh-file-explorer-content::-webkit-scrollbar-thumb:hover {
+    background: #484f58;
+}

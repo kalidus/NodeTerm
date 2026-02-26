@@ -60,6 +60,14 @@ contextBridge.exposeInMainWorld('electron', {
       return ipcRenderer.invoke('ssh:rename-file', { tabId, oldPath, newPath, sshConfig: config });
     }
   },
+  localFs: {
+    getHomeDirectory: () => ipcRenderer.invoke('local-fs:get-home-directory'),
+    getDrives: () => ipcRenderer.invoke('local-fs:get-drives'),
+    listFiles: (path) => ipcRenderer.invoke('local-fs:list-files', path),
+    createDirectory: (path) => ipcRenderer.invoke('local-fs:create-directory', path),
+    deleteFile: (path, isDirectory) => ipcRenderer.invoke('local-fs:delete-file', { path, isDirectory }),
+    renameFile: (oldPath, newPath) => ipcRenderer.invoke('local-fs:rename-file', { oldPath, newPath })
+  },
   dialog: {
     showSaveDialog: (options) => ipcRenderer.invoke('dialog:show-save-dialog', options),
     showOpenDialog: (options) => ipcRenderer.invoke('dialog:show-open-dialog', options)
@@ -144,6 +152,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^updater:.*$/,
         /^system:.*$/,
         /^file:.*$/,
+        /^local-fs:.*$/,
         // 'process-pdf', // DESHABILITADO - pdf-parse eliminado
         // 'process-pdf-buffer', // DESHABILITADO
         // 'create-temp-file', // DESHABILITADO
