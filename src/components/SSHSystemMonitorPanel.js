@@ -89,6 +89,12 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
     const [isRefreshMenuOpen, setIsRefreshMenuOpen] = useState(false);
     const refreshMenuRef = useRef(null);
     const intervalRef = useRef(null);
+    const [opacity, setOpacity] = useState(() => {
+        const saved = localStorage.getItem('ssh_monitor_opacity');
+        return saved ? parseFloat(saved) : 0.9;
+    });
+    const [isOpacityMenuOpen, setIsOpacityMenuOpen] = useState(false);
+    const opacityMenuRef = useRef(null);
 
     // ── Fetch process list from main process via IPC ──────────────────────────
     const fetchProcesses = useCallback(async () => {
@@ -116,6 +122,12 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
         }
     }, []);
 
+    const handleOpacityChange = (e) => {
+        const val = parseFloat(e.target.value);
+        setOpacity(val);
+        localStorage.setItem('ssh_monitor_opacity', val.toString());
+    };
+
     // Sync init interval
     useEffect(() => {
         if (window.electron?.ipcRenderer) {
@@ -123,11 +135,14 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
         }
     }, [refreshInterval]);
 
-    // Close dropdown on outside click
+    // Close dropdowns on outside click
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (refreshMenuRef.current && !refreshMenuRef.current.contains(e.target)) {
                 setIsRefreshMenuOpen(false);
+            }
+            if (opacityMenuRef.current && !opacityMenuRef.current.contains(e.target)) {
+                setIsOpacityMenuOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -301,7 +316,10 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
     return (
         <div
             className="ssh-monitor-overlay"
-            style={{ '--ssh-monitor-left': `${panelLeft}%` }}
+            style={{
+                '--ssh-monitor-left': `${panelLeft}%`,
+                '--ssh-monitor-opacity': opacity
+            }}
             onClick={(e) => {
                 // Solo cerrar si el click es exactamente en el overlay (fondo transparente)
                 // y NO estamos redimensionando
@@ -340,6 +358,33 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
                             <span className="ssh-monitor-uptime">⏱ {stats.uptime}</span>
                         )}
                     </div>
+
+                    <div className="ssh-monitor-opacity-container" ref={opacityMenuRef}>
+                        <button
+                            className={`ssh-monitor-opacity-toggle ${isOpacityMenuOpen ? 'active' : ''}`}
+                            onClick={() => setIsOpacityMenuOpen(!isOpacityMenuOpen)}
+                            title="Ajustar opacidad"
+                        >
+                            <i className="pi pi-clone" style={{ fontSize: '12px', transform: 'rotate(45deg)' }} />
+                            <span className="ssh-monitor-opacity-val-text">{Math.round(opacity * 100)}%</span>
+                        </button>
+
+                        {isOpacityMenuOpen && (
+                            <div className="ssh-monitor-opacity-popover">
+                                <span className="ssh-monitor-opacity-label">Opacidad</span>
+                                <input
+                                    type="range"
+                                    className="ssh-monitor-opacity-slider"
+                                    min="0.1"
+                                    max="1"
+                                    step="0.05"
+                                    value={opacity}
+                                    onChange={handleOpacityChange}
+                                />
+                            </div>
+                        )}
+                    </div>
+
                     <button className="ssh-monitor-close" onClick={onClose} title="Cerrar (Esc)">✕</button>
                 </div>
 
