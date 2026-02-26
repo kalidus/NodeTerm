@@ -81,7 +81,11 @@ const TabContentRenderer = React.memo(({
   activeIds,
   openInSplit,
   handleToggleBroadcast,
-  handleBroadcastData
+  handleBroadcastData,
+  onShowSystemMonitor,
+  onShowFileExplorer,
+  handleToggleBroadcastTarget,
+  getAllTabs
 }) => {
   // 🚀 OPTIMIZACIÓN: Calcular conteos una sola vez cuando cambian los nodos o pestañas RDP
   const counts = React.useMemo(() => {
@@ -101,6 +105,13 @@ const TabContentRenderer = React.memo(({
         onCreateVncConnection={onOpenVncConnection}
         onLoadGroup={handleLoadGroupFromFavorites}
         sidebarNodes={nodes}
+        onOpenFileExplorer={() => {
+          // Si HomeTab necesita abrir el explorador de archivos, asumimos
+          // que NodeTermStatus sabe el key o abrimos el del grupo activo.
+          // O lo que haga onShowFileExplorer genérico.
+          // El user reportó que el explorador se abre con NodeTermStatus.
+          if (onShowFileExplorer) onShowFileExplorer(null);
+        }}
         onEditConnection={(connection) => {
           // Intentar construir un nodo temporal según el tipo para reutilizar los editores existentes
           if (!connection) return;
@@ -152,12 +163,6 @@ const TabContentRenderer = React.memo(({
         localFontSize={localFontSize}
         localTerminalTheme={localLinuxTerminalTheme}
         localPowerShellTheme={localPowerShellTheme}
-        localLinuxTerminalTheme={localLinuxTerminalTheme}
-        onOpenFileExplorer={() => {
-          try {
-            window.dispatchEvent(new CustomEvent('open-explorer-dialog'));
-          } catch (e) { /* noop */ }
-        }}
         onOpenSettings={() => {
           try {
             window.dispatchEvent(new CustomEvent('open-settings-dialog'));
@@ -1593,7 +1598,11 @@ const TabContentRenderer = React.memo(({
           }
         }}
         isBroadcastActive={tab.isBroadcastActive || false}
+        handleToggleBroadcastTarget={handleToggleBroadcastTarget}
+        getAllTabs={getAllTabs}
         onBroadcastData={handleBroadcastData ? (data) => handleBroadcastData(tab.key, data) : undefined}
+        onShowSystemMonitor={onShowSystemMonitor}
+        onShowFileExplorer={onShowFileExplorer}
       />
     );
   }

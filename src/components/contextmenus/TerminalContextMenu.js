@@ -14,6 +14,7 @@ const TerminalContextMenu = ({
   handleToggleBroadcastTarget,
   getAllTabs,
   onShowSystemMonitor,
+  onShowFileExplorer,
   isSSHSession = false
 }) => {
   const menuRef = useRef(null);
@@ -302,6 +303,31 @@ const TerminalContextMenu = ({
             >
               <i className="pi pi-chart-bar" style={{ width: '16px', color: '#58a6ff' }} />
               Monitor del Sistema
+            </div>
+          </>
+        )}
+
+        {/* SSH File Explorer */}
+        {isSSHSession && onShowFileExplorer && (
+          <>
+            <div className="menu-separator" style={{ height: '1px', margin: '4px 0' }} />
+            <div
+              className="menu-item"
+              style={{
+                padding: '8px 12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#eab308'
+              }}
+              onClick={() => {
+                onShowFileExplorer(terminalContextMenu.tabKey);
+                setTerminalContextMenu(null);
+              }}
+            >
+              <i className="pi pi-folder-open" style={{ width: '16px', color: '#eab308' }} />
+              Explorar Archivos
             </div>
           </>
         )}

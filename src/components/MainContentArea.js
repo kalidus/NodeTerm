@@ -13,6 +13,7 @@ import TabContextMenu from './contextmenus/TabContextMenu';
 import TerminalContextMenu from './contextmenus/TerminalContextMenu';
 import OverflowMenu from './contextmenus/OverflowMenu';
 import SSHSystemMonitorPanel from './SSHSystemMonitorPanel';
+import SSHFileExplorerPanel from './SSHFileExplorerPanel';
 import { TAB_TYPES } from '../utils/constants';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
@@ -114,6 +115,9 @@ const MainContentArea = ({
 
   // Estado para el panel SSH System Monitor
   const [sshSystemMonitorTabId, setSshSystemMonitorTabId] = useState(null);
+
+  // Estado para el panel SSH File Explorer
+  const [sshFileExplorerTabId, setSshFileExplorerTabId] = useState(null);
 
   // Función para obtener el terminal por defecto desde configuración
   const getDefaultTerminalFromConfig = () => {
@@ -1438,6 +1442,7 @@ const MainContentArea = ({
                   handleToggleBroadcastTarget={handleToggleBroadcastTarget}
                   getAllTabs={getAllTabs}
                   onShowSystemMonitor={(tabKey) => setSshSystemMonitorTabId(tabKey)}
+                  onShowFileExplorer={(tabKey) => setSshFileExplorerTabId(tabKey)}
                   isSSHSession={terminalContextMenu ? (() => {
                     const allT = getAllTabs ? getAllTabs() : [];
                     const tab = allT.find(t => t.key === terminalContextMenu.tabKey);
@@ -1506,6 +1511,7 @@ const MainContentArea = ({
                         {...memoizedContentRendererProps}
                         // Terminal props (específicas)
                         sshStatsByTabId={sshStatsByTabId}
+                        getAllTabs={getAllTabs}
                       />
                       {/* SSH System Monitor: right-side panel inside per-tab absolute div */}
                       {tab.type === 'terminal' && sshSystemMonitorTabId === tab.key && (
@@ -1514,6 +1520,16 @@ const MainContentArea = ({
                           tab={tab}
                           stats={sshStatsByTabId?.[tab.key] || {}}
                           onClose={() => setSshSystemMonitorTabId(null)}
+                        />
+                      )}
+
+                      {/* SSH File Explorer: right-side panel inside per-tab absolute div */}
+                      {tab.type === 'terminal' && sshFileExplorerTabId === tab.key && (
+                        <SSHFileExplorerPanel
+                          tabId={tab.key}
+                          tab={tab}
+                          sshConfig={tab.sshConfig}
+                          onClose={() => setSshFileExplorerTabId(null)}
                         />
                       )}
                     </div>
