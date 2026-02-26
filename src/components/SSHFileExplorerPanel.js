@@ -1156,6 +1156,88 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
     const filteredLocalNodes = useMemo(() => filterHiddenNodes(localNodes, showHidden), [localNodes, showHidden, filterHiddenNodes]);
     const filteredRemoteNodes = useMemo(() => filterHiddenNodes(remoteNodes, showHidden), [remoteNodes, showHidden, filterHiddenNodes]);
 
+
+    const renderPaneToolbar = (side) => {
+        const isRemote = side === 'remote';
+        const selectedKey = isRemote ? remoteSelectedKey : localSelectedKey;
+        const nodes = isRemote ? remoteNodes : localNodes;
+        const defaultRoot = isRemote ? '/' : 'C:\\';
+        const separator = isRemote ? '/' : '\\';
+
+        let currentPath = selectedKey ? selectedKey.replace(/^fs\|/, '') : (nodes.length > 0 ? nodes[0].data.path : defaultRoot);
+
+        const handleUpLevel = () => {
+            if (!currentPath || currentPath === defaultRoot) return;
+            // Clean trailing separator
+            if (currentPath.length > 1 && currentPath.endsWith(separator)) {
+                currentPath = currentPath.slice(0, -1);
+            }
+            const lastIndex = currentPath.lastIndexOf(separator);
+            if (lastIndex <= 0 && isRemote) {
+                setRemoteSelectedKey(makeKey('/'));
+            } else if (lastIndex <= 0 && !isRemote) {
+                setLocalSelectedKey(makeKey(currentPath.substring(0, 3))); // usually 'C:\'
+            } else {
+                const parentPath = currentPath.substring(0, lastIndex);
+                const parentKey = makeKey(parentPath);
+                if (isRemote) setRemoteSelectedKey(parentKey); else setLocalSelectedKey(parentKey);
+            }
+        };
+
+        const handleHome = () => {
+            const homePath = nodes.length > 0 ? nodes[0].data.path : defaultRoot;
+            if (isRemote) setRemoteSelectedKey(makeKey(homePath)); else setLocalSelectedKey(makeKey(homePath));
+        };
+
+        const handleRefresh = () => {
+            if (!currentPath) return;
+            const node = findNodeByKey(nodes, makeKey(currentPath));
+            if (node) {
+                handleRefreshNode(node, side);
+            }
+        };
+
+        const handleToggleHidden = () => {
+            const next = !showHidden;
+            setShowHidden(next);
+            localStorage.setItem('ssh_file_explorer_show_hidden', next ? 'true' : 'false');
+        };
+
+        return (
+            <div style={{
+                padding: '6px 14px',
+                borderBottom: '1px solid #21262d',
+                background: 'rgba(22, 27, 34, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                flexShrink: 0
+            }}>
+                <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleToggleHidden} title={showHidden ? "Ocultar ocultos" : "Mostrar ocultos"} >
+                    <i className={`pi ${showHidden ? 'pi-eye' : 'pi-eye-slash'}`} />
+                </button>
+                <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleUpLevel} title="Subir nivel">
+                    <i className="pi pi-arrow-up" />
+                </button>
+                <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleHome} title="Inicio">
+                    <i className="pi pi-home" />
+                </button>
+
+                <div style={{ flex: 1, margin: '0 8px', display: 'flex', alignItems: 'center' }}>
+                    <i className="pi pi-filter" style={{ color: '#8b949e', fontSize: '11px', marginRight: '6px' }} />
+                    <i className="pi pi-star" style={{ color: '#8b949e', fontSize: '11px', marginRight: '6px' }} />
+                    <span style={{ color: '#e6edf3', fontSize: '0.75rem', fontFamily: 'Consolas, monospace', letterSpacing: '-0.3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {currentPath}
+                    </span>
+                </div>
+
+                <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleRefresh} title="Actualizar">
+                    <i className="pi pi-refresh" />
+                </button>
+            </div>
+        );
+    };
+
     return (
         <div
             className="ssh-monitor-overlay"
@@ -1196,28 +1278,6 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                             <h2>Explorador SSH</h2>
                         </div>
                         <div className="ssh-monitor-header-actions">
-                            <button
-                                className={`ssh-monitor-action-btn ${showHidden ? 'active' : ''}`}
-                                onClick={() => {
-                                    const next = !showHidden;
-                                    setShowHidden(next);
-                                    localStorage.setItem('ssh_file_explorer_show_hidden', next ? 'true' : 'false');
-                                }}
-                                title={showHidden ? "Ocultar archivos ocultos" : "Mostrar archivos ocultos"}
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: showHidden ? '#58a6ff' : '#8b949e',
-                                    cursor: 'pointer',
-                                    padding: '4px 8px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.4rem',
-                                    fontSize: '12px'
-                                }}
-                            >
-                                <i className={`pi ${showHidden ? 'pi-eye' : 'pi-eye-slash'}`} style={{ fontSize: '13px' }} />
-                            </button>
                             <div className="ssh-monitor-opacity-container" ref={opacityMenuRef}>
                                 <button
                                     className={`ssh-monitor-opacity-toggle ${isOpacityMenuOpen ? 'active' : ''}`}
@@ -1275,6 +1335,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                                 {tab?.nodeData?.host || sshConfig?.host || ''}
                             </span>
                         </div>
+                        {renderPaneToolbar('remote')}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
                             {globalLoading && remoteNodes.length === 0 ? (
                                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -1318,6 +1379,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                             <i className="pi pi-desktop" style={{ fontSize: '0.7rem', color: '#3fb950' }} />
                             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#3fb950', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Local</span>
                         </div>
+                        {renderPaneToolbar('local')}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
                             {globalLoading && localNodes.length === 0 ? (
                                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>

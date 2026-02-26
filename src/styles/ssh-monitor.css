@@ -877,6 +877,34 @@
     background: transparent !important;
 }
 
+/* ---- Pane Toolbar Actions ---- */
+.pane-toolbar-btn {
+    background: transparent;
+    border: none;
+    color: #8b949e;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.15s ease, color 0.15s ease;
+    outline: none;
+}
+
+.pane-toolbar-btn i {
+    font-size: 13px;
+}
+
+.pane-toolbar-btn:hover {
+    background: rgba(139, 148, 158, 0.15);
+    color: #e6edf3;
+}
+
+.pane-toolbar-btn:active {
+    background: rgba(139, 148, 158, 0.25);
+}
+
 /* ---- Scrollbar for pane content areas ---- */
 .ssh-file-explorer-content::-webkit-scrollbar {
     width: 5px;
