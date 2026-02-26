@@ -82,6 +82,7 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
     const [sortKey, setSortKey] = useState('cpu');
     const [sortDir, setSortDir] = useState(SORT_DIRECTIONS.desc);
     const [cpuHistory, setCpuHistory] = useState([]);
+    const [memHistory, setMemHistory] = useState([]);
     const [lastRefreshed, setLastRefreshed] = useState(null);
     const [netIfaces, setNetIfaces] = useState([]);
 
@@ -177,13 +178,20 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
         return () => clearInterval(intervalRef.current);
     }, [fetchProcesses, fetchNetIfaces, refreshInterval]);
 
-    // ── Track CPU history from incoming stats ─────────────────────────────────
+    // ── Track CPU and Memory history from incoming stats ──────────────────────
     useEffect(() => {
         if (stats?.cpu !== undefined) {
             const cpuVal = parseFloat(stats.cpu) || 0;
             setCpuHistory(prev => [...prev, cpuVal].slice(-MAX_HISTORY));
         }
-    }, [stats?.cpu]);
+
+        if (stats?.mem?.total !== undefined && stats?.mem?.used !== undefined) {
+            const memTotal = stats.mem.total;
+            const memUsed = stats.mem.used;
+            const memPctVal = memTotal > 0 ? (memUsed / memTotal) * 100 : 0;
+            setMemHistory(prev => [...prev, memPctVal].slice(-MAX_HISTORY));
+        }
+    }, [stats?.cpu, stats?.mem?.total, stats?.mem?.used]);
 
     // ── Close on Escape key ───────────────────────────────────────────────────
     useEffect(() => {
@@ -420,7 +428,7 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                             <Sparkline data={cpuHistory} color="#58a6ff" maxVal={100} />
                         )}
                         {stats?.coreLoads && stats.coreLoads.length > 0 && (
-                            <div className="ssh-monitor-cpu-tooltip">
+                            <div className="ssh-monitor-hover-tooltip">
                                 <div style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '8px', color: '#e6edf3', borderBottom: '1px solid #30363d', paddingBottom: '4px' }}>Utilización por Núcleo</div>
                                 <div className="ssh-monitor-cpu-cores-grid">
                                     {stats.coreLoads.map((load, idx) => (
@@ -438,26 +446,40 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                     </div>
 
                     {/* Memory */}
-                    <div className="ssh-monitor-stat-card">
+                    <div className="ssh-monitor-stat-card ssh-stat-hoverable">
                         <div className="ssh-monitor-stat-label">Memoria</div>
                         <div className="ssh-monitor-stat-value mem">{memPct.toFixed(1)}%</div>
                         <StatBar value={memPct} type="mem" />
-                        <div className="ssh-monitor-stat-sub" style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#c9d1d9', flexWrap: 'wrap', gap: '4px' }}>
-                                <span>Usada:</span>
-                                <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatBytes(memUsed)} / {formatBytes(memTotal)}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
-                                <span>Caché:</span>
-                                <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatBytes(stats?.mem?.cached || 0)}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', borderTop: '1px dotted #30363d', paddingTop: '4px', marginTop: '1px' }}>
-                                <span>Swap:</span>
-                                <div style={{ display: 'flex', flexWrap: 'nowrap', justifyContent: 'flex-end' }}>
-                                    <span style={{ color: stats?.mem?.swapUsed > 0 ? '#d29922' : 'inherit' }}>
-                                        {formatBytes(stats?.mem?.swapUsed || 0)}
-                                    </span>
-                                    <span style={{ whiteSpace: 'nowrap' }}>&nbsp;/ {formatBytes(stats?.mem?.swapTotal || 0)}</span>
+                        <div className="ssh-monitor-stat-sub" style={{ marginTop: '2px' }}>
+                            {formatBytes(memUsed)} / {formatBytes(memTotal)}
+                        </div>
+
+                        <div className="ssh-monitor-hover-tooltip">
+                            <div style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '8px', color: '#e6edf3', borderBottom: '1px solid #30363d', paddingBottom: '4px' }}>Detalles de Memoria</div>
+
+                            {memHistory.length > 1 && (
+                                <div style={{ height: '36px', marginBottom: '12px', position: 'relative' }}>
+                                    <Sparkline data={memHistory} color="#d29922" maxVal={100} />
+                                </div>
+                            )}
+
+                            <div className="ssh-monitor-stat-sub" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#c9d1d9', flexWrap: 'wrap', gap: '4px' }}>
+                                    <span>Usada:</span>
+                                    <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatBytes(memUsed)} / {formatBytes(memTotal)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
+                                    <span>Caché:</span>
+                                    <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatBytes(stats?.mem?.cached || 0)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', borderTop: '1px dotted #30363d', paddingTop: '8px', marginTop: '2px' }}>
+                                    <span>Swap:</span>
+                                    <div style={{ display: 'flex', flexWrap: 'nowrap', justifyContent: 'flex-end' }}>
+                                        <span style={{ color: stats?.mem?.swapUsed > 0 ? '#d29922' : 'inherit' }}>
+                                            {formatBytes(stats?.mem?.swapUsed || 0)}
+                                        </span>
+                                        <span style={{ whiteSpace: 'nowrap' }}>&nbsp;/ {formatBytes(stats?.mem?.swapTotal || 0)}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

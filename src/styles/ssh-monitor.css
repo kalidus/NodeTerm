@@ -211,13 +211,13 @@
     border-top: 1px solid rgba(48, 54, 61, 0.3);
 }
 
-.ssh-monitor-stat-card.ssh-stat-hoverable:hover .ssh-monitor-cpu-tooltip {
+.ssh-monitor-stat-card.ssh-stat-hoverable:hover .ssh-monitor-hover-tooltip {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
 }
 
-.ssh-monitor-cpu-tooltip {
+.ssh-monitor-hover-tooltip {
     position: absolute;
     top: 50%;
     /* Subimos el recuadro para centrarlo verticalmente respecto a la tajeta */
