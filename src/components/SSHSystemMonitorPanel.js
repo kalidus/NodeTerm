@@ -5,10 +5,11 @@ import '../styles/ssh-monitor.css';
  * Formats bytes to a human-readable string (KB, MB, GB)
  */
 function formatBytes(bytes) {
-    if (!bytes || bytes === 0) return '0 KB';
-    if (bytes < 1024) return `${bytes} KB`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} MB`;
-    return `${(bytes / 1024 / 1024).toFixed(2)} GB`;
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 }
 
 /**
@@ -16,9 +17,10 @@ function formatBytes(bytes) {
  */
 function formatSpeed(bytesPerSec) {
     if (!bytesPerSec || bytesPerSec === 0) return '0 B/s';
-    if (bytesPerSec < 1024) return `${bytesPerSec.toFixed(0)} B/s`;
-    if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
-    return `${(bytesPerSec / 1024 / 1024).toFixed(2)} MB/s`;
+    const k = 1024;
+    const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s', 'TB/s'];
+    const i = Math.floor(Math.log(bytesPerSec) / Math.log(k));
+    return `${(bytesPerSec / Math.pow(k, i)).toFixed(i > 0 ? 1 : 0)} ${sizes[i]}`;
 }
 
 /**
@@ -409,19 +411,19 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
                         <div className="ssh-monitor-stat-sub" style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#c9d1d9', flexWrap: 'wrap', gap: '4px' }}>
                                 <span>Usada:</span>
-                                <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{memUsedGB} / {memTotalGB} GB</span>
+                                <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatBytes(memUsed)} / {formatBytes(memTotal)}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
                                 <span>Caché:</span>
-                                <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{stats?.mem?.cached ? (stats.mem.cached / 1024 / 1024 / 1024).toFixed(1) : '0.0'} GB</span>
+                                <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatBytes(stats?.mem?.cached || 0)}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', borderTop: '1px dotted #30363d', paddingTop: '4px', marginTop: '1px' }}>
                                 <span>Swap:</span>
                                 <div style={{ display: 'flex', flexWrap: 'nowrap', justifyContent: 'flex-end' }}>
                                     <span style={{ color: stats?.mem?.swapUsed > 0 ? '#d29922' : 'inherit' }}>
-                                        {stats?.mem?.swapUsed ? (stats.mem.swapUsed / 1024 / 1024 / 1024).toFixed(1) : '0.0'}
+                                        {formatBytes(stats?.mem?.swapUsed || 0)}
                                     </span>
-                                    <span style={{ whiteSpace: 'nowrap' }}>&nbsp;/ {stats?.mem?.swapTotal ? (stats.mem.swapTotal / 1024 / 1024 / 1024).toFixed(1) : '0.0'} GB</span>
+                                    <span style={{ whiteSpace: 'nowrap' }}>&nbsp;/ {formatBytes(stats?.mem?.swapTotal || 0)}</span>
                                 </div>
                             </div>
                         </div>

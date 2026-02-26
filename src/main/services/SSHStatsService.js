@@ -96,24 +96,43 @@ class SSHStatsService {
     const memParts = memLine.trim().split(/\s+/);
     const swapParts = swapLine.trim().split(/\s+/);
 
-    // depending on 'free' version, buffers and cache might be combined or separate.
-    // Mem: total used free shared buff/cache available (index 5)
-    // Mem: total used free shared buffers cached (index 5, it's buffers and 6 is cached)
-    let cached = parseInt(memParts[5], 10) || 0;
-    if (memParts.length > 6 && !isNaN(parseInt(memParts[6], 10))) {
-      // If there's an index 6, it might be older 'free' where 5 is buffers, 6 is cached.
-      // But in newer free, 6 is 'available'. We shouldn't add available to cache.
-      // We can just rely on index 5 for buff/cache in modern systems, plus index 6 if it's strictly cached?
-      // Actually, let's just use index 5 as cache to be simple and robust on most modern distros.
+    if (memParts.length < 2) {
+      return { total: 0, used: 0, cached: 0, swapTotal: 0, swapUsed: 0 };
     }
 
-    return {
-      total: parseInt(memParts[1], 10) || 0,
-      used: parseInt(memParts[2], 10) || 0,
-      cached: parseInt(memParts[5], 10) || 0,
-      swapTotal: parseInt(swapParts[1], 10) || 0,
-      swapUsed: parseInt(swapParts[2], 10) || 0,
-    };
+    let total = parseInt(memParts[1], 10) || 0;
+    let used = parseInt(memParts[2], 10) || 0;
+    let cached = parseInt(memParts[5], 10) || 0;
+    let swapTotal = parseInt(swapParts[1], 10) || 0;
+    let swapUsed = parseInt(swapParts[2], 10) || 0;
+
+    let multiplier = 1;
+    // Detectar si los valores están en KB en lugar de Bytes.
+    // Heurística: Si la memoria total es < 16,000,000 (lo que serían 16MB si fuesen Bytes),
+    // es casi seguro que son KB (representando hasta 16GB RAM), ya que es raro un sistema con < 16MB RAM real.
+    if (total > 0 && total < 16000000) {
+      multiplier = 1024;
+    }
+
+    total *= multiplier;
+    used *= multiplier;
+    cached *= multiplier;
+    swapTotal *= multiplier;
+    swapUsed *= multiplier;
+
+    // Si hay un índice 6 y el 5 parece ser buffers (BusyBox free), sumar el 6 que suele ser cached real
+    if (memParts.length > 6 && !isNaN(parseInt(memParts[6], 10))) {
+      const val5 = parseInt(memParts[5], 10) || 0;
+      const val6 = parseInt(memParts[6], 10) || 0;
+      // En BusyBox, buffers suelen ser menos que cached.
+      // Si sumamos ambos suele ser más preciso para lo que el UI llama "Caché" (buff/cache)
+      // val6 < total / multiplier para evitar confundir con 'available' en sistemas con mucha RAM
+      if (val6 > 0 && total > 0 && val6 < total / (multiplier / 1)) {
+        cached = (val5 + val6) * multiplier;
+      }
+    }
+
+    return { total, used, cached, swapTotal, swapUsed };
   }
 
   /**

@@ -53,34 +53,78 @@ function parseLsOutput(output) {
  */
 function parseProcessList(output) {
   const lines = (output || '').trim().split('\n').filter(Boolean);
-  const results = [];
+  if (lines.length === 0) return [];
 
-  for (const line of lines) {
-    const parts = line.trim().split(/\s+/);
-    if (parts.length < 11) continue;
+  // Encontrar la cabecera para mapear columnas dinámicamente
+  // Intentamos varias combinaciones de palabras clave de cabecera
+  let headerIndex = lines.findIndex(l =>
+    (l.includes('PID') || l.includes('Pid')) &&
+    (l.includes('USER') || l.includes('COMMAND') || l.includes('CMD') || l.includes('STAT') || l.includes('vsz'))
+  );
 
-    const [user, pid, cpu, mem, vsz, rss, tty, stat, start, time, ...cmdParts] = parts;
+  let idx = { pid: -1, user: -1, cpu: -1, mem: -1, vsz: -1, rss: -1, command: -1 };
 
-    // Skip the ps header line
-    if (user === 'USER' && pid === 'PID') continue;
+  if (headerIndex >= 0) {
+    const header = lines[headerIndex];
+    const headerParts = header.trim().split(/\s+/).map(p => p.toUpperCase());
 
-    const cpuVal = parseFloat(cpu);
-    // Skip lines where pid isn't numeric (malformed)
-    if (isNaN(parseInt(pid, 10))) continue;
-
-    results.push({
-      user,
-      pid: parseInt(pid, 10) || 0,
-      cpu: isNaN(cpuVal) ? 0 : cpuVal,
-      mem: parseFloat(mem) || 0,
-      vsz: parseInt(vsz, 10) || 0,
-      rss: parseInt(rss, 10) || 0,
-      command: cmdParts.join(' ').substring(0, 80)
-    });
+    idx.pid = headerParts.indexOf('PID');
+    idx.user = headerParts.findIndex(p => p === 'USER' || p === 'OWNER' || p === 'UID');
+    idx.cpu = headerParts.findIndex(p => p === '%CPU' || p === 'CPU');
+    idx.mem = headerParts.findIndex(p => p === '%MEM' || p === 'MEM');
+    idx.vsz = headerParts.indexOf('VSZ');
+    idx.rss = headerParts.indexOf('RSS');
+    idx.command = headerParts.findIndex(p => p === 'COMMAND' || p === 'CMD' || p === 'ARGS');
   }
 
-  // Sort by CPU descending in JS (no shell pipes needed)
-  results.sort((a, b) => b.cpu - a.cpu);
+  // Si no hay cabecera o no pudimos encontrar PID/COMMAND, intentamos un mapeo por defecto para BusyBox
+  if (idx.pid === -1 || idx.command === -1) {
+    // Si la primera línea empieza por un número, asumimos que no hay cabecera
+    const firstLineParts = lines[0].trim().split(/\s+/);
+    if (!isNaN(parseInt(firstLineParts[0], 10))) {
+      headerIndex = -1; // Procesar desde la primera línea
+      // BusyBox típico: PID USER VSZ STAT COMMAND
+      idx.pid = 0;
+      idx.user = 1;
+      idx.vsz = 2;
+      idx.command = firstLineParts.length >= 4 ? (firstLineParts.length - 1) : 2;
+    } else {
+      // Si la primera línea no es un número y no la reconocimos como cabecera, 
+      // podría ser una cabecera extraña. Intentamos usar la segunda línea como datos.
+      headerIndex = 0;
+      idx.pid = 0;
+      idx.command = firstLineParts.length - 1;
+    }
+  }
+
+  const results = [];
+  for (let i = headerIndex + 1; i < lines.length; i++) {
+    const line = lines[i];
+    const parts = line.trim().split(/\s+/);
+
+    if (idx.pid < 0 || parts.length <= idx.pid) continue;
+
+    const pid = parseInt(parts[idx.pid], 10);
+    if (isNaN(pid)) continue;
+
+    const user = idx.user >= 0 && parts.length > idx.user ? parts[idx.user] : 'root';
+    const cpu = idx.cpu >= 0 && parts.length > idx.cpu ? parseFloat(parts[idx.cpu]) || 0 : 0;
+    const mem = idx.mem >= 0 && parts.length > idx.mem ? parseFloat(parts[idx.mem]) || 0 : 0;
+    const vsz = idx.vsz >= 0 && parts.length > idx.vsz ? parseInt(parts[idx.vsz], 10) || 0 : 0;
+    const rss = idx.rss >= 0 && parts.length > idx.rss ? parseInt(parts[idx.rss], 10) || 0 : 0;
+
+    const cmdIdx = idx.command >= 0 ? idx.command : (parts.length - 1);
+    const command = parts.slice(cmdIdx).join(' ').substring(0, 100);
+
+    results.push({ user, pid, cpu, mem, vsz, rss, command });
+  }
+
+  if (idx.cpu >= 0) {
+    results.sort((a, b) => b.cpu - a.cpu);
+  } else {
+    results.sort((a, b) => b.pid - a.pid);
+  }
+
   return results.slice(0, 80);
 }
 
@@ -576,7 +620,7 @@ function registerSSHHandlers(dependencies = {}) {
       if (!conn || !conn.ssh) {
         return { success: false, error: `No SSH connection. Keys: ${Object.keys(sshConnections || {}).join(',')}` };
       }
-      const raw = await conn.ssh.exec('ps aux');
+      const raw = await conn.ssh.exec('ps aux || ps -ef || ps w || ps');
       const processes = parseProcessList(raw);
       return { success: true, processes };
     } catch (err) {
@@ -592,26 +636,61 @@ function registerSSHHandlers(dependencies = {}) {
         return { success: false, error: 'No SSH connection found' };
       }
 
-      // ip -br address is safe (single command, no pipes, always exits 0)
-      const raw = await conn.ssh.exec('ip -br address');
+      // Probar múltiples comandos para obtener interfaces
+      const raw = await conn.ssh.exec('ip -br addr 2>/dev/null || ip addr 2>/dev/null || ifconfig -a 2>/dev/null || ifconfig 2>/dev/null');
 
       const interfaces = [];
       const lines = (raw || '').trim().split('\n').filter(Boolean);
 
-      for (const line of lines) {
-        // ip -br format: eth0  UP  192.168.1.1/24 ...
-        const parts = line.trim().split(/\s+/);
-        if (parts.length >= 2) {
-          const name = parts[0].replace(/@.*/, '');
-          const state = parts[1] || 'UNKNOWN';
-          const ip = parts.slice(2).find(p => p.includes('.') && !p.startsWith('127.')) || '';
-          if (name !== 'lo') {
-            interfaces.push({ name, state, ip: ip.split('/')[0] });
+      if (raw.includes('link/') || (raw.includes('inet ') && raw.includes('<'))) {
+        // Formato verbose de 'ip address'
+        let currentIface = null;
+        for (const line of lines) {
+          const ifaceMatch = line.match(/^\d+:\s+([^:@\s]+)/);
+          if (ifaceMatch) {
+            currentIface = { name: ifaceMatch[1], state: line.includes('UP') ? 'UP' : 'DOWN', ip: '' };
+            if (currentIface.name !== 'lo') interfaces.push(currentIface);
+            continue;
+          }
+          if (currentIface && line.trim().startsWith('inet ')) {
+            const ipMatch = line.trim().match(/^inet\s+([0-9.]+)/);
+            if (ipMatch && !ipMatch[1].startsWith('127.')) {
+              currentIface.ip = ipMatch[1];
+            }
+          }
+        }
+      } else if (raw.includes('Link encap') || raw.includes('HWaddr') || raw.includes('flags=')) {
+        // Formato ifconfig
+        let currentIface = null;
+        for (const line of lines) {
+          const ifaceMatch = line.match(/^([a-zA-Z0-9.]+)/);
+          if (ifaceMatch) {
+            currentIface = { name: ifaceMatch[1], state: 'UP', ip: '' };
+            if (currentIface.name !== 'lo') interfaces.push(currentIface);
+          }
+          if (currentIface && line.includes('inet ')) {
+            const ipMatch = line.match(/inet (addr:)?([0-9.]+)/);
+            if (ipMatch && !ipMatch[2].startsWith('127.')) {
+              currentIface.ip = ipMatch[2];
+            }
+          }
+        }
+      } else {
+        // Formato ip -br o similar
+        for (const line of lines) {
+          const parts = line.trim().split(/\s+/);
+          if (parts.length >= 2) {
+            const name = parts[0].replace(/@.*/, '');
+            const state = parts[1] || 'UNKNOWN';
+            const ipPart = parts.slice(2).find(p => p.includes('.') && !p.startsWith('127.')) || '';
+            if (name !== 'lo') {
+              interfaces.push({ name, state, ip: ipPart.split('/')[0] });
+            }
           }
         }
       }
 
-      return { success: true, interfaces };
+      return { success: true, interfaces: interfaces.filter(i => i.name !== 'lo') };
     } catch (err) {
       return { success: false, error: err.message || String(err) };
     }

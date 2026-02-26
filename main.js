@@ -141,6 +141,12 @@ const fs = require('fs');
 // - Themes (via sync to ~/.nodeterm/theme.json)
 // ============================================================================
 
+// Guardar para evitar errores si app no está disponible (ej: ejecutando con node puro)
+if (!app) {
+  console.error('❌ [CRITICAL] Electron "app" object is undefined. Ensure you are running with "electron ."');
+  process.exit(1);
+}
+
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
