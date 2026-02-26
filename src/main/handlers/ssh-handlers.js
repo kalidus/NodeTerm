@@ -52,80 +52,83 @@ function parseLsOutput(output) {
  * Parsea la salida de 'ps aux' en una lista de objetos de proceso
  */
 function parseProcessList(output) {
-  const lines = (output || '').trim().split('\n').filter(Boolean);
+  if (!output || typeof output !== 'string') return [];
+  // Dividir y limpiar, pero conservar el contenido para el comando (que puede tener espacios al inicio)
+  const lines = output.split('\n').map(l => l.trim()).filter(Boolean);
   if (lines.length === 0) return [];
 
-  // Encontrar la cabecera para mapear columnas dinámicamente
-  // Intentamos varias combinaciones de palabras clave de cabecera
-  let headerIndex = lines.findIndex(l =>
-    (l.includes('PID') || l.includes('Pid')) &&
-    (l.includes('USER') || l.includes('COMMAND') || l.includes('CMD') || l.includes('STAT') || l.includes('vsz'))
-  );
-
+  let headerIndex = -1;
   let idx = { pid: -1, user: -1, cpu: -1, mem: -1, vsz: -1, rss: -1, command: -1 };
 
-  if (headerIndex >= 0) {
-    const header = lines[headerIndex];
-    const headerParts = header.trim().split(/\s+/).map(p => p.toUpperCase());
-
-    idx.pid = headerParts.indexOf('PID');
-    idx.user = headerParts.findIndex(p => p === 'USER' || p === 'OWNER' || p === 'UID');
-    idx.cpu = headerParts.findIndex(p => p === '%CPU' || p === 'CPU');
-    idx.mem = headerParts.findIndex(p => p === '%MEM' || p === 'MEM');
-    idx.vsz = headerParts.indexOf('VSZ');
-    idx.rss = headerParts.indexOf('RSS');
-    idx.command = headerParts.findIndex(p => p === 'COMMAND' || p === 'CMD' || p === 'ARGS');
-  }
-
-  // Si no hay cabecera o no pudimos encontrar PID/COMMAND, intentamos un mapeo por defecto para BusyBox
-  if (idx.pid === -1 || idx.command === -1) {
-    // Si la primera línea empieza por un número, asumimos que no hay cabecera
-    const firstLineParts = lines[0].trim().split(/\s+/);
-    if (!isNaN(parseInt(firstLineParts[0], 10))) {
-      headerIndex = -1; // Procesar desde la primera línea
-      // BusyBox típico: PID USER VSZ STAT COMMAND
-      idx.pid = 0;
-      idx.user = 1;
-      idx.vsz = 2;
-      idx.command = firstLineParts.length >= 4 ? (firstLineParts.length - 1) : 2;
-    } else {
-      // Si la primera línea no es un número y no la reconocimos como cabecera, 
-      // podría ser una cabecera extraña. Intentamos usar la segunda línea como datos.
-      headerIndex = 0;
-      idx.pid = 0;
-      idx.command = firstLineParts.length - 1;
+  // 1. Buscar cabecera (en los ASUSWRT suele ser la primera línea)
+  for (let i = 0; i < Math.min(lines.length, 5); i++) {
+    const line = lines[i].toUpperCase();
+    if (line.includes('PID') && (line.includes('COMMAND') || line.includes('CMD') || line.includes('VSZ') || line.includes('STAT'))) {
+      headerIndex = i;
+      const parts = lines[i].trim().split(/\s+/).map(p => p.toUpperCase());
+      idx.pid = parts.indexOf('PID');
+      idx.user = parts.findIndex(p => p === 'USER' || p === 'OWNER' || p === 'UID');
+      idx.cpu = parts.findIndex(p => p.includes('%CPU') || p === 'CPU');
+      idx.mem = parts.findIndex(p => p.includes('%MEM') || p === 'MEM');
+      idx.vsz = parts.indexOf('VSZ');
+      idx.rss = parts.indexOf('RSS');
+      idx.command = parts.findIndex(p => p === 'COMMAND' || p === 'CMD' || p === 'ARGS');
+      break;
     }
   }
 
+  // 2. Si no hay cabecera clara, intentar detectar basándonos en la primera línea de datos
+  if (idx.pid === -1) {
+    const firstParts = lines[0].trim().split(/\s+/);
+    if (!isNaN(parseInt(firstParts[0], 10))) {
+      headerIndex = -1;
+      idx.pid = 0;
+      // Heurística BusyBox: [PID, USER, VSZ, STAT, COMMAND]
+      if (firstParts.length >= 5) {
+        idx.user = 1;
+        idx.vsz = 2;
+        idx.command = 4;
+      } else {
+        idx.command = firstParts.length - 1;
+      }
+    }
+  }
+
+  if (idx.pid === -1) return [];
+
   const results = [];
   for (let i = headerIndex + 1; i < lines.length; i++) {
-    const line = lines[i];
-    const parts = line.trim().split(/\s+/);
+    const line = lines[i].trim();
+    if (!line) continue;
+    const parts = line.split(/\s+/);
 
-    if (idx.pid < 0 || parts.length <= idx.pid) continue;
+    if (parts.length <= idx.pid) continue;
 
     const pid = parseInt(parts[idx.pid], 10);
     if (isNaN(pid)) continue;
 
-    const user = idx.user >= 0 && parts.length > idx.user ? parts[idx.user] : 'root';
-    const cpu = idx.cpu >= 0 && parts.length > idx.cpu ? parseFloat(parts[idx.cpu]) || 0 : 0;
-    const mem = idx.mem >= 0 && parts.length > idx.mem ? parseFloat(parts[idx.mem]) || 0 : 0;
-    const vsz = idx.vsz >= 0 && parts.length > idx.vsz ? parseInt(parts[idx.vsz], 10) || 0 : 0;
-    const rss = idx.rss >= 0 && parts.length > idx.rss ? parseInt(parts[idx.rss], 10) || 0 : 0;
+    const user = (idx.user >= 0 && parts[idx.user]) ? parts[idx.user] : 'root';
+    const cpu = (idx.cpu >= 0 && parts[idx.cpu]) ? parseFloat(parts[idx.cpu]) || 0 : 0;
+    const mem = (idx.mem >= 0 && parts[idx.mem]) ? parseFloat(parts[idx.mem]) || 0 : 0;
+    const vsz = (idx.vsz >= 0 && parts[idx.vsz]) ? parseInt(parts[idx.vsz], 10) || 0 : 0;
+    const rss = (idx.rss >= 0 && parts[idx.rss]) ? parseInt(parts[idx.rss], 10) || 0 : 0;
 
-    const cmdIdx = idx.command >= 0 ? idx.command : (parts.length - 1);
-    const command = parts.slice(cmdIdx).join(' ').substring(0, 100);
+    const cmdStart = idx.command >= 0 ? idx.command : (parts.length - 1);
+    const command = parts.slice(cmdStart).join(' ');
 
-    results.push({ user, pid, cpu, mem, vsz, rss, command });
+    if (command) {
+      results.push({ user, pid, cpu, mem, vsz, rss, command: command.substring(0, 120) });
+    }
   }
 
-  if (idx.cpu >= 0) {
+  // Ordenar por CPU si existe, si no por PID
+  if (idx.cpu >= 0 && results.some(r => r.cpu > 0)) {
     results.sort((a, b) => b.cpu - a.cpu);
   } else {
     results.sort((a, b) => b.pid - a.pid);
   }
 
-  return results.slice(0, 80);
+  return results;
 }
 
 function registerSSHHandlers(dependencies = {}) {
@@ -618,10 +621,34 @@ function registerSSHHandlers(dependencies = {}) {
     try {
       const conn = sshConnections && sshConnections[tabId];
       if (!conn || !conn.ssh) {
-        return { success: false, error: `No SSH connection. Keys: ${Object.keys(sshConnections || {}).join(',')}` };
+        return { success: false, error: 'No SSH connection found' };
       }
-      const raw = await conn.ssh.exec('ps aux || ps -ef || ps w || ps');
-      const processes = parseProcessList(raw);
+
+      let raw = '';
+      let processes = [];
+
+      // Intento 1: ps aux
+      try {
+        raw = await conn.ssh.exec('ps aux');
+        processes = parseProcessList(raw);
+      } catch (e) { /* ignore */ }
+
+      // Intento 2: ps w (si el primero no devolvió procesos)
+      if (processes.length === 0) {
+        try {
+          raw = await conn.ssh.exec('ps w');
+          processes = parseProcessList(raw);
+        } catch (e) { /* ignore */ }
+      }
+
+      // Intento 3: ps básico
+      if (processes.length === 0) {
+        try {
+          raw = await conn.ssh.exec('ps');
+          processes = parseProcessList(raw);
+        } catch (e) { /* ignore */ }
+      }
+
       return { success: true, processes };
     } catch (err) {
       return { success: false, error: err.message || String(err) };
@@ -669,9 +696,10 @@ function registerSSHHandlers(dependencies = {}) {
             if (currentIface.name !== 'lo') interfaces.push(currentIface);
           }
           if (currentIface && line.includes('inet ')) {
-            const ipMatch = line.match(/inet (addr:)?([0-9.]+)/);
-            if (ipMatch && !ipMatch[2].startsWith('127.')) {
-              currentIface.ip = ipMatch[2];
+            // Soporte para "inet addr:192.168.1.1" (ifconfig antiguo) o "inet 192.168.1.1" (ip/ifconfig moderno)
+            const ipMatch = line.match(/inet\s+(?:addr:)?([0-9.]+)/);
+            if (ipMatch && !ipMatch[1].startsWith('127.')) {
+              currentIface.ip = ipMatch[1];
             }
           }
         }
