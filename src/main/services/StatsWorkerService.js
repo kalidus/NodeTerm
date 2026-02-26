@@ -12,20 +12,20 @@ let statsWorkerQueue = [];
 
 function startStatsWorker() {
   if (statsWorker) {
-    try { statsWorker.kill(); } catch {}
+    try { statsWorker.kill(); } catch { }
     statsWorker = null;
     statsWorkerReady = false;
   }
-  
+
   statsWorker = fork(path.join(__dirname, '../../../system-stats-worker.js'));
   statsWorkerReady = true;
-  
+
   statsWorker.on('exit', () => {
     statsWorkerReady = false;
     // Reiniciar automáticamente si muere
     setTimeout(startStatsWorker, 1000);
   });
-  
+
   statsWorker.on('message', (msg) => {
     if (statsWorkerQueue.length > 0) {
       const { resolve, timeout } = statsWorkerQueue.shift();
@@ -39,13 +39,17 @@ function startStatsWorker() {
   });
 }
 
+const os = require('os');
+
 function getFallbackStats(model = 'NoData') {
   return {
     cpu: { usage: 0, cores: 0, model },
     memory: { used: 0, total: 0, percentage: 0 },
     disks: [],
     network: { download: 0, upload: 0 },
-    temperature: { cpu: 0, gpu: 0 }
+    temperature: { cpu: 0, gpu: 0 },
+    hostname: os.hostname(),
+    platform: process.platform
   };
 }
 
@@ -56,13 +60,13 @@ async function getSystemStats() {
       resolve(getFallbackStats('NoWorker'));
       return;
     }
-    
+
     const timeout = setTimeout(() => {
       resolve(getFallbackStats('Timeout'));
     }, 15000); // 15 segundos de timeout
-    
+
     statsWorkerQueue.push({ resolve, timeout });
-    
+
     try {
       statsWorker.send('get-stats');
     } catch (e) {

@@ -118,8 +118,8 @@ const UbuntuTerminal = forwardRef(({
                     mem: { total: memTotalBytes, used: memUsedBytes },
                     disk: displayDisk,
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
-                    hostname: systemStats.hostname || undefined,
-                    ip: systemStats.ip || undefined,
+                    hostname: systemStats.hostname,
+                    ip: systemStats.ip,
                     distro: distroId || 'ubuntu',
                     cpuHistory
                 };

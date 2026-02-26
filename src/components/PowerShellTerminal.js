@@ -99,8 +99,8 @@ const PowerShellTerminal = forwardRef(({
                     mem: { total: memTotalBytes, used: memUsedBytes },
                     disk: displayDisk,
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
-                    hostname: systemStats.hostname || undefined,
-                    ip: systemStats.ip || undefined,
+                    hostname: systemStats.hostname,
+                    ip: systemStats.ip,
                     distro: window.electron?.platform === 'win32' ? 'windows' : (window.electron?.platform === 'darwin' ? 'macos' : 'linux'),
                     // Optional fields omitted for local PS (hostname/distro/uptime/ip)
                     cpuHistory

@@ -240,11 +240,14 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
 
     return (
         <div className="status-bar">
-            <div className="status-group">
-                {hostname && (
-                    <div className="status-bar-section">
+            <div className="status-group" style={{ flex: 1 }}>
+                {(hostname || distro || ip) && (
+                    <div
+                        className="status-bar-section hostname-section"
+                        title={`Host: ${hostname || ip || 'Unknown'} | IP: ${ip || 'N/A'} | Platform: ${distro || 'linux'}`}
+                    >
                         <DistroIcon distro={distro} />
-                        <span>{hostname}</span>
+                        <span>{(hostname && hostname !== 'unknown' && hostname !== 'localhost') ? hostname : (ip || hostname || 'Unknown')}</span>
                     </div>
                 )}
                 {cpu !== undefined && (
@@ -349,17 +352,28 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
                         <span>{uptime}</span>
                     </div>
                 )}
-                {ip && (
-                    <div className="status-bar-section">
-                        <span
-                            className="status-bar-icon"
-                            style={{ color: currentIconTheme.colors.server }}
-                        >
-                            {currentIconTheme.icons.server}
-                        </span>
-                        <span>{ip}</span>
-                    </div>
-                )}
+                {ip && hostname &&
+                    ip !== hostname &&
+                    hostname !== 'unknown' &&
+                    hostname !== 'localhost' && (
+                        <div className="status-bar-section ip-section">
+                            <span
+                                className="status-bar-icon"
+                                style={{ color: currentIconTheme.colors.server }}
+                            >
+                                {currentIconTheme.icons.server}
+                            </span>
+                            <span>{ip}</span>
+                        </div>
+                    )}
+                <div className="status-bar-section version-info-section" style={{ marginLeft: 'auto', opacity: 0.5, fontSize: '0.85em', display: 'flex', alignItems: 'center' }}>
+                    {appVersion && appVersion !== '0.0.0' && (
+                        <span title={versionId}>v{appVersion}</span>
+                    )}
+                    {versionId && versionId !== '0.0.0' && versionId !== appVersion && (
+                        <span style={{ marginLeft: '5px', fontSize: '0.9em' }}>({versionId})</span>
+                    )}
+                </div>
             </div>
         </div>
     );

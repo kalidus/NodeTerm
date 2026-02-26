@@ -137,15 +137,21 @@ function registerCriticalHandlers(dependencies) {
   ipcMain.handle('get-system-stats', async () => {
     try {
       const StatsWorkerService = require('../services/StatsWorkerService');
-      return await StatsWorkerService.getSystemStats();
+      const stats = await StatsWorkerService.getSystemStats();
+      // Asegurar que hostname esté presente (fallback si el worker no lo envió)
+      if (stats && !stats.hostname) {
+        stats.hostname = require('os').hostname();
+      }
+      return stats;
     } catch (error) {
       // Devolver stats vacías si el worker aún no está listo
+      const os = require('os');
       return {
         cpu: { usage: 0, cores: 0 },
         memory: { total: 0, used: 0, free: 0 },
         disks: [],
         network: { download: 0, upload: 0 },
-        hostname: '',
+        hostname: os.hostname(),
         platform: process.platform
       };
     }

@@ -33,7 +33,7 @@ async function getSystemStats() {
     memory: { ...lastValidStats.memory },
     disks: [...lastValidStats.disks],
     network: { ...lastValidStats.network },
-    hostname: lastValidStats.hostname || os.hostname(),
+    hostname: os.hostname(),
     ip: lastValidStats.ip || '',
     temperature: { ...lastValidStats.temperature }
   };

@@ -39,7 +39,7 @@ const StandaloneStatusBar = ({ visible = true }) => {
     // Poll local system stats
     useEffect(() => {
         if (!visible) return; // No hacer polling si no está visible
-        
+
         let stopped = false;
         let timer = null;
         const pollingInterval = parseInt(localStorage.getItem('statusBarPollingInterval') || '3', 10) * 1000;
@@ -65,7 +65,7 @@ const StandaloneStatusBar = ({ visible = true }) => {
                 if (!systemStats || stopped) {
                     return;
                 }
-                
+
                 // Map worker stats → StatusBar expected shape
                 const memTotalBytes = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
                 const memUsedBytes = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
@@ -80,13 +80,13 @@ const StandaloneStatusBar = ({ visible = true }) => {
                     const isUNC = id.startsWith('\\\\') || id.startsWith('//');
                     return !(d && (d.isNetwork || isUNC));
                 });
-                
+
                 const cpuVal = typeof systemStats.cpu?.usage === 'number' ? systemStats.cpu.usage : null;
                 if (cpuVal !== null && !isNaN(cpuVal)) {
                     cpuHistoryRef.current = [...cpuHistoryRef.current, cpuVal].slice(-20);
                     setCpuHistory([...cpuHistoryRef.current]);
                 }
-                
+
                 // Obtener estadísticas de GPU
                 try {
                     const gpuData = await window.electron.system?.getGPUStats();
@@ -99,19 +99,19 @@ const StandaloneStatusBar = ({ visible = true }) => {
                     // GPU no disponible o error
                     setGpuStats(null);
                 }
-                
+
                 // Usar el historial actualizado desde el ref
                 const statsPayload = {
                     cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
                     mem: { total: memTotalBytes, used: memUsedBytes },
                     disk: displayDisk,
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
-                    hostname: systemStats.hostname || undefined,
+                    hostname: systemStats.hostname,
                     ip: systemStats.ip || undefined,
                     distro: 'windows',
                     cpuHistory: [...cpuHistoryRef.current]
                 };
-                
+
                 setStatusStats(statsPayload);
                 setIsLoadingStats(false);
             } catch (error) {
@@ -149,7 +149,7 @@ const StandaloneStatusBar = ({ visible = true }) => {
     }
 
     return (
-        <div style={{ 
+        <div style={{
             ...getScopedStatusBarCssVars(),
             position: 'absolute',
             bottom: 0,
@@ -158,13 +158,13 @@ const StandaloneStatusBar = ({ visible = true }) => {
             zIndex: 10,
             width: '100%'
         }}>
-            <StatusBar 
-                stats={statusStats || {}} 
+            <StatusBar
+                stats={statusStats || {}}
                 gpuStats={gpuStats}
-                active={true} 
-                statusBarIconTheme={statusBarIconTheme} 
-                showNetworkDisks={showNetworkDisks} 
-                isLoading={isLoadingStats} 
+                active={true}
+                statusBarIconTheme={statusBarIconTheme}
+                showNetworkDisks={showNetworkDisks}
+                isLoading={isLoadingStats}
             />
         </div>
     );

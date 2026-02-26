@@ -430,7 +430,8 @@ class SSHStatsService {
         distro,
         versionId,
         ip,
-        cores
+        cores,
+        hostname: realHostname
       };
     } catch (error) {
       throw error;
@@ -501,7 +502,8 @@ class SSHStatsService {
         distro,
         versionId,
         ip,
-        cores
+        cores,
+        hostname
       };
     } catch (error) {
       throw error;
