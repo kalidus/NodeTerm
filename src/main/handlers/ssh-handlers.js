@@ -6,6 +6,7 @@ const { ipcMain } = require('electron');
 const SSH2Promise = require('ssh2-promise');
 const SftpClient = require('ssh2-sftp-client');
 const fs = require('fs');
+const sshStatsService = require('../services/SSHStatsService');
 
 /**
  * Escapa caracteres especiales de shell para prevenir command injection
@@ -617,6 +618,15 @@ function registerSSHHandlers(dependencies = {}) {
   });
 
   // Todos los handlers SSH registrados exitosamente
+  // SSH: Configurar intervalo de actualización de stats
+  ipcMain.handle('ssh:set-stats-interval', async (event, { intervalMs }) => {
+    try {
+      sshStatsService.setPollingInterval(intervalMs);
+      return { success: true, intervalMs };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
 }
 
 module.exports = registerSSHHandlers;

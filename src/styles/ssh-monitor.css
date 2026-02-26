@@ -487,10 +487,28 @@
     flex-shrink: 0;
 }
 
-.ssh-monitor-refresh-indicator {
+.ssh-monitor-refresh-selector {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.ssh-monitor-refresh-btn {
     display: flex;
     align-items: center;
     gap: 6px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    user-select: none;
+    color: #8b949e;
+    margin-left: -8px;
+}
+
+.ssh-monitor-refresh-btn:hover {
+    background: #21262d;
+    color: #e6edf3;
 }
 
 .ssh-monitor-refresh-dot {
@@ -499,6 +517,60 @@
     border-radius: 50%;
     background: #3fb950;
     animation: ssh-monitor-pulse 2s ease infinite;
+}
+
+.ssh-monitor-refresh-menu {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 6px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    padding: 6px;
+    min-width: 150px;
+    z-index: 1000;
+    animation: ssh-monitor-menu-in 0.15s ease;
+}
+
+@keyframes ssh-monitor-menu-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ssh-monitor-refresh-option {
+    display: flex;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #c9d1d9;
+    cursor: pointer;
+    transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.ssh-monitor-refresh-option:hover {
+    background: #1f6feb;
+    color: #ffffff;
+}
+
+.ssh-monitor-refresh-option.active {
+    background: rgba(88, 166, 255, 0.1);
+    color: #58a6ff;
+    font-weight: 600;
+}
+
+.ssh-monitor-refresh-option.active:hover {
+    background: #1f6feb;
+    color: #ffffff;
 }
 
 @keyframes ssh-monitor-pulse {

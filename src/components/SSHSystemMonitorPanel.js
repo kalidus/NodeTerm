@@ -60,7 +60,7 @@ const StatBar = ({ value, type = 'cpu' }) => {
 };
 
 const SORT_DIRECTIONS = { asc: 'asc', desc: 'desc' };
-const REFRESH_INTERVAL_MS = 3000;
+const REFRESH_OPTIONS = [1000, 2000, 3000, 5000, 10000];
 const MAX_HISTORY = 40;
 
 /**
@@ -80,6 +80,14 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
     const [cpuHistory, setCpuHistory] = useState([]);
     const [lastRefreshed, setLastRefreshed] = useState(null);
     const [netIfaces, setNetIfaces] = useState([]);
+
+    // Dropdown refresh menu state
+    const [refreshInterval, setRefreshInterval] = useState(() => {
+        const saved = localStorage.getItem('ssh_monitor_refresh_ms');
+        return saved ? parseInt(saved, 10) : 3000;
+    });
+    const [isRefreshMenuOpen, setIsRefreshMenuOpen] = useState(false);
+    const refreshMenuRef = useRef(null);
     const intervalRef = useRef(null);
 
     // ── Fetch process list from main process via IPC ──────────────────────────
@@ -98,6 +106,33 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
             setLastRefreshed(new Date());
         }
     }, [tabId]);
+
+    // ── Handle interval changes and sync with backend ─────────────────────────
+    const handleIntervalChange = useCallback((newMs) => {
+        setRefreshInterval(newMs);
+        localStorage.setItem('ssh_monitor_refresh_ms', newMs.toString());
+        if (window.electron?.ipcRenderer) {
+            window.electron.ipcRenderer.invoke('ssh:set-stats-interval', { intervalMs: newMs });
+        }
+    }, []);
+
+    // Sync init interval
+    useEffect(() => {
+        if (window.electron?.ipcRenderer) {
+            window.electron.ipcRenderer.invoke('ssh:set-stats-interval', { intervalMs: refreshInterval });
+        }
+    }, [refreshInterval]);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (refreshMenuRef.current && !refreshMenuRef.current.contains(e.target)) {
+                setIsRefreshMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
 
 
@@ -118,9 +153,10 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
     useEffect(() => {
         fetchProcesses();
         fetchNetIfaces();
-        intervalRef.current = setInterval(fetchProcesses, REFRESH_INTERVAL_MS);
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        intervalRef.current = setInterval(fetchProcesses, refreshInterval);
         return () => clearInterval(intervalRef.current);
-    }, [fetchProcesses, fetchNetIfaces]);
+    }, [fetchProcesses, fetchNetIfaces, refreshInterval]);
 
     // ── Track CPU history from incoming stats ─────────────────────────────────
     useEffect(() => {
@@ -475,14 +511,38 @@ const SSHSystemMonitorPanel = ({ tabId, stats = {}, onClose }) => {
 
                 {/* ── Footer ────────────────────────────────────────────────── */}
                 <div className="ssh-monitor-footer">
-                    <div className="ssh-monitor-refresh-indicator">
-                        <div className="ssh-monitor-refresh-dot" />
-                        Actualización cada {REFRESH_INTERVAL_MS / 1000}s
+                    <div className="ssh-monitor-refresh-selector" ref={refreshMenuRef}>
+                        <div
+                            className="ssh-monitor-refresh-btn"
+                            onClick={() => setIsRefreshMenuOpen(!isRefreshMenuOpen)}
+                        >
+                            <div className="ssh-monitor-refresh-dot" />
+                            Actualización: {refreshInterval / 1000}s
+                            <i className={`pi ${isRefreshMenuOpen ? 'pi-chevron-up' : 'pi-chevron-down'}`} style={{ fontSize: '10px', marginLeft: 4 }} />
+                        </div>
+
+                        {isRefreshMenuOpen && (
+                            <div className="ssh-monitor-refresh-menu">
+                                {REFRESH_OPTIONS.map(ms => (
+                                    <div
+                                        key={ms}
+                                        className={`ssh-monitor-refresh-option ${refreshInterval === ms ? 'active' : ''}`}
+                                        onClick={() => {
+                                            handleIntervalChange(ms);
+                                            setIsRefreshMenuOpen(false);
+                                        }}
+                                    >
+                                        Cada {ms / 1000} segundos
+                                        {refreshInterval === ms && <i className="pi pi-check" style={{ fontSize: '10px', marginLeft: 'auto' }} />}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     {lastRefreshed && (
                         <span>Última actualización: {lastRefreshed.toLocaleTimeString()}</span>
                     )}
-                    <span style={{ color: '#484f58' }}>Pulsa ESC para cerrar</span>
+                    <span style={{ color: '#484f58', marginLeft: 'auto' }}>ESC para cerrar</span>
                 </div>
 
             </div>
