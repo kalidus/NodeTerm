@@ -52,7 +52,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
 
     const [showHidden, setShowHidden] = useState(() => {
         const saved = localStorage.getItem('ssh_file_explorer_show_hidden');
-        return saved !== 'false';
+        return saved === 'true'; // Default is false for cleaner look like windows explorer
     });
 
     const panelLeftRef = useRef(panelLeft);
@@ -1084,6 +1084,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         const isDirectory = node?.data?.type === 'directory';
         const isExpanded = isDirectory && keysMap?.[node.key];
         const isDragTarget = dragOverKey === node.key && isDirectory;
+        const isHidden = node.isHidden || entry.isHidden || node.label.startsWith('.');
 
         // Icon: try from data.iconInfo first, then fall back
         const iconInfo = node?.data?.iconInfo;
@@ -1137,10 +1138,11 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                     transition: 'background 0.15s ease, box-shadow 0.15s ease',
                     cursor: 'pointer',
                     minHeight: '28px',
+                    opacity: isHidden ? 0.3 : 1,
                     background: isDragTarget ? `rgba(${side === 'remote' ? '88,166,255' : '63,185,80'},0.15)` : 'transparent',
                     boxShadow: isDragTarget ? `inset 0 0 0 1px ${side === 'remote' ? '#58a6ff' : '#3fb950'}` : 'none',
                 }}
-                className={`filesystem-node fs-node-${side}`}
+                className={`filesystem-node fs-node-${side} ${isHidden ? 'is-hidden-node' : ''}`}
             >
                 {/* Icon */}
                 <span
@@ -1199,18 +1201,29 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
     const remoteNodeRenderer = useMemo(() => createNodeTemplate('remote'), [createNodeTemplate]);
 
     const filterHiddenNodes = useCallback((nodesList, isHiddenShown) => {
-        if (isHiddenShown) return nodesList;
-        return nodesList
-            .filter(node => node.data.isRoot || !node.label.startsWith('.'))
-            .map(node => {
-                if (node.children) {
-                    return {
-                        ...node,
-                        children: filterHiddenNodes(node.children, isHiddenShown)
-                    };
+        if (!nodesList) return [];
+
+        const applyIsHidden = (nodes) => {
+            return nodes.map(node => {
+                const entry = node.data?.raw || {};
+                const nodeIsHidden = !!(node.isHidden || entry.isHidden || (node.label && node.label.startsWith('.')));
+
+                let children = node.children;
+                if (children && children.length > 0) {
+                    children = applyIsHidden(children);
                 }
-                return node;
+
+                return { ...node, isHidden: nodeIsHidden, children };
             });
+        };
+
+        const processed = applyIsHidden(nodesList);
+
+        if (isHiddenShown) {
+            return processed;
+        }
+
+        return processed.filter(node => node.data?.isRoot || !node.isHidden);
     }, []);
 
     // Extract strictly the flat children array for the current path

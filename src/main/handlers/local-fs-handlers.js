@@ -22,6 +22,20 @@ function sanitizeLocalPath(userPath) {
  * Convierte información de archivo fs.stat a formato estándar
  */
 function formatLocalFile(filename, stats, fullPath) {
+    let isSymbolic = false;
+    let isJunction = false;
+    try {
+        const lstats = fs.lstatSync(fullPath);
+        isSymbolic = lstats.isSymbolicLink();
+
+        // Detect junctions/reparse points by comparing stat and lstat
+        if (process.platform === 'win32' && !isSymbolic && stats.isDirectory()) {
+            if (lstats.dev !== stats.dev || lstats.ino !== stats.ino || lstats.mode !== stats.mode) {
+                isJunction = true;
+            }
+        }
+    } catch (e) { }
+
     return {
         name: filename,
         path: fullPath,
@@ -30,7 +44,9 @@ function formatLocalFile(filename, stats, fullPath) {
         group: '',
         size: stats.size || 0,
         modified: stats.mtime ? stats.mtime.toLocaleString() : '',
-        type: stats.isDirectory() ? 'directory' : (stats.isSymbolicLink() ? 'symlink' : 'file'),
+        type: stats.isDirectory() ? 'directory' : (isSymbolic ? 'symlink' : 'file'),
+        isSymbolic: isSymbolic || isJunction,
+        isHidden: false
     };
 }
 
@@ -78,11 +94,59 @@ async function listFiles(targetPath) {
         const files = fs.readdirSync(safePath);
         const result = [];
 
+        // Identify hidden files via Windows attrib
+        const hiddenSet = new Set();
+        if (process.platform === 'win32') {
+            try {
+                // To avoid long execs in massive directories, limit timeout
+                if (files.length < 1000) {
+                    const { stdout } = await execPromise(`attrib /D "${path.join(safePath, '*')}"`, { timeout: 2000 }).catch(() => ({ stdout: '' }));
+                    // Use regex that handles both CRLF and LF safely
+                    const lines = stdout.split(/\r?\n/);
+                    for (const line of lines) {
+                        if (line.length > 21) {
+                            const attrs = line.substring(0, 20);
+                            if (attrs.includes('H') || attrs.includes('S')) {
+                                const fullPathInLine = line.substring(20).trim();
+                                if (fullPathInLine) {
+                                    hiddenSet.add(path.basename(fullPathInLine).toLowerCase());
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (err) { }
+        }
+
+        const windowsSystemFolders = new Set([
+            'sendto', 'recent', 'plantillas', 'templates', 'cookies',
+            'nethood', 'printhood', 'application data', 'my documents',
+            'local settings', 'inicio', 'start menu', 'menú inicio',
+            'desktop', 'escritorio', 'documents', 'documentos',
+            'pictures', 'imágenes', 'music', 'música', 'videos', 'vídeos',
+            'searches', 'búsquedas', 'links', 'vínculos', 'favorites', 'favoritos',
+            'saved games', 'juegos guardados', 'contacts', 'contactos',
+            'downloads', 'descargas', 'appdata', 'entorno de red', 'ntuser.dat', 'ntuser.ini'
+        ]);
+
         for (const file of files) {
             try {
                 const fullPath = path.join(safePath, file);
                 const stats = fs.statSync(fullPath);
-                result.push(formatLocalFile(file, stats, fullPath));
+                const item = formatLocalFile(file, stats, fullPath);
+
+                const lowerName = file.toLowerCase();
+
+                if (file.startsWith('.') || hiddenSet.has(lowerName)) {
+                    item.isHidden = true;
+                } else if (process.platform === 'win32') {
+                    // Force hide common system junctions
+                    if (windowsSystemFolders.has(lowerName) && item.isSymbolic) {
+                        item.isHidden = true;
+                    }
+                }
+
+                result.push(item);
             } catch (e) {
                 // Ignorar archivos sin permisos de lectura
             }
