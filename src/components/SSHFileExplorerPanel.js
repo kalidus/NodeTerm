@@ -1365,10 +1365,9 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             <div
                 className={`ssh-monitor-resize-handle ${isResizing ? 'is-resizing' : ''}`}
                 onMouseDown={handleMouseDownResizer}
-                onClick={(e) => e.stopPropagation()}
             />
 
-            <div className={`ssh-monitor-panel ${hasMounted || isResizing ? 'no-animation' : ''}`} onClick={(e) => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className={`ssh-monitor-panel ${hasMounted || isResizing ? 'no-animation' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
 
                 {/* ── Header ────────────────────────────────────────────────── */}
                 <div className="ssh-monitor-header">
