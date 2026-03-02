@@ -1145,7 +1145,7 @@ const NodeTermStatus = ({
 						})}
 						{/* Ubuntus adicionales */}
 						{(ubuntuDistributions || []).map((d, idx) => (
-							<button key={`ubuntu-${idx}`} title={d.label} onClick={() => window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: 'ubuntu', distroInfo: d.distroInfo || d } }))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+							<button key={`ubuntu-${idx}`} title={d.label} onClick={() => handleOpenTerminal('ubuntu', d.distroInfo || d)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
 								<FaUbuntu style={{ color: d.color || '#E95420', fontSize: '1.1rem' }} />
 							</button>
 						))}
@@ -1466,7 +1466,17 @@ const NodeTermStatus = ({
 						(dockerContainers || []).forEach(c => {
 							items.push({ label: `🐳 ${c.name}`, terminalType: 'docker', distroInfo: { containerName: c.name, containerId: c.id, shortId: c.shortId }, icon: 'docker', color: '#2496ed', isDocker: true });
 						});
-						const dispatch = (terminalType, distroInfo) => window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType, distroInfo } }));
+						const dispatch = (terminalType, distroInfo) => {
+							// Determine if it's Ubuntu to open as a global app tab instead of home-tab local terminal
+							const isUbuntu = terminalType === 'ubuntu' ||
+								(distroInfo && (distroInfo.category === 'ubuntu' || (distroInfo.name || '').toLowerCase().includes('ubuntu')));
+
+							if (isUbuntu) {
+								handleOpenTerminal(terminalType, distroInfo);
+							} else {
+								window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType, distroInfo } }));
+							}
+						};
 						const TermIcon = ({ it }) => {
 							if (it.icon === 'docker' || it.isDocker) return <SiDocker style={{ color: it.color, fontSize: '1rem' }} />;
 							if (it.terminalType === 'powershell') return <FaWindows style={{ color: it.color, fontSize: '1rem' }} />;
