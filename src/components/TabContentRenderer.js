@@ -161,7 +161,7 @@ const TabContentRenderer = React.memo(({
         rdpConnectionsCount={counts?.rdp || 0}
         localFontFamily={localFontFamily}
         localFontSize={localFontSize}
-        localTerminalTheme={localLinuxTerminalTheme}
+        localLinuxTerminalTheme={localLinuxTerminalTheme}
         localPowerShellTheme={localPowerShellTheme}
         onOpenSettings={() => {
           try {
