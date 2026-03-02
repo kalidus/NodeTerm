@@ -725,6 +725,25 @@ function registerSSHHandlers(dependencies = {}) {
   });
 
   // Todos los handlers SSH registrados exitosamente
+
+  // SSH: Copiar archivo/directorio en el servidor remoto (remoto→remoto)
+  ipcMain.handle('ssh:copy-file', async (event, { tabId, srcPath, destPath, sshConfig }) => {
+    try {
+      if (!srcPath || !destPath) return { success: false, error: 'srcPath o destPath inválido' };
+      const safeSrc = escapeShellPath(srcPath.trim());
+      const safeDest = escapeShellPath(destPath.trim());
+      const command = `cp -r "${safeSrc}" "${safeDest}" && echo __OK__ || echo __FAIL__`;
+
+      const ssh = new SSH2Promise(sshConfig);
+      await ssh.connect();
+      const result = await ssh.exec(command);
+      await ssh.close();
+      return result.includes('__OK__') ? { success: true } : { success: false, error: 'cp falló en el servidor' };
+    } catch (err) {
+      return { success: false, error: err.message || err };
+    }
+  });
+
   // SSH: Configurar intervalo de actualización de stats
   ipcMain.handle('ssh:set-stats-interval', async (event, { intervalMs }) => {
     try {

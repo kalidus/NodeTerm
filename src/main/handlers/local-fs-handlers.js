@@ -203,6 +203,25 @@ async function renameFile(oldPath, newPath) {
 }
 
 /**
+ * Copia un archivo o directorio local a otra ruta
+ */
+async function copyFile(srcPath, destPath) {
+    try {
+        const safeSrc = sanitizeLocalPath(srcPath);
+        const safeDest = sanitizeLocalPath(destPath);
+        const srcStats = fs.statSync(safeSrc);
+        if (srcStats.isDirectory()) {
+            fs.cpSync(safeSrc, safeDest, { recursive: true, force: true });
+        } else {
+            fs.copyFileSync(safeSrc, safeDest);
+        }
+        return { success: true, destPath: safeDest };
+    } catch (err) {
+        return { success: false, error: err.message || err };
+    }
+}
+
+/**
  * Registra todos los manejadores IPC relacionados con archivos locales
  */
 function registerLocalFsHandlers() {
@@ -212,6 +231,7 @@ function registerLocalFsHandlers() {
     ipcMain.handle('local-fs:create-directory', async (event, path) => createDirectory(path));
     ipcMain.handle('local-fs:delete-file', async (event, { path, isDirectory }) => deleteFile(path, isDirectory));
     ipcMain.handle('local-fs:rename-file', async (event, { oldPath, newPath }) => renameFile(oldPath, newPath));
+    ipcMain.handle('local-fs:copy-file', async (event, { srcPath, destPath }) => copyFile(srcPath, destPath));
 }
 
 module.exports = {

@@ -13,13 +13,17 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
     const [remoteNodes, setRemoteNodes] = useState([]);
     const [remoteExpandedKeys, setRemoteExpandedKeys] = useState({});
     const [remoteSelectedKey, setRemoteSelectedKey] = useState(null);
+    const [remoteSelectedKeys, setRemoteSelectedKeys] = useState(new Set()); // multi-select
     const [remoteLoadingPaths, setRemoteLoadingPaths] = useState({});
+    const remoteLastClickedKey = useRef(null);
 
     // ---- Local State ----
     const [localNodes, setLocalNodes] = useState([]);
     const [localExpandedKeys, setLocalExpandedKeys] = useState({});
     const [localSelectedKey, setLocalSelectedKey] = useState(null);
+    const [localSelectedKeys, setLocalSelectedKeys] = useState(new Set()); // multi-select
     const [localLoadingPaths, setLocalLoadingPaths] = useState({});
+    const localLastClickedKey = useRef(null);
 
     // ---- Current Path Tracking ----
     const [remoteCurrentPath, setRemoteCurrentPath] = useState(null);
@@ -805,6 +809,123 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         e.dataTransfer.dropEffect = 'copy';
     }, []);
 
+    // ────────────────────────────────────────────────────────────────
+    // Multi-selection click handler (Ctrl+Click toggle, Shift+Click range, plain click single)
+    // ────────────────────────────────────────────────────────────────
+    const handleNodeClick = useCallback((e, node, side, activeNodes) => {
+        const setKeys = side === 'local' ? setLocalSelectedKeys : setRemoteSelectedKeys;
+        const setSingle = side === 'local' ? setLocalSelectedKey : setRemoteSelectedKey;
+        const lastRef = side === 'local' ? localLastClickedKey : remoteLastClickedKey;
+        const currentKeys = side === 'local' ? localSelectedKeys : remoteSelectedKeys;
+
+        if (e.ctrlKey || e.metaKey) {
+            const next = new Set(currentKeys);
+            if (next.has(node.key)) { next.delete(node.key); } else { next.add(node.key); }
+            setKeys(next);
+            setSingle(node.key);
+            lastRef.current = node.key;
+        } else if (e.shiftKey && lastRef.current && activeNodes?.length) {
+            const keys = activeNodes.map(n => n.key);
+            const fromIdx = keys.indexOf(lastRef.current);
+            const toIdx = keys.indexOf(node.key);
+            if (fromIdx !== -1 && toIdx !== -1) {
+                const [s, end] = fromIdx < toIdx ? [fromIdx, toIdx] : [toIdx, fromIdx];
+                setKeys(new Set(keys.slice(s, end + 1)));
+                setSingle(node.key);
+            }
+        } else {
+            setKeys(new Set([node.key]));
+            setSingle(node.key);
+            lastRef.current = node.key;
+        }
+    }, [localSelectedKeys, remoteSelectedKeys]);
+
+    // ────────────────────────────────────────────────────────────────
+    // Bulk copy cross-panel (local→remote or remote→local)
+    // ────────────────────────────────────────────────────────────────
+    const handleCopySelectedCrossSide = useCallback(async (fromSide) => {
+        const invoke = window.electron?.ipcRenderer?.invoke;
+        if (!invoke) return;
+
+        const fromKeys = fromSide === 'local' ? localSelectedKeys : remoteSelectedKeys;
+        const fromNodes = fromSide === 'local' ? localNodes : remoteNodes;
+        const toPath = fromSide === 'local' ? remoteCurrentPath : localCurrentPath;
+        const toSide = fromSide === 'local' ? 'remote' : 'local';
+
+        if (fromKeys.size === 0) {
+            notify('warn', 'Sin selección', `Selecciona archivos en el panel ${fromSide === 'local' ? 'local' : 'remoto'} primero.`);
+            return;
+        }
+        if (!toPath) { notify('warn', 'Sin destino', 'Navega a una carpeta en el panel destino.'); return; }
+
+        setGlobalLoading(true);
+        let ok = 0; let fail = 0;
+        for (const key of fromKeys) {
+            const node = findNodeByKey(fromNodes, key);
+            if (!node?.data?.path) continue;
+            try {
+                if (fromSide === 'local') {
+                    const rPath = joinPath(toPath, node.label);
+                    const res = await invoke('ssh:upload-file', { tabId, localPath: node.data.path, remotePath: rPath, sshConfig });
+                    res?.success ? ok++ : fail++;
+                } else {
+                    const sep = toPath.includes('\\') ? '\\' : '/';
+                    const lPath = toPath.endsWith(sep) ? `${toPath}${node.label}` : `${toPath}${sep}${node.label}`;
+                    const res = await invoke('ssh:download-file', { tabId, remotePath: node.data.path, localPath: lPath, sshConfig });
+                    res?.success ? ok++ : fail++;
+                }
+            } catch (err) { fail++; }
+        }
+        if (ok > 0) {
+            notify('success', 'Copia completada', `${ok} elemento(s) copiado(s).`);
+            if (toSide === 'remote') await loadRemoteDirectory(toPath, { keepExpanded: true });
+            else await loadLocalDirectory(toPath, { keepExpanded: true });
+        }
+        if (fail > 0) notify('error', 'Errores en copia', `${fail} elemento(s) fallaron.`);
+        setGlobalLoading(false);
+    }, [localSelectedKeys, remoteSelectedKeys, localNodes, remoteNodes, localCurrentPath, remoteCurrentPath,
+        findNodeByKey, joinPath, loadLocalDirectory, loadRemoteDirectory, notify, sshConfig, tabId]);
+
+    // ────────────────────────────────────────────────────────────────
+    // Bulk delete
+    // ────────────────────────────────────────────────────────────────
+    const handleDeleteSelected = useCallback(async (side) => {
+        const invoke = window.electron?.ipcRenderer?.invoke;
+        const fromKeys = side === 'local' ? localSelectedKeys : remoteSelectedKeys;
+        const fromNodes = side === 'local' ? localNodes : remoteNodes;
+        const currentPath = side === 'local' ? localCurrentPath : remoteCurrentPath;
+        const loadDir = side === 'local' ? loadLocalDirectory : loadRemoteDirectory;
+
+        if (fromKeys.size === 0) { notify('warn', 'Sin selección', 'Selecciona archivos primero.'); return; }
+
+        if (!window.confirm(`¿Eliminar ${fromKeys.size} elemento(s)?`)) return;
+
+        setGlobalLoading(true);
+        let ok = 0; let fail = 0;
+        for (const key of fromKeys) {
+            const node = findNodeByKey(fromNodes, key);
+            if (!node?.data?.path) continue;
+            const isDir = node.data.type === 'directory';
+            try {
+                let res;
+                if (side === 'local') {
+                    res = await window.electron?.localFs?.deleteFile(node.data.path, isDir);
+                } else {
+                    res = await invoke('ssh:delete-file', { tabId, remotePath: node.data.path, isDirectory: isDir, sshConfig });
+                }
+                res?.success ? ok++ : fail++;
+            } catch { fail++; }
+        }
+        if (ok > 0) {
+            notify('success', 'Eliminado', `${ok} elemento(s) eliminado(s).`);
+            (side === 'local' ? setLocalSelectedKeys : setRemoteSelectedKeys)(new Set());
+            if (currentPath) await loadDir(currentPath, { keepExpanded: true });
+        }
+        if (fail > 0) notify('error', 'Error al eliminar', `${fail} elemento(s) fallaron.`);
+        setGlobalLoading(false);
+    }, [localSelectedKeys, remoteSelectedKeys, localNodes, remoteNodes, localCurrentPath, remoteCurrentPath,
+        findNodeByKey, loadLocalDirectory, loadRemoteDirectory, notify, sshConfig, tabId]);
+
     const handleDrop = useCallback(async (e, targetSide) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1074,10 +1195,12 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
     }, []);
 
-    const createNodeTemplate = useCallback((side) => (node) => {
+    const createNodeTemplate = useCallback((side, activeNodes) => (node) => {
         const loadingPathsMap = side === 'local' ? localLoadingPaths : remoteLoadingPaths;
         const keysMap = side === 'local' ? localExpandedKeys : remoteExpandedKeys;
+        const selectedKeysSet = side === 'local' ? localSelectedKeys : remoteSelectedKeys;
         const accentColor = side === 'remote' ? '#58a6ff' : '#3fb950';
+        const accentRgb = side === 'remote' ? '88,166,255' : '63,185,80';
 
         const isLoading = node?.data?.path ? loadingPathsMap[node.data.path] : false;
         const entry = node?.data?.raw || {};
@@ -1085,6 +1208,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         const isExpanded = isDirectory && keysMap?.[node.key];
         const isDragTarget = dragOverKey === node.key && isDirectory;
         const isHidden = node.isHidden || entry.isHidden || node.label.startsWith('.');
+        const isSelected = selectedKeysSet.has(node.key);
 
         // Icon: try from data.iconInfo first, then fall back
         const iconInfo = node?.data?.iconInfo;
@@ -1097,10 +1221,16 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         const rawSize = typeof entry.size === 'number' ? entry.size : (typeof entry.size === 'string' ? parseInt(entry.size, 10) : null);
         const formattedSize = !isDirectory && rawSize ? formatFileSize(rawSize) : null;
 
+        let bgColor = 'transparent';
+        let bsVal = 'none';
+        if (isSelected) { bgColor = `rgba(${accentRgb},0.15)`; bsVal = `inset 0 0 0 1px rgba(${accentRgb},0.4)`; }
+        if (isDragTarget) { bgColor = `rgba(${accentRgb},0.22)`; bsVal = `inset 0 0 0 1px ${accentColor}`; }
+
         return (
             <div
                 data-id={node.key}
                 draggable
+                onClick={(e) => handleNodeClick(e, node, side, activeNodes)}
                 onDragStart={(e) => {
                     e.stopPropagation();
                     e.dataTransfer.setData('application/vnd.nodeterm.side', side);
@@ -1109,17 +1239,11 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 }}
                 onDoubleClick={(e) => {
                     e.stopPropagation();
-                    if (isDirectory) {
-                        handleNavigate(node.data.path, side);
-                    }
+                    if (isDirectory) { handleNavigate(node.data.path, side); }
                 }}
                 onDragEnd={() => setDragOverKey(null)}
                 onDragEnter={(e) => {
-                    if (isDirectory) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setDragOverKey(node.key);
-                    }
+                    if (isDirectory) { e.preventDefault(); e.stopPropagation(); setDragOverKey(node.key); }
                 }}
                 onDragLeave={(e) => {
                     if (isDirectory && !e.currentTarget.contains(e.relatedTarget)) {
@@ -1128,77 +1252,43 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 }}
                 onContextMenu={(e) => handleContextMenu(e, node, side)}
                 style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    width: '100%',
-                    padding: '0.25rem 0.4rem',
-                    borderRadius: '5px',
-                    transition: 'background 0.15s ease, box-shadow 0.15s ease',
-                    cursor: 'pointer',
-                    minHeight: '28px',
-                    opacity: isHidden ? 0.3 : 1,
-                    background: isDragTarget ? `rgba(${side === 'remote' ? '88,166,255' : '63,185,80'},0.15)` : 'transparent',
-                    boxShadow: isDragTarget ? `inset 0 0 0 1px ${side === 'remote' ? '#58a6ff' : '#3fb950'}` : 'none',
+                    display: 'flex', flexDirection: 'row', alignItems: 'center',
+                    gap: '0.5rem', width: '100%', padding: '0.25rem 0.4rem',
+                    borderRadius: '5px', transition: 'background 0.12s ease, box-shadow 0.12s ease',
+                    cursor: 'pointer', minHeight: '28px', opacity: isHidden ? 0.3 : 1,
+                    background: bgColor, boxShadow: bsVal,
                 }}
-                className={`filesystem-node fs-node-${side} ${isHidden ? 'is-hidden-node' : ''}`}
+                className={`filesystem-node fs-node-${side} ${isHidden ? 'is-hidden-node' : ''} ${isSelected ? 'fs-node-selected' : ''}`}
             >
-                {/* Icon */}
-                <span
-                    className={iconClass}
-                    style={{
-                        color: iconColor,
-                        fontSize: '0.8rem',
-                        width: '13px',
-                        flexShrink: 0,
-                        textAlign: 'center'
-                    }}
-                />
+                <span className={iconClass} style={{ color: iconColor, fontSize: '0.8rem', width: '13px', flexShrink: 0, textAlign: 'center' }} />
 
-                {/* Name */}
                 <span style={{
-                    flex: 1,
-                    minWidth: 0,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    color: '#e6edf3',
-                    fontSize: '0.82rem',
-                    letterSpacing: '0.01em'
+                    flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    color: isSelected ? accentColor : '#e6edf3',
+                    fontSize: '0.82rem', letterSpacing: '0.01em',
+                    fontWeight: isSelected ? 600 : 400,
                 }}>
                     {node.label}
                 </span>
 
-                {/* Right side: size pill or spinner */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
                     {formattedSize && (
-                        <span style={{
-                            fontSize: '0.65rem',
-                            color: '#6e7681',
-                            background: 'rgba(110,118,129,0.12)',
-                            padding: '1px 5px',
-                            borderRadius: '3px',
-                            fontVariantNumeric: 'tabular-nums'
-                        }}>
+                        <span style={{ fontSize: '0.65rem', color: '#6e7681', background: 'rgba(110,118,129,0.12)', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums' }}>
                             {formattedSize}
                         </span>
                     )}
                     {isLoading && (
-                        <ProgressSpinner
-                            style={{ width: '10px', height: '10px' }}
-                            strokeWidth="3"
-                            fill="transparent"
-                            animationDuration=".6s"
-                        />
+                        <ProgressSpinner style={{ width: '10px', height: '10px' }} strokeWidth="3" fill="transparent" animationDuration=".6s" />
                     )}
                 </div>
             </div>
         );
-    }, [dragOverKey, formatFileSize, handleContextMenu, localLoadingPaths, remoteLoadingPaths, localExpandedKeys, remoteExpandedKeys]);
+    }, [dragOverKey, formatFileSize, handleContextMenu, handleNavigate, handleNodeClick,
+        localLoadingPaths, remoteLoadingPaths, localExpandedKeys, remoteExpandedKeys,
+        localSelectedKeys, remoteSelectedKeys]);
 
-    const localNodeRenderer = useMemo(() => createNodeTemplate('local'), [createNodeTemplate]);
-    const remoteNodeRenderer = useMemo(() => createNodeTemplate('remote'), [createNodeTemplate]);
+    const localNodeRenderer = useMemo(() => createNodeTemplate('local', activeLocalNodes), [createNodeTemplate, activeLocalNodes]);
+    const remoteNodeRenderer = useMemo(() => createNodeTemplate('remote', activeRemoteNodes), [createNodeTemplate, activeRemoteNodes]);
 
     const filterHiddenNodes = useCallback((nodesList, isHiddenShown) => {
         if (!nodesList) return [];
@@ -1300,48 +1390,100 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             localStorage.setItem('ssh_file_explorer_show_hidden', next ? 'true' : 'false');
         };
 
+        const selectedKeys = isRemote ? remoteSelectedKeys : localSelectedKeys;
+
         return (
-            <div style={{
-                padding: '6px 10px',
-                borderBottom: '1px solid #21262d',
-                background: isRemote ? 'rgba(88,166,255,0.05)' : 'rgba(63,185,80,0.05)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                flexShrink: 0
-            }}>
-                {/* Title */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '4px' }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: accentColor, flexShrink: 0 }} />
-                    <i className={isRemote ? "pi pi-server" : "pi pi-desktop"} style={{ fontSize: '0.7rem', color: accentColor }} />
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: accentColor, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                        {isRemote ? 'Remoto' : 'Local'}
-                    </span>
+            <>
+                {/* Main toolbar */}
+                <div style={{
+                    padding: '6px 10px',
+                    borderBottom: '1px solid #21262d',
+                    background: isRemote ? 'rgba(88,166,255,0.05)' : 'rgba(63,185,80,0.05)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    flexShrink: 0
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '4px' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: accentColor, flexShrink: 0 }} />
+                        <i className={isRemote ? "pi pi-server" : "pi pi-desktop"} style={{ fontSize: '0.7rem', color: accentColor }} />
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: accentColor, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                            {isRemote ? 'Remoto' : 'Local'}
+                        </span>
+                    </div>
+                    <div style={{ width: '1px', height: '14px', background: '#30363d', margin: '0 2px' }} />
+                    <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleToggleHidden} title={showHidden ? "Ocultar ocultos" : "Mostrar ocultos"}>
+                        <i className={`pi ${showHidden ? 'pi-eye' : 'pi-eye-slash'}`} />
+                    </button>
+                    <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleUpLevel} title="Subir nivel">
+                        <i className="pi pi-arrow-up" />
+                    </button>
+                    <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleHome} title="Inicio">
+                        <i className="pi pi-home" />
+                    </button>
+                    <div style={{ flex: 1, margin: '0 4px', display: 'flex', alignItems: 'center', background: 'rgba(13, 17, 23, 0.4)', padding: '2px 8px', borderRadius: '4px', border: '1px solid #30363d' }}>
+                        <i className="pi pi-folder-open" style={{ color: '#8b949e', fontSize: '11px', marginRight: '6px' }} />
+                        <span style={{ color: '#e6edf3', fontSize: '0.75rem', fontFamily: 'Consolas, monospace', letterSpacing: '-0.3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {currentPath}
+                        </span>
+                    </div>
+                    <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleRefresh} title="Actualizar">
+                        <i className="pi pi-refresh" />
+                    </button>
                 </div>
 
-                <div style={{ width: '1px', height: '14px', background: '#30363d', margin: '0 2px' }} />
-
-                <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleToggleHidden} title={showHidden ? "Ocultar ocultos" : "Mostrar ocultos"} >
-                    <i className={`pi ${showHidden ? 'pi-eye' : 'pi-eye-slash'}`} />
-                </button>
-                <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleUpLevel} title="Subir nivel">
-                    <i className="pi pi-arrow-up" />
-                </button>
-                <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleHome} title="Inicio">
-                    <i className="pi pi-home" />
-                </button>
-
-                <div style={{ flex: 1, margin: '0 4px', display: 'flex', alignItems: 'center', background: 'rgba(13, 17, 23, 0.4)', padding: '2px 8px', borderRadius: '4px', border: '1px solid #30363d' }}>
-                    <i className="pi pi-folder-open" style={{ color: '#8b949e', fontSize: '11px', marginRight: '6px' }} />
-                    <span style={{ color: '#e6edf3', fontSize: '0.75rem', fontFamily: 'Consolas, monospace', letterSpacing: '-0.3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {currentPath}
-                    </span>
-                </div>
-
-                <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleRefresh} title="Actualizar">
-                    <i className="pi pi-refresh" />
-                </button>
-            </div>
+                {/* Selection action bar — only shown when items are selected */}
+                {selectedKeys.size > 0 && (
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        padding: '3px 10px', borderBottom: '1px solid #21262d',
+                        background: isRemote ? 'rgba(88,166,255,0.07)' : 'rgba(63,185,80,0.07)',
+                        flexShrink: 0, minHeight: '28px',
+                    }}>
+                        <span style={{ fontSize: '0.7rem', color: accentColor, fontWeight: 700 }}>
+                            {selectedKeys.size} sel.
+                        </span>
+                        <div style={{ flex: 1 }} />
+                        <button
+                            onClick={() => handleCopySelectedCrossSide(side)}
+                            title={`Copiar al panel ${isRemote ? 'local' : 'remoto'}`}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                padding: '2px 8px', borderRadius: '5px', border: 'none',
+                                background: `rgba(${isRemote ? '88,166,255' : '63,185,80'},0.15)`,
+                                color: accentColor, cursor: 'pointer', fontSize: '0.7rem', fontWeight: 600,
+                            }}
+                        >
+                            <i className={`pi ${isRemote ? 'pi-arrow-right' : 'pi-arrow-left'}`} style={{ fontSize: '10px' }} />
+                            {isRemote ? '→ local' : '→ remoto'}
+                        </button>
+                        <button
+                            onClick={() => handleDeleteSelected(side)}
+                            title={`Eliminar ${selectedKeys.size} elemento(s)`}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                padding: '2px 8px', borderRadius: '5px', border: 'none',
+                                background: 'rgba(248,81,73,0.12)',
+                                color: '#f85149', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 600,
+                            }}
+                        >
+                            <i className="pi pi-trash" style={{ fontSize: '10px' }} />
+                            Eliminar
+                        </button>
+                        <button
+                            onClick={() => (isRemote ? setRemoteSelectedKeys : setLocalSelectedKeys)(new Set())}
+                            title="Limpiar selección"
+                            style={{
+                                display: 'flex', alignItems: 'center', padding: '2px 6px',
+                                borderRadius: '5px', border: 'none', background: 'rgba(110,118,129,0.12)',
+                                color: '#8b949e', cursor: 'pointer',
+                            }}
+                        >
+                            <i className="pi pi-times" style={{ fontSize: '9px' }} />
+                        </button>
+                    </div>
+                )}
+            </>
         );
     };
 
