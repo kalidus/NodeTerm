@@ -10,6 +10,7 @@ import { TbLayoutSidebarRightCollapse, TbLayoutSidebarRightExpand, TbChevronsLef
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { getActionBarIcon, actionBarIconColors } from '../themes/action-bar-icon-themes';
 import { STORAGE_KEYS } from '../utils/constants';
+import { actionBarThemes } from '../themes/action-bar-themes';
 
 const NodeTermStatus = ({
 	sshConnectionsCount = 0,
@@ -62,6 +63,19 @@ const NodeTermStatus = ({
 			return 'original';
 		}
 	});
+
+	// Tema visual de la barra de acciones (Contenedor/Efectos)
+	const [actionBarThemeId, setActionBarThemeId] = useState(() => {
+		try {
+			return localStorage.getItem('actionBarTheme') || 'default';
+		} catch {
+			return 'default';
+		}
+	});
+
+	const activeActionBarTheme = useMemo(() => {
+		return actionBarThemes[actionBarThemeId] || actionBarThemes.default;
+	}, [actionBarThemeId]);
 	const [aiClientsState, setAiClientsState] = useState({
 		nodeterm: false,
 		anythingllm: { enabled: false, running: false },
@@ -405,10 +419,23 @@ const NodeTermStatus = ({
 				if (currentIconTheme !== actionBarIconTheme) {
 					setActionBarIconTheme(currentIconTheme);
 				}
+				// Verificar tema visual
+				const currentVisualTheme = localStorage.getItem('actionBarTheme') || 'default';
+				if (currentVisualTheme !== actionBarThemeId) {
+					setActionBarThemeId(currentVisualTheme);
+				}
 			} catch { }
 		}, 1000);
 
+		// Escuchar evento personalizado de cambio de tema visual
+		const handleActionBarThemeChange = (e) => {
+			const newTheme = e.detail?.theme || localStorage.getItem('actionBarTheme') || 'default';
+			setActionBarThemeId(newTheme);
+		};
+		window.addEventListener('action-bar-theme-changed', handleActionBarThemeChange);
+
 		return () => {
+			window.removeEventListener('action-bar-theme-changed', handleActionBarThemeChange);
 			if (intervalId) clearInterval(intervalId);
 			if (ollamaIntervalId) clearInterval(ollamaIntervalId);
 			if (aiServicesIntervalId) clearInterval(aiServicesIntervalId);
@@ -1031,7 +1058,10 @@ const NodeTermStatus = ({
 
 	// Layout columna derecha (variant rightColumn) - sustituye barra superior en HomeTab
 	if (variant === 'rightColumn') {
-		const colBg = themeColors.cardBackground || 'rgba(16, 20, 28, 0.95)';
+		const colBg = activeActionBarTheme.container.background;
+		const colBorder = activeActionBarTheme.container.border;
+		const colShadow = activeActionBarTheme.container.boxShadow;
+		const colBlur = activeActionBarTheme.container.backdropFilter;
 
 		// Estilos para modo colapsado
 		if (collapsed) {
@@ -1041,7 +1071,10 @@ const NodeTermStatus = ({
 					minWidth: '48px',
 					flexShrink: 0,
 					background: colBg,
-					borderLeft: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}`,
+					backdropFilter: colBlur,
+					WebkitBackdropFilter: colBlur,
+					borderLeft: colBorder,
+					boxShadow: colShadow,
 					padding: '0.75rem 0',
 					display: 'flex',
 					flexDirection: 'column',
@@ -1061,28 +1094,28 @@ const NodeTermStatus = ({
 								display: 'flex',
 								alignItems: 'center',
 								justifyContent: 'center',
-								background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
-								backdropFilter: 'blur(10px)',
-								WebkitBackdropFilter: 'blur(10px)',
-								border: '1px solid rgba(255, 255, 255, 0.15)',
-								borderRadius: '10px',
+								background: activeActionBarTheme.button.background,
+								backdropFilter: activeActionBarTheme.container.backdropFilter,
+								WebkitBackdropFilter: activeActionBarTheme.container.backdropFilter,
+								border: activeActionBarTheme.button.border,
+								borderRadius: activeActionBarTheme.iconBox.borderRadius || '10px',
 								cursor: 'pointer',
 								color: themeColors.primaryColor || '#4fc3f7',
 								transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-								boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+								boxShadow: activeActionBarTheme.button.boxShadow,
 								flexShrink: 0
 							}}
 							onMouseEnter={e => {
 								e.currentTarget.style.transform = 'scale(1.1)';
-								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%)';
-								e.currentTarget.style.boxShadow = `0 0 15px ${(themeColors.primaryColor || '#4fc3f7')}40, 0 6px 20px rgba(0, 0, 0, 0.4)`;
-								e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+								e.currentTarget.style.background = activeActionBarTheme.buttonHover.background;
+								e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow;
+								e.currentTarget.style.borderColor = activeActionBarTheme.buttonHover.border;
 							}}
 							onMouseLeave={e => {
 								e.currentTarget.style.transform = 'scale(1)';
-								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)';
-								e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
-								e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+								e.currentTarget.style.background = activeActionBarTheme.button.background;
+								e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow;
+								e.currentTarget.style.borderColor = activeActionBarTheme.button.border;
 							}}
 						>
 							<TbChevronsLeft style={{ fontSize: '1.4rem' }} />
@@ -1092,23 +1125,22 @@ const NodeTermStatus = ({
 					{/* Separador */}
 					<div style={{ width: '20px', height: '1px', background: 'rgba(255,255,255,0.1)' }} />
 
-					{/* ACCIONES RÁPIDAS (Solo Iconos) */}
 					<div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
-						<button title="Nueva Conexión" onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+						<button title="Nueva Conexión" onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'))} style={{ background: 'transparent', border: 'none', borderRadius: activeActionBarTheme.iconBox.borderRadius || '4px', cursor: 'pointer', padding: '4px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
 							<i className="pi pi-plus" style={{ color: '#22c55e', fontSize: '1.1rem' }} />
 						</button>
-						<button title="Nuevo Secreto" onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog', { detail: { initialCategory: secretsManagementCategory } }))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+						<button title="Nuevo Secreto" onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog', { detail: { initialCategory: secretsManagementCategory } }))} style={{ background: 'transparent', border: 'none', borderRadius: activeActionBarTheme.iconBox.borderRadius || '4px', cursor: 'pointer', padding: '4px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
 							<i className="pi pi-key" style={{ color: '#ffc107', fontSize: '1.1rem' }} />
 						</button>
 						{setShowCreateGroupDialog && (
-							<button title={tDialogs('group.title.new')} onClick={() => setShowCreateGroupDialog(true)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+							<button title={tDialogs('group.title.new')} onClick={() => setShowCreateGroupDialog(true)} style={{ background: 'transparent', border: 'none', borderRadius: activeActionBarTheme.iconBox.borderRadius || '4px', cursor: 'pointer', padding: '4px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
 								<i className="pi pi-th-large" style={{ color: '#4fc3f7', fontSize: '1.1rem' }} />
 							</button>
 						)}
-						<button title="Herramientas" onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+						<button title="Herramientas" onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))} style={{ background: 'transparent', border: 'none', borderRadius: activeActionBarTheme.iconBox.borderRadius || '4px', cursor: 'pointer', padding: '4px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
 							<i className="pi pi-wrench" style={{ color: '#06b6d4', fontSize: '1.1rem' }} />
 						</button>
-						<button title="Configuración" onClick={onOpenSettings} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+						<button title="Configuración" onClick={onOpenSettings} style={{ background: 'transparent', border: 'none', borderRadius: activeActionBarTheme.iconBox.borderRadius || '4px', cursor: 'pointer', padding: '4px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
 							<i className="pi pi-cog" style={{ color: '#b0bec5', fontSize: '1.1rem' }} />
 						</button>
 					</div>
@@ -1138,20 +1170,20 @@ const NodeTermStatus = ({
 							};
 
 							return (
-								<button key={`term-${idx}`} title={t.label} onClick={handleClick} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+								<button key={`term-${idx}`} title={t.label} onClick={handleClick} style={{ background: 'transparent', border: 'none', borderRadius: activeActionBarTheme.iconBox.borderRadius || '4px', cursor: 'pointer', padding: '4px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
 									{iconElement}
 								</button>
 							);
 						})}
 						{/* Ubuntus adicionales */}
 						{(ubuntuDistributions || []).map((d, idx) => (
-							<button key={`ubuntu-${idx}`} title={d.label} onClick={() => handleOpenTerminal('ubuntu', d.distroInfo || d)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+							<button key={`ubuntu-${idx}`} title={d.label} onClick={() => handleOpenTerminal('ubuntu', d.distroInfo || d)} style={{ background: 'transparent', border: 'none', borderRadius: activeActionBarTheme.iconBox.borderRadius || '4px', cursor: 'pointer', padding: '4px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
 								<FaUbuntu style={{ color: d.color || '#E95420', fontSize: '1.1rem' }} />
 							</button>
 						))}
 						{/* Docker containers */}
 						{(dockerContainers || []).map((c, idx) => (
-							<button key={`docker-${idx}`} title={`🐳 ${c.name}`} onClick={() => window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: 'docker', distroInfo: { containerName: c.name, containerId: c.id, shortId: c.shortId } } }))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+							<button key={`docker-${idx}`} title={`🐳 ${c.name}`} onClick={() => window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: 'docker', distroInfo: { containerName: c.name, containerId: c.id, shortId: c.shortId } } }))} style={{ background: 'transparent', border: 'none', borderRadius: activeActionBarTheme.iconBox.borderRadius || '4px', cursor: 'pointer', padding: '4px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
 								<SiDocker style={{ color: '#2496ed', fontSize: '1.1rem' }} />
 							</button>
 						))}
@@ -1178,9 +1210,10 @@ const NodeTermStatus = ({
 		}
 
 		const cardStyle = (color) => ({
-			background: themeColors.itemBackground || 'rgba(255,255,255,0.05)',
-			border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
-			borderRadius: '10px',
+			background: activeActionBarTheme.button.background,
+			border: activeActionBarTheme.button.border,
+			boxShadow: activeActionBarTheme.button.boxShadow,
+			borderRadius: activeActionBarTheme.iconBox.borderRadius || '10px',
 			padding: '0.75rem',
 			display: 'flex',
 			flexDirection: 'column',
@@ -1197,9 +1230,10 @@ const NodeTermStatus = ({
 			alignItems: 'center',
 			gap: '0.5rem',
 			padding: '0.5rem 0.75rem',
-			borderRadius: '8px',
-			background: themeColors.itemBackground || 'rgba(255,255,255,0.05)',
-			border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+			borderRadius: activeActionBarTheme.iconBox.borderRadius || '8px',
+			background: activeActionBarTheme.button.background,
+			border: activeActionBarTheme.button.border,
+			boxShadow: activeActionBarTheme.button.boxShadow,
 			color: themeColors.textPrimary || 'rgba(255,255,255,0.9)',
 			cursor: 'pointer',
 			transition: 'all 0.2s ease',
@@ -1351,7 +1385,10 @@ const NodeTermStatus = ({
 				minWidth: '260px',
 				flexShrink: 0,
 				background: colBg,
-				borderLeft: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}`,
+				backdropFilter: colBlur,
+				WebkitBackdropFilter: colBlur,
+				borderLeft: colBorder,
+				boxShadow: colShadow,
 				padding: '1rem',
 				display: 'flex',
 				flexDirection: 'column',
@@ -1370,26 +1407,26 @@ const NodeTermStatus = ({
 								display: 'flex',
 								alignItems: 'center',
 								justifyContent: 'center',
-								background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%)',
-								backdropFilter: 'blur(10px)',
-								WebkitBackdropFilter: 'blur(10px)',
-								border: '1px solid rgba(255, 255, 255, 0.12)',
-								borderRadius: '10px',
+								background: activeActionBarTheme.button.background,
+								backdropFilter: activeActionBarTheme.container.backdropFilter,
+								WebkitBackdropFilter: activeActionBarTheme.container.backdropFilter,
+								border: activeActionBarTheme.button.border,
+								borderRadius: activeActionBarTheme.iconBox.borderRadius || '10px',
 								cursor: 'pointer',
 								color: themeColors.primaryColor || '#4fc3f7',
 								transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-								boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+								boxShadow: activeActionBarTheme.button.boxShadow
 							}}
 							onMouseEnter={e => {
-								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%)';
-								e.currentTarget.style.boxShadow = `0 0 15px ${(themeColors.primaryColor || '#4fc3f7')}30, 0 6px 20px rgba(0, 0, 0, 0.3)`;
-								e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+								e.currentTarget.style.background = activeActionBarTheme.buttonHover.background;
+								e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow;
+								e.currentTarget.style.borderColor = activeActionBarTheme.buttonHover.border;
 								e.currentTarget.style.transform = 'translateY(-1px)';
 							}}
 							onMouseLeave={e => {
-								e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%)';
-								e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
-								e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+								e.currentTarget.style.background = activeActionBarTheme.button.background;
+								e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow;
+								e.currentTarget.style.borderColor = activeActionBarTheme.button.border;
 								e.currentTarget.style.transform = 'translateY(0)';
 							}}
 						>
@@ -1402,21 +1439,21 @@ const NodeTermStatus = ({
 					<SectionHeader id="acciones" label="ACCIONES RÁPIDAS" />
 					{!sc.acciones && (
 						<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-							<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'))} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
 								<i className="pi pi-plus" style={{ color: '#22c55e', fontSize: '1rem' }} /><span>Nueva Conexión</span>
 							</button>
-							<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog', { detail: { initialCategory: secretsManagementCategory } }))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog', { detail: { initialCategory: secretsManagementCategory } }))} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
 								<i className="pi pi-key" style={{ color: '#ffc107', fontSize: '1rem' }} /><span>Nuevo Secreto</span>
 							</button>
 							{setShowCreateGroupDialog && (
-								<button style={btnStyle()} onClick={() => setShowCreateGroupDialog(true)} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+								<button style={btnStyle()} onClick={() => setShowCreateGroupDialog(true)} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
 									<i className="pi pi-th-large" style={{ color: '#4fc3f7', fontSize: '1rem' }} /><span>{tDialogs('group.title.new')}</span>
 								</button>
 							)}
-							<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
 								<i className="pi pi-wrench" style={{ color: '#06b6d4', fontSize: '1rem' }} /><span>Herramientas</span>
 							</button>
-							<button style={btnStyle()} onClick={onOpenSettings} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<button style={btnStyle()} onClick={onOpenSettings} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
 								<i className="pi pi-cog" style={{ color: '#b0bec5', fontSize: '1rem' }} /><span>Configuración</span>
 							</button>
 						</div>
@@ -1493,7 +1530,7 @@ const NodeTermStatus = ({
 									<div style={{ fontSize: '0.75rem', color: themeColors.textSecondary, fontStyle: 'italic', padding: '0.25rem 0' }}>No hay terminales detectados</div>
 								) : (
 									items.map((it, idx) => (
-										<button key={idx} style={btnStyle()} onClick={() => dispatch(it.terminalType, it.distroInfo)} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+										<button key={idx} style={btnStyle()} onClick={() => dispatch(it.terminalType, it.distroInfo)} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
 											<TermIcon it={it} /><span>{it.label}</span>
 										</button>
 									))
@@ -1511,7 +1548,7 @@ const NodeTermStatus = ({
 							<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
 								{/* Chat IA NodeTerm */}
 								{aiClientsState.nodeterm && (
-									<button style={btnStyle()} onClick={onToggleAIChat} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+									<button style={btnStyle()} onClick={onToggleAIChat} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
 										<i className="pi pi-comments" style={{ color: '#8b5cf6', fontSize: '1rem' }} /><span>Chat IA</span>
 									</button>
 								)}
@@ -1532,8 +1569,8 @@ const NodeTermStatus = ({
 												detail: { tab: newTab }
 											}));
 										}}
-										onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }}
-										onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}
+										onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }}
+										onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}
 										title={aiClientsState.anythingllm.running ? 'AnythingLLM: En ejecución' : 'AnythingLLM: Detenido'}
 									>
 										<i className="pi pi-cloud" style={{ color: aiClientsState.anythingllm.running ? '#22c55e' : '#f59e0b', fontSize: '1rem' }} />
@@ -1567,8 +1604,8 @@ const NodeTermStatus = ({
 												detail: { tab: newTab }
 											}));
 										}}
-										onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }}
-										onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}
+										onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }}
+										onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}
 										title={aiClientsState.openwebui.running ? 'OpenWebUI: En ejecución' : 'OpenWebUI: Detenido'}
 									>
 										<i className="pi pi-globe" style={{ color: aiClientsState.openwebui.running ? '#3b82f6' : '#f59e0b', fontSize: '1rem' }} />
@@ -1620,22 +1657,22 @@ const NodeTermStatus = ({
 										window.showToast('error', 'Error', 'Error al cargar las grabaciones');
 									}
 								}
-							}} title="Ver grabaciones y auditoría" onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							}} title="Ver grabaciones y auditoría" onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
 								<i className="pi pi-history" style={{ color: '#a855f7', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Auditoría</span>
 							</button>
-							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); setTimeout(() => { try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'rdp' } })); } catch (e) { } }, 100); }} title={`Guacd: ${guacdState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); setTimeout(() => { try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'rdp' } })); } catch (e) { } }, 100); }} title={`Guacd: ${guacdState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
 								<i className={guacdState.method === 'docker' ? 'pi pi-box' : 'pi pi-window-maximize'} style={{ color: guacdState.isRunning ? '#22c55e' : '#ef4444', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Guacd</span>
 							</button>
-							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); setTimeout(() => { try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'ai' } })); } catch (e) { } }, 100); }} title={`Ollama: ${ollamaState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); setTimeout(() => { try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'ai' } })); } catch (e) { } }, 100); }} title={`Ollama: ${ollamaState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
 								<i className="pi pi-bolt" style={{ color: ollamaState.isRunning ? '#22c55e' : '#ef4444', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Ollama</span>
 							</button>
-							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); setTimeout(() => { try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'sync' } })); } catch (e) { } }, 100); }} title={`Nextcloud: ${syncState.configured ? (syncState.connectivity === 'ok' ? 'Conectado' : 'Configurado') : 'No configurado'}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); setTimeout(() => { try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'sync' } })); } catch (e) { } }, 100); }} title={`Nextcloud: ${syncState.configured ? (syncState.connectivity === 'ok' ? 'Conectado' : 'Configurado') : 'No configurado'}`} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
 								<i className="pi pi-cloud" style={{ color: syncState.configured ? (syncState.connectivity === 'error' ? '#ef4444' : '#60a5fa') : '#9ca3af', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Nextcloud</span>
 							</button>
-							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); setTimeout(() => { try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'security', subTab: 'clave-maestra' } })); } catch (e) { } }, 100); }} title={`Vault: ${!vaultState.configured ? 'No configurado' : (vaultState.unlocked ? 'Desbloqueado' : 'Bloqueado')}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); setTimeout(() => { try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'security', subTab: 'clave-maestra' } })); } catch (e) { } }, 100); }} title={`Vault: ${!vaultState.configured ? 'No configurado' : (vaultState.unlocked ? 'Desbloqueado' : 'Bloqueado')}`} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
 								<i className={vaultState.unlocked ? 'pi pi-unlock' : 'pi pi-lock'} style={{ color: !vaultState.configured ? '#9ca3af' : '#f59e0b', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Vault</span>
 							</button>
-							<button style={cardStyle()} onClick={() => setStatsOpen(true)} title={`Estadísticas de la aplicación\n• Conexiones: ${sshConnectionsCount + rdpConnectionsCount}\n• Secretos: ${passwordsCount}`} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
+							<button style={cardStyle()} onClick={() => setStatsOpen(true)} title={`Estadísticas de la aplicación\n• Conexiones: ${sshConnectionsCount + rdpConnectionsCount}\n• Secretos: ${passwordsCount}`} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
 								<i className="pi pi-chart-pie" style={{ color: '#ec4899', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Estadísticas</span>
 							</button>
 						</div>
@@ -1655,19 +1692,21 @@ const NodeTermStatus = ({
 									padding: '0.5rem',
 									flex: 1,
 									justifyContent: 'center',
-									background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%)',
-									border: '1px solid rgba(59, 130, 246, 0.2)',
-									boxShadow: '0 2px 10px rgba(59, 130, 246, 0.1)'
+									background: activeActionBarTheme.button.background,
+									border: activeActionBarTheme.button.border,
+									boxShadow: activeActionBarTheme.button.boxShadow
 								}}
 								onMouseEnter={e => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(59, 130, 246, 0.15) 100%)';
+									e.currentTarget.style.background = activeActionBarTheme.buttonHover.background;
+									e.currentTarget.style.border = activeActionBarTheme.buttonHover.border;
+									e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow;
 									e.currentTarget.style.transform = 'translateY(-1px)';
-									e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.2)';
 								}}
 								onMouseLeave={e => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%)';
+									e.currentTarget.style.background = activeActionBarTheme.button.background;
+									e.currentTarget.style.border = activeActionBarTheme.button.border;
+									e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow;
 									e.currentTarget.style.transform = 'translateY(0)';
-									e.currentTarget.style.boxShadow = '0 2px 10px rgba(59, 130, 246, 0.1)';
 								}}
 							>
 								<i className="pi pi-desktop" style={{ fontSize: '1.1rem', color: '#60a5fa' }} />
@@ -1682,19 +1721,21 @@ const NodeTermStatus = ({
 									padding: '0.5rem',
 									flex: 1,
 									justifyContent: 'center',
-									background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(168, 85, 247, 0.05) 100%)',
-									border: '1px solid rgba(168, 85, 247, 0.2)',
-									boxShadow: '0 2px 10px rgba(168, 85, 247, 0.1)'
+									background: activeActionBarTheme.button.background,
+									border: activeActionBarTheme.button.border,
+									boxShadow: activeActionBarTheme.button.boxShadow
 								}}
 								onMouseEnter={e => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%)';
+									e.currentTarget.style.background = activeActionBarTheme.buttonHover.background;
+									e.currentTarget.style.border = activeActionBarTheme.buttonHover.border;
+									e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow;
 									e.currentTarget.style.transform = 'translateY(-1px)';
-									e.currentTarget.style.boxShadow = '0 4px 12px rgba(168, 85, 247, 0.2)';
 								}}
 								onMouseLeave={e => {
-									e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(168, 85, 247, 0.05) 100%)';
+									e.currentTarget.style.background = activeActionBarTheme.button.background;
+									e.currentTarget.style.border = activeActionBarTheme.button.border;
+									e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow;
 									e.currentTarget.style.transform = 'translateY(0)';
-									e.currentTarget.style.boxShadow = '0 2px 10px rgba(168, 85, 247, 0.1)';
 								}}
 							>
 								<i className="pi pi-bars" style={{ fontSize: '1.1rem', color: '#c084fc' }} />

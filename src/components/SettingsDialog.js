@@ -37,6 +37,7 @@ import SettingsSidebarNav from './SettingsSidebarNav';
 import TerminalSettingsTab from './TerminalSettingsTab';
 import { useDialogResize } from '../hooks/useDialogResize';
 import { treeThemes, treeThemeOptions, getTreeTheme } from '../themes/tree-themes';
+import { actionBarThemes } from '../themes/action-bar-themes';
 import { sessionActionIconThemes, getDefaultSessionActionIconTheme } from '../themes/session-action-icons';
 import { actionBarIconThemes, actionBarIconThemeList, getActionBarIcon, actionBarIconColors, actionBarIconNames } from '../themes/action-bar-icon-themes';
 import '../styles/components/settings-sidebar.css';
@@ -307,6 +308,19 @@ const SettingsDialog = ({
       return 'original';
     }
   });
+
+  // Tema visual de la barra de acciones (Contenedor/Efectos)
+  const [actionBarTheme, setActionBarTheme] = useState(() => {
+    try {
+      return localStorage.getItem('actionBarTheme') || 'default';
+    } catch {
+      return 'default';
+    }
+  });
+
+  const activeActionBarVisualTheme = useMemo(() => {
+    return actionBarThemes[actionBarTheme] || actionBarThemes.default;
+  }, [actionBarTheme]);
 
   // Configuración para mostrar/ocultar terminal local al iniciar
   const [localTerminalVisible, setLocalTerminalVisible] = useState(() => {
@@ -4530,6 +4544,72 @@ const SettingsDialog = ({
                           </div>
                         </div>
 
+                        {/* Tema Visual de la Barra */}
+                        <div style={{
+                          background: 'rgba(0, 0, 0, 0.08)',
+                          borderRadius: '10px',
+                          padding: '0.875rem 1rem',
+                          border: '1px solid rgba(255, 255, 255, 0.05)',
+                          marginTop: '1rem'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            marginBottom: '0.75rem'
+                          }}>
+                            <i className="pi pi-palette" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
+                            <span style={{
+                              fontSize: '0.875rem',
+                              fontWeight: 600,
+                              color: 'var(--ui-dialog-text)'
+                            }}>Tema de la Barra de Acciones</span>
+                          </div>
+
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              minWidth: '60px'
+                            }}>
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Seleccionar tema</span>
+                            </div>
+                            <Dropdown
+                              id="actionbar-visual-theme"
+                              value={actionBarTheme}
+                              options={Object.values(actionBarThemes).map(theme => ({ label: theme.name, value: theme.id }))}
+                              onChange={e => {
+                                setActionBarTheme(e.value);
+                                localStorage.setItem('actionBarTheme', e.value);
+                                window.dispatchEvent(new CustomEvent('action-bar-theme-changed'));
+                              }}
+                              placeholder="Seleccionar tema visual"
+                              style={{ flex: 1 }}
+                              itemTemplate={option => {
+                                const theme = actionBarThemes[option.value];
+                                return (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <div style={{
+                                      width: '24px',
+                                      height: '24px',
+                                      borderRadius: '4px',
+                                      background: theme.container.background,
+                                      border: theme.container.border !== 'none' ? theme.container.border : '1px solid rgba(255,255,255,0.1)',
+                                      backdropFilter: theme.container.backdropFilter
+                                    }}></div>
+                                    <span>{theme.name}</span>
+                                  </div>
+                                );
+                              }}
+                            />
+                          </div>
+                        </div>
+
                         {/* Terminal Local */}
                         <div style={{
                           background: 'rgba(0, 0, 0, 0.08)',
@@ -4655,55 +4735,92 @@ const SettingsDialog = ({
                           </div>
                           <div style={{
                             background: 'rgba(0, 0, 0, 0.15)',
-                            borderRadius: '8px',
-                            padding: '1rem',
-                            border: '1px solid rgba(255, 255, 255, 0.05)'
+                            borderRadius: '12px',
+                            padding: '1.25rem',
+                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center'
                           }}>
                             <div style={{
+                              width: '74px',
+                              height: 'auto',
+                              minHeight: '240px',
+                              background: activeActionBarVisualTheme.container.background,
+                              backdropFilter: activeActionBarVisualTheme.container.backdropFilter,
+                              WebkitBackdropFilter: activeActionBarVisualTheme.container.backdropFilter,
+                              border: activeActionBarVisualTheme.container.border,
+                              borderRadius: '14px',
+                              boxShadow: activeActionBarVisualTheme.container.boxShadow,
                               display: 'flex',
-                              gap: '1rem',
-                              flexWrap: 'wrap'
+                              flexDirection: 'column',
+                              padding: '0.6rem 0.4rem',
+                              gap: '0.35rem',
+                              boxSizing: 'border-box'
                             }}>
                               {[
                                 { label: 'Nuevo', icon: 'nuevo' },
                                 { label: 'Grupo', icon: 'grupo' },
                                 { label: 'Sesiones', icon: 'conexiones' },
                                 { label: 'Contraseñas', icon: 'contraseñas' },
-                                { label: 'Audit', icon: 'audit' },
-                                { label: 'Herramientas', icon: 'nettools' },
-                                { label: 'Config', icon: 'config' },
-                                { label: 'Terminal', icon: 'terminal' },
-                                { label: 'StatusBar', icon: 'statusbar' }
+                                { label: 'Audit', icon: 'audit' }
                               ].map((item, idx) => (
                                 <div key={idx} style={{
                                   display: 'flex',
                                   flexDirection: 'column',
                                   alignItems: 'center',
-                                  gap: '0.25rem',
-                                  padding: '0.5rem',
-                                  borderRadius: '6px',
-                                  background: 'rgba(255, 255, 255, 0.03)'
+                                  gap: '0.125rem',
+                                  padding: '0.4rem 0',
+                                  borderRadius: '12px',
+                                  background: activeActionBarVisualTheme.button.background,
+                                  border: activeActionBarVisualTheme.button.border,
+                                  boxShadow: activeActionBarVisualTheme.button.boxShadow,
+                                  backdropFilter: activeActionBarVisualTheme.button.backdropFilter || 'none',
+                                  WebkitBackdropFilter: activeActionBarVisualTheme.button.backdropFilter || 'none',
+                                  position: 'relative'
                                 }}>
                                   <div style={{
-                                    width: '40px',
-                                    height: '40px',
-                                    borderRadius: '8px',
-                                    background: `rgba(${actionBarIconColors[item.icon] ? parseInt(actionBarIconColors[item.icon].slice(1, 3), 16) : 79}, ${actionBarIconColors[item.icon] ? parseInt(actionBarIconColors[item.icon].slice(3, 5), 16) : 195}, ${actionBarIconColors[item.icon] ? parseInt(actionBarIconColors[item.icon].slice(5, 7), 16) : 247}, 0.1)`,
-                                    border: `1px solid rgba(${actionBarIconColors[item.icon] ? parseInt(actionBarIconColors[item.icon].slice(1, 3), 16) : 79}, ${actionBarIconColors[item.icon] ? parseInt(actionBarIconColors[item.icon].slice(3, 5), 16) : 195}, ${actionBarIconColors[item.icon] ? parseInt(actionBarIconColors[item.icon].slice(5, 7), 16) : 247}, 0.2)`,
+                                    width: '28px',
+                                    height: '28px',
+                                    borderRadius: activeActionBarVisualTheme.iconBox.borderRadius,
+                                    background: `linear-gradient(135deg, ${actionBarIconColors[item.icon] || '#4fc3f7'} 0%, ${(actionBarIconColors[item.icon] || '#4fc3f7')}dd 100%)`,
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'center'
+                                    justifyContent: 'center',
+                                    boxShadow: `0 1px 4px ${(actionBarIconColors[item.icon] || '#4fc3f7')}40`
                                   }}>
-                                    {getActionBarIcon(actionBarIconTheme, item.icon, 20)}
+                                    {getActionBarIcon(actionBarIconTheme, item.icon, 16)}
                                   </div>
                                   <span style={{
-                                    fontSize: `${homeTabFontSize * 0.65}px`,
+                                    fontSize: '8px',
                                     fontFamily: homeTabFont,
                                     color: 'var(--text-color-secondary)',
-                                    textAlign: 'center'
+                                    textAlign: 'center',
+                                    opacity: 0.8,
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    width: '100%',
+                                    padding: '0 2px'
                                   }}>{item.label}</span>
                                 </div>
                               ))}
+                            </div>
+
+                            <div style={{
+                              marginLeft: '1.5rem',
+                              flex: 1,
+                              height: '240px',
+                              background: 'rgba(255, 255, 255, 0.02)',
+                              borderRadius: '12px',
+                              border: '1px dashed rgba(255, 255, 255, 0.1)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'var(--text-color-secondary)',
+                              fontSize: '0.8rem'
+                            }}>
+                              Contenido del HomeTab
                             </div>
                           </div>
                         </div>

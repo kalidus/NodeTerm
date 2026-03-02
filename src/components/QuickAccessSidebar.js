@@ -4,6 +4,7 @@ import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 // 🚀 OPTIMIZACIÓN: Usar hook centralizado para detección de sistema
 import { useSystemDetection } from '../hooks/useSystemDetection';
+import { actionBarThemes } from '../themes/action-bar-themes';
 
 const QuickAccessSidebar = ({
   onCreateSSHConnection,
@@ -30,6 +31,19 @@ const QuickAccessSidebar = ({
 
   // Estado para el tema
   const [themeVersion, setThemeVersion] = useState(0);
+
+  // Estado para el tema de la barra de acciones
+  const [actionBarThemeId, setActionBarThemeId] = useState(() => {
+    try {
+      return localStorage.getItem('actionBarTheme') || 'default';
+    } catch {
+      return 'default';
+    }
+  });
+
+  const activeActionBarTheme = React.useMemo(() => {
+    return actionBarThemes[actionBarThemeId] || actionBarThemes.default;
+  }, [actionBarThemeId]);
 
   // Estado para manejar la transición del botón
   const [isToggling, setIsToggling] = useState(false);
@@ -100,6 +114,25 @@ const QuickAccessSidebar = ({
     };
     window.addEventListener('theme-changed', onThemeChanged);
     return () => window.removeEventListener('theme-changed', onThemeChanged);
+  }, []);
+
+  // Escuchar cambios en el tema de la barra de acciones
+  useEffect(() => {
+    const handleThemeChange = () => {
+      try {
+        const newThemeId = localStorage.getItem('actionBarTheme') || 'default';
+        setActionBarThemeId(newThemeId);
+      } catch (e) { }
+    };
+
+    window.addEventListener('action-bar-theme-changed', handleThemeChange);
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'actionBarTheme') handleThemeChange();
+    });
+
+    return () => {
+      window.removeEventListener('action-bar-theme-changed', handleThemeChange);
+    };
   }, []);
 
   // Detectar estado de transición desde localStorage
@@ -375,20 +408,15 @@ const QuickAccessSidebar = ({
         style={{
           cursor: 'pointer',
           transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-          background: `linear-gradient(135deg, 
-            rgba(255,255,255,0.08) 0%, 
-            rgba(255,255,255,0.04) 50%, 
-            rgba(255,255,255,0.02) 100%)`,
-          backdropFilter: 'blur(24px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-          border: `1px solid rgba(255,255,255,0.12)`,
+          background: activeActionBarTheme.button.background,
+          backdropFilter: activeActionBarTheme.button.backdropFilter || 'none',
+          WebkitBackdropFilter: activeActionBarTheme.button.backdropFilter || 'none',
+          border: activeActionBarTheme.button.border,
           position: 'relative',
           width: '100%',
           height: '48px',
           borderRadius: '12px',
-          boxShadow: `0 2px 8px rgba(0,0,0,0.08), 
-                      0 1px 3px rgba(0,0,0,0.12),
-                      inset 0 1px 0 rgba(255,255,255,0.15)`,
+          boxShadow: activeActionBarTheme.button.boxShadow,
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
@@ -398,25 +426,15 @@ const QuickAccessSidebar = ({
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-1px)';
-          e.currentTarget.style.background = `linear-gradient(135deg, 
-            rgba(255,255,255,0.12) 0%, 
-            rgba(255,255,255,0.08) 50%, 
-            rgba(255,255,255,0.04) 100%)`;
-          e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.12), 
-                                              0 2px 8px rgba(0,0,0,0.16),
-                                              inset 0 1px 0 rgba(255,255,255,0.2)`;
-          e.currentTarget.style.borderColor = `rgba(255,255,255,0.18)`;
+          e.currentTarget.style.background = activeActionBarTheme.buttonHover.background;
+          e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow;
+          e.currentTarget.style.borderColor = activeActionBarTheme.buttonHover.border;
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.background = `linear-gradient(135deg, 
-            rgba(255,255,255,0.08) 0%, 
-            rgba(255,255,255,0.04) 50%, 
-            rgba(255,255,255,0.02) 100%)`;
-          e.currentTarget.style.boxShadow = `0 2px 8px rgba(0,0,0,0.08), 
-                                              0 1px 3px rgba(0,0,0,0.12),
-                                              inset 0 1px 0 rgba(255,255,255,0.15)`;
-          e.currentTarget.style.borderColor = `rgba(255,255,255,0.12)`;
+          e.currentTarget.style.background = activeActionBarTheme.button.background;
+          e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow;
+          e.currentTarget.style.borderColor = activeActionBarTheme.button.border;
         }}
         onClick={action.action}
       >
@@ -424,7 +442,7 @@ const QuickAccessSidebar = ({
         <div style={{
           width: '28px',
           height: '28px',
-          borderRadius: '8px',
+          borderRadius: activeActionBarTheme.iconBox.borderRadius,
           background: `linear-gradient(135deg, 
             ${action.color} 0%, 
             ${action.color}dd 100%)`,
@@ -500,20 +518,15 @@ const QuickAccessSidebar = ({
         style={{
           cursor: 'pointer',
           transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-          background: `linear-gradient(135deg, 
-            rgba(255,255,255,0.06) 0%, 
-            rgba(255,255,255,0.03) 50%, 
-            rgba(255,255,255,0.01) 100%)`,
-          backdropFilter: 'blur(24px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-          border: `1px solid rgba(255,255,255,0.1)`,
+          background: activeActionBarTheme.button.background,
+          backdropFilter: activeActionBarTheme.button.backdropFilter || 'none',
+          WebkitBackdropFilter: activeActionBarTheme.button.backdropFilter || 'none',
+          border: activeActionBarTheme.button.border,
           position: 'relative',
           width: '100%',
           height: '48px',
           borderRadius: '12px',
-          boxShadow: `0 2px 8px rgba(0,0,0,0.06), 
-                      0 1px 3px rgba(0,0,0,0.1),
-                      inset 0 1px 0 rgba(255,255,255,0.12)`,
+          boxShadow: activeActionBarTheme.button.boxShadow,
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
@@ -523,25 +536,15 @@ const QuickAccessSidebar = ({
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-1px)';
-          e.currentTarget.style.background = `linear-gradient(135deg, 
-            rgba(255,255,255,0.1) 0%, 
-            rgba(255,255,255,0.06) 50%, 
-            rgba(255,255,255,0.03) 100%)`;
-          e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.1), 
-                                              0 2px 8px rgba(0,0,0,0.14),
-                                              inset 0 1px 0 rgba(255,255,255,0.18)`;
-          e.currentTarget.style.borderColor = `rgba(255,255,255,0.15)`;
+          e.currentTarget.style.background = activeActionBarTheme.buttonHover.background;
+          e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow;
+          e.currentTarget.style.borderColor = activeActionBarTheme.buttonHover.border;
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.background = `linear-gradient(135deg, 
-            rgba(255,255,255,0.06) 0%, 
-            rgba(255,255,255,0.03) 50%, 
-            rgba(255,255,255,0.01) 100%)`;
-          e.currentTarget.style.boxShadow = `0 2px 8px rgba(0,0,0,0.06), 
-                                              0 1px 3px rgba(0,0,0,0.1),
-                                              inset 0 1px 0 rgba(255,255,255,0.12)`;
-          e.currentTarget.style.borderColor = `rgba(255,255,255,0.1)`;
+          e.currentTarget.style.background = activeActionBarTheme.button.background;
+          e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow;
+          e.currentTarget.style.borderColor = activeActionBarTheme.button.border;
         }}
         onClick={terminal.action}
       >
@@ -549,7 +552,7 @@ const QuickAccessSidebar = ({
         <div style={{
           width: '28px',
           height: '28px',
-          borderRadius: '8px',
+          borderRadius: activeActionBarTheme.iconBox.borderRadius,
           background: `linear-gradient(135deg, 
             ${terminal.color} 0%, 
             ${terminal.color}dd 100%)`,
@@ -619,12 +622,12 @@ const QuickAccessSidebar = ({
         height: 'auto',
         maxHeight: 'calc(100% - 120px)',
         minHeight: '200px',
-        background: 'rgba(0, 0, 0, 0.25)',
-        backdropFilter: 'blur(30px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(30px) saturate(180%)',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
+        background: activeActionBarTheme.container.background,
+        backdropFilter: activeActionBarTheme.container.backdropFilter,
+        WebkitBackdropFilter: activeActionBarTheme.container.backdropFilter,
+        border: activeActionBarTheme.container.border,
         borderRadius: '14px',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+        boxShadow: activeActionBarTheme.container.boxShadow,
         display: 'flex',
         flexDirection: 'column',
         padding: '0.5rem 0.3rem',
@@ -654,13 +657,13 @@ const QuickAccessSidebar = ({
             cursor: isToggling ? 'wait' : 'pointer',
             transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
             background: isToggling
-              ? `linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%)`
-              : `linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)`,
-            backdropFilter: 'blur(24px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+              ? `linear-gradient(135deg, rgba(0, 188, 212, 0.25) 0%, rgba(0, 188, 212, 0.15) 50%, rgba(0, 188, 212, 0.05) 100%)`
+              : activeActionBarTheme.button.background,
+            backdropFilter: activeActionBarTheme.button.backdropFilter || 'none',
+            WebkitBackdropFilter: activeActionBarTheme.button.backdropFilter || 'none',
             border: isToggling
               ? '1px solid rgba(0,188,212,0.4)'
-              : '1px solid rgba(255,255,255,0.12)',
+              : activeActionBarTheme.button.border,
             position: 'relative',
             width: '100%',
             height: '48px',
@@ -669,7 +672,7 @@ const QuickAccessSidebar = ({
             borderRadius: '12px',
             boxShadow: isToggling
               ? '0 4px 16px rgba(0,188,212,0.2), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2)'
-              : '0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.15)',
+              : activeActionBarTheme.button.boxShadow,
             overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
@@ -684,17 +687,17 @@ const QuickAccessSidebar = ({
           onMouseEnter={(e) => {
             if (!isToggling) {
               e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.background = `linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%)`;
-              e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.2)';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)';
+              e.currentTarget.style.background = activeActionBarTheme.buttonHover.background;
+              e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow;
+              e.currentTarget.style.borderColor = activeActionBarTheme.buttonHover.border;
             }
           }}
           onMouseLeave={(e) => {
             if (!isToggling) {
               e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.background = `linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)`;
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.15)';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
+              e.currentTarget.style.background = activeActionBarTheme.button.background;
+              e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow;
+              e.currentTarget.style.borderColor = activeActionBarTheme.button.border;
             }
           }}
           onClick={handleToggleTerminalVisibility}
@@ -702,7 +705,7 @@ const QuickAccessSidebar = ({
           <div style={{
             width: '28px',
             height: '28px',
-            borderRadius: '8px',
+            borderRadius: activeActionBarTheme.iconBox.borderRadius,
             background: 'linear-gradient(135deg, #00BCD4 0%, #00BCD4dd 100%)',
             display: 'flex',
             alignItems: 'center',
@@ -761,12 +764,12 @@ const QuickAccessSidebar = ({
             transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
             background: statusBarVisible
               ? `linear-gradient(135deg, rgba(79, 195, 247, 0.3) 0%, rgba(79, 195, 247, 0.2) 50%, rgba(79, 195, 247, 0.1) 100%)`
-              : `linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)`,
-            backdropFilter: 'blur(24px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+              : activeActionBarTheme.button.background,
+            backdropFilter: activeActionBarTheme.button.backdropFilter || 'none',
+            WebkitBackdropFilter: activeActionBarTheme.button.backdropFilter || 'none',
             border: statusBarVisible
               ? '1px solid rgba(79, 195, 247, 0.5)'
-              : '1px solid rgba(255,255,255,0.12)',
+              : activeActionBarTheme.button.border,
             position: 'relative',
             width: '100%',
             height: '48px',
@@ -775,7 +778,7 @@ const QuickAccessSidebar = ({
             borderRadius: '12px',
             boxShadow: statusBarVisible
               ? '0 4px 16px rgba(79, 195, 247, 0.3), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2)'
-              : '0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.15)',
+              : activeActionBarTheme.button.boxShadow,
             overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
@@ -791,21 +794,21 @@ const QuickAccessSidebar = ({
             e.currentTarget.style.transform = 'translateY(-1px)';
             e.currentTarget.style.background = statusBarVisible
               ? `linear-gradient(135deg, rgba(79, 195, 247, 0.4) 0%, rgba(79, 195, 247, 0.3) 50%, rgba(79, 195, 247, 0.2) 100%)`
-              : `linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%)`;
+              : activeActionBarTheme.buttonHover.background;
             e.currentTarget.style.boxShadow = statusBarVisible
               ? '0 6px 20px rgba(79, 195, 247, 0.4), 0 3px 10px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.25)'
-              : '0 4px 16px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.2)';
-            e.currentTarget.style.borderColor = statusBarVisible ? 'rgba(79, 195, 247, 0.6)' : 'rgba(255,255,255,0.18)';
+              : activeActionBarTheme.buttonHover.boxShadow;
+            e.currentTarget.style.borderColor = statusBarVisible ? 'rgba(79, 195, 247, 0.6)' : activeActionBarTheme.buttonHover.border;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = 'translateY(0)';
             e.currentTarget.style.background = statusBarVisible
               ? `linear-gradient(135deg, rgba(79, 195, 247, 0.3) 0%, rgba(79, 195, 247, 0.2) 50%, rgba(79, 195, 247, 0.1) 100%)`
-              : `linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)`;
+              : activeActionBarTheme.button.background;
             e.currentTarget.style.boxShadow = statusBarVisible
               ? '0 4px 16px rgba(79, 195, 247, 0.3), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2)'
-              : '0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.15)';
-            e.currentTarget.style.borderColor = statusBarVisible ? 'rgba(79, 195, 247, 0.5)' : 'rgba(255,255,255,0.12)';
+              : activeActionBarTheme.button.boxShadow;
+            e.currentTarget.style.borderColor = statusBarVisible ? 'rgba(79, 195, 247, 0.5)' : activeActionBarTheme.button.border;
           }}
           onClick={(e) => {
             e.preventDefault();
@@ -818,7 +821,7 @@ const QuickAccessSidebar = ({
           <div style={{
             width: '28px',
             height: '28px',
-            borderRadius: '8px',
+            borderRadius: activeActionBarTheme.iconBox.borderRadius,
             background: 'linear-gradient(135deg, #4fc3f7 0%, #4fc3f7dd 100%)',
             display: 'flex',
             alignItems: 'center',
@@ -862,12 +865,12 @@ const QuickAccessSidebar = ({
             transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
             background: showAIChat
               ? `linear-gradient(135deg, rgba(138, 43, 226, 0.3) 0%, rgba(138, 43, 226, 0.2) 50%, rgba(138, 43, 226, 0.1) 100%)`
-              : `linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)`,
-            backdropFilter: 'blur(24px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+              : activeActionBarTheme.button.background,
+            backdropFilter: activeActionBarTheme.button.backdropFilter || 'none',
+            WebkitBackdropFilter: activeActionBarTheme.button.backdropFilter || 'none',
             border: showAIChat
               ? '1px solid rgba(138, 43, 226, 0.5)'
-              : '1px solid rgba(255,255,255,0.12)',
+              : activeActionBarTheme.button.border,
             position: 'relative',
             width: '100%',
             height: '48px',
@@ -876,7 +879,7 @@ const QuickAccessSidebar = ({
             borderRadius: '12px',
             boxShadow: showAIChat
               ? '0 4px 16px rgba(138, 43, 226, 0.3), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2)'
-              : '0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.15)',
+              : activeActionBarTheme.button.boxShadow,
             overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
@@ -892,28 +895,28 @@ const QuickAccessSidebar = ({
             e.currentTarget.style.transform = 'translateY(-1px)';
             e.currentTarget.style.background = showAIChat
               ? `linear-gradient(135deg, rgba(138, 43, 226, 0.4) 0%, rgba(138, 43, 226, 0.3) 50%, rgba(138, 43, 226, 0.2) 100%)`
-              : `linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%)`;
+              : activeActionBarTheme.buttonHover.background;
             e.currentTarget.style.boxShadow = showAIChat
               ? '0 6px 20px rgba(138, 43, 226, 0.4), 0 3px 10px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.25)'
-              : '0 4px 16px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.2)';
-            e.currentTarget.style.borderColor = showAIChat ? 'rgba(138, 43, 226, 0.6)' : 'rgba(255,255,255,0.18)';
+              : activeActionBarTheme.buttonHover.boxShadow;
+            e.currentTarget.style.borderColor = showAIChat ? 'rgba(138, 43, 226, 0.6)' : activeActionBarTheme.buttonHover.border;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = 'translateY(0)';
             e.currentTarget.style.background = showAIChat
               ? `linear-gradient(135deg, rgba(138, 43, 226, 0.3) 0%, rgba(138, 43, 226, 0.2) 50%, rgba(138, 43, 226, 0.1) 100%)`
-              : `linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)`;
+              : activeActionBarTheme.button.background;
             e.currentTarget.style.boxShadow = showAIChat
               ? '0 4px 16px rgba(138, 43, 226, 0.3), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2)'
-              : '0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.15)';
-            e.currentTarget.style.borderColor = showAIChat ? 'rgba(138, 43, 226, 0.5)' : 'rgba(255,255,255,0.12)';
+              : activeActionBarTheme.button.boxShadow;
+            e.currentTarget.style.borderColor = showAIChat ? 'rgba(138, 43, 226, 0.5)' : activeActionBarTheme.button.border;
           }}
           onClick={onToggleAIChat}
         >
           <div style={{
             width: '28px',
             height: '28px',
-            borderRadius: '8px',
+            borderRadius: activeActionBarTheme.iconBox.borderRadius,
             background: 'linear-gradient(135deg, #8A2BE2 0%, #8A2BE2dd 100%)',
             display: 'flex',
             alignItems: 'center',
@@ -990,19 +993,19 @@ const QuickAccessSidebar = ({
                   transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                   background: dockerMenuOpen
                     ? `linear-gradient(135deg, rgba(36, 150, 237, 0.3) 0%, rgba(36, 150, 237, 0.2) 50%, rgba(36, 150, 237, 0.1) 100%)`
-                    : `linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)`,
-                  backdropFilter: 'blur(24px) saturate(180%)',
-                  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                    : activeActionBarTheme.button.background,
+                  backdropFilter: activeActionBarTheme.button.backdropFilter || 'none',
+                  WebkitBackdropFilter: activeActionBarTheme.button.backdropFilter || 'none',
                   border: dockerMenuOpen
                     ? '1px solid rgba(36, 150, 237, 0.5)'
-                    : '1px solid rgba(255,255,255,0.12)',
+                    : activeActionBarTheme.button.border,
                   position: 'relative',
                   width: '100%',
                   height: '48px',
                   borderRadius: '12px',
                   boxShadow: dockerMenuOpen
                     ? '0 4px 16px rgba(36, 150, 237, 0.3), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2)'
-                    : '0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.15)',
+                    : activeActionBarTheme.button.boxShadow,
                   overflow: 'hidden',
                   display: 'flex',
                   alignItems: 'center',
@@ -1015,28 +1018,28 @@ const QuickAccessSidebar = ({
                   e.currentTarget.style.transform = 'translateY(-1px)';
                   e.currentTarget.style.background = dockerMenuOpen
                     ? `linear-gradient(135deg, rgba(36, 150, 237, 0.4) 0%, rgba(36, 150, 237, 0.3) 50%, rgba(36, 150, 237, 0.2) 100%)`
-                    : `linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%)`;
+                    : activeActionBarTheme.buttonHover.background;
                   e.currentTarget.style.boxShadow = dockerMenuOpen
                     ? '0 6px 20px rgba(36, 150, 237, 0.4), 0 3px 10px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.25)'
-                    : '0 4px 16px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.2)';
-                  e.currentTarget.style.borderColor = dockerMenuOpen ? 'rgba(36, 150, 237, 0.6)' : 'rgba(255,255,255,0.18)';
+                    : activeActionBarTheme.buttonHover.boxShadow;
+                  e.currentTarget.style.borderColor = dockerMenuOpen ? 'rgba(36, 150, 237, 0.6)' : activeActionBarTheme.buttonHover.border;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.background = dockerMenuOpen
                     ? `linear-gradient(135deg, rgba(36, 150, 237, 0.3) 0%, rgba(36, 150, 237, 0.2) 50%, rgba(36, 150, 237, 0.1) 100%)`
-                    : `linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)`;
+                    : activeActionBarTheme.button.background;
                   e.currentTarget.style.boxShadow = dockerMenuOpen
                     ? '0 4px 16px rgba(36, 150, 237, 0.3), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2)'
-                    : '0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.15)';
-                  e.currentTarget.style.borderColor = dockerMenuOpen ? 'rgba(36, 150, 237, 0.5)' : 'rgba(255,255,255,0.12)';
+                    : activeActionBarTheme.button.boxShadow;
+                  e.currentTarget.style.borderColor = dockerMenuOpen ? 'rgba(36, 150, 237, 0.5)' : activeActionBarTheme.button.border;
                 }}
                 onClick={() => setDockerMenuOpen(!dockerMenuOpen)}
               >
                 <div style={{
                   width: '28px',
                   height: '28px',
-                  borderRadius: '8px',
+                  borderRadius: activeActionBarTheme.iconBox.borderRadius,
                   background: 'linear-gradient(135deg, #2496ED 0%, #2496EDdd 100%)',
                   display: 'flex',
                   alignItems: 'center',
@@ -1156,7 +1159,7 @@ const QuickAccessSidebar = ({
                         width: '36px',
                         height: '36px',
                         minWidth: '36px',
-                        borderRadius: '10px',
+                        borderRadius: activeActionBarTheme.iconBox.borderRadius,
                         background: `linear-gradient(135deg, 
                         #2496ED 0%, 
                         #2496EDdd 100%)`,
