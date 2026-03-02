@@ -1448,27 +1448,25 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                             onClick={() => handleCopySelectedCrossSide(side)}
                             title={`Copiar al panel ${isRemote ? 'local' : 'remoto'}`}
                             style={{
-                                display: 'flex', alignItems: 'center', gap: '4px',
-                                padding: '2px 8px', borderRadius: '5px', border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: '28px', height: '28px', borderRadius: '5px', border: 'none',
                                 background: `rgba(${isRemote ? '88,166,255' : '63,185,80'},0.15)`,
-                                color: accentColor, cursor: 'pointer', fontSize: '0.7rem', fontWeight: 600,
+                                color: accentColor, cursor: 'pointer', transition: 'background 0.12s',
                             }}
                         >
-                            <i className={`pi ${isRemote ? 'pi-arrow-right' : 'pi-arrow-left'}`} style={{ fontSize: '10px' }} />
-                            {isRemote ? '→ local' : '→ remoto'}
+                            <i className={`pi ${isRemote ? 'pi-arrow-right' : 'pi-arrow-left'}`} style={{ fontSize: '12px' }} />
                         </button>
                         <button
                             onClick={() => handleDeleteSelected(side)}
                             title={`Eliminar ${selectedKeys.size} elemento(s)`}
                             style={{
-                                display: 'flex', alignItems: 'center', gap: '4px',
-                                padding: '2px 8px', borderRadius: '5px', border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: '28px', height: '28px', borderRadius: '5px', border: 'none',
                                 background: 'rgba(248,81,73,0.12)',
-                                color: '#f85149', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 600,
+                                color: '#f85149', cursor: 'pointer', transition: 'background 0.12s',
                             }}
                         >
-                            <i className="pi pi-trash" style={{ fontSize: '10px' }} />
-                            Eliminar
+                            <i className="pi pi-trash" style={{ fontSize: '11px' }} />
                         </button>
                         <button
                             onClick={() => (isRemote ? setRemoteSelectedKeys : setLocalSelectedKeys)(new Set())}
