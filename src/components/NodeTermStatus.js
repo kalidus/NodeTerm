@@ -21,7 +21,6 @@ const NodeTermStatus = ({
 	variant, // 'rightColumn' = columna derecha en HomeTab
 	onCreateSSHConnection,
 	onCreateFolder,
-	onOpenFileExplorer,
 	onOpenSettings,
 	onToggleTerminalVisibility,
 	onToggleAIChat,
@@ -1106,11 +1105,6 @@ const NodeTermStatus = ({
 								<i className="pi pi-th-large" style={{ color: '#4fc3f7', fontSize: '1.1rem' }} />
 							</button>
 						)}
-						{onOpenFileExplorer && (
-							<button title="Explorador SSH" onClick={onOpenFileExplorer} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
-								<i className="pi pi-folder-open" style={{ color: '#eab308', fontSize: '1.1rem' }} />
-							</button>
-						)}
 						<button title="Herramientas" onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
 							<i className="pi pi-wrench" style={{ color: '#06b6d4', fontSize: '1.1rem' }} />
 						</button>
@@ -1417,11 +1411,6 @@ const NodeTermStatus = ({
 							{setShowCreateGroupDialog && (
 								<button style={btnStyle()} onClick={() => setShowCreateGroupDialog(true)} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
 									<i className="pi pi-th-large" style={{ color: '#4fc3f7', fontSize: '1rem' }} /><span>{tDialogs('group.title.new')}</span>
-								</button>
-							)}
-							{onOpenFileExplorer && (
-								<button style={btnStyle()} onClick={onOpenFileExplorer} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>
-									<i className="pi pi-folder-open" style={{ color: '#eab308', fontSize: '1rem' }} /><span>Explorador SSH</span>
 								</button>
 							)}
 							<button style={btnStyle()} onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))} onMouseEnter={e => { e.currentTarget.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.background = themeColors.itemBackground || 'rgba(255,255,255,0.05)'; }}>

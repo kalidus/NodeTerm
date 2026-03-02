@@ -203,6 +203,27 @@ const MainContentArea = ({
     }));
   }, []);
 
+  // Manejador para abrir el explorador desde el botón de la sidebar
+  const handleSidebarOpenFileExplorer = useCallback(() => {
+    // 1. Intentar con la pestaña activa si es SSH
+    const activeTab = filteredTabs[activeTabIndex];
+    if (activeTab && (activeTab.type === 'terminal' || activeTab.type === 'split' || activeTab.type === TAB_TYPES.TERMINAL || activeTab.type === TAB_TYPES.SPLIT)) {
+      setSshFileExplorerTabId(activeTab.key);
+      return;
+    }
+
+    // 2. Si no, buscar la primera pestaña SSH disponible
+    const firstSshTab = sshTabs.find(t => t.type === 'terminal' || t.type === 'split' || t.type === TAB_TYPES.TERMINAL || t.type === TAB_TYPES.SPLIT);
+    if (firstSshTab) {
+      // Encontrar su índice en las pestañas filtradas (considerando grupos)
+      const idx = filteredTabs.findIndex(t => t.key === firstSshTab.key);
+      if (idx !== -1) {
+        setActiveTabIndex(idx);
+        setSshFileExplorerTabId(firstSshTab.key);
+      }
+    }
+  }, [filteredTabs, activeTabIndex, sshTabs, setActiveTabIndex, setSshFileExplorerTabId]);
+
   // Contador para IDs de terminales locales - iniciar desde 1000 para evitar colisiones con Home
   const localTerminalCounterRef = useRef(1000);
 
@@ -1192,6 +1213,7 @@ const MainContentArea = ({
         >
           <Sidebar
             {...memoizedSidebarProps}
+            onOpenFileExplorer={handleSidebarOpenFileExplorer}
             setSidebarCollapsed={handleSidebarToggle}
           />
         </SplitterPanel>

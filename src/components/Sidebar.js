@@ -138,7 +138,9 @@ const Sidebar = React.memo(({
   onShowImportExportDialog,
   onShowImportWizard,
   isExternalReloadRef, // Nuevo prop para control de polling sync
-  updateTreeHash       // Nuevo prop para actualizar hash tras cambios locales
+  updateTreeHash,      // Nuevo prop para actualizar hash tras cambios locales
+  hasActiveSshSession = false,
+  onOpenFileExplorer
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
@@ -2742,6 +2744,33 @@ const Sidebar = React.memo(({
                       {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
                     </span>
                   </Button>
+                  {hasActiveSshSession && onOpenFileExplorer && (
+                    <Button
+                      className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                      onClick={() => onOpenFileExplorer()}
+                      tooltip="Explorador SSH"
+                      tooltipOptions={{ position: 'bottom' }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '40px',
+                        height: '40px',
+                        padding: 0
+                      }}
+                    >
+                      <span style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '20px',
+                        height: '20px',
+                        color: 'var(--ui-sidebar-text)'
+                      }}>
+                        <i className="pi pi-folder-open" style={{ color: '#eab308', fontSize: '1.2rem' }} />
+                      </span>
+                    </Button>
+                  )}
                   <Button
                     className="p-button-rounded p-button-text sidebar-action-button glass-button key-button"
                     onClick={() => setViewMode('passwords')}

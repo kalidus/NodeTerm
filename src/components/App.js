@@ -2417,6 +2417,8 @@ const App = () => {
     sidebarCallbacksRef,
     selectedNodeKey,
     setSelectedNodeKey,
+    hasActiveSshSession: sshTabs.some(tab => tab.type === 'terminal' || tab.type === 'split'),
+    onOpenFileExplorer: openFileExplorer,
 
     // Props para conexiones
     getAllFolders,
@@ -2478,7 +2480,7 @@ const App = () => {
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
     iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, sidebarFontColor, terminalTheme, treeTheme, sessionActionIconTheme,
     toast, confirmDialog, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu, hideContextMenu,
-    sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey,
+    sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey, sshTabs, openFileExplorer,
 
     // Dependencias para conexiones
     getAllFolders, createNewSSH, saveEditSSH, openEditSSHDialog, handleSaveRdpToSidebar,

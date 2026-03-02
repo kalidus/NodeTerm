@@ -838,7 +838,6 @@ const HomeTab = ({
             foldersCount={foldersCount}
             rdpConnectionsCount={rdpConnectionsCount}
             themeColors={themeColors}
-            onOpenFileExplorer={onOpenFileExplorer}
             onOpenSettings={onOpenSettings}
             onToggleTerminalVisibility={handleToggleTerminalVisibility}
             onToggleAIChat={handleToggleAIChat}
