@@ -1390,6 +1390,11 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             localStorage.setItem('ssh_file_explorer_show_hidden', next ? 'true' : 'false');
         };
 
+        const handleNewFolder = () => {
+            if (!currentPath) return;
+            openCreateFolderDialog({ data: { path: currentPath, type: 'directory' } }, side);
+        };
+
         const selectedKeys = isRemote ? remoteSelectedKeys : localSelectedKeys;
 
         return (
@@ -1420,6 +1425,9 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                     </button>
                     <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleHome} title="Inicio">
                         <i className="pi pi-home" />
+                    </button>
+                    <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleNewFolder} title="Nueva carpeta">
+                        <i className="pi pi-plus-circle" />
                     </button>
                     <div style={{ flex: 1, margin: '0 4px', display: 'flex', alignItems: 'center', background: 'rgba(13, 17, 23, 0.4)', padding: '2px 8px', borderRadius: '4px', border: '1px solid #30363d' }}>
                         <i className="pi pi-folder-open" style={{ color: '#8b949e', fontSize: '11px', marginRight: '6px' }} />
