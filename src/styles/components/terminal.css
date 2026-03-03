@@ -16,13 +16,16 @@
   box-sizing: border-box !important;
   background-color: transparent !important;
   /* CRÍTICO: Dejar que el contenedor maneje el fondo */
-  
-  /* MEJORA: Nitidez de fuente en macOS similar a iTerm */
-  -webkit-font-smoothing: antialiased !important;
-  -moz-osx-font-smoothing: grayscale !important;
+
+  /* MEJORA: Nitidez de fuente exclusiva para macOS similar a iTerm */
+  /* Solo se aplica en macOS para no romper el renderizado subpixel (ClearType/FreeType) de Windows/Linux */
+  .platform-darwin & {
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+  }
 }
 
-.xterm-rows {
+.platform-darwin .xterm-rows {
   -webkit-font-smoothing: antialiased !important;
   -moz-osx-font-smoothing: grayscale !important;
 }

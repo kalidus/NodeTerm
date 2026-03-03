@@ -493,9 +493,11 @@
   flex-direction: column;
   gap: 0.125rem;
 
-  /* MEJORA: Nitidez de fuente en macOS */
-  -webkit-font-smoothing: antialiased !important;
-  -moz-osx-font-smoothing: grayscale !important;
+  /* MEJORA: Nitidez de fuente exclusiva para macOS */
+  .platform-darwin & {
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+  }
 }
 
 .terminal-preview-line {

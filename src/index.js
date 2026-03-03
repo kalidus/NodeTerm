@@ -190,9 +190,12 @@ const initAndRender = () => {
   // 3. Renderizar React inmediatamente
   root.render(<App />);
 
-  // 4. Marcar que React está renderizado
+  // 4. Marcar que React está renderizado y asignar plataforma para CSS
   requestAnimationFrame(() => {
     document.documentElement.classList.add('app-ready');
+    if (window.electron && window.electron.platform) {
+      document.documentElement.classList.add(`platform-${window.electron.platform}`);
+    }
   });
 };
 
