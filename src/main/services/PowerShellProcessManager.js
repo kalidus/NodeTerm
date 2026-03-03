@@ -232,15 +232,17 @@ function startPowerShellSession(tabId, { cols, rows }) {
       }
     }
 
+    const ptyProcess = powershellProcesses[tabId];
+
     // Handle PowerShell output
-    powershellProcesses[tabId].onData((data) => {
+    ptyProcess.onData((data) => {
       if (mainWindow && mainWindow.webContents) {
         mainWindow.webContents.send(`powershell:data:${tabId}`, data);
       }
     });
 
     // Handle PowerShell exit
-    powershellProcesses[tabId].onExit((exitCode, signal) => {
+    ptyProcess.onExit((exitCode, signal) => {
       // Extraer el código de salida real
       let actualExitCode = exitCode;
       if (typeof exitCode === 'object' && exitCode !== null) {
@@ -257,7 +259,11 @@ function startPowerShellSession(tabId, { cols, rows }) {
         actualExitCode = 0;
       }
 
-      delete powershellProcesses[tabId];
+      const isIntentionallyStopped = ptyProcess._isIntentionallyStopped || actualExitCode === 1; // exit code 1 is standard when taskkill terminates it
+
+      if (powershellProcesses[tabId] === ptyProcess) {
+        delete powershellProcesses[tabId];
+      }
 
       const needsRestart = actualExitCode === -1073741510;
 
@@ -272,8 +278,8 @@ function startPowerShellSession(tabId, { cols, rows }) {
           }
         }, 1000);
       } else {
-        if (actualExitCode === 0) {
-          console.log(`PowerShell ${tabId} terminó normalmente (código ${actualExitCode})`);
+        if (actualExitCode === 0 || isIntentionallyStopped) {
+          console.log(`PowerShell ${tabId} terminó normalmente (código ${actualExitCode}, intencional: ${!!isIntentionallyStopped})`);
         } else {
           // Solo enviar error si no estamos cerrando la aplicación
           if (!isAppQuitting.value) {
@@ -341,7 +347,12 @@ function stopPowerShell(tabId) {
       const process = powershellProcesses[tabId];
       const pid = process.pid;
 
-      process.removeAllListeners();
+      process._isIntentionallyStopped = true;
+      try {
+        if (typeof process.removeAllListeners === 'function') {
+          process.removeAllListeners();
+        }
+      } catch (e) { }
 
       // En Windows, usar taskkill directamente para evitar errores de AttachConsole
       if (os.platform() === 'win32') {

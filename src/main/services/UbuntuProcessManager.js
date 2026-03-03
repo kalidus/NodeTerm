@@ -97,15 +97,17 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
 
     ubuntuProcesses[tabId] = getPtyFn().spawn(shell, args, spawnOptions);
 
+    const ptyProcess = ubuntuProcesses[tabId];
+
     // Handle Ubuntu output
-    ubuntuProcesses[tabId].onData((data) => {
+    ptyProcess.onData((data) => {
       if (mainWindow && mainWindow.webContents) {
         mainWindow.webContents.send(`ubuntu:data:${tabId}`, data);
       }
     });
 
     // Handle Ubuntu exit
-    ubuntuProcesses[tabId].onExit((exitCode, signal) => {
+    ptyProcess.onExit((exitCode, signal) => {
 
       // Extraer el código de salida real
       let actualExitCode = exitCode;
@@ -119,7 +121,9 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
         actualExitCode = parseInt(exitCode, 10) || 0;
       }
 
-      if (actualExitCode !== 0 && signal !== 'SIGTERM' && signal !== 'SIGKILL') {
+      const isIntentionallyStopped = ptyProcess._isIntentionallyStopped || actualExitCode === 1; // exit code 1 is standard when taskkill terminates it
+
+      if (actualExitCode !== 0 && !isIntentionallyStopped && signal !== 'SIGTERM' && signal !== 'SIGKILL') {
         // Silenciar el mensaje de error si estamos cerrando la aplicación
         if (!isAppQuitting.value) {
           console.log(`Ubuntu ${tabId} terminó con error (código ${actualExitCode})`);
@@ -130,7 +134,9 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
       }
 
       // Cleanup
-      delete ubuntuProcesses[tabId];
+      if (ubuntuProcesses[tabId] === ptyProcess) {
+        delete ubuntuProcesses[tabId];
+      }
     });
 
     // Send ready signal
@@ -187,8 +193,14 @@ function stopUbuntu(tabId) {
       const process = ubuntuProcesses[tabId];
       const pid = process.pid;
 
+      process._isIntentionallyStopped = true;
+
       // Remover listeners antes de terminar el proceso
-      process.removeAllListeners();
+      try {
+        if (typeof process.removeAllListeners === 'function') {
+          process.removeAllListeners();
+        }
+      } catch (e) { }
 
       // En Windows, usar taskkill directamente para evitar errores de AttachConsole
       if (os.platform() === 'win32') {
