@@ -6,6 +6,7 @@ const { ipcMain } = require('electron');
 const SSH2Promise = require('ssh2-promise');
 const SftpClient = require('ssh2-sftp-client');
 const fs = require('fs');
+const { parseProcessList } = require('../utils/parsing-utils');
 const sshStatsService = require('../services/SSHStatsService');
 
 /**
@@ -51,85 +52,6 @@ function parseLsOutput(output) {
 /**
  * Parsea la salida de 'ps aux' en una lista de objetos de proceso
  */
-function parseProcessList(output) {
-  if (!output || typeof output !== 'string') return [];
-  // Dividir y limpiar, pero conservar el contenido para el comando (que puede tener espacios al inicio)
-  const lines = output.split('\n').map(l => l.trim()).filter(Boolean);
-  if (lines.length === 0) return [];
-
-  let headerIndex = -1;
-  let idx = { pid: -1, user: -1, cpu: -1, mem: -1, vsz: -1, rss: -1, command: -1 };
-
-  // 1. Buscar cabecera (en los ASUSWRT suele ser la primera línea)
-  for (let i = 0; i < Math.min(lines.length, 5); i++) {
-    const line = lines[i].toUpperCase();
-    if (line.includes('PID') && (line.includes('COMMAND') || line.includes('CMD') || line.includes('VSZ') || line.includes('STAT'))) {
-      headerIndex = i;
-      const parts = lines[i].trim().split(/\s+/).map(p => p.toUpperCase());
-      idx.pid = parts.indexOf('PID');
-      idx.user = parts.findIndex(p => p === 'USER' || p === 'OWNER' || p === 'UID');
-      idx.cpu = parts.findIndex(p => p.includes('%CPU') || p === 'CPU');
-      idx.mem = parts.findIndex(p => p.includes('%MEM') || p === 'MEM');
-      idx.vsz = parts.indexOf('VSZ');
-      idx.rss = parts.indexOf('RSS');
-      idx.command = parts.findIndex(p => p === 'COMMAND' || p === 'CMD' || p === 'ARGS');
-      break;
-    }
-  }
-
-  // 2. Si no hay cabecera clara, intentar detectar basándonos en la primera línea de datos
-  if (idx.pid === -1) {
-    const firstParts = lines[0].trim().split(/\s+/);
-    if (!isNaN(parseInt(firstParts[0], 10))) {
-      headerIndex = -1;
-      idx.pid = 0;
-      // Heurística BusyBox: [PID, USER, VSZ, STAT, COMMAND]
-      if (firstParts.length >= 5) {
-        idx.user = 1;
-        idx.vsz = 2;
-        idx.command = 4;
-      } else {
-        idx.command = firstParts.length - 1;
-      }
-    }
-  }
-
-  if (idx.pid === -1) return [];
-
-  const results = [];
-  for (let i = headerIndex + 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    const parts = line.split(/\s+/);
-
-    if (parts.length <= idx.pid) continue;
-
-    const pid = parseInt(parts[idx.pid], 10);
-    if (isNaN(pid)) continue;
-
-    const user = (idx.user >= 0 && parts[idx.user]) ? parts[idx.user] : 'root';
-    const cpu = (idx.cpu >= 0 && parts[idx.cpu]) ? parseFloat(parts[idx.cpu]) || 0 : 0;
-    const mem = (idx.mem >= 0 && parts[idx.mem]) ? parseFloat(parts[idx.mem]) || 0 : 0;
-    const vsz = (idx.vsz >= 0 && parts[idx.vsz]) ? parseInt(parts[idx.vsz], 10) || 0 : 0;
-    const rss = (idx.rss >= 0 && parts[idx.rss]) ? parseInt(parts[idx.rss], 10) || 0 : 0;
-
-    const cmdStart = idx.command >= 0 ? idx.command : (parts.length - 1);
-    const command = parts.slice(cmdStart).join(' ');
-
-    if (command) {
-      results.push({ user, pid, cpu, mem, vsz, rss, command: command.substring(0, 120) });
-    }
-  }
-
-  // Ordenar por CPU si existe, si no por PID
-  if (idx.cpu >= 0 && results.some(r => r.cpu > 0)) {
-    results.sort((a, b) => b.cpu - a.cpu);
-  } else {
-    results.sort((a, b) => b.pid - a.pid);
-  }
-
-  return results;
-}
 
 function registerSSHHandlers(dependencies = {}) {
   const { findSSHConnection, sshConnections } = dependencies || {};
@@ -624,33 +546,14 @@ function registerSSHHandlers(dependencies = {}) {
         return { success: false, error: 'No SSH connection found' };
       }
 
-      let raw = '';
-      let processes = [];
-
-      // Intento 1: ps aux
-      try {
-        raw = await conn.ssh.exec('ps aux');
-        processes = parseProcessList(raw);
-      } catch (e) { /* ignore */ }
-
-      // Intento 2: ps w (si el primero no devolvió procesos)
-      if (processes.length === 0) {
-        try {
-          raw = await conn.ssh.exec('ps w');
-          processes = parseProcessList(raw);
-        } catch (e) { /* ignore */ }
-      }
-
-      // Intento 3: ps básico
-      if (processes.length === 0) {
-        try {
-          raw = await conn.ssh.exec('ps');
-          processes = parseProcessList(raw);
-        } catch (e) { /* ignore */ }
-      }
+      // Consolidar intentos en una sola llamada de shell para evitar sobrecargar el router con múltiples canales
+      const command = 'ps aux 2>/dev/null || ps w 2>/dev/null || ps 2>/dev/null';
+      const rawOutput = await conn.ssh.exec(command);
+      const processes = parseProcessList(rawOutput);
 
       return { success: true, processes };
     } catch (err) {
+      console.error('[SSH PROCESSES] Error:', err);
       return { success: false, error: err.message || String(err) };
     }
   });

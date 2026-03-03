@@ -182,6 +182,38 @@ class SSHStatsService {
   }
 
   /**
+   * Parsea memoria de macOS (output de vm_stat y sysctl hw.memsize)
+   */
+  parseMemoryMacOS(vmStatOutput, totalMemBytes) {
+    const lines = vmStatOutput.split('\n');
+    const getVal = (label) => {
+      const line = lines.find(l => l.includes(label));
+      if (!line) return 0;
+      const match = line.match(/: \s*(\d+)\./);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+
+    const pageSize = 4096; // Standard on macOS
+    const free = getVal('Pages free') * pageSize;
+    const active = getVal('Pages active') * pageSize;
+    const inactive = getVal('Pages inactive') * pageSize;
+    const speculative = getVal('Pages speculative') * pageSize;
+    const wired = getVal('Pages wired down') * pageSize;
+    const compressed = getVal('Pages occupied by compressor') * pageSize;
+
+    const used = active + wired + compressed;
+    const cached = inactive + speculative;
+
+    return {
+      total: totalMemBytes || (used + free + cached),
+      used: used,
+      cached: cached,
+      swapTotal: 0,
+      swapUsed: 0
+    };
+  }
+
+  /**
    * Parsea discos del output de 'df -P'
    */
   parseDisks(parts) {
@@ -251,7 +283,11 @@ class SSHStatsService {
       return { network: { rx_speed: 0, tx_speed: 0 }, currentNet: null };
     }
 
-    const netOutput = parts.slice(netIndex).join('\n');
+    // Isolar solo el bloque de red (hasta el siguiente delimitador o fin)
+    const nextBlockIndex = parts.findIndex((line, i) => i > netIndex && line.includes('---'));
+    const netParts = nextBlockIndex > 0 ? parts.slice(netIndex, nextBlockIndex) : parts.slice(netIndex);
+
+    const netOutput = netParts.join('\n');
     const currentNet = parseNetDev(netOutput);
     const currentTime = Date.now();
 
@@ -443,20 +479,24 @@ class SSHStatsService {
    */
   async processDirectSSHStats(conn, realHostname, finalDistroId, host) {
     try {
-      // CPU (ahora obtenemos todas las líneas para contar cores)
-      const cpuStatOutput = await conn.ssh.exec("grep '^cpu' /proc/stat");
-      const { cpuLoad, currentCpu, cores, coreLoads } = this.parseCPU(cpuStatOutput, conn.previousCpu);
-
-      if (currentCpu) {
-        conn.previousCpu = currentCpu;
+      if (finalDistroId === 'macos' || finalDistroId === 'darwin') {
+        return await this.processMacOSSSHStats(conn, realHostname, host);
       }
 
-      // Memoria, disco, uptime, red, IP
-      const allStatsRes = await conn.ssh.exec(
-        "free -b && df -P && uptime && cat /proc/net/dev && (cat /etc/os-release 2>/dev/null || cat /usr/lib/os-release 2>/dev/null || echo '') && (hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo '')"
-      );
-      const parts = allStatsRes.trim().split('\n');
+      // Consolidar CPU, memoria, disco, uptime, red, IP y distro en una SOLA llamada de shell.
+      // Esto es CRÍTICO para routers y bastiones que limitan canales/sesiones.
+      const command = `grep '^cpu' /proc/stat && echo "---CPU_END---" && free -b 2>/dev/null && echo "---MEM_END---" && df -P 2>/dev/null && echo "---DISK_END---" && uptime 2>/dev/null && echo "---UPTIME_END---" && cat /proc/net/dev 2>/dev/null && echo "---NET_END---" && (cat /etc/os-release 2>/dev/null || cat /usr/lib/os-release 2>/dev/null || echo "") && echo "---OS_END---" && (hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "")`;
 
+      const rawOutput = await conn.ssh.exec(command);
+      const parts = rawOutput.split('\n');
+
+      // 1. CPU
+      const cpuEndIdx = parts.indexOf("---CPU_END---");
+      const cpuStatOutput = cpuEndIdx >= 0 ? parts.slice(0, cpuEndIdx).join('\n') : "";
+      const { cpuLoad, currentCpu, cores, coreLoads } = this.parseCPU(cpuStatOutput, conn.previousCpu);
+      if (currentCpu) conn.previousCpu = currentCpu;
+
+      // 2. Otros (el parsing existente busca por palabras clave, así que le pasamos el resto)
       const mem = this.parseMemory(parts);
       const disks = this.parseDisks(parts);
       const uptime = this.parseUptime(parts);
@@ -489,8 +529,101 @@ class SSHStatsService {
         hostname: realHostname
       };
     } catch (error) {
+      console.error('[SSH STATS] Error:', error);
       throw error;
     }
+  }
+
+  /**
+   * Especial para macOS SSH
+   */
+  async processMacOSSSHStats(conn, realHostname, host) {
+    try {
+      const commands = [
+        "sysctl -n hw.ncpu",
+        "ps -A -o %cpu | awk '{s+=$1} END {print s}'",
+        "sysctl -n hw.memsize",
+        "vm_stat",
+        "df -P",
+        "uptime",
+        "networksetup -listallhardwareports" // Opcional, netstat es mejor
+      ];
+
+      // Ejecutar comandos en paralelo (o secuencial si el server es lento)
+      const results = await Promise.all(commands.map(cmd => conn.ssh.exec(cmd).catch(() => '')));
+
+      const cores = parseInt(results[0], 10) || 1;
+      const cpuLoad = (parseFloat(results[1]) / cores).toFixed(2);
+      const totalMem = parseInt(results[2], 10) || 0;
+      const mem = this.parseMemoryMacOS(results[3], totalMem);
+      const disks = this.parseDisks(results[4].split('\n'));
+      const uptime = this.parseUptime(results[5].split('\n'));
+
+      // Netstat para macOS
+      const netRes = await conn.ssh.exec("netstat -ib | grep -v 'lo0'");
+      const { network, currentNet, currentTime } = this.parseNetworkMacOS(
+        netRes,
+        conn.previousNet,
+        conn.previousTime
+      );
+
+      if (currentNet) {
+        conn.previousNet = currentNet;
+        conn.previousTime = currentTime;
+      }
+
+      return {
+        cpu: cpuLoad,
+        mem,
+        disk: disks,
+        uptime,
+        network,
+        distro: 'macos',
+        versionId: '',
+        ip: host,
+        cores,
+        coreLoads: null,
+        hostname: realHostname
+      };
+    } catch (e) {
+      return this.createFallbackStats(realHostname, 'macos', host);
+    }
+  }
+
+  /**
+   * Parsea red para macOS
+   */
+  parseNetworkMacOS(netstatOutput, previousNet, previousTime) {
+    const lines = netstatOutput.trim().split('\n');
+    let totalRx = 0;
+    let totalTx = 0;
+    const currentTime = Date.now();
+
+    lines.forEach(line => {
+      const parts = line.trim().split(/\s+/);
+      // macOS netstat -ib format:
+      // Name  Mtu   Network       Address            Ipkts Ierrs    Ibytes    Opkts Oerrs    Obytes  Coll
+      // en0   1500  <Link#4>    00:00:00:00:00:00  12345     0   1234567    12345     0   1234567     0
+      if (parts.length >= 10) {
+        const rx = parseInt(parts[6], 10);
+        const tx = parseInt(parts[9], 10);
+        if (!isNaN(rx)) totalRx += rx;
+        if (!isNaN(tx)) totalTx += tx;
+      }
+    });
+
+    const currentNet = { totalRx, totalTx };
+    let network = { rx_speed: 0, tx_speed: 0 };
+
+    if (previousNet && previousTime) {
+      const timeDiff = (currentTime - previousTime) / 1000;
+      if (timeDiff > 0) {
+        network.rx_speed = Math.max(0, (totalRx - previousNet.totalRx) / timeDiff);
+        network.tx_speed = Math.max(0, (totalTx - previousNet.totalTx) / timeDiff);
+      }
+    }
+
+    return { network, currentNet, currentTime };
   }
 
   /**

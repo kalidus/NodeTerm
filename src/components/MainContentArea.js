@@ -1468,7 +1468,7 @@ const MainContentArea = ({
                   isSSHSession={terminalContextMenu ? (() => {
                     const allT = getAllTabs ? getAllTabs() : [];
                     const tab = allT.find(t => t.key === terminalContextMenu.tabKey);
-                    return tab ? (tab.type === 'terminal' || tab.type === TAB_TYPES.TERMINAL) : false;
+                    return tab ? (tab.type === 'terminal' || tab.type === TAB_TYPES.TERMINAL || tab.type === 'local-terminal') : false;
                   })() : false}
                 />
 
@@ -1536,7 +1536,7 @@ const MainContentArea = ({
                         getAllTabs={getAllTabs}
                       />
                       {/* SSH System Monitor: right-side panel inside per-tab absolute div */}
-                      {tab.type === 'terminal' && sshSystemMonitorTabId === tab.key && (
+                      {(tab.type === 'terminal' || tab.type === 'local-terminal') && sshSystemMonitorTabId === tab.key && (
                         <SSHSystemMonitorPanel
                           tabId={tab.key}
                           tab={tab}

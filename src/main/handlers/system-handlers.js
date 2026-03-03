@@ -3,6 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const os = require('os');
+const { exec } = require('child_process');
+const { promisify } = require('util');
+const execAsync = promisify(exec);
+const { parseProcessList } = require('../utils/parsing-utils');
 
 /**
  * Handlers para funcionalidades del sistema
@@ -728,6 +732,42 @@ function registerSystemMonitoringHandlers() {
       };
       // No cachear errores fatales por si son temporales
       return errorStats;
+    }
+  });
+
+  // Handler para obtener procesos locales (System Monitor para terminales locales)
+  ipcMain.handle('app:get-local-processes', async () => {
+    try {
+      const platform = process.platform;
+      let command = '';
+
+      if (platform === 'win32') {
+        // En Windows, systeminformation es más robusto para esto, 
+        // pero para rapidez usaremos un comando nativo si fuera posible.
+        // Por ahora, usamos systeminformation que ya está instalado y es cross-platform.
+        const si = require('systeminformation');
+        const data = await si.processes();
+        return {
+          success: true,
+          processes: data.list.map(p => ({
+            pid: p.pid,
+            user: p.user,
+            cpu: p.cpu,
+            mem: p.mem,
+            rss: p.memRss * 1024, // KB to Bytes
+            command: p.command
+          }))
+        };
+      } else {
+        // macOS / Linux: ps aux es extremadamente rápido
+        command = 'ps aux';
+        const { stdout } = await execAsync(command, { timeout: 5000 });
+        const processes = parseProcessList(stdout);
+        return { success: true, processes };
+      }
+    } catch (err) {
+      console.error('Error fetching local processes:', err);
+      return { success: false, error: err.message };
     }
   });
 }

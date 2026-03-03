@@ -109,7 +109,9 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
         const invoke = window.electron?.ipcRenderer?.invoke;
         if (!invoke) return;
         try {
-            const result = await invoke('ssh:get-processes', { tabId });
+            const isLocal = tab?.type === 'local-terminal';
+            const handler = isLocal ? 'app:get-local-processes' : 'ssh:get-processes';
+            const result = await invoke(handler, { tabId });
             if (result?.success && Array.isArray(result.processes)) {
                 setProcesses(result.processes);
             }
@@ -119,7 +121,7 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
             setProcessesLoading(false);
             setLastRefreshed(new Date());
         }
-    }, [tabId]);
+    }, [tabId, tab?.type]);
 
     // ── Handle interval changes and sync with backend ─────────────────────────
     const handleIntervalChange = useCallback((newMs) => {
@@ -181,36 +183,84 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
         return () => clearInterval(intervalRef.current);
     }, [fetchProcesses, fetchNetIfaces, refreshInterval]);
 
-    // ── Track CPU and Memory history from incoming stats ──────────────────────
+
+    // ── Fetch local stats ONLY for local terminal ────────────────────────────
+    const [localStats, setLocalStats] = useState(null);
     useEffect(() => {
-        if (stats?.cpu !== undefined) {
-            const cpuVal = parseFloat(stats.cpu) || 0;
+        if (tab?.type !== 'local-terminal') return;
+
+        let stopped = false;
+        let timer = null;
+
+        const fetchLocalStats = async () => {
+            if (stopped) return;
+            const systemStats = await window.electronAPI?.getSystemStats();
+            if (systemStats && !stopped) {
+                // Adapt stats for what the UI expects (matching SSHStatsService format)
+                const adapted = {
+                    cpu: (systemStats.cpu?.usage || 0).toFixed(2),
+                    mem: {
+                        total: (systemStats.memory?.total || 0) * 1024 * 1024 * 1024,
+                        used: (systemStats.memory?.used || 0) * 1024 * 1024 * 1024
+                    },
+                    network: {
+                        rx_speed: (systemStats.network?.download || 0) * 1024 * 1024 / 8,
+                        tx_speed: (systemStats.network?.upload || 0) * 1024 * 1024 / 8
+                    },
+                    disk: Array.isArray(systemStats.disks)
+                        ? systemStats.disks.map(d => ({ fs: d.name, use: d.percentage }))
+                        : [],
+                    hostname: systemStats.hostname,
+                    ip: systemStats.ip,
+                    distro: window.electron?.platform === 'darwin' ? 'macos' : (window.electron?.platform === 'win32' ? 'windows' : 'linux')
+                };
+                setLocalStats(adapted);
+            }
+            if (!stopped) {
+                timer = setTimeout(fetchLocalStats, refreshInterval);
+            }
+        };
+
+        fetchLocalStats();
+        return () => {
+            stopped = true;
+            if (timer) clearTimeout(timer);
+        };
+    }, [tab?.type, refreshInterval]);
+
+    // Determinar qué estadísticas usar (pasadas por prop para SSH, locales para terminal local)
+    const activeStats = tab?.type === 'local-terminal' ? (localStats || {}) : (stats || {});
+
+    // ── Track CPU and Memory history from active stats ───────────────────────
+    useEffect(() => {
+        if (activeStats?.cpu !== undefined) {
+            const cpuVal = parseFloat(activeStats.cpu) || 0;
             setCpuHistory(prev => [...prev, cpuVal].slice(-MAX_HISTORY));
         }
 
-        if (stats?.mem?.total !== undefined && stats?.mem?.used !== undefined) {
-            const memTotal = stats.mem.total;
-            const memUsed = stats.mem.used;
+        if (activeStats?.mem?.total !== undefined && activeStats?.mem?.used !== undefined) {
+            const memTotal = activeStats.mem.total;
+            const memUsed = activeStats.mem.used;
             const memPctVal = memTotal > 0 ? (memUsed / memTotal) * 100 : 0;
             setMemHistory(prev => [...prev, memPctVal].slice(-MAX_HISTORY));
         }
 
-        if (stats?.network) {
-            const rx = stats.network.rx_speed || 0;
-            const tx = stats.network.tx_speed || 0;
+        if (activeStats?.network) {
+            const rx = activeStats.network.rx_speed || 0;
+            const tx = activeStats.network.tx_speed || 0;
             setNetRxHistory(prev => [...prev, rx].slice(-MAX_HISTORY));
             setNetTxHistory(prev => [...prev, tx].slice(-MAX_HISTORY));
         }
 
-        if (Array.isArray(stats?.disk) && stats.disk.length > 0) {
+        if (Array.isArray(activeStats?.disk) && activeStats.disk.length > 0) {
             let totalUse = 0;
-            stats.disk.forEach(d => {
+            activeStats.disk.forEach(d => {
                 totalUse += typeof d.use === 'number' ? d.use : (d.percentage || 0);
             });
-            const avgDisk = totalUse / stats.disk.length;
+            const avgDisk = totalUse / activeStats.disk.length;
             setDiskHistory(prev => [...prev, avgDisk].slice(-MAX_HISTORY));
         }
-    }, [stats?.cpu, stats?.mem?.total, stats?.mem?.used, stats?.network, stats?.disk]);
+    }, [activeStats?.cpu, activeStats?.mem?.total, activeStats?.mem?.used, activeStats?.network, activeStats?.disk]);
 
     // ── Close on Escape key ───────────────────────────────────────────────────
     useEffect(() => {
@@ -220,15 +270,15 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
     }, [onClose]);
 
     // ── Derived stats ─────────────────────────────────────────────────────────
-    const cpuPct = parseFloat(stats?.cpu) || 0;
-    const memTotal = stats?.mem?.total || 0;
-    const memUsed = stats?.mem?.used || 0;
+    const cpuPct = parseFloat(activeStats?.cpu) || 0;
+    const memTotal = activeStats?.mem?.total || 0;
+    const memUsed = activeStats?.mem?.used || 0;
     const memPct = memTotal > 0 ? (memUsed / memTotal) * 100 : 0;
     const memUsedGB = memTotal > 0 ? (memUsed / 1024 / 1024 / 1024).toFixed(1) : '?';
     const memTotalGB = memTotal > 0 ? (memTotal / 1024 / 1024 / 1024).toFixed(1) : '?';
-    const disks = Array.isArray(stats?.disk) ? stats.disk : [];
-    const rxSpeed = stats?.network?.rx_speed || 0;
-    const txSpeed = stats?.network?.tx_speed || 0;
+    const disks = Array.isArray(activeStats?.disk) ? activeStats.disk : [];
+    const rxSpeed = activeStats?.network?.rx_speed || 0;
+    const txSpeed = activeStats?.network?.tx_speed || 0;
 
     // ── Sorting ───────────────────────────────────────────────────────────────
     const handleSort = (key) => {
@@ -376,30 +426,30 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                                     pixelSize={20}
                                 />
                             ) : (
-                                <i className="pi pi-server ssh-monitor-title-icon" />
+                                <i className={`pi ${tab?.type === 'local-terminal' ? 'pi-desktop' : 'pi-server'} ssh-monitor-title-icon`} />
                             )}
-                            <h2>{stats?.hostname || 'Servidor SSH'}</h2>
+                            <h2>{activeStats?.hostname || (tab?.type === 'local-terminal' ? 'Sistema Local' : 'Servidor SSH')}</h2>
 
                             <div className="ssh-monitor-header-sub">
-                                {stats?.distro && (
+                                {activeStats?.distro && (
                                     <>
                                         <span className="ssh-monitor-separator">•</span>
                                         <span className="ssh-monitor-distro-info" title="Sistema Operativo">
-                                            <i className="pi pi-linux" />
-                                            <span style={{ textTransform: 'capitalize' }}>{stats.distro}</span>
+                                            {activeStats.distro === 'macos' ? '🍎' : (activeStats.distro === 'windows' ? '🪟' : <i className="pi pi-linux" />)}
+                                            <span style={{ textTransform: 'capitalize', marginLeft: '4px' }}>{activeStats.distro}</span>
                                         </span>
                                     </>
                                 )}
-                                {stats?.uptime && (
+                                {activeStats?.uptime && (
                                     <>
                                         <span className="ssh-monitor-separator">•</span>
-                                        <span className="ssh-monitor-uptime" title="Tiempo de actividad">⏱ {stats.uptime}</span>
+                                        <span className="ssh-monitor-uptime" title="Tiempo de actividad">⏱ {activeStats.uptime}</span>
                                     </>
                                 )}
-                                {stats?.ip && stats.ip !== stats?.hostname && (
+                                {activeStats?.ip && activeStats.ip !== activeStats?.hostname && (
                                     <>
                                         <span className="ssh-monitor-separator">•</span>
-                                        <span className="ssh-monitor-server-ip" title="Dirección IP">{stats.ip}</span>
+                                        <span className="ssh-monitor-server-ip" title="Dirección IP">{activeStats.ip}</span>
                                     </>
                                 )}
                             </div>
@@ -440,13 +490,13 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
 
                     {/* CPU */}
                     <div className="ssh-monitor-stat-card ssh-stat-hoverable">
-                        <div className="ssh-monitor-stat-label">CPU {stats?.cores ? `(${stats.cores} cores)` : ''}</div>
+                        <div className="ssh-monitor-stat-label">CPU {activeStats?.cores ? `(${activeStats.cores} cores)` : ''}</div>
                         <div className={`ssh-monitor-stat-value cpu`}>{cpuPct.toFixed(1)}%</div>
                         <StatBar value={cpuPct} type="cpu" />
                         {cpuHistory.length > 1 && (
                             <Sparkline data={cpuHistory} color="#58a6ff" maxVal={100} />
                         )}
-                        {stats?.coreLoads && stats.coreLoads.length > 0 && (
+                        {activeStats?.coreLoads && activeStats.coreLoads.length > 0 && (
                             <div className="ssh-monitor-hover-tooltip">
                                 <div style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '8px', color: '#e6edf3', borderBottom: '1px solid #30363d', paddingBottom: '4px' }}>Utilización por Núcleo</div>
                                 <div className="ssh-monitor-cpu-cores-grid">
