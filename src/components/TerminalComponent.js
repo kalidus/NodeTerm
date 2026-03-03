@@ -495,6 +495,15 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     useEffect(() => {
         if (term.current && fontFamily) {
             term.current.options.fontFamily = fontFamily;
+
+            // CRÍTICO: Re-aplicar opciones de nitidez al cambiar de fuente
+            // xterm.js a veces resetea o recalcula el renderizado internamente
+            term.current.options.fontWeight = '400';
+            term.current.options.fontWeightBold = 'bold';
+            term.current.options.minimumContrastRatio = 1;
+            term.current.options.letterSpacing = 0;
+            term.current.options.lineHeight = 1.1;
+
             // We might need to call fit again to readjust character sizes
             fitAddon.current?.fit();
         }
@@ -504,6 +513,13 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     useEffect(() => {
         if (term.current && fontSize) {
             term.current.options.fontSize = fontSize;
+
+            // CRÍTICO: Re-aplicar opciones de nitidez al cambiar el tamaño
+            term.current.options.fontWeight = '400';
+            term.current.options.fontWeightBold = 'bold';
+            term.current.options.minimumContrastRatio = 1;
+            term.current.options.lineHeight = 1.1;
+
             // We might need to call fit again to readjust character sizes
             fitAddon.current?.fit();
         }
