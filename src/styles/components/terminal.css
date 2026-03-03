@@ -16,6 +16,15 @@
   box-sizing: border-box !important;
   background-color: transparent !important;
   /* CRÍTICO: Dejar que el contenedor maneje el fondo */
+  
+  /* MEJORA: Nitidez de fuente en macOS similar a iTerm */
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+.xterm-rows {
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
 }
 
 .xterm-screen {

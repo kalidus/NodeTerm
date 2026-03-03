@@ -148,7 +148,11 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             disableStdin: false,
             // Configuraciones de compatibilidad con aplicaciones complejas
             drawBoldTextInBrightColors: true,
-            minimumContrastRatio: 4.5,
+            minimumContrastRatio: 1, // Desactivar ajuste de contraste automático para evitar desenfoque de color
+            fontWeight: '400', // Forzar un peso de fuente estándar definido
+            fontWeightBold: 'bold',
+            letterSpacing: 0,
+            lineHeight: 1.1,
         });
 
         // Disable bracketed paste mode to prevent weird characters on Ctrl+V
