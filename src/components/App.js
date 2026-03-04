@@ -2573,7 +2573,9 @@ const App = () => {
     activeIds,
     handleToggleBroadcast,
     handleToggleBroadcastTarget,
-    handleBroadcastData
+    handleBroadcastData,
+    masterKey,
+    secureStorage
   }), [
     onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, onOpenVncConnection, handleLoadGroupFromFavorites,
     openEditRdpDialog, openEditSSHDialog, nodes, localFontFamily, localFontSize,
@@ -2581,7 +2583,8 @@ const App = () => {
     explorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
     handleTerminalContextMenu, showTerminalContextMenu, sshStatsByTabId,
     terminalRefs, statusBarIconTheme, handleCloseSplitPanel, openInSplit, rdpTabs, findNodeByKey,
-    setSshTabs, setShowCreateGroupDialog, activeIds, handleToggleBroadcast, handleToggleBroadcastTarget, handleBroadcastData
+    setSshTabs, setShowCreateGroupDialog, activeIds, handleToggleBroadcast, handleToggleBroadcastTarget, handleBroadcastData,
+    masterKey, secureStorage
   ]);
 
   if (!isAppReady) {

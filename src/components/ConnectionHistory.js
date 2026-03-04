@@ -6,6 +6,7 @@ import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import favoriteGroupsStore from '../utils/favoriteGroupsStore';
 import FilterPanel from './FilterPanel';
 import FilterBadge from './FilterBadge';
+import { InputText } from 'primereact/inputtext';
 
 // Formatear "Hace 5m", "Hace 2 h", "Ayer", etc.
 function formatRelativeTime(iso) {
@@ -91,6 +92,71 @@ const findNodeInTree = (nodes, connection) => {
 	return null;
 };
 
+const getConnectionTypeColor = (type) => {
+	switch (type) {
+		case 'ssh': return '#28a745';
+		case 'rdp':
+		case 'rdp-guacamole': return '#007ad9';
+		case 'vnc':
+		case 'vnc-guacamole': return '#00bcd4';
+		case 'docker': return '#0db7ed';
+		case 'password': return '#ffc107';
+		default: return '#4fc3f7';
+	}
+};
+
+const getConnectionTypeIcon = (type) => {
+	switch (type) {
+		case 'ssh': return 'pi pi-bolt';
+		case 'rdp':
+		case 'rdp-guacamole': return 'pi pi-desktop';
+		case 'vnc':
+		case 'vnc-guacamole': return 'pi pi-eye';
+		case 'docker': return 'pi pi-box';
+		case 'password': return 'pi pi-key';
+		default: return 'pi pi-link';
+	}
+};
+
+const getProtocolLabel = (type) => {
+	switch (type) {
+		case 'ssh': return 'SSH';
+		case 'rdp':
+		case 'rdp-guacamole': return 'RDP';
+		case 'vnc':
+		case 'vnc-guacamole': return 'VNC';
+		case 'docker': return 'DOCKER';
+		case 'password': return 'PWD';
+		default: return 'CON';
+	}
+};
+
+const getNodeFolderPath = (nodes, targetNode) => {
+	const findFolderPath = (nodeList, target, currentPath = []) => {
+		if (!nodeList) return null;
+		for (const node of nodeList) {
+			// Solo agregar a la ruta si es una carpeta (no una conexión)
+			const isFolder = !node.data || (!node.data.type || (node.data.type !== 'ssh' && node.data.type !== 'rdp' && node.data.type !== 'rdp-guacamole'));
+			const newPath = isFolder ? [...currentPath, node.label] : currentPath;
+
+			// Si encontramos el nodo objetivo, retornar la ruta de carpetas (sin incluir la conexión)
+			if (node.key === target.key) {
+				return currentPath;
+			}
+
+			// Si tiene hijos, buscar recursivamente
+			if (node.children && node.children.length > 0) {
+				const foundPath = findFolderPath(node.children, target, newPath);
+				if (foundPath) {
+					return foundPath;
+				}
+			}
+		}
+		return null;
+	};
+	return findFolderPath(nodes, targetNode);
+};
+
 const ConnectionHistory = ({
 	onConnectToHistory,
 	recentConnections = [],
@@ -98,8 +164,206 @@ const ConnectionHistory = ({
 	onEdit,
 	themeColors = {},
 	sidebarNodes = null, // Nodos de la sidebar para buscar iconos personalizados
+	masterKey = null,
+	secureStorage = null
 }) => {
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
+	const [passwordNodes, setPasswordNodes] = useState([]);
+	const [searchTerm, setSearchTerm] = useState('');
+	const [filteredSearchResults, setFilteredSearchResults] = useState([]);
+	const [isSearching, setIsSearching] = useState(false);
+	const [showDropdown, setShowDropdown] = useState(false);
+	const [activeIndex, setActiveIndex] = useState(-1);
+
+	// Cargar passwords desde localStorage (con soporte para encriptación) - Igual que en TitleBar
+	useEffect(() => {
+		const loadPasswords = async () => {
+			try {
+				if (masterKey && secureStorage) {
+					const encryptedData = localStorage.getItem('passwords_encrypted');
+					if (encryptedData) {
+						const decrypted = await secureStorage.decryptData(
+							JSON.parse(encryptedData),
+							masterKey
+						);
+						setPasswordNodes(decrypted || []);
+					} else {
+						const plainData = localStorage.getItem('passwordManagerNodes');
+						if (plainData) {
+							setPasswordNodes(JSON.parse(plainData) || []);
+						}
+					}
+				} else {
+					const saved = localStorage.getItem('passwordManagerNodes');
+					if (saved) {
+						setPasswordNodes(JSON.parse(saved) || []);
+					}
+				}
+			} catch (error) {
+				console.error('Error loading passwords for home search:', error);
+				setPasswordNodes([]);
+			}
+		};
+
+		loadPasswords();
+		const handleStorageChange = (e) => {
+			if (e.key === 'passwordManagerNodes' || e.key === 'passwords_encrypted') {
+				loadPasswords();
+			}
+		};
+		window.addEventListener('storage', handleStorageChange);
+		return () => window.removeEventListener('storage', handleStorageChange);
+	}, [masterKey, secureStorage]);
+
+	// Función para encontrar todas las conexiones en el árbol
+	const findAllSidebarConnections = useCallback((nodesList) => {
+		if (!nodesList) return [];
+		let results = [];
+		const traverse = (list) => {
+			for (const node of list) {
+				if (node.data && (node.data.type === 'ssh' || node.data.type === 'rdp' || node.data.type === 'rdp-guacamole' || node.data.type === 'vnc' || node.data.type === 'vnc-guacamole')) {
+					results.push(node);
+				}
+				if (node.children && node.children.length > 0) {
+					traverse(node.children);
+				}
+			}
+		};
+		traverse(nodesList);
+		return results;
+	}, []);
+
+	// Función para encontrar todos los passwords en el árbol
+	const findAllPasswords = useCallback((nodesList) => {
+		if (!nodesList) return [];
+		let results = [];
+		const traverse = (list) => {
+			for (const node of list) {
+				if (node.data && node.data.type === 'password') {
+					results.push(node);
+				}
+				if (node.children && node.children.length > 0) {
+					traverse(node.children);
+				}
+			}
+		};
+		traverse(nodesList);
+		return results;
+	}, []);
+
+	// Lógica de búsqueda debounced
+	useEffect(() => {
+		const timeoutId = setTimeout(() => {
+			if (searchTerm.trim()) {
+				setIsSearching(true);
+				const performSearch = () => {
+					try {
+						const query = searchTerm.toLowerCase();
+						const allConnNodes = findAllSidebarConnections(sidebarNodes);
+						const allPwdNodes = findAllPasswords(passwordNodes);
+						const combined = [...allConnNodes, ...allPwdNodes];
+						const MAX_RESULTS = 30;
+
+						const filtered = [];
+						for (let i = 0; i < combined.length && filtered.length < MAX_RESULTS; i++) {
+							const node = combined[i];
+							let matches = false;
+
+							if (node.label.toLowerCase().includes(query)) {
+								matches = true;
+							} else if (node.data) {
+								if (node.data.type === 'password') {
+									matches = (
+										(node.data.username && node.data.username.toLowerCase().includes(query)) ||
+										(node.data.url && node.data.url.toLowerCase().includes(query)) ||
+										(node.data.group && node.data.group.toLowerCase().includes(query))
+									);
+								} else {
+									matches = (
+										(node.data.host && node.data.host.toLowerCase().includes(query)) ||
+										(node.data.hostname && node.data.hostname.toLowerCase().includes(query)) ||
+										(node.data.user && node.data.user.toLowerCase().includes(query)) ||
+										(node.data.username && node.data.username.toLowerCase().includes(query))
+									);
+								}
+							}
+
+							if (matches) filtered.push(node);
+						}
+
+						setFilteredSearchResults(filtered);
+						setShowDropdown(filtered.length > 0);
+						setIsSearching(false);
+						setActiveIndex(-1);
+					} catch (err) {
+						console.error('Search error:', err);
+						setIsSearching(false);
+					}
+				};
+
+				if (typeof requestIdleCallback !== 'undefined') {
+					requestIdleCallback(performSearch);
+				} else {
+					setTimeout(performSearch, 0);
+				}
+			} else {
+				setFilteredSearchResults([]);
+				setShowDropdown(false);
+				setIsSearching(false);
+			}
+		}, 300);
+
+		return () => clearTimeout(timeoutId);
+	}, [searchTerm, sidebarNodes, passwordNodes, findAllSidebarConnections, findAllPasswords]);
+
+	// Cerrar dropdown al hacer click fuera
+	useEffect(() => {
+		const handleClickOutside = (event) => {
+			if (showDropdown && !event.target.closest('.hero-search-container') && !event.target.closest('.hero-search-dropdown')) {
+				setShowDropdown(false);
+			}
+		};
+		document.addEventListener('mousedown', handleClickOutside);
+		return () => document.removeEventListener('mousedown', handleClickOutside);
+	}, [showDropdown]);
+
+	const handleSearchKeyDown = (e) => {
+		if (!showDropdown) return;
+
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			setActiveIndex(prev => (prev < filteredSearchResults.length - 1 ? prev + 1 : prev));
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			setActiveIndex(prev => (prev > 0 ? prev - 1 : prev));
+		} else if (e.key === 'Enter') {
+			if (activeIndex >= 0 && activeIndex < filteredSearchResults.length) {
+				handleSelectSearchResult(filteredSearchResults[activeIndex]);
+			}
+		} else if (e.key === 'Escape') {
+			setShowDropdown(false);
+		}
+	};
+
+	const handleSelectSearchResult = (node) => {
+		setSearchTerm('');
+		setShowDropdown(false);
+
+		const isPassword = node.data && node.data.type === 'password';
+		if (isPassword) {
+			const payload = {
+				key: node.key,
+				label: node.label,
+				data: { ...node.data }
+			};
+			window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
+		} else {
+			// Es una conexión, usar handleConnectToHistory pero adaptando el formato
+			const conn = helpers.fromSidebarNode(node);
+			if (conn) onConnectToHistory(conn);
+		}
+	};
+
 	const [typeFilter, setTypeFilter] = useState(() => {
 		const saved = localStorage.getItem('nodeterm_fav_type');
 		if (saved === 'explorer') return 'sftp';
@@ -1243,15 +1507,83 @@ const ConnectionHistory = ({
 				/* -- Custom Hero Splash Styles -- */
 				.connection-history-root { background: transparent !important; height: 100%; overflow-y: auto; color: ${themeColors.textPrimary || '#fff'}; }
 				.connection-history-section { border: none !important; background: transparent !important; }
-				.hero-splash-header { text-align: center; padding: 40px 20px 20px; background: radial-gradient(circle at top, ${themeColors.cardBackground ? themeColors.cardBackground.replace('0.6', '0.4') : '#152036'} 0%, transparent 70%); }
+				.hero-splash-header {
+					text-align: center;
+					padding: 40px 20px 20px;
+					background: radial-gradient(circle at top, ${themeColors.cardBackground ? themeColors.cardBackground.replace('0.6', '0.3') : 'rgba(21, 32, 54, 0.3)'} 0%, transparent 70%);
+					position: relative;
+				}
 				.hero-title { font-size: 32px; font-weight: 800; background: linear-gradient(90deg, ${themeColors.textPrimary || '#ffffff'}, ${themeColors.primaryColor || '#4fc3f7'}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0 0 10px 0; }
 				.hero-status { color: #81c784; font-size: 0.85rem; margin-bottom: 30px; display: flex; justify-content: center; align-items: center; gap: 8px; }
-				.hero-search-container { max-width: 600px; margin: 0 auto 16px; position: relative; }
-				.hero-search-input { width: 100%; background: ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.6)'}; border: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}; border-radius: 30px; padding: 14px 20px 14px 48px; color: ${themeColors.textPrimary || '#fff'}; font-size: 1.05rem; outline: none; backdrop-filter: blur(10px); transition: all 0.3s ease; }
-				.hero-search-input:focus { border-color: ${themeColors.primaryColor || '#4fc3f7'}; box-shadow: 0 0 15px ${themeColors.primaryColor ? themeColors.primaryColor + '40' : 'rgba(79, 195, 247, 0.2)'}; }
-				.hero-search-icon { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: ${themeColors.textSecondary || 'rgba(255,255,255,0.4)'}; font-size: 1.2rem; }
+				.hero-search-container { max-width: 600px; margin: 0 auto 16px; position: relative; z-index: 100; }
+				.hero-search-input {
+					width: 100%;
+					background: ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.6)'};
+					border: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'};
+					border-radius: 30px;
+					padding: 14px 20px 14px 48px !important;
+					color: ${themeColors.textPrimary || '#fff'};
+					font-size: 1.05rem;
+					outline: none;
+					backdrop-filter: blur(10px);
+					transition: all 0.3s ease;
+				}
+				.hero-search-input:focus {
+					border-color: ${themeColors.primaryColor || '#4fc3f7'};
+					box-shadow: 0 0 20px ${themeColors.primaryColor ? themeColors.primaryColor + '30' : 'rgba(79, 195, 247, 0.2)'};
+					background: ${themeColors.cardBackground ? themeColors.cardBackground.replace('0.6', '0.8') : 'rgba(22, 27, 34, 0.8)'};
+				}
+				.hero-search-icon { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: ${themeColors.textSecondary || 'rgba(255,255,255,0.4)'}; font-size: 1.2rem; z-index: 2; pointer-events: none; }
+				.hero-search-spinner { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); color: ${themeColors.primaryColor || '#4fc3f7'}; font-size: 1.1rem; z-index: 2; }
 				.hero-shortcuts { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.4)'}; font-size: 0.75rem; display: flex; justify-content: center; gap: 16px; }
 				.hero-shortcuts kbd { background: ${themeColors.itemBackground || 'rgba(255,255,255,0.1)'}; padding: 2px 6px; border-radius: 4px; margin-right: 4px; font-family: inherit; }
+
+				/* Search Dropdown Styles */
+				.hero-search-dropdown {
+					position: fixed;
+					background: ${themeColors.cardBackground ? themeColors.cardBackground.replace('0.6', '0.95') : 'rgba(16, 20, 28, 0.95)'};
+					border: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'};
+					border-radius: 12px;
+					box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+					backdrop-filter: blur(20px);
+					overflow-y: auto;
+					z-index: 10000;
+					margin-top: 8px;
+					padding: 8px;
+					display: flex;
+					flex-direction: column;
+					gap: 4px;
+				}
+				.search-result-item {
+					display: flex;
+					align-items: center;
+					gap: 12px;
+					padding: 10px 14px;
+					border-radius: 8px;
+					cursor: pointer;
+					transition: all 0.2s ease;
+					border: 1px solid transparent;
+				}
+				.search-result-item:hover, .search-result-item.active {
+					background: ${themeColors.hoverBackground || 'rgba(255,255,255,0.08)'};
+					border-color: ${themeColors.borderColor || 'rgba(255,255,255,0.1)'};
+				}
+				.search-result-icon {
+					width: 32px;
+					height: 32px;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					font-size: 1.2rem;
+					border-radius: 6px;
+				}
+				.search-result-info { flex: 1; display: flex; flex-direction: column; overflow: hidden; gap: 2px; }
+				.search-result-flex-header { display: flex; align-items: center; gap: 8px; }
+				.search-result-label { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: ${themeColors.textPrimary || '#fff'}; }
+				.search-result-sub-container { display: flex; align-items: center; gap: 8px; }
+				.search-result-sub { font-size: 0.75rem; opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace; }
+				.search-result-folder { font-size: 0.7rem; opacity: 0.4; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+				.search-result-type { font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; opacity: 0.8; flex-shrink: 0; }
 				/* Hero Chips */
 				.hero-chip { display: flex; align-items: center; background: ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.6)'}; border: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.05)'}; border-radius: 30px; padding: 6px 16px 6px 6px; width: 180px; height: 60px; cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px); flex-shrink: 0; text-align: left; }
 				.hero-chip:hover { background: ${themeColors.hoverBackground || 'rgba(30, 36, 45, 0.8)'}; transform: translateY(-2px); border-color: ${themeColors.primaryColor || 'rgba(255,255,255,0.1)'}; }
@@ -1292,7 +1624,73 @@ const ConnectionHistory = ({
 				</div>
 				<div className="hero-search-container">
 					<i className="pi pi-search hero-search-icon" />
-					<input type="text" className="hero-search-input" placeholder="Search or connect to a host..." />
+					<InputText
+						value={searchTerm}
+						onChange={(e) => setSearchTerm(e.target.value)}
+						onKeyDown={handleSearchKeyDown}
+						className="hero-search-input"
+						placeholder="Search or connect to a host..."
+						onBlur={() => {
+							// Pequeno delay para permitir clicks en el dropdown
+							setTimeout(() => setShowDropdown(false), 200);
+						}}
+						onFocus={() => {
+							if (filteredSearchResults.length > 0) setShowDropdown(true);
+						}}
+						autoComplete="off"
+					/>
+					{isSearching && (
+						<i className="pi pi-spin pi-spinner hero-search-spinner" />
+					)}
+
+					{showDropdown && ReactDOM.createPortal(
+						<div
+							className="hero-search-dropdown"
+							style={{
+								width: 'min(600px, 90vw)',
+								left: '50%',
+								top: document.querySelector('.hero-search-input')?.getBoundingClientRect().bottom || 0,
+								transform: 'translateX(-50%)'
+							}}
+						>
+							{filteredSearchResults.map((node, idx) => {
+								const isPassword = node.data?.type === 'password';
+								const color = isPassword ? '#E91E63' : getConnectionTypeColor(node.data?.type);
+								const label = node.label;
+								const sub = isPassword ? (node.data.url || node.data.username) : (node.data.host || node.data.hostname || node.data.server);
+
+								// Obtener ruta de carpetas
+								const folderPath = getNodeFolderPath(sidebarNodes, node);
+								const folderPathString = folderPath && folderPath.length > 0 ? folderPath.join(' / ') : 'Raíz';
+
+								return (
+									<div
+										key={node.key}
+										className={`search-result-item ${activeIndex === idx ? 'active' : ''}`}
+										onClick={() => handleSelectSearchResult(node)}
+										onMouseEnter={() => setActiveIndex(idx)}
+									>
+										<div className="search-result-icon" style={{ background: `${color}15`, color }}>
+											<i className={isPassword ? 'pi pi-key' : getConnectionTypeIcon(node.data?.type)} />
+										</div>
+										<div className="search-result-info">
+											<div className="search-result-flex-header">
+												<span className="search-result-label">{label}</span>
+												<span className="search-result-type" style={{ background: `${color}20`, color, borderColor: `${color}40`, border: '1px solid' }}>
+													{isPassword ? 'PWD' : getProtocolLabel(node.data?.type)}
+												</span>
+											</div>
+											<div className="search-result-sub-container">
+												<span className="search-result-sub">{sub}</span>
+												{!isPassword && <span className="search-result-folder">📁 {folderPathString}</span>}
+											</div>
+										</div>
+									</div>
+								);
+							})}
+						</div>,
+						document.body
+					)}
 				</div>
 				<div className="hero-shortcuts">
 					<span><kbd>⌘K</kbd> Quick connect</span>

@@ -85,7 +85,9 @@ const TabContentRenderer = React.memo(({
   onShowSystemMonitor,
   onShowFileExplorer,
   handleToggleBroadcastTarget,
-  getAllTabs
+  getAllTabs,
+  masterKey,
+  secureStorage
 }) => {
   // 🚀 OPTIMIZACIÓN: Calcular conteos una sola vez cuando cambian los nodos o pestañas RDP
   const counts = React.useMemo(() => {
@@ -169,6 +171,8 @@ const TabContentRenderer = React.memo(({
           } catch (e) { /* noop */ }
         }}
         setShowCreateGroupDialog={setShowCreateGroupDialog}
+        masterKey={masterKey}
+        secureStorage={secureStorage}
       />
     );
   }

@@ -36,6 +36,8 @@ const HomeTab = ({
   sidebarNodes = null,
   setShowCreateGroupDialog,
   activeIds = new Set(),
+  masterKey = null,
+  secureStorage = null,
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal'); // Estado normal para tamaño correcto
@@ -724,6 +726,8 @@ const HomeTab = ({
                         onEdit={onEditConnection}
                         themeColors={themeColors}
                         sidebarNodes={sidebarNodes}
+                        masterKey={masterKey}
+                        secureStorage={secureStorage}
                       />
                     </div>
                   </div>
