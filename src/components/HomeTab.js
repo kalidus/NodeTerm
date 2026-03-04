@@ -98,6 +98,7 @@ const HomeTab = ({
   const versionInfo = getVersionInfo();
   const tabbedTerminalRef = useRef();
   const embeddedTabbedTerminalRef = useRef();
+  const embeddedTerminalInitialized = useRef(false); // evitar crear tabs nuevas al cambiar de vista
   const containerRef = useRef(null);
   const [containerHeight, setContainerHeight] = useState(window.innerHeight - 100);
 
@@ -722,7 +723,8 @@ const HomeTab = ({
   const handleTerminalToggle = React.useCallback((show, terminalType) => {
     if (show) {
       setTerminalView(true);
-      if (terminalType) {
+      if (!embeddedTerminalInitialized.current && terminalType) {
+        embeddedTerminalInitialized.current = true;
         setTimeout(() => {
           try {
             embeddedTabbedTerminalRef.current?.addTerminalTab?.(terminalType);
@@ -807,7 +809,7 @@ const HomeTab = ({
                   <div style={{
                     flex: terminalView ? '0 0 auto' : 1,
                     minHeight: 0,
-                    overflow: terminalView ? 'visible' : 'hidden',
+                    overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column'
                   }}>
@@ -825,20 +827,23 @@ const HomeTab = ({
                     />
                   </div>
 
-                  {/* Terminal embebido - en flujo, con márgenes, como una tarjeta integrada */}
+                  {/* Terminal embebido - tarjeta integrada */}
                   {terminalView && (
-                    <div style={{
-                      flex: 1,
-                      minHeight: 120,
-                      margin: '0 1rem 1rem 1rem',
-                      borderRadius: '12px',
-                      overflow: 'hidden',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.12)'}`,
-                      background: localTerminalBg,
-                      boxShadow: '0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)'
-                    }}>
+                    <div
+                      style={{
+                        flex: 1,
+                        margin: '0 1rem 1rem 1rem',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.12)'}`,
+                        background: localTerminalBg,
+                        boxShadow: '0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
+                        position: 'relative',
+                        minHeight: '120px'
+                      }}
+                    >
                       {/* Header estilo macOS */}
                       <div style={{
                         height: '32px',
@@ -874,6 +879,7 @@ const HomeTab = ({
                           localPowerShellTheme={localPowerShellTheme}
                           localLinuxTerminalTheme={localLinuxTerminalTheme}
                           hideStatusBar={true}
+                          hideTabs={true}
                         />
                       </div>
                     </div>
