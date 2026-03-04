@@ -752,27 +752,10 @@ const ConnectionHistory = ({
 	const RibbonCard = ({ connection, isActive, onConnect, onEdit, onToggleFav, onEditGroups, onDragStart, onDragOver, onDrop, index }) => {
 		const typeColor = getConnectionTypeColor(connection.type);
 		const hostLabel = connection.host || connection.hostname || '—';
-		const protocolLabel = getProtocolLabel(connection.type);
-		const timeStr = formatRelativeTime(connection.lastConnected);
-
-		// Map index to a gradient class
-		const gradientClass = `icon-gradient-${(index % 5) + 1}`;
-
-		const handleStar = (e) => {
-			e.stopPropagation();
-			e.preventDefault();
-			onToggleFav(connection);
-		};
-
-		const handleGroups = (e) => {
-			e.stopPropagation();
-			e.preventDefault();
-			onEditGroups?.(connection);
-		};
 
 		return (
 			<div
-				className="ribbon-card apple-card"
+				className={`hero-chip ${isActive ? 'active' : ''}`}
 				onClick={() => onConnect?.(connection)}
 				style={{ '--card-accent': typeColor }}
 				title={`${connection.name} (${hostLabel})`}
@@ -780,95 +763,36 @@ const ConnectionHistory = ({
 				onDragStart={(e) => onDragStart(e, connection)}
 				onDragOver={(e) => onDragOver(e)}
 				onDrop={(e) => onDrop(e, connection)}
+				onContextMenu={(e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					if (onEdit) onEdit(connection);
+				}}
 			>
-				{/* Edit Button (visible on hover) */}
 				<div
-					className="ribbon-card__edit"
-					onClick={(e) => {
-						e.stopPropagation();
-						onEdit?.(connection);
+					className="hero-chip-icon"
+					style={{
+						background: `linear-gradient(135deg, ${typeColor}40, transparent)`,
+						border: `1px solid ${typeColor}80`
 					}}
-					onMouseDown={(e) => e.stopPropagation()}
-					title="Editar conexión"
 				>
-					<i className="pi pi-pencil" style={{ fontSize: '0.8rem' }} />
+					{(() => {
+						let customIcon = connection.customIcon;
+						if ((!customIcon || customIcon === 'default') && sidebarNodes) {
+							const matchingNode = findNodeInTree(sidebarNodes, connection);
+							if (matchingNode && matchingNode.data?.customIcon) customIcon = matchingNode.data.customIcon;
+						}
+						if (customIcon && customIcon !== 'default' && SSHIconPresets[customIcon.toUpperCase()]) {
+							return <SSHIconRenderer preset={SSHIconPresets[customIcon.toUpperCase()]} pixelSize={24} />;
+						}
+						const svg = getConnectionTypeIconSVG(connection.type, customIcon);
+						if (svg) return React.cloneElement(svg, { width: 24, height: 24, style: { width: 24, height: 24 } });
+						return <i className={getConnectionTypeIcon(connection.type)} style={{ color: typeColor, fontSize: '1.2rem' }} />;
+					})()}
 				</div>
-
-				{/* Groups Button (only if custom groups exist) */}
-				{customGroups.length > 0 && (
-					<div
-						className="ribbon-card__groups"
-						onClick={handleGroups}
-						onMouseDown={(e) => e.stopPropagation()}
-						title="Gestionar grupos"
-					>
-						<i className="pi pi-folder" style={{ fontSize: '0.8rem' }} />
-					</div>
-				)}
-
-				{/* Pin Button */}
-				<div
-					className="ribbon-card__pin"
-					onClick={handleStar}
-					onMouseDown={(e) => e.stopPropagation()}
-					title="Quitar de favoritos"
-				>
-					<i className="pi pi-star-fill" style={{ fontSize: '0.8rem' }} />
-				</div>
-
-				{/* Icon with Gradient Background */}
-				<div className={`ribbon-card__icon-wrapper ${gradientClass}`}>
-					<div className="ribbon-card__icon">
-						{(() => {
-							let customIcon = connection.customIcon;
-							if ((!customIcon || customIcon === 'default') && sidebarNodes) {
-								const matchingNode = findNodeInTree(sidebarNodes, connection);
-								if (matchingNode && matchingNode.data?.customIcon) {
-									customIcon = matchingNode.data.customIcon;
-								}
-							}
-							if (customIcon && customIcon !== 'default' && SSHIconPresets[customIcon.toUpperCase()]) {
-								const preset = SSHIconPresets[customIcon.toUpperCase()];
-								return <SSHIconRenderer preset={preset} pixelSize={32} />;
-							}
-							const svg = getConnectionTypeIconSVG(connection.type, customIcon);
-							if (svg) {
-								return React.cloneElement(svg, { width: 32, height: 32, style: { width: 32, height: 32 } });
-							}
-							return <i className={getConnectionTypeIcon(connection.type)} aria-hidden="true" />;
-						})()}
-					</div>
-
-					{/* Protocol Badge (Integrated) */}
-					<div
-						className="ribbon-card__protocol-badge"
-						style={{
-							color: typeColor,
-							borderColor: typeColor,
-							top: '0',
-							bottom: 'auto',
-							left: '-12px',
-							right: 'auto',
-							transform: 'none',
-							background: 'rgba(0, 0, 0, 0.7)',
-							boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-							fontSize: '0.5rem',
-							padding: '1px 4px',
-							borderRadius: '4px'
-						}}
-					>
-						{protocolLabel}
-					</div>
-				</div>
-
-				{/* Content */}
-				<div className="ribbon-card__content">
-					<div className="ribbon-card__name" title={connection.name}>{connection.name}</div>
-					<div className="ribbon-card__host" title={hostLabel}>{hostLabel}</div>
-					<div className="ribbon-card__time">
-						<span className={`ribbon-card__status-dot ${isActive ? 'is-active' : ''}`} title={isActive ? "Sesión activa" : "Desconectado"} />
-						{timeStr}
-					</div>
+				<div className="hero-chip-content">
+					<span className="hero-chip-name">{connection.name}</span>
+					<span className="hero-chip-host">{hostLabel}</span>
 				</div>
 			</div>
 		);
@@ -1124,7 +1048,7 @@ const ConnectionHistory = ({
 								</>
 							)}
 
-							<div className="favorites-ribbon-track" ref={trackRef}>
+							<div className="favorites-ribbon-track" ref={trackRef} style={{ display: 'flex', gap: '16px', overflowX: 'auto', padding: '8px', maxWidth: '100%', scrollbarWidth: 'none', justifyContent: connections?.length > 4 ? 'flex-start' : 'center' }}>
 								{hasItems ? (
 									connections.map((c, idx) => (
 										<RibbonCard
@@ -1205,9 +1129,8 @@ const ConnectionHistory = ({
 		const typeColor = getConnectionTypeColor(connection.type);
 		const protocolLabel = getProtocolLabel(connection.type);
 		const hostLabel = buildHostLabel(connection);
-		const lastConnected = connection.lastConnected;
+		const timeStr = formatRelativeTime(connection.lastConnected);
 		const fav = isPinned || isFavorite(connection);
-		const timeStr = formatRelativeTime(lastConnected);
 
 		const handleStar = (e) => {
 			e.stopPropagation();
@@ -1221,70 +1144,43 @@ const ConnectionHistory = ({
 
 		return (
 			<div
-				className={`connection-card-row ${isActive ? 'active-row' : ''}`}
+				className={`hero-recent-card ${isActive ? 'active-row' : ''}`}
 				onClick={() => onConnect?.(connection)}
 				style={{ '--row-accent': typeColor }}
+				onContextMenu={(e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					handleEdit(e);
+				}}
 			>
-				{/* Name & Icon */}
-				<div className="col-name">
-					<div className="icon-box" style={{ color: typeColor }}>
-						{(() => {
-							let customIcon = connection.customIcon;
-							if ((!customIcon || customIcon === 'default') && sidebarNodes) {
-								const matchingNode = findNodeInTree(sidebarNodes, connection);
-								if (matchingNode && matchingNode.data?.customIcon) {
-									customIcon = matchingNode.data.customIcon;
-								}
-							}
-							if (customIcon && customIcon !== 'default' && SSHIconPresets[customIcon.toUpperCase()]) {
-								const preset = SSHIconPresets[customIcon.toUpperCase()];
-								return <SSHIconRenderer preset={preset} pixelSize={20} />;
-							}
-							const svg = getConnectionTypeIconSVG(connection.type, customIcon);
-							if (svg) {
-								return React.cloneElement(svg, { width: 20, height: 20, style: { width: 20, height: 20 } });
-							}
-							return <i className={getConnectionTypeIcon(connection.type)} aria-hidden="true" />;
-						})()}
-					</div>
-					<div className="col-name-text" title={connection.name}>{connection.name}</div>
+				<div className="hrc-icon" style={{ color: typeColor }}>
+					{(() => {
+						let customIcon = connection.customIcon;
+						if ((!customIcon || customIcon === 'default') && sidebarNodes) {
+							const matchingNode = findNodeInTree(sidebarNodes, connection);
+							if (matchingNode && matchingNode.data?.customIcon) customIcon = matchingNode.data.customIcon;
+						}
+						if (customIcon && customIcon !== 'default' && SSHIconPresets[customIcon.toUpperCase()]) {
+							return <SSHIconRenderer preset={SSHIconPresets[customIcon.toUpperCase()]} pixelSize={24} />;
+						}
+						const svg = getConnectionTypeIconSVG(connection.type, customIcon);
+						if (svg) return React.cloneElement(svg, { width: 24, height: 24, style: { width: 24, height: 24 } });
+						return <i className={getConnectionTypeIcon(connection.type)} aria-hidden="true" />;
+					})()}
 				</div>
-
-				{/* Host */}
-				<div className="col-host" title={hostLabel}>
-					{hostLabel}
+				<div className="hrc-content">
+					<div className="hrc-name">{connection.name}</div>
+					<div className="hrc-host">{hostLabel}</div>
 				</div>
-
-				{/* Protocol */}
-				<div className="col-protocol">
-					<span className="glass-tag" style={{ color: typeColor, borderColor: typeColor }}>
-						{protocolLabel}
-					</span>
+				<div className="hrc-badge" style={{ color: typeColor, borderColor: `${typeColor}40`, background: `${typeColor}15` }}>
+					{protocolLabel}
 				</div>
-
-				{/* Last Used */}
-				<div className="col-time">
-					{timeStr}
-				</div>
-
-				{/* Actions */}
-				<div className="col-actions" onClick={(e) => e.stopPropagation()}>
-					<button
-						className={`glass-action-btn ${fav ? 'fav-active' : ''}`}
-						onClick={handleStar}
-						title={fav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-					>
+				<div className="hrc-time">{timeStr}</div>
+				<div className="hrc-actions" onClick={(e) => e.stopPropagation()}>
+					<button className={`glass-action-btn ${fav ? 'fav-active' : ''}`} onClick={handleStar} title="Favorito">
 						<i className={fav ? 'pi pi-star-fill' : 'pi pi-star'} />
 					</button>
-					{onEdit && (
-						<button
-							className="glass-action-btn"
-							onClick={handleEdit}
-							title="Editar"
-						>
-							<i className="pi pi-pencil" />
-						</button>
-					)}
+					<button className="hrc-connect-btn" onClick={() => onConnect?.(connection)}>Connect</button>
 				</div>
 			</div>
 		);
@@ -1342,10 +1238,69 @@ const ConnectionHistory = ({
 	}, [themeColors]);
 
 	return (
-		<div className="connection-history-root">
+		<div className="connection-history-root" style={{ background: 'transparent' }}>
+			<style>{`
+				/* -- Custom Hero Splash Styles -- */
+				.connection-history-root { background: transparent !important; height: 100%; overflow-y: auto; color: ${themeColors.textPrimary || '#fff'}; }
+				.connection-history-section { border: none !important; background: transparent !important; }
+				.hero-splash-header { text-align: center; padding: 40px 20px 20px; background: radial-gradient(circle at top, ${themeColors.cardBackground ? themeColors.cardBackground.replace('0.6', '0.4') : '#152036'} 0%, transparent 70%); }
+				.hero-title { font-size: 32px; font-weight: 800; background: linear-gradient(90deg, ${themeColors.textPrimary || '#ffffff'}, ${themeColors.primaryColor || '#4fc3f7'}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0 0 10px 0; }
+				.hero-status { color: #81c784; font-size: 0.85rem; margin-bottom: 30px; display: flex; justify-content: center; align-items: center; gap: 8px; }
+				.hero-search-container { max-width: 600px; margin: 0 auto 16px; position: relative; }
+				.hero-search-input { width: 100%; background: ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.6)'}; border: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}; border-radius: 30px; padding: 14px 20px 14px 48px; color: ${themeColors.textPrimary || '#fff'}; font-size: 1.05rem; outline: none; backdrop-filter: blur(10px); transition: all 0.3s ease; }
+				.hero-search-input:focus { border-color: ${themeColors.primaryColor || '#4fc3f7'}; box-shadow: 0 0 15px ${themeColors.primaryColor ? themeColors.primaryColor + '40' : 'rgba(79, 195, 247, 0.2)'}; }
+				.hero-search-icon { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: ${themeColors.textSecondary || 'rgba(255,255,255,0.4)'}; font-size: 1.2rem; }
+				.hero-shortcuts { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.4)'}; font-size: 0.75rem; display: flex; justify-content: center; gap: 16px; }
+				.hero-shortcuts kbd { background: ${themeColors.itemBackground || 'rgba(255,255,255,0.1)'}; padding: 2px 6px; border-radius: 4px; margin-right: 4px; font-family: inherit; }
+				/* Hero Chips */
+				.hero-chip { display: flex; align-items: center; background: ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.6)'}; border: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.05)'}; border-radius: 30px; padding: 6px 16px 6px 6px; width: 180px; height: 60px; cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px); flex-shrink: 0; text-align: left; }
+				.hero-chip:hover { background: ${themeColors.hoverBackground || 'rgba(30, 36, 45, 0.8)'}; transform: translateY(-2px); border-color: ${themeColors.primaryColor || 'rgba(255,255,255,0.1)'}; }
+				.hero-chip.active { border-left: 3px solid var(--card-accent); }
+				.hero-chip-icon { width: 48px; height: 48px; min-width: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px; }
+				.hero-chip-content { display: flex; flex-direction: column; overflow: hidden; }
+				.hero-chip-name { color: ${themeColors.textPrimary || '#fff'}; font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+				.hero-chip-host { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.5)'}; font-size: 0.75rem; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+				/* Hero Recent Cards grid */
+				.connection-list-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 12px; padding: 0 20px 20px; }
+				.hero-recent-card { display: flex; align-items: center; background: ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.4)'}; border: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.05)'}; border-radius: 12px; padding: 12px 16px; gap: 12px; cursor: pointer; transition: all 0.2s ease; }
+				.hero-recent-card:hover { background: ${themeColors.hoverBackground || 'rgba(30, 36, 45, 0.7)'}; border-color: ${themeColors.primaryColor || 'rgba(255,255,255,0.1)'}; }
+				.hrc-icon { font-size: 1.4rem; width: 32px; display: flex; justify-content: center; }
+				.hrc-content { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+				.hrc-name { color: ${themeColors.textPrimary || '#fff'}; font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+				.hrc-host { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.5)'}; font-family: monospace; font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+				.hrc-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; border: 1px solid; font-weight: bold; white-space: nowrap; }
+				.hrc-time { color: rgba(255,255,255,0.4); font-size: 0.8rem; width: 70px; text-align: right; white-space: nowrap; }
+				.hrc-actions { display: flex; gap: 8px; opacity: 0; transition: opacity 0.2s; }
+				.hero-recent-card:hover .hrc-actions { opacity: 1; }
+				.hrc-connect-btn { background: transparent; padding: 4px 12px; font-size: 0.8rem; color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+				.hrc-connect-btn:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.4); }
+				/* Hide original section headers but keep their actions available */
+				.modern-section-header.header-favorites .modern-header-title, .modern-section-header.header-recents .modern-header-title,
+				.modern-section-header.header-favorites .section-collapse-btn, .modern-section-header.header-recents .section-collapse-btn,
+				.modern-section-header.header-favorites .modern-header-line, .modern-section-header.header-recents .modern-header-line { display: none !important; }
+				.modern-section-header { justify-content: center !important; margin-bottom: 20px !important; border: none !important; background: transparent !important; }
+				.modern-section-header.header-favorites::before { content: 'Quick Access'; color: rgba(255,255,255,0.7); font-size: 1.1rem; font-weight: 500; display: block; width: 100%; text-align: center; }
+				.modern-section-header.header-recents::before { content: 'Recent connections'; color: rgba(255,255,255,0.7); font-size: 1.1rem; font-weight: 500; display: block; width: 100%; text-align: center; }
+			`}</style>
 
-
-			{/* FilterPanel Dropdown - Rendered in Portal to avoid clipping */}
+			{/* Hero Splash Hero Area */}
+			<div className="hero-splash-header">
+				<h1 className="hero-title">NodeTerm</h1>
+				<div className="hero-status">
+					<i className="pi pi-circle-fill" style={{ fontSize: '0.6rem' }} />
+					<span>{activeIds.size} active sessions</span>
+				</div>
+				<div className="hero-search-container">
+					<i className="pi pi-search hero-search-icon" />
+					<input type="text" className="hero-search-input" placeholder="Search or connect to a host..." />
+				</div>
+				<div className="hero-shortcuts">
+					<span><kbd>⌘K</kbd> Quick connect</span>
+					<span><kbd>⌘T</kbd> New terminal</span>
+					<span><kbd>⌘R</kbd> Recent</span>
+					<span><kbd>⌘F</kbd> Favorites</span>
+				</div>
+			</div>			{/* FilterPanel Dropdown - Rendered in Portal to avoid clipping */}
 			{ReactDOM.createPortal(
 				<FilterPanel
 					isOpen={filterPanelOpen}
