@@ -163,9 +163,11 @@ const ConnectionHistory = ({
 	activeIds = new Set(),
 	onEdit,
 	themeColors = {},
-	sidebarNodes = null, // Nodos de la sidebar para buscar iconos personalizados
+	sidebarNodes = null,
 	masterKey = null,
-	secureStorage = null
+	secureStorage = null,
+	terminalView = false,
+	onTerminalToggle = null,
 }) => {
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
 	const [passwordNodes, setPasswordNodes] = useState([]);
@@ -1717,23 +1719,13 @@ const ConnectionHistory = ({
 					)}
 
 					<button
-						className="hero-terminal-btn"
+						className={`hero-terminal-btn ${terminalView ? 'active' : ''}`}
 						title="Abrir nueva terminal local"
 						onClick={(e) => {
 							e.stopPropagation();
-							const defaultAction = () => {
-								window.dispatchEvent(new CustomEvent('create-terminal-tab', {
-									detail: { type: 'powershell' } // Default if nothing else
-								}));
-							};
-
-							try {
-								const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
-								window.dispatchEvent(new CustomEvent('create-terminal-tab', {
-									detail: { type: defaultTerminal }
-								}));
-							} catch {
-								defaultAction();
+							if (onTerminalToggle) {
+								const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
+								onTerminalToggle(!terminalView, terminalType);
 							}
 						}}
 					>
@@ -1792,37 +1784,33 @@ const ConnectionHistory = ({
 
 				<div className="hero-action-buttons">
 					<button
-						className="hero-action-btn"
+						className={`hero-action-btn ${terminalView ? 'active' : ''}`}
 						title="Abrir nueva terminal local"
 						onClick={(e) => {
 							e.stopPropagation();
-							const defaultAction = () => {
-								window.dispatchEvent(new CustomEvent('create-terminal-tab', {
-									detail: { type: 'powershell' } // Default if nothing else
-								}));
-							};
-
-							try {
-								const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
-								window.dispatchEvent(new CustomEvent('create-terminal-tab', {
-									detail: { type: defaultTerminal }
-								}));
-							} catch {
-								defaultAction();
+							if (onTerminalToggle) {
+								const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
+								onTerminalToggle(!terminalView, terminalType);
 							}
 						}}
 					>
 						<i className="pi pi-desktop" /> Nueva terminal
 					</button>
 					<button
-						className={`hero-action-btn ${activeBottomView === 'recent' ? 'active' : ''}`}
-						onClick={() => setActiveBottomView(prev => prev === 'recent' ? 'all' : 'recent')}
+						className={`hero-action-btn ${activeBottomView === 'recent' && !terminalView ? 'active' : ''}`}
+						onClick={() => {
+							if (terminalView && onTerminalToggle) onTerminalToggle(false);
+							setActiveBottomView(prev => prev === 'recent' ? 'all' : 'recent');
+						}}
 					>
 						<i className="pi pi-clock" /> Recent
 					</button>
 					<button
-						className={`hero-action-btn ${activeBottomView === 'favorites' ? 'active' : ''}`}
-						onClick={() => setActiveBottomView(prev => prev === 'favorites' ? 'all' : 'favorites')}
+						className={`hero-action-btn ${activeBottomView === 'favorites' && !terminalView ? 'active' : ''}`}
+						onClick={() => {
+							if (terminalView && onTerminalToggle) onTerminalToggle(false);
+							setActiveBottomView(prev => prev === 'favorites' ? 'all' : 'favorites');
+						}}
 					>
 						<i className="pi pi-star" /> Favorites
 					</button>
@@ -2131,7 +2119,7 @@ const ConnectionHistory = ({
 			)}
 
 			{/* FAVORITES RIBBON (Always visible or toggled) */}
-			{(activeBottomView === 'all' || activeBottomView === 'favorites') && (
+			{!terminalView && (activeBottomView === 'all' || activeBottomView === 'favorites') && (
 				<FavoritesRibbon
 					connections={filteredFavorites}
 					fullList={favoriteConnections}
@@ -2178,7 +2166,7 @@ const ConnectionHistory = ({
 
 
 			{/* RECIENTES TABLE (Fills remaining space) */}
-			{(activeBottomView === 'all' || activeBottomView === 'recent') && (
+			{!terminalView && (activeBottomView === 'all' || activeBottomView === 'recent') && (
 				<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginTop: '0' }}>
 					<div className="modern-section-header header-recents">
 						<button

@@ -97,8 +97,13 @@ const HomeTab = ({
 
   const versionInfo = getVersionInfo();
   const tabbedTerminalRef = useRef();
+  const embeddedTabbedTerminalRef = useRef();
   const containerRef = useRef(null);
   const [containerHeight, setContainerHeight] = useState(window.innerHeight - 100);
+
+  // Estado para el terminal embebido como vista integrada
+  const [terminalView, setTerminalView] = useState(false);
+  const [embeddedTerminalHeight, setEmbeddedTerminalHeight] = useState(360);
 
   // Medir el tamaño real del contenedor
   useEffect(() => {
@@ -713,6 +718,24 @@ const HomeTab = ({
     return () => window.removeEventListener('home-tab-add-terminal', handleAddTerminal);
   }, [terminalHidden]);
 
+  // Callback para toggling del terminal embebido (llamado por ConnectionHistory via prop)
+  const handleTerminalToggle = React.useCallback((show, terminalType) => {
+    if (show) {
+      setTerminalView(true);
+      if (terminalType) {
+        setTimeout(() => {
+          try {
+            embeddedTabbedTerminalRef.current?.addTerminalTab?.(terminalType);
+          } catch (err) {
+            console.warn('[HomeTab] embedded addTerminalTab:', err);
+          }
+        }, 80);
+      }
+    } else {
+      setTerminalView(false);
+    }
+  }, []);
+
 
 
 
@@ -778,41 +801,84 @@ const HomeTab = ({
                   </div>
                 </div>
               ) : (
-                // Contenido normal de la página de inicio (Favoritos + Recientes)
-                <>
-                  {/* Columna central: Favoritos y Recientes */}
+                // Contenido normal: ConnectionHistory (con header+botones) + terminal en flujo
+                <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                  {/* ConnectionHistory - siempre renderiza el header; oculta Fav/Recent cuando terminalView */}
                   <div style={{
-                    flex: 1,
-                    padding: '0.5rem 1rem 0.5rem 0.1rem',
-                    display: 'flex',
-                    flexDirection: 'column',
+                    flex: terminalView ? '0 0 auto' : 1,
                     minHeight: 0,
-                    overflow: 'hidden',
-                    height: '100%'
+                    overflow: terminalView ? 'visible' : 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column'
                   }}>
-                    {/* PINNED + RECIENTES en una sola columna (estilo imagen) */}
+                    <ConnectionHistory
+                      onConnectToHistory={handleConnectToHistory}
+                      recentConnections={recentConnections}
+                      activeIds={activeIds}
+                      onEdit={onEditConnection}
+                      themeColors={themeColors}
+                      sidebarNodes={sidebarNodes}
+                      masterKey={masterKey}
+                      secureStorage={secureStorage}
+                      terminalView={terminalView}
+                      onTerminalToggle={handleTerminalToggle}
+                    />
+                  </div>
+
+                  {/* Terminal embebido - en flujo, con márgenes, como una tarjeta integrada */}
+                  {terminalView && (
                     <div style={{
+                      flex: 1,
+                      minHeight: 120,
+                      margin: '0 1rem 1rem 1rem',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
                       display: 'flex',
                       flexDirection: 'column',
-                      flex: 1,
-                      minHeight: 0,
-                      overflow: 'hidden',
-                      position: 'relative',
-                      padding: '0 0.2rem'
+                      border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.12)'}`,
+                      background: localTerminalBg,
+                      boxShadow: '0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)'
                     }}>
-                      <ConnectionHistory
-                        onConnectToHistory={handleConnectToHistory}
-                        recentConnections={recentConnections}
-                        activeIds={activeIds}
-                        onEdit={onEditConnection}
-                        themeColors={themeColors}
-                        sidebarNodes={sidebarNodes}
-                        masterKey={masterKey}
-                        secureStorage={secureStorage}
-                      />
+                      {/* Header estilo macOS */}
+                      <div style={{
+                        height: '32px',
+                        flexShrink: 0,
+                        background: themeColors.cardBackground || 'rgba(20,22,28,0.95)',
+                        borderBottom: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}`,
+                        borderRadius: '12px 12px 0 0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '0 12px',
+                        position: 'relative'
+                      }}>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <div
+                            onClick={() => setTerminalView(false)}
+                            style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56', cursor: 'pointer', border: '1px solid #e0443e', flexShrink: 0 }}
+                            title="Cerrar"
+                          />
+                          <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e', border: '1px solid #dea123', flexShrink: 0 }} />
+                          <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f', border: '1px solid #1aab29', flexShrink: 0 }} />
+                        </div>
+                        <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', color: themeColors.textSecondary, fontSize: '11px', userSelect: 'none', pointerEvents: 'none', fontWeight: 500 }}>
+                          {terminalTitle}
+                        </div>
+                      </div>
+                      {/* Contenido del terminal */}
+                      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        <TabbedTerminal
+                          ref={embeddedTabbedTerminalRef}
+                          terminalState="normal"
+                          localFontFamily={localFontFamily}
+                          localFontSize={localFontSize}
+                          localPowerShellTheme={localPowerShellTheme}
+                          localLinuxTerminalTheme={localLinuxTerminalTheme}
+                          hideStatusBar={true}
+                        />
+                      </div>
                     </div>
-                  </div>
-                </>
+                  )}
+                </div>
               )}
             </div>
           </div>
