@@ -455,6 +455,69 @@ const HomeTab = ({
     }
   };
 
+  // Helper para ajustar la opacidad de los colores (Hex o RGBA)
+  const adjustOpacity = (color, opacity) => {
+    if (!color) return `rgba(0,0,0,${opacity})`;
+    if (color.startsWith('rgba')) {
+      return color.replace(/[\d.]+\)$/g, `${opacity})`);
+    }
+    if (color.startsWith('#')) {
+      const hex = color.replace('#', '');
+      const r = parseInt(hex.substring(0, 2), 16) || 0;
+      const g = parseInt(hex.substring(2, 4), 16) || 0;
+      const b = parseInt(hex.substring(4, 6), 16) || 0;
+      return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    }
+    return color;
+  };
+
+  // Helper para obtener un fondo con contraste basado en el brillo (ideal para temas planos como Nord)
+  const getContrastBg = (color, opacity = 0.8) => {
+    if (!color) return `rgba(255,255,255,${opacity * 0.1})`;
+
+    // Si es un gradiente, intentar extraer el primer color o devolver un fallback
+    if (color.includes('gradient')) {
+      const match = color.match(/#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}/);
+      if (match) color = match[0];
+      else return `rgba(255,255,255,0.1)`;
+    }
+
+    let r, g, b;
+    if (color.startsWith('#')) {
+      const hex = color.replace('#', '');
+      if (hex.length === 3) {
+        r = parseInt(hex[0] + hex[0], 16);
+        g = parseInt(hex[1] + hex[1], 16);
+        b = parseInt(hex[2] + hex[2], 16);
+      } else {
+        r = parseInt(hex.substring(0, 2), 16) || 0;
+        g = parseInt(hex.substring(2, 4), 16) || 0;
+        b = parseInt(hex.substring(4, 6), 16) || 0;
+      }
+    } else if (color.startsWith('rgba') || color.startsWith('rgb')) {
+      const parts = color.match(/\d+/g);
+      if (!parts || parts.length < 3) return adjustOpacity(color, opacity);
+      r = parseInt(parts[0]);
+      g = parseInt(parts[1]);
+      b = parseInt(parts[2]);
+    } else {
+      // Intentar una aproximación para colores con nombre o desconocidos
+      return adjustOpacity(color, opacity);
+    }
+
+    // Calcular brillo (YIQ)
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+
+    // Si es oscuro, aclarar significativamente. Si es claro, oscurecer.
+    if (brightness < 128) {
+      // Modo oscuro: aclarar para resaltar
+      return `rgba(${Math.min(r + 40, 255)}, ${Math.min(g + 40, 255)}, ${Math.min(b + 55, 255)}, ${opacity})`;
+    } else {
+      // Modo claro: oscurecer para resaltar
+      return `rgba(${Math.max(r - 30, 0)}, ${Math.max(g - 30, 0)}, ${Math.max(b - 40, 0)}, ${opacity})`;
+    }
+  };
+
   // Obtener el color de fondo del tema actual
   const currentTheme = React.useMemo(() => {
     return themeManager.getCurrentTheme() || uiThemes['Light'];
@@ -477,7 +540,25 @@ const HomeTab = ({
       itemBackground: currentTheme.colors?.tabBackground || 'rgba(255,255,255,0.05)',
       cardBorder: currentTheme.colors?.dialogBorder || currentTheme.colors?.contentBorder || 'rgba(255,255,255,0.1)',
       cardBackground: currentTheme.colors?.dialogBackground || 'rgba(16, 20, 28, 0.6)',
-      primaryColor: currentTheme.colors?.buttonPrimary || currentTheme.colors?.primaryColor || '#2196f3'
+      primaryColor: currentTheme.colors?.buttonPrimary || currentTheme.colors?.primaryColor || '#2196f3',
+      // Colores específicos para el buscador para asegurar que resalte en todos los temas
+      searchBackground: getContrastBg(currentTheme.colors?.contentBackground || '#1e1e1e', 0.85),
+      searchBorder: adjustOpacity(currentTheme.colors?.primaryColor || '#2196f3', 0.5),
+      searchFocusBorder: currentTheme.colors?.primaryColor || '#2196f3',
+      heroGradientColor: (() => {
+        const bg = currentTheme.colors?.contentBackground || '#1e1e1e';
+        let r = 30, g = 30, b = 30;
+        if (bg.startsWith('#')) {
+          const hex = bg.replace('#', '');
+          r = parseInt(hex.substring(0, 2), 16) || 0;
+          g = parseInt(hex.substring(2, 4), 16) || 0;
+          b = parseInt(hex.substring(4, 6), 16) || 0;
+        }
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        return brightness < 128
+          ? adjustOpacity(currentTheme.colors?.primaryColor || '#2196f3', 0.15)
+          : adjustOpacity(currentTheme.colors?.primaryColor || '#2196f3', 0.1);
+      })()
     };
   }, [currentTheme]);
 

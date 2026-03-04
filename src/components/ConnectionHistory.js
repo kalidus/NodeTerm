@@ -1509,29 +1509,33 @@ const ConnectionHistory = ({
 				.connection-history-section { border: none !important; background: transparent !important; }
 				.hero-splash-header {
 					text-align: center;
-					padding: 40px 20px 20px;
-					background: radial-gradient(circle at top, ${themeColors.cardBackground ? themeColors.cardBackground.replace('0.6', '0.3') : 'rgba(21, 32, 54, 0.3)'} 0%, transparent 70%);
+					padding: 60px 20px 40px;
+					background: radial-gradient(circle at top, ${themeColors.heroGradientColor || 'rgba(21, 32, 54, 0.4)'} 0%, transparent 85%);
 					position: relative;
+					margin-bottom: 20px;
 				}
 				.hero-title { font-size: 32px; font-weight: 800; background: linear-gradient(90deg, ${themeColors.textPrimary || '#ffffff'}, ${themeColors.primaryColor || '#4fc3f7'}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0 0 10px 0; }
 				.hero-status { color: #81c784; font-size: 0.85rem; margin-bottom: 30px; display: flex; justify-content: center; align-items: center; gap: 8px; }
 				.hero-search-container { max-width: 600px; margin: 0 auto 16px; position: relative; z-index: 100; }
 				.hero-search-input {
-					width: 100%;
-					background: ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.6)'};
-					border: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'};
-					border-radius: 30px;
+					width: 100% !important;
+					background: ${themeColors.searchBackground || 'rgba(22, 27, 34, 0.85)'} !important;
+					border: 2px solid ${themeColors.searchBorder || 'rgba(255,255,255,0.4)'} !important;
+					border-radius: 30px !important;
 					padding: 14px 20px 14px 48px !important;
-					color: ${themeColors.textPrimary || '#fff'};
+					color: ${themeColors.textPrimary || '#fff'} !important;
 					font-size: 1.05rem;
 					outline: none;
-					backdrop-filter: blur(10px);
-					transition: all 0.3s ease;
+					backdrop-filter: blur(12px);
+					box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.1);
+					transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 				}
 				.hero-search-input:focus {
-					border-color: ${themeColors.primaryColor || '#4fc3f7'};
-					box-shadow: 0 0 20px ${themeColors.primaryColor ? themeColors.primaryColor + '30' : 'rgba(79, 195, 247, 0.2)'};
-					background: ${themeColors.cardBackground ? themeColors.cardBackground.replace('0.6', '0.8') : 'rgba(22, 27, 34, 0.8)'};
+					border-color: ${themeColors.searchFocusBorder || '#4fc3f7'};
+					box-shadow: 0 0 30px ${themeColors.primaryColor ? themeColors.primaryColor + '50' : 'rgba(79, 195, 247, 0.4)'},
+					            inset 0 1px 1px rgba(255,255,255,0.15);
+					background: ${themeColors.searchBackground ? themeColors.searchBackground.replace('0.85', '0.95') : 'rgba(22, 27, 34, 0.95)'};
+					transform: translateY(-2px);
 				}
 				.hero-search-icon { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: ${themeColors.textSecondary || 'rgba(255,255,255,0.4)'}; font-size: 1.2rem; z-index: 2; pointer-events: none; }
 				.hero-search-spinner { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); color: ${themeColors.primaryColor || '#4fc3f7'}; font-size: 1.1rem; z-index: 2; }
