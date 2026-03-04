@@ -174,6 +174,7 @@ const ConnectionHistory = ({
 	const [isSearching, setIsSearching] = useState(false);
 	const [showDropdown, setShowDropdown] = useState(false);
 	const [activeIndex, setActiveIndex] = useState(-1);
+	const [activeBottomView, setActiveBottomView] = useState('all');
 
 	// Cargar passwords desde localStorage (con soporte para encriptación) - Igual que en TitleBar
 	useEffect(() => {
@@ -1516,15 +1517,15 @@ const ConnectionHistory = ({
 				}
 				.hero-title { font-size: 32px; font-weight: 800; background: linear-gradient(90deg, ${themeColors.textPrimary || '#ffffff'}, ${themeColors.primaryColor || '#4fc3f7'}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0 0 10px 0; }
 				.hero-status { color: #81c784; font-size: 0.85rem; margin-bottom: 30px; display: flex; justify-content: center; align-items: center; gap: 8px; }
-				.hero-search-container { max-width: 600px; margin: 0 auto 16px; position: relative; z-index: 100; }
+				.hero-search-container { max-width: 550px; margin: 0 auto 16px; position: relative; z-index: 100; }
 				.hero-search-input, .p-inputtext.hero-search-input:enabled:focus {
 					width: 100% !important;
 					background: ${themeColors.searchBackground || 'rgba(22, 27, 34, 0.85)'} !important;
-					border: 2px solid ${themeColors.searchBorder || 'rgba(255,255,255,0.4)'} !important;
+					border: 1px solid ${themeColors.searchBorder || 'rgba(255,255,255,0.2)'} !important;
 					border-radius: 30px !important;
-					padding: 14px 20px 14px 48px !important;
+					padding: 12px 60px 12px 42px !important;
 					color: ${themeColors.textPrimary || '#fff'} !important;
-					font-size: 1.05rem;
+					font-size: 1rem;
 					outline: none !important;
 					box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.1) !important;
 					backdrop-filter: blur(12px);
@@ -1532,13 +1533,81 @@ const ConnectionHistory = ({
 				}
 				.hero-search-input:focus, .p-inputtext.hero-search-input:enabled:focus {
 					border-color: ${themeColors.searchFocusBorder || '#4fc3f7'} !important;
-					box-shadow: 0 0 30px ${themeColors.primaryColor ? themeColors.primaryColor + '50' : 'rgba(79, 195, 247, 0.4)'},
-					            inset 0 1px 1px rgba(255,255,255,0.15) !important;
+					box-shadow: 0 0 20px ${themeColors.primaryColor ? themeColors.primaryColor + '40' : 'rgba(79, 195, 247, 0.3)'},
+					            inset 0 1px 1px rgba(255,255,255,0.15),
+					            0 0 0 1px ${themeColors.searchFocusBorder || '#4fc3f7'} !important;
 					background: ${themeColors.searchBackground ? themeColors.searchBackground.replace('0.85', '0.95') : 'rgba(22, 27, 34, 0.95)'} !important;
-					transform: translateY(-2px);
+					transform: translateY(-1px);
 				}
-				.hero-search-icon { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: ${themeColors.textSecondary || 'rgba(255,255,255,0.4)'}; font-size: 1.2rem; z-index: 2; pointer-events: none; }
-				.hero-search-spinner { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); color: ${themeColors.primaryColor || '#4fc3f7'}; font-size: 1.1rem; z-index: 2; }
+				.hero-search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: ${themeColors.textSecondary || 'rgba(255,255,255,0.4)'}; font-size: 1.1rem; z-index: 2; pointer-events: none; }
+				.hero-search-spinner { position: absolute; right: 60px; top: 50%; transform: translateY(-50%); color: ${themeColors.primaryColor || '#4fc3f7'}; font-size: 1.1rem; z-index: 2; }
+				
+				.hero-terminal-btn {
+					position: absolute;
+					right: 8px;
+					top: 50%;
+					transform: translateY(-50%);
+					height: 32px;
+					padding: 0 12px;
+					border-radius: 20px;
+					background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 100%);
+					border: 1px solid rgba(255,255,255,0.1);
+					border-top: 1px solid rgba(255,255,255,0.2);
+					color: ${themeColors.textPrimary || '#fff'};
+					font-family: monospace;
+					font-weight: bold;
+					font-size: 0.9rem;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					cursor: pointer;
+					z-index: 3;
+					transition: all 0.2s ease;
+					box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.2);
+				}
+				.hero-terminal-btn:hover {
+					background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%);
+					border-color: rgba(255,255,255,0.2);
+					box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 4px 8px rgba(0,0,0,0.3);
+					transform: translateY(-50%) scale(1.02);
+				}
+				.hero-terminal-btn:active {
+					transform: translateY(-50%) scale(0.98);
+					box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+				}
+
+				.hero-action-buttons {
+					display: flex;
+					justify-content: center;
+					gap: 12px;
+					margin-bottom: 16px;
+				}
+				.hero-action-btn {
+					background: ${themeColors.itemBackground || 'rgba(30,36,45,0.6)'};
+					border: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.05)'};
+					border-radius: 20px;
+					padding: 6px 16px;
+					color: ${themeColors.textSecondary || 'rgba(255,255,255,0.7)'};
+					font-size: 0.85rem;
+					display: flex;
+					align-items: center;
+					gap: 8px;
+					cursor: pointer;
+					transition: all 0.2s ease;
+					backdrop-filter: blur(8px);
+				}
+				.hero-action-btn:hover {
+					background: ${themeColors.hoverBackground || 'rgba(255,255,255,0.1)'};
+					color: ${themeColors.textPrimary || '#fff'};
+					border-color: rgba(255,255,255,0.15);
+					transform: translateY(-1px);
+				}
+				.hero-action-btn.active {
+					background: ${themeColors.primaryColor ? themeColors.primaryColor + '30' : 'rgba(79, 195, 247, 0.3)'};
+					color: ${themeColors.primaryColor || '#4fc3f7'};
+					border-color: ${themeColors.primaryColor || '#4fc3f7'};
+				}
+				
 				.hero-shortcuts { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.4)'}; font-size: 0.75rem; display: flex; justify-content: center; gap: 16px; }
 				.hero-shortcuts kbd { background: ${themeColors.itemBackground || 'rgba(255,255,255,0.1)'}; padding: 2px 6px; border-radius: 4px; margin-right: 4px; font-family: inherit; }
 
@@ -1647,6 +1716,30 @@ const ConnectionHistory = ({
 						<i className="pi pi-spin pi-spinner hero-search-spinner" />
 					)}
 
+					<button
+						className="hero-terminal-btn"
+						title="Abrir nueva terminal local"
+						onClick={(e) => {
+							e.stopPropagation();
+							const defaultAction = () => {
+								window.dispatchEvent(new CustomEvent('create-terminal-tab', {
+									detail: { type: 'powershell' } // Default if nothing else
+								}));
+							};
+
+							try {
+								const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
+								window.dispatchEvent(new CustomEvent('create-terminal-tab', {
+									detail: { type: defaultTerminal }
+								}));
+							} catch {
+								defaultAction();
+							}
+						}}
+					>
+						$_
+					</button>
+
 					{showDropdown && ReactDOM.createPortal(
 						<div
 							className="hero-search-dropdown"
@@ -1696,6 +1789,45 @@ const ConnectionHistory = ({
 						document.body
 					)}
 				</div>
+
+				<div className="hero-action-buttons">
+					<button
+						className="hero-action-btn"
+						title="Abrir nueva terminal local"
+						onClick={(e) => {
+							e.stopPropagation();
+							const defaultAction = () => {
+								window.dispatchEvent(new CustomEvent('create-terminal-tab', {
+									detail: { type: 'powershell' } // Default if nothing else
+								}));
+							};
+
+							try {
+								const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
+								window.dispatchEvent(new CustomEvent('create-terminal-tab', {
+									detail: { type: defaultTerminal }
+								}));
+							} catch {
+								defaultAction();
+							}
+						}}
+					>
+						<i className="pi pi-desktop" /> Nueva terminal
+					</button>
+					<button
+						className={`hero-action-btn ${activeBottomView === 'recent' ? 'active' : ''}`}
+						onClick={() => setActiveBottomView(prev => prev === 'recent' ? 'all' : 'recent')}
+					>
+						<i className="pi pi-clock" /> Recent
+					</button>
+					<button
+						className={`hero-action-btn ${activeBottomView === 'favorites' ? 'active' : ''}`}
+						onClick={() => setActiveBottomView(prev => prev === 'favorites' ? 'all' : 'favorites')}
+					>
+						<i className="pi pi-star" /> Favorites
+					</button>
+				</div>
+
 				<div className="hero-shortcuts">
 					<span><kbd>⌘K</kbd> Quick connect</span>
 					<span><kbd>⌘T</kbd> New terminal</span>
@@ -1998,146 +2130,150 @@ const ConnectionHistory = ({
 				document.body
 			)}
 
-			{/* FAVORITES RIBBON (Always visible, shows placeholder if empty) */}
-			<FavoritesRibbon
-				connections={filteredFavorites}
-				fullList={favoriteConnections}
-				onReorder={(newList) => {
-					// Enable reordering even if filtered
-					// We merge the reordered subset back into the main list
-					const currentFullList = [...favoriteConnections];
+			{/* FAVORITES RIBBON (Always visible or toggled) */}
+			{(activeBottomView === 'all' || activeBottomView === 'favorites') && (
+				<FavoritesRibbon
+					connections={filteredFavorites}
+					fullList={favoriteConnections}
+					onReorder={(newList) => {
+						// Enable reordering even if filtered
+						// We merge the reordered subset back into the main list
+						const currentFullList = [...favoriteConnections];
 
-					// 1. Identify indices of the items in the main list that are part of the reordered set
-					// (The items in 'newList' are the ones currently visible and reordered)
-					const subsetIds = new Set(newList.map(c => c.id));
-					const indices = [];
+						// 1. Identify indices of the items in the main list that are part of the reordered set
+						// (The items in 'newList' are the ones currently visible and reordered)
+						const subsetIds = new Set(newList.map(c => c.id));
+						const indices = [];
 
-					currentFullList.forEach((c, index) => {
-						if (subsetIds.has(c.id)) {
-							indices.push(index);
-						}
-					});
-
-					// 2. Place the items from the new list into the identified slots
-					if (indices.length === newList.length) {
-						indices.forEach((originalIndex, i) => {
-							currentFullList[originalIndex] = newList[i];
+						currentFullList.forEach((c, index) => {
+							if (subsetIds.has(c.id)) {
+								indices.push(index);
+							}
 						});
 
-						// 3. Save and update
-						reorderFavorites(currentFullList);
-						loadConnectionHistory();
-					} else {
-						console.warn('Cannot reorder: index mismatch', indices.length, newList.length);
-					}
-				}}
-				collapsed={favoritesCollapsed}
-				onToggleCollapsed={toggleFavoritesCollapsed}
-				onOpenFilter={() => {
-					setFilterContext('favorites');
-					setFilterPanelOpen(true);
-				}}
-				activeFilterCount={getActiveFilterCount(activeFavFilters)}
-				activeFilters={activeFavFilters}
-				onRemoveFilter={(cat, id) => handleRemoveFilter('favorites', cat, id)}
-			/>
+						// 2. Place the items from the new list into the identified slots
+						if (indices.length === newList.length) {
+							indices.forEach((originalIndex, i) => {
+								currentFullList[originalIndex] = newList[i];
+							});
+
+							// 3. Save and update
+							reorderFavorites(currentFullList);
+							loadConnectionHistory();
+						} else {
+							console.warn('Cannot reorder: index mismatch', indices.length, newList.length);
+						}
+					}}
+					collapsed={favoritesCollapsed}
+					onToggleCollapsed={toggleFavoritesCollapsed}
+					onOpenFilter={() => {
+						setFilterContext('favorites');
+						setFilterPanelOpen(true);
+					}}
+					activeFilterCount={getActiveFilterCount(activeFavFilters)}
+					activeFilters={activeFavFilters}
+					onRemoveFilter={(cat, id) => handleRemoveFilter('favorites', cat, id)}
+				/>
+			)}
 
 
 			{/* RECIENTES TABLE (Fills remaining space) */}
-			<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginTop: '0' }}>
-				<div className="modern-section-header header-recents">
-					<button
-						className="section-collapse-btn"
-						onClick={toggleRecentsCollapsed}
-						title={recentsCollapsed ? "Expandir recientes" : "Colapsar recientes"}
-						style={{
-							background: 'transparent',
-							border: 'none',
-							padding: '4px 2px',
-							cursor: 'pointer',
-							fontSize: '0.9rem',
-							transition: 'all 0.2s ease',
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-						}}
-						onMouseEnter={(e) => {
-							e.currentTarget.style.transform = 'scale(1.1)';
-						}}
-						onMouseLeave={(e) => {
-							e.currentTarget.style.transform = 'scale(1)';
-						}}
-					>
-						<i className={recentsCollapsed ? "pi pi-chevron-down" : "pi pi-chevron-up"} />
-					</button>
-					<div className="modern-header-title">
-						<i className="pi pi-history" />
-						<span>RECIENTES</span>
+			{(activeBottomView === 'all' || activeBottomView === 'recent') && (
+				<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginTop: '0' }}>
+					<div className="modern-section-header header-recents">
+						<button
+							className="section-collapse-btn"
+							onClick={toggleRecentsCollapsed}
+							title={recentsCollapsed ? "Expandir recientes" : "Colapsar recientes"}
+							style={{
+								background: 'transparent',
+								border: 'none',
+								padding: '4px 2px',
+								cursor: 'pointer',
+								fontSize: '0.9rem',
+								transition: 'all 0.2s ease',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+							}}
+							onMouseEnter={(e) => {
+								e.currentTarget.style.transform = 'scale(1.1)';
+							}}
+							onMouseLeave={(e) => {
+								e.currentTarget.style.transform = 'scale(1)';
+							}}
+						>
+							<i className={recentsCollapsed ? "pi pi-chevron-down" : "pi pi-chevron-up"} />
+						</button>
+						<div className="modern-header-title">
+							<i className="pi pi-history" />
+							<span>RECIENTES</span>
+						</div>
+
+						{/* Filter Button (Recents) */}
+						<button
+							className={`section-action-btn ${getActiveFilterCount(activeRecentFilters) > 0 ? 'active' : ''}`}
+							onClick={() => {
+								setFilterContext('recents');
+								setFilterPanelOpen(true);
+							}}
+							title="Filtrar recientes"
+							style={{ marginRight: '8px' }}
+						>
+							<i className={`pi ${getActiveFilterCount(activeRecentFilters) > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
+						</button>
+
+						{/* Active Filter Chips (Recents) */}
+						{getActiveFilterCount(activeRecentFilters) > 0 && (
+							<div className="header-active-filters">
+								{activeRecentFilters.protocols?.map(filterId => (
+									<FilterBadge
+										key={`protocol-${filterId}`}
+										label={getFilterLabel('protocols', filterId)}
+										color={getFilterColor('protocols', filterId)}
+										icon={getFilterIcon('protocols', filterId)}
+										type="protocol"
+										onRemove={() => handleRemoveFilter('recents', 'protocols', filterId)}
+										compact
+									/>
+								))}
+								{activeRecentFilters.groups?.map(filterId => (
+									<FilterBadge
+										key={`group-${filterId}`}
+										label={getFilterLabel('groups', filterId)}
+										color={getFilterColor('groups', filterId)}
+										icon={getFilterIcon('groups', filterId)}
+										type="group"
+										onRemove={() => handleRemoveFilter('recents', 'groups', filterId)}
+										compact
+									/>
+								))}
+								{activeRecentFilters.states?.map(filterId => (
+									<FilterBadge
+										key={`state-${filterId}`}
+										label={getFilterLabel('states', filterId)}
+										color={getFilterColor('states', filterId)}
+										icon={getFilterIcon('states', filterId)}
+										type="state"
+										onRemove={() => handleRemoveFilter('recents', 'states', filterId)}
+										compact
+									/>
+								))}
+							</div>
+						)}
+						<div className="modern-header-line"></div>
 					</div>
 
-					{/* Filter Button (Recents) */}
-					<button
-						className={`section-action-btn ${getActiveFilterCount(activeRecentFilters) > 0 ? 'active' : ''}`}
-						onClick={() => {
-							setFilterContext('recents');
-							setFilterPanelOpen(true);
-						}}
-						title="Filtrar recientes"
-						style={{ marginRight: '8px' }}
-					>
-						<i className={`pi ${getActiveFilterCount(activeRecentFilters) > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
-					</button>
 
-					{/* Active Filter Chips (Recents) */}
-					{getActiveFilterCount(activeRecentFilters) > 0 && (
-						<div className="header-active-filters">
-							{activeRecentFilters.protocols?.map(filterId => (
-								<FilterBadge
-									key={`protocol-${filterId}`}
-									label={getFilterLabel('protocols', filterId)}
-									color={getFilterColor('protocols', filterId)}
-									icon={getFilterIcon('protocols', filterId)}
-									type="protocol"
-									onRemove={() => handleRemoveFilter('recents', 'protocols', filterId)}
-									compact
-								/>
-							))}
-							{activeRecentFilters.groups?.map(filterId => (
-								<FilterBadge
-									key={`group-${filterId}`}
-									label={getFilterLabel('groups', filterId)}
-									color={getFilterColor('groups', filterId)}
-									icon={getFilterIcon('groups', filterId)}
-									type="group"
-									onRemove={() => handleRemoveFilter('recents', 'groups', filterId)}
-									compact
-								/>
-							))}
-							{activeRecentFilters.states?.map(filterId => (
-								<FilterBadge
-									key={`state-${filterId}`}
-									label={getFilterLabel('states', filterId)}
-									color={getFilterColor('states', filterId)}
-									icon={getFilterIcon('states', filterId)}
-									type="state"
-									onRemove={() => handleRemoveFilter('recents', 'states', filterId)}
-									compact
-								/>
-							))}
-						</div>
+					{!recentsCollapsed && (
+						<ConnectionTable
+							connections={filteredRecentsForDisplay}
+							title="Nombre"
+							emptyMessage="No hay sesiones recientes"
+						/>
 					)}
-					<div className="modern-header-line"></div>
-				</div>
-
-
-				{!recentsCollapsed && (
-					<ConnectionTable
-						connections={filteredRecentsForDisplay}
-						title="Nombre"
-						emptyMessage="No hay sesiones recientes"
-					/>
-				)}
-			</section>
+				</section>
+			)}
 		</div>
 	);
 };
