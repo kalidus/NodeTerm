@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import SplitLayout from './SplitLayout';
+import { Rnd } from 'react-rnd';
 import { Card } from 'primereact/card';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Divider } from 'primereact/divider';
@@ -49,7 +49,9 @@ const HomeTab = ({
       return false; // Por defecto visible
     }
   });
-  const [manualPaneSize, setManualPaneSize] = useState(null); // Tamaño manual del panel superior
+  const [rndSize, setRndSize] = useState({ width: '80%', height: 400 });
+  const [rndPosition, setRndPosition] = useState({ x: 50, y: 50 });
+  const [isRndInitialized, setIsRndInitialized] = useState(false);
   const [favType, setFavType] = useState('all'); // Nuevo estado para filtros
   const [recentConnections, setRecentConnections] = useState([]); // Estado para conexiones recientes
   const [recentPasswords, setRecentPasswords] = useState([]); // Estado para passwords recientes
@@ -114,6 +116,22 @@ const HomeTab = ({
       observer.disconnect();
     };
   }, []);
+
+  // Inicializar Rnd position
+  useEffect(() => {
+    if (!isRndInitialized && containerHeight > 0 && containerRef.current) {
+      const containerWidth = containerRef.current.offsetWidth;
+      const initialWidth = Math.min(containerWidth * 0.8, 1200);
+      const initialHeight = Math.min(containerHeight * 0.45, 400);
+
+      setRndSize({ width: initialWidth, height: initialHeight });
+      setRndPosition({
+        x: (containerWidth - initialWidth) / 2,
+        y: containerHeight - initialHeight - 20
+      });
+      setIsRndInitialized(true);
+    }
+  }, [containerHeight, isRndInitialized]);
 
   // Estado para forzar re-render al cambiar el tema
   const [themeVersion, setThemeVersion] = useState(0);
@@ -469,51 +487,16 @@ const HomeTab = ({
   // Funciones para controlar el estado del terminal
   const handleMinimizeTerminal = React.useCallback(() => {
     setTerminalState(prevState => {
-      const newState = prevState === 'minimized' ? 'normal' : 'minimized';
-      // Limpiar tamaño manual cuando se cambia el estado programáticamente
-      if (newState !== 'normal') {
-        setManualPaneSize(null);
-      }
-      return newState;
+      return prevState === 'minimized' ? 'normal' : 'minimized';
     });
   }, []);
 
   const handleMaximizeTerminal = React.useCallback(() => {
     setTerminalState(prevState => {
-      const newState = prevState === 'maximized' ? 'normal' : 'maximized';
-      // Limpiar tamaño manual cuando se cambia el estado programáticamente
-      if (newState !== 'normal') {
-        setManualPaneSize(null);
-      }
-      return newState;
+      return prevState === 'maximized' ? 'normal' : 'maximized';
     });
   }, []);
 
-  // Función para resetear a modo manual cuando el usuario redimensiona
-  const handleManualResize = () => {
-    if (terminalState !== 'normal') {
-      setTerminalState('normal');
-    }
-    // Cuando el usuario redimensiona, necesitamos obtener el nuevo tamaño del SplitLayout
-    // Esto se manejará a través del callback de redimensionamiento
-  };
-
-  // Callback para cuando el usuario redimensiona manualmente
-  const handlePaneSizeChange = (newSize) => {
-    // Permitir guardar cualquier tamaño, incluso si es el 100% de la altura
-    const statusBarHeight = statusBarVisible ? 40 : 0;
-    const availableHeight = window.innerHeight - statusBarHeight;
-    // NO limitar - permitir hasta el 100% del espacio disponible
-    const clampedSize = Math.min(newSize, availableHeight);
-    setManualPaneSize(clampedSize);
-    setTerminalState('normal');
-    console.log('📐 HomeTab: handlePaneSizeChange:', {
-      newSize,
-      clampedSize,
-      availableHeight,
-      percentage: ((clampedSize / availableHeight) * 100).toFixed(2) + '%'
-    });
-  };
 
   // Función para toggle de visibilidad del terminal
   const handleToggleTerminalVisibility = () => {
@@ -610,39 +593,7 @@ const HomeTab = ({
 
 
 
-  // Determinar el tamaño del panel superior
-  const getTopPanelSize = () => {
-    const statusBarHeight = statusBarVisible ? 40 : 0;
-    const availableHeight = containerHeight - statusBarHeight;
 
-    // Si el terminal está oculto, el dashboard ocupa toda la pantalla disponible
-    if (terminalHidden) {
-      return availableHeight;
-    }
-
-    // Si hay un tamaño manual guardado y estamos en modo normal, usarlo
-    if (manualPaneSize !== null && terminalState === 'normal') {
-      return Math.min(manualPaneSize, availableHeight);
-    }
-
-    let size;
-
-    switch (terminalState) {
-      case 'minimized':
-        // Cuando está minimizado, el panel superior ocupa casi todo, dejando exactamente 40px para el terminal
-        size = Math.max(0, availableHeight - 40);
-        break;
-      case 'maximized':
-        size = 0;
-        break;
-      default:
-        // Para 'normal', el panel superior ocupa 55% de la altura disponible
-        size = Math.max(availableHeight * 0.55, 400);
-        break;
-    }
-
-    return size;
-  };
 
   // Panel superior: Nuevo layout con 3 columnas (basado en redesigned pero con ConnectionHistory)
   const topPanel = (
@@ -746,35 +697,72 @@ const HomeTab = ({
     </>
   );
 
-  // Panel inferior: Terminal con pestañas
+  // Panel inferior: Terminal con pestañas flotante
   const bottomPanel = (
     <div style={{
       height: '100%',
       width: '100%',
-      display: terminalHidden ? 'none' : 'flex',
+      display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
-      background: localTerminalBg
+      background: localTerminalBg,
+      borderRadius: terminalState === 'maximized' ? '0' : '8px',
+      boxShadow: terminalState === 'maximized' ? 'none' : '0 10px 30px rgba(0,0,0,0.5)',
+      border: terminalState === 'maximized' ? 'none' : `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`
     }}>
-      <TabbedTerminal
-        ref={tabbedTerminalRef}
-        onMinimize={handleMinimizeTerminal}
-        onMaximize={handleMaximizeTerminal}
-        terminalState={terminalState}
-        localFontFamily={localFontFamily}
-        localFontSize={localFontSize}
-        localPowerShellTheme={localPowerShellTheme}
-        localLinuxTerminalTheme={localLinuxTerminalTheme}
-        hideStatusBar={true}
-      />
+      {/* MacOS style header */}
+      <div
+        className="terminal-drag-handle"
+        style={{
+          height: '32px',
+          background: 'rgba(255, 255, 255, 0.03)',
+          borderBottom: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 12px',
+          cursor: terminalState === 'maximized' ? 'default' : 'grab',
+          flexShrink: 0,
+          position: 'relative'
+        }}
+        onMouseDown={(e) => { if (terminalState !== 'maximized') e.currentTarget.style.cursor = 'grabbing'; }}
+        onMouseUp={(e) => { if (terminalState !== 'maximized') e.currentTarget.style.cursor = 'grab'; }}
+        onMouseLeave={(e) => { if (terminalState !== 'maximized') e.currentTarget.style.cursor = 'grab'; }}
+        onDoubleClick={handleMaximizeTerminal}
+      >
+        <div style={{ display: 'flex', gap: '8px', zIndex: 10 }}>
+          <div
+            onClick={() => setTerminalHidden(true)}
+            style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56', cursor: 'pointer', border: '1px solid #e0443e' }}
+            title="Cerrar" />
+          <div
+            onClick={handleMinimizeTerminal}
+            style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e', cursor: 'pointer', border: '1px solid #dea123' }}
+            title="Minimizar" />
+          <div
+            onClick={handleMaximizeTerminal}
+            style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f', cursor: 'pointer', border: '1px solid #1aab29' }}
+            title="Maximizar" />
+        </div>
+        <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', color: themeColors.textSecondary, fontSize: '12px', userSelect: 'none', pointerEvents: 'none', fontWeight: 500 }}>
+          Terminal Local
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflow: 'hidden', display: terminalState === 'minimized' ? 'none' : 'flex', flexDirection: 'column' }}>
+        <TabbedTerminal
+          ref={tabbedTerminalRef}
+          onMinimize={handleMinimizeTerminal}
+          onMaximize={handleMaximizeTerminal}
+          terminalState={terminalState}
+          localFontFamily={localFontFamily}
+          localFontSize={localFontSize}
+          localPowerShellTheme={localPowerShellTheme}
+          localLinuxTerminalTheme={localLinuxTerminalTheme}
+          hideStatusBar={true}
+        />
+      </div>
     </div>
   );
-
-  const splitterColor = React.useMemo(() => {
-    return currentTheme.colors?.splitter || localTerminalBg || dashboardBg || '#2d2d2d';
-  }, [currentTheme, localTerminalBg, dashboardBg]);
-
-  const topPanelSize = getTopPanelSize();
 
   return (
     <div
@@ -810,24 +798,50 @@ const HomeTab = ({
             position: 'relative',
             overflow: 'hidden'
           }}>
-            <SplitLayout
-              key={`home-split-${themeVersion}`}
-              leftTerminal={{ key: 'home_top', content: topPanel }}
-              rightTerminal={{ key: 'home_bottom', content: bottomPanel }}
-              orientation="horizontal"
-              fontFamily={''}
-              fontSize={16}
-              theme={{ background: localTerminalBg }}
-              onContextMenu={() => { }}
-              sshStatsByTabId={{}}
-              terminalRefs={{ current: {} }}
-              statusBarIconTheme="classic"
-              isHomeTab={true}
-              externalPaneSize={topPanelSize}
-              onManualResize={handleManualResize}
-              onPaneSizeChange={handlePaneSizeChange}
-              splitterColor={splitterColor}
-            />
+            {topPanel}
+
+            {!terminalHidden && isRndInitialized && (
+              <Rnd
+                size={
+                  terminalState === 'maximized'
+                    ? { width: '100%', height: '100%' }
+                    : (terminalState === 'minimized' ? { height: 32, width: rndSize.width } : rndSize)
+                }
+                position={
+                  terminalState === 'maximized'
+                    ? { x: 0, y: 0 }
+                    : rndPosition
+                }
+                onDragStop={(e, d) => {
+                  if (terminalState !== 'maximized') {
+                    setRndPosition({ x: d.x, y: d.y });
+                  }
+                }}
+                onResizeStop={(e, direction, ref, delta, position) => {
+                  if (terminalState !== 'maximized' && terminalState !== 'minimized') {
+                    setRndSize({ width: ref.style.width, height: ref.style.height });
+                    setRndPosition(position);
+                  }
+                }}
+                minWidth={300}
+                minHeight={terminalState === 'minimized' ? 32 : 200}
+                bounds="parent"
+                dragHandleClassName="terminal-drag-handle"
+                style={{
+                  zIndex: 100,
+                  display: 'flex',
+                  position: 'absolute'
+                }}
+                disableDragging={terminalState === 'maximized'}
+                enableResizing={terminalState !== 'maximized' && terminalState !== 'minimized' ? {
+                  bottom: true, bottomLeft: true, bottomRight: true,
+                  left: true, right: true,
+                  top: true, topLeft: true, topRight: true
+                } : false}
+              >
+                {bottomPanel}
+              </Rnd>
+            )}
           </div>
 
           {/* Sidebar Area - Outside the vertical split to remain at full height */}
