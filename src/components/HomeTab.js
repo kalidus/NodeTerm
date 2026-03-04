@@ -66,6 +66,7 @@ const HomeTab = ({
       return true;
     }
   }); // Estado para mostrar/ocultar status bar
+  const [terminalTitle, setTerminalTitle] = useState('Terminal Local');
 
   const [rightColumnCollapsed, setRightColumnCollapsed] = useState(() => {
     try {
@@ -210,6 +211,44 @@ const HomeTab = ({
       window.removeEventListener('home-tab-local-terminal-visibility-changed', handleTerminalVisibilityChange);
       window.removeEventListener('storage', handleTerminalVisibilityChange);
     };
+  }, []);
+
+  // Determinar el título del terminal basado en la terminal por defecto
+  useEffect(() => {
+    const updateTerminalTitle = () => {
+      try {
+        const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
+        const platform = window.electron?.platform || 'unknown';
+
+        if (defaultTerminal) {
+          const terminalTitles = {
+            'powershell': 'Windows PowerShell',
+            'wsl': 'WSL',
+            'cygwin': 'Cygwin',
+            'linux-terminal': platform === 'darwin' ? 'Terminal macOS' : 'Terminal Linux'
+          };
+
+          if (defaultTerminal.startsWith('docker-')) {
+            setTerminalTitle(`🐳 ${defaultTerminal.replace('docker-', '')}`);
+          } else if (terminalTitles[defaultTerminal]) {
+            setTerminalTitle(terminalTitles[defaultTerminal]);
+          } else {
+            setTerminalTitle(defaultTerminal);
+          }
+        } else {
+          // Fallback por defecto según plataforma
+          if (platform === 'linux') setTerminalTitle('Terminal Linux');
+          else if (platform === 'darwin') setTerminalTitle('Terminal macOS');
+          else setTerminalTitle('Windows PowerShell');
+        }
+      } catch (err) {
+        setTerminalTitle('Terminal Local');
+      }
+    };
+
+    updateTerminalTitle();
+    window.addEventListener('storage', updateTerminalTitle);
+    return () => window.removeEventListener('storage', updateTerminalTitle);
   }, []);
 
   useEffect(() => {
@@ -715,14 +754,17 @@ const HomeTab = ({
         className="terminal-drag-handle"
         style={{
           height: '32px',
-          background: 'rgba(255, 255, 255, 0.03)',
+          background: themeColors.cardBackground || 'rgba(255, 255, 255, 0.03)',
           borderBottom: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'space-between',
           padding: '0 12px',
           cursor: terminalState === 'maximized' ? 'default' : 'grab',
           flexShrink: 0,
-          position: 'relative'
+          position: 'relative',
+          borderTopLeftRadius: terminalState === 'maximized' ? '0' : '8px',
+          borderTopRightRadius: terminalState === 'maximized' ? '0' : '8px',
         }}
         onMouseDown={(e) => { if (terminalState !== 'maximized') e.currentTarget.style.cursor = 'grabbing'; }}
         onMouseUp={(e) => { if (terminalState !== 'maximized') e.currentTarget.style.cursor = 'grab'; }}
@@ -743,9 +785,12 @@ const HomeTab = ({
             style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f', cursor: 'pointer', border: '1px solid #1aab29' }}
             title="Maximizar" />
         </div>
-        <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', color: themeColors.textSecondary, fontSize: '12px', userSelect: 'none', pointerEvents: 'none', fontWeight: 500 }}>
-          Terminal Local
+
+        <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', color: themeColors.textSecondary, fontSize: '11px', userSelect: 'none', pointerEvents: 'none', fontWeight: 500 }}>
+          {terminalTitle}
         </div>
+
+        <div style={{ width: '60px' }}></div>
       </div>
 
       <div style={{ flex: 1, overflow: 'hidden', display: terminalState === 'minimized' ? 'none' : 'flex', flexDirection: 'column' }}>
