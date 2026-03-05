@@ -357,13 +357,14 @@ function stopPowerShell(tabId) {
       // En Windows, usar taskkill directamente para evitar errores de AttachConsole
       if (os.platform() === 'win32') {
         try {
-          const { execSync } = require('child_process');
-          // Usar taskkill directamente sin llamar a destroy() para evitar
-          // el error "AttachConsole failed" de node-pty
-          execSync(`taskkill /F /PID ${pid} /T`, {
-            stdio: 'ignore',
-            windowsHide: true
+          const { spawn } = require('child_process');
+          // Usar taskkill de forma asíncrona y separada para no bloquear
+          const killProc = spawn('taskkill', ['/F', '/T', '/PID', pid], {
+            detached: true,
+            windowsHide: true,
+            stdio: 'ignore'
           });
+          killProc.unref();
         } catch (killError) {
           // El proceso probablemente ya terminó
         }

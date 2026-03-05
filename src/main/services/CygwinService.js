@@ -21,8 +21,8 @@ let cygwinBashPath = null;
 function initializeCygwinPaths() {
   try {
     if (cygwinRootPath && cygwinBashPath) {
-      return { 
-        root: cygwinRootPath, 
+      return {
+        root: cygwinRootPath,
         bash: cygwinBashPath,
         exists: fs.existsSync(cygwinBashPath)
       };
@@ -30,7 +30,7 @@ function initializeCygwinPaths() {
 
     // Detectar si estamos en desarrollo o producción
     const isDev = !app.isPackaged;
-    
+
     let resourcesPath;
     if (isDev) {
       // En desarrollo: resources en la raíz del proyecto
@@ -91,13 +91,13 @@ async function startCygwinSession(tabId, { cols, rows }) {
     // Verificar si ya hay un proceso activo
     if (cygwinProcesses[tabId]) {
       console.log(`✅ Cygwin ${tabId}: Reutilizando`);
-      
+
       // No enviar prompt falso - el proceso ya está activo y mostrará su prompt real
       return;
     }
 
     const paths = initializeCygwinPaths();
-    
+
     if (!paths.exists) {
       throw new Error('Cygwin embebido no encontrado en la aplicación');
     }
@@ -107,7 +107,7 @@ async function startCygwinSession(tabId, { cols, rows }) {
     // Crear directorio home para el usuario si no existe
     const userName = process.env.USERNAME || process.env.USER || 'user';
     const cygwinHome = path.join(paths.root, 'home', userName);
-    
+
     if (!fs.existsSync(cygwinHome)) {
       fs.mkdirSync(cygwinHome, { recursive: true });
       // Home creado silenciosamente
@@ -127,11 +127,11 @@ async function startCygwinSession(tabId, { cols, rows }) {
       fs.unlinkSync(bashrcPath);
       // .bashrc actualizado silenciosamente
     }
-    
+
     // Crear/validar el archivo fstab
     const etcPath = path.join(paths.root, 'etc');
     const fstabPath = path.join(etcPath, 'fstab');
-    
+
     if (!fs.existsSync(etcPath)) {
       fs.mkdirSync(etcPath, { recursive: true });
     }
@@ -281,7 +281,7 @@ cd ~
     cygwinProcesses[tabId].onExit(({ exitCode, signal }) => {
       console.log(`🔚 Cygwin ${tabId}: Terminado`);
       delete cygwinProcesses[tabId];
-      
+
       if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         mainWindow.webContents.send(`cygwin:exit:${tabId}`, exitCode?.toString() || '0');
       }
@@ -289,7 +289,7 @@ cd ~
 
     // Handle errors
     cygwinProcesses[tabId].on('error', (error) => {
-        console.error(`❌ Cygwin ${tabId}: Error`);
+      console.error(`❌ Cygwin ${tabId}: Error`);
       if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         mainWindow.webContents.send(`cygwin:error:${tabId}`, error.message);
       }
@@ -300,7 +300,7 @@ cd ~
   } catch (error) {
     console.error(`❌ Cygwin ${tabId}: Error de inicio`);
     if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
-      mainWindow.webContents.send(`cygwin:error:${tabId}`, 
+      mainWindow.webContents.send(`cygwin:error:${tabId}`,
         `No se pudo iniciar Cygwin: ${error.message}\n\n` +
         `Asegúrate de que la carpeta 'resources/cygwin64' existe en la aplicación.`
       );
@@ -317,9 +317,9 @@ const CygwinHandlers = {
     try {
       const available = isCygwinAvailable();
       const paths = initializeCygwinPaths();
-      
+
       // Log simplificado para detección
-      
+
       return {
         available: available === true,
         path: available ? paths.bash : null,
@@ -369,19 +369,21 @@ const CygwinHandlers = {
       try {
         const process = cygwinProcesses[tabId];
         const pid = process.pid;
-        
+
         process.removeAllListeners();
-        
+
         // En Windows, usar taskkill directamente para evitar errores de AttachConsole
         if (os.platform() === 'win32') {
           try {
-            const { execSync } = require('child_process');
-            // Usar taskkill directamente sin llamar a destroy() para evitar
-            // el error "AttachConsole failed" de node-pty
-            execSync(`taskkill /F /PID ${pid} /T`, { 
-              stdio: 'ignore',
-              windowsHide: true
+            const { spawn } = require('child_process');
+            // Usar taskkill de forma asíncrona y separada para no bloquear
+            // el cierre de la aplicación
+            const killProc = spawn('taskkill', ['/F', '/T', '/PID', pid], {
+              detached: true,
+              windowsHide: true,
+              stdio: 'ignore'
             });
+            killProc.unref();
           } catch (killError) {
             // El proceso probablemente ya terminó
           }
@@ -392,7 +394,7 @@ const CygwinHandlers = {
             // Ignorar errores de kill
           }
         }
-        
+
         delete cygwinProcesses[tabId];
       } catch (error) {
         console.error(`❌ Cygwin ${tabId}: Error al detener`);
