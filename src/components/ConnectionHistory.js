@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { getFavorites, toggleFavorite, onUpdate, isFavorite, reorderFavorites, helpers } from '../utils/connectionStore';
 import { iconThemes } from '../themes/icon-themes';
@@ -10,15 +10,15 @@ import { InputText } from 'primereact/inputtext';
 
 // Formatear "Hace 5m", "Hace 2 h", "Ayer", etc.
 function formatRelativeTime(iso) {
-	if (!iso) return 'â€”';
+	if (!iso) return '-';
 	const d = new Date(iso);
-	if (isNaN(d.getTime())) return 'â€”';
+	if (isNaN(d.getTime())) return '-';
 	const s = Math.floor((Date.now() - d) / 1000);
 	if (s < 60) return 'Ahora';
 	if (s < 3600) return `Hace ${Math.floor(s / 60)}m`;
 	if (s < 86400) return `Hace ${Math.floor(s / 3600)} h`;
 	if (s < 172800) return 'Ayer';
-	if (s < 604800) return `Hace ${Math.floor(s / 86400)} dÃ­as`;
+	if (s < 604800) return `Hace ${Math.floor(s / 86400)} d\u00EDas`;
 	if (s < 2592000) return `Hace ${Math.floor(s / 604800)} sem`;
 	return `Hace ${Math.floor(s / 2592000)} mes`;
 }
@@ -33,31 +33,31 @@ function defaultPort(type) {
 }
 
 function buildHostLabel(conn) {
-	if (conn.type === 'group') return conn.name || 'â€”';
+	if (conn.type === 'group') return conn.name || '-';
 
 	// Para secretos (passwords, wallets, etc.), mostrar URL o username
 	if (['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'].includes(conn.type)) {
 		if (conn.url) return conn.url;
 		if (conn.username) return conn.username;
-		return conn.group || 'â€”';
+		return conn.group || '-';
 	}
 
-	// En conexiones con bastiÃ³n (Wallix), la cadena completa estÃ¡ en bastionUser
+	// En conexiones con basti\u00F3n (Wallix), la cadena completa est\u00E1 en bastionUser
 	const user = conn.useBastionWallix ? (conn.bastionUser || conn.username || conn.user || '') : (conn.username || conn.user || '');
 	const host = conn.host || conn.hostname || '';
 	const port = conn.port != null && conn.port !== '' ? Number(conn.port) : null;
 	const def = defaultPort(conn.type);
-	let part = user ? (host ? `${user}@${host}` : user) : (host || 'â€”');
+	let part = user ? (host ? `${user}@${host}` : user) : (host || '-');
 	if (port != null && !isNaN(port) && port !== def) part += `:${port}`;
 	return part;
 }
 
-// FunciÃ³n helper para buscar un nodo en el Ã¡rbol de la sidebar
+// Funci\u00F3n helper para buscar un nodo en el \u00E1rbol de la sidebar
 const findNodeInTree = (nodes, connection) => {
 	if (!nodes || !Array.isArray(nodes)) return null;
 
 	for (const node of nodes) {
-		// Verificar si el nodo coincide con la conexiÃ³n
+		// Verificar si el nodo coincide con la conexi\u00F3n
 		if (node.data) {
 			const nodeType = node.data.type;
 			const connType = connection.type === 'rdp' ? 'rdp-guacamole' :
@@ -92,54 +92,17 @@ const findNodeInTree = (nodes, connection) => {
 	return null;
 };
 
-const getConnectionTypeColor = (type) => {
-	switch (type) {
-		case 'ssh': return '#28a745';
-		case 'rdp':
-		case 'rdp-guacamole': return '#007ad9';
-		case 'vnc':
-		case 'vnc-guacamole': return '#00bcd4';
-		case 'docker': return '#0db7ed';
-		case 'password': return '#ffc107';
-		default: return '#4fc3f7';
-	}
-};
-
-const getConnectionTypeIcon = (type) => {
-	switch (type) {
-		case 'ssh': return 'pi pi-bolt';
-		case 'rdp':
-		case 'rdp-guacamole': return 'pi pi-desktop';
-		case 'vnc':
-		case 'vnc-guacamole': return 'pi pi-eye';
-		case 'docker': return 'pi pi-box';
-		case 'password': return 'pi pi-key';
-		default: return 'pi pi-link';
-	}
-};
-
-const getProtocolLabel = (type) => {
-	switch (type) {
-		case 'ssh': return 'SSH';
-		case 'rdp':
-		case 'rdp-guacamole': return 'RDP';
-		case 'vnc':
-		case 'vnc-guacamole': return 'VNC';
-		case 'docker': return 'DOCKER';
-		case 'password': return 'PWD';
-		default: return 'CON';
-	}
-};
+// Protocol and styling helpers are defined below within the component or can be moved here if needed.
 
 const getNodeFolderPath = (nodes, targetNode) => {
 	const findFolderPath = (nodeList, target, currentPath = []) => {
 		if (!nodeList) return null;
 		for (const node of nodeList) {
-			// Solo agregar a la ruta si es una carpeta (no una conexiÃ³n)
+			// Solo agregar a la ruta si es una carpeta (no una conexi\u00F3n)
 			const isFolder = !node.data || (!node.data.type || (node.data.type !== 'ssh' && node.data.type !== 'rdp' && node.data.type !== 'rdp-guacamole'));
 			const newPath = isFolder ? [...currentPath, node.label] : currentPath;
 
-			// Si encontramos el nodo objetivo, retornar la ruta de carpetas (sin incluir la conexiÃ³n)
+			// Si encontramos el nodo objetivo, retornar la ruta de carpetas (sin incluir la conexi\u00F3n)
 			if (node.key === target.key) {
 				return currentPath;
 			}
@@ -179,7 +142,7 @@ const ConnectionHistory = ({
 	const [activeIndex, setActiveIndex] = useState(-1);
 	const [activeBottomView, setActiveBottomView] = useState('all');
 
-	// Cargar passwords desde localStorage (con soporte para encriptaciÃ³n) - Igual que en TitleBar
+	// Cargar passwords desde localStorage (con soporte para encriptaci\u00F3n) - Igual que en TitleBar
 	useEffect(() => {
 		const loadPasswords = async () => {
 			try {
@@ -219,7 +182,7 @@ const ConnectionHistory = ({
 		return () => window.removeEventListener('storage', handleStorageChange);
 	}, [masterKey, secureStorage]);
 
-	// FunciÃ³n para encontrar todas las conexiones en el Ã¡rbol
+	// Funci\u00F3n para encontrar todas las conexiones en el \u00E1rbol
 	const findAllSidebarConnections = useCallback((nodesList) => {
 		if (!nodesList) return [];
 		let results = [];
@@ -237,7 +200,7 @@ const ConnectionHistory = ({
 		return results;
 	}, []);
 
-	// FunciÃ³n para encontrar todos los passwords en el Ã¡rbol
+	// Funci\u00F3n para encontrar todos los passwords en el \u00E1rbol
 	const findAllPasswords = useCallback((nodesList) => {
 		if (!nodesList) return [];
 		let results = [];
@@ -255,7 +218,7 @@ const ConnectionHistory = ({
 		return results;
 	}, []);
 
-	// LÃ³gica de bÃºsqueda debounced
+	// L\u00F3gica de b\u00FAsqueda debounced
 	useEffect(() => {
 		const timeoutId = setTimeout(() => {
 			if (searchTerm.trim()) {
@@ -362,7 +325,7 @@ const ConnectionHistory = ({
 			};
 			window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
 		} else {
-			// Es una conexiÃ³n, usar handleConnectToHistory pero adaptando el formato
+			// Es una conexi\u00F3n, usar handleConnectToHistory pero adaptando el formato
 			const conn = helpers.fromSidebarNode(node);
 			if (conn) onConnectToHistory(conn);
 		}
@@ -422,7 +385,7 @@ const ConnectionHistory = ({
 	const filterBarRef = useRef(null);
 	const [indicatorStyle, setIndicatorStyle] = useState({});
 
-	// Estado para configuraciÃ³n unificada de filtros
+	// Estado para configuraci\u00F3n unificada de filtros
 	const [showFilterConfig, setShowFilterConfig] = useState(false);
 	const [allFilters, setAllFilters] = useState(() => favoriteGroupsStore.getAllFilters());
 
@@ -549,7 +512,7 @@ const ConnectionHistory = ({
 				});
 			}
 		};
-		// Delay para asegurar que el DOM estÃ© listo
+		// Delay para asegurar que el DOM est\u00E9 listo
 		const timer = setTimeout(updateIndicator, 50);
 		window.addEventListener('resize', updateIndicator);
 		return () => {
@@ -558,7 +521,7 @@ const ConnectionHistory = ({
 		};
 	}, [typeFilter, activeGroupId, favoriteGroups]);
 
-	// Funciones para gestiÃ³n de grupos
+	// Funciones para gesti\u00F3n de grupos
 	const handleCreateGroup = () => {
 		if (!newGroupName.trim()) return;
 		try {
@@ -577,7 +540,7 @@ const ConnectionHistory = ({
 	};
 
 	const handleDeleteGroup = (groupId) => {
-		if (!window.confirm('Â¿EstÃ¡s seguro de que deseas eliminar este grupo?')) return;
+		if (!window.confirm('\u00BFEst\u00E1s seguro de que deseas eliminar este grupo?')) return;
 		try {
 			favoriteGroupsStore.deleteGroup(groupId);
 			setFavoriteGroups(favoriteGroupsStore.getGroups());
@@ -605,7 +568,7 @@ const ConnectionHistory = ({
 	// Manejar toggle de favorito con selector de grupo
 	const handleToggleFavoriteWithGroup = (connection) => {
 		const isCurrentlyFavorite = isFavorite(connection);
-		// Calcular grupos personalizados aquÃ­ para evitar problemas de hoisting
+		// Calcular grupos personalizados aqu\u00ED para evitar problemas de hoisting
 		const userGroups = favoriteGroups.filter(g => !g.isDefault);
 
 		if (isCurrentlyFavorite) {
@@ -633,14 +596,14 @@ const ConnectionHistory = ({
 
 		const isFav = isFavorite(connectionToFavorite);
 
-		// Solo hacemos toggle si NO es favorito (para aÃ±adirlo).
-		// Si YA es favorito, no hacemos toggle (lo quitarÃ­a), solo actualizamos grupos.
+		// Solo hacemos toggle si NO es favorito (para a\u00F1adirlo).
+		// Si YA es favorito, no hacemos toggle (lo quitar\u00EDa), solo actualizamos grupos.
 		if (!isFav) {
 			toggleFavorite(connectionToFavorite);
 		}
 
 		// Asignar a grupos seleccionados
-		// Usamos un ID consistente (el toggle ya debiÃ³ aÃ±adirlo al store si era nuevo)
+		// Usamos un ID consistente (el toggle ya debi\u00F3 a\u00F1adirlo al store si era nuevo)
 		const serial = typeof connectionToFavorite === 'string'
 			? connectionToFavorite
 			: (connectionToFavorite.id || helpers.buildId(connectionToFavorite));
@@ -653,7 +616,7 @@ const ConnectionHistory = ({
 		loadConnectionHistory();
 	};
 
-	// FunciÃ³n para quitar de favoritos desde el diÃ¡logo
+	// Funci\u00F3n para quitar de favoritos desde el di\u00E1logo
 	const handleRemoveFavoriteFromDialog = () => {
 		if (!connectionToFavorite) return;
 
@@ -668,7 +631,7 @@ const ConnectionHistory = ({
 		loadConnectionHistory();
 	};
 
-	// Toggle selecciÃ³n de grupo para el favorito
+	// Toggle selecci\u00F3n de grupo para el favorito
 	const toggleGroupForFavorite = (groupId) => {
 		setSelectedGroupsForFav(prev => {
 			if (prev.includes(groupId)) {
@@ -683,7 +646,7 @@ const ConnectionHistory = ({
 	const [editingFavorite, setEditingFavorite] = useState(null);
 	const [editSelectedGroups, setEditSelectedGroups] = useState([]);
 
-	// Abrir diÃ¡logo para editar grupos de un favorito existente
+	// Abrir di\u00E1logo para editar grupos de un favorito existente
 	const handleEditFavoriteGroups = (connection) => {
 		const favId = connection.id || helpers.buildId(connection);
 		const currentGroups = favoriteGroupsStore.getFavoriteGroups(favId);
@@ -721,7 +684,7 @@ const ConnectionHistory = ({
 			const syncedFavs = favs.map(fav => {
 				const recent = recentById.get(fav.id);
 				if (recent && recent.lastConnected) {
-					// Si existe en recientes, usar su lastConnected (mÃ¡s actualizado)
+					// Si existe en recientes, usar su lastConnected (m\u00E1s actualizado)
 					return { ...fav, lastConnected: recent.lastConnected, isFavorite: true };
 				}
 				return { ...fav, isFavorite: true };
@@ -755,7 +718,7 @@ const ConnectionHistory = ({
 	};
 
 	const getConnectionTypeIconSVG = (type, customIcon = null) => {
-		// Si hay un icono personalizado y es vÃ¡lido, usarlo
+		// Si hay un icono personalizado y es v\u00E1lido, usarlo
 		if (customIcon && customIcon !== 'default' && SSHIconPresets[customIcon.toUpperCase()]) {
 			return null; // Retornar null para que se use SSHIconRenderer en su lugar
 		}
@@ -764,7 +727,7 @@ const ConnectionHistory = ({
 		const icons = (iconThemes[theme] || iconThemes['nord']).icons || {};
 		switch (type) {
 			case 'ssh': return icons.ssh;
-			case 'ssh-tunnel': return icons.ssh; // Usar icono SSH por defecto si no hay especÃ­fico
+			case 'ssh-tunnel': return icons.ssh; // Usar icono SSH por defecto si no hay espec\u00EDfico
 			case 'rdp':
 			case 'rdp-guacamole': return icons.rdp;
 			case 'vnc':
@@ -1019,7 +982,7 @@ const ConnectionHistory = ({
 	// Componente interno para las tarjetas del Carrusel
 	const RibbonCard = ({ connection, isActive, onConnect, onEdit, onToggleFav, onEditGroups, onDragStart, onDragOver, onDrop, index }) => {
 		const typeColor = getConnectionTypeColor(connection.type);
-		const hostLabel = connection.host || connection.hostname || 'â€”';
+		const hostLabel = connection.host || connection.hostname || '-';
 
 		return (
 			<div
@@ -1174,7 +1137,7 @@ const ConnectionHistory = ({
 							const nodeData = JSON.parse(data);
 							const connection = nodeData.data;
 							if (connection) {
-								// Usar el label del nodo como nombre de la conexiÃ³n si no tiene uno o para asegurar que sea el correcto
+								// Usar el label del nodo como nombre de la conexi\u00F3n si no tiene uno o para asegurar que sea el correcto
 								if (nodeData.label) {
 									connection.name = nodeData.label;
 								}
@@ -1189,7 +1152,7 @@ const ConnectionHistory = ({
 										window.toast.current.show({
 											severity: 'success',
 											summary: 'Agregado a Favoritos',
-											detail: connection.name || 'ConexiÃ³n agregada',
+											detail: connection.name || 'Conexi\u00F3n agregada',
 											life: 2000
 										});
 									}
@@ -1198,7 +1161,7 @@ const ConnectionHistory = ({
 										window.toast.current.show({
 											severity: 'info',
 											summary: 'Ya existe',
-											detail: 'Esta conexiÃ³n ya estÃ¡ en favoritos',
+											detail: 'Esta conexi\u00F3n ya est\u00E1 en favoritos',
 											life: 2000
 										});
 									}
@@ -1377,7 +1340,7 @@ const ConnectionHistory = ({
 	// Filtros unificados visibles (protocolos + grupos personalizados)
 	const visibleFilters = allFilters.filter(f => f.visible);
 
-	// Calcular contadores por tipo de conexiÃ³n
+	// Calcular contadores por tipo de conexi\u00F3n
 	const countByType = (connections, filterKey) => {
 		if (filterKey === 'all') return connections.length;
 		if (filterKey === 'vnc-guacamole') return connections.filter(c => c.type === 'vnc-guacamole' || c.type === 'vnc').length;
@@ -1424,7 +1387,7 @@ const ConnectionHistory = ({
 					>
 						<i className={fav ? 'pi pi-star-fill' : 'pi pi-star'} />
 					</button>
-					<button className="hrc-connect-btn" onClick={() => onConnect?.(connection)}>â†’ connect</button>
+					<button className="hrc-connect-btn" onClick={() => onConnect?.(connection)}>{'\u2192'} connect</button>
 				</div>
 			</div>
 		);
@@ -1474,7 +1437,7 @@ const ConnectionHistory = ({
 
 	// Debug: Log theme colors to see what we're getting
 	React.useEffect(() => {
-		// console.log('ðŸŽ¨ ConnectionHistory themeColors:', {
+		// console.log('\uD83D\uDCC1 ConnectionHistory themeColors:', {
 		// 	itemBackground: themeColors.itemBackground,
 		// 	cardBackground: themeColors.cardBackground,
 		// 	textPrimary: themeColors.textPrimary
@@ -1516,7 +1479,7 @@ const ConnectionHistory = ({
 					z-index: 100;
 				}
 				.hero-search-container::before {
-					content: "âžœ  ~";
+					content: "\u279C  ~";
 					position: absolute;
 					left: 20px;
 					top: 50%;
@@ -1625,7 +1588,7 @@ const ConnectionHistory = ({
 				.hero-shortcuts { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.3)'}; font-size: 0.75rem; display: flex; justify-content: center; gap: 20px; font-weight: 500;}
 				.hero-shortcuts kbd { background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); margin-right: 6px; font-family: monospace; color: rgba(255,255,255,0.7); }
 
-				/* â”€â”€ Terminal Frame for Recents â”€â”€ */
+				/* --- Terminal Frame for Recents --- */
 				.recents-terminal-frame {
 					margin: 0 1rem 1rem 1rem;
 					border-radius: 12px;
@@ -1707,7 +1670,7 @@ const ConnectionHistory = ({
 					scrollbar-width: thin;
 					scrollbar-color: ${terminalTheme.brightBlack || '#444'} transparent;
 				}
-				/* â”€â”€ Grep-style connection rows â”€â”€ */
+				/* --- Grep-style connection rows --- */
 				.connection-list-body {
 					display: flex !important;
 					flex-direction: column !important;
@@ -1915,7 +1878,7 @@ const ConnectionHistory = ({
 
 								// Obtener ruta de carpetas
 								const folderPath = getNodeFolderPath(sidebarNodes, node);
-								const folderPathString = folderPath && folderPath.length > 0 ? folderPath.join(' / ') : 'RaÃ­z';
+								const folderPathString = folderPath && folderPath.length > 0 ? folderPath.join(' / ') : 'Ra\u00EDz';
 
 								return (
 									<div
@@ -1936,7 +1899,7 @@ const ConnectionHistory = ({
 											</div>
 											<div className="search-result-sub-container">
 												<span className="search-result-sub">{sub}</span>
-												{!isPassword && <span className="search-result-folder">ðŸ“ {folderPathString}</span>}
+												{!isPassword && <span className="search-result-folder">{'\uD83D\uDCC1'}  {folderPathString}</span>}
 											</div>
 										</div>
 									</div>
@@ -1982,10 +1945,10 @@ const ConnectionHistory = ({
 				</div>
 
 				<div className="hero-shortcuts">
-					<span><kbd>âŒ˜K</kbd> Quick connect</span>
-					<span><kbd>âŒ˜T</kbd> New terminal</span>
-					<span><kbd>âŒ˜R</kbd> Recent</span>
-					<span><kbd>âŒ˜F</kbd> Favorites</span>
+					<span><kbd>{'\u2318'}K</kbd> Quick connect</span>
+					<span><kbd>{'\u2318'}T</kbd> New terminal</span>
+					<span><kbd>{'\u2318'}R</kbd> Recent</span>
+					<span><kbd>{'\u2318'}F</kbd> Favorites</span>
 				</div>
 			</div > {/* FilterPanel Dropdown - Rendered in Portal to avoid clipping */}
 			{
@@ -2059,7 +2022,7 @@ const ConnectionHistory = ({
 													}
 												}}
 												disabled={filter.id === 'all'}
-												title={filter.id === 'all' ? 'Este filtro siempre estÃ¡ visible' : (filter.visible ? 'Ocultar' : 'Mostrar')}
+												title={filter.id === 'all' ? 'Este filtro siempre est\u00E1 visible' : (filter.visible ? 'Ocultar' : 'Mostrar')}
 											>
 												<i className={filter.visible ? 'pi pi-eye' : 'pi pi-eye-slash'} />
 											</button>
@@ -2103,7 +2066,7 @@ const ConnectionHistory = ({
 										type="text"
 										value={newGroupName}
 										onChange={(e) => setNewGroupName(e.target.value)}
-										placeholder="Ej: ProducciÃ³n, Desarrollo..."
+										placeholder="Ej: Producci\u00F3n, Desarrollo..."
 										autoFocus
 										onKeyDown={(e) => e.key === 'Enter' && handleCreateGroup()}
 									/>
@@ -2360,7 +2323,7 @@ const ConnectionHistory = ({
 								<div className="traffic-dot green" />
 							</div>
 							<div className="header-path">
-								<span className="path-tilde">~</span>/recent &nbsp;Â·&nbsp; {filteredRecentsForDisplay.length} connections
+								<span className="path-tilde">~</span>/recent &nbsp;\u00B7&nbsp; {filteredRecentsForDisplay.length} connections
 							</div>
 							<div className="recents-header-right">
 								<button
@@ -2431,3 +2394,4 @@ const ConnectionHistory = ({
 };
 
 export default ConnectionHistory;
+

@@ -40,9 +40,9 @@ const HomeTab = ({
   secureStorage = null,
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [terminalState, setTerminalState] = useState('normal'); // Estado normal para tamaño correcto
+  const [terminalState, setTerminalState] = useState('normal'); // Estado normal para tama\u00F1o correcto
   const [terminalHidden, setTerminalHidden] = useState(() => {
-    // Leer configuración desde localStorage, por defecto visible (terminalHidden = false)
+    // Leer configuraci\u00F3n desde localStorage, por defecto visible (terminalHidden = false)
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE);
       const isVisible = saved !== null ? saved === 'true' : true; // Por defecto true (visible)
@@ -78,7 +78,7 @@ const HomeTab = ({
     }
   });
 
-  // Configuración de tipografía de HomeTab
+  // Configuraci\u00F3n de tipograf\u00EDa de HomeTab
   const [homeTabFont, setHomeTabFont] = useState(() => {
     try {
       return localStorage.getItem('homeTabFont') || localStorage.getItem('sidebarFont') || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
@@ -106,7 +106,7 @@ const HomeTab = ({
   const [terminalView, setTerminalView] = useState(true);
   const [embeddedTerminalHeight, setEmbeddedTerminalHeight] = useState(360);
 
-  // Auto-inicializar terminal embebido al montar el componente si está visible por defecto
+  // Auto-inicializar terminal embebido al montar el componente si est\u00E1 visible por defecto
   useEffect(() => {
     if (terminalView && !embeddedTerminalInitialized.current) {
       const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
@@ -125,7 +125,7 @@ const HomeTab = ({
     }
   }, []);
 
-  // Medir el tamaño real del contenedor
+  // Medir el tama\u00F1o real del contenedor
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current) {
@@ -133,7 +133,7 @@ const HomeTab = ({
       }
     };
 
-    updateSize(); // Medición inicial
+    updateSize(); // Medici\u00F3n inicial
 
     const observer = new ResizeObserver(updateSize);
     if (containerRef.current) observer.observe(containerRef.current);
@@ -240,7 +240,7 @@ const HomeTab = ({
     };
   }, []);
 
-  // Determinar el título del terminal basado en la terminal por defecto
+  // Determinar el t\u00EDtulo del terminal basado en la terminal por defecto
   useEffect(() => {
     const updateTerminalTitle = () => {
       try {
@@ -256,14 +256,14 @@ const HomeTab = ({
           };
 
           if (defaultTerminal.startsWith('docker-')) {
-            setTerminalTitle(`🐳 ${defaultTerminal.replace('docker-', '')}`);
+            setTerminalTitle(`\uD83D\uDC33 ${defaultTerminal.replace('docker-', '')}`);
           } else if (terminalTitles[defaultTerminal]) {
             setTerminalTitle(terminalTitles[defaultTerminal]);
           } else {
             setTerminalTitle(defaultTerminal);
           }
         } else {
-          // Fallback por defecto según plataforma
+          // Fallback por defecto seg\u00FAn plataforma
           if (platform === 'linux') setTerminalTitle('Terminal Linux');
           else if (platform === 'darwin') setTerminalTitle('Terminal macOS');
           else setTerminalTitle('Windows PowerShell');
@@ -320,7 +320,7 @@ const HomeTab = ({
       loadRecentConnections();
       loadRecentPasswords();
     });
-    // Respaldo: suscripción directa que se ejecuta en el mismo tick que recordRecent (por si el evento falla en Electron)
+    // Respaldo: suscripci\u00F3n directa que se ejecuta en el mismo tick que recordRecent (por si el evento falla en Electron)
     const off2 = subscribeRecents(() => {
       loadRecentConnections();
       loadRecentPasswords();
@@ -331,7 +331,7 @@ const HomeTab = ({
     };
   }, [loadRecentConnections, loadRecentPasswords]);
 
-  // Refrescar recientes al volver a la pestaña Inicio (por si se perdió un evento o se conectó desde otro grupo)
+  // Refrescar recientes al volver a la pesta\u00F1a Inicio (por si se perdi\u00F3 un evento o se conect\u00F3 desde otro grupo)
   useEffect(() => {
     if (isActiveTab) {
       loadRecentConnections();
@@ -440,7 +440,7 @@ const HomeTab = ({
         await navigator.clipboard.writeText(text);
       }
 
-      // Mostrar notificación si está disponible
+      // Mostrar notificaci\u00F3n si est\u00E1 disponible
       if (window.toast?.current?.show) {
         window.toast.current.show({
           severity: 'success',
@@ -456,7 +456,7 @@ const HomeTab = ({
 
   const openPasswordTab = (passwordData) => {
     try {
-      // Crear el evento para abrir la pestaña de password
+      // Crear el evento para abrir la pesta\u00F1a de password
       const event = new CustomEvent('open-password-tab', {
         detail: {
           key: passwordData.id,
@@ -476,7 +476,7 @@ const HomeTab = ({
       // Dispatch del evento
       window.dispatchEvent(event);
     } catch (err) {
-      console.error('Error abriendo pestaña de password:', err);
+      console.error('Error abriendo pesta\u00F1a de password:', err);
     }
   };
 
@@ -526,7 +526,7 @@ const HomeTab = ({
       g = parseInt(parts[1]);
       b = parseInt(parts[2]);
     } else {
-      // Intentar una aproximación para colores con nombre o desconocidos
+      // Intentar una aproximaci\u00F3n para colores con nombre o desconocidos
       return adjustOpacity(color, opacity);
     }
 
@@ -566,7 +566,7 @@ const HomeTab = ({
       cardBorder: currentTheme.colors?.dialogBorder || currentTheme.colors?.contentBorder || 'rgba(255,255,255,0.1)',
       cardBackground: currentTheme.colors?.dialogBackground || 'rgba(16, 20, 28, 0.6)',
       primaryColor: currentTheme.colors?.buttonPrimary || currentTheme.colors?.primaryColor || '#2196f3',
-      // Colores específicos para el buscador para asegurar que resalte en todos los temas
+      // Colores espec\u00EDficos para el buscador para asegurar que resalte en todos los temas
       searchBackground: getContrastBg(currentTheme.colors?.contentBackground || '#1e1e1e', 0.85),
       searchBorder: adjustOpacity(currentTheme.colors?.primaryColor || '#2196f3', 0.5),
       searchFocusBorder: currentTheme.colors?.primaryColor || '#2196f3',
@@ -615,7 +615,7 @@ const HomeTab = ({
       // Manejar conexiones VNC-Guacamole y VNC
       handleCreateVncConnection(connection);
     } else if (connection.type === 'ssh-tunnel') {
-      // Manejar túneles SSH
+      // Manejar t\u00FAneles SSH
       if (onOpenSSHTunnel) {
         onOpenSSHTunnel(connection);
       }
@@ -657,11 +657,11 @@ const HomeTab = ({
   }, []);
 
 
-  // Función para toggle de visibilidad del terminal
+  // Funci\u00F3n para toggle de visibilidad del terminal
   const handleToggleTerminalVisibility = () => {
     setTerminalHidden(prev => {
       const newHidden = !prev;
-      // Si se está mostrando el terminal, cambiar el estado a 'normal' (1/4 de página)
+      // Si se est\u00E1 mostrando el terminal, cambiar el estado a 'normal' (1/4 de p\u00E1gina)
       if (!newHidden) {
         setTerminalState('normal');
       }
@@ -669,12 +669,12 @@ const HomeTab = ({
     });
   };
 
-  // Función para toggle del chat de IA
+  // Funci\u00F3n para toggle del chat de IA
   const handleToggleAIChat = () => {
     setShowAIChat(prev => !prev);
   };
 
-  // Función para toggle de la status bar
+  // Funci\u00F3n para toggle de la status bar
   const handleToggleStatusBar = () => {
     setStatusBarVisible(prev => {
       const newValue = !prev;
@@ -730,7 +730,7 @@ const HomeTab = ({
     };
   }, []);
 
-  // Escuchar evento para añadir terminal al TabbedTerminal desde la columna derecha
+  // Escuchar evento para a\u00F1adir terminal al TabbedTerminal desde la columna derecha
   useEffect(() => {
     const handleAddTerminal = (e) => {
       const { terminalType, distroInfo } = e?.detail || {};
@@ -756,7 +756,7 @@ const HomeTab = ({
       setTerminalView(true);
       if (!embeddedTerminalInitialized.current && terminalType) {
         embeddedTerminalInitialized.current = true;
-        // Solo para el terminal embebido, le agregamos el tab explícito si es la primera vez
+        // Solo para el terminal embebido, le agregamos el tab expl\u00EDcito si es la primera vez
         setTimeout(() => {
           try {
             if (embeddedTabbedTerminalRef.current?.addTerminalTab) {
@@ -766,7 +766,7 @@ const HomeTab = ({
             console.warn('[HomeTab] embedded addTerminalTab:', err);
           }
           window.dispatchEvent(new Event('resize'));
-        }, 150); // Dar algo más de tiempo para que se monte correctamente en el viewport antes de crear xterm
+        }, 150); // Dar algo m\u00E1s de tiempo para que se monte correctamente en el viewport antes de crear xterm
       } else {
         setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
       }
@@ -782,7 +782,7 @@ const HomeTab = ({
   // Panel superior: Nuevo layout con 3 columnas (basado en redesigned pero con ConnectionHistory)
   const topPanel = (
     <>
-      {/* Estilos para la animación del spinner */}
+      {/* Estilos para la animaci\u00F3n del spinner */}
       <style>
         {`
           @keyframes spin {
@@ -802,7 +802,7 @@ const HomeTab = ({
         transition: 'opacity 0.1s ease, visibility 0.1s ease'
       }}>
         <div className="home-page-scroll" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
-          {/* Layout principal: área central + columna derecha */}
+          {/* Layout principal: \u00E1rea central + columna derecha */}
           <div style={{
             display: 'flex',
             flexDirection: 'row',
@@ -811,7 +811,7 @@ const HomeTab = ({
             overflow: 'hidden',
             height: '100%'
           }}>
-            {/* Áreas central */}
+            {/* \u00C1reas central */}
             <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {/* Mostrar Chat de IA o contenido normal */}
               {showAIChat ? (
@@ -929,7 +929,7 @@ const HomeTab = ({
     </>
   );
 
-  // Panel inferior: Terminal con pestañas flotante
+  // Panel inferior: Terminal con pesta\u00F1as flotante
   const bottomPanel = (
     <div style={{
       height: '100%',
