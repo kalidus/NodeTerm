@@ -2258,9 +2258,9 @@ const ConnectionHistory = ({
 				)
 			}
 
-			{/* FAVORITES RIBBON (Always visible or toggled) */}
+			{/* FAVORITES RIBBON (Visible in 'all' view) */}
 			{
-				!terminalView && (activeBottomView === 'all' || activeBottomView === 'favorites') && (
+				!terminalView && activeBottomView === 'all' && (
 					<FavoritesRibbon
 						connections={filteredFavorites}
 						fullList={favoriteConnections}
@@ -2306,6 +2306,88 @@ const ConnectionHistory = ({
 				)
 			}
 
+			{/* FAVORITES TABLE - Terminal-style frame for favorites */}
+			{
+				!terminalView && activeBottomView === 'favorites' && (
+					<div className="recents-terminal-frame favorites-terminal-frame">
+						{/* macOS-style header */}
+						<div className="recents-terminal-header">
+							<div className="traffic-lights">
+								<div
+									className="traffic-dot red"
+									onClick={() => setActiveBottomView('all')}
+									title="Cerrar favoritos"
+								/>
+								<div className="traffic-dot yellow" />
+								<div className="traffic-dot green" />
+							</div>
+							<div className="header-path">
+								<span className="path-tilde">~</span>/favorites &nbsp;{'\u00B7'}&nbsp; {filteredFavorites.length} connections
+							</div>
+							<div className="recents-header-right">
+								<button
+									className={`recents-header-filter-btn ${getActiveFilterCount(activeFavFilters) > 0 ? 'active' : ''}`}
+									onClick={() => { setFilterContext('favorites'); setFilterPanelOpen(true); }}
+									title="Filtrar favoritos"
+								>
+									<i className={`pi ${getActiveFilterCount(activeFavFilters) > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
+									{getActiveFilterCount(activeFavFilters) > 0 && (
+										<span style={{ fontSize: '0.7rem', marginLeft: 3 }}>{getActiveFilterCount(activeFavFilters)}</span>
+									)}
+								</button>
+							</div>
+						</div>
+
+						{/* Active filter chips strip for favorites */}
+						{getActiveFilterCount(activeFavFilters) > 0 && (
+							<div className="recents-filter-chips-bar">
+								{activeFavFilters.protocols?.map(filterId => (
+									<FilterBadge
+										key={`fav-protocol-${filterId}`}
+										label={getFilterLabel('protocols', filterId)}
+										color={getFilterColor('protocols', filterId)}
+										icon={getFilterIcon('protocols', filterId)}
+										type="protocol"
+										onRemove={() => handleRemoveFilter('favorites', 'protocols', filterId)}
+										compact
+									/>
+								))}
+								{activeFavFilters.groups?.map(filterId => (
+									<FilterBadge
+										key={`fav-group-${filterId}`}
+										label={getFilterLabel('groups', filterId)}
+										color={getFilterColor('groups', filterId)}
+										icon={getFilterIcon('groups', filterId)}
+										type="group"
+										onRemove={() => handleRemoveFilter('favorites', 'groups', filterId)}
+										compact
+									/>
+								))}
+								{activeFavFilters.states?.map(filterId => (
+									<FilterBadge
+										key={`fav-state-${filterId}`}
+										label={getFilterLabel('states', filterId)}
+										color={getFilterColor('states', filterId)}
+										icon={getFilterIcon('states', filterId)}
+										type="state"
+										onRemove={() => handleRemoveFilter('favorites', 'states', filterId)}
+										compact
+									/>
+								))}
+							</div>
+						)}
+
+						{/* Grep-style connection list for favorites */}
+						<div className="recents-terminal-body">
+							<ConnectionTable
+								connections={filteredFavorites}
+								title="Favoritos"
+								emptyMessage="# no favorite sessions found"
+							/>
+						</div>
+					</div>
+				)
+			}
 
 			{/* RECIENTES TABLE - Terminal-style frame with grep rows */}
 			{
