@@ -840,104 +840,35 @@ const HomeTab = ({
                   </div>
                 </div>
               ) : (
-                // Contenido normal: ConnectionHistory (con header+botones) + terminal en flujo
-                <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  {/* ConnectionHistory - siempre renderiza el header; oculta Fav/Recent cuando terminalView */}
-                  <div style={{
-                    flex: terminalView ? '0 0 auto' : 1,
-                    minHeight: 0,
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column'
-                  }}>
-                    <ConnectionHistory
-                      onConnectToHistory={handleConnectToHistory}
-                      recentConnections={recentConnections}
-                      activeIds={activeIds}
-                      onEdit={onEditConnection}
-                      themeColors={themeColors}
-                      sidebarNodes={sidebarNodes}
-                      masterKey={masterKey}
-                      secureStorage={secureStorage}
-                      terminalView={terminalView}
-                      onTerminalToggle={handleTerminalToggle}
-                      terminalTheme={localTerminalTheme}
+                // Contenido normal: ConnectionHistory maneja todo, incluido el terminal si terminalView
+                <ConnectionHistory
+                  onConnectToHistory={handleConnectToHistory}
+                  recentConnections={recentConnections}
+                  activeIds={activeIds}
+                  onEdit={onEditConnection}
+                  themeColors={themeColors}
+                  sidebarNodes={sidebarNodes}
+                  masterKey={masterKey}
+                  secureStorage={secureStorage}
+                  terminalView={terminalView}
+                  onTerminalToggle={handleTerminalToggle}
+                  terminalTheme={localTerminalTheme}
+                  terminalTitle={`/local \u00B7 ${terminalTitle}`}
+                >
+                  {/* Terminal body - always mounted to preserve state */}
+                  <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <TabbedTerminal
+                      ref={embeddedTabbedTerminalRef}
+                      terminalState="normal"
+                      localFontFamily={localFontFamily}
+                      localFontSize={localFontSize}
+                      localPowerShellTheme={localPowerShellTheme}
+                      localLinuxTerminalTheme={localLinuxTerminalTheme}
+                      hideStatusBar={true}
+                      hideTabs={true}
                     />
                   </div>
-
-                  {/* Terminal embebido - tarjeta integrada (siempre renderizado para mantener estado) */}
-                  <div
-                    style={{
-                      flex: terminalView ? 1 : 0,
-                      margin: terminalView ? '0 1rem 1rem 1rem' : '0 1rem 0 1rem',
-                      borderRadius: '12px',
-                      overflow: 'hidden',
-                      display: terminalView ? 'flex' : 'none',
-                      flexDirection: 'column',
-                      border: `1px solid ${localTerminalTheme.brightBlack ? localTerminalTheme.brightBlack + '55' : 'rgba(255,255,255,0.12)'}`,
-                      background: localTerminalBg,
-                      boxShadow: '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)',
-                      position: 'relative',
-                      minHeight: terminalView ? '120px' : '0'
-                    }}
-                  >
-                    {/* Header estilo macOS */}
-                    <div style={{
-                      height: '36px',
-                      flexShrink: 0,
-                      background: localTerminalTheme.background ? localTerminalTheme.background + 'ee' : 'rgba(20,22,28,0.95)',
-                      borderBottom: `1px solid ${localTerminalTheme.brightBlack ? localTerminalTheme.brightBlack + '44' : 'rgba(255,255,255,0.08)'}`,
-                      borderRadius: '12px 12px 0 0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '0 12px',
-                      position: 'relative',
-                      gap: 0
-                    }}>
-                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
-                        <div
-                          onClick={() => setTerminalView(false)}
-                          style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56', cursor: 'pointer', border: '1px solid #e0443e', flexShrink: 0, transition: 'filter 0.15s' }}
-                          title="Ocultar Terminal"
-                          onMouseOver={(e) => e.target.style.filter = 'brightness(1.25)'}
-                          onMouseOut={(e) => e.target.style.filter = 'none'}
-                        />
-                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e', border: '1px solid #dea123', flexShrink: 0 }} />
-                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f', border: '1px solid #1aab29', flexShrink: 0 }} />
-                      </div>
-                      <div style={{
-                        flex: 1,
-                        textAlign: 'center',
-                        color: localTerminalTheme.foreground || '#c9d1d9',
-                        opacity: 0.6,
-                        fontSize: '11.5px',
-                        userSelect: 'none',
-                        pointerEvents: 'none',
-                        fontFamily: "'Fira Code', 'Cascadia Code', 'Consolas', monospace",
-                        fontWeight: 400,
-                        letterSpacing: '0.3px'
-                      }}>
-                        <span style={{ color: localTerminalTheme.green || '#3fb950' }}>~</span>/local &nbsp;{'\u00B7'}&nbsp; {terminalTitle}
-                      </div>
-                      {/* Fake right element to balance flex and align precisely same as ConnectionHistory filter button */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, width: '28px', visibility: 'hidden' }}>
-                      </div>
-                    </div>
-                    {/* Contenido del terminal */}
-                    <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                      <TabbedTerminal
-                        ref={embeddedTabbedTerminalRef}
-                        terminalState="normal"
-                        localFontFamily={localFontFamily}
-                        localFontSize={localFontSize}
-                        localPowerShellTheme={localPowerShellTheme}
-                        localLinuxTerminalTheme={localLinuxTerminalTheme}
-                        hideStatusBar={true}
-                        hideTabs={true}
-                      />
-                    </div>
-                  </div>
-                </div>
+                </ConnectionHistory>
               )}
             </div>
           </div>

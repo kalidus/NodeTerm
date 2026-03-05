@@ -132,6 +132,8 @@ const ConnectionHistory = ({
 	terminalView = false,
 	onTerminalToggle = null,
 	terminalTheme = {},
+	terminalTitle = '/local',
+	children
 }) => {
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
 	const [passwordNodes, setPasswordNodes] = useState([]);
@@ -1445,10 +1447,12 @@ const ConnectionHistory = ({
 	}, [themeColors]);
 
 	return (
-		<div className="connection-history-root" style={{ background: 'transparent' }}>
+		<div className={`connection-history-root${terminalView ? ' is-terminal-view' : ''}`} style={{ background: 'transparent' }}>
 			<style>{`
 				/* -- Custom Hero Splash Styles -- */
-				.connection-history-root { background: transparent !important; height: 100%; overflow-y: auto; color: ${themeColors.textPrimary || '#fff'}; }
+				.connection-history-root { background: transparent !important; height: 100%; display: flex; flex-direction: column; color: ${themeColors.textPrimary || '#fff'}; }
+				.connection-history-root:not(.is-terminal-view) { overflow-y: auto; }
+				.connection-history-root.is-terminal-view { overflow: hidden; }
 				.connection-history-section { border: none !important; background: transparent !important; }
 				.hero-splash-header {
 					text-align: center;
@@ -1600,9 +1604,11 @@ const ConnectionHistory = ({
 					box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
 					flex: 1;
 					min-height: 120px;
+					box-sizing: border-box;
 				}
 				.recents-terminal-header {
 					height: 36px;
+					box-sizing: border-box;
 					flex-shrink: 0;
 					background: ${terminalTheme.background ? terminalTheme.background + 'ee' : 'rgba(20,22,28,0.95)'};
 					border-bottom: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '44' : 'rgba(255,255,255,0.08)'};
@@ -2470,6 +2476,35 @@ const ConnectionHistory = ({
 								emptyMessage="# no recent sessions"
 							/>
 						</div>
+					</div>
+				)
+			}
+
+			{/* EMBEDDED LOCAL TERMINAL - Shared Frame */}
+			{
+				terminalView && (
+					<div className="recents-terminal-frame">
+						{/* macOS-style header */}
+						<div className="recents-terminal-header">
+							<div className="traffic-lights">
+								<div
+									className="traffic-dot red"
+									onClick={() => { if (onTerminalToggle) onTerminalToggle(false); }}
+									title="Ocultar Terminal"
+								/>
+								<div className="traffic-dot yellow" />
+								<div className="traffic-dot green" />
+							</div>
+							<div className="header-path">
+								<span className="path-tilde">~</span>{terminalTitle}
+							</div>
+							<div className="recents-header-right">
+								<i className="pi pi-th-large" style={{ fontSize: '0.9rem', color: terminalTheme.foreground || '#c9d1d9', opacity: 0.3, cursor: 'not-allowed' }} title="Split Terminal (Próximamente)" />
+							</div>
+						</div>
+
+						{/* Terminal Body */}
+						{children}
 					</div>
 				)
 			}
