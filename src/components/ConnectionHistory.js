@@ -2480,37 +2480,32 @@ const ConnectionHistory = ({
 				)
 			}
 
-			{/* EMBEDDED LOCAL TERMINAL - Shared Frame */}
-			{
-				terminalView && (
-					<div className="recents-terminal-frame">
-						{/* macOS-style header */}
-						<div className="recents-terminal-header">
-							<div className="traffic-lights">
-								<div
-									className="traffic-dot red"
-									onClick={() => { if (onTerminalToggle) onTerminalToggle(false); }}
-									title="Ocultar Terminal"
-								/>
-								<div className="traffic-dot yellow" />
-								<div className="traffic-dot green" />
-							</div>
-							<div className="header-path">
-								<span className="path-tilde">~</span>{terminalTitle}
-							</div>
-							<div className="recents-header-right">
-								<i className="pi pi-th-large" style={{ fontSize: '0.9rem', color: terminalTheme.foreground || '#c9d1d9', opacity: 0.3, cursor: 'not-allowed' }} title="Split Terminal (Próximamente)" />
-							</div>
-						</div>
-
-						{/* Terminal Body */}
-						{children}
+			{/* EMBEDDED LOCAL TERMINAL - Always mounted to preserve session state, shown/hidden via display */}
+			<div className="recents-terminal-frame" style={{ display: terminalView ? 'flex' : 'none' }}>
+				{/* macOS-style header */}
+				<div className="recents-terminal-header">
+					<div className="traffic-lights">
+						<div
+							className="traffic-dot red"
+							onClick={() => { if (onTerminalToggle) onTerminalToggle(false); }}
+							title="Ocultar Terminal"
+						/>
+						<div className="traffic-dot yellow" />
+						<div className="traffic-dot green" />
 					</div>
-				)
-			}
+					<div className="header-path">
+						<span className="path-tilde">~</span>{terminalTitle}
+					</div>
+					<div className="recents-header-right">
+						<i className="pi pi-th-large" style={{ fontSize: '0.9rem', color: terminalTheme.foreground || '#c9d1d9', opacity: 0.3, cursor: 'not-allowed' }} title="Split Terminal (Próximamente)" />
+					</div>
+				</div>
+
+				{/* Terminal Body - always kept alive */}
+				{children}
+			</div>
 		</div >
 	);
 };
 
 export default ConnectionHistory;
-
