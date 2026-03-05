@@ -1845,6 +1845,27 @@ const ConnectionHistory = ({
 				.hero-chip-content { display: flex; flex-direction: column; overflow: hidden; justify-content: center;}
 				.hero-chip-name { color: ${themeColors.textPrimary || '#fff'}; font-weight: 500; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;}
 				.hero-chip-host { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.5)'}; font-size: 0.8rem; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.7;}
+				/* Custom scrollbar for theme picker overlay */
+				.theme-picker-overlay .p-overlaypanel-content {
+					padding: 0;
+				}
+				.theme-picker-overlay *::-webkit-scrollbar {
+					width: 8px;
+				}
+				.theme-picker-overlay *::-webkit-scrollbar-track {
+					background: transparent;
+				}
+				.theme-picker-overlay *::-webkit-scrollbar-thumb {
+					background: rgba(255, 255, 255, 0.15);
+					border-radius: 4px;
+					border: 2px solid transparent;
+					background-clip: padding-box;
+				}
+				.theme-picker-overlay *::-webkit-scrollbar-thumb:hover {
+					background: rgba(255, 255, 255, 0.3);
+					border: 2px solid transparent;
+					background-clip: padding-box;
+				}
 			`}</style>
 
 			<div className="hero-splash-header">
@@ -2607,9 +2628,10 @@ const ConnectionHistory = ({
 									width: '18px',
 									height: '18px',
 									borderRadius: '4px',
-									backgroundColor: currentTheme.background || '#000',
-									border: '1px solid rgba(255,255,255,0.1)',
-									boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+									background: `linear-gradient(135deg, ${currentTheme.background || '#000'} 0%, ${currentTheme.background || '#000'} 45%, ${currentTheme.cursor || currentTheme.green || currentTheme.foreground || '#fff'} 100%)`,
+									border: `1px solid ${currentTheme.cursor || currentTheme.foreground || 'rgba(255,255,255,0.2)'}`,
+									boxShadow: '0 2px 4px rgba(0,0,0,0.4)',
+									opacity: 0.9
 								}} />
 								<span style={{
 									fontSize: '13px',
