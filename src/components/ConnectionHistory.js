@@ -1720,36 +1720,36 @@ const ConnectionHistory = ({
 				}
 				.hero-recent-card {
 					display: grid !important;
-					grid-template-columns: 20px 72px 160px 1fr 68px minmax(0,auto) !important;
+					grid-template-columns: 24px 90px 320px 1fr 100px minmax(0,auto) !important;
 					align-items: center !important;
 					background: transparent !important;
 					border: none !important;
 					border-left: 2px solid transparent !important;
 					border-radius: 0 !important;
-					padding: 0 16px 0 14px !important;
+					padding: 0 32px 0 24px !important;
 					cursor: pointer !important;
 					transition: background 0.1s, border-color 0.1s !important;
 					box-shadow: none !important;
 					min-width: 0 !important;
 					width: 100% !important;
-					height: 30px !important;
+					height: 40px !important;
 					font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace !important;
-					font-size: 0.81rem !important;
+					font-size: 0.88rem !important;
 					backdrop-filter: none !important;
 				}
 				.hero-recent-card:hover {
-					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.05)'} !important;
+					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.08)'} !important;
 					border-left-color: var(--row-accent) !important;
 				}
 				.hero-recent-card.active-row {
 					border-left-color: var(--row-accent) !important;
-					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.04)'} !important;
+					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.06)'} !important;
 				}
-				.hrc-prompt { color: ${terminalTheme.green || '#3fb950'}; font-weight: bold; font-size: 0.85rem; }
-				.hrc-protocol-tag { font-weight: 600; font-size: 0.72rem; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-				.hrc-name { color: ${terminalTheme.foreground || '#c9d1d9'}; font-weight: 500; font-size: 0.83rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-				.hrc-host { color: ${terminalTheme.brightBlack || '#6e7681'}; font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: inherit; }
-				.hrc-time { color: ${terminalTheme.brightBlack || '#6e7681'}; font-size: 0.72rem; text-align: right; white-space: nowrap; opacity: 0.8; }
+				.hrc-prompt { color: ${terminalTheme.green || '#3fb950'}; font-weight: bold; font-size: 0.9rem; }
+				.hrc-protocol-tag { font-weight: 700; font-size: 0.75rem; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+				.hrc-name { color: ${terminalTheme.foreground || '#ffffff'}; font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.2px; }
+				.hrc-host { color: ${terminalTheme.foreground || '#c9d1d9'}; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: inherit; opacity: 0.75; }
+				.hrc-time { color: ${terminalTheme.foreground || '#c9d1d9'}; font-size: 0.75rem; text-align: right; white-space: nowrap; opacity: 0.5; }
 				.hrc-actions { display: flex; gap: 6px; opacity: 0; transition: opacity 0.15s; align-items: center; justify-content: flex-end; }
 				.hero-recent-card:hover .hrc-actions { opacity: 1; }
 				.hrc-connect-btn {
@@ -1830,16 +1830,6 @@ const ConnectionHistory = ({
 				.hero-chip-host { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.5)'}; font-size: 0.8rem; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.7;}
 				
 				/* Command Palette List Styles (override grid/cards) */
-				.connection-list-body, .favorites-ribbon-track { 
-					display: flex !important; 
-					flex-direction: column !important; 
-					gap: 4px !important; 
-					padding: 0 0 20px 0 !important; 
-					width: 100% !important;
-					max-width: 650px !important; 
-					margin: 0 auto !important; 
-					overflow: visible !important;
-				}
 				.ribbon-side-btn, .ribbon-pagination { display: none !important; }
 				.ribbon-container-relative { display: block !important; padding: 0 !important; }
 
