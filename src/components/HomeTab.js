@@ -27,7 +27,9 @@ const HomeTab = ({
   localFontFamily,
   localFontSize,
   localPowerShellTheme,
+  setLocalPowerShellTheme,
   localLinuxTerminalTheme,
+  setLocalLinuxTerminalTheme,
   onCreateRdpConnection,
   onCreateVncConnection,
   onEditConnection,
@@ -852,8 +854,11 @@ const HomeTab = ({
                   secureStorage={secureStorage}
                   terminalView={terminalView}
                   onTerminalToggle={handleTerminalToggle}
-                  terminalTheme={localTerminalTheme}
+                  terminalTheme={themes[localLinuxTerminalTheme]?.theme || themes['Nord']?.theme || {}}
+                  localLinuxTerminalTheme={localLinuxTerminalTheme}
+                  setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
                   terminalTitle={`/local \u00B7 ${terminalTitle}`}
+                  onOpenSettings={onOpenSettings}
                 >
                   {/* Terminal body - always mounted to preserve state */}
                   <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>

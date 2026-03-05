@@ -41,7 +41,9 @@ const TabContentRenderer = React.memo(({
   localFontFamily,
   localFontSize,
   localLinuxTerminalTheme,
+  setLocalLinuxTerminalTheme,
   localPowerShellTheme,
+  setLocalPowerShellTheme,
   localDockerTerminalTheme,
   dockerFontFamily,
   dockerFontSize,
@@ -164,7 +166,9 @@ const TabContentRenderer = React.memo(({
         localFontFamily={localFontFamily}
         localFontSize={localFontSize}
         localLinuxTerminalTheme={localLinuxTerminalTheme}
+        setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
         localPowerShellTheme={localPowerShellTheme}
+        setLocalPowerShellTheme={setLocalPowerShellTheme}
         onOpenSettings={() => {
           try {
             window.dispatchEvent(new CustomEvent('open-settings-dialog'));

@@ -7,6 +7,8 @@ import favoriteGroupsStore from '../utils/favoriteGroupsStore';
 import FilterPanel from './FilterPanel';
 import FilterBadge from './FilterBadge';
 import { InputText } from 'primereact/inputtext';
+import { OverlayPanel } from 'primereact/overlaypanel';
+import { themes } from '../themes';
 
 // Formatear "Hace 5m", "Hace 2 h", "Ayer", etc.
 function formatRelativeTime(iso) {
@@ -131,8 +133,11 @@ const ConnectionHistory = ({
 	secureStorage = null,
 	terminalView = false,
 	onTerminalToggle = null,
+	localLinuxTerminalTheme,
+	setLocalLinuxTerminalTheme,
 	terminalTheme = {},
 	terminalTitle = '/local',
+	onOpenSettings = null,
 	children
 }) => {
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
@@ -143,6 +148,20 @@ const ConnectionHistory = ({
 	const [showDropdown, setShowDropdown] = useState(false);
 	const [activeIndex, setActiveIndex] = useState(-1);
 	const [activeBottomView, setActiveBottomView] = useState('all');
+	const themePickerRef = useRef(null);
+
+	const handleThemeSelect = (themeName) => {
+		if (setLocalLinuxTerminalTheme) {
+			setLocalLinuxTerminalTheme(themeName);
+			localStorage.setItem('localLinuxTerminalTheme', themeName);
+		}
+
+		// Dispatch local event for components listening to storage changes
+		window.dispatchEvent(new Event('storage'));
+		window.dispatchEvent(new CustomEvent('terminal-theme-changed', { detail: { theme: themeName } }));
+
+		themePickerRef.current?.hide();
+	};
 
 	// Cargar passwords desde localStorage (con soporte para encriptaci\u00F3n) - Igual que en TitleBar
 	useEffect(() => {
@@ -2496,14 +2515,143 @@ const ConnectionHistory = ({
 					<div className="header-path">
 						<span className="path-tilde">~</span>{terminalTitle}
 					</div>
-					<div className="recents-header-right">
-						<i className="pi pi-th-large" style={{ fontSize: '0.9rem', color: terminalTheme.foreground || '#c9d1d9', opacity: 0.3, cursor: 'not-allowed' }} title="Split Terminal (Próximamente)" />
+					<div className="recents-header-right" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+						<i
+							className="pi pi-palette"
+							style={{
+								fontSize: '0.9rem',
+								color: terminalTheme.foreground || '#c9d1d9',
+								opacity: 0.6,
+								cursor: 'pointer',
+								padding: '4px',
+								borderRadius: '4px',
+								transition: 'all 0.2s'
+							}}
+							title="Fijar Tema Linux/WSL... (clic derecho para Preferencias)"
+							onClick={(e) => {
+								e.stopPropagation();
+								themePickerRef.current?.toggle(e);
+							}}
+							onContextMenu={(e) => {
+								e.preventDefault();
+								if (onOpenSettings) onOpenSettings();
+								setTimeout(() => {
+									try {
+										window.dispatchEvent(new CustomEvent('open-settings-dialog', {
+											detail: { tab: 'appearance', subTab: 'terminal' }
+										}));
+									} catch (err) {
+										console.error('Error opening settings tab:', err);
+									}
+								}, 100);
+							}}
+							onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+							onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+						/>
+						<i className="pi pi-th-large" style={{ fontSize: '0.9rem', color: terminalTheme.foreground || '#c9d1d9', opacity: 0.3, cursor: 'not-allowed', padding: '4px' }} title="Split Terminal (Próximamente)" />
 					</div>
 				</div>
 
 				{/* Terminal Body - always kept alive */}
 				{children}
 			</div>
+
+			<OverlayPanel
+				ref={themePickerRef}
+				style={{
+					width: '280px',
+					backgroundColor: 'var(--ui-dialog-bg, #1e1e1e)',
+					border: '1px solid var(--ui-content-border, #444)',
+					boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+					borderRadius: '8px'
+				}}
+				className="theme-picker-overlay"
+			>
+				<div style={{ maxHeight: '350px', overflowY: 'auto', padding: '4px' }}>
+					<div style={{
+						padding: '8px 12px',
+						fontWeight: '600',
+						fontSize: '14px',
+						color: 'var(--ui-dialog-text)',
+						borderBottom: '1px solid var(--ui-content-border, #444)',
+						marginBottom: '8px',
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'space-between'
+					}}>
+						<span>Tema (Linux/WSL)</span>
+						<i className="pi pi-palette" style={{ opacity: 0.7 }} />
+					</div>
+					{Object.keys(themes).map(themeKey => {
+						const currentTheme = themes[themeKey]?.theme || {};
+						return (
+							<div
+								key={themeKey}
+								onClick={() => handleThemeSelect(themeKey)}
+								style={{
+									display: 'flex',
+									alignItems: 'center',
+									gap: '12px',
+									padding: '10px 12px',
+									cursor: 'pointer',
+									borderRadius: '6px',
+									backgroundColor: themeKey === localLinuxTerminalTheme ? 'rgba(var(--ui-button-primary-rgb), 0.2)' : 'transparent',
+									transition: 'all 0.2s',
+									margin: '2px 0'
+								}}
+								className="theme-picker-item"
+								onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
+								onMouseLeave={(e) => e.currentTarget.style.backgroundColor = themeKey === localLinuxTerminalTheme ? 'rgba(var(--ui-button-primary-rgb), 0.2)' : 'transparent'}
+							>
+								<div style={{
+									width: '18px',
+									height: '18px',
+									borderRadius: '4px',
+									backgroundColor: currentTheme.background || '#000',
+									border: '1px solid rgba(255,255,255,0.1)',
+									boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+								}} />
+								<span style={{
+									fontSize: '13px',
+									color: 'var(--ui-dialog-text)',
+									fontWeight: themeKey === localLinuxTerminalTheme ? '600' : 'normal',
+									flex: 1
+								}}>{themeKey}</span>
+								{themeKey === localLinuxTerminalTheme && (
+									<i className="pi pi-check" style={{ fontSize: '10px', color: 'var(--ui-button-primary)' }} />
+								)}
+							</div>
+						);
+					})}
+					<div
+						style={{
+							padding: '10px 12px',
+							marginTop: '8px',
+							borderTop: '1px solid var(--ui-content-border, #444)',
+							textAlign: 'center',
+							fontSize: '11px',
+							color: 'var(--ui-dialog-text)',
+							opacity: 0.7,
+							cursor: 'pointer'
+						}}
+						onClick={() => {
+							themePickerRef.current?.hide();
+							if (onOpenSettings) onOpenSettings();
+							setTimeout(() => {
+								try {
+									window.dispatchEvent(new CustomEvent('open-settings-dialog', {
+										detail: { tab: 'appearance', subTab: 'terminal' }
+									}));
+								} catch (err) {
+									console.error('Error opening settings tab:', err);
+								}
+							}, 100);
+						}}
+					>
+						Ajustes avanzados...
+					</div>
+				</div>
+			</OverlayPanel>
 		</div >
 	);
 };

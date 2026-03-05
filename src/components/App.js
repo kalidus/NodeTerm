@@ -2542,7 +2542,9 @@ const App = () => {
     activeGroupId,
     activeTabIndex,
     localLinuxTerminalTheme,
+    setLocalLinuxTerminalTheme,
     localPowerShellTheme,
+    setLocalPowerShellTheme,
     localDockerTerminalTheme,
     dockerFontFamily,
     dockerFontSize,
@@ -2579,7 +2581,7 @@ const App = () => {
   }), [
     onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, onOpenVncConnection, handleLoadGroupFromFavorites,
     openEditRdpDialog, openEditSSHDialog, nodes, localFontFamily, localFontSize,
-    localLinuxTerminalTheme, localPowerShellTheme, localDockerTerminalTheme, dockerFontFamily, dockerFontSize, iconTheme, explorerFont,
+    localLinuxTerminalTheme, setLocalLinuxTerminalTheme, localPowerShellTheme, setLocalPowerShellTheme, localDockerTerminalTheme, dockerFontFamily, dockerFontSize, iconTheme, explorerFont,
     explorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
     handleTerminalContextMenu, showTerminalContextMenu, sshStatsByTabId,
     terminalRefs, statusBarIconTheme, handleCloseSplitPanel, openInSplit, rdpTabs, findNodeByKey,
