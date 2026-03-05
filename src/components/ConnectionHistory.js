@@ -1632,7 +1632,8 @@ const ConnectionHistory = ({
 				.recents-terminal-header .header-path {
 					flex: 1;
 					text-align: center;
-					color: ${terminalTheme.brightBlack || '#6e7681'};
+					color: ${terminalTheme.foreground || '#c9d1d9'};
+					opacity: 0.6;
 					font-size: 11.5px;
 					user-select: none;
 					pointer-events: none;
@@ -1645,7 +1646,8 @@ const ConnectionHistory = ({
 				.recents-header-filter-btn {
 					background: transparent;
 					border: none;
-					color: ${terminalTheme.brightBlack || '#6e7681'};
+					color: ${terminalTheme.foreground || '#c9d1d9'};
+					opacity: 0.6;
 					cursor: pointer;
 					padding: 4px 6px;
 					border-radius: 4px;
@@ -1653,7 +1655,7 @@ const ConnectionHistory = ({
 					transition: color 0.15s, background 0.15s;
 					display: flex; align-items: center;
 				}
-				.recents-header-filter-btn:hover, .recents-header-filter-btn.active { color: ${terminalTheme.green || '#3fb950'}; background: rgba(255,255,255,0.06); }
+				.recents-header-filter-btn:hover, .recents-header-filter-btn.active { color: ${terminalTheme.green || '#3fb950'}; background: rgba(255,255,255,0.06); opacity: 1; }
 				.recents-filter-chips-bar {
 					display: flex;
 					align-items: center;
