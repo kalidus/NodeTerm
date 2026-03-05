@@ -1928,7 +1928,7 @@ const ConnectionHistory = ({
 						className={`hero-action-btn ${activeBottomView === 'recent' && !terminalView ? 'active' : ''}`}
 						onClick={() => {
 							if (terminalView && onTerminalToggle) onTerminalToggle(false);
-							setActiveBottomView(prev => prev === 'recent' ? 'all' : 'recent');
+							setActiveBottomView('recent');
 						}}
 					>
 						<i className="pi pi-clock" /> Recent
@@ -1937,7 +1937,7 @@ const ConnectionHistory = ({
 						className={`hero-action-btn ${activeBottomView === 'favorites' && !terminalView ? 'active' : ''}`}
 						onClick={() => {
 							if (terminalView && onTerminalToggle) onTerminalToggle(false);
-							setActiveBottomView(prev => prev === 'favorites' ? 'all' : 'favorites');
+							setActiveBottomView('favorites');
 						}}
 					>
 						<i className="pi pi-star" /> Favorites
@@ -2066,7 +2066,7 @@ const ConnectionHistory = ({
 										type="text"
 										value={newGroupName}
 										onChange={(e) => setNewGroupName(e.target.value)}
-										placeholder="Ej: Producci\u00F3n, Desarrollo..."
+										placeholder={"Ej: Producci\u00F3n, Desarrollo..."}
 										autoFocus
 										onKeyDown={(e) => e.key === 'Enter' && handleCreateGroup()}
 									/>
@@ -2405,7 +2405,7 @@ const ConnectionHistory = ({
 								<div className="traffic-dot green" />
 							</div>
 							<div className="header-path">
-								<span className="path-tilde">~</span>/recent &nbsp;\u00B7&nbsp; {filteredRecentsForDisplay.length} connections
+								<span className="path-tilde">~</span>/recent &nbsp;{'\u00B7'}&nbsp; {filteredRecentsForDisplay.length} connections
 							</div>
 							<div className="recents-header-right">
 								<button
