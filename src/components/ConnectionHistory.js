@@ -1512,37 +1512,70 @@ const ConnectionHistory = ({
 				.connection-history-section { border: none !important; background: transparent !important; }
 				.hero-splash-header {
 					text-align: center;
-					padding: 60px 20px 40px;
-					background: radial-gradient(circle at top, ${themeColors.heroGradientColor || 'rgba(21, 32, 54, 0.4)'} 0%, transparent 85%);
+					padding: 3vh 20px 3vh;
+					background: transparent;
 					position: relative;
-					margin-bottom: 20px;
+					margin-bottom: 0px;
+					display: flex;
+					flex-direction: column;
+					align-items: center;
+					justify-content: center;
 				}
-				.hero-title { font-size: 32px; font-weight: 800; background: linear-gradient(90deg, ${themeColors.textPrimary || '#ffffff'}, ${themeColors.primaryColor || '#4fc3f7'}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0 0 10px 0; }
-				.hero-status { color: #81c784; font-size: 0.85rem; margin-bottom: 30px; display: flex; justify-content: center; align-items: center; gap: 8px; }
-				.hero-search-container { max-width: 550px; margin: 0 auto 16px; position: relative; z-index: 100; }
+				.hero-title { 
+					font-size: 42px; 
+					font-weight: 800; 
+					background: linear-gradient(90deg, ${themeColors.textPrimary || '#ffffff'}, ${themeColors.primaryColor || '#4fc3f7'}); 
+					-webkit-background-clip: text; 
+					-webkit-text-fill-color: transparent; 
+					margin: 0 0 10px 0; 
+					letter-spacing: -0.5px;
+				}
+				.hero-status { color: #81c784; font-size: 0.9rem; margin-bottom: 30px; display: flex; justify-content: center; align-items: center; gap: 8px; font-family: monospace; }
+				.hero-search-container { 
+					width: 100%; 
+					max-width: 580px; 
+					margin: 0 auto 16px; 
+					position: relative; 
+					z-index: 100;
+				}
+				.hero-search-container::before {
+					content: "➜  ~";
+					position: absolute;
+					left: 20px;
+					top: 50%;
+					transform: translateY(-50%);
+					color: #27c93f;
+					font-family: 'Fira Code', 'Consolas', monospace;
+					font-weight: bold;
+					font-size: 1rem;
+					z-index: 2;
+					pointer-events: none;
+				}
 				.hero-search-input, .p-inputtext.hero-search-input:enabled:focus {
 					width: 100% !important;
-					background: ${themeColors.searchBackground || 'rgba(22, 27, 34, 0.85)'} !important;
-					border: 1px solid ${themeColors.searchBorder || 'rgba(255,255,255,0.2)'} !important;
-					border-radius: 30px !important;
-					padding: 12px 60px 12px 42px !important;
+					background: ${themeColors.searchBackground || 'rgba(22, 27, 34, 0.6)'} !important;
+					border: 1px solid ${themeColors.searchBorder || 'rgba(255,255,255,0.1)'} !important;
+					border-radius: 10px !important;
+					padding: 12px 70px 12px 55px !important;
 					color: ${themeColors.textPrimary || '#fff'} !important;
 					font-size: 1rem;
+					font-family: 'Fira Code', 'Consolas', monospace !important;
 					outline: none !important;
-					box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.1) !important;
-					backdrop-filter: blur(12px);
-					transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+					box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05) !important;
+					backdrop-filter: blur(16px);
+					transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 				}
 				.hero-search-input:focus, .p-inputtext.hero-search-input:enabled:focus {
-					border-color: ${themeColors.searchFocusBorder || '#4fc3f7'} !important;
-					box-shadow: 0 0 20px ${themeColors.primaryColor ? themeColors.primaryColor + '40' : 'rgba(79, 195, 247, 0.3)'},
-					            inset 0 1px 1px rgba(255,255,255,0.15),
-					            0 0 0 1px ${themeColors.searchFocusBorder || '#4fc3f7'} !important;
-					background: ${themeColors.searchBackground ? themeColors.searchBackground.replace('0.85', '0.95') : 'rgba(22, 27, 34, 0.95)'} !important;
-					transform: translateY(-1px);
+					border-color: #27c93f !important;
+					box-shadow: 0 0 20px rgba(39, 201, 63, 0.15),
+					            inset 0 1px 1px rgba(255,255,255,0.1),
+					            0 0 0 1px #27c93f !important;
+					background: ${themeColors.searchBackground ? themeColors.searchBackground.replace('0.85', '0.90').replace('0.6', '0.90') : 'rgba(22, 27, 34, 0.90)'} !important;
+					transform: translateY(-2px);
 				}
-				.hero-search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: ${themeColors.textSecondary || 'rgba(255,255,255,0.4)'}; font-size: 1.1rem; z-index: 2; pointer-events: none; }
-				.hero-search-spinner { position: absolute; right: 60px; top: 50%; transform: translateY(-50%); color: ${themeColors.primaryColor || '#4fc3f7'}; font-size: 1.1rem; z-index: 2; }
+				/* Hide old search icon since we use terminal prompt */
+				.hero-search-icon { display: none; }
+				.hero-search-spinner { position: absolute; right: 70px; top: 50%; transform: translateY(-50%); color: #27c93f; font-size: 1.2rem; z-index: 2; }
 				
 				.hero-terminal-btn {
 					position: absolute;
@@ -1551,143 +1584,196 @@ const ConnectionHistory = ({
 					transform: translateY(-50%);
 					height: 32px;
 					padding: 0 12px;
-					border-radius: 20px;
-					background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 100%);
-					border: 1px solid rgba(255,255,255,0.1);
-					border-top: 1px solid rgba(255,255,255,0.2);
+					border-radius: 8px;
+					background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.01) 100%);
+					border: 1px solid rgba(255,255,255,0.05);
+					border-top: 1px solid rgba(255,255,255,0.1);
 					color: ${themeColors.textPrimary || '#fff'};
 					font-family: monospace;
 					font-weight: bold;
-					font-size: 0.9rem;
+					font-size: 1rem;
 					display: flex;
 					align-items: center;
 					justify-content: center;
 					cursor: pointer;
 					z-index: 3;
-					transition: all 0.2s ease;
-					box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.2);
+					transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+					box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 4px rgba(0,0,0,0.15);
 				}
 				.hero-terminal-btn:hover {
-					background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%);
-					border-color: rgba(255,255,255,0.2);
-					box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 4px 8px rgba(0,0,0,0.3);
+					background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.03) 100%);
+					border-color: rgba(255,255,255,0.15);
+					box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 3px 8px rgba(0,0,0,0.25);
 					transform: translateY(-50%) scale(1.02);
 				}
 				.hero-terminal-btn:active {
 					transform: translateY(-50%) scale(0.98);
-					box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+					box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
 				}
 
 				.hero-action-buttons {
 					display: flex;
 					justify-content: center;
-					gap: 12px;
-					margin-bottom: 16px;
+					gap: 16px;
+					margin-bottom: 24px;
 				}
 				.hero-action-btn {
-					background: ${themeColors.itemBackground || 'rgba(30,36,45,0.6)'};
-					border: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.05)'};
-					border-radius: 20px;
-					padding: 6px 16px;
-					color: ${themeColors.textSecondary || 'rgba(255,255,255,0.7)'};
-					font-size: 0.85rem;
+					background: transparent;
+					border: 1px solid transparent;
+					border-radius: 8px;
+					padding: 8px 16px;
+					color: ${themeColors.textSecondary || 'rgba(255,255,255,0.5)'};
+					font-size: 0.95rem;
+					font-weight: 500;
 					display: flex;
 					align-items: center;
-					gap: 8px;
+					gap: 10px;
 					cursor: pointer;
-					transition: all 0.2s ease;
+					transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 					backdrop-filter: blur(8px);
 				}
 				.hero-action-btn:hover {
-					background: ${themeColors.hoverBackground || 'rgba(255,255,255,0.1)'};
+					background: ${themeColors.hoverBackground || 'rgba(255,255,255,0.05)'};
 					color: ${themeColors.textPrimary || '#fff'};
-					border-color: rgba(255,255,255,0.15);
+					border-color: rgba(255,255,255,0.05);
 					transform: translateY(-1px);
 				}
 				.hero-action-btn.active {
-					background: ${themeColors.primaryColor ? themeColors.primaryColor + '30' : 'rgba(79, 195, 247, 0.3)'};
-					color: ${themeColors.primaryColor || '#4fc3f7'};
-					border-color: ${themeColors.primaryColor || '#4fc3f7'};
+					background: ${themeColors.itemBackground || 'rgba(255,255,255,0.08)'};
+					color: ${themeColors.textPrimary || '#ffffff'};
+					border-color: ${themeColors.borderColor || 'rgba(255,255,255,0.1)'};
+					box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 				}
 				
-				.hero-shortcuts { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.4)'}; font-size: 0.75rem; display: flex; justify-content: center; gap: 16px; }
-				.hero-shortcuts kbd { background: ${themeColors.itemBackground || 'rgba(255,255,255,0.1)'}; padding: 2px 6px; border-radius: 4px; margin-right: 4px; font-family: inherit; }
+				.hero-shortcuts { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.3)'}; font-size: 0.75rem; display: flex; justify-content: center; gap: 20px; font-weight: 500;}
+				.hero-shortcuts kbd { background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); margin-right: 6px; font-family: monospace; color: rgba(255,255,255,0.7); }
 
 				/* Search Dropdown Styles */
 				.hero-search-dropdown {
 					position: fixed;
-					background: ${themeColors.cardBackground ? themeColors.cardBackground.replace('0.6', '0.95') : 'rgba(16, 20, 28, 0.95)'};
+					background: ${themeColors.cardBackground ? themeColors.cardBackground.replace('0.6', '0.90') : 'rgba(16, 20, 28, 0.90)'};
 					border: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'};
-					border-radius: 12px;
-					box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-					backdrop-filter: blur(20px);
+					border-radius: 16px;
+					box-shadow: 0 16px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05) inset;
+					backdrop-filter: blur(24px);
 					overflow-y: auto;
 					z-index: 10000;
-					margin-top: 8px;
-					padding: 8px;
+					margin-top: 12px;
+					padding: 12px;
 					display: flex;
 					flex-direction: column;
-					gap: 4px;
+					gap: 6px;
 				}
 				.search-result-item {
 					display: flex;
 					align-items: center;
-					gap: 12px;
-					padding: 10px 14px;
-					border-radius: 8px;
+					gap: 16px;
+					padding: 12px 16px;
+					border-radius: 10px;
 					cursor: pointer;
-					transition: all 0.2s ease;
+					transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 					border: 1px solid transparent;
 				}
 				.search-result-item:hover, .search-result-item.active {
-					background: ${themeColors.hoverBackground || 'rgba(255,255,255,0.08)'};
-					border-color: ${themeColors.borderColor || 'rgba(255,255,255,0.1)'};
+					background: ${themeColors.hoverBackground || 'rgba(255,255,255,0.06)'};
+					border-color: ${themeColors.borderColor || 'rgba(255,255,255,0.08)'};
+					transform: scale(1.01);
 				}
 				.search-result-icon {
-					width: 32px;
-					height: 32px;
+					width: 40px;
+					height: 40px;
 					display: flex;
 					align-items: center;
 					justify-content: center;
-					font-size: 1.2rem;
-					border-radius: 6px;
+					font-size: 1.4rem;
+					border-radius: 10px;
 				}
-				.search-result-info { flex: 1; display: flex; flex-direction: column; overflow: hidden; gap: 2px; }
-				.search-result-flex-header { display: flex; align-items: center; gap: 8px; }
-				.search-result-label { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: ${themeColors.textPrimary || '#fff'}; }
-				.search-result-sub-container { display: flex; align-items: center; gap: 8px; }
-				.search-result-sub { font-size: 0.75rem; opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace; }
-				.search-result-folder { font-size: 0.7rem; opacity: 0.4; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-				.search-result-type { font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; opacity: 0.8; flex-shrink: 0; }
+				.search-result-info { flex: 1; display: flex; flex-direction: column; overflow: hidden; gap: 4px; }
+				.search-result-flex-header { display: flex; align-items: center; gap: 10px; }
+				.search-result-label { font-weight: 500; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: ${themeColors.textPrimary || '#fff'}; }
+				.search-result-sub-container { display: flex; align-items: center; gap: 10px; }
+				.search-result-sub { font-size: 0.8rem; opacity: 0.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace; }
+				.search-result-folder { font-size: 0.75rem; opacity: 0.4; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+				.search-result-type { font-size: 0.7rem; font-weight: bold; padding: 2px 8px; border-radius: 6px; opacity: 0.8; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.5px;}
+				
 				/* Hero Chips */
-				.hero-chip { display: flex; align-items: center; background: ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.6)'}; border: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.05)'}; border-radius: 30px; padding: 6px 16px 6px 6px; width: 180px; height: 60px; cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px); flex-shrink: 0; text-align: left; }
-				.hero-chip:hover { background: ${themeColors.hoverBackground || 'rgba(30, 36, 45, 0.8)'}; transform: translateY(-2px); border-color: ${themeColors.primaryColor || 'rgba(255,255,255,0.1)'}; }
-				.hero-chip.active { border-left: 3px solid var(--card-accent); }
-				.hero-chip-icon { width: 48px; height: 48px; min-width: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px; }
-				.hero-chip-content { display: flex; flex-direction: column; overflow: hidden; }
-				.hero-chip-name { color: ${themeColors.textPrimary || '#fff'}; font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-				.hero-chip-host { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.5)'}; font-size: 0.75rem; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-				/* Hero Recent Cards grid */
-				.connection-list-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 12px; padding: 0 20px 20px; }
-				.hero-recent-card { display: flex; align-items: center; background: ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.4)'}; border: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.05)'}; border-radius: 12px; padding: 12px 16px; gap: 12px; cursor: pointer; transition: all 0.2s ease; }
-				.hero-recent-card:hover { background: ${themeColors.hoverBackground || 'rgba(30, 36, 45, 0.7)'}; border-color: ${themeColors.primaryColor || 'rgba(255,255,255,0.1)'}; }
-				.hrc-icon { font-size: 1.4rem; width: 32px; display: flex; justify-content: center; }
-				.hrc-content { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
-				.hrc-name { color: ${themeColors.textPrimary || '#fff'}; font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-				.hrc-host { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.5)'}; font-family: monospace; font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-				.hrc-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; border: 1px solid; font-weight: bold; white-space: nowrap; }
-				.hrc-time { color: rgba(255,255,255,0.4); font-size: 0.8rem; width: 70px; text-align: right; white-space: nowrap; }
-				.hrc-actions { display: flex; gap: 8px; opacity: 0; transition: opacity 0.2s; }
-				.hero-recent-card:hover .hrc-actions { opacity: 1; }
-				.hrc-connect-btn { background: transparent; padding: 4px 12px; font-size: 0.8rem; color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; cursor: pointer; transition: all 0.2s; }
-				.hrc-connect-btn:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.4); }
+				.hero-chip { display: flex; align-items: center; background: ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.4)'}; border: 1px solid transparent; border-radius: 16px; padding: 8px 24px 8px 8px; width: 220px; height: 70px; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(10px); flex-shrink: 0; text-align: left; }
+				.hero-chip:hover { background: ${themeColors.hoverBackground || 'rgba(30, 36, 45, 0.6)'}; transform: translateY(-4px); border-color: ${themeColors.borderColor || 'rgba(255,255,255,0.05)'}; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+				.hero-chip.active { border-color: var(--card-accent); background: linear-gradient(135deg, ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.4)'}, ${themeColors.hoverBackground || 'rgba(30,36,45,0.6)'}); box-shadow: 0 0 0 1px var(--card-accent) inset;}
+				.hero-chip-icon { width: 54px; height: 54px; min-width: 54px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 16px; }
+				.hero-chip-content { display: flex; flex-direction: column; overflow: hidden; justify-content: center;}
+				.hero-chip-name { color: ${themeColors.textPrimary || '#fff'}; font-weight: 500; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;}
+				.hero-chip-host { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.5)'}; font-size: 0.8rem; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.7;}
+				
+				/* Command Palette List Styles (override grid/cards) */
+				.connection-list-body, .favorites-ribbon-track { 
+					display: flex !important; 
+					flex-direction: column !important; 
+					gap: 4px !important; 
+					padding: 0 0 20px 0 !important; 
+					width: 100% !important;
+					max-width: 650px !important; 
+					margin: 0 auto !important; 
+					overflow: visible !important;
+				}
+				.ribbon-side-btn, .ribbon-pagination { display: none !important; }
+				.ribbon-container-relative { display: block !important; padding: 0 !important; }
+
+				.hero-recent-card, .ribbon-card { 
+					display: flex !important; 
+					align-items: center !important; 
+					flex-direction: row !important;
+					background: transparent !important; 
+					border: 1px solid transparent !important; 
+					border-bottom: 1px solid rgba(255,255,255,0.03) !important;
+					border-radius: 8px !important; 
+					padding: 8px 12px 8px 8px !important; 
+					gap: 12px !important; 
+					cursor: pointer; 
+					transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important; 
+					box-shadow: none !important; 
+					min-width: 0 !important;
+					width: 100% !important;
+					height: auto !important;
+					justify-content: flex-start !important;
+					backdrop-filter: none !important;
+				}
+				.hero-recent-card:hover, .ribbon-card:hover { 
+					background: ${themeColors.hoverBackground || 'rgba(255,255,255,0.04)'} !important; 
+					transform: none !important; 
+					border-color: transparent !important; 
+					border-bottom-color: rgba(255,255,255,0.03) !important;
+				}
+				.hero-recent-card.active-row, .ribbon-card.active { border-left: 3px solid var(--row-accent) !important; background: rgba(255,255,255,0.02) !important; }
+				
+				/* Override Ribbon internal elements to match row style */
+				.rc-splash { display: none !important; }
+				.rc-info { flex-direction: row !important; align-items: center !important; gap: 12px !important; padding: 0 !important; width: 100% !important; }
+				.rc-favicon-container { margin: 0 !important; position: static !important; transform: none !important; border: none !important; box-shadow: none !important; width: 32px !important; height: 32px !important; border-radius: 6px !important; }
+				.rc-text { text-align: left !important; flex: 1; flex-direction: row !important; align-items: center !important; gap: 12px !important; }
+				.rc-name { font-size: 0.95rem !important; margin: 0 !important; flex-shrink: 0; }
+				.rc-host { font-size: 0.8rem !important; opacity: 0.7 !important; color: ${themeColors.textSecondary || 'rgba(255,255,255,0.5)'} !important;}
+				.rc-tags-container { display: none !important; }
+				.rc-star-btn { position: static !important; background: transparent !important; color: #f1c40f !important; border: none !important; opacity: 1 !important;}
+
+				.hrc-icon { font-size: 1.2rem; width: 32px; display: flex; justify-content: center; opacity: 0.9;}
+				.hrc-content { flex: 1; min-width: 0; display: flex; flex-direction: row; gap: 12px; align-items: center; overflow: hidden; justify-content: flex-start;}
+				.hrc-name { color: ${themeColors.textPrimary || '#fff'}; font-weight: 500; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0;}
+				.hrc-host { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.5)'}; font-family: monospace; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.7;}
+				.hrc-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; border: 1px solid; font-weight: bold; white-space: nowrap; letter-spacing: 0.5px; opacity: 0.8;}
+				.hrc-time { color: rgba(255,255,255,0.3); font-size: 0.75rem; width: 80px; text-align: right; white-space: nowrap; font-weight: 500;}
+				.hrc-actions { display: flex; gap: 8px; opacity: 0; transition: opacity 0.2s; align-items: center; }
+				.hero-recent-card:hover .hrc-actions, .ribbon-card:hover .hrc-actions { opacity: 1; }
+				.hrc-connect-btn { background: rgba(255,255,255,0.05); padding: 4px 10px; font-size: 0.8rem; color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; cursor: pointer; transition: all 0.2s; font-weight: 500;}
+				.hrc-connect-btn:hover { background: rgba(255,255,255,0.15); color: #fff; border-color: rgba(255,255,255,0.2); }
+				.glass-action-btn.fav-active i { color: #FFD700; filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.4));}
 				/* Hide original section headers but keep their actions available */
 				.modern-section-header.header-favorites .modern-header-title, .modern-section-header.header-recents .modern-header-title,
 				.modern-section-header.header-favorites .section-collapse-btn, .modern-section-header.header-recents .section-collapse-btn,
 				.modern-section-header.header-favorites .modern-header-line, .modern-section-header.header-recents .modern-header-line { display: none !important; }
-				.modern-section-header { justify-content: center !important; margin-bottom: 20px !important; border: none !important; background: transparent !important; }
-				.modern-section-header.header-favorites::before { content: 'Quick Access'; color: rgba(255,255,255,0.7); font-size: 1.1rem; font-weight: 500; display: block; width: 100%; text-align: center; }
-				.modern-section-header.header-recents::before { content: 'Recent connections'; color: rgba(255,255,255,0.7); font-size: 1.1rem; font-weight: 500; display: block; width: 100%; text-align: center; }
+				.modern-section-header { justify-content: center !important; margin-bottom: 30px !important; border: none !important; background: transparent !important; }
+				.modern-section-header.header-favorites::before { content: 'Quick Access'; color: rgba(255,255,255,0.4); font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; display: block; width: 100%; text-align: center; }
+				.modern-section-header.header-recents::before { content: 'Recent Connections'; color: rgba(255,255,255,0.4); font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; display: block; width: 100%; text-align: center; }
 			`}</style>
 
 			{/* Hero Splash Hero Area */}
@@ -1698,7 +1784,6 @@ const ConnectionHistory = ({
 					<span>{activeIds.size} active sessions</span>
 				</div>
 				<div className="hero-search-container">
-					<i className="pi pi-search hero-search-icon" />
 					<InputText
 						value={searchTerm}
 						onChange={(e) => setSearchTerm(e.target.value)}
@@ -1823,446 +1908,462 @@ const ConnectionHistory = ({
 					<span><kbd>⌘F</kbd> Favorites</span>
 				</div>
 			</div>			{/* FilterPanel Dropdown - Rendered in Portal to avoid clipping */}
-			{ReactDOM.createPortal(
-				<FilterPanel
-					isOpen={filterPanelOpen}
-					onClose={() => setFilterPanelOpen(false)}
-					activeFilters={filterContext === 'favorites' ? activeFavFilters : activeRecentFilters}
-					onApplyFilters={handleApplyFilters}
-					availableFilters={{
-						protocols: favoriteGroupsStore.getProtocolFilters().map(f => ({
-							...f,
-							count: countByType(filterContext === 'recents' ? recentConnections : favoriteConnections, f.id)
-						})),
-						groups: favoriteGroups.filter(g => !g.isDefault).map(g => ({
-							id: g.id,
-							label: g.name,
-							icon: g.icon || 'pi-folder',
-							color: g.color,
-							count: filterContext === 'recents'
-								? recentConnections.filter(c => c.groupId === g.id).length // Simple check for recents
-								: favoriteGroupsStore.getFavoritesInGroup(g.id, favoriteConnections).length
-						}))
-					}}
-					themeColors={themeColors}
-					onCreateGroup={() => setShowCreateGroupDialog(true)}
-					onDeleteGroup={handleDeleteGroup}
-				/>,
-				document.body
-			)}
+			{
+				ReactDOM.createPortal(
+					<FilterPanel
+						isOpen={filterPanelOpen}
+						onClose={() => setFilterPanelOpen(false)}
+						activeFilters={filterContext === 'favorites' ? activeFavFilters : activeRecentFilters}
+						onApplyFilters={handleApplyFilters}
+						availableFilters={{
+							protocols: favoriteGroupsStore.getProtocolFilters().map(f => ({
+								...f,
+								count: countByType(filterContext === 'recents' ? recentConnections : favoriteConnections, f.id)
+							})),
+							groups: favoriteGroups.filter(g => !g.isDefault).map(g => ({
+								id: g.id,
+								label: g.name,
+								icon: g.icon || 'pi-folder',
+								color: g.color,
+								count: filterContext === 'recents'
+									? recentConnections.filter(c => c.groupId === g.id).length // Simple check for recents
+									: favoriteGroupsStore.getFavoritesInGroup(g.id, favoriteConnections).length
+							}))
+						}}
+						themeColors={themeColors}
+						onCreateGroup={() => setShowCreateGroupDialog(true)}
+						onDeleteGroup={handleDeleteGroup}
+					/>,
+					document.body
+				)
+			}
 
 			{/* Filter Configuration Dialog */}
-			{showFilterConfig && ReactDOM.createPortal(
-				<div className="create-group-overlay" onClick={() => setShowFilterConfig(false)}>
-					<div className="create-group-dialog filter-config-dialog" onClick={(e) => e.stopPropagation()}>
-						<div className="dialog-header">
-							<h3><i className="pi pi-cog" /> Configurar Filtros</h3>
-							<button className="dialog-close" onClick={() => setShowFilterConfig(false)}>
-								<i className="pi pi-times" />
-							</button>
-						</div>
-						<div className="dialog-body">
-							<p style={{ color: 'rgba(255,255,255,0.6)', margin: '0 0 16px', fontSize: '0.85rem' }}>
-								Activa o desactiva los filtros que deseas ver en la barra:
-							</p>
-							<div className="filter-config-list">
-								{allFilters.map(filter => (
-									<div
-										key={filter.id}
-										className={`filter-config-item ${filter.visible ? 'visible' : 'hidden'}`}
-										style={{ '--item-color': filter.color }}
-									>
-										<div className="filter-config-info">
-											{filter.isGroup && (
-												<span className="filter-config-dot" style={{ background: filter.color }} />
-											)}
-											<i className={`pi ${filter.icon}`} style={{ color: filter.color }} />
-											<span className="filter-config-label">{filter.label}</span>
-											{filter.isProtocol && <span className="filter-config-type">Protocolo</span>}
-											{filter.isGroup && <span className="filter-config-type">Grupo</span>}
-										</div>
-										<button
-											type="button"
-											className={`filter-config-toggle ${filter.visible ? 'on' : 'off'}`}
-											onClick={() => {
-												if (filter.id !== 'all') {
-													favoriteGroupsStore.setFilterVisibility(filter.id, !filter.visible);
-													setAllFilters(favoriteGroupsStore.getAllFilters());
-												}
-											}}
-											disabled={filter.id === 'all'}
-											title={filter.id === 'all' ? 'Este filtro siempre está visible' : (filter.visible ? 'Ocultar' : 'Mostrar')}
+			{
+				showFilterConfig && ReactDOM.createPortal(
+					<div className="create-group-overlay" onClick={() => setShowFilterConfig(false)}>
+						<div className="create-group-dialog filter-config-dialog" onClick={(e) => e.stopPropagation()}>
+							<div className="dialog-header">
+								<h3><i className="pi pi-cog" /> Configurar Filtros</h3>
+								<button className="dialog-close" onClick={() => setShowFilterConfig(false)}>
+									<i className="pi pi-times" />
+								</button>
+							</div>
+							<div className="dialog-body">
+								<p style={{ color: 'rgba(255,255,255,0.6)', margin: '0 0 16px', fontSize: '0.85rem' }}>
+									Activa o desactiva los filtros que deseas ver en la barra:
+								</p>
+								<div className="filter-config-list">
+									{allFilters.map(filter => (
+										<div
+											key={filter.id}
+											className={`filter-config-item ${filter.visible ? 'visible' : 'hidden'}`}
+											style={{ '--item-color': filter.color }}
 										>
-											<i className={filter.visible ? 'pi pi-eye' : 'pi pi-eye-slash'} />
-										</button>
-									</div>
-								))}
-							</div>
-						</div>
-						<div className="dialog-footer">
-							<button
-								className="btn-cancel"
-								onClick={() => {
-									favoriteGroupsStore.resetFilterConfig();
-									setAllFilters(favoriteGroupsStore.getAllFilters());
-								}}
-							>
-								<i className="pi pi-refresh" /> Restaurar
-							</button>
-							<button className="btn-create" onClick={() => setShowFilterConfig(false)}>
-								<i className="pi pi-check" /> Listo
-							</button>
-						</div>
-					</div>
-				</div>,
-				document.body
-			)}
-			{showCreateGroupDialog && ReactDOM.createPortal(
-				<div className="create-group-overlay" onClick={() => setShowCreateGroupDialog(false)}>
-					<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
-						<div className="dialog-header">
-							<h3>Crear Grupo</h3>
-							<button className="dialog-close" onClick={() => setShowCreateGroupDialog(false)}>
-								<i className="pi pi-times" />
-							</button>
-						</div>
-						<div className="dialog-body">
-							<div className="form-field">
-								<label>Nombre del grupo</label>
-								<input
-									type="text"
-									value={newGroupName}
-									onChange={(e) => setNewGroupName(e.target.value)}
-									placeholder="Ej: Producción, Desarrollo..."
-									autoFocus
-									onKeyDown={(e) => e.key === 'Enter' && handleCreateGroup()}
-								/>
-							</div>
-							<div className="form-field">
-								<label>Color</label>
-								<div className="color-picker">
-									{['#4fc3f7', '#ff6b35', '#81c784', '#FFB300', '#E91E63', '#9C27B0', '#00BCD4', '#FF5722'].map(c => (
-										<button
-											key={c}
-											type="button"
-											className={`color-option ${newGroupColor === c ? 'selected' : ''}`}
-											style={{ background: c }}
-											onClick={() => setNewGroupColor(c)}
-										/>
+											<div className="filter-config-info">
+												{filter.isGroup && (
+													<span className="filter-config-dot" style={{ background: filter.color }} />
+												)}
+												<i className={`pi ${filter.icon}`} style={{ color: filter.color }} />
+												<span className="filter-config-label">{filter.label}</span>
+												{filter.isProtocol && <span className="filter-config-type">Protocolo</span>}
+												{filter.isGroup && <span className="filter-config-type">Grupo</span>}
+											</div>
+											<button
+												type="button"
+												className={`filter-config-toggle ${filter.visible ? 'on' : 'off'}`}
+												onClick={() => {
+													if (filter.id !== 'all') {
+														favoriteGroupsStore.setFilterVisibility(filter.id, !filter.visible);
+														setAllFilters(favoriteGroupsStore.getAllFilters());
+													}
+												}}
+												disabled={filter.id === 'all'}
+												title={filter.id === 'all' ? 'Este filtro siempre está visible' : (filter.visible ? 'Ocultar' : 'Mostrar')}
+											>
+												<i className={filter.visible ? 'pi pi-eye' : 'pi pi-eye-slash'} />
+											</button>
+										</div>
 									))}
 								</div>
 							</div>
-						</div>
-						<div className="dialog-footer">
-							<button className="btn-cancel" onClick={() => setShowCreateGroupDialog(false)}>
-								Cancelar
-							</button>
-							<button className="btn-create" onClick={handleCreateGroup} disabled={!newGroupName.trim()}>
-								<i className="pi pi-check" /> Crear
-							</button>
-						</div>
-					</div>
-				</div>,
-				document.body
-			)}
-
-			{/* Edit/Delete Group Menu */}
-			{editingGroup && ReactDOM.createPortal(
-				<div className="create-group-overlay" onClick={() => setEditingGroup(null)}>
-					<div className="create-group-dialog small" onClick={(e) => e.stopPropagation()}>
-						<div className="dialog-header">
-							<h3>Opciones de "{editingGroup.name}"</h3>
-							<button className="dialog-close" onClick={() => setEditingGroup(null)}>
-								<i className="pi pi-times" />
-							</button>
-						</div>
-						<div className="dialog-body">
-							<button
-								className="menu-option danger"
-								onClick={() => {
-									handleDeleteGroup(editingGroup.id);
-									setEditingGroup(null);
-								}}
-							>
-								<i className="pi pi-trash" /> Eliminar grupo
-							</button>
-						</div>
-					</div>
-				</div>,
-				document.body
-			)}
-
-			{/* Group Selector Dialog - shown when adding a favorite */}
-			{/* Group Selector Dialog - shown when adding a favorite */}
-			{showGroupSelector && connectionToFavorite && ReactDOM.createPortal(
-				<div className="create-group-overlay" onClick={() => setShowGroupSelector(false)}>
-					<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
-						<div className="dialog-header">
-							<h3>{isFavorite(connectionToFavorite) ? 'Editar favorito' : 'Agregar a favoritos'}</h3>
-							<button className="dialog-close" onClick={() => setShowGroupSelector(false)}>
-								<i className="pi pi-times" />
-							</button>
-						</div>
-						<div className="dialog-body">
-							<p style={{ color: 'rgba(255,255,255,0.7)', margin: '0 0 16px', fontSize: '0.9rem' }}>
-								Selecciona los grupos para <strong style={{ color: '#fff' }}>{connectionToFavorite.name}</strong>:
-							</p>
-							<div className="groups-selector">
-								{customGroups.map(group => (
-									<button
-										key={group.id}
-										type="button"
-										className={`group-selector-item ${selectedGroupsForFav.includes(group.id) ? 'selected' : ''}`}
-										onClick={() => toggleGroupForFavorite(group.id)}
-										style={{ '--group-color': group.color }}
-									>
-										<span className="group-dot" style={{ background: group.color }} />
-										<span>{group.name}</span>
-										{selectedGroupsForFav.includes(group.id) && (
-											<i className="pi pi-check" style={{ marginLeft: 'auto', color: group.color }} />
-										)}
-									</button>
-								))}
-							</div>
-							{!customGroups.length && (
-								<p style={{ color: 'rgba(255,255,255,0.5)', margin: '8px 0', fontSize: '0.8rem', fontStyle: 'italic' }}>
-									No hay grupos personalizados.
-								</p>
-							)}
-						</div>
-						<div className="dialog-footer">
-							{isFavorite(connectionToFavorite) ? (
-								<button
-									className="btn-cancel"
-									style={{ color: '#ff5252' }}
-									onClick={handleRemoveFavoriteFromDialog}
-								>
-									<i className="pi pi-trash" style={{ marginRight: 6 }} />
-									Quitar fav
-								</button>
-							) : (
+							<div className="dialog-footer">
 								<button
 									className="btn-cancel"
 									onClick={() => {
-										// Agregar sin grupos
-										toggleFavorite(connectionToFavorite);
-										loadConnectionHistory();
-										setShowGroupSelector(false);
-										setConnectionToFavorite(null);
+										favoriteGroupsStore.resetFilterConfig();
+										setAllFilters(favoriteGroupsStore.getAllFilters());
 									}}
 								>
-									Sin grupos
+									<i className="pi pi-refresh" /> Restaurar
 								</button>
-							)}
-
-							<button className="btn-create" onClick={handleConfirmAddFavorite}>
-								{isFavorite(connectionToFavorite) ? (
-									<><i className="pi pi-save" /> Guardar</>
-								) : (
-									<><i className="pi pi-star-fill" /> Agregar</>
-								)}
-							</button>
+								<button className="btn-create" onClick={() => setShowFilterConfig(false)}>
+									<i className="pi pi-check" /> Listo
+								</button>
+							</div>
 						</div>
-					</div>
-				</div>,
-				document.body
-			)}
-
-			{/* Edit Favorite Groups Dialog */}
-			{showEditFavGroups && editingFavorite && ReactDOM.createPortal(
-				<div className="create-group-overlay" onClick={() => setShowEditFavGroups(false)}>
-					<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
-						<div className="dialog-header">
-							<h3><i className="pi pi-folder" /> Grupos de Favoritos</h3>
-							<button className="dialog-close" onClick={() => setShowEditFavGroups(false)}>
-								<i className="pi pi-times" />
-							</button>
+					</div>,
+					document.body
+				)
+			}
+			{
+				showCreateGroupDialog && ReactDOM.createPortal(
+					<div className="create-group-overlay" onClick={() => setShowCreateGroupDialog(false)}>
+						<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
+							<div className="dialog-header">
+								<h3>Crear Grupo</h3>
+								<button className="dialog-close" onClick={() => setShowCreateGroupDialog(false)}>
+									<i className="pi pi-times" />
+								</button>
+							</div>
+							<div className="dialog-body">
+								<div className="form-field">
+									<label>Nombre del grupo</label>
+									<input
+										type="text"
+										value={newGroupName}
+										onChange={(e) => setNewGroupName(e.target.value)}
+										placeholder="Ej: Producción, Desarrollo..."
+										autoFocus
+										onKeyDown={(e) => e.key === 'Enter' && handleCreateGroup()}
+									/>
+								</div>
+								<div className="form-field">
+									<label>Color</label>
+									<div className="color-picker">
+										{['#4fc3f7', '#ff6b35', '#81c784', '#FFB300', '#E91E63', '#9C27B0', '#00BCD4', '#FF5722'].map(c => (
+											<button
+												key={c}
+												type="button"
+												className={`color-option ${newGroupColor === c ? 'selected' : ''}`}
+												style={{ background: c }}
+												onClick={() => setNewGroupColor(c)}
+											/>
+										))}
+									</div>
+								</div>
+							</div>
+							<div className="dialog-footer">
+								<button className="btn-cancel" onClick={() => setShowCreateGroupDialog(false)}>
+									Cancelar
+								</button>
+								<button className="btn-create" onClick={handleCreateGroup} disabled={!newGroupName.trim()}>
+									<i className="pi pi-check" /> Crear
+								</button>
+							</div>
 						</div>
-						<div className="dialog-body">
-							<p style={{ color: 'rgba(255,255,255,0.7)', margin: '0 0 16px', fontSize: '0.9rem' }}>
-								Asignar <strong style={{ color: '#fff' }}>{editingFavorite.name}</strong> a grupos:
-							</p>
-							<div className="groups-selector">
-								{customGroups.length > 0 ? (
-									customGroups.map(group => (
+					</div>,
+					document.body
+				)
+			}
+
+			{/* Edit/Delete Group Menu */}
+			{
+				editingGroup && ReactDOM.createPortal(
+					<div className="create-group-overlay" onClick={() => setEditingGroup(null)}>
+						<div className="create-group-dialog small" onClick={(e) => e.stopPropagation()}>
+							<div className="dialog-header">
+								<h3>Opciones de "{editingGroup.name}"</h3>
+								<button className="dialog-close" onClick={() => setEditingGroup(null)}>
+									<i className="pi pi-times" />
+								</button>
+							</div>
+							<div className="dialog-body">
+								<button
+									className="menu-option danger"
+									onClick={() => {
+										handleDeleteGroup(editingGroup.id);
+										setEditingGroup(null);
+									}}
+								>
+									<i className="pi pi-trash" /> Eliminar grupo
+								</button>
+							</div>
+						</div>
+					</div>,
+					document.body
+				)
+			}
+
+			{/* Group Selector Dialog - shown when adding a favorite */}
+			{/* Group Selector Dialog - shown when adding a favorite */}
+			{
+				showGroupSelector && connectionToFavorite && ReactDOM.createPortal(
+					<div className="create-group-overlay" onClick={() => setShowGroupSelector(false)}>
+						<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
+							<div className="dialog-header">
+								<h3>{isFavorite(connectionToFavorite) ? 'Editar favorito' : 'Agregar a favoritos'}</h3>
+								<button className="dialog-close" onClick={() => setShowGroupSelector(false)}>
+									<i className="pi pi-times" />
+								</button>
+							</div>
+							<div className="dialog-body">
+								<p style={{ color: 'rgba(255,255,255,0.7)', margin: '0 0 16px', fontSize: '0.9rem' }}>
+									Selecciona los grupos para <strong style={{ color: '#fff' }}>{connectionToFavorite.name}</strong>:
+								</p>
+								<div className="groups-selector">
+									{customGroups.map(group => (
 										<button
 											key={group.id}
 											type="button"
-											className={`group-selector-item ${editSelectedGroups.includes(group.id) ? 'selected' : ''}`}
-											onClick={() => toggleEditGroup(group.id)}
+											className={`group-selector-item ${selectedGroupsForFav.includes(group.id) ? 'selected' : ''}`}
+											onClick={() => toggleGroupForFavorite(group.id)}
 											style={{ '--group-color': group.color }}
 										>
 											<span className="group-dot" style={{ background: group.color }} />
 											<span>{group.name}</span>
-											{editSelectedGroups.includes(group.id) && (
+											{selectedGroupsForFav.includes(group.id) && (
 												<i className="pi pi-check" style={{ marginLeft: 'auto', color: group.color }} />
 											)}
 										</button>
-									))
-								) : (
-									<div style={{ textAlign: 'center', padding: '20px', color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>
-										<i className="pi pi-info-circle" style={{ display: 'block', fontSize: '1.5rem', marginBottom: '8px' }} />
-										No hay grupos personalizados creados.
-									</div>
+									))}
+								</div>
+								{!customGroups.length && (
+									<p style={{ color: 'rgba(255,255,255,0.5)', margin: '8px 0', fontSize: '0.8rem', fontStyle: 'italic' }}>
+										No hay grupos personalizados.
+									</p>
 								)}
 							</div>
+							<div className="dialog-footer">
+								{isFavorite(connectionToFavorite) ? (
+									<button
+										className="btn-cancel"
+										style={{ color: '#ff5252' }}
+										onClick={handleRemoveFavoriteFromDialog}
+									>
+										<i className="pi pi-trash" style={{ marginRight: 6 }} />
+										Quitar fav
+									</button>
+								) : (
+									<button
+										className="btn-cancel"
+										onClick={() => {
+											// Agregar sin grupos
+											toggleFavorite(connectionToFavorite);
+											loadConnectionHistory();
+											setShowGroupSelector(false);
+											setConnectionToFavorite(null);
+										}}
+									>
+										Sin grupos
+									</button>
+								)}
+
+								<button className="btn-create" onClick={handleConfirmAddFavorite}>
+									{isFavorite(connectionToFavorite) ? (
+										<><i className="pi pi-save" /> Guardar</>
+									) : (
+										<><i className="pi pi-star-fill" /> Agregar</>
+									)}
+								</button>
+							</div>
 						</div>
-						<div className="dialog-footer">
-							<button className="btn-cancel" onClick={() => setShowEditFavGroups(false)}>Cancelar</button>
-							<button className="btn-create" onClick={handleSaveEditGroups}>
-								<i className="pi pi-save" /> Guardar Cambios
-							</button>
+					</div>,
+					document.body
+				)
+			}
+
+			{/* Edit Favorite Groups Dialog */}
+			{
+				showEditFavGroups && editingFavorite && ReactDOM.createPortal(
+					<div className="create-group-overlay" onClick={() => setShowEditFavGroups(false)}>
+						<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
+							<div className="dialog-header">
+								<h3><i className="pi pi-folder" /> Grupos de Favoritos</h3>
+								<button className="dialog-close" onClick={() => setShowEditFavGroups(false)}>
+									<i className="pi pi-times" />
+								</button>
+							</div>
+							<div className="dialog-body">
+								<p style={{ color: 'rgba(255,255,255,0.7)', margin: '0 0 16px', fontSize: '0.9rem' }}>
+									Asignar <strong style={{ color: '#fff' }}>{editingFavorite.name}</strong> a grupos:
+								</p>
+								<div className="groups-selector">
+									{customGroups.length > 0 ? (
+										customGroups.map(group => (
+											<button
+												key={group.id}
+												type="button"
+												className={`group-selector-item ${editSelectedGroups.includes(group.id) ? 'selected' : ''}`}
+												onClick={() => toggleEditGroup(group.id)}
+												style={{ '--group-color': group.color }}
+											>
+												<span className="group-dot" style={{ background: group.color }} />
+												<span>{group.name}</span>
+												{editSelectedGroups.includes(group.id) && (
+													<i className="pi pi-check" style={{ marginLeft: 'auto', color: group.color }} />
+												)}
+											</button>
+										))
+									) : (
+										<div style={{ textAlign: 'center', padding: '20px', color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>
+											<i className="pi pi-info-circle" style={{ display: 'block', fontSize: '1.5rem', marginBottom: '8px' }} />
+											No hay grupos personalizados creados.
+										</div>
+									)}
+								</div>
+							</div>
+							<div className="dialog-footer">
+								<button className="btn-cancel" onClick={() => setShowEditFavGroups(false)}>Cancelar</button>
+								<button className="btn-create" onClick={handleSaveEditGroups}>
+									<i className="pi pi-save" /> Guardar Cambios
+								</button>
+							</div>
 						</div>
-					</div>
-				</div>,
-				document.body
-			)}
+					</div>,
+					document.body
+				)
+			}
 
 			{/* FAVORITES RIBBON (Always visible or toggled) */}
-			{!terminalView && (activeBottomView === 'all' || activeBottomView === 'favorites') && (
-				<FavoritesRibbon
-					connections={filteredFavorites}
-					fullList={favoriteConnections}
-					onReorder={(newList) => {
-						// Enable reordering even if filtered
-						// We merge the reordered subset back into the main list
-						const currentFullList = [...favoriteConnections];
+			{
+				!terminalView && (activeBottomView === 'all' || activeBottomView === 'favorites') && (
+					<FavoritesRibbon
+						connections={filteredFavorites}
+						fullList={favoriteConnections}
+						onReorder={(newList) => {
+							// Enable reordering even if filtered
+							// We merge the reordered subset back into the main list
+							const currentFullList = [...favoriteConnections];
 
-						// 1. Identify indices of the items in the main list that are part of the reordered set
-						// (The items in 'newList' are the ones currently visible and reordered)
-						const subsetIds = new Set(newList.map(c => c.id));
-						const indices = [];
+							// 1. Identify indices of the items in the main list that are part of the reordered set
+							// (The items in 'newList' are the ones currently visible and reordered)
+							const subsetIds = new Set(newList.map(c => c.id));
+							const indices = [];
 
-						currentFullList.forEach((c, index) => {
-							if (subsetIds.has(c.id)) {
-								indices.push(index);
-							}
-						});
-
-						// 2. Place the items from the new list into the identified slots
-						if (indices.length === newList.length) {
-							indices.forEach((originalIndex, i) => {
-								currentFullList[originalIndex] = newList[i];
+							currentFullList.forEach((c, index) => {
+								if (subsetIds.has(c.id)) {
+									indices.push(index);
+								}
 							});
 
-							// 3. Save and update
-							reorderFavorites(currentFullList);
-							loadConnectionHistory();
-						} else {
-							console.warn('Cannot reorder: index mismatch', indices.length, newList.length);
-						}
-					}}
-					collapsed={favoritesCollapsed}
-					onToggleCollapsed={toggleFavoritesCollapsed}
-					onOpenFilter={() => {
-						setFilterContext('favorites');
-						setFilterPanelOpen(true);
-					}}
-					activeFilterCount={getActiveFilterCount(activeFavFilters)}
-					activeFilters={activeFavFilters}
-					onRemoveFilter={(cat, id) => handleRemoveFilter('favorites', cat, id)}
-				/>
-			)}
+							// 2. Place the items from the new list into the identified slots
+							if (indices.length === newList.length) {
+								indices.forEach((originalIndex, i) => {
+									currentFullList[originalIndex] = newList[i];
+								});
+
+								// 3. Save and update
+								reorderFavorites(currentFullList);
+								loadConnectionHistory();
+							} else {
+								console.warn('Cannot reorder: index mismatch', indices.length, newList.length);
+							}
+						}}
+						collapsed={favoritesCollapsed}
+						onToggleCollapsed={toggleFavoritesCollapsed}
+						onOpenFilter={() => {
+							setFilterContext('favorites');
+							setFilterPanelOpen(true);
+						}}
+						activeFilterCount={getActiveFilterCount(activeFavFilters)}
+						activeFilters={activeFavFilters}
+						onRemoveFilter={(cat, id) => handleRemoveFilter('favorites', cat, id)}
+					/>
+				)
+			}
 
 
 			{/* RECIENTES TABLE (Fills remaining space) */}
-			{!terminalView && (activeBottomView === 'all' || activeBottomView === 'recent') && (
-				<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginTop: '0' }}>
-					<div className="modern-section-header header-recents">
-						<button
-							className="section-collapse-btn"
-							onClick={toggleRecentsCollapsed}
-							title={recentsCollapsed ? "Expandir recientes" : "Colapsar recientes"}
-							style={{
-								background: 'transparent',
-								border: 'none',
-								padding: '4px 2px',
-								cursor: 'pointer',
-								fontSize: '0.9rem',
-								transition: 'all 0.2s ease',
-								display: 'flex',
-								alignItems: 'center',
-								justifyContent: 'center',
-							}}
-							onMouseEnter={(e) => {
-								e.currentTarget.style.transform = 'scale(1.1)';
-							}}
-							onMouseLeave={(e) => {
-								e.currentTarget.style.transform = 'scale(1)';
-							}}
-						>
-							<i className={recentsCollapsed ? "pi pi-chevron-down" : "pi pi-chevron-up"} />
-						</button>
-						<div className="modern-header-title">
-							<i className="pi pi-history" />
-							<span>RECIENTES</span>
+			{
+				!terminalView && (activeBottomView === 'all' || activeBottomView === 'recent') && (
+					<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginTop: '0' }}>
+						<div className="modern-section-header header-recents">
+							<button
+								className="section-collapse-btn"
+								onClick={toggleRecentsCollapsed}
+								title={recentsCollapsed ? "Expandir recientes" : "Colapsar recientes"}
+								style={{
+									background: 'transparent',
+									border: 'none',
+									padding: '4px 2px',
+									cursor: 'pointer',
+									fontSize: '0.9rem',
+									transition: 'all 0.2s ease',
+									display: 'flex',
+									alignItems: 'center',
+									justifyContent: 'center',
+								}}
+								onMouseEnter={(e) => {
+									e.currentTarget.style.transform = 'scale(1.1)';
+								}}
+								onMouseLeave={(e) => {
+									e.currentTarget.style.transform = 'scale(1)';
+								}}
+							>
+								<i className={recentsCollapsed ? "pi pi-chevron-down" : "pi pi-chevron-up"} />
+							</button>
+							<div className="modern-header-title">
+								<i className="pi pi-history" />
+								<span>RECIENTES</span>
+							</div>
+
+							{/* Filter Button (Recents) */}
+							<button
+								className={`section-action-btn ${getActiveFilterCount(activeRecentFilters) > 0 ? 'active' : ''}`}
+								onClick={() => {
+									setFilterContext('recents');
+									setFilterPanelOpen(true);
+								}}
+								title="Filtrar recientes"
+								style={{ marginRight: '8px' }}
+							>
+								<i className={`pi ${getActiveFilterCount(activeRecentFilters) > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
+							</button>
+
+							{/* Active Filter Chips (Recents) */}
+							{getActiveFilterCount(activeRecentFilters) > 0 && (
+								<div className="header-active-filters">
+									{activeRecentFilters.protocols?.map(filterId => (
+										<FilterBadge
+											key={`protocol-${filterId}`}
+											label={getFilterLabel('protocols', filterId)}
+											color={getFilterColor('protocols', filterId)}
+											icon={getFilterIcon('protocols', filterId)}
+											type="protocol"
+											onRemove={() => handleRemoveFilter('recents', 'protocols', filterId)}
+											compact
+										/>
+									))}
+									{activeRecentFilters.groups?.map(filterId => (
+										<FilterBadge
+											key={`group-${filterId}`}
+											label={getFilterLabel('groups', filterId)}
+											color={getFilterColor('groups', filterId)}
+											icon={getFilterIcon('groups', filterId)}
+											type="group"
+											onRemove={() => handleRemoveFilter('recents', 'groups', filterId)}
+											compact
+										/>
+									))}
+									{activeRecentFilters.states?.map(filterId => (
+										<FilterBadge
+											key={`state-${filterId}`}
+											label={getFilterLabel('states', filterId)}
+											color={getFilterColor('states', filterId)}
+											icon={getFilterIcon('states', filterId)}
+											type="state"
+											onRemove={() => handleRemoveFilter('recents', 'states', filterId)}
+											compact
+										/>
+									))}
+								</div>
+							)}
+							<div className="modern-header-line"></div>
 						</div>
 
-						{/* Filter Button (Recents) */}
-						<button
-							className={`section-action-btn ${getActiveFilterCount(activeRecentFilters) > 0 ? 'active' : ''}`}
-							onClick={() => {
-								setFilterContext('recents');
-								setFilterPanelOpen(true);
-							}}
-							title="Filtrar recientes"
-							style={{ marginRight: '8px' }}
-						>
-							<i className={`pi ${getActiveFilterCount(activeRecentFilters) > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
-						</button>
 
-						{/* Active Filter Chips (Recents) */}
-						{getActiveFilterCount(activeRecentFilters) > 0 && (
-							<div className="header-active-filters">
-								{activeRecentFilters.protocols?.map(filterId => (
-									<FilterBadge
-										key={`protocol-${filterId}`}
-										label={getFilterLabel('protocols', filterId)}
-										color={getFilterColor('protocols', filterId)}
-										icon={getFilterIcon('protocols', filterId)}
-										type="protocol"
-										onRemove={() => handleRemoveFilter('recents', 'protocols', filterId)}
-										compact
-									/>
-								))}
-								{activeRecentFilters.groups?.map(filterId => (
-									<FilterBadge
-										key={`group-${filterId}`}
-										label={getFilterLabel('groups', filterId)}
-										color={getFilterColor('groups', filterId)}
-										icon={getFilterIcon('groups', filterId)}
-										type="group"
-										onRemove={() => handleRemoveFilter('recents', 'groups', filterId)}
-										compact
-									/>
-								))}
-								{activeRecentFilters.states?.map(filterId => (
-									<FilterBadge
-										key={`state-${filterId}`}
-										label={getFilterLabel('states', filterId)}
-										color={getFilterColor('states', filterId)}
-										icon={getFilterIcon('states', filterId)}
-										type="state"
-										onRemove={() => handleRemoveFilter('recents', 'states', filterId)}
-										compact
-									/>
-								))}
-							</div>
+						{!recentsCollapsed && (
+							<ConnectionTable
+								connections={filteredRecentsForDisplay}
+								title="Nombre"
+								emptyMessage="No hay sesiones recientes"
+							/>
 						)}
-						<div className="modern-header-line"></div>
-					</div>
-
-
-					{!recentsCollapsed && (
-						<ConnectionTable
-							connections={filteredRecentsForDisplay}
-							title="Nombre"
-							emptyMessage="No hay sesiones recientes"
-						/>
-					)}
-				</section>
-			)}
-		</div>
+					</section>
+				)
+			}
+		</div >
 	);
 };
 

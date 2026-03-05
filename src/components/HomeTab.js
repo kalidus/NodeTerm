@@ -102,9 +102,28 @@ const HomeTab = ({
   const containerRef = useRef(null);
   const [containerHeight, setContainerHeight] = useState(window.innerHeight - 100);
 
-  // Estado para el terminal embebido como vista integrada
-  const [terminalView, setTerminalView] = useState(false);
+  // Estado para el terminal embebido como vista integrada (por defecto visible en Command Palette mode)
+  const [terminalView, setTerminalView] = useState(true);
   const [embeddedTerminalHeight, setEmbeddedTerminalHeight] = useState(360);
+
+  // Auto-inicializar terminal embebido al montar el componente si está visible por defecto
+  useEffect(() => {
+    if (terminalView && !embeddedTerminalInitialized.current) {
+      const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
+      embeddedTerminalInitialized.current = true;
+
+      setTimeout(() => {
+        try {
+          if (embeddedTabbedTerminalRef.current?.addTerminalTab) {
+            embeddedTabbedTerminalRef.current.addTerminalTab(terminalType);
+          }
+        } catch (err) {
+          console.warn('[HomeTab] embedded auto init:', err);
+        }
+        window.dispatchEvent(new Event('resize'));
+      }, 500); // Retraso ligeramente mayor al montar inicialmente para asegurar render DOM
+    }
+  }, []);
 
   // Medir el tamaño real del contenedor
   useEffect(() => {
@@ -725,13 +744,19 @@ const HomeTab = ({
       setTerminalView(true);
       if (!embeddedTerminalInitialized.current && terminalType) {
         embeddedTerminalInitialized.current = true;
+        // Solo para el terminal embebido, le agregamos el tab explícito si es la primera vez
         setTimeout(() => {
           try {
-            embeddedTabbedTerminalRef.current?.addTerminalTab?.(terminalType);
+            if (embeddedTabbedTerminalRef.current?.addTerminalTab) {
+              embeddedTabbedTerminalRef.current.addTerminalTab(terminalType);
+            }
           } catch (err) {
             console.warn('[HomeTab] embedded addTerminalTab:', err);
           }
-        }, 80);
+          window.dispatchEvent(new Event('resize'));
+        }, 150); // Dar algo más de tiempo para que se monte correctamente en el viewport antes de crear xterm
+      } else {
+        setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
       }
     } else {
       setTerminalView(false);
@@ -827,63 +852,61 @@ const HomeTab = ({
                     />
                   </div>
 
-                  {/* Terminal embebido - tarjeta integrada */}
-                  {terminalView && (
-                    <div
-                      style={{
-                        flex: 1,
-                        margin: '0 1rem 1rem 1rem',
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.12)'}`,
-                        background: localTerminalBg,
-                        boxShadow: '0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
-                        position: 'relative',
-                        minHeight: '120px'
-                      }}
-                    >
-                      {/* Header estilo macOS */}
-                      <div style={{
-                        height: '32px',
-                        flexShrink: 0,
-                        background: themeColors.cardBackground || 'rgba(20,22,28,0.95)',
-                        borderBottom: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}`,
-                        borderRadius: '12px 12px 0 0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '0 12px',
-                        position: 'relative'
-                      }}>
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                          <div
-                            onClick={() => setTerminalView(false)}
-                            style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56', cursor: 'pointer', border: '1px solid #e0443e', flexShrink: 0 }}
-                            title="Cerrar"
-                          />
-                          <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e', border: '1px solid #dea123', flexShrink: 0 }} />
-                          <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f', border: '1px solid #1aab29', flexShrink: 0 }} />
-                        </div>
-                        <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', color: themeColors.textSecondary, fontSize: '11px', userSelect: 'none', pointerEvents: 'none', fontWeight: 500 }}>
-                          {terminalTitle}
-                        </div>
-                      </div>
-                      {/* Contenido del terminal */}
-                      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                        <TabbedTerminal
-                          ref={embeddedTabbedTerminalRef}
-                          terminalState="normal"
-                          localFontFamily={localFontFamily}
-                          localFontSize={localFontSize}
-                          localPowerShellTheme={localPowerShellTheme}
-                          localLinuxTerminalTheme={localLinuxTerminalTheme}
-                          hideStatusBar={true}
-                          hideTabs={true}
+                  {/* Terminal embebido - tarjeta integrada (siempre renderizado para mantener estado) */}
+                  <div
+                    style={{
+                      flex: terminalView ? 1 : 0,
+                      margin: terminalView ? '0 1rem 1rem 1rem' : '0 1rem 0 1rem',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      display: terminalView ? 'flex' : 'none',
+                      flexDirection: 'column',
+                      border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.12)'}`,
+                      background: localTerminalBg,
+                      boxShadow: '0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
+                      position: 'relative',
+                      minHeight: terminalView ? '120px' : '0'
+                    }}
+                  >
+                    {/* Header estilo macOS */}
+                    <div style={{
+                      height: '32px',
+                      flexShrink: 0,
+                      background: themeColors.cardBackground || 'rgba(20,22,28,0.95)',
+                      borderBottom: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}`,
+                      borderRadius: '12px 12px 0 0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '0 12px',
+                      position: 'relative'
+                    }}>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <div
+                          onClick={() => setTerminalView(false)}
+                          style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56', cursor: 'pointer', border: '1px solid #e0443e', flexShrink: 0 }}
+                          title="Ocultar Terminal"
                         />
+                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e', border: '1px solid #dea123', flexShrink: 0 }} />
+                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f', border: '1px solid #1aab29', flexShrink: 0 }} />
+                      </div>
+                      <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', color: themeColors.textSecondary, fontSize: '11px', userSelect: 'none', pointerEvents: 'none', fontWeight: 500 }}>
+                        {terminalTitle}
                       </div>
                     </div>
-                  )}
+                    {/* Contenido del terminal */}
+                    <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                      <TabbedTerminal
+                        ref={embeddedTabbedTerminalRef}
+                        terminalState="normal"
+                        localFontFamily={localFontFamily}
+                        localFontSize={localFontSize}
+                        localPowerShellTheme={localPowerShellTheme}
+                        localLinuxTerminalTheme={localLinuxTerminalTheme}
+                        hideStatusBar={true}
+                        hideTabs={true}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

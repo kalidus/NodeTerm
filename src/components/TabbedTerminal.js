@@ -1374,7 +1374,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 setCygwinAvailable(false);
                 return;
             }
-        } else if (terminalTypeToUse.startsWith('wsl-') || terminalTypeToUse === 'debian' || matchedDistro) {
+        } else if (terminalTypeToUse.startsWith('wsl-') || terminalTypeToUse === 'debian' || matchedDistro || terminalTypeToUse.toLowerCase().includes('ubuntu') || terminalTypeToUse.toLowerCase().includes('debian')) {
             // Extraer información de la distribución WSL seleccionada (permite tanto "wsl-<name>" como "<name>")
             const selectedDistro = matchedDistro || findDistroByValue(terminalTypeToUse);
 
@@ -1388,7 +1388,11 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     icon: selectedDistro.icon,
                     category: selectedDistro.category
                 };
-            } else if (terminalTypeToUse === 'debian' || terminalTypeToUse === 'wsl-debian') {
+            } else if (terminalTypeToUse.toLowerCase().includes('ubuntu')) {
+                title = terminalTypeToUse;
+                terminalType = 'ubuntu';
+                distroInfo = { name: terminalTypeToUse, label: terminalTypeToUse, category: 'ubuntu', executable: 'ubuntu.exe' };
+            } else if (terminalTypeToUse.toLowerCase().includes('debian') || terminalTypeToUse === 'wsl-debian') {
                 title = 'Debian';
                 terminalType = 'debian';
                 // Fallback distroInfo si no se encontró en la lista
