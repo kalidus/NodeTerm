@@ -1648,6 +1648,73 @@ const ConnectionHistory = ({
 				.hero-shortcuts { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.3)'}; font-size: 0.75rem; display: flex; justify-content: center; gap: 20px; font-weight: 500;}
 				.hero-shortcuts kbd { background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); margin-right: 6px; font-family: monospace; color: rgba(255,255,255,0.7); }
 
+				/* Terminal-style frame for Recents */
+				.recents-terminal-frame {
+					margin: 0 1rem 1rem 1rem;
+					border-radius: 12px;
+					overflow: hidden;
+					display: flex;
+					flex-direction: column;
+					border: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.12)'};
+					background: ${themeColors.cardBackground || 'rgba(16, 20, 28, 0.6)'};
+					box-shadow: 0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
+					flex: 1;
+					min-height: 120px;
+				}
+				.recents-terminal-header {
+					height: 32px;
+					flex-shrink: 0;
+					background: ${themeColors.cardBackground || 'rgba(20,22,28,0.95)'};
+					border-bottom: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'};
+					border-radius: 12px 12px 0 0;
+					display: flex;
+					align-items: center;
+					padding: 0 12px;
+					position: relative;
+				}
+				.recents-terminal-header .traffic-lights {
+					display: flex;
+					gap: 6px;
+					align-items: center;
+				}
+				.recents-terminal-header .traffic-dot {
+					width: 12px;
+					height: 12px;
+					border-radius: 50%;
+					flex-shrink: 0;
+				}
+				.recents-terminal-header .traffic-dot.red { background: #ff5f56; border: 1px solid #e0443e; cursor: pointer; }
+				.recents-terminal-header .traffic-dot.red:hover { filter: brightness(1.2); }
+				.recents-terminal-header .traffic-dot.yellow { background: #ffbd2e; border: 1px solid #dea123; }
+				.recents-terminal-header .traffic-dot.green { background: #27c93f; border: 1px solid #1aab29; }
+				.recents-terminal-header .header-title {
+					position: absolute;
+					left: 0;
+					right: 0;
+					text-align: center;
+					color: ${themeColors.textSecondary || 'rgba(255,255,255,0.5)'};
+					font-size: 11px;
+					user-select: none;
+					pointer-events: none;
+					font-weight: 500;
+				}
+				.recents-terminal-body {
+					flex: 1;
+					overflow-y: auto;
+					padding: 0;
+				}
+				/* Adjust internal section styles when inside terminal frame */
+				.recents-terminal-body .connection-history-section {
+					margin: 0 !important;
+					padding: 0 !important;
+				}
+				.recents-terminal-body .modern-section-header.header-recents {
+					margin-bottom: 8px !important;
+					padding-top: 8px !important;
+				}
+				.recents-terminal-body .connection-list-body {
+					padding: 0 8px 12px 8px !important;
+				}
 				/* Search Dropdown Styles */
 				.hero-search-dropdown {
 					position: fixed;
@@ -2264,103 +2331,123 @@ const ConnectionHistory = ({
 			}
 
 
-			{/* RECIENTES TABLE (Fills remaining space) */}
+			{/* RECIENTES TABLE (Fills remaining space) - Terminal-style frame */}
 			{
 				!terminalView && (activeBottomView === 'all' || activeBottomView === 'recent') && (
-					<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginTop: '0' }}>
-						<div className="modern-section-header header-recents">
-							<button
-								className="section-collapse-btn"
-								onClick={toggleRecentsCollapsed}
-								title={recentsCollapsed ? "Expandir recientes" : "Colapsar recientes"}
-								style={{
-									background: 'transparent',
-									border: 'none',
-									padding: '4px 2px',
-									cursor: 'pointer',
-									fontSize: '0.9rem',
-									transition: 'all 0.2s ease',
-									display: 'flex',
-									alignItems: 'center',
-									justifyContent: 'center',
-								}}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.transform = 'scale(1.1)';
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.transform = 'scale(1)';
-								}}
-							>
-								<i className={recentsCollapsed ? "pi pi-chevron-down" : "pi pi-chevron-up"} />
-							</button>
-							<div className="modern-header-title">
-								<i className="pi pi-history" />
-								<span>RECIENTES</span>
+					<div className="recents-terminal-frame">
+						{/* macOS-style header */}
+						<div className="recents-terminal-header">
+							<div className="traffic-lights">
+								<div
+									className="traffic-dot red"
+									onClick={() => setActiveBottomView('all')}
+									title="Cerrar vista de recientes"
+								/>
+								<div className="traffic-dot yellow" />
+								<div className="traffic-dot green" />
 							</div>
-
-							{/* Filter Button (Recents) */}
-							<button
-								className={`section-action-btn ${getActiveFilterCount(activeRecentFilters) > 0 ? 'active' : ''}`}
-								onClick={() => {
-									setFilterContext('recents');
-									setFilterPanelOpen(true);
-								}}
-								title="Filtrar recientes"
-								style={{ marginRight: '8px' }}
-							>
-								<i className={`pi ${getActiveFilterCount(activeRecentFilters) > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
-							</button>
-
-							{/* Active Filter Chips (Recents) */}
-							{getActiveFilterCount(activeRecentFilters) > 0 && (
-								<div className="header-active-filters">
-									{activeRecentFilters.protocols?.map(filterId => (
-										<FilterBadge
-											key={`protocol-${filterId}`}
-											label={getFilterLabel('protocols', filterId)}
-											color={getFilterColor('protocols', filterId)}
-											icon={getFilterIcon('protocols', filterId)}
-											type="protocol"
-											onRemove={() => handleRemoveFilter('recents', 'protocols', filterId)}
-											compact
-										/>
-									))}
-									{activeRecentFilters.groups?.map(filterId => (
-										<FilterBadge
-											key={`group-${filterId}`}
-											label={getFilterLabel('groups', filterId)}
-											color={getFilterColor('groups', filterId)}
-											icon={getFilterIcon('groups', filterId)}
-											type="group"
-											onRemove={() => handleRemoveFilter('recents', 'groups', filterId)}
-											compact
-										/>
-									))}
-									{activeRecentFilters.states?.map(filterId => (
-										<FilterBadge
-											key={`state-${filterId}`}
-											label={getFilterLabel('states', filterId)}
-											color={getFilterColor('states', filterId)}
-											icon={getFilterIcon('states', filterId)}
-											type="state"
-											onRemove={() => handleRemoveFilter('recents', 'states', filterId)}
-											compact
-										/>
-									))}
-								</div>
-							)}
-							<div className="modern-header-line"></div>
+							<div className="header-title">
+								Recent Connections — {filteredRecentsForDisplay.length}
+							</div>
 						</div>
+						{/* Content body */}
+						<div className="recents-terminal-body">
+							<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginTop: '0' }}>
+								<div className="modern-section-header header-recents">
+									<button
+										className="section-collapse-btn"
+										onClick={toggleRecentsCollapsed}
+										title={recentsCollapsed ? "Expandir recientes" : "Colapsar recientes"}
+										style={{
+											background: 'transparent',
+											border: 'none',
+											padding: '4px 2px',
+											cursor: 'pointer',
+											fontSize: '0.9rem',
+											transition: 'all 0.2s ease',
+											display: 'flex',
+											alignItems: 'center',
+											justifyContent: 'center',
+										}}
+										onMouseEnter={(e) => {
+											e.currentTarget.style.transform = 'scale(1.1)';
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.style.transform = 'scale(1)';
+										}}
+									>
+										<i className={recentsCollapsed ? "pi pi-chevron-down" : "pi pi-chevron-up"} />
+									</button>
+									<div className="modern-header-title">
+										<i className="pi pi-history" />
+										<span>RECIENTES</span>
+									</div>
+
+									{/* Filter Button (Recents) */}
+									<button
+										className={`section-action-btn ${getActiveFilterCount(activeRecentFilters) > 0 ? 'active' : ''}`}
+										onClick={() => {
+											setFilterContext('recents');
+											setFilterPanelOpen(true);
+										}}
+										title="Filtrar recientes"
+										style={{ marginRight: '8px' }}
+									>
+										<i className={`pi ${getActiveFilterCount(activeRecentFilters) > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
+									</button>
+
+									{/* Active Filter Chips (Recents) */}
+									{getActiveFilterCount(activeRecentFilters) > 0 && (
+										<div className="header-active-filters">
+											{activeRecentFilters.protocols?.map(filterId => (
+												<FilterBadge
+													key={`protocol-${filterId}`}
+													label={getFilterLabel('protocols', filterId)}
+													color={getFilterColor('protocols', filterId)}
+													icon={getFilterIcon('protocols', filterId)}
+													type="protocol"
+													onRemove={() => handleRemoveFilter('recents', 'protocols', filterId)}
+													compact
+												/>
+											))}
+											{activeRecentFilters.groups?.map(filterId => (
+												<FilterBadge
+													key={`group-${filterId}`}
+													label={getFilterLabel('groups', filterId)}
+													color={getFilterColor('groups', filterId)}
+													icon={getFilterIcon('groups', filterId)}
+													type="group"
+													onRemove={() => handleRemoveFilter('recents', 'groups', filterId)}
+													compact
+												/>
+											))}
+											{activeRecentFilters.states?.map(filterId => (
+												<FilterBadge
+													key={`state-${filterId}`}
+													label={getFilterLabel('states', filterId)}
+													color={getFilterColor('states', filterId)}
+													icon={getFilterIcon('states', filterId)}
+													type="state"
+													onRemove={() => handleRemoveFilter('recents', 'states', filterId)}
+													compact
+												/>
+											))}
+										</div>
+									)}
+									<div className="modern-header-line"></div>
+								</div>
 
 
-						{!recentsCollapsed && (
-							<ConnectionTable
-								connections={filteredRecentsForDisplay}
-								title="Nombre"
-								emptyMessage="No hay sesiones recientes"
-							/>
-						)}
-					</section>
+								{!recentsCollapsed && (
+									<ConnectionTable
+										connections={filteredRecentsForDisplay}
+										title="Nombre"
+										emptyMessage="No hay sesiones recientes"
+									/>
+								)}
+							</section>
+						</div>
+					</div>
 				)
 			}
 		</div >
