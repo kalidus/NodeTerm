@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Rnd } from 'react-rnd';
 import { Card } from 'primereact/card';
 import { TabView, TabPanel } from 'primereact/tabview';
@@ -883,9 +883,9 @@ const HomeTab = ({
                   >
                     {/* Header estilo macOS */}
                     <div style={{
-                      height: '32px',
+                      height: '36px',
                       flexShrink: 0,
-                      background: themeColors.cardBackground || 'rgba(20,22,28,0.95)',
+                      background: localTerminalTheme.background ? localTerminalTheme.background + 'ee' : 'rgba(20,22,28,0.95)',
                       borderBottom: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'}`,
                       borderRadius: '12px 12px 0 0',
                       display: 'flex',
@@ -893,7 +893,7 @@ const HomeTab = ({
                       padding: '0 12px',
                       position: 'relative'
                     }}>
-                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', zIndex: 2 }}>
                         <div
                           onClick={() => setTerminalView(false)}
                           style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56', cursor: 'pointer', border: '1px solid #e0443e', flexShrink: 0 }}
@@ -902,8 +902,21 @@ const HomeTab = ({
                         <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e', border: '1px solid #dea123', flexShrink: 0 }} />
                         <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f', border: '1px solid #1aab29', flexShrink: 0 }} />
                       </div>
-                      <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', color: themeColors.textSecondary, fontSize: '11px', userSelect: 'none', pointerEvents: 'none', fontWeight: 500 }}>
-                        {terminalTitle}
+                      <div style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        textAlign: 'center',
+                        color: localTerminalTheme.foreground || '#c9d1d9',
+                        opacity: 0.6,
+                        fontSize: '11.5px',
+                        userSelect: 'none',
+                        pointerEvents: 'none',
+                        fontFamily: "'Fira Code', 'Cascadia Code', 'Consolas', monospace",
+                        fontWeight: 400,
+                        letterSpacing: '0.3px'
+                      }}>
+                        <span style={{ color: localTerminalTheme.green || '#3fb950' }}>~</span>/local &nbsp;{'\u00B7'}&nbsp; {terminalTitle}
                       </div>
                     </div>
                     {/* Contenido del terminal */}
