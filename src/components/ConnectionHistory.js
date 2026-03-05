@@ -1496,8 +1496,6 @@ const ConnectionHistory = ({
 				.hero-status { color: #81c784; font-size: 0.9rem; margin-bottom: 30px; display: flex; justify-content: center; align-items: center; gap: 8px; font-family: monospace; }
 				.hero-search-container { 
 					width: 100%; 
-					max-width: 580px; 
-					margin: 0 auto 16px; 
 					position: relative; 
 					z-index: 100;
 				}
@@ -1516,11 +1514,11 @@ const ConnectionHistory = ({
 				}
 				.hero-search-input, .p-inputtext.hero-search-input:enabled:focus {
 					width: 100% !important;
-					background: ${themeColors.searchBackground || 'rgba(22, 27, 34, 0.6)'} !important;
-					border: 1px solid ${themeColors.searchBorder || 'rgba(255,255,255,0.1)'} !important;
+					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.05)'} !important;
+					border: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '55' : 'rgba(255,255,255,0.1)'} !important;
 					border-radius: 10px !important;
 					padding: 12px 70px 12px 55px !important;
-					color: ${themeColors.textPrimary || '#fff'} !important;
+					color: ${terminalTheme.foreground || '#fff'} !important;
 					font-size: 1rem;
 					font-family: 'Fira Code', 'Consolas', monospace !important;
 					outline: none !important;
@@ -1529,11 +1527,11 @@ const ConnectionHistory = ({
 					transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 				}
 				.hero-search-input:focus, .p-inputtext.hero-search-input:enabled:focus {
-					border-color: #27c93f !important;
-					box-shadow: 0 0 20px rgba(39, 201, 63, 0.15),
-					            inset 0 1px 1px rgba(255,255,255,0.1),
-					            0 0 0 1px #27c93f !important;
-					background: ${themeColors.searchBackground ? themeColors.searchBackground.replace('0.85', '0.90').replace('0.6', '0.90') : 'rgba(22, 27, 34, 0.90)'} !important;
+					border-color: ${terminalTheme.green || '#27c93f'} !important;
+					box-shadow: 0 0 15px ${terminalTheme.green ? terminalTheme.green + '33' : 'rgba(39, 201, 63, 0.15)'},
+					            inset 0 1px 1px rgba(255,255,255,0.05),
+					            0 0 0 1px ${terminalTheme.green || '#27c93f'} !important;
+					background: ${terminalTheme.background || 'rgba(22, 27, 34, 0.90)'} !important;
 					transform: translateY(-2px);
 				}
 				/* Hide old search icon since we use terminal prompt */
@@ -1581,35 +1579,119 @@ const ConnectionHistory = ({
 					margin-bottom: 24px;
 				}
 				.hero-action-btn {
-					background: transparent;
-					border: 1px solid transparent;
-					border-radius: 8px;
-					padding: 8px 16px;
-					color: ${themeColors.textSecondary || 'rgba(255,255,255,0.5)'};
+					background: ${terminalTheme.background ? terminalTheme.background + '88' : 'rgba(13, 17, 23, 0.5)'};
+					border: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '40' : 'rgba(255,255,255,0.08)'};
+					border-top: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '88' : 'rgba(255,255,255,0.15)'};
+					border-radius: 20px;
+					padding: 10px 24px;
+					color: ${terminalTheme.foreground || 'rgba(255,255,255,0.8)'};
 					font-size: 0.95rem;
 					font-weight: 500;
+					font-family: 'Fira Code', monospace;
 					display: flex;
 					align-items: center;
-					gap: 10px;
+					gap: 12px;
 					cursor: pointer;
-					transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-					backdrop-filter: blur(8px);
+					transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+					box-shadow: 0 4px 15px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.02);
+					backdrop-filter: blur(12px);
 				}
 				.hero-action-btn:hover {
-					background: ${themeColors.hoverBackground || 'rgba(255,255,255,0.05)'};
-					color: ${themeColors.textPrimary || '#fff'};
-					border-color: rgba(255,255,255,0.05);
-					transform: translateY(-1px);
+					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.1)'};
+					color: ${terminalTheme.foreground || '#ffffff'};
+					border-color: ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '99' : 'rgba(255,255,255,0.2)'};
+					transform: translateY(-2px);
+					box-shadow: 0 6px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+				}
+				.hero-action-btn:active {
+					transform: translateY(1px);
+					box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 				}
 				.hero-action-btn.active {
-					background: ${themeColors.itemBackground || 'rgba(255,255,255,0.08)'};
-					color: ${themeColors.textPrimary || '#ffffff'};
-					border-color: ${themeColors.borderColor || 'rgba(255,255,255,0.1)'};
-					box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.15)'};
+					color: ${terminalTheme.foreground || '#ffffff'};
+					border-color: ${terminalTheme.blue || '#58a6ff'};
+					box-shadow: 0 0 12px ${terminalTheme.blue ? terminalTheme.blue + '40' : 'rgba(88, 166, 255, 0.25)'}, inset 0 1px 0 rgba(255,255,255,0.1);
+				}
+				.hero-action-btn i {
+					font-size: 1.1rem;
+					color: ${terminalTheme.brightBlack || 'rgba(255,255,255,0.5)'};
+					transition: color 0.3s ease;
+				}
+				.hero-action-btn:hover i {
+					color: ${terminalTheme.blue || '#58a6ff'};
+				}
+				.hero-action-btn.active i {
+					color: ${terminalTheme.blue || '#58a6ff'};
+					filter: drop-shadow(0 0 8px ${terminalTheme.blue ? terminalTheme.blue + '80' : 'rgba(88,166,255,0.5)'});
 				}
 				
 				.hero-shortcuts { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.3)'}; font-size: 0.75rem; display: flex; justify-content: center; gap: 20px; font-weight: 500;}
 				.hero-shortcuts kbd { background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); margin-right: 6px; font-family: monospace; color: rgba(255,255,255,0.7); }
+
+				/* --- Top Terminal Frame (Search + Actions) --- */
+				.top-terminal-frame {
+					margin: 0 auto 24px auto;
+					border-radius: 12px;
+					overflow: hidden;
+					display: flex;
+					flex-direction: column;
+					border: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '55' : 'rgba(255,255,255,0.12)'};
+					background: ${terminalTheme.background || '#0d1117'};
+					box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
+					max-width: 650px;
+					width: 100%;
+				}
+				.top-terminal-header {
+					height: 36px;
+					box-sizing: border-box;
+					flex-shrink: 0;
+					background: ${terminalTheme.background ? terminalTheme.background + 'ee' : 'rgba(20,22,28,0.95)'};
+					border-bottom: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '44' : 'rgba(255,255,255,0.08)'};
+					border-radius: 12px 12px 0 0;
+					display: flex;
+					align-items: center;
+					padding: 0 12px;
+					position: relative;
+					gap: 0;
+				}
+				.top-terminal-header .traffic-lights {
+					display: flex;
+					gap: 6px;
+					align-items: center;
+					flex-shrink: 0;
+				}
+				.top-terminal-header .traffic-dot {
+					width: 12px;
+					height: 12px;
+					border-radius: 50%;
+					flex-shrink: 0;
+				}
+				.top-terminal-header .traffic-dot.red { background: #ff5f56; border: 1px solid #e0443e; cursor: pointer; transition: filter 0.15s; }
+				.top-terminal-header .traffic-dot.red:hover { filter: brightness(1.25); }
+				.top-terminal-header .traffic-dot.yellow { background: #ffbd2e; border: 1px solid #dea123; }
+				.top-terminal-header .traffic-dot.green { background: #27c93f; border: 1px solid #1aab29; }
+				.top-terminal-header .header-path {
+					flex: 1;
+					text-align: center;
+					color: ${terminalTheme.foreground || '#c9d1d9'};
+					opacity: 0.6;
+					font-size: 11.5px;
+					user-select: none;
+					pointer-events: none;
+					font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+					font-weight: 400;
+					letter-spacing: 0.3px;
+				}
+				.top-terminal-header .header-path .path-tilde { color: ${terminalTheme.green || '#3fb950'}; }
+				
+				.top-terminal-body {
+					padding: 24px 20px;
+					display: flex;
+					flex-direction: column;
+					align-items: center;
+					background: transparent;
+				}
 
 				/* --- Terminal Frame for Recents --- */
 				.recents-terminal-frame {
@@ -1874,129 +1956,136 @@ const ConnectionHistory = ({
 					<i className="pi pi-circle-fill" style={{ fontSize: '0.6rem' }} />
 					<span>{activeIds.size} active sessions</span>
 				</div>
-				<div className="hero-search-container">
-					<InputText
-						value={searchTerm}
-						onChange={(e) => setSearchTerm(e.target.value)}
-						onKeyDown={handleSearchKeyDown}
-						className="hero-search-input"
-						placeholder="Search or connect to a host..."
-						onBlur={() => {
-							// Pequeno delay para permitir clicks en el dropdown
-							setTimeout(() => setShowDropdown(false), 200);
-						}}
-						onFocus={() => {
-							if (filteredSearchResults.length > 0) setShowDropdown(true);
-						}}
-						autoComplete="off"
-					/>
-					{isSearching && (
-						<i className="pi pi-spin pi-spinner hero-search-spinner" />
-					)}
+				<div className="top-terminal-frame">
+					<div className="top-terminal-header">
+						<div className="traffic-lights">
+							<div className="traffic-dot red" />
+							<div className="traffic-dot yellow" />
+							<div className="traffic-dot green" />
+						</div>
+						<div className="header-path">
+							<span className="path-tilde">~</span>/home
+						</div>
+					</div>
+					<div className="top-terminal-body">
+						<div className="hero-search-container" style={{ margin: '0 0 16px 0' }}>
+							<InputText
+								value={searchTerm}
+								onChange={(e) => setSearchTerm(e.target.value)}
+								onKeyDown={handleSearchKeyDown}
+								className="hero-search-input"
+								placeholder="Search or connect to a host..."
+								onBlur={() => {
+									// Pequeno delay para permitir clicks en el dropdown
+									setTimeout(() => setShowDropdown(false), 200);
+								}}
+								onFocus={() => {
+									if (filteredSearchResults.length > 0) setShowDropdown(true);
+								}}
+								autoComplete="off"
+							/>
+							{isSearching && (
+								<i className="pi pi-spin pi-spinner hero-search-spinner" />
+							)}
 
-					<button
-						className={`hero-terminal-btn ${terminalView ? 'active' : ''}`}
-						title="Abrir nueva terminal local"
-						onClick={(e) => {
-							e.stopPropagation();
-							if (onTerminalToggle) {
-								const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
-								onTerminalToggle(!terminalView, terminalType);
-							}
-						}}
-					>
-						$_
-					</button>
+							<button
+								className={`hero-terminal-btn ${terminalView ? 'active' : ''}`}
+								title="Abrir nueva terminal local"
+								onClick={(e) => {
+									e.stopPropagation();
+									if (onTerminalToggle) {
+										const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
+										onTerminalToggle(!terminalView, terminalType);
+									}
+								}}
+							>
+								$_
+							</button>
 
-					{showDropdown && ReactDOM.createPortal(
-						<div
-							className="hero-search-dropdown"
-							style={{
-								width: 'min(600px, 90vw)',
-								left: '50%',
-								top: document.querySelector('.hero-search-input')?.getBoundingClientRect().bottom || 0,
-								transform: 'translateX(-50%)'
-							}}
-						>
-							{filteredSearchResults.map((node, idx) => {
-								const isPassword = node.data?.type === 'password';
-								const color = isPassword ? '#E91E63' : getConnectionTypeColor(node.data?.type);
-								const label = node.label;
-								const sub = isPassword ? (node.data.url || node.data.username) : (node.data.host || node.data.hostname || node.data.server);
+							{showDropdown && ReactDOM.createPortal(
+								<div
+									className="hero-search-dropdown"
+									style={{
+										width: 'min(600px, 90vw)',
+										left: '50%',
+										top: document.querySelector('.hero-search-input')?.getBoundingClientRect().bottom || 0,
+										transform: 'translateX(-50%)'
+									}}
+								>
+									{filteredSearchResults.map((node, idx) => {
+										const isPassword = node.data?.type === 'password';
+										const color = isPassword ? '#E91E63' : getConnectionTypeColor(node.data?.type);
+										const label = node.label;
+										const sub = isPassword ? (node.data.url || node.data.username) : (node.data.host || node.data.hostname || node.data.server);
 
-								// Obtener ruta de carpetas
-								const folderPath = getNodeFolderPath(sidebarNodes, node);
-								const folderPathString = folderPath && folderPath.length > 0 ? folderPath.join(' / ') : 'Ra\u00EDz';
+										// Obtener ruta de carpetas
+										const folderPath = getNodeFolderPath(sidebarNodes, node);
+										const folderPathString = folderPath && folderPath.length > 0 ? folderPath.join(' / ') : 'Ra\u00EDz';
 
-								return (
-									<div
-										key={node.key}
-										className={`search-result-item ${activeIndex === idx ? 'active' : ''}`}
-										onClick={() => handleSelectSearchResult(node)}
-										onMouseEnter={() => setActiveIndex(idx)}
-									>
-										<div className="search-result-icon" style={{ background: `${color}15`, color }}>
-											<i className={isPassword ? 'pi pi-key' : getConnectionTypeIcon(node.data?.type)} />
-										</div>
-										<div className="search-result-info">
-											<div className="search-result-flex-header">
-												<span className="search-result-label">{label}</span>
-												<span className="search-result-type" style={{ background: `${color}20`, color, borderColor: `${color}40`, border: '1px solid' }}>
-													{isPassword ? 'PWD' : getProtocolLabel(node.data?.type)}
-												</span>
+										return (
+											<div
+												key={node.key}
+												className={`search-result-item ${activeIndex === idx ? 'active' : ''}`}
+												onClick={() => handleSelectSearchResult(node)}
+												onMouseEnter={() => setActiveIndex(idx)}
+											>
+												<div className="search-result-icon" style={{ background: `${color}15`, color }}>
+													<i className={isPassword ? 'pi pi-key' : getConnectionTypeIcon(node.data?.type)} />
+												</div>
+												<div className="search-result-info">
+													<div className="search-result-flex-header">
+														<span className="search-result-label">{label}</span>
+														<span className="search-result-type" style={{ background: `${color}20`, color, borderColor: `${color}40`, border: '1px solid' }}>
+															{isPassword ? 'PWD' : getProtocolLabel(node.data?.type)}
+														</span>
+													</div>
+													<div className="search-result-sub-container">
+														<span className="search-result-sub">{sub}</span>
+														{!isPassword && <span className="search-result-folder">{'\uD83D\uDCC1'}  {folderPathString}</span>}
+													</div>
+												</div>
 											</div>
-											<div className="search-result-sub-container">
-												<span className="search-result-sub">{sub}</span>
-												{!isPassword && <span className="search-result-folder">{'\uD83D\uDCC1'}  {folderPathString}</span>}
-											</div>
-										</div>
-									</div>
-								);
-							})}
-						</div>,
-						document.body
-					)}
-				</div>
+										);
+									})}
+								</div>,
+								document.body
+							)}
+						</div>
 
-				<div className="hero-action-buttons">
-					<button
-						className={`hero-action-btn ${terminalView ? 'active' : ''}`}
-						title="Abrir nueva terminal local"
-						onClick={(e) => {
-							e.stopPropagation();
-							if (onTerminalToggle) {
-								const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
-								onTerminalToggle(!terminalView, terminalType);
-							}
-						}}
-					>
-						<i className="pi pi-desktop" /> Nueva terminal
-					</button>
-					<button
-						className={`hero-action-btn ${activeBottomView === 'recent' && !terminalView ? 'active' : ''}`}
-						onClick={() => {
-							if (terminalView && onTerminalToggle) onTerminalToggle(false);
-							setActiveBottomView('recent');
-						}}
-					>
-						<i className="pi pi-clock" /> Recent
-					</button>
-					<button
-						className={`hero-action-btn ${activeBottomView === 'favorites' && !terminalView ? 'active' : ''}`}
-						onClick={() => {
-							if (terminalView && onTerminalToggle) onTerminalToggle(false);
-							setActiveBottomView('favorites');
-						}}
-					>
-						<i className="pi pi-star" /> Favorites
-					</button>
-				</div>
-
-				<div className="hero-shortcuts">
-					<span><kbd>{'\u2318'}K</kbd> Quick connect</span>
-					<span><kbd>{'\u2318'}T</kbd> New terminal</span>
-					<span><kbd>{'\u2318'}R</kbd> Recent</span>
-					<span><kbd>{'\u2318'}F</kbd> Favorites</span>
+						<div className="hero-action-buttons" style={{ margin: 0 }}>
+							<button
+								className={`hero-action-btn ${terminalView ? 'active' : ''}`}
+								title="Abrir nueva terminal local"
+								onClick={(e) => {
+									e.stopPropagation();
+									if (onTerminalToggle) {
+										const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
+										onTerminalToggle(!terminalView, terminalType);
+									}
+								}}
+							>
+								<i className="pi pi-desktop" /> Nueva terminal
+							</button>
+							<button
+								className={`hero-action-btn ${activeBottomView === 'recent' && !terminalView ? 'active' : ''}`}
+								onClick={() => {
+									if (terminalView && onTerminalToggle) onTerminalToggle(false);
+									setActiveBottomView('recent');
+								}}
+							>
+								<i className="pi pi-clock" /> Recent
+							</button>
+							<button
+								className={`hero-action-btn ${activeBottomView === 'favorites' && !terminalView ? 'active' : ''}`}
+								onClick={() => {
+									if (terminalView && onTerminalToggle) onTerminalToggle(false);
+									setActiveBottomView('favorites');
+								}}
+							>
+								<i className="pi pi-star" /> Favorites
+							</button>
+						</div>
+					</div>
 				</div>
 			</div > {/* FilterPanel Dropdown - Rendered in Portal to avoid clipping */}
 			{
