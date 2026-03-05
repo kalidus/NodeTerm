@@ -591,6 +591,18 @@ const HomeTab = ({
     return themes[localLinuxTerminalTheme]?.theme?.background || themes[localPowerShellTheme]?.theme?.background || '#222';
   }, [localLinuxTerminalTheme, localPowerShellTheme]);
 
+  const localTerminalTheme = React.useMemo(() => {
+    const t = themes[localLinuxTerminalTheme]?.theme || themes[localPowerShellTheme]?.theme || {};
+    return {
+      background: t.background || '#0d1117',
+      foreground: t.foreground || '#c9d1d9',
+      green: t.green || t.brightGreen || '#3fb950',
+      cyan: t.cyan || t.brightCyan || '#58a6ff',
+      brightBlack: t.brightBlack || '#6e7681',
+      selectionBackground: t.selectionBackground || 'rgba(255,255,255,0.08)',
+    };
+  }, [localLinuxTerminalTheme, localPowerShellTheme]);
+
   const handleConnectToHistory = (connection) => {
     // console.log('Conectando a:', connection);
     if (connection.type === 'group') {
@@ -849,6 +861,7 @@ const HomeTab = ({
                       secureStorage={secureStorage}
                       terminalView={terminalView}
                       onTerminalToggle={handleTerminalToggle}
+                      terminalTheme={localTerminalTheme}
                     />
                   </div>
 

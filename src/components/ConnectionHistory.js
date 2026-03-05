@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { getFavorites, toggleFavorite, onUpdate, isFavorite, reorderFavorites, helpers } from '../utils/connectionStore';
 import { iconThemes } from '../themes/icon-themes';
@@ -10,15 +10,15 @@ import { InputText } from 'primereact/inputtext';
 
 // Formatear "Hace 5m", "Hace 2 h", "Ayer", etc.
 function formatRelativeTime(iso) {
-	if (!iso) return '—';
+	if (!iso) return 'â€”';
 	const d = new Date(iso);
-	if (isNaN(d.getTime())) return '—';
+	if (isNaN(d.getTime())) return 'â€”';
 	const s = Math.floor((Date.now() - d) / 1000);
 	if (s < 60) return 'Ahora';
 	if (s < 3600) return `Hace ${Math.floor(s / 60)}m`;
 	if (s < 86400) return `Hace ${Math.floor(s / 3600)} h`;
 	if (s < 172800) return 'Ayer';
-	if (s < 604800) return `Hace ${Math.floor(s / 86400)} días`;
+	if (s < 604800) return `Hace ${Math.floor(s / 86400)} dÃ­as`;
 	if (s < 2592000) return `Hace ${Math.floor(s / 604800)} sem`;
 	return `Hace ${Math.floor(s / 2592000)} mes`;
 }
@@ -33,31 +33,31 @@ function defaultPort(type) {
 }
 
 function buildHostLabel(conn) {
-	if (conn.type === 'group') return conn.name || '—';
+	if (conn.type === 'group') return conn.name || 'â€”';
 
 	// Para secretos (passwords, wallets, etc.), mostrar URL o username
 	if (['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'].includes(conn.type)) {
 		if (conn.url) return conn.url;
 		if (conn.username) return conn.username;
-		return conn.group || '—';
+		return conn.group || 'â€”';
 	}
 
-	// En conexiones con bastión (Wallix), la cadena completa está en bastionUser
+	// En conexiones con bastiÃ³n (Wallix), la cadena completa estÃ¡ en bastionUser
 	const user = conn.useBastionWallix ? (conn.bastionUser || conn.username || conn.user || '') : (conn.username || conn.user || '');
 	const host = conn.host || conn.hostname || '';
 	const port = conn.port != null && conn.port !== '' ? Number(conn.port) : null;
 	const def = defaultPort(conn.type);
-	let part = user ? (host ? `${user}@${host}` : user) : (host || '—');
+	let part = user ? (host ? `${user}@${host}` : user) : (host || 'â€”');
 	if (port != null && !isNaN(port) && port !== def) part += `:${port}`;
 	return part;
 }
 
-// Función helper para buscar un nodo en el árbol de la sidebar
+// FunciÃ³n helper para buscar un nodo en el Ã¡rbol de la sidebar
 const findNodeInTree = (nodes, connection) => {
 	if (!nodes || !Array.isArray(nodes)) return null;
 
 	for (const node of nodes) {
-		// Verificar si el nodo coincide con la conexión
+		// Verificar si el nodo coincide con la conexiÃ³n
 		if (node.data) {
 			const nodeType = node.data.type;
 			const connType = connection.type === 'rdp' ? 'rdp-guacamole' :
@@ -135,11 +135,11 @@ const getNodeFolderPath = (nodes, targetNode) => {
 	const findFolderPath = (nodeList, target, currentPath = []) => {
 		if (!nodeList) return null;
 		for (const node of nodeList) {
-			// Solo agregar a la ruta si es una carpeta (no una conexión)
+			// Solo agregar a la ruta si es una carpeta (no una conexiÃ³n)
 			const isFolder = !node.data || (!node.data.type || (node.data.type !== 'ssh' && node.data.type !== 'rdp' && node.data.type !== 'rdp-guacamole'));
 			const newPath = isFolder ? [...currentPath, node.label] : currentPath;
 
-			// Si encontramos el nodo objetivo, retornar la ruta de carpetas (sin incluir la conexión)
+			// Si encontramos el nodo objetivo, retornar la ruta de carpetas (sin incluir la conexiÃ³n)
 			if (node.key === target.key) {
 				return currentPath;
 			}
@@ -168,6 +168,7 @@ const ConnectionHistory = ({
 	secureStorage = null,
 	terminalView = false,
 	onTerminalToggle = null,
+	terminalTheme = {},
 }) => {
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
 	const [passwordNodes, setPasswordNodes] = useState([]);
@@ -178,7 +179,7 @@ const ConnectionHistory = ({
 	const [activeIndex, setActiveIndex] = useState(-1);
 	const [activeBottomView, setActiveBottomView] = useState('all');
 
-	// Cargar passwords desde localStorage (con soporte para encriptación) - Igual que en TitleBar
+	// Cargar passwords desde localStorage (con soporte para encriptaciÃ³n) - Igual que en TitleBar
 	useEffect(() => {
 		const loadPasswords = async () => {
 			try {
@@ -218,7 +219,7 @@ const ConnectionHistory = ({
 		return () => window.removeEventListener('storage', handleStorageChange);
 	}, [masterKey, secureStorage]);
 
-	// Función para encontrar todas las conexiones en el árbol
+	// FunciÃ³n para encontrar todas las conexiones en el Ã¡rbol
 	const findAllSidebarConnections = useCallback((nodesList) => {
 		if (!nodesList) return [];
 		let results = [];
@@ -236,7 +237,7 @@ const ConnectionHistory = ({
 		return results;
 	}, []);
 
-	// Función para encontrar todos los passwords en el árbol
+	// FunciÃ³n para encontrar todos los passwords en el Ã¡rbol
 	const findAllPasswords = useCallback((nodesList) => {
 		if (!nodesList) return [];
 		let results = [];
@@ -254,7 +255,7 @@ const ConnectionHistory = ({
 		return results;
 	}, []);
 
-	// Lógica de búsqueda debounced
+	// LÃ³gica de bÃºsqueda debounced
 	useEffect(() => {
 		const timeoutId = setTimeout(() => {
 			if (searchTerm.trim()) {
@@ -361,7 +362,7 @@ const ConnectionHistory = ({
 			};
 			window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
 		} else {
-			// Es una conexión, usar handleConnectToHistory pero adaptando el formato
+			// Es una conexiÃ³n, usar handleConnectToHistory pero adaptando el formato
 			const conn = helpers.fromSidebarNode(node);
 			if (conn) onConnectToHistory(conn);
 		}
@@ -421,7 +422,7 @@ const ConnectionHistory = ({
 	const filterBarRef = useRef(null);
 	const [indicatorStyle, setIndicatorStyle] = useState({});
 
-	// Estado para configuración unificada de filtros
+	// Estado para configuraciÃ³n unificada de filtros
 	const [showFilterConfig, setShowFilterConfig] = useState(false);
 	const [allFilters, setAllFilters] = useState(() => favoriteGroupsStore.getAllFilters());
 
@@ -548,7 +549,7 @@ const ConnectionHistory = ({
 				});
 			}
 		};
-		// Delay para asegurar que el DOM esté listo
+		// Delay para asegurar que el DOM estÃ© listo
 		const timer = setTimeout(updateIndicator, 50);
 		window.addEventListener('resize', updateIndicator);
 		return () => {
@@ -557,7 +558,7 @@ const ConnectionHistory = ({
 		};
 	}, [typeFilter, activeGroupId, favoriteGroups]);
 
-	// Funciones para gestión de grupos
+	// Funciones para gestiÃ³n de grupos
 	const handleCreateGroup = () => {
 		if (!newGroupName.trim()) return;
 		try {
@@ -576,7 +577,7 @@ const ConnectionHistory = ({
 	};
 
 	const handleDeleteGroup = (groupId) => {
-		if (!window.confirm('¿Estás seguro de que deseas eliminar este grupo?')) return;
+		if (!window.confirm('Â¿EstÃ¡s seguro de que deseas eliminar este grupo?')) return;
 		try {
 			favoriteGroupsStore.deleteGroup(groupId);
 			setFavoriteGroups(favoriteGroupsStore.getGroups());
@@ -604,7 +605,7 @@ const ConnectionHistory = ({
 	// Manejar toggle de favorito con selector de grupo
 	const handleToggleFavoriteWithGroup = (connection) => {
 		const isCurrentlyFavorite = isFavorite(connection);
-		// Calcular grupos personalizados aquí para evitar problemas de hoisting
+		// Calcular grupos personalizados aquÃ­ para evitar problemas de hoisting
 		const userGroups = favoriteGroups.filter(g => !g.isDefault);
 
 		if (isCurrentlyFavorite) {
@@ -632,14 +633,14 @@ const ConnectionHistory = ({
 
 		const isFav = isFavorite(connectionToFavorite);
 
-		// Solo hacemos toggle si NO es favorito (para añadirlo).
-		// Si YA es favorito, no hacemos toggle (lo quitaría), solo actualizamos grupos.
+		// Solo hacemos toggle si NO es favorito (para aÃ±adirlo).
+		// Si YA es favorito, no hacemos toggle (lo quitarÃ­a), solo actualizamos grupos.
 		if (!isFav) {
 			toggleFavorite(connectionToFavorite);
 		}
 
 		// Asignar a grupos seleccionados
-		// Usamos un ID consistente (el toggle ya debió añadirlo al store si era nuevo)
+		// Usamos un ID consistente (el toggle ya debiÃ³ aÃ±adirlo al store si era nuevo)
 		const serial = typeof connectionToFavorite === 'string'
 			? connectionToFavorite
 			: (connectionToFavorite.id || helpers.buildId(connectionToFavorite));
@@ -652,7 +653,7 @@ const ConnectionHistory = ({
 		loadConnectionHistory();
 	};
 
-	// Función para quitar de favoritos desde el diálogo
+	// FunciÃ³n para quitar de favoritos desde el diÃ¡logo
 	const handleRemoveFavoriteFromDialog = () => {
 		if (!connectionToFavorite) return;
 
@@ -667,7 +668,7 @@ const ConnectionHistory = ({
 		loadConnectionHistory();
 	};
 
-	// Toggle selección de grupo para el favorito
+	// Toggle selecciÃ³n de grupo para el favorito
 	const toggleGroupForFavorite = (groupId) => {
 		setSelectedGroupsForFav(prev => {
 			if (prev.includes(groupId)) {
@@ -682,7 +683,7 @@ const ConnectionHistory = ({
 	const [editingFavorite, setEditingFavorite] = useState(null);
 	const [editSelectedGroups, setEditSelectedGroups] = useState([]);
 
-	// Abrir diálogo para editar grupos de un favorito existente
+	// Abrir diÃ¡logo para editar grupos de un favorito existente
 	const handleEditFavoriteGroups = (connection) => {
 		const favId = connection.id || helpers.buildId(connection);
 		const currentGroups = favoriteGroupsStore.getFavoriteGroups(favId);
@@ -720,7 +721,7 @@ const ConnectionHistory = ({
 			const syncedFavs = favs.map(fav => {
 				const recent = recentById.get(fav.id);
 				if (recent && recent.lastConnected) {
-					// Si existe en recientes, usar su lastConnected (más actualizado)
+					// Si existe en recientes, usar su lastConnected (mÃ¡s actualizado)
 					return { ...fav, lastConnected: recent.lastConnected, isFavorite: true };
 				}
 				return { ...fav, isFavorite: true };
@@ -754,7 +755,7 @@ const ConnectionHistory = ({
 	};
 
 	const getConnectionTypeIconSVG = (type, customIcon = null) => {
-		// Si hay un icono personalizado y es válido, usarlo
+		// Si hay un icono personalizado y es vÃ¡lido, usarlo
 		if (customIcon && customIcon !== 'default' && SSHIconPresets[customIcon.toUpperCase()]) {
 			return null; // Retornar null para que se use SSHIconRenderer en su lugar
 		}
@@ -763,7 +764,7 @@ const ConnectionHistory = ({
 		const icons = (iconThemes[theme] || iconThemes['nord']).icons || {};
 		switch (type) {
 			case 'ssh': return icons.ssh;
-			case 'ssh-tunnel': return icons.ssh; // Usar icono SSH por defecto si no hay específico
+			case 'ssh-tunnel': return icons.ssh; // Usar icono SSH por defecto si no hay especÃ­fico
 			case 'rdp':
 			case 'rdp-guacamole': return icons.rdp;
 			case 'vnc':
@@ -1018,7 +1019,7 @@ const ConnectionHistory = ({
 	// Componente interno para las tarjetas del Carrusel
 	const RibbonCard = ({ connection, isActive, onConnect, onEdit, onToggleFav, onEditGroups, onDragStart, onDragOver, onDrop, index }) => {
 		const typeColor = getConnectionTypeColor(connection.type);
-		const hostLabel = connection.host || connection.hostname || '—';
+		const hostLabel = connection.host || connection.hostname || 'â€”';
 
 		return (
 			<div
@@ -1173,7 +1174,7 @@ const ConnectionHistory = ({
 							const nodeData = JSON.parse(data);
 							const connection = nodeData.data;
 							if (connection) {
-								// Usar el label del nodo como nombre de la conexión si no tiene uno o para asegurar que sea el correcto
+								// Usar el label del nodo como nombre de la conexiÃ³n si no tiene uno o para asegurar que sea el correcto
 								if (nodeData.label) {
 									connection.name = nodeData.label;
 								}
@@ -1188,7 +1189,7 @@ const ConnectionHistory = ({
 										window.toast.current.show({
 											severity: 'success',
 											summary: 'Agregado a Favoritos',
-											detail: connection.name || 'Conexión agregada',
+											detail: connection.name || 'ConexiÃ³n agregada',
 											life: 2000
 										});
 									}
@@ -1197,7 +1198,7 @@ const ConnectionHistory = ({
 										window.toast.current.show({
 											severity: 'info',
 											summary: 'Ya existe',
-											detail: 'Esta conexión ya está en favoritos',
+											detail: 'Esta conexiÃ³n ya estÃ¡ en favoritos',
 											life: 2000
 										});
 									}
@@ -1376,7 +1377,7 @@ const ConnectionHistory = ({
 	// Filtros unificados visibles (protocolos + grupos personalizados)
 	const visibleFilters = allFilters.filter(f => f.visible);
 
-	// Calcular contadores por tipo de conexión
+	// Calcular contadores por tipo de conexiÃ³n
 	const countByType = (connections, filterKey) => {
 		if (filterKey === 'all') return connections.length;
 		if (filterKey === 'vnc-guacamole') return connections.filter(c => c.type === 'vnc-guacamole' || c.type === 'vnc').length;
@@ -1399,16 +1400,6 @@ const ConnectionHistory = ({
 		const timeStr = formatRelativeTime(connection.lastConnected);
 		const fav = isPinned || isFavorite(connection);
 
-		const handleStar = (e) => {
-			e.stopPropagation();
-			onToggleFav(connection);
-		};
-
-		const handleEdit = (e) => {
-			e.stopPropagation();
-			onEdit?.(connection);
-		};
-
 		return (
 			<div
 				className={`hero-recent-card ${isActive ? 'active-row' : ''}`}
@@ -1417,37 +1408,23 @@ const ConnectionHistory = ({
 				onContextMenu={(e) => {
 					e.preventDefault();
 					e.stopPropagation();
-					handleEdit(e);
+					onEdit?.(connection);
 				}}
 			>
-				<div className="hrc-icon" style={{ color: typeColor }}>
-					{(() => {
-						let customIcon = connection.customIcon;
-						if ((!customIcon || customIcon === 'default') && sidebarNodes) {
-							const matchingNode = findNodeInTree(sidebarNodes, connection);
-							if (matchingNode && matchingNode.data?.customIcon) customIcon = matchingNode.data.customIcon;
-						}
-						if (customIcon && customIcon !== 'default' && SSHIconPresets[customIcon.toUpperCase()]) {
-							return <SSHIconRenderer preset={SSHIconPresets[customIcon.toUpperCase()]} pixelSize={24} />;
-						}
-						const svg = getConnectionTypeIconSVG(connection.type, customIcon);
-						if (svg) return React.cloneElement(svg, { width: 24, height: 24, style: { width: 24, height: 24 } });
-						return <i className={getConnectionTypeIcon(connection.type)} aria-hidden="true" />;
-					})()}
-				</div>
-				<div className="hrc-content">
-					<div className="hrc-name">{connection.name}</div>
-					<div className="hrc-host">{hostLabel}</div>
-				</div>
-				<div className="hrc-badge" style={{ color: typeColor, borderColor: `${typeColor}40`, background: `${typeColor}15` }}>
-					{protocolLabel}
-				</div>
-				<div className="hrc-time">{timeStr}</div>
+				<span className="hrc-prompt">$</span>
+				<span className="hrc-protocol-tag" style={{ color: typeColor }}>[{protocolLabel}]</span>
+				<span className="hrc-name">{connection.name}</span>
+				<span className="hrc-host">{hostLabel}</span>
+				<span className="hrc-time">{timeStr}</span>
 				<div className="hrc-actions" onClick={(e) => e.stopPropagation()}>
-					<button className={`glass-action-btn ${fav ? 'fav-active' : ''}`} onClick={handleStar} title="Favorito">
+					<button
+						className={`glass-action-btn ${fav ? 'fav-active' : ''}`}
+						onClick={(e) => { e.stopPropagation(); onToggleFav(connection); }}
+						title="Favorito"
+					>
 						<i className={fav ? 'pi pi-star-fill' : 'pi pi-star'} />
 					</button>
-					<button className="hrc-connect-btn" onClick={() => onConnect?.(connection)}>Connect</button>
+					<button className="hrc-connect-btn" onClick={() => onConnect?.(connection)}>â†’ connect</button>
 				</div>
 			</div>
 		);
@@ -1497,7 +1474,7 @@ const ConnectionHistory = ({
 
 	// Debug: Log theme colors to see what we're getting
 	React.useEffect(() => {
-		// console.log('🎨 ConnectionHistory themeColors:', {
+		// console.log('ðŸŽ¨ ConnectionHistory themeColors:', {
 		// 	itemBackground: themeColors.itemBackground,
 		// 	cardBackground: themeColors.cardBackground,
 		// 	textPrimary: themeColors.textPrimary
@@ -1539,7 +1516,7 @@ const ConnectionHistory = ({
 					z-index: 100;
 				}
 				.hero-search-container::before {
-					content: "➜  ~";
+					content: "âžœ  ~";
 					position: absolute;
 					left: 20px;
 					top: 50%;
@@ -1648,34 +1625,36 @@ const ConnectionHistory = ({
 				.hero-shortcuts { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.3)'}; font-size: 0.75rem; display: flex; justify-content: center; gap: 20px; font-weight: 500;}
 				.hero-shortcuts kbd { background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); margin-right: 6px; font-family: monospace; color: rgba(255,255,255,0.7); }
 
-				/* Terminal-style frame for Recents */
+				/* â”€â”€ Terminal Frame for Recents â”€â”€ */
 				.recents-terminal-frame {
 					margin: 0 1rem 1rem 1rem;
 					border-radius: 12px;
 					overflow: hidden;
 					display: flex;
 					flex-direction: column;
-					border: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.12)'};
-					background: ${themeColors.cardBackground || 'rgba(16, 20, 28, 0.6)'};
-					box-shadow: 0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
+					border: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '55' : 'rgba(255,255,255,0.12)'};
+					background: ${terminalTheme.background || '#0d1117'};
+					box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
 					flex: 1;
 					min-height: 120px;
 				}
 				.recents-terminal-header {
-					height: 32px;
+					height: 36px;
 					flex-shrink: 0;
-					background: ${themeColors.cardBackground || 'rgba(20,22,28,0.95)'};
-					border-bottom: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.08)'};
+					background: ${terminalTheme.background ? terminalTheme.background + 'ee' : 'rgba(20,22,28,0.95)'};
+					border-bottom: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '44' : 'rgba(255,255,255,0.08)'};
 					border-radius: 12px 12px 0 0;
 					display: flex;
 					align-items: center;
 					padding: 0 12px;
 					position: relative;
+					gap: 0;
 				}
 				.recents-terminal-header .traffic-lights {
 					display: flex;
 					gap: 6px;
 					align-items: center;
+					flex-shrink: 0;
 				}
 				.recents-terminal-header .traffic-dot {
 					width: 12px;
@@ -1683,38 +1662,116 @@ const ConnectionHistory = ({
 					border-radius: 50%;
 					flex-shrink: 0;
 				}
-				.recents-terminal-header .traffic-dot.red { background: #ff5f56; border: 1px solid #e0443e; cursor: pointer; }
-				.recents-terminal-header .traffic-dot.red:hover { filter: brightness(1.2); }
+				.recents-terminal-header .traffic-dot.red { background: #ff5f56; border: 1px solid #e0443e; cursor: pointer; transition: filter 0.15s; }
+				.recents-terminal-header .traffic-dot.red:hover { filter: brightness(1.25); }
 				.recents-terminal-header .traffic-dot.yellow { background: #ffbd2e; border: 1px solid #dea123; }
 				.recents-terminal-header .traffic-dot.green { background: #27c93f; border: 1px solid #1aab29; }
-				.recents-terminal-header .header-title {
-					position: absolute;
-					left: 0;
-					right: 0;
+				.recents-terminal-header .header-path {
+					flex: 1;
 					text-align: center;
-					color: ${themeColors.textSecondary || 'rgba(255,255,255,0.5)'};
-					font-size: 11px;
+					color: ${terminalTheme.brightBlack || '#6e7681'};
+					font-size: 11.5px;
 					user-select: none;
 					pointer-events: none;
-					font-weight: 500;
+					font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+					font-weight: 400;
+					letter-spacing: 0.3px;
+				}
+				.recents-terminal-header .header-path .path-tilde { color: ${terminalTheme.green || '#3fb950'}; }
+				.recents-header-right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+				.recents-header-filter-btn {
+					background: transparent;
+					border: none;
+					color: ${terminalTheme.brightBlack || '#6e7681'};
+					cursor: pointer;
+					padding: 4px 6px;
+					border-radius: 4px;
+					font-size: 0.85rem;
+					transition: color 0.15s, background 0.15s;
+					display: flex; align-items: center;
+				}
+				.recents-header-filter-btn:hover, .recents-header-filter-btn.active { color: ${terminalTheme.green || '#3fb950'}; background: rgba(255,255,255,0.06); }
+				.recents-filter-chips-bar {
+					display: flex;
+					align-items: center;
+					gap: 6px;
+					padding: 4px 12px;
+					border-bottom: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '33' : 'rgba(255,255,255,0.05)'};
+					background: transparent;
+					flex-wrap: wrap;
 				}
 				.recents-terminal-body {
 					flex: 1;
 					overflow-y: auto;
-					padding: 0;
+					padding: 4px 0;
+					scrollbar-width: thin;
+					scrollbar-color: ${terminalTheme.brightBlack || '#444'} transparent;
 				}
-				/* Adjust internal section styles when inside terminal frame */
-				.recents-terminal-body .connection-history-section {
-					margin: 0 !important;
+				/* â”€â”€ Grep-style connection rows â”€â”€ */
+				.connection-list-body {
+					display: flex !important;
+					flex-direction: column !important;
+					gap: 0 !important;
 					padding: 0 !important;
+					width: 100% !important;
+					max-width: 100% !important;
+					margin: 0 !important;
+					overflow: visible !important;
 				}
-				.recents-terminal-body .modern-section-header.header-recents {
-					margin-bottom: 8px !important;
-					padding-top: 8px !important;
+				.hero-recent-card {
+					display: grid !important;
+					grid-template-columns: 20px 72px 160px 1fr 68px minmax(0,auto) !important;
+					align-items: center !important;
+					background: transparent !important;
+					border: none !important;
+					border-left: 2px solid transparent !important;
+					border-radius: 0 !important;
+					padding: 0 16px 0 14px !important;
+					cursor: pointer !important;
+					transition: background 0.1s, border-color 0.1s !important;
+					box-shadow: none !important;
+					min-width: 0 !important;
+					width: 100% !important;
+					height: 30px !important;
+					font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace !important;
+					font-size: 0.81rem !important;
+					backdrop-filter: none !important;
 				}
-				.recents-terminal-body .connection-list-body {
-					padding: 0 8px 12px 8px !important;
+				.hero-recent-card:hover {
+					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.05)'} !important;
+					border-left-color: var(--row-accent) !important;
 				}
+				.hero-recent-card.active-row {
+					border-left-color: var(--row-accent) !important;
+					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.04)'} !important;
+				}
+				.hrc-prompt { color: ${terminalTheme.green || '#3fb950'}; font-weight: bold; font-size: 0.85rem; }
+				.hrc-protocol-tag { font-weight: 600; font-size: 0.72rem; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+				.hrc-name { color: ${terminalTheme.foreground || '#c9d1d9'}; font-weight: 500; font-size: 0.83rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+				.hrc-host { color: ${terminalTheme.brightBlack || '#6e7681'}; font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: inherit; }
+				.hrc-time { color: ${terminalTheme.brightBlack || '#6e7681'}; font-size: 0.72rem; text-align: right; white-space: nowrap; opacity: 0.8; }
+				.hrc-actions { display: flex; gap: 6px; opacity: 0; transition: opacity 0.15s; align-items: center; justify-content: flex-end; }
+				.hero-recent-card:hover .hrc-actions { opacity: 1; }
+				.hrc-connect-btn {
+					background: transparent;
+					padding: 2px 8px;
+					font-size: 0.72rem;
+					color: ${terminalTheme.green || '#3fb950'};
+					border: 1px solid ${terminalTheme.green ? terminalTheme.green + '55' : 'rgba(63,185,80,0.4)'};
+					border-radius: 3px;
+					cursor: pointer;
+					transition: all 0.15s;
+					font-family: inherit;
+					font-weight: 500;
+					letter-spacing: 0.3px;
+				}
+				.hrc-connect-btn:hover { background: ${terminalTheme.green ? terminalTheme.green + '22' : 'rgba(63,185,80,0.15)'}; color: ${terminalTheme.green || '#3fb950'}; }
+				.glass-action-btn { background: transparent; border: none; cursor: pointer; color: ${terminalTheme.brightBlack || '#6e7681'}; font-size: 0.8rem; padding: 2px 4px; transition: color 0.15s; }
+				.glass-action-btn:hover { color: #FFD700; }
+				.glass-action-btn.fav-active i { color: #FFD700; filter: drop-shadow(0 0 3px rgba(255,215,0,0.5)); }
+				/* Empty state inside terminal frame */
+				.recents-terminal-body .ribbon-empty { flex-direction: column; gap: 8px; color: ${terminalTheme.brightBlack || '#6e7681'}; background: transparent; border: none; font-family: 'Fira Code', monospace; font-size: 0.82rem; min-height: 60px; }
+
 				/* Search Dropdown Styles */
 				.hero-search-dropdown {
 					position: fixed;
@@ -1786,64 +1843,30 @@ const ConnectionHistory = ({
 				.ribbon-side-btn, .ribbon-pagination { display: none !important; }
 				.ribbon-container-relative { display: block !important; padding: 0 !important; }
 
-				.hero-recent-card, .ribbon-card { 
-					display: flex !important; 
-					align-items: center !important; 
+				/* Keep favorites-ribbon-track in original style (horizontal scroll) */
+				.favorites-ribbon-track {
+					display: flex !important;
 					flex-direction: row !important;
-					background: transparent !important; 
-					border: 1px solid transparent !important; 
-					border-bottom: 1px solid rgba(255,255,255,0.03) !important;
-					border-radius: 8px !important; 
-					padding: 8px 12px 8px 8px !important; 
-					gap: 12px !important; 
-					cursor: pointer; 
-					transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important; 
-					box-shadow: none !important; 
-					min-width: 0 !important;
-					width: 100% !important;
-					height: auto !important;
-					justify-content: flex-start !important;
-					backdrop-filter: none !important;
+					gap: 16px !important;
+					padding: 8px !important;
+					width: auto !important;
+					max-width: 100% !important;
+					margin: 0 !important;
+					overflow-x: auto !important;
+					scrollbar-width: none !important;
+					overflow-y: visible !important;
 				}
-				.hero-recent-card:hover, .ribbon-card:hover { 
-					background: ${themeColors.hoverBackground || 'rgba(255,255,255,0.04)'} !important; 
-					transform: none !important; 
-					border-color: transparent !important; 
-					border-bottom-color: rgba(255,255,255,0.03) !important;
-				}
-				.hero-recent-card.active-row, .ribbon-card.active { border-left: 3px solid var(--row-accent) !important; background: rgba(255,255,255,0.02) !important; }
-				
-				/* Override Ribbon internal elements to match row style */
-				.rc-splash { display: none !important; }
-				.rc-info { flex-direction: row !important; align-items: center !important; gap: 12px !important; padding: 0 !important; width: 100% !important; }
-				.rc-favicon-container { margin: 0 !important; position: static !important; transform: none !important; border: none !important; box-shadow: none !important; width: 32px !important; height: 32px !important; border-radius: 6px !important; }
-				.rc-text { text-align: left !important; flex: 1; flex-direction: row !important; align-items: center !important; gap: 12px !important; }
-				.rc-name { font-size: 0.95rem !important; margin: 0 !important; flex-shrink: 0; }
-				.rc-host { font-size: 0.8rem !important; opacity: 0.7 !important; color: ${themeColors.textSecondary || 'rgba(255,255,255,0.5)'} !important;}
-				.rc-tags-container { display: none !important; }
-				.rc-star-btn { position: static !important; background: transparent !important; color: #f1c40f !important; border: none !important; opacity: 1 !important;}
 
-				.hrc-icon { font-size: 1.2rem; width: 32px; display: flex; justify-content: center; opacity: 0.9;}
-				.hrc-content { flex: 1; min-width: 0; display: flex; flex-direction: row; gap: 12px; align-items: center; overflow: hidden; justify-content: flex-start;}
-				.hrc-name { color: ${themeColors.textPrimary || '#fff'}; font-weight: 500; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0;}
-				.hrc-host { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.5)'}; font-family: monospace; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.7;}
-				.hrc-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; border: 1px solid; font-weight: bold; white-space: nowrap; letter-spacing: 0.5px; opacity: 0.8;}
-				.hrc-time { color: rgba(255,255,255,0.3); font-size: 0.75rem; width: 80px; text-align: right; white-space: nowrap; font-weight: 500;}
-				.hrc-actions { display: flex; gap: 8px; opacity: 0; transition: opacity 0.2s; align-items: center; }
-				.hero-recent-card:hover .hrc-actions, .ribbon-card:hover .hrc-actions { opacity: 1; }
-				.hrc-connect-btn { background: rgba(255,255,255,0.05); padding: 4px 10px; font-size: 0.8rem; color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; cursor: pointer; transition: all 0.2s; font-weight: 500;}
-				.hrc-connect-btn:hover { background: rgba(255,255,255,0.15); color: #fff; border-color: rgba(255,255,255,0.2); }
-				.glass-action-btn.fav-active i { color: #FFD700; filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.4));}
-				/* Hide original section headers but keep their actions available */
-				.modern-section-header.header-favorites .modern-header-title, .modern-section-header.header-recents .modern-header-title,
-				.modern-section-header.header-favorites .section-collapse-btn, .modern-section-header.header-recents .section-collapse-btn,
-				.modern-section-header.header-favorites .modern-header-line, .modern-section-header.header-recents .modern-header-line { display: none !important; }
-				.modern-section-header { justify-content: center !important; margin-bottom: 30px !important; border: none !important; background: transparent !important; }
-				.modern-section-header.header-favorites::before { content: 'Quick Access'; color: rgba(255,255,255,0.4); font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; display: block; width: 100%; text-align: center; }
-				.modern-section-header.header-recents::before { content: 'Recent Connections'; color: rgba(255,255,255,0.4); font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; display: block; width: 100%; text-align: center; }
+				/* Hero Chips */
+				.hero-chip { display: flex; align-items: center; background: ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.4)'}; border: 1px solid transparent; border-radius: 16px; padding: 8px 24px 8px 8px; width: 220px; height: 70px; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(10px); flex-shrink: 0; text-align: left; }
+				.hero-chip:hover { background: ${themeColors.hoverBackground || 'rgba(30, 36, 45, 0.6)'}; transform: translateY(-4px); border-color: ${themeColors.borderColor || 'rgba(255,255,255,0.05)'}; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+				.hero-chip.active { border-color: var(--card-accent); background: linear-gradient(135deg, ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.4)'}, ${themeColors.hoverBackground || 'rgba(30,36,45,0.6)'}); box-shadow: 0 0 0 1px var(--card-accent) inset;}
+				.hero-chip-icon { width: 54px; height: 54px; min-width: 54px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 16px; }
+				.hero-chip-content { display: flex; flex-direction: column; overflow: hidden; justify-content: center;}
+				.hero-chip-name { color: ${themeColors.textPrimary || '#fff'}; font-weight: 500; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;}
+				.hero-chip-host { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.5)'}; font-size: 0.8rem; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.7;}
 			`}</style>
 
-			{/* Hero Splash Hero Area */}
 			<div className="hero-splash-header">
 				<h1 className="hero-title">NodeTerm</h1>
 				<div className="hero-status">
@@ -1902,7 +1925,7 @@ const ConnectionHistory = ({
 
 								// Obtener ruta de carpetas
 								const folderPath = getNodeFolderPath(sidebarNodes, node);
-								const folderPathString = folderPath && folderPath.length > 0 ? folderPath.join(' / ') : 'Raíz';
+								const folderPathString = folderPath && folderPath.length > 0 ? folderPath.join(' / ') : 'RaÃ­z';
 
 								return (
 									<div
@@ -1923,7 +1946,7 @@ const ConnectionHistory = ({
 											</div>
 											<div className="search-result-sub-container">
 												<span className="search-result-sub">{sub}</span>
-												{!isPassword && <span className="search-result-folder">📁 {folderPathString}</span>}
+												{!isPassword && <span className="search-result-folder">ðŸ“ {folderPathString}</span>}
 											</div>
 										</div>
 									</div>
@@ -1969,12 +1992,12 @@ const ConnectionHistory = ({
 				</div>
 
 				<div className="hero-shortcuts">
-					<span><kbd>⌘K</kbd> Quick connect</span>
-					<span><kbd>⌘T</kbd> New terminal</span>
-					<span><kbd>⌘R</kbd> Recent</span>
-					<span><kbd>⌘F</kbd> Favorites</span>
+					<span><kbd>âŒ˜K</kbd> Quick connect</span>
+					<span><kbd>âŒ˜T</kbd> New terminal</span>
+					<span><kbd>âŒ˜R</kbd> Recent</span>
+					<span><kbd>âŒ˜F</kbd> Favorites</span>
 				</div>
-			</div>			{/* FilterPanel Dropdown - Rendered in Portal to avoid clipping */}
+			</div > {/* FilterPanel Dropdown - Rendered in Portal to avoid clipping */}
 			{
 				ReactDOM.createPortal(
 					<FilterPanel
@@ -2046,7 +2069,7 @@ const ConnectionHistory = ({
 													}
 												}}
 												disabled={filter.id === 'all'}
-												title={filter.id === 'all' ? 'Este filtro siempre está visible' : (filter.visible ? 'Ocultar' : 'Mostrar')}
+												title={filter.id === 'all' ? 'Este filtro siempre estÃ¡ visible' : (filter.visible ? 'Ocultar' : 'Mostrar')}
 											>
 												<i className={filter.visible ? 'pi pi-eye' : 'pi pi-eye-slash'} />
 											</button>
@@ -2090,7 +2113,7 @@ const ConnectionHistory = ({
 										type="text"
 										value={newGroupName}
 										onChange={(e) => setNewGroupName(e.target.value)}
-										placeholder="Ej: Producción, Desarrollo..."
+										placeholder="Ej: ProducciÃ³n, Desarrollo..."
 										autoFocus
 										onKeyDown={(e) => e.key === 'Enter' && handleCreateGroup()}
 									/>
@@ -2331,121 +2354,84 @@ const ConnectionHistory = ({
 			}
 
 
-			{/* RECIENTES TABLE (Fills remaining space) - Terminal-style frame */}
+			{/* RECIENTES TABLE - Terminal-style frame with grep rows */}
 			{
 				!terminalView && (activeBottomView === 'all' || activeBottomView === 'recent') && (
 					<div className="recents-terminal-frame">
-						{/* macOS-style header */}
+						{/* macOS-style header with filter on the right */}
 						<div className="recents-terminal-header">
 							<div className="traffic-lights">
 								<div
 									className="traffic-dot red"
 									onClick={() => setActiveBottomView('all')}
-									title="Cerrar vista de recientes"
+									title="Cerrar recientes"
 								/>
 								<div className="traffic-dot yellow" />
 								<div className="traffic-dot green" />
 							</div>
-							<div className="header-title">
-								Recent Connections — {filteredRecentsForDisplay.length}
+							<div className="header-path">
+								<span className="path-tilde">~</span>/recent &nbsp;Â·&nbsp; {filteredRecentsForDisplay.length} connections
+							</div>
+							<div className="recents-header-right">
+								<button
+									className={`recents-header-filter-btn ${getActiveFilterCount(activeRecentFilters) > 0 ? 'active' : ''}`}
+									onClick={() => { setFilterContext('recents'); setFilterPanelOpen(true); }}
+									title="Filtrar recientes"
+								>
+									<i className={`pi ${getActiveFilterCount(activeRecentFilters) > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
+									{getActiveFilterCount(activeRecentFilters) > 0 && (
+										<span style={{ fontSize: '0.7rem', marginLeft: 3 }}>{getActiveFilterCount(activeRecentFilters)}</span>
+									)}
+								</button>
 							</div>
 						</div>
-						{/* Content body */}
-						<div className="recents-terminal-body">
-							<section className="connection-history-section" style={{ flex: 1, minHeight: 0, marginTop: '0' }}>
-								<div className="modern-section-header header-recents">
-									<button
-										className="section-collapse-btn"
-										onClick={toggleRecentsCollapsed}
-										title={recentsCollapsed ? "Expandir recientes" : "Colapsar recientes"}
-										style={{
-											background: 'transparent',
-											border: 'none',
-											padding: '4px 2px',
-											cursor: 'pointer',
-											fontSize: '0.9rem',
-											transition: 'all 0.2s ease',
-											display: 'flex',
-											alignItems: 'center',
-											justifyContent: 'center',
-										}}
-										onMouseEnter={(e) => {
-											e.currentTarget.style.transform = 'scale(1.1)';
-										}}
-										onMouseLeave={(e) => {
-											e.currentTarget.style.transform = 'scale(1)';
-										}}
-									>
-										<i className={recentsCollapsed ? "pi pi-chevron-down" : "pi pi-chevron-up"} />
-									</button>
-									<div className="modern-header-title">
-										<i className="pi pi-history" />
-										<span>RECIENTES</span>
-									</div>
 
-									{/* Filter Button (Recents) */}
-									<button
-										className={`section-action-btn ${getActiveFilterCount(activeRecentFilters) > 0 ? 'active' : ''}`}
-										onClick={() => {
-											setFilterContext('recents');
-											setFilterPanelOpen(true);
-										}}
-										title="Filtrar recientes"
-										style={{ marginRight: '8px' }}
-									>
-										<i className={`pi ${getActiveFilterCount(activeRecentFilters) > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
-									</button>
-
-									{/* Active Filter Chips (Recents) */}
-									{getActiveFilterCount(activeRecentFilters) > 0 && (
-										<div className="header-active-filters">
-											{activeRecentFilters.protocols?.map(filterId => (
-												<FilterBadge
-													key={`protocol-${filterId}`}
-													label={getFilterLabel('protocols', filterId)}
-													color={getFilterColor('protocols', filterId)}
-													icon={getFilterIcon('protocols', filterId)}
-													type="protocol"
-													onRemove={() => handleRemoveFilter('recents', 'protocols', filterId)}
-													compact
-												/>
-											))}
-											{activeRecentFilters.groups?.map(filterId => (
-												<FilterBadge
-													key={`group-${filterId}`}
-													label={getFilterLabel('groups', filterId)}
-													color={getFilterColor('groups', filterId)}
-													icon={getFilterIcon('groups', filterId)}
-													type="group"
-													onRemove={() => handleRemoveFilter('recents', 'groups', filterId)}
-													compact
-												/>
-											))}
-											{activeRecentFilters.states?.map(filterId => (
-												<FilterBadge
-													key={`state-${filterId}`}
-													label={getFilterLabel('states', filterId)}
-													color={getFilterColor('states', filterId)}
-													icon={getFilterIcon('states', filterId)}
-													type="state"
-													onRemove={() => handleRemoveFilter('recents', 'states', filterId)}
-													compact
-												/>
-											))}
-										</div>
-									)}
-									<div className="modern-header-line"></div>
-								</div>
-
-
-								{!recentsCollapsed && (
-									<ConnectionTable
-										connections={filteredRecentsForDisplay}
-										title="Nombre"
-										emptyMessage="No hay sesiones recientes"
+						{/* Active filter chips strip */}
+						{getActiveFilterCount(activeRecentFilters) > 0 && (
+							<div className="recents-filter-chips-bar">
+								{activeRecentFilters.protocols?.map(filterId => (
+									<FilterBadge
+										key={`protocol-${filterId}`}
+										label={getFilterLabel('protocols', filterId)}
+										color={getFilterColor('protocols', filterId)}
+										icon={getFilterIcon('protocols', filterId)}
+										type="protocol"
+										onRemove={() => handleRemoveFilter('recents', 'protocols', filterId)}
+										compact
 									/>
-								)}
-							</section>
+								))}
+								{activeRecentFilters.groups?.map(filterId => (
+									<FilterBadge
+										key={`group-${filterId}`}
+										label={getFilterLabel('groups', filterId)}
+										color={getFilterColor('groups', filterId)}
+										icon={getFilterIcon('groups', filterId)}
+										type="group"
+										onRemove={() => handleRemoveFilter('recents', 'groups', filterId)}
+										compact
+									/>
+								))}
+								{activeRecentFilters.states?.map(filterId => (
+									<FilterBadge
+										key={`state-${filterId}`}
+										label={getFilterLabel('states', filterId)}
+										color={getFilterColor('states', filterId)}
+										icon={getFilterIcon('states', filterId)}
+										type="state"
+										onRemove={() => handleRemoveFilter('recents', 'states', filterId)}
+										compact
+									/>
+								))}
+							</div>
+						)}
+
+						{/* Grep-style connection list */}
+						<div className="recents-terminal-body">
+							<ConnectionTable
+								connections={filteredRecentsForDisplay}
+								title="Nombre"
+								emptyMessage="# no recent sessions"
+							/>
 						</div>
 					</div>
 				)
