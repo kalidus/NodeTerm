@@ -874,9 +874,9 @@ const HomeTab = ({
                       overflow: 'hidden',
                       display: terminalView ? 'flex' : 'none',
                       flexDirection: 'column',
-                      border: `1px solid ${localTerminalTheme.brightBlack ? localTerminalTheme.brightBlack + '44' : 'rgba(255,255,255,0.1)'}`,
+                      border: `1px solid ${localTerminalTheme.brightBlack ? localTerminalTheme.brightBlack + '55' : 'rgba(255,255,255,0.12)'}`,
                       background: localTerminalBg,
-                      boxShadow: '0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)',
                       position: 'relative',
                       minHeight: terminalView ? '120px' : '0'
                     }}
@@ -891,21 +891,22 @@ const HomeTab = ({
                       display: 'flex',
                       alignItems: 'center',
                       padding: '0 12px',
-                      position: 'relative'
+                      position: 'relative',
+                      gap: 0
                     }}>
-                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', zIndex: 2 }}>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
                         <div
                           onClick={() => setTerminalView(false)}
-                          style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56', cursor: 'pointer', border: '1px solid #e0443e', flexShrink: 0 }}
+                          style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56', cursor: 'pointer', border: '1px solid #e0443e', flexShrink: 0, transition: 'filter 0.15s' }}
                           title="Ocultar Terminal"
+                          onMouseOver={(e) => e.target.style.filter = 'brightness(1.25)'}
+                          onMouseOut={(e) => e.target.style.filter = 'none'}
                         />
                         <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e', border: '1px solid #dea123', flexShrink: 0 }} />
                         <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f', border: '1px solid #1aab29', flexShrink: 0 }} />
                       </div>
                       <div style={{
-                        position: 'absolute',
-                        left: 0,
-                        right: 0,
+                        flex: 1,
                         textAlign: 'center',
                         color: localTerminalTheme.foreground || '#c9d1d9',
                         opacity: 0.6,
@@ -917,6 +918,9 @@ const HomeTab = ({
                         letterSpacing: '0.3px'
                       }}>
                         <span style={{ color: localTerminalTheme.green || '#3fb950' }}>~</span>/local &nbsp;{'\u00B7'}&nbsp; {terminalTitle}
+                      </div>
+                      {/* Fake right element to balance flex and align precisely same as ConnectionHistory filter button */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, width: '28px', visibility: 'hidden' }}>
                       </div>
                     </div>
                     {/* Contenido del terminal */}
