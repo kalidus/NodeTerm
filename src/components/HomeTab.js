@@ -104,6 +104,8 @@ const HomeTab = ({
   const containerRef = useRef(null);
   const mainAreaRef = useRef(null);
   const [containerHeight, setContainerHeight] = useState(window.innerHeight - 100);
+  const [containerWidth, setContainerWidth] = useState(window.innerWidth - 100);
+  const [hasUserMovedTerminal, setHasUserMovedTerminal] = useState(false);
 
   // Estado para el terminal embebido como vista integrada (por defecto visible en Command Palette mode)
   const [terminalView, setTerminalView] = useState(true);
@@ -133,6 +135,7 @@ const HomeTab = ({
     const updateSize = () => {
       if (mainAreaRef.current) {
         setContainerHeight(mainAreaRef.current.offsetHeight);
+        setContainerWidth(mainAreaRef.current.offsetWidth);
       }
     };
 
@@ -153,24 +156,28 @@ const HomeTab = ({
     if (mainAreaRef.current) {
       const parentWidth = mainAreaRef.current.offsetWidth;
       const parentHeight = mainAreaRef.current.offsetHeight;
+
+      // Usar dimensiones mínimas si el padre aún no está listo
+      if (parentWidth <= 0 || parentHeight <= 0) return;
+
       const initialWidth = Math.min(parentWidth * 0.8, 1200);
-      const initialHeight = Math.min(parentHeight * 0.45, 400);
+      const initialHeight = Math.min(parentHeight * 0.7, 600);
 
       setRndSize({ width: initialWidth, height: initialHeight });
       setRndPosition({
         x: (parentWidth - initialWidth) / 2,
-        y: parentHeight - initialHeight - 20
+        y: (parentHeight - initialHeight) / 2
       });
       setIsRndInitialized(true);
     }
   };
 
-  // Inicializar Rnd position
+  // Inicializar/Recalcular Rnd position
   useEffect(() => {
-    if (!isRndInitialized) {
+    if (!isRndInitialized || !hasUserMovedTerminal) {
       centerAndSizeTerminal();
     }
-  }, [containerHeight, isRndInitialized]);
+  }, [containerHeight, containerWidth, isRndInitialized, hasUserMovedTerminal]);
 
   // Asegurar que se centra si se muestra tras estar oculto o cambia tamaño
   useEffect(() => {
@@ -1045,12 +1052,14 @@ const HomeTab = ({
                 onDragStop={(e, d) => {
                   if (terminalState !== 'maximized') {
                     setRndPosition({ x: d.x, y: d.y });
+                    setHasUserMovedTerminal(true);
                   }
                 }}
                 onResizeStop={(e, direction, ref, delta, position) => {
                   if (terminalState !== 'maximized' && terminalState !== 'minimized') {
                     setRndSize({ width: ref.style.width, height: ref.style.height });
                     setRndPosition(position);
+                    setHasUserMovedTerminal(true);
                   }
                 }}
                 minWidth={300}
