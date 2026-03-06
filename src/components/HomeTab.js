@@ -857,30 +857,30 @@ const HomeTab = ({
           /* KDE Style */
           .kde-controls { display: flex; align-items: center; gap: 4px; }
           .kde-dot {
-            width: 26px;
-            height: 26px;
+            width: 14px;
+            height: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #fff;
-            font-size: 10px;
+            font-size: 6px;
             cursor: pointer;
-            border-radius: 4px;
+            border-radius: 2px;
             transition: background 0.1s;
           }
           .kde-dot:hover { background: rgba(255,255,255,0.1); }
           .kde-dot.close:hover { background: #e81123; }
 
           /* Windows Style */
-          .windows-controls { display: flex; align-items: center; }
+          .windows-controls { display: flex; align-items: center; border-radius: 2px; overflow: hidden; }
           .win-dot {
-            width: 32px;
-            height: 28px;
+            width: 22px;
+            height: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #fff;
-            font-size: 10px;
+            font-size: 7px;
             cursor: pointer;
             transition: background 0.1s;
           }
@@ -891,8 +891,9 @@ const HomeTab = ({
           .bottom-terminal-frame.futuristic {
             border: 1px solid #00f2ff !important;
             box-shadow: 0 0 20px rgba(0, 242, 255, 0.4) !important;
-            clip-path: polygon(0 0, 97% 0, 100% 3%, 100% 100%, 3% 100%, 0 97%);
+            clip-path: polygon(0 0, 98% 0, 100% 8%, 100% 100%, 8% 100%, 0 92%);
             background: rgba(10, 15, 25, 0.95) !important;
+            padding: 1px;
           }
           .futuristic-controls { display: flex; gap: 10px; }
           .cyber-dot {
@@ -945,20 +946,7 @@ const HomeTab = ({
           }
           .retro-switch.on::after { left: auto; right: 2px; background: #0f0; box-shadow: 0 0 5px #0f0; }
 
-          /* WhiteSur Style */
-          .bottom-terminal-frame.whitesur {
-            border-radius: 10px !important;
-            border: 1px solid rgba(255,255,255,0.15) !important;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.4) !important;
-          }
-          .whitesur-controls { display: flex; gap: 8px; }
-          .whitesur-dot {
-            width: 12px; height: 12px; border-radius: 50%;
-            cursor: pointer; position: relative;
-          }
-          .whitesur-dot.close { background: #ff5f56; }
-          .whitesur-dot.min { background: #ffbd2e; }
-          .whitesur-dot.max { background: #27c93f; }
+          /* Removed WhiteSur as requested */
 
           /* Orchis Style */
           .bottom-terminal-frame.orchis {
@@ -1172,22 +1160,6 @@ const HomeTab = ({
               <div className="win-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><i className="pi pi-minus" /></div>
               <div className="win-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><i className="pi pi-stop" /></div>
               <div className="win-dot close" title="Cerrar" onClick={() => setTerminalHidden(true)}><i className="pi pi-times" /></div>
-            </div>
-          ) : terminalFrameStyle === 'whitesur' ? (
-            <div className="whitesur-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="whitesur-dot close" onClick={() => setTerminalHidden(true)} title="Cerrar" />
-              <div className="whitesur-dot min" onClick={handleMinimizeTerminal} />
-              <div className="whitesur-dot max" onClick={handleMaximizeTerminal} />
-            </div>
-          ) : terminalFrameStyle === 'orchis' ? (
-            <div className="orchis-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="orchis-dot" onClick={() => setTerminalHidden(true)} title="Cerrar"><i className="pi pi-times" /></div>
-            </div>
-          ) : terminalFrameStyle === 'fluent' ? (
-            <div className="fluent-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="fluent-dot" onClick={handleMinimizeTerminal}><i className="pi pi-minus" /></div>
-              <div className="fluent-dot" onClick={handleMaximizeTerminal}><i className="pi pi-stop" /></div>
-              <div className="fluent-dot" onClick={() => setTerminalHidden(true)} title="Cerrar"><i className="pi pi-times" /></div>
             </div>
           ) : terminalFrameStyle === 'matcha' ? (
             <div className="matcha-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>

@@ -1462,30 +1462,30 @@ const ConnectionHistory = ({
 				/* KDE Style */
 				.kde-controls { display: flex; align-items: center; gap: 4px; }
 				.kde-dot {
-					width: 26px;
-					height: 26px;
+					width: 14px;
+					height: 14px;
 					display: flex;
 					align-items: center;
 					justify-content: center;
 					color: #fff;
-					font-size: 10px;
+					font-size: 6px;
 					cursor: pointer;
-					border-radius: 4px;
+					border-radius: 2px;
 					transition: background 0.1s;
 				}
 				.kde-dot:hover { background: rgba(255,255,255,0.1); }
 				.kde-dot.close:hover { background: #e81123; }
 
 				/* Windows Style */
-				.windows-controls { display: flex; align-items: center; }
+				.windows-controls { display: flex; align-items: center; border-radius: 2px; overflow: hidden; }
 				.win-dot {
-					width: 32px;
-					height: 28px;
+					width: 22px;
+					height: 18px;
 					display: flex;
 					align-items: center;
 					justify-content: center;
 					color: #fff;
-					font-size: 10px;
+					font-size: 7px;
 					cursor: pointer;
 					transition: background 0.1s;
 				}
@@ -1493,11 +1493,12 @@ const ConnectionHistory = ({
 				.win-dot.close:hover { background: #e81123; }
 
 				/* Futuristic Style */
-				.recents-terminal-frame.futuristic {
+				.recents-terminal-frame.futuristic, .top-terminal-frame.futuristic {
 					border: 1px solid #00f2ff !important;
 					box-shadow: 0 0 15px rgba(0, 242, 255, 0.3) !important;
-					clip-path: polygon(0 0, 95% 0, 100% 5%, 100% 100%, 5% 100%, 0 95%);
+					clip-path: polygon(0 0, 98% 0, 100% 8%, 100% 100%, 8% 100%, 0 92%);
 					background: rgba(10, 15, 25, 0.9) !important;
+					padding: 1px;
 				}
 				.futuristic-controls { display: flex; gap: 10px; }
 				.cyber-dot {
@@ -1548,51 +1549,9 @@ const ConnectionHistory = ({
 					content: ''; position: absolute; left: 2px; top: 2px;
 					width: 8px; height: 4px; background: #888;
 				}
-				.retro-switch.on::after { left: auto; right: 2px; background: #0f0; }
+				.retro-switch.on::after { left: auto; right: 2px; background: #0f0; box-shadow: 0 0 5px #0f0; }
 
-				/* WhiteSur Style */
-				.recents-terminal-frame.whitesur {
-					border-radius: 10px !important;
-					border: 1px solid rgba(255,255,255,0.15) !important;
-					box-shadow: 0 12px 40px rgba(0,0,0,0.4) !important;
-				}
-				.whitesur-controls { display: flex; gap: 8px; }
-				.whitesur-dot {
-					width: 12px; height: 12px; border-radius: 50%;
-					cursor: pointer; position: relative;
-				}
-				.whitesur-dot.close { background: #ff5f56; }
-				.whitesur-dot.min { background: #ffbd2e; }
-				.whitesur-dot.max { background: #27c93f; }
-
-				/* Orchis Style */
-				.recents-terminal-frame.orchis {
-					border-radius: 24px !important;
-					border: 1px solid rgba(255,255,255,0.1) !important;
-				}
-				.orchis-controls { display: flex; gap: 4px; }
-				.orchis-dot {
-					width: 24px; height: 24px; border-radius: 50%;
-					display: flex; align-items: center; justify-content: center;
-					background: rgba(255,255,255,0.05); color: #fff;
-					font-size: 10px; cursor: pointer; transition: all 0.2s;
-				}
-				.orchis-dot:hover { background: rgba(255,255,255,0.1); }
-
-				/* Fluent Style */
-				.recents-terminal-frame.fluent {
-					border-radius: 8px !important;
-					backdrop-filter: blur(20px) !important;
-					border: 1px solid rgba(255,255,255,0.1) !important;
-				}
-				.fluent-controls { display: flex; }
-				.fluent-dot {
-					width: 36px; height: 32px;
-					display: flex; align-items: center; justify-content: center;
-					color: #fff; font-size: 10px; cursor: pointer;
-					transition: background 0.1s;
-				}
-				.fluent-dot:hover { background: rgba(255,255,255,0.1); }
+				/* Removed WhiteSur, Orchis, Fluent as requested */
 
 				/* Matcha Style */
 				.recents-terminal-frame.matcha {
@@ -1845,12 +1804,9 @@ const ConnectionHistory = ({
 					<h4 style={{ margin: '0 0 10px 8px', color: themeColors.textPrimary || '#fff', fontSize: '0.9rem' }}>Estilo de Marco</h4>
 					{[
 						{ id: 'macos', label: 'macOS (Traffic)', dots: ['#ff5f56', '#ffbd2e', '#27c93f'] },
-						{ id: 'whitesur', label: 'WhiteSur (Gnome)', dots: ['#ff5f56', '#ffbd2e', '#27c93f'], rounded: true },
 						{ id: 'gnome', label: 'GNOME (Adwaita)', icon: 'pi pi-times', right: true },
 						{ id: 'kde', label: 'KDE (Breeze)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
 						{ id: 'windows', label: 'Windows (WinUI)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
-						{ id: 'orchis', label: 'Orchis (Rounded)', icons: ['pi-times'], right: true, rounded: true },
-						{ id: 'fluent', label: 'Fluent (Microsoft)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
 						{ id: 'matcha', label: 'Matcha (Green)', line: '#2eb398', icons: ['pi-times'], right: true },
 						{ id: 'futuristic', label: 'Futurista (Cyber)', color: '#00f2ff', text: 'EXE' },
 						{ id: 'modern', label: 'Moderno (Glass)', rounded: true, icons: ['pi-times'], right: true },
@@ -1894,7 +1850,7 @@ const ConnectionHistory = ({
 
 			<div className="hero-splash-header" style={{ paddingBottom: '20px' }}>
 
-				<div className="top-terminal-frame">
+				<div className={`top-terminal-frame ${terminalFrameStyle}`}>
 					<div className="top-terminal-header">
 						<div className="traffic-lights">
 							{terminalFrameStyle === 'macos' ? (
@@ -1918,22 +1874,6 @@ const ConnectionHistory = ({
 									<div className="win-dot minimize" title="Minimizar"><i className="pi pi-minus" /></div>
 									<div className="win-dot maximize" title="Maximizar"><i className="pi pi-stop" /></div>
 									<div className="win-dot close" title="Cerrar"><i className="pi pi-times" /></div>
-								</div>
-							) : terminalFrameStyle === 'whitesur' ? (
-								<div className="whitesur-controls" style={{ marginLeft: '-8px' }}>
-									<div className="whitesur-dot close" />
-									<div className="whitesur-dot min" />
-									<div className="whitesur-dot max" />
-								</div>
-							) : terminalFrameStyle === 'orchis' ? (
-								<div className="orchis-controls" style={{ marginLeft: '-8px' }}>
-									<div className="orchis-dot"><i className="pi pi-times" /></div>
-								</div>
-							) : terminalFrameStyle === 'fluent' ? (
-								<div className="fluent-controls" style={{ marginLeft: '-12px' }}>
-									<div className="fluent-dot"><i className="pi pi-minus" /></div>
-									<div className="fluent-dot"><i className="pi pi-stop" /></div>
-									<div className="fluent-dot"><i className="pi pi-times" /></div>
 								</div>
 							) : terminalFrameStyle === 'matcha' ? (
 								<div className="matcha-controls" style={{ marginLeft: '-8px' }}>
@@ -2437,17 +2377,63 @@ const ConnectionHistory = ({
 			{/* FAVORITES TABLE - Terminal-style frame for favorites */}
 			{
 				!terminalView && activeBottomView === 'favorites' && (
-					<div className="recents-terminal-frame favorites-terminal-frame">
+					<div className={`recents-terminal-frame favorites-terminal-frame ${terminalFrameStyle}`}>
 						{/* macOS-style header */}
 						<div className="recents-terminal-header">
 							<div className="traffic-lights">
-								<div
-									className="traffic-dot red"
-									onClick={() => setActiveBottomView('all')}
-									title="Cerrar favoritos"
-								/>
-								<div className="traffic-dot yellow" />
-								<div className="traffic-dot green" />
+								{terminalFrameStyle === 'macos' ? (
+									<>
+										<div
+											className="traffic-dot red"
+											onClick={() => setActiveBottomView('all')}
+											title="Cerrar favoritos"
+										/>
+										<div className="traffic-dot yellow" />
+										<div className="traffic-dot green" />
+									</>
+								) : terminalFrameStyle === 'gnome' ? (
+									<div className="gnome-controls">
+										<div className="gnome-dot close" title="Cerrar" onClick={() => setActiveBottomView('all')}><i className="pi pi-times" /></div>
+									</div>
+								) : terminalFrameStyle === 'kde' ? (
+									<div className="kde-controls">
+										<div className="kde-dot minimize" title="Minimizar"><i className="pi pi-minus" /></div>
+										<div className="kde-dot maximize" title="Maximizar"><i className="pi pi-stop" /></div>
+										<div className="kde-dot close" title="Cerrar" onClick={() => setActiveBottomView('all')}><i className="pi pi-times" /></div>
+									</div>
+								) : terminalFrameStyle === 'windows' ? (
+									<div className="windows-controls">
+										<div className="win-dot minimize" title="Minimizar"><i className="pi pi-minus" /></div>
+										<div className="win-dot maximize" title="Maximizar"><i className="pi pi-stop" /></div>
+										<div className="win-dot close" title="Cerrar" onClick={() => setActiveBottomView('all')}><i className="pi pi-times" /></div>
+									</div>
+								) : terminalFrameStyle === 'orchis' ? (
+									<div className="orchis-controls">
+										<div className="orchis-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
+									</div>
+								) : terminalFrameStyle === 'fluent' ? (
+									<div className="fluent-controls">
+										<div className="fluent-dot"><i className="pi pi-minus" /></div>
+										<div className="fluent-dot"><i className="pi pi-stop" /></div>
+										<div className="fluent-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
+									</div>
+								) : terminalFrameStyle === 'matcha' ? (
+									<div className="matcha-controls">
+										<div className="matcha-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
+									</div>
+								) : terminalFrameStyle === 'futuristic' ? (
+									<div className="futuristic-controls">
+										<div className="cyber-dot" onClick={() => setActiveBottomView('all')} title="Cerrar">EXE</div>
+									</div>
+								) : terminalFrameStyle === 'modern' ? (
+									<div className="modern-controls">
+										<div className="glass-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
+									</div>
+								) : (
+									<div className="retro-controls">
+										<div className="retro-switch on" onClick={() => setActiveBottomView('all')} title="OFF" />
+									</div>
+								)}
 							</div>
 							<div className="header-path">
 								<span className="path-tilde">~</span>/favorites &nbsp;{'\u00B7'}&nbsp; {filteredFavorites.length} connections
@@ -2520,17 +2506,63 @@ const ConnectionHistory = ({
 			{/* RECIENTES TABLE - Terminal-style frame with grep rows */}
 			{
 				!terminalView && (activeBottomView === 'all' || activeBottomView === 'recent') && (
-					<div className="recents-terminal-frame">
+					<div className={`recents-terminal-frame ${terminalFrameStyle}`}>
 						{/* macOS-style header with filter on the right */}
 						<div className="recents-terminal-header">
 							<div className="traffic-lights">
-								<div
-									className="traffic-dot red"
-									onClick={() => setActiveBottomView('all')}
-									title="Cerrar recientes"
-								/>
-								<div className="traffic-dot yellow" />
-								<div className="traffic-dot green" />
+								{terminalFrameStyle === 'macos' ? (
+									<>
+										<div
+											className="traffic-dot red"
+											onClick={() => setActiveBottomView('all')}
+											title="Cerrar recientes"
+										/>
+										<div className="traffic-dot yellow" />
+										<div className="traffic-dot green" />
+									</>
+								) : terminalFrameStyle === 'gnome' ? (
+									<div className="gnome-controls">
+										<div className="gnome-dot close" title="Cerrar" onClick={() => setActiveBottomView('all')}><i className="pi pi-times" /></div>
+									</div>
+								) : terminalFrameStyle === 'kde' ? (
+									<div className="kde-controls">
+										<div className="kde-dot minimize" title="Minimizar"><i className="pi pi-minus" /></div>
+										<div className="kde-dot maximize" title="Maximizar"><i className="pi pi-stop" /></div>
+										<div className="kde-dot close" title="Cerrar" onClick={() => setActiveBottomView('all')}><i className="pi pi-times" /></div>
+									</div>
+								) : terminalFrameStyle === 'windows' ? (
+									<div className="windows-controls">
+										<div className="win-dot minimize" title="Minimizar"><i className="pi pi-minus" /></div>
+										<div className="win-dot maximize" title="Maximizar"><i className="pi pi-stop" /></div>
+										<div className="win-dot close" title="Cerrar" onClick={() => setActiveBottomView('all')}><i className="pi pi-times" /></div>
+									</div>
+								) : terminalFrameStyle === 'orchis' ? (
+									<div className="orchis-controls">
+										<div className="orchis-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
+									</div>
+								) : terminalFrameStyle === 'fluent' ? (
+									<div className="fluent-controls">
+										<div className="fluent-dot"><i className="pi pi-minus" /></div>
+										<div className="fluent-dot"><i className="pi pi-stop" /></div>
+										<div className="fluent-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
+									</div>
+								) : terminalFrameStyle === 'matcha' ? (
+									<div className="matcha-controls">
+										<div className="matcha-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
+									</div>
+								) : terminalFrameStyle === 'futuristic' ? (
+									<div className="futuristic-controls">
+										<div className="cyber-dot" onClick={() => setActiveBottomView('all')} title="Cerrar">EXE</div>
+									</div>
+								) : terminalFrameStyle === 'modern' ? (
+									<div className="modern-controls">
+										<div className="glass-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
+									</div>
+								) : (
+									<div className="retro-controls">
+										<div className="retro-switch on" onClick={() => setActiveBottomView('all')} title="OFF" />
+									</div>
+								)}
 							</div>
 							<div className="header-path">
 								<span className="path-tilde">~</span>/recent &nbsp;{'\u00B7'}&nbsp; {filteredRecentsForDisplay.length} connections
@@ -2661,12 +2693,6 @@ const ConnectionHistory = ({
 								>
 									<i className="pi pi-times" />
 								</div>
-							</div>
-						) : terminalFrameStyle === 'whitesur' ? (
-							<div className="whitesur-controls">
-								<div className="whitesur-dot close" onClick={() => { if (onTerminalToggle) onTerminalToggle(false); setActiveBottomView('recent'); }} title="Cerrar" />
-								<div className="whitesur-dot min" />
-								<div className="whitesur-dot max" />
 							</div>
 						) : terminalFrameStyle === 'orchis' ? (
 							<div className="orchis-controls">
