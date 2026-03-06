@@ -9,6 +9,8 @@ import FilterBadge from './FilterBadge';
 import { InputText } from 'primereact/inputtext';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { themes } from '../themes';
+import { themeManager } from '../utils/themeManager';
+import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS, ANIMATED_UI_KEYS, NATURE_UI_KEYS } from '../themes/ui-themes';
 
 // Formatear "Hace 5m", "Hace 2 h", "Ayer", etc.
 function formatRelativeTime(iso) {
@@ -149,6 +151,8 @@ const ConnectionHistory = ({
 	const [activeIndex, setActiveIndex] = useState(-1);
 	const [activeBottomView, setActiveBottomView] = useState('all');
 	const themePickerRef = useRef(null);
+	const uiThemePickerRef = useRef(null);
+	const [currentUITheme, setCurrentUITheme] = useState(() => localStorage.getItem('ui_theme') || 'Light');
 
 	const handleThemeSelect = (themeName) => {
 		if (setLocalLinuxTerminalTheme) {
@@ -162,6 +166,20 @@ const ConnectionHistory = ({
 
 		themePickerRef.current?.hide();
 	};
+
+	const handleUIThemeSelect = (themeName) => {
+		setCurrentUITheme(themeName);
+		themeManager.applyTheme(themeName);
+		uiThemePickerRef.current?.hide();
+	};
+
+	const UI_CATEGORIES = [
+		{ id: 'classic', name: 'Clásicos', keys: CLASSIC_UI_KEYS },
+		{ id: 'futuristic', name: 'Futuristas', keys: FUTURISTIC_UI_KEYS },
+		{ id: 'modern', name: 'Modernos', keys: MODERN_UI_KEYS },
+		{ id: 'animated', name: 'Animados', keys: ANIMATED_UI_KEYS },
+		{ id: 'nature', name: 'Naturaleza', keys: NATURE_UI_KEYS }
+	];
 
 	// Cargar passwords desde localStorage (con soporte para encriptaci\u00F3n) - Igual que en TitleBar
 	useEffect(() => {
@@ -1993,11 +2011,30 @@ const ConnectionHistory = ({
 								<span className="path-tilde">~</span>/home
 							</div>
 						</div>
-						<div className="header-sessions-container" style={{ marginLeft: 'auto', zIndex: 5 }}>
+						<div className="header-sessions-container" style={{ marginLeft: 'auto', zIndex: 10, display: 'flex', alignItems: 'center', gap: '8px' }}>
 							<span className="header-sessions" style={{ fontSize: '9px', fontWeight: 600 }}>
 								<i className="pi pi-circle-fill" style={{ fontSize: '5px' }} />
 								{activeIds.size} sessions
 							</span>
+							<i
+								className="pi pi-palette"
+								style={{
+									fontSize: '0.9rem',
+									color: themeColors.textPrimary || '#fff',
+									opacity: 0.6,
+									cursor: 'pointer',
+									padding: '4px',
+									borderRadius: '4px',
+									transition: 'all 0.2s'
+								}}
+								title="Cambiar tema de la interfaz"
+								onClick={(e) => {
+									e.stopPropagation();
+									uiThemePickerRef.current?.toggle(e);
+								}}
+								onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+								onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+							/>
 						</div>
 					</div>
 					<div className="top-terminal-body">
@@ -2797,6 +2834,137 @@ const ConnectionHistory = ({
 						}}
 					>
 						Ajustes avanzados...
+					</div>
+				</div>
+			</OverlayPanel>
+
+			<OverlayPanel
+				ref={uiThemePickerRef}
+				style={{
+					width: '320px',
+					backgroundColor: 'var(--ui-dialog-bg, #1e1e1e)',
+					border: '1px solid var(--ui-content-border, #444)',
+					boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+					borderRadius: '12px'
+				}}
+				className="ui-theme-picker-overlay"
+			>
+				<div style={{ maxHeight: '450px', overflowY: 'auto', padding: '8px' }}>
+					<div style={{
+						padding: '8px 12px',
+						fontWeight: '700',
+						fontSize: '15px',
+						color: 'var(--ui-dialog-text)',
+						borderBottom: '1px solid var(--ui-content-border, #444)',
+						marginBottom: '12px',
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'space-between',
+						letterSpacing: '0.5px'
+					}}>
+						<span>Temas de Interfaz</span>
+						<i className="pi pi-sparkles" style={{ color: 'var(--ui-button-primary)', opacity: 0.9 }} />
+					</div>
+
+					{UI_CATEGORIES.map(category => (
+						<div key={category.id} className="ui-theme-category-group">
+							<div style={{
+								fontSize: '11px',
+								textTransform: 'uppercase',
+								color: 'rgba(255,255,255,0.4)',
+								fontWeight: '600',
+								padding: '8px 12px 4px',
+								letterSpacing: '1px'
+							}}>
+								{category.name}
+							</div>
+							{category.keys.map(themeKey => {
+								const theme = uiThemes[themeKey];
+								if (!theme) return null;
+								const isActive = theme.name === currentUITheme;
+								const colors = theme.colors || {};
+
+								return (
+									<div
+										key={themeKey}
+										onClick={() => handleUIThemeSelect(theme.name)}
+										style={{
+											display: 'flex',
+											alignItems: 'center',
+											gap: '12px',
+											padding: '8px 12px',
+											cursor: 'pointer',
+											borderRadius: '8px',
+											backgroundColor: isActive ? 'rgba(var(--ui-button-primary-rgb), 0.15)' : 'transparent',
+											transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+											margin: '2px 0'
+										}}
+										className={`ui-theme-item ${isActive ? 'active' : ''}`}
+										onMouseEnter={(e) => {
+											if (!isActive) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+										}}
+										onMouseLeave={(e) => {
+											if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
+										}}
+									>
+										<div style={{
+											display: 'flex',
+											gap: '2px',
+											width: '24px',
+											height: '24px',
+											borderRadius: '6px',
+											overflow: 'hidden',
+											border: `1px solid ${isActive ? 'var(--ui-button-primary)' : 'rgba(255,255,255,0.1)'}`,
+											boxShadow: isActive ? '0 0 10px rgba(var(--ui-button-primary-rgb), 0.3)' : 'none'
+										}}>
+											<div style={{ flex: 1, backgroundColor: colors.sidebarBackground || '#000' }} />
+											<div style={{ flex: 1, backgroundColor: colors.buttonPrimary || '#fff' }} />
+											<div style={{ flex: 1, backgroundColor: colors.contentBackground || '#333' }} />
+										</div>
+										<span style={{
+											fontSize: '13px',
+											color: isActive ? 'var(--ui-button-primary)' : 'var(--ui-dialog-text)',
+											fontWeight: isActive ? '600' : '500',
+											flex: 1
+										}}>{theme.name}</span>
+										{isActive && (
+											<i className="pi pi-check" style={{ fontSize: '12px', color: 'var(--ui-button-primary)' }} />
+										)}
+									</div>
+								);
+							})}
+						</div>
+					))}
+
+					<div
+						style={{
+							padding: '12px',
+							marginTop: '12px',
+							borderTop: '1px solid var(--ui-content-border, #444)',
+							textAlign: 'center',
+							fontSize: '11px',
+							color: 'var(--ui-dialog-text)',
+							opacity: 0.6,
+							cursor: 'pointer',
+							transition: 'opacity 0.2s'
+						}}
+						onClick={() => {
+							uiThemePickerRef.current?.hide();
+							if (onOpenSettings) onOpenSettings();
+							setTimeout(() => {
+								try {
+									window.dispatchEvent(new CustomEvent('open-settings-dialog', {
+										detail: { tab: 'appearance' }
+									}));
+								} catch (err) {
+									console.error('Error opening settings tab:', err);
+								}
+							}, 100);
+						}}
+						onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+						onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+					>
+						Gestión completa de temas...
 					</div>
 				</div>
 			</OverlayPanel>
