@@ -1485,15 +1485,15 @@ const ConnectionHistory = ({
 					justify-content: center;
 				}
 				.hero-title { 
-					font-size: 42px; 
+					font-size: 24px; 
 					font-weight: 800; 
 					background: linear-gradient(90deg, ${themeColors.textPrimary || '#ffffff'}, ${themeColors.primaryColor || '#4fc3f7'}); 
 					-webkit-background-clip: text; 
 					-webkit-text-fill-color: transparent; 
-					margin: 0 0 10px 0; 
+					margin: 0; 
 					letter-spacing: -0.5px;
 				}
-				.hero-status { color: #81c784; font-size: 0.9rem; margin-bottom: 30px; display: flex; justify-content: center; align-items: center; gap: 8px; font-family: monospace; }
+				.hero-status { color: #81c784; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; font-family: 'Fira Code', monospace; }
 				.hero-search-container { 
 					width: 100%; 
 					position: relative; 
@@ -1528,11 +1528,10 @@ const ConnectionHistory = ({
 				}
 				.hero-search-input:focus, .p-inputtext.hero-search-input:enabled:focus {
 					border-color: ${terminalTheme.green || '#27c93f'} !important;
-					box-shadow: 0 0 15px ${terminalTheme.green ? terminalTheme.green + '33' : 'rgba(39, 201, 63, 0.15)'},
-					            inset 0 1px 1px rgba(255,255,255,0.05),
-					            0 0 0 1px ${terminalTheme.green || '#27c93f'} !important;
-					background: ${terminalTheme.background || 'rgba(22, 27, 34, 0.90)'} !important;
-					transform: translateY(-2px);
+					box-shadow: 0 0 20px ${terminalTheme.green ? terminalTheme.green + '44' : 'rgba(39, 201, 63, 0.2)'},
+					            inset 0 1px 1px rgba(255,255,255,0.05) !important;
+					background: ${terminalTheme.background || 'rgba(15, 18, 24, 0.95)'} !important;
+					transform: translateY(-1px);
 				}
 				/* Hide old search icon since we use terminal prompt */
 				.hero-search-icon { display: none; }
@@ -1575,55 +1574,55 @@ const ConnectionHistory = ({
 				.hero-action-buttons {
 					display: flex;
 					justify-content: center;
-					gap: 16px;
-					margin-bottom: 24px;
+					gap: 4px;
+					margin-top: 20px;
+					background: rgba(0, 0, 0, 0.2);
+					padding: 4px;
+					border-radius: 12px;
+					border: 1px solid rgba(255, 255, 255, 0.03);
+					backdrop-filter: blur(10px);
 				}
 				.hero-action-btn {
-					background: ${terminalTheme.background ? terminalTheme.background + '88' : 'rgba(13, 17, 23, 0.5)'};
-					border: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '40' : 'rgba(255,255,255,0.08)'};
-					border-top: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '88' : 'rgba(255,255,255,0.15)'};
-					border-radius: 20px;
-					padding: 10px 24px;
-					color: ${terminalTheme.foreground || 'rgba(255,255,255,0.8)'};
-					font-size: 0.95rem;
+					background: transparent;
+					border: 1px solid transparent;
+					border-radius: 10px;
+					padding: 8px 18px;
+					color: rgba(255,255,255,0.6);
+					font-size: 0.85rem;
 					font-weight: 500;
-					font-family: 'Fira Code', monospace;
+					font-family: 'Inter', system-ui, -apple-system, sans-serif;
 					display: flex;
 					align-items: center;
-					gap: 12px;
+					gap: 8px;
 					cursor: pointer;
-					transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-					box-shadow: 0 4px 15px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.02);
-					backdrop-filter: blur(12px);
+					transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 				}
 				.hero-action-btn:hover {
-					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.1)'};
-					color: ${terminalTheme.foreground || '#ffffff'};
-					border-color: ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '99' : 'rgba(255,255,255,0.2)'};
-					transform: translateY(-2px);
-					box-shadow: 0 6px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
-				}
-				.hero-action-btn:active {
-					transform: translateY(1px);
-					box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+					color: #fff;
+					background: rgba(255, 255, 255, 0.05);
 				}
 				.hero-action-btn.active {
-					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.15)'};
-					color: ${terminalTheme.foreground || '#ffffff'};
-					border-color: ${terminalTheme.blue || '#58a6ff'};
-					box-shadow: 0 0 12px ${terminalTheme.blue ? terminalTheme.blue + '40' : 'rgba(88, 166, 255, 0.25)'}, inset 0 1px 0 rgba(255,255,255,0.1);
+					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.1)'};
+					color: #fff;
+					border-color: rgba(255, 255, 255, 0.05);
+					box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 				}
 				.hero-action-btn i {
-					font-size: 1.1rem;
-					color: ${terminalTheme.brightBlack || 'rgba(255,255,255,0.5)'};
-					transition: color 0.3s ease;
-				}
-				.hero-action-btn:hover i {
-					color: ${terminalTheme.blue || '#58a6ff'};
+					font-size: 0.9rem;
+					opacity: 0.6;
 				}
 				.hero-action-btn.active i {
-					color: ${terminalTheme.blue || '#58a6ff'};
-					filter: drop-shadow(0 0 8px ${terminalTheme.blue ? terminalTheme.blue + '80' : 'rgba(88,166,255,0.5)'});
+					opacity: 1;
+					color: ${terminalTheme.green || '#3fb950'};
+				}
+				.hero-action-btn.terminal-primary {
+					background: ${terminalTheme.green ? terminalTheme.green + '22' : 'rgba(39, 201, 63, 0.1)'};
+					color: ${terminalTheme.green || '#3fb950'};
+					border: 1px solid ${terminalTheme.green ? terminalTheme.green + '44' : 'rgba(39, 201, 63, 0.2)'};
+				}
+				.hero-action-btn.terminal-primary:hover {
+					background: ${terminalTheme.green ? terminalTheme.green + '33' : 'rgba(39, 201, 63, 0.15)'};
+					transform: translateY(-1px);
 				}
 				
 				.hero-shortcuts { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.3)'}; font-size: 0.75rem; display: flex; justify-content: center; gap: 20px; font-weight: 500;}
@@ -1672,21 +1671,44 @@ const ConnectionHistory = ({
 				.top-terminal-header .traffic-dot.yellow { background: #ffbd2e; border: 1px solid #dea123; }
 				.top-terminal-header .traffic-dot.green { background: #27c93f; border: 1px solid #1aab29; }
 				.top-terminal-header .header-path {
-					flex: 1;
-					text-align: center;
+					position: absolute;
+					left: 50%;
+					top: 50%;
+					transform: translate(-50%, -50%);
 					color: ${terminalTheme.foreground || '#c9d1d9'};
-					opacity: 0.6;
 					font-size: 11.5px;
 					user-select: none;
 					pointer-events: none;
 					font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
-					font-weight: 400;
+					font-weight: 500;
 					letter-spacing: 0.3px;
+					display: flex;
+					align-items: center;
+					gap: 6px;
+					white-space: nowrap;
 				}
-				.top-terminal-header .header-path .path-tilde { color: ${terminalTheme.green || '#3fb950'}; }
+				.top-terminal-header .header-brand {
+					font-weight: 800;
+					letter-spacing: 0.5px;
+					color: ${themeColors.textPrimary || '#fff'};
+					opacity: 1;
+				}
+				.top-terminal-header .header-sessions {
+					font-size: 10px;
+					opacity: 0.7;
+					display: flex;
+					align-items: center;
+					gap: 4px;
+					background: rgba(129, 199, 132, 0.1);
+					padding: 2px 8px;
+					border-radius: 10px;
+					color: #81c784;
+					border: 1px solid rgba(129, 199, 132, 0.2);
+				}
+				.top-terminal-header .header-path .path-tilde { color: ${terminalTheme.green || '#3fb950'}; opacity: 0.8; }
 				
 				.top-terminal-body {
-					padding: 24px 20px;
+					padding: 18px 20px 22px;
 					display: flex;
 					flex-direction: column;
 					align-items: center;
@@ -1950,12 +1972,8 @@ const ConnectionHistory = ({
 				}
 			`}</style>
 
-			<div className="hero-splash-header">
-				<h1 className="hero-title">NodeTerm</h1>
-				<div className="hero-status">
-					<i className="pi pi-circle-fill" style={{ fontSize: '0.6rem' }} />
-					<span>{activeIds.size} active sessions</span>
-				</div>
+			<div className="hero-splash-header" style={{ paddingBottom: '20px' }}>
+
 				<div className="top-terminal-frame">
 					<div className="top-terminal-header">
 						<div className="traffic-lights">
@@ -1964,11 +1982,21 @@ const ConnectionHistory = ({
 							<div className="traffic-dot green" />
 						</div>
 						<div className="header-path">
-							<span className="path-tilde">~</span>/home
+							<span className="header-brand">NodeTerm</span>
+							<span style={{ opacity: 0.4 }}>{'\u00B7'}</span>
+							<div style={{ opacity: 0.4, display: 'flex', alignItems: 'center', fontSize: '11px' }}>
+								<span className="path-tilde">~</span>/home
+							</div>
+						</div>
+						<div className="header-sessions-container" style={{ marginLeft: 'auto', zIndex: 5 }}>
+							<span className="header-sessions" style={{ fontSize: '9px', fontWeight: 600 }}>
+								<i className="pi pi-circle-fill" style={{ fontSize: '5px' }} />
+								{activeIds.size} sessions
+							</span>
 						</div>
 					</div>
 					<div className="top-terminal-body">
-						<div className="hero-search-container" style={{ margin: '0 0 16px 0' }}>
+						<div className="hero-search-container" style={{ margin: '0 0 12px 0' }}>
 							<InputText
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
@@ -2052,9 +2080,9 @@ const ConnectionHistory = ({
 							)}
 						</div>
 
-						<div className="hero-action-buttons" style={{ margin: 0 }}>
+						<div className="hero-action-buttons">
 							<button
-								className={`hero-action-btn ${terminalView ? 'active' : ''}`}
+								className={`hero-action-btn terminal-primary ${terminalView ? 'active' : ''}`}
 								title="Abrir nueva terminal local"
 								onClick={(e) => {
 									e.stopPropagation();
@@ -2064,7 +2092,7 @@ const ConnectionHistory = ({
 									}
 								}}
 							>
-								<i className="pi pi-desktop" /> Nueva terminal
+								<i className="pi pi-plus-circle" /> Terminal
 							</button>
 							<button
 								className={`hero-action-btn ${activeBottomView === 'recent' && !terminalView ? 'active' : ''}`}
@@ -2073,7 +2101,7 @@ const ConnectionHistory = ({
 									setActiveBottomView('recent');
 								}}
 							>
-								<i className="pi pi-clock" /> Recent
+								<i className="pi pi-clock" /> Recientes
 							</button>
 							<button
 								className={`hero-action-btn ${activeBottomView === 'favorites' && !terminalView ? 'active' : ''}`}
@@ -2082,7 +2110,7 @@ const ConnectionHistory = ({
 									setActiveBottomView('favorites');
 								}}
 							>
-								<i className="pi pi-star" /> Favorites
+								<i className="pi pi-star" /> Favoritos
 							</button>
 						</div>
 					</div>
