@@ -1505,26 +1505,31 @@ const ConnectionHistory = ({
 					left: 20px;
 					top: 50%;
 					transform: translateY(-50%);
-					color: #27c93f;
+					color: ${terminalTheme.green || '#27c93f'};
 					font-family: 'Fira Code', 'Consolas', monospace;
 					font-weight: bold;
-					font-size: 1rem;
+					font-size: 0.85rem;
 					z-index: 2;
 					pointer-events: none;
+					opacity: 0.8;
 				}
 				.hero-search-input, .p-inputtext.hero-search-input:enabled:focus {
 					width: 100% !important;
 					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.05)'} !important;
 					border: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '55' : 'rgba(255,255,255,0.1)'} !important;
 					border-radius: 10px !important;
-					padding: 12px 70px 12px 55px !important;
+					padding: 10px 70px 10px 65px !important;
 					color: ${terminalTheme.foreground || '#fff'} !important;
-					font-size: 1rem;
+					font-size: 0.9rem;
 					font-family: 'Fira Code', 'Consolas', monospace !important;
 					outline: none !important;
 					box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05) !important;
 					backdrop-filter: blur(16px);
 					transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+				}
+				.hero-search-input::placeholder {
+					color: ${terminalTheme.foreground || '#fff'};
+					opacity: 0.45;
 				}
 				.hero-search-input:focus, .p-inputtext.hero-search-input:enabled:focus {
 					border-color: ${terminalTheme.green || '#27c93f'} !important;
@@ -1535,7 +1540,7 @@ const ConnectionHistory = ({
 				}
 				/* Hide old search icon since we use terminal prompt */
 				.hero-search-icon { display: none; }
-				.hero-search-spinner { position: absolute; right: 70px; top: 50%; transform: translateY(-50%); color: #27c93f; font-size: 1.2rem; z-index: 2; }
+				.hero-search-spinner { position: absolute; right: 70px; top: 50%; transform: translateY(-50%); color: ${terminalTheme.green || '#27c93f'}; font-size: 1.2rem; z-index: 2; }
 				
 				.hero-terminal-btn {
 					position: absolute;
