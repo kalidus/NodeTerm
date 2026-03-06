@@ -1462,35 +1462,66 @@ const ConnectionHistory = ({
 				/* KDE Style */
 				.kde-controls { display: flex; align-items: center; gap: 4px; }
 				.kde-dot {
-					width: 14px;
-					height: 14px;
+					width: 24px;
+					height: 24px;
 					display: flex;
 					align-items: center;
 					justify-content: center;
-					color: #fff;
-					font-size: 6px;
+					color: ${themeColors.textPrimary || '#fff'};
 					cursor: pointer;
-					border-radius: 2px;
-					transition: background 0.1s;
+					border-radius: 4px;
+					transition: all 0.2s;
 				}
 				.kde-dot:hover { background: rgba(255,255,255,0.1); }
-				.kde-dot.close:hover { background: #e81123; }
+				.kde-dot.close:hover { background: #e81123; color: #fff !important; }
 
-				/* Windows Style */
-				.windows-controls { display: flex; align-items: center; border-radius: 2px; overflow: hidden; }
-				.win-dot {
-					width: 22px;
-					height: 18px;
+				/* Custom Thin Icons */
+				.custom-icon {
+					width: 10px;
+					height: 10px;
+					position: relative;
 					display: flex;
 					align-items: center;
 					justify-content: center;
-					color: #fff;
-					font-size: 7px;
+					opacity: 0.8;
+				}
+				.kde-dot:hover .custom-icon { opacity: 1; }
+				.icon-min::after {
+					content: '';
+					width: 10px;
+					height: 1px;
+					background: currentColor;
+				}
+				.icon-max::after {
+					content: '';
+					width: 8px;
+					height: 8px;
+					border: 1px solid currentColor;
+				}
+				.icon-close::before, .icon-close::after {
+					content: '';
+					position: absolute;
+					width: 11px;
+					height: 1px;
+					background: currentColor;
+				}
+				.icon-close::before { transform: rotate(45deg); }
+				.icon-close::after { transform: rotate(-45deg); }
+
+				/* Windows Style */
+				.windows-controls { display: flex; align-items: center; }
+				.win-dot {
+					width: 32px;
+					height: 24px;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					color: ${themeColors.textPrimary || '#fff'};
 					cursor: pointer;
-					transition: background 0.1s;
+					transition: all 0.15s;
 				}
 				.win-dot:hover { background: rgba(255,255,255,0.1); }
-				.win-dot.close:hover { background: #e81123; }
+				.win-dot.close:hover { background: #e81123; color: #fff !important; }
 
 				/* Futuristic Style */
 				.recents-terminal-frame.futuristic, .top-terminal-frame.futuristic {
@@ -1865,15 +1896,15 @@ const ConnectionHistory = ({
 								</div>
 							) : terminalFrameStyle === 'kde' ? (
 								<div className="kde-controls" style={{ marginLeft: '-8px' }}>
-									<div className="kde-dot minimize" title="Minimizar"><i className="pi pi-minus" /></div>
-									<div className="kde-dot maximize" title="Maximizar"><i className="pi pi-stop" /></div>
-									<div className="kde-dot close" title="Cerrar"><i className="pi pi-times" /></div>
+									<div className="kde-dot minimize" title="Minimizar"><div className="custom-icon icon-min" /></div>
+									<div className="kde-dot maximize" title="Maximizar"><div className="custom-icon icon-max" /></div>
+									<div className="kde-dot close" title="Cerrar"><div className="custom-icon icon-close" /></div>
 								</div>
 							) : terminalFrameStyle === 'windows' ? (
 								<div className="windows-controls" style={{ marginLeft: '-8px' }}>
-									<div className="win-dot minimize" title="Minimizar"><i className="pi pi-minus" /></div>
-									<div className="win-dot maximize" title="Maximizar"><i className="pi pi-stop" /></div>
-									<div className="win-dot close" title="Cerrar"><i className="pi pi-times" /></div>
+									<div className="win-dot minimize" title="Minimizar"><div className="custom-icon icon-min" /></div>
+									<div className="win-dot maximize" title="Maximizar"><div className="custom-icon icon-max" /></div>
+									<div className="win-dot close" title="Cerrar"><div className="custom-icon icon-close" /></div>
 								</div>
 							) : terminalFrameStyle === 'matcha' ? (
 								<div className="matcha-controls" style={{ marginLeft: '-8px' }}>
@@ -2666,8 +2697,8 @@ const ConnectionHistory = ({
 							</div>
 						) : terminalFrameStyle === 'kde' ? (
 							<div className="kde-controls">
-								<div className="kde-dot minimize" title="Minimizar"><i className="pi pi-minus" /></div>
-								<div className="kde-dot maximize" title="Maximizar"><i className="pi pi-stop" /></div>
+								<div className="kde-dot minimize" title="Minimizar"><div className="custom-icon icon-min" /></div>
+								<div className="kde-dot maximize" title="Maximizar"><div className="custom-icon icon-max" /></div>
 								<div
 									className="kde-dot close"
 									title="Cerrar"
@@ -2676,13 +2707,13 @@ const ConnectionHistory = ({
 										setActiveBottomView('recent');
 									}}
 								>
-									<i className="pi pi-times" />
+									<div className="custom-icon icon-close" />
 								</div>
 							</div>
 						) : terminalFrameStyle === 'windows' ? (
 							<div className="windows-controls">
-								<div className="win-dot minimize" title="Minimizar"><i className="pi pi-minus" /></div>
-								<div className="win-dot maximize" title="Maximizar"><i className="pi pi-stop" /></div>
+								<div className="win-dot minimize" title="Minimizar"><div className="custom-icon icon-min" /></div>
+								<div className="win-dot maximize" title="Maximizar"><div className="custom-icon icon-max" /></div>
 								<div
 									className="win-dot close"
 									title="Cerrar"
@@ -2691,7 +2722,7 @@ const ConnectionHistory = ({
 										setActiveBottomView('recent');
 									}}
 								>
-									<i className="pi pi-times" />
+									<div className="custom-icon icon-close" />
 								</div>
 							</div>
 						) : terminalFrameStyle === 'orchis' ? (
