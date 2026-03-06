@@ -1514,6 +1514,8 @@ const ConnectionHistory = ({
 				.hero-status { color: #81c784; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; font-family: 'Fira Code', monospace; }
 				.hero-search-container { 
 					width: 100%; 
+					max-width: 500px;
+					margin: 0 auto;
 					position: relative; 
 					z-index: 100;
 				}
