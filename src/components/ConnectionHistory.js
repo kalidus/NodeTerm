@@ -140,6 +140,7 @@ const ConnectionHistory = ({
 	terminalTheme = {},
 	terminalTitle = '/local',
 	onOpenSettings = null,
+	onToggleTerminalVisibility = null,
 	children
 }) => {
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
@@ -1570,10 +1571,9 @@ const ConnectionHistory = ({
 					height: 32px;
 					padding: 0 12px;
 					border-radius: 8px;
-					background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.01) 100%);
-					border: 1px solid rgba(255,255,255,0.05);
-					border-top: 1px solid rgba(255,255,255,0.1);
-					color: ${themeColors.textPrimary || '#fff'};
+					background: #000000;
+					border: 1px solid rgba(255,255,255,0.2);
+					color: #ffffff;
 					font-family: monospace;
 					font-weight: bold;
 					font-size: 1rem;
@@ -1583,17 +1583,18 @@ const ConnectionHistory = ({
 					cursor: pointer;
 					z-index: 3;
 					transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-					box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 4px rgba(0,0,0,0.15);
+					box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 				}
 				.hero-terminal-btn:hover {
-					background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.03) 100%);
-					border-color: rgba(255,255,255,0.15);
-					box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 3px 8px rgba(0,0,0,0.25);
+					background: #1a1a1a;
+					border-color: rgba(255,255,255,0.4);
+					box-shadow: 0 4px 8px rgba(0,0,0,0.4);
 					transform: translateY(-50%) scale(1.02);
 				}
 				.hero-terminal-btn:active {
+					background: #000000;
 					transform: translateY(-50%) scale(0.98);
-					box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+					box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
 				}
 
 				.hero-action-buttons {
@@ -2061,13 +2062,12 @@ const ConnectionHistory = ({
 							)}
 
 							<button
-								className={`hero-terminal-btn ${terminalView ? 'active' : ''}`}
-								title="Abrir nueva terminal local"
+								className="hero-terminal-btn"
+								title="Mostrar/ocultar terminal local flotante"
 								onClick={(e) => {
 									e.stopPropagation();
-									if (onTerminalToggle) {
-										const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
-										onTerminalToggle(true, terminalType, false);
+									if (onToggleTerminalVisibility) {
+										onToggleTerminalVisibility();
 									}
 								}}
 							>

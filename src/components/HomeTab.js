@@ -861,6 +861,7 @@ const HomeTab = ({
                   setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
                   terminalTitle={`/local \u00B7 ${terminalTitle}`}
                   onOpenSettings={onOpenSettings}
+                  onToggleTerminalVisibility={handleToggleTerminalVisibility}
                 >
                   {/* Terminal body - always mounted to preserve state */}
                   <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
