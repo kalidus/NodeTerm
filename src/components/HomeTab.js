@@ -53,6 +53,15 @@ const HomeTab = ({
       return false; // Por defecto visible
     }
   });
+
+  const [terminalFrameStyle, setTerminalFrameStyle] = useState(() => {
+    return localStorage.getItem(STORAGE_KEYS.TERMINAL_FRAME_STYLE) || 'macos';
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.TERMINAL_FRAME_STYLE, terminalFrameStyle);
+  }, [terminalFrameStyle]);
+
   const [rndSize, setRndSize] = useState({ width: '80%', height: 400 });
   const [rndPosition, setRndPosition] = useState({ x: 50, y: 50 });
   const [isRndInitialized, setIsRndInitialized] = useState(false);
@@ -827,6 +836,171 @@ const HomeTab = ({
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
           }
+          
+          /* GNOME Style */
+          .gnome-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+          }
+          .gnome-dot:hover { background: #e81123; }
+          .gnome-controls { display: flex; align-items: center; }
+
+          /* KDE Style */
+          .kde-controls { display: flex; align-items: center; gap: 4px; }
+          .kde-dot {
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.1s;
+          }
+          .kde-dot:hover { background: rgba(255,255,255,0.1); }
+          .kde-dot.close:hover { background: #e81123; }
+
+          /* Windows Style */
+          .windows-controls { display: flex; align-items: center; }
+          .win-dot {
+            width: 32px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 10px;
+            cursor: pointer;
+            transition: background 0.1s;
+          }
+          .win-dot:hover { background: rgba(255,255,255,0.1); }
+          .win-dot.close:hover { background: #e81123; }
+
+          /* Futuristic Style */
+          .bottom-terminal-frame.futuristic {
+            border: 1px solid #00f2ff !important;
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.4) !important;
+            clip-path: polygon(0 0, 97% 0, 100% 3%, 100% 100%, 3% 100%, 0 97%);
+            background: rgba(10, 15, 25, 0.95) !important;
+          }
+          .futuristic-controls { display: flex; gap: 10px; }
+          .cyber-dot {
+            width: 22px; height: 22px;
+            border: 1px solid #00f2ff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; color: #00f2ff; cursor: pointer;
+            text-shadow: 0 0 5px #00f2ff;
+            transform: skew(-15deg);
+            transition: all 0.2s;
+          }
+          .cyber-dot:hover { background: #00f2ff; color: #000; box-shadow: 0 0 10px #00f2ff; }
+
+          /* Modern Glass Style */
+          .bottom-terminal-frame.modern {
+            border: 1px solid rgba(255,255,255,0.2) !important;
+            backdrop-filter: blur(30px) saturate(180%) !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-radius: 20px !important;
+            overflow: hidden;
+          }
+          .modern-controls { display: flex; gap: 8px; }
+          .glass-dot {
+            width: 30px; height: 30px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff; cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          }
+          .glass-dot:hover { background: rgba(255,255,255,0.2); transform: translateY(-1px); }
+
+          /* Retro CRT Style */
+          .bottom-terminal-frame.retro {
+            border: 12px solid #333 !important;
+            border-radius: 24px !important;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.9), 0 10px 40px rgba(0,0,0,0.6) !important;
+            background: #000 !important;
+          }
+          .retro-controls { display: flex; gap: 10px; }
+          .retro-switch {
+            width: 28px; height: 14px;
+            background: #444; border: 2px solid #555;
+            position: relative; cursor: pointer;
+          }
+          .retro-switch::after {
+            content: ''; position: absolute; left: 2px; top: 2px;
+            width: 10px; height: 6px; background: #666;
+          }
+          .retro-switch.on::after { left: auto; right: 2px; background: #0f0; box-shadow: 0 0 5px #0f0; }
+
+          /* WhiteSur Style */
+          .bottom-terminal-frame.whitesur {
+            border-radius: 10px !important;
+            border: 1px solid rgba(255,255,255,0.15) !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4) !important;
+          }
+          .whitesur-controls { display: flex; gap: 8px; }
+          .whitesur-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            cursor: pointer; position: relative;
+          }
+          .whitesur-dot.close { background: #ff5f56; }
+          .whitesur-dot.min { background: #ffbd2e; }
+          .whitesur-dot.max { background: #27c93f; }
+
+          /* Orchis Style */
+          .bottom-terminal-frame.orchis {
+            border-radius: 24px !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+          }
+          .orchis-controls { display: flex; gap: 6px; }
+          .orchis-dot {
+            width: 24px; height: 24px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.05); color: #fff;
+            font-size: 10px; cursor: pointer; transition: all 0.2s;
+          }
+          .orchis-dot:hover { background: rgba(255,255,255,0.1); }
+
+          /* Fluent Style */
+          .bottom-terminal-frame.fluent {
+            border-radius: 8px !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+          }
+          .fluent-controls { display: flex; }
+          .fluent-dot {
+            width: 36px; height: 32px;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 10px; cursor: pointer;
+            transition: background 0.1s;
+          }
+          .fluent-dot:hover { background: rgba(255,255,255,0.1); }
+
+          /* Matcha Style */
+          .bottom-terminal-frame.matcha {
+            border-top: 3px solid #2eb398 !important;
+            border-radius: 4px !important;
+          }
+          .matcha-controls { display: flex; gap: 4px; }
+          .matcha-dot {
+            width: 26px; height: 26px;
+            display: flex; align-items: center; justify-content: center;
+            color: #aaa; cursor: pointer;
+          }
+          .matcha-dot:hover { color: #fff; background: rgba(255,255,255,0.1); }
         `}
       </style>
       <div style={{
@@ -896,6 +1070,8 @@ const HomeTab = ({
                   terminalTitle={`/local \u00B7 ${terminalTitle}`}
                   onOpenSettings={onOpenSettings}
                   onToggleTerminalVisibility={handleToggleTerminalVisibility}
+                  terminalFrameStyle={terminalFrameStyle}
+                  setTerminalFrameStyle={setTerminalFrameStyle}
                 >
                   {/* Terminal body - always mounted to preserve state */}
                   <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -921,24 +1097,27 @@ const HomeTab = ({
 
   // Panel inferior: Terminal con pesta\u00F1as flotante
   const bottomPanel = (
-    <div style={{
-      height: '100%',
-      width: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-      background: localTerminalBg,
-      borderRadius: terminalState === 'maximized' ? '0' : '8px',
-      boxShadow: terminalState === 'maximized' ? 'none' : '0 10px 30px rgba(0,0,0,0.5)',
-      border: terminalState === 'maximized' ? 'none' : `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`
-    }}>
-      {/* MacOS style header */}
+    <div
+      className={`bottom-terminal-frame ${terminalFrameStyle}`}
+      style={{
+        height: '100%',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        background: localTerminalBg,
+        borderRadius: terminalState === 'maximized' ? '0' : (terminalFrameStyle === 'modern' ? '20px' : (terminalFrameStyle === 'retro' ? '24px' : '8px')),
+        boxShadow: terminalState === 'maximized' ? 'none' : '0 10px 30px rgba(0,0,0,0.5)',
+        border: terminalState === 'maximized' ? 'none' : (['futuristic', 'modern', 'retro', 'matcha'].includes(terminalFrameStyle) ? 'none' : `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`)
+      }}
+    >
+      {/* Universal header wrapper */}
       <div
         className="terminal-drag-handle"
         style={{
-          height: '32px',
+          height: '36px',
           background: themeColors.cardBackground || 'rgba(255, 255, 255, 0.03)',
-          borderBottom: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+          borderBottom: ['futuristic', 'modern', 'retro', 'matcha'].includes(terminalFrameStyle) ? 'none' : `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -946,8 +1125,8 @@ const HomeTab = ({
           cursor: terminalState === 'maximized' ? 'default' : 'grab',
           flexShrink: 0,
           position: 'relative',
-          borderTopLeftRadius: terminalState === 'maximized' ? '0' : '8px',
-          borderTopRightRadius: terminalState === 'maximized' ? '0' : '8px',
+          borderTopLeftRadius: terminalState === 'maximized' ? '0' : (terminalFrameStyle === 'modern' ? '20px' : (terminalFrameStyle === 'retro' ? '24px' : (terminalFrameStyle === 'orchis' ? '24px' : '8px'))),
+          borderTopRightRadius: terminalState === 'maximized' ? '0' : (terminalFrameStyle === 'modern' ? '20px' : (terminalFrameStyle === 'retro' ? '24px' : (terminalFrameStyle === 'orchis' ? '24px' : '8px'))),
         }}
         onMouseDown={(e) => { if (terminalState !== 'maximized') e.currentTarget.style.cursor = 'grabbing'; }}
         onMouseUp={(e) => { if (terminalState !== 'maximized') e.currentTarget.style.cursor = 'grab'; }}
@@ -955,27 +1134,88 @@ const HomeTab = ({
         onDoubleClick={handleMaximizeTerminal}
       >
         <div style={{ display: 'flex', gap: '8px', zIndex: 10 }}>
-          <div
-            className="no-drag"
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={() => setTerminalHidden(true)}
-            style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56', cursor: 'pointer', border: '1px solid #e0443e' }}
-            title="Cerrar" />
-          <div
-            className="no-drag"
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={handleMinimizeTerminal}
-            style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e', cursor: 'pointer', border: '1px solid #dea123' }}
-            title="Minimizar" />
-          <div
-            className="no-drag"
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={handleMaximizeTerminal}
-            style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f', cursor: 'pointer', border: '1px solid #1aab29' }}
-            title="Maximizar" />
+          {terminalFrameStyle === 'macos' ? (
+            <>
+              <div
+                className="no-drag"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => setTerminalHidden(true)}
+                style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56', cursor: 'pointer', border: '1px solid #e0443e' }}
+                title="Cerrar" />
+              <div
+                className="no-drag"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={handleMinimizeTerminal}
+                style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e', cursor: 'pointer', border: '1px solid #dea123' }}
+                title="Minimizar" />
+              <div
+                className="no-drag"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={handleMaximizeTerminal}
+                style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f', cursor: 'pointer', border: '1px solid #1aab29' }}
+                title="Maximizar" />
+            </>
+          ) : terminalFrameStyle === 'gnome' ? (
+            <div className="gnome-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="gnome-dot close" title="Cerrar" onClick={() => setTerminalHidden(true)}>
+                <i className="pi pi-times" />
+              </div>
+            </div>
+          ) : terminalFrameStyle === 'kde' ? (
+            <div className="kde-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="kde-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><i className="pi pi-minus" /></div>
+              <div className="kde-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><i className="pi pi-stop" /></div>
+              <div className="kde-dot close" title="Cerrar" onClick={() => setTerminalHidden(true)}><i className="pi pi-times" /></div>
+            </div>
+          ) : terminalFrameStyle === 'windows' ? (
+            <div className="windows-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="win-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><i className="pi pi-minus" /></div>
+              <div className="win-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><i className="pi pi-stop" /></div>
+              <div className="win-dot close" title="Cerrar" onClick={() => setTerminalHidden(true)}><i className="pi pi-times" /></div>
+            </div>
+          ) : terminalFrameStyle === 'whitesur' ? (
+            <div className="whitesur-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="whitesur-dot close" onClick={() => setTerminalHidden(true)} title="Cerrar" />
+              <div className="whitesur-dot min" onClick={handleMinimizeTerminal} />
+              <div className="whitesur-dot max" onClick={handleMaximizeTerminal} />
+            </div>
+          ) : terminalFrameStyle === 'orchis' ? (
+            <div className="orchis-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="orchis-dot" onClick={() => setTerminalHidden(true)} title="Cerrar"><i className="pi pi-times" /></div>
+            </div>
+          ) : terminalFrameStyle === 'fluent' ? (
+            <div className="fluent-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="fluent-dot" onClick={handleMinimizeTerminal}><i className="pi pi-minus" /></div>
+              <div className="fluent-dot" onClick={handleMaximizeTerminal}><i className="pi pi-stop" /></div>
+              <div className="fluent-dot" onClick={() => setTerminalHidden(true)} title="Cerrar"><i className="pi pi-times" /></div>
+            </div>
+          ) : terminalFrameStyle === 'matcha' ? (
+            <div className="matcha-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="matcha-dot" onClick={() => setTerminalHidden(true)} title="Cerrar"><i className="pi pi-times" /></div>
+            </div>
+          ) : terminalFrameStyle === 'futuristic' ? (
+            <div className="futuristic-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="cyber-dot" title="Cerrar Terminal" onClick={() => setTerminalHidden(true)}>EXE</div>
+            </div>
+          ) : terminalFrameStyle === 'modern' ? (
+            <div className="modern-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="glass-dot" title="Ocultar" onClick={() => setTerminalHidden(true)}><i className="pi pi-times" /></div>
+            </div>
+          ) : (
+            <div className="retro-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="retro-switch on" title="OFF" onClick={() => setTerminalHidden(true)} />
+            </div>
+          )}
         </div>
 
-        <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', color: themeColors.textSecondary, fontSize: '11px', userSelect: 'none', pointerEvents: 'none', fontWeight: 500 }}>
+        <div style={{
+          position: 'absolute', left: 0, right: 0, textAlign: 'center',
+          color: terminalFrameStyle === 'futuristic' ? '#00f2ff' : (terminalFrameStyle === 'retro' ? '#0f0' : themeColors.textSecondary),
+          fontSize: terminalFrameStyle === 'retro' ? '12px' : '11px',
+          userSelect: 'none', pointerEvents: 'none', fontWeight: 500,
+          textShadow: terminalFrameStyle === 'futuristic' ? '0 0 8px #00f2ff' : (terminalFrameStyle === 'retro' ? '0 0 5px #0f0' : 'none'),
+          fontFamily: terminalFrameStyle === 'retro' ? '"Courier New", monospace' : 'inherit'
+        }}>
           {terminalTitle}
         </div>
 
