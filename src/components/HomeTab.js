@@ -102,6 +102,7 @@ const HomeTab = ({
   const embeddedTabbedTerminalRef = useRef();
   const embeddedTerminalInitialized = useRef(false); // evitar crear tabs nuevas al cambiar de vista
   const containerRef = useRef(null);
+  const mainAreaRef = useRef(null);
   const [containerHeight, setContainerHeight] = useState(window.innerHeight - 100);
 
   // Estado para el terminal embebido como vista integrada (por defecto visible en Command Palette mode)
@@ -127,18 +128,18 @@ const HomeTab = ({
     }
   }, []);
 
-  // Medir el tama\u00F1o real del contenedor
+  // Medir el tamaño real del contenedor
   useEffect(() => {
     const updateSize = () => {
-      if (containerRef.current) {
-        setContainerHeight(containerRef.current.offsetHeight);
+      if (mainAreaRef.current) {
+        setContainerHeight(mainAreaRef.current.offsetHeight);
       }
     };
 
-    updateSize(); // Medici\u00F3n inicial
+    updateSize(); // Medición inicial
 
     const observer = new ResizeObserver(updateSize);
-    if (containerRef.current) observer.observe(containerRef.current);
+    if (mainAreaRef.current) observer.observe(mainAreaRef.current);
 
     window.addEventListener('resize', updateSize);
     return () => {
@@ -147,21 +148,46 @@ const HomeTab = ({
     };
   }, []);
 
-  // Inicializar Rnd position
-  useEffect(() => {
-    if (!isRndInitialized && containerHeight > 0 && containerRef.current) {
-      const containerWidth = containerRef.current.offsetWidth;
-      const initialWidth = Math.min(containerWidth * 0.8, 1200);
-      const initialHeight = Math.min(containerHeight * 0.45, 400);
+  // Función para centrar y dimensionar el terminal
+  const centerAndSizeTerminal = () => {
+    if (mainAreaRef.current) {
+      const parentWidth = mainAreaRef.current.offsetWidth;
+      const parentHeight = mainAreaRef.current.offsetHeight;
+      const initialWidth = Math.min(parentWidth * 0.8, 1200);
+      const initialHeight = Math.min(parentHeight * 0.45, 400);
 
       setRndSize({ width: initialWidth, height: initialHeight });
       setRndPosition({
-        x: (containerWidth - initialWidth) / 2,
-        y: containerHeight - initialHeight - 20
+        x: (parentWidth - initialWidth) / 2,
+        y: parentHeight - initialHeight - 20
       });
       setIsRndInitialized(true);
     }
+  };
+
+  // Inicializar Rnd position
+  useEffect(() => {
+    if (!isRndInitialized) {
+      centerAndSizeTerminal();
+    }
   }, [containerHeight, isRndInitialized]);
+
+  // Asegurar que se centra si se muestra tras estar oculto o cambia tamaño
+  useEffect(() => {
+    if (!terminalHidden && isRndInitialized && mainAreaRef.current) {
+      const parentWidth = mainAreaRef.current.offsetWidth;
+      const parentHeight = mainAreaRef.current.offsetHeight;
+
+      // Recalcular si está sustancialmente fuera de límites
+      if (typeof rndPosition.y === 'number' && (rndPosition.y > parentHeight - 50 || rndPosition.y < 0)) {
+        centerAndSizeTerminal();
+      } else if (typeof rndPosition.x === 'number' && (rndPosition.x > parentWidth - 50 || rndPosition.x + 100 < 0)) {
+        centerAndSizeTerminal();
+      }
+    }
+  }, [terminalHidden]);
+
+
 
   // Estado para forzar re-render al cambiar el tema
   const [themeVersion, setThemeVersion] = useState(0);
@@ -659,13 +685,14 @@ const HomeTab = ({
   }, []);
 
 
-  // Funci\u00F3n para toggle de visibilidad del terminal
+  // Función para toggle de visibilidad del terminal
   const handleToggleTerminalVisibility = () => {
     setTerminalHidden(prev => {
       const newHidden = !prev;
-      // Si se est\u00E1 mostrando el terminal, cambiar el estado a 'normal' (1/4 de p\u00E1gina)
+      // Si se está mostrando el terminal, cambiar el estado a 'normal' (1/4 de página)
       if (!newHidden) {
         setTerminalState('normal');
+        setTerminalView(false); // Ocultar terminal embebido para evitar duplicidad
       }
       return newHidden;
     });
@@ -922,14 +949,20 @@ const HomeTab = ({
       >
         <div style={{ display: 'flex', gap: '8px', zIndex: 10 }}>
           <div
+            className="no-drag"
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={() => setTerminalHidden(true)}
             style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56', cursor: 'pointer', border: '1px solid #e0443e' }}
             title="Cerrar" />
           <div
+            className="no-drag"
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={handleMinimizeTerminal}
             style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e', cursor: 'pointer', border: '1px solid #dea123' }}
             title="Minimizar" />
           <div
+            className="no-drag"
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={handleMaximizeTerminal}
             style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f', cursor: 'pointer', border: '1px solid #1aab29' }}
             title="Maximizar" />
@@ -985,13 +1018,16 @@ const HomeTab = ({
           overflow: 'hidden'
         }}>
           {/* Main area with Dashboard and Terminal */}
-          <div style={{
-            flex: 1,
-            minWidth: 0,
-            height: '100%',
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
+          <div
+            ref={mainAreaRef}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              height: '100%',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
             {topPanel}
 
             {!terminalHidden && isRndInitialized && (
@@ -1021,6 +1057,7 @@ const HomeTab = ({
                 minHeight={terminalState === 'minimized' ? 32 : 200}
                 bounds="parent"
                 dragHandleClassName="terminal-drag-handle"
+                cancel=".no-drag"
                 style={{
                   zIndex: 100,
                   display: 'flex',
