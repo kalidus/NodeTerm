@@ -753,12 +753,14 @@ const HomeTab = ({
   }, [terminalHidden]);
 
   // Callback para toggling del terminal embebido (llamado por ConnectionHistory via prop)
-  const handleTerminalToggle = React.useCallback((show, terminalType) => {
+  const handleTerminalToggle = React.useCallback((show, terminalType, addNewTab = false) => {
     if (show) {
       setTerminalView(true);
-      if (!embeddedTerminalInitialized.current && terminalType) {
+      if (addNewTab && embeddedTabbedTerminalRef.current?.addTerminalTab) {
+        embeddedTabbedTerminalRef.current.addTerminalTab(terminalType);
+      } else if (!embeddedTerminalInitialized.current && terminalType) {
         embeddedTerminalInitialized.current = true;
-        // Solo para el terminal embebido, le agregamos el tab expl\u00EDcito si es la primera vez
+        // Solo para el terminal embebido, le agregamos el tab explícito si es la primera vez
         setTimeout(() => {
           try {
             if (embeddedTabbedTerminalRef.current?.addTerminalTab) {
@@ -768,7 +770,7 @@ const HomeTab = ({
             console.warn('[HomeTab] embedded addTerminalTab:', err);
           }
           window.dispatchEvent(new Event('resize'));
-        }, 150); // Dar algo m\u00E1s de tiempo para que se monte correctamente en el viewport antes de crear xterm
+        }, 150); // Dar algo más de tiempo para que se monte correctamente en el viewport antes de crear xterm
       } else {
         setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
       }

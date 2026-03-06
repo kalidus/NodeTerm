@@ -2028,7 +2028,7 @@ const ConnectionHistory = ({
 									e.stopPropagation();
 									if (onTerminalToggle) {
 										const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
-										onTerminalToggle(!terminalView, terminalType);
+										onTerminalToggle(true, terminalType, false);
 									}
 								}}
 							>
@@ -2093,7 +2093,7 @@ const ConnectionHistory = ({
 									e.stopPropagation();
 									if (onTerminalToggle) {
 										const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
-										onTerminalToggle(!terminalView, terminalType);
+										onTerminalToggle(true, terminalType, false);
 									}
 								}}
 							>
@@ -2649,7 +2649,11 @@ const ConnectionHistory = ({
 					<div className="traffic-lights">
 						<div
 							className="traffic-dot red"
-							onClick={() => { if (onTerminalToggle) onTerminalToggle(false); }}
+							onClick={() => {
+								if (onTerminalToggle) onTerminalToggle(false);
+								// Al cerrar el terminal integrado, forzar vista de Recientes para evitar el 'old code' de favoritos
+								setActiveBottomView('recent');
+							}}
 							title="Ocultar Terminal"
 						/>
 						<div className="traffic-dot yellow" />
