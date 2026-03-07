@@ -127,7 +127,7 @@ const HomeTab = ({
   const embeddedTerminalInitialized = useRef(false); // evitar crear tabs nuevas al cambiar de vista
   const containerRef = useRef(null);
   const mainAreaRef = useRef(null);
-  const frameStylePickerRef = useRef(null);
+
   const terminalOpacityOverlayRef = useRef(null);
   const [containerHeight, setContainerHeight] = useState(window.innerHeight - 100);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth - 100);
@@ -1254,27 +1254,7 @@ const HomeTab = ({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
-          <i
-            className="pi pi-desktop no-drag"
-            style={{
-              fontSize: '0.9rem',
-              color: terminalFrameStyle === 'futuristic' ? '#00f2ff' : (terminalFrameStyle === 'retro' ? '#0f0' : (themeColors.textPrimary || '#fff')),
-              opacity: 0.6,
-              cursor: 'pointer',
-              padding: '4px',
-              borderRadius: '4px',
-              transition: 'all 0.2s',
-              textShadow: terminalFrameStyle === 'futuristic' ? '0 0 8px #00f2ff' : (terminalFrameStyle === 'retro' ? '0 0 5px #0f0' : 'none'),
-            }}
-            title="Cambiar estilo de marco"
-            onClick={(e) => {
-              e.stopPropagation();
-              frameStylePickerRef.current?.toggle(e);
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-            onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-            onMouseDown={(e) => e.stopPropagation()}
-          />
+
           {/* Opacity toggle hidden for floating terminal since it is now opaque */}
           {/* <i
             className="pi pi-eye no-drag"
@@ -1318,54 +1298,6 @@ const HomeTab = ({
         </div>
       </OverlayPanel>
 
-      <OverlayPanel ref={frameStylePickerRef} className="theme-picker-overlay" style={{ background: themeColors.cardBackground || '#1e1e1e', width: '220px' }}>
-        <div style={{ padding: '8px' }}>
-          <h4 style={{ margin: '0 0 10px 8px', color: themeColors.textPrimary || '#fff', fontSize: '0.9rem' }}>Estilo de Marco</h4>
-          {[
-            { id: 'macos', label: 'macOS (Traffic)', dots: ['#ff5f56', '#ffbd2e', '#27c93f'] },
-            { id: 'gnome', label: 'GNOME (Adwaita)', icon: 'pi pi-times', right: true },
-            { id: 'kde', label: 'KDE (Breeze)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
-            { id: 'windows', label: 'Windows (WinUI)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
-            { id: 'matcha', label: 'Matcha (Green)', line: '#2eb398', icons: ['pi-times'], right: true },
-            { id: 'futuristic', label: 'Futurista (Cyber)', color: '#00f2ff', text: 'EXE' },
-            { id: 'modern', label: 'Moderno (Glass)', rounded: true, icons: ['pi-times'], right: true },
-            { id: 'retro', label: 'Retro (CRT)', color: '#0f0', switch: true }
-          ].map(style => (
-            <div
-              key={style.id}
-              className={`frame-style-option ${terminalFrameStyle === style.id ? 'active' : ''}`}
-              onClick={() => {
-                setTerminalFrameStyle(style.id);
-                frameStylePickerRef.current?.hide();
-              }}
-            >
-              <div className="frame-preview" style={{
-                borderColor: style.color || 'rgba(255,255,255,0.1)',
-                borderTop: style.line ? `2px solid ${style.line}` : undefined,
-                borderRadius: style.rounded ? '8px' : '4px'
-              }}>
-                {style.dots ? (
-                  <div style={{ display: 'flex', gap: '3px' }}>
-                    {style.dots.map((c, i) => <div key={i} className="frame-preview-dot" style={{ background: c }} />)}
-                  </div>
-                ) : style.switch ? (
-                  <div className="frame-preview-dot" style={{ background: '#0f0', boxShadow: '0 0 4px #0f0' }} />
-                ) : style.text ? (
-                  <span style={{ fontSize: '6px', color: style.color }}>{style.text}</span>
-                ) : (
-                  <div style={{ display: 'flex', gap: '2px', marginLeft: style.right ? 'auto' : 0 }}>
-                    {(style.icons || [style.icon]).map((ico, i) => (
-                      <i key={i} className={`pi ${ico}`} style={{ fontSize: '6px', opacity: 0.5 }} />
-                    ))}
-                  </div>
-                )}
-                <div className="frame-preview-bar" />
-              </div>
-              <span style={{ fontSize: '0.82rem' }}>{style.label}</span>
-            </div>
-          ))}
-        </div>
-      </OverlayPanel>
 
       <div style={{
         flex: 1,
