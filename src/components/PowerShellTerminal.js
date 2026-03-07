@@ -196,7 +196,8 @@ const PowerShellTerminal = forwardRef(({
             fontSize: fontSize,
             allowProposedApi: true,
             theme: {
-                background: theme?.background || '#012456',
+                ...theme,
+                background: 'rgba(0,0,0,0)',
                 foreground: theme?.foreground || '#FFFFFF',
                 cursor: theme?.cursor || '#FFFFFF',
                 selection: theme?.selection || 'rgba(255, 255, 255, 0.3)',
@@ -215,8 +216,7 @@ const PowerShellTerminal = forwardRef(({
                 cyan: theme?.cyan || '#61D6D6',
                 brightCyan: theme?.brightCyan || '#9AECEC',
                 white: theme?.white || '#CCCCCC',
-                brightWhite: theme?.brightWhite || '#F2F2F2',
-                ...theme
+                brightWhite: theme?.brightWhite || '#F2F2F2'
             },
             // PowerShell optimized settings
             convertEol: true,
@@ -224,7 +224,7 @@ const PowerShellTerminal = forwardRef(({
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
             windowsMode: true, // Important for PowerShell on Windows
-            allowTransparency: false,
+            allowTransparency: true,
             cols: 120,
             rows: 30,
             fastScrollModifier: 'alt',
@@ -448,7 +448,11 @@ const PowerShellTerminal = forwardRef(({
     // Update theme dynamically
     useEffect(() => {
         if (term.current && theme) {
-            term.current.options.theme = { ...term.current.options.theme, ...theme };
+            term.current.options.theme = {
+                ...term.current.options.theme,
+                ...theme,
+                background: 'rgba(0,0,0,0)'
+            };
         }
     }, [theme]);
 
@@ -507,7 +511,7 @@ const PowerShellTerminal = forwardRef(({
     }, [tabId]);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', flex: 1, width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: theme?.background || '#012456' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', flex: 1, width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: 'transparent' }}>
             <div
                 ref={terminalRef}
                 style={{
@@ -518,7 +522,8 @@ const PowerShellTerminal = forwardRef(({
                     overflow: 'hidden',
                     position: 'relative',
                     padding: '0 0 0 8px',
-                    margin: 0
+                    margin: 0,
+                    background: 'transparent'
                 }}
             />
             {!hideStatusBar && (

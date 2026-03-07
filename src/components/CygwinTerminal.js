@@ -8,9 +8,9 @@ import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 
-const CygwinTerminal = forwardRef(({ 
-    fontFamily = '"FiraCode Nerd Font", Consolas, monospace', 
-    fontSize = 14, 
+const CygwinTerminal = forwardRef(({
+    fontFamily = '"FiraCode Nerd Font", Consolas, monospace',
+    fontSize = 14,
     theme = {},
     tabId = 'default',
     hideStatusBar = false
@@ -52,12 +52,12 @@ const CygwinTerminal = forwardRef(({
     useEffect(() => {
         let stopped = false;
         let timer = null;
-        
+
         const fetchStats = async () => {
             try {
                 const systemStats = await window.electronAPI?.getSystemStats();
                 if (!systemStats) return;
-                
+
                 const memTotalBytes = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
                 const memUsedBytes = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
                 const disk = Array.isArray(systemStats.disks)
@@ -71,7 +71,7 @@ const CygwinTerminal = forwardRef(({
                     const isUNC = id.startsWith('\\\\') || id.startsWith('//');
                     return !(d && (d.isNetwork || isUNC));
                 });
-                
+
                 const payload = {
                     cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
                     mem: { total: memTotalBytes, used: memUsedBytes },
@@ -84,7 +84,7 @@ const CygwinTerminal = forwardRef(({
                 };
                 setStatusStats(payload);
                 setIsLoadingStats(false);
-                
+
                 const cpuVal = typeof payload.cpu === 'number' ? payload.cpu : null;
                 if (cpuVal !== null && !isNaN(cpuVal)) {
                     setCpuHistory(prev => [...prev, cpuVal].slice(-30));
@@ -101,9 +101,9 @@ const CygwinTerminal = forwardRef(({
             });
         };
         loop();
-        
-        return () => { 
-            stopped = true; 
+
+        return () => {
+            stopped = true;
             if (timer) clearTimeout(timer);
         };
     }, []);
@@ -167,8 +167,9 @@ const CygwinTerminal = forwardRef(({
             fontSize: fontSize,
             allowProposedApi: true,
             theme: {
+                ...theme,
                 // Fondo oscuro moderno
-                background: theme.background || '#0C0C0C',
+                background: 'rgba(0,0,0,0)',
                 foreground: theme.foreground || '#CCCCCC',
                 cursor: theme.cursor || '#00FF00',
                 cursorAccent: '#000000',
@@ -190,15 +191,14 @@ const CygwinTerminal = forwardRef(({
                 brightBlue: '#B5DCFE',
                 brightMagenta: '#FF9CFE',
                 brightCyan: '#DFDFFE',
-                brightWhite: '#FFFFFF',
-                ...theme
+                brightWhite: '#FFFFFF'
             },
             convertEol: true,
             scrollback: scrollbackLines, // Configurable desde Settings (default: 1000)
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
             windowsMode: false,
-            allowTransparency: false,
+            allowTransparency: true,
             cols: 120,
             rows: 30,
             fastScrollModifier: 'alt',
@@ -225,7 +225,7 @@ const CygwinTerminal = forwardRef(({
         }
 
         term.current.open(terminalRef.current);
-        
+
         try {
             fitAddon.current.fit();
             term.current.focus();
@@ -241,13 +241,13 @@ const CygwinTerminal = forwardRef(({
         }
 
         const resizeObserver = new ResizeObserver(() => {
-            try { 
-                fitAddon.current?.fit(); 
+            try {
+                fitAddon.current?.fit();
             } catch (e) {
                 // Silently handle resize errors
             }
         });
-        
+
         if (terminalRef.current) {
             resizeObserver.observe(terminalRef.current);
         }
@@ -268,7 +268,7 @@ const CygwinTerminal = forwardRef(({
         if (window.electron) {
             term.current.clear();
             // Terminal creado silenciosamente
-            
+
             const delay = tabId === 'tab-1' ? 300 : 0;
             setTimeout(() => {
                 // console.log(`🚀 CygwinTerminal [${tabId}] enviando cygwin:start`, {
@@ -352,12 +352,12 @@ const CygwinTerminal = forwardRef(({
             return () => {
                 resizeObserver.disconnect();
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
-                
+
                 const isReloading = performance.navigation?.type === 1 || document.readyState === 'loading';
                 if (!isReloading) {
                     window.electron.ipcRenderer.send(`cygwin:stop:${tabId}`);
                 }
-                
+
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();
                 if (terminalRef.current) {
@@ -398,7 +398,11 @@ const CygwinTerminal = forwardRef(({
 
     useEffect(() => {
         if (term.current && theme) {
-            term.current.options.theme = { ...term.current.options.theme, ...theme };
+            term.current.options.theme = {
+                ...term.current.options.theme,
+                ...theme,
+                background: 'rgba(0,0,0,0)'
+            };
         }
     }, [theme]);
 
@@ -406,8 +410,8 @@ const CygwinTerminal = forwardRef(({
     useEffect(() => {
         if (fitAddon.current) {
             setTimeout(() => {
-                try { 
-                    fitAddon.current?.fit(); 
+                try {
+                    fitAddon.current?.fit();
                 } catch (e) {
                     // Silently handle
                 }
@@ -426,7 +430,7 @@ const CygwinTerminal = forwardRef(({
                 }
             }
         };
-        
+
         forceResize();
         setTimeout(forceResize, 50);
         setTimeout(forceResize, 150);
@@ -444,7 +448,7 @@ const CygwinTerminal = forwardRef(({
                 }
             }
         };
-        
+
         // Aplicar focus múltiples veces para asegurar que se aplique correctamente
         setTimeout(ensureFocus, 100);
         setTimeout(ensureFocus, 250);
@@ -453,27 +457,28 @@ const CygwinTerminal = forwardRef(({
     }, [tabId]);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', flex: 1, width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: theme.background || '#000000' }}>
-            <div 
-                ref={terminalRef} 
-                style={{ 
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', flex: 1, width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: 'transparent' }}>
+            <div
+                ref={terminalRef}
+                style={{
                     flex: 1,
-                    width: '100%', 
+                    width: '100%',
                     minWidth: 0,
                     minHeight: 0,
                     overflow: 'hidden',
                     position: 'relative',
                     padding: '0 0 0 8px',
-                    margin: 0
-                }} 
+                    margin: 0,
+                    background: 'transparent'
+                }}
             />
             {!hideStatusBar && (
                 <div style={{ ...getScopedStatusBarCssVars() }}>
-                    <StatusBar 
-                        stats={{ ...(statusStats || {}), cpuHistory }} 
-                        active={true} 
-                        statusBarIconTheme={statusBarIconTheme} 
-                        showNetworkDisks={showNetworkDisks} 
+                    <StatusBar
+                        stats={{ ...(statusStats || {}), cpuHistory }}
+                        active={true}
+                        statusBarIconTheme={statusBarIconTheme}
+                        showNetworkDisks={showNetworkDisks}
                         isLoading={isLoadingStats}
                     />
                 </div>

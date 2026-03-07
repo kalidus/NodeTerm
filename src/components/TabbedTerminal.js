@@ -1595,7 +1595,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
-            background: activeTab?.type === 'powershell' ? (themes[localPowerShellTheme]?.theme?.background || '#222') : (activeTab?.type === 'ubuntu' ? '#300A24' : '#300A24'),
+            background: 'transparent',
             overflow: 'hidden'
         }}>
             {/* Barra de pestañas */}
@@ -2073,7 +2073,8 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 transform: tab.active ? 'translateX(0)' : 'translateX(100%)',
                                 transition: 'transform 0.1s ease-out',
                                 visibility: tab.active ? 'visible' : 'hidden',
-                                opacity: tab.active ? 1 : 0
+                                opacity: tab.active ? 1 : 0,
+                                background: 'transparent'
                             }}
                         >
                             {(() => {

@@ -8,9 +8,9 @@ import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 
-const WSLTerminal = forwardRef(({ 
-    fontFamily = 'Consolas, "Courier New", monospace', 
-    fontSize = 14, 
+const WSLTerminal = forwardRef(({
+    fontFamily = 'Consolas, "Courier New", monospace',
+    fontSize = 14,
     theme = {},
     tabId = 'default',
     hideStatusBar = false
@@ -66,12 +66,12 @@ const WSLTerminal = forwardRef(({
                                 setDistroId(match[2].toLowerCase());
                             }
                         }
-                    } catch {}
+                    } catch { }
                 };
                 const unsubscribe = window.electron?.ipcRenderer.on(`wsl:data:${tabId}`, handler);
                 window.electron?.ipcRenderer.send(`wsl:data:${tabId}`, 'cat /etc/os-release\n');
-                setTimeout(() => { try { if (typeof unsubscribe === 'function') unsubscribe(); } catch {} }, 1200);
-            } catch {}
+                setTimeout(() => { try { if (typeof unsubscribe === 'function') unsubscribe(); } catch { } }, 1200);
+            } catch { }
         };
         detectDistro();
     }, [tabId]);
@@ -84,7 +84,7 @@ const WSLTerminal = forwardRef(({
         const getIntervalMs = () => {
             try { return Math.max(1, parseInt(localStorage.getItem(POLL_KEY) || '3', 10)) * 1000; } catch { return 3000; } // Reducido de 5s a 3s para locales
         };
-        
+
         // Optimización: pausar polling cuando la ventana pierda foco
         const handleFocus = () => {
             if (window.electronAPI?.send) {
@@ -96,7 +96,7 @@ const WSLTerminal = forwardRef(({
                 window.electronAPI.send('window:focus-changed', false);
             }
         };
-        
+
         window.addEventListener('focus', handleFocus);
         window.addEventListener('blur', handleBlur);
         const fetchStats = async () => {
@@ -132,7 +132,7 @@ const WSLTerminal = forwardRef(({
                 if (cpuVal !== null && !isNaN(cpuVal)) {
                     setCpuHistory(prev => [...prev, cpuVal].slice(-30));
                 }
-            } catch {}
+            } catch { }
         };
         const loop = () => {
             if (stopped) return;
@@ -141,8 +141,8 @@ const WSLTerminal = forwardRef(({
             });
         };
         loop();
-        return () => { 
-            stopped = true; 
+        return () => {
+            stopped = true;
             if (timer) clearTimeout(timer);
             window.removeEventListener('focus', handleFocus);
             window.removeEventListener('blur', handleBlur);
@@ -203,7 +203,8 @@ const WSLTerminal = forwardRef(({
             fontSize: fontSize,
             allowProposedApi: true,
             theme: {
-                background: theme.background || '#300A24', // Usar theme.background con fallback
+                ...theme,
+                background: 'rgba(0,0,0,0)', // Usar transparente con fallback
                 foreground: '#FFFFFF',
                 cursor: '#FFFFFF',
                 selection: 'rgba(255, 255, 255, 0.3)',
@@ -222,8 +223,7 @@ const WSLTerminal = forwardRef(({
                 cyan: '#06989A',
                 brightCyan: '#34E2E2',
                 white: '#D3D7CF',
-                brightWhite: '#EEEEEC',
-                ...theme  // Permitir que theme sobrescriba cualquier color
+                brightWhite: '#EEEEEC'
             },
             // WSL/Linux optimized settings
             convertEol: true,
@@ -231,7 +231,7 @@ const WSLTerminal = forwardRef(({
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
             windowsMode: false, // Different from PowerShell
-            allowTransparency: false,
+            allowTransparency: true,
             cols: 120,
             rows: 30,
             fastScrollModifier: 'alt',
@@ -266,8 +266,8 @@ const WSLTerminal = forwardRef(({
         // ResizeObserver for dynamic resizing
         const resizeObserver = new ResizeObserver(() => {
             if (fitAddon.current) {
-                try { 
-                    fitAddon.current.fit(); 
+                try {
+                    fitAddon.current.fit();
                 } catch (e) {
                     console.error('Error during fit:', e);
                 }
@@ -281,10 +281,10 @@ const WSLTerminal = forwardRef(({
         if (window.electron) {
             // Initialize WSL session
             // term.current.writeln('\x1b[36mInitializing WSL...\x1b[0m');
-            
+
             // Limpiar el terminal antes de iniciar
             term.current.clear();
-            
+
             window.electron.ipcRenderer.send(`wsl:start:${tabId}`, {
                 cols: term.current.cols,
                 rows: term.current.rows
@@ -417,8 +417,8 @@ const WSLTerminal = forwardRef(({
     useEffect(() => {
         if (fitAddon.current) {
             setTimeout(() => {
-                try { 
-                    fitAddon.current.fit(); 
+                try {
+                    fitAddon.current.fit();
                 } catch (e) {
                     console.error('Error in auto-fit:', e);
                 }
@@ -437,7 +437,7 @@ const WSLTerminal = forwardRef(({
                 }
             }
         };
-        
+
         // Aplicar focus múltiples veces para asegurar que se aplique correctamente
         setTimeout(ensureFocus, 100);
         setTimeout(ensureFocus, 250);
@@ -445,20 +445,32 @@ const WSLTerminal = forwardRef(({
         setTimeout(ensureFocus, 600);
     }, [tabId]);
 
+    // Update theme dynamically
+    useEffect(() => {
+        if (term.current && theme) {
+            term.current.options.theme = {
+                ...term.current.options.theme,
+                ...theme,
+                background: 'rgba(0,0,0,0)'
+            };
+        }
+    }, [theme]);
+
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: theme.background || '#300A24' }}>
-            <div 
-                ref={terminalRef} 
-                style={{ 
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: 'transparent' }}>
+            <div
+                ref={terminalRef}
+                style={{
                     flex: 1,
-                    width: '100%', 
+                    width: '100%',
                     minWidth: 0,
                     minHeight: 0,
                     overflow: 'hidden',
                     position: 'relative',
                     padding: '0 0 0 8px',
-                    margin: 0
-                }} 
+                    margin: 0,
+                    background: 'transparent'
+                }}
             />
             {!hideStatusBar && (
                 <div style={{ ...getScopedStatusBarCssVars() }}>

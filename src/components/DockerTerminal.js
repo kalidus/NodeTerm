@@ -8,9 +8,9 @@ import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 
-const DockerTerminal = forwardRef(({ 
-    fontFamily = '"FiraCode Nerd Font", Consolas, monospace', 
-    fontSize = 14, 
+const DockerTerminal = forwardRef(({
+    fontFamily = '"FiraCode Nerd Font", Consolas, monospace',
+    fontSize = 14,
     theme = {},
     tabId = 'default',
     dockerInfo = {},
@@ -53,12 +53,12 @@ const DockerTerminal = forwardRef(({
     useEffect(() => {
         let stopped = false;
         let timer = null;
-        
+
         const fetchStats = async () => {
             try {
                 const systemStats = await window.electronAPI?.getSystemStats();
                 if (!systemStats) return;
-                
+
                 const memTotalBytes = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
                 const memUsedBytes = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
                 const disk = Array.isArray(systemStats.disks)
@@ -72,7 +72,7 @@ const DockerTerminal = forwardRef(({
                     const isUNC = id.startsWith('\\\\') || id.startsWith('//');
                     return !(d && (d.isNetwork || isUNC));
                 });
-                
+
                 const payload = {
                     cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
                     mem: { total: memTotalBytes, used: memUsedBytes },
@@ -85,7 +85,7 @@ const DockerTerminal = forwardRef(({
                 };
                 setStatusStats(payload);
                 setIsLoadingStats(false);
-                
+
                 const cpuVal = typeof payload.cpu === 'number' ? payload.cpu : null;
                 if (cpuVal !== null && !isNaN(cpuVal)) {
                     setCpuHistory(prev => [...prev, cpuVal].slice(-30));
@@ -122,11 +122,12 @@ const DockerTerminal = forwardRef(({
         term.current = new Terminal({
             fontFamily: fontFamily,
             fontSize: fontSize,
-            theme: theme,
+            theme: { ...theme, background: 'rgba(0,0,0,0)' },
             cursorBlink: true,
             scrollback: scrollbackLines, // Configurable desde Settings (default: 1000)
             convertEol: true,
             allowProposedApi: true,
+            allowTransparency: true,
         });
 
         // Agregar addons
@@ -134,7 +135,7 @@ const DockerTerminal = forwardRef(({
         term.current.loadAddon(fitAddon.current);
         term.current.loadAddon(new WebLinksAddon());
         term.current.loadAddon(new Unicode11Addon());
-        
+
         // Intentar agregar WebGL addon para mejor rendimiento
         try {
             term.current.loadAddon(new WebglAddon());
@@ -271,7 +272,7 @@ const DockerTerminal = forwardRef(({
                 flexDirection: 'column',
                 height: '100%',
                 width: '100%',
-                backgroundColor: theme.background || '#000000',
+                backgroundColor: 'transparent',
                 overflow: 'hidden'
             }}
         >
@@ -284,7 +285,7 @@ const DockerTerminal = forwardRef(({
                     width: '100%'
                 }}
             />
-            
+
             {/* Status Bar */}
             {!hideStatusBar && (
                 <div style={getScopedStatusBarCssVars()}>

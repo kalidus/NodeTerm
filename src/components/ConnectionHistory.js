@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { getFavorites, toggleFavorite, onUpdate, isFavorite, reorderFavorites, helpers } from '../utils/connectionStore';
 import { iconThemes } from '../themes/icon-themes';
@@ -147,6 +147,28 @@ const ConnectionHistory = ({
 	onTerminalOpacityChange = () => { },
 	children
 }) => {
+	// Helper para ajustar la opacidad de los colores (Hex o RGBA)
+	const adjustOpacity = (color, opacity) => {
+		if (!color) return `rgba(0,0,0,${opacity})`;
+		if (color.startsWith('rgba')) {
+			return color.replace(/[\d.]+\)$/g, `${opacity})`);
+		}
+		if (color.startsWith('#')) {
+			const hex = color.replace('#', '');
+			const r = parseInt(hex.substring(0, 2), 16) || 0;
+			const g = parseInt(hex.substring(2, 4), 16) || 0;
+			const b = parseInt(hex.substring(4, 6), 16) || 0;
+			return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+		}
+		return color;
+	};
+
+	const localTerminalBg = useMemo(() => {
+		const baseColor = themes[localLinuxTerminalTheme]?.theme?.background || '#0c0c0c';
+		if (terminalOpacity >= 0.99) return baseColor;
+		return adjustOpacity(baseColor, terminalOpacity);
+	}, [localLinuxTerminalTheme, terminalOpacity]);
+
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
 	const [passwordNodes, setPasswordNodes] = useState([]);
 	const [searchTerm, setSearchTerm] = useState('');
@@ -1396,7 +1418,6 @@ const ConnectionHistory = ({
 					display: flex;
 					flex-direction: column;
 					border: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '55' : 'rgba(255,255,255,0.12)'};
-					background: ${terminalTheme.background || '#0d1117'};
 					box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
 					flex: 1;
 					min-height: 120px;
@@ -1406,7 +1427,25 @@ const ConnectionHistory = ({
 					height: 36px;
 					box-sizing: border-box;
 					flex-shrink: 0;
-					background: ${terminalTheme.background ? terminalTheme.background + 'ee' : 'rgba(20,22,28,0.95)'};
+					background: ${(() => {
+					const bg = terminalTheme.background || '#0d1117';
+					const adjustOpacity = (color, opacity) => {
+						if (!color) return `rgba(0,0,0,${opacity})`;
+						if (color.startsWith('rgba')) {
+							return color.replace(/[\d.]+\)$/g, `${opacity})`);
+						}
+						if (color.startsWith('#')) {
+							const hex = color.replace('#', '');
+							const r = parseInt(hex.substring(0, 2), 16) || 0;
+							const g = parseInt(hex.substring(2, 4), 16) || 0;
+							const b = parseInt(hex.substring(4, 6), 16) || 0;
+							return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+						}
+						return color;
+					};
+					// Un poco más de opacidad para el header para que se note, pero que siga siendo transparente
+					return adjustOpacity(bg, Math.min(terminalOpacity + 0.1, 1.0));
+				})()};
 					border-bottom: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '44' : 'rgba(255,255,255,0.08)'};
 					border-radius: 12px 12px 0 0;
 					display: flex;
@@ -1533,7 +1572,7 @@ const ConnectionHistory = ({
 					border: 1px solid #00f2ff !important;
 					box-shadow: 0 0 15px rgba(0, 242, 255, 0.3) !important;
 					clip-path: polygon(0 0, 98% 0, 100% 8%, 100% 100%, 8% 100%, 0 92%);
-					background: rgba(10, 15, 25, 0.9) !important;
+					background: transparent !important;
 					padding: 1px;
 				}
 				.futuristic-controls { display: flex; gap: 10px; }
@@ -1552,7 +1591,7 @@ const ConnectionHistory = ({
 				.recents-terminal-frame.modern {
 					border: 1px solid rgba(255,255,255,0.2) !important;
 					backdrop-filter: blur(25px) saturate(180%) !important;
-					background: rgba(255, 255, 255, 0.05) !important;
+					background: transparent !important;
 					border-radius: 16px !important;
 					overflow: hidden;
 				}
@@ -1573,7 +1612,7 @@ const ConnectionHistory = ({
 					border: 10px solid #2c2c2c !important;
 					border-radius: 20px !important;
 					box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 5px 15px rgba(0,0,0,0.5) !important;
-					background: #0a0a0a !important;
+					background: transparent !important;
 				}
 				.retro-controls { display: flex; gap: 8px; }
 				.retro-switch {
@@ -1645,7 +1684,7 @@ const ConnectionHistory = ({
 				.recents-terminal-frame.retro, .top-terminal-frame.retro {
 					background-color: ${(() => {
 					const bg = terminalTheme.background || '#0d1117';
-					const adjustOpacity = (color, opacity) => {
+					const adjustOpacityLoc = (color, opacity) => {
 						if (!color) return `rgba(0,0,0,${opacity})`;
 						if (color.startsWith('rgba')) {
 							return color.replace(/[\d.]+\)$/g, `${opacity})`);
@@ -1659,11 +1698,11 @@ const ConnectionHistory = ({
 						}
 						return color;
 					};
-					return adjustOpacity(bg, terminalOpacity);
+					return adjustOpacityLoc(bg, terminalOpacity);
 				})()} !important;
 					background: ${(() => {
 					const bg = terminalTheme.background || '#0d1117';
-					const adjustOpacity = (color, opacity) => {
+					const adjustOpacityLoc = (color, opacity) => {
 						if (!color) return `rgba(0,0,0,${opacity})`;
 						if (color.startsWith('rgba')) {
 							return color.replace(/[\d.]+\)$/g, `${opacity})`);
@@ -1677,8 +1716,9 @@ const ConnectionHistory = ({
 						}
 						return color;
 					};
-					return adjustOpacity(bg, terminalOpacity);
+					return adjustOpacityLoc(bg, terminalOpacity);
 				})()} !important;
+				}
 				}
 
 				/* --- Grep-style connection rows --- */
@@ -2670,8 +2710,37 @@ const ConnectionHistory = ({
 				)
 			}
 
+			{/* CSS Overrides for Terminal Transparency in Integrated View */}
+			<style>
+				{`
+					.recents-terminal-frame .xterm, 
+					.recents-terminal-frame .xterm-viewport,
+					.recents-terminal-frame .xterm-screen,
+					.recents-terminal-frame .xterm-screen canvas, 
+					.recents-terminal-frame .xterm-rows,
+					.recents-terminal-frame .xterm-text-layer, 
+					.recents-terminal-frame .xterm-selection-layer,
+					.recents-terminal-frame .xterm-link-layer, 
+					.recents-terminal-frame .xterm-cursor-layer,
+					.recents-terminal-frame .xterm-decoration-container, 
+					.recents-terminal-frame .xterm-helpers,
+					.recents-terminal-frame .p-tabview, 
+					.recents-terminal-frame .p-tabview-panels,
+					.recents-terminal-frame .p-tabview-panel {
+						background: transparent !important;
+						background-color: transparent !important;
+					}
+				`}
+			</style>
+
 			{/* EMBEDDED LOCAL TERMINAL - Always mounted to preserve session state, shown/hidden via display */}
-			<div className={`recents-terminal-frame ${terminalFrameStyle}`} style={{ display: terminalView ? 'flex' : 'none' }}>
+			<div
+				className={`recents-terminal-frame ${terminalFrameStyle}`}
+				style={{
+					display: terminalView ? 'flex' : 'none',
+					background: localTerminalBg
+				}}
+			>
 				{/* macOS-style header */}
 				<div className="recents-terminal-header">
 					<div className="traffic-lights">

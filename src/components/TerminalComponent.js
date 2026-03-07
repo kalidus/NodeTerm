@@ -127,7 +127,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             fontFamily: defaultFont,
             fontSize: defaultFontSize,
             allowProposedApi: true,
-            theme: theme,
+            theme: { ...theme, background: 'rgba(0,0,0,0)' },
             // Configuraciones adicionales para compatibilidad con aplicaciones TUI
             convertEol: true,
             scrollback: scrollbackLines, // Configurable desde Settings (default: 1000)
@@ -528,7 +528,10 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     // Effect to update theme dynamically
     useEffect(() => {
         if (term.current && theme) {
-            term.current.options.theme = theme;
+            term.current.options.theme = {
+                ...theme,
+                background: 'rgba(0,0,0,0)'
+            };
         }
     }, [theme]);
 
@@ -566,7 +569,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     position: 'relative',
                     padding: 0,
                     margin: 0,
-                    backgroundColor: theme?.background || 'transparent', // Usar transparente si no hay fondo definido (para terminales locales)
+                    backgroundColor: 'transparent', // Usar transparente siempre para permitir opacidad del frame
                     // Configurar variables CSS para que los scrollbars coincidan con el tema del terminal
                     '--terminal-bg': theme?.background || 'transparent',
                     '--terminal-fg': theme?.foreground || 'inherit',
@@ -583,7 +586,8 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                         height: '100%',
                         minHeight: 0,
                         overflow: 'hidden',
-                        backgroundColor: theme?.background || 'transparent' // CRÍTICO: Asegurar que el fondo coincida también aquí
+                        background: 'transparent',
+                        backgroundColor: 'transparent' // CRÍTICO: Asegurar que el fondo coincida también aquí
                     }}
                 />
             </div>

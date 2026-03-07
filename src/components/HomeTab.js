@@ -1052,6 +1052,36 @@ const HomeTab = ({
             background-color: ${localTerminalBg} !important;
             background: ${localTerminalBg} !important;
           }
+
+          /* Force transparency for internal terminal elements */
+          .bottom-terminal-frame .xterm-viewport,
+          .bottom-terminal-frame .xterm-screen,
+          .bottom-terminal-frame .xterm-rows,
+          .bottom-terminal-frame .xterm-text-layer,
+          .bottom-terminal-frame .p-tabview-panels,
+          .bottom-terminal-frame .p-tabview-panel,
+          .bottom-terminal-frame .p-tabview,
+          .bottom-terminal-frame .xterm,
+          .terminal-frame-fixed .xterm-viewport,
+          .terminal-frame-fixed .xterm-screen,
+          .terminal-frame-fixed .xterm-rows,
+          .terminal-frame-fixed .xterm-text-layer,
+          .terminal-frame-fixed .p-tabview-panels,
+          .terminal-frame-fixed .p-tabview-panel,
+          .terminal-frame-fixed .p-tabview,
+          .terminal-frame-fixed .xterm {
+            background: transparent !important;
+            background-color: transparent !important;
+          }
+          
+          /* Extra aggressive: target all xterm elements and containers */
+          .xterm, .xterm-viewport, .xterm-screen, .xterm-screen canvas, .xterm-rows,
+          .xterm-text-layer, .xterm-selection-layer, .xterm-link-layer, .xterm-cursor-layer,
+          .xterm-decoration-container, .xterm-helpers, .p-tabview, .p-tabview-panels, 
+          .p-tabview-panel, .recents-terminal-frame .xterm-screen canvas {
+            background: transparent !important;
+            background-color: transparent !important;
+          }
         `}
       </style>
       <div style={{
@@ -1127,7 +1157,7 @@ const HomeTab = ({
                   onTerminalOpacityChange={setTerminalOpacity}
                 >
                   {/* Terminal body - always mounted to preserve state */}
-                  <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'transparent' }}>
                     <TabbedTerminal
                       ref={embeddedTabbedTerminalRef}
                       terminalState="normal"

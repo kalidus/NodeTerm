@@ -212,7 +212,8 @@ const UbuntuTerminal = forwardRef(({
             fontSize: fontSize,
             allowProposedApi: true,
             theme: {
-                background: theme.background || '#300A24', // Usar theme.background con fallback
+                ...theme,
+                background: 'rgba(0,0,0,0)', // Usar transparente con fallback
                 foreground: '#FFFFFF',
                 cursor: '#FFFFFF',
                 selection: 'rgba(255, 255, 255, 0.3)',
@@ -231,8 +232,7 @@ const UbuntuTerminal = forwardRef(({
                 cyan: '#06989A',
                 brightCyan: '#34E2E2',
                 white: '#D3D7CF',
-                brightWhite: '#EEEEEC',
-                ...theme  // Permitir que theme sobrescriba cualquier color
+                brightWhite: '#EEEEEC'
             },
             // Ubuntu/Linux optimized settings
             convertEol: true,
@@ -240,7 +240,7 @@ const UbuntuTerminal = forwardRef(({
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
             windowsMode: false, // Ubuntu runs on Linux
-            allowTransparency: false,
+            allowTransparency: true,
             cols: 120,
             rows: 30,
             fastScrollModifier: 'alt',
@@ -462,7 +462,11 @@ const UbuntuTerminal = forwardRef(({
     // Update theme dynamically
     useEffect(() => {
         if (term.current && theme) {
-            term.current.options.theme = { ...term.current.options.theme, ...theme };
+            term.current.options.theme = {
+                ...term.current.options.theme,
+                ...theme,
+                background: 'rgba(0,0,0,0)'
+            };
         }
     }, [theme]);
 
@@ -518,7 +522,7 @@ const UbuntuTerminal = forwardRef(({
     }, [tabId]);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: theme.background || '#300A24' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: 'transparent' }}>
             <div
                 ref={terminalRef}
                 style={{
@@ -529,7 +533,8 @@ const UbuntuTerminal = forwardRef(({
                     overflow: 'hidden',
                     position: 'relative',
                     padding: '0 0 0 8px',
-                    margin: 0
+                    margin: 0,
+                    background: 'transparent'
                 }}
             />
             {!hideStatusBar && (
