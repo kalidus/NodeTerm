@@ -1074,11 +1074,30 @@ const HomeTab = ({
             background-color: transparent !important;
           }
           
-          /* Extra aggressive: target all xterm elements and containers */
-          .xterm, .xterm-viewport, .xterm-screen, .xterm-screen canvas, .xterm-rows,
-          .xterm-text-layer, .xterm-selection-layer, .xterm-link-layer, .xterm-cursor-layer,
-          .xterm-decoration-container, .xterm-helpers, .p-tabview, .p-tabview-panels, 
-          .p-tabview-panel, .recents-terminal-frame .xterm-screen canvas {
+          /* Extra aggressive: target only specific terminal frames and their containers */
+          .bottom-terminal-frame .xterm, 
+          .bottom-terminal-frame .xterm-viewport, 
+          .bottom-terminal-frame .xterm-screen, 
+          .bottom-terminal-frame .xterm-screen canvas, 
+          .bottom-terminal-frame .xterm-rows,
+          .bottom-terminal-frame .xterm-text-layer, 
+          .bottom-terminal-frame .xterm-selection-layer, 
+          .bottom-terminal-frame .xterm-link-layer, 
+          .bottom-terminal-frame .xterm-cursor-layer,
+          .bottom-terminal-frame .xterm-decoration-container, 
+          .bottom-terminal-frame .xterm-helpers, 
+          .bottom-terminal-frame .p-tabview, 
+          .bottom-terminal-frame .p-tabview-panels, 
+          .bottom-terminal-frame .p-tabview-panel,
+          .terminal-frame-fixed .xterm, 
+          .terminal-frame-fixed .xterm-viewport, 
+          .terminal-frame-fixed .xterm-screen, 
+          .terminal-frame-fixed .xterm-screen canvas, 
+          .terminal-frame-fixed .xterm-rows,
+          .terminal-frame-fixed .xterm-text-layer, 
+          .terminal-frame-fixed .p-tabview, 
+          .terminal-frame-fixed .p-tabview-panels, 
+          .terminal-frame-fixed .p-tabview-panel {
             background: transparent !important;
             background-color: transparent !important;
           }
@@ -1410,6 +1429,7 @@ const HomeTab = ({
           localPowerShellTheme={localPowerShellTheme}
           localLinuxTerminalTheme={localLinuxTerminalTheme}
           hideStatusBar={true}
+          isIntegrated={true}
         />
       </div>
     </div>

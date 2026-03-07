@@ -8,7 +8,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 
-const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu, active, stats, hideStatusBar = false, statusBarIconTheme = 'classic', onDrop, onDragOver, isBroadcastActive, onBroadcastData, broadcastExcludedTargets = [] }, ref) => {
+const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu, active, stats, hideStatusBar = false, statusBarIconTheme = 'classic', onDrop, onDragOver, isBroadcastActive, onBroadcastData, broadcastExcludedTargets = [], isIntegrated = false }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
@@ -49,6 +49,9 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         window.addEventListener('terminal-settings-changed', handleSettingsChange);
         return () => window.removeEventListener('terminal-settings-changed', handleSettingsChange);
     }, []);
+
+    // Detectar si es terminal local de forma robusta para aplicar opacidad opcionalmente
+    const isLocalTerminal = !sshConfig || Object.keys(sshConfig).length === 0 || (!sshConfig.host && !sshConfig.username);
 
     // Expose fit method to parent component
     useImperativeHandle(ref, () => ({
@@ -110,7 +113,6 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         }
 
         // Detectar si es terminal local (inicio) de forma robusta
-        const isLocalTerminal = !sshConfig || Object.keys(sshConfig).length === 0 || (!sshConfig.host && !sshConfig.username);
         let defaultFont = fontFamily || 'monospace';
         let defaultFontSize = fontSize;
         if (isLocalTerminal) {
@@ -127,7 +129,9 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             fontFamily: defaultFont,
             fontSize: defaultFontSize,
             allowProposedApi: true,
-            theme: { ...theme, background: 'rgba(0,0,0,0)' },
+            theme: isIntegrated
+                ? { ...theme, background: 'rgba(0,0,0,0)' }
+                : theme,
             // Configuraciones adicionales para compatibilidad con aplicaciones TUI
             convertEol: true,
             scrollback: scrollbackLines, // Configurable desde Settings (default: 1000)
@@ -135,7 +139,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             macOptionIsMeta: true,
             windowsMode: false,
             // Habilitar soporte completo para códigos de escape ANSI
-            allowTransparency: true,
+            allowTransparency: isIntegrated,
             windowOptions: {},
             // Configuración para aplicaciones interactivas
             cols: 80,
@@ -528,10 +532,9 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     // Effect to update theme dynamically
     useEffect(() => {
         if (term.current && theme) {
-            term.current.options.theme = {
-                ...theme,
-                background: 'rgba(0,0,0,0)'
-            };
+            term.current.options.theme = isIntegrated
+                ? { ...theme, background: 'rgba(0,0,0,0)' }
+                : theme;
         }
     }, [theme]);
 
@@ -569,7 +572,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     position: 'relative',
                     padding: 0,
                     margin: 0,
-                    backgroundColor: 'transparent', // Usar transparente siempre para permitir opacidad del frame
+                    backgroundColor: isIntegrated ? 'transparent' : (theme?.background || '#000'), // Usar transparente solo si es integrado
                     // Configurar variables CSS para que los scrollbars coincidan con el tema del terminal
                     '--terminal-bg': theme?.background || 'transparent',
                     '--terminal-fg': theme?.foreground || 'inherit',
@@ -586,8 +589,8 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                         height: '100%',
                         minHeight: 0,
                         overflow: 'hidden',
-                        background: 'transparent',
-                        backgroundColor: 'transparent' // CRÍTICO: Asegurar que el fondo coincida también aquí
+                        background: isIntegrated ? 'transparent' : (theme?.background || 'inherit'),
+                        backgroundColor: isIntegrated ? 'transparent' : (theme?.background || 'inherit') // CRÍTICO: Asegurar que el fondo coincida también aquí
                     }}
                 />
             </div>

@@ -2002,25 +2002,6 @@ const ConnectionHistory = ({
 								onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
 								onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
 							/>
-							<i
-								className="pi pi-eye"
-								style={{
-									fontSize: '0.9rem',
-									color: themeColors.textPrimary || '#fff',
-									opacity: 0.6,
-									cursor: 'pointer',
-									padding: '4px',
-									borderRadius: '4px',
-									transition: 'all 0.2s'
-								}}
-								title="Ajustar opacidad del terminal"
-								onClick={(e) => {
-									e.stopPropagation();
-									terminalOpacityOverlayRef.current?.toggle(e);
-								}}
-								onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-								onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-							/>
 						</div>
 					</div>
 					<div className="top-terminal-body">

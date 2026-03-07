@@ -13,7 +13,8 @@ const PowerShellTerminal = forwardRef(({
     fontSize = 14,
     theme = {},
     tabId = 'default',
-    hideStatusBar = false
+    hideStatusBar = false,
+    isIntegrated = false
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -197,7 +198,7 @@ const PowerShellTerminal = forwardRef(({
             allowProposedApi: true,
             theme: {
                 ...theme,
-                background: 'rgba(0,0,0,0)',
+                background: isIntegrated ? 'rgba(0,0,0,0)' : (theme?.background || '#012456'),
                 foreground: theme?.foreground || '#FFFFFF',
                 cursor: theme?.cursor || '#FFFFFF',
                 selection: theme?.selection || 'rgba(255, 255, 255, 0.3)',
@@ -224,7 +225,7 @@ const PowerShellTerminal = forwardRef(({
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
             windowsMode: true, // Important for PowerShell on Windows
-            allowTransparency: true,
+            allowTransparency: isIntegrated,
             cols: 120,
             rows: 30,
             fastScrollModifier: 'alt',
@@ -511,7 +512,7 @@ const PowerShellTerminal = forwardRef(({
     }, [tabId]);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', flex: 1, width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: 'transparent' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', flex: 1, width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: isIntegrated ? 'transparent' : (theme?.background || '#012456') }}>
             <div
                 ref={terminalRef}
                 style={{
@@ -523,7 +524,7 @@ const PowerShellTerminal = forwardRef(({
                     position: 'relative',
                     padding: '0 0 0 8px',
                     margin: 0,
-                    background: 'transparent'
+                    background: isIntegrated ? 'transparent' : (theme?.background || '#012456')
                 }}
             />
             {!hideStatusBar && (

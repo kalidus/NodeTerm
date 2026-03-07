@@ -14,7 +14,8 @@ const DockerTerminal = forwardRef(({
     theme = {},
     tabId = 'default',
     dockerInfo = {},
-    hideStatusBar = false
+    hideStatusBar = false,
+    isIntegrated = false
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -122,12 +123,12 @@ const DockerTerminal = forwardRef(({
         term.current = new Terminal({
             fontFamily: fontFamily,
             fontSize: fontSize,
-            theme: { ...theme, background: 'rgba(0,0,0,0)' },
+            theme: isIntegrated ? { ...theme, background: 'rgba(0,0,0,0)' } : theme,
             cursorBlink: true,
             scrollback: scrollbackLines, // Configurable desde Settings (default: 1000)
             convertEol: true,
             allowProposedApi: true,
-            allowTransparency: true,
+            allowTransparency: isIntegrated,
         });
 
         // Agregar addons
@@ -272,7 +273,7 @@ const DockerTerminal = forwardRef(({
                 flexDirection: 'column',
                 height: '100%',
                 width: '100%',
-                backgroundColor: 'transparent',
+                backgroundColor: isIntegrated ? 'transparent' : (theme?.background || '#0c1a25'),
                 overflow: 'hidden'
             }}
         >

@@ -14,7 +14,8 @@ const UbuntuTerminal = forwardRef(({
     theme = {},
     tabId = 'default',
     ubuntuInfo = null, // Mantener nombre por compatibilidad, pero puede ser cualquier distribución WSL
-    hideStatusBar = false
+    hideStatusBar = false,
+    isIntegrated = false
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -213,7 +214,7 @@ const UbuntuTerminal = forwardRef(({
             allowProposedApi: true,
             theme: {
                 ...theme,
-                background: 'rgba(0,0,0,0)', // Usar transparente con fallback
+                background: isIntegrated ? 'rgba(0,0,0,0)' : (theme?.background || '#2c001e'), // Solo transparente si es integrado
                 foreground: '#FFFFFF',
                 cursor: '#FFFFFF',
                 selection: 'rgba(255, 255, 255, 0.3)',
@@ -240,7 +241,7 @@ const UbuntuTerminal = forwardRef(({
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
             windowsMode: false, // Ubuntu runs on Linux
-            allowTransparency: true,
+            allowTransparency: isIntegrated,
             cols: 120,
             rows: 30,
             fastScrollModifier: 'alt',
@@ -522,7 +523,7 @@ const UbuntuTerminal = forwardRef(({
     }, [tabId]);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: 'transparent' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: isIntegrated ? 'transparent' : (theme?.background || '#2c001e') }}>
             <div
                 ref={terminalRef}
                 style={{
@@ -534,7 +535,7 @@ const UbuntuTerminal = forwardRef(({
                     position: 'relative',
                     padding: '0 0 0 8px',
                     margin: 0,
-                    background: 'transparent'
+                    background: isIntegrated ? 'transparent' : (theme?.background || '#2c001e')
                 }}
             />
             {!hideStatusBar && (

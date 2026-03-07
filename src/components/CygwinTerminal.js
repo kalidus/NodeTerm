@@ -13,7 +13,8 @@ const CygwinTerminal = forwardRef(({
     fontSize = 14,
     theme = {},
     tabId = 'default',
-    hideStatusBar = false
+    hideStatusBar = false,
+    isIntegrated = false
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -169,7 +170,7 @@ const CygwinTerminal = forwardRef(({
             theme: {
                 ...theme,
                 // Fondo oscuro moderno
-                background: 'rgba(0,0,0,0)',
+                background: isIntegrated ? 'rgba(0,0,0,0)' : (theme.background || '#0a0d0a'),
                 foreground: theme.foreground || '#CCCCCC',
                 cursor: theme.cursor || '#00FF00',
                 cursorAccent: '#000000',
@@ -198,7 +199,7 @@ const CygwinTerminal = forwardRef(({
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
             windowsMode: false,
-            allowTransparency: true,
+            allowTransparency: isIntegrated,
             cols: 120,
             rows: 30,
             fastScrollModifier: 'alt',
@@ -457,7 +458,7 @@ const CygwinTerminal = forwardRef(({
     }, [tabId]);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', flex: 1, width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: 'transparent' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', flex: 1, width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: isIntegrated ? 'transparent' : (theme?.background || '#0c0c0c') }}>
             <div
                 ref={terminalRef}
                 style={{
@@ -469,7 +470,7 @@ const CygwinTerminal = forwardRef(({
                     position: 'relative',
                     padding: '0 0 0 8px',
                     margin: 0,
-                    background: 'transparent'
+                    background: isIntegrated ? 'transparent' : (theme?.background || '#0c0c0c')
                 }}
             />
             {!hideStatusBar && (

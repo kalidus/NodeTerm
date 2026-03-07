@@ -13,7 +13,8 @@ const WSLTerminal = forwardRef(({
     fontSize = 14,
     theme = {},
     tabId = 'default',
-    hideStatusBar = false
+    hideStatusBar = false,
+    isIntegrated = false
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -204,7 +205,7 @@ const WSLTerminal = forwardRef(({
             allowProposedApi: true,
             theme: {
                 ...theme,
-                background: 'rgba(0,0,0,0)', // Usar transparente con fallback
+                background: isIntegrated ? 'rgba(0,0,0,0)' : (theme?.background || '#0c0c0c'), // Solo transparente si es integrado
                 foreground: '#FFFFFF',
                 cursor: '#FFFFFF',
                 selection: 'rgba(255, 255, 255, 0.3)',
@@ -231,7 +232,7 @@ const WSLTerminal = forwardRef(({
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
             windowsMode: false, // Different from PowerShell
-            allowTransparency: true,
+            allowTransparency: isIntegrated,
             cols: 120,
             rows: 30,
             fastScrollModifier: 'alt',
@@ -451,13 +452,13 @@ const WSLTerminal = forwardRef(({
             term.current.options.theme = {
                 ...term.current.options.theme,
                 ...theme,
-                background: 'rgba(0,0,0,0)'
+                background: isIntegrated ? 'rgba(0,0,0,0)' : (theme?.background || '#0c0c0c')
             };
         }
     }, [theme]);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: 'transparent' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: isIntegrated ? 'transparent' : (theme?.background || '#0c0c0c') }}>
             <div
                 ref={terminalRef}
                 style={{
@@ -469,7 +470,7 @@ const WSLTerminal = forwardRef(({
                     position: 'relative',
                     padding: '0 0 0 8px',
                     margin: 0,
-                    background: 'transparent'
+                    background: isIntegrated ? 'transparent' : (theme?.background || '#0c0c0c')
                 }}
             />
             {!hideStatusBar && (
