@@ -60,7 +60,7 @@ const PowerShellTerminal = forwardRef(({
             try { return Math.max(1, parseInt(localStorage.getItem(POLL_KEY) || '3', 10)) * 1000; } catch { return 3000; } // Reducido de 5s a 3s para locales
         };
 
-        // Optimización: pausar polling cuando la ventana pierda foco
+        // Optimizaci??n: pausar polling cuando la ventana pierda foco
         const handleFocus = () => {
             if (window.electronAPI?.send) {
                 window.electronAPI.send('window:focus-changed', true);
@@ -81,14 +81,14 @@ const PowerShellTerminal = forwardRef(({
                 if (!systemStats) {
                     return;
                 }
-                // Map worker stats → StatusBar expected shape
+                // Map worker stats ??? StatusBar expected shape
                 const memTotalBytes = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
                 const memUsedBytes = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
                 const disk = Array.isArray(systemStats.disks)
                     ? systemStats.disks.map(d => ({ fs: d.name, use: d.percentage, isNetwork: d.isNetwork }))
                     : [];
-                const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8; // Mb/s → B/s
-                const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;   // Mb/s → B/s
+                const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8; // Mb/s ??? B/s
+                const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;   // Mb/s ??? B/s
                 const showNet = (() => { try { return (localStorage.getItem('localShowNetworkDisks') || 'true') === 'true'; } catch { return true; } })();
                 const displayDisk = showNet ? disk : disk.filter(d => {
                     const id = String((d && (d.fs || d.name || d.mount)) || '');
@@ -116,7 +116,7 @@ const PowerShellTerminal = forwardRef(({
                     });
                 }
             } catch (error) {
-                console.error('Error obteniendo estadísticas:', error);
+                console.error('Error obteniendo estad??sticas:', error);
             }
         };
 
@@ -187,7 +187,7 @@ const PowerShellTerminal = forwardRef(({
     }));
 
     useEffect(() => {
-        // Leer scrollback desde configuración (configurable en Settings)
+        // Leer scrollback desde configuraci??n (configurable en Settings)
         const scrollbackLines = parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10);
 
         // Initialize Terminal with PowerShell-optimized settings
@@ -310,7 +310,7 @@ const PowerShellTerminal = forwardRef(({
             // Limpiar el terminal antes de iniciar
             term.current.clear();
 
-            // Delay pequeño solo para tab-1 inicial para dar tiempo al backend
+            // Delay peque??o solo para tab-1 inicial para dar tiempo al backend
             const delay = tabId === 'tab-1' ? 300 : 0;
 
             setTimeout(() => {
@@ -340,7 +340,7 @@ const PowerShellTerminal = forwardRef(({
                             term.current.focus();
                             setTimeout(() => {
                                 window.electron.ipcRenderer.send(`powershell:data:${tabId}`, text);
-                                // Restaurar el foco después de pegar
+                                // Restaurar el foco despu??s de pegar
                                 term.current.focus();
                             }, 10);
                         }
@@ -452,10 +452,10 @@ const PowerShellTerminal = forwardRef(({
             term.current.options.theme = {
                 ...term.current.options.theme,
                 ...theme,
-                background: 'rgba(0,0,0,0)'
+                background: isIntegrated ? 'rgba(0,0,0,0)' : (theme?.background || '#012456')
             };
         }
-    }, [theme]);
+    }, [theme, isIntegrated]);
 
     // Auto-fit after render
     useEffect(() => {
@@ -471,7 +471,7 @@ const PowerShellTerminal = forwardRef(({
         }
     });
 
-    // Efecto adicional para forzar redimensionamiento después del montaje
+    // Efecto adicional para forzar redimensionamiento despu??s del montaje
     useEffect(() => {
         const forceResize = () => {
             if (fitAddon.current) {
@@ -484,14 +484,14 @@ const PowerShellTerminal = forwardRef(({
             }
         };
 
-        // Intentar múltiples veces después del montaje
+        // Intentar m??ltiples veces despu??s del montaje
         forceResize();
         setTimeout(forceResize, 50);
         setTimeout(forceResize, 150);
         setTimeout(forceResize, 300);
     }, [tabId]);
 
-    // Efecto adicional para asegurar el focus automático después del montaje
+    // Efecto adicional para asegurar el focus autom??tico despu??s del montaje
     useEffect(() => {
         const ensureFocus = () => {
             if (term.current) {
@@ -504,7 +504,7 @@ const PowerShellTerminal = forwardRef(({
             }
         };
 
-        // Aplicar focus múltiples veces para asegurar que se aplique correctamente
+        // Aplicar focus m??ltiples veces para asegurar que se aplique correctamente
         setTimeout(ensureFocus, 100);
         setTimeout(ensureFocus, 250);
         setTimeout(ensureFocus, 400);

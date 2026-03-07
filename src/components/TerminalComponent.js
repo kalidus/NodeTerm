@@ -24,7 +24,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         broadcastPropsRef.current = { isBroadcastActive, onBroadcastData };
     }, [isBroadcastActive, onBroadcastData]);
 
-    // Actualizar cpuHistory cada vez que cambie stats.cpu, pero solo si es válido
+    // Actualizar cpuHistory cada vez que cambie stats.cpu, pero solo si es v??lido
     useEffect(() => {
         const cpuValue = stats && typeof stats.cpu === 'string'
             ? parseFloat(stats.cpu)
@@ -59,7 +59,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             try {
                 fitAddon.current?.fit();
             } catch (e) {
-                // Elimina cualquier console.log de depuración restante.
+                // Elimina cualquier console.log de depuraci??n restante.
             }
         },
         focus: () => {
@@ -82,7 +82,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             if (term.current && text) {
                 // Asegurar que el terminal tenga el foco antes de pegar
                 term.current.focus();
-                // Usar un pequeño delay para asegurar que el terminal esté listo
+                // Usar un peque??o delay para asegurar que el terminal est?? listo
                 setTimeout(() => {
                     // Para terminales SSH, enviar datos al servidor SSH
                     if (sshConfig && sshConfig.host) {
@@ -91,10 +91,10 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                         // Para terminales locales, usar write directamente
                         term.current.write(text);
                     }
-                    // Restaurar el foco después de pegar y asegurar que los eventos funcionen
+                    // Restaurar el foco despu??s de pegar y asegurar que los eventos funcionen
                     setTimeout(() => {
                         term.current.focus();
-                        // Forzar un evento de foco para asegurar que el terminal esté completamente activo
+                        // Forzar un evento de foco para asegurar que el terminal est?? completamente activo
                         term.current.element?.dispatchEvent(new Event('focus', { bubbles: true }));
                     }, 5);
                 }, 10);
@@ -105,8 +105,8 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     useEffect(() => {
         if (!tabId) return;
 
-        // Cancelar timer de desconexión pendiente si existe
-        // Esto evita desconectar la sesión SSH cuando el componente se remonta rápidamente
+        // Cancelar timer de desconexi??n pendiente si existe
+        // Esto evita desconectar la sesi??n SSH cuando el componente se remonta r??pidamente
         if (window.__sshDisconnectTimers && window.__sshDisconnectTimers[tabId]) {
             clearTimeout(window.__sshDisconnectTimers[tabId]);
             delete window.__sshDisconnectTimers[tabId];
@@ -120,7 +120,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             defaultFontSize = parseInt(localStorage.getItem('basicapp_local_terminal_font_size') || '14', 10);
         }
 
-        // Leer scrollback desde configuración (configurable en Settings)
+        // Leer scrollback desde configuraci??n (configurable en Settings)
         const scrollbackLines = parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10);
 
         // Initialize Terminal
@@ -138,22 +138,22 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
             windowsMode: false,
-            // Habilitar soporte completo para códigos de escape ANSI
+            // Habilitar soporte completo para c??digos de escape ANSI
             allowTransparency: isIntegrated,
             windowOptions: {},
-            // Configuración para aplicaciones interactivas
+            // Configuraci??n para aplicaciones interactivas
             cols: 80,
             rows: 24,
-            // Configuraciones críticas para aplicaciones TUI como htop, vim, etc.
+            // Configuraciones cr??ticas para aplicaciones TUI como htop, vim, etc.
             fastScrollModifier: 'alt',
             fastScrollSensitivity: 5,
             scrollSensitivity: 1,
-            // Habilitar procesamiento completo de códigos de escape
+            // Habilitar procesamiento completo de c??digos de escape
             disableStdin: false,
             // Configuraciones de compatibilidad con aplicaciones complejas
             drawBoldTextInBrightColors: true,
-            minimumContrastRatio: 1, // Desactivar ajuste de contraste automático para evitar desenfoque de color
-            fontWeight: '400', // Forzar un peso de fuente estándar definido
+            minimumContrastRatio: 1, // Desactivar ajuste de contraste autom??tico para evitar desenfoque de color
+            fontWeight: '400', // Forzar un peso de fuente est??ndar definido
             fontWeightBold: 'bold',
             letterSpacing: 0,
             lineHeight: 1.1,
@@ -186,8 +186,8 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
 
                 // Solo restaurar si fue guardado recientemente (menos de 3 segundos)
                 if (timeSinceSaved < 3000) {
-                    // Restaurar cada línea con salto de línea entre ellas
-                    // NO agregar \r\n al final de la última línea para evitar prompt desplazado
+                    // Restaurar cada l??nea con salto de l??nea entre ellas
+                    // NO agregar \r\n al final de la ??ltima l??nea para evitar prompt desplazado
                     savedBuffer.lines.forEach((line, index) => {
                         term.current.write(line);
                         if (index < savedBuffer.lines.length - 1) {
@@ -208,7 +208,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         term.current.focus();
 
         // ResizeObserver con debounce para evitar desplazamientos al hacer split
-        // CRÍTICO: No hacer fit() inmediatamente cuando cambia el tamaño, esperar a que el DOM se estabilice
+        // CR??TICO: No hacer fit() inmediatamente cuando cambia el tama??o, esperar a que el DOM se estabilice
         let resizeRaf = null;
         let resizeTimeout = null;
         const resizeObserver = new ResizeObserver(() => {
@@ -222,13 +222,13 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     clearTimeout(resizeTimeout);
                 }
 
-                // Usar RAF + timeout para asegurar que el DOM está completamente estable
+                // Usar RAF + timeout para asegurar que el DOM est?? completamente estable
                 // RAF para el siguiente frame, timeout adicional para splits complejos
                 resizeRaf = requestAnimationFrame(() => {
                     resizeTimeout = setTimeout(() => {
                         try {
                             // Simplemente hacer fit sin tocar el scroll
-                            // xterm.js maneja el scroll automáticamente
+                            // xterm.js maneja el scroll autom??ticamente
                             fitAddon.current.fit();
                         } catch (e) {
                             // Silenciar errores
@@ -257,7 +257,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     domEvent.preventDefault(); // Prevenir el comportamiento por defecto primero
                     window.electron.clipboard.readText().then(text => {
                         if (text) {
-                            // Asegurar que el terminal tenga el foco y esté listo
+                            // Asegurar que el terminal tenga el foco y est?? listo
                             term.current.focus();
                             setTimeout(() => {
                                 // Para terminales SSH, enviar datos al servidor SSH
@@ -267,10 +267,10 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                                     // Para terminales locales, usar write directamente
                                     term.current.write(text);
                                 }
-                                // Restaurar el foco después de pegar y asegurar que los eventos funcionen
+                                // Restaurar el foco despu??s de pegar y asegurar que los eventos funcionen
                                 setTimeout(() => {
                                     term.current.focus();
-                                    // Forzar un evento de foco para asegurar que el terminal esté completamente activo
+                                    // Forzar un evento de foco para asegurar que el terminal est?? completamente activo
                                     term.current.element?.dispatchEvent(new Event('focus', { bubbles: true }));
                                 }, 5);
                             }, 10);
@@ -331,7 +331,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             const errorListener = (error) => {
                 let message = error;
                 if (typeof error === 'string' && error.includes('Channel open failure')) {
-                    message = `No se pudo abrir un nuevo canal SSH.\r\n\r\nEsto suele ocurrir porque el servidor solo permite un canal SSH por sesión, o el sistema necesita ser reiniciado.\r\n\r\nDetalles: ${error}`;
+                    message = `No se pudo abrir un nuevo canal SSH.\r\n\r\nEsto suele ocurrir porque el servidor solo permite un canal SSH por sesi??n, o el sistema necesita ser reiniciado.\r\n\r\nDetalles: ${error}`;
                 }
                 if (!message || (typeof message === 'string' && message.trim() === '')) {
                     message = 'Error desconocido al conectar por SSH.';
@@ -340,15 +340,15 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             };
             const onErrorUnsubscribe = window.electron.ipcRenderer.on(`ssh:error:${tabId}`, errorListener);
 
-            // Ahora sí, verificar y conectar DESPUÉS de registrar los listeners
-            // Verificar si ya existe una conexión SSH activa para este tabId
+            // Ahora s??, verificar y conectar DESPU??S de registrar los listeners
+            // Verificar si ya existe una conexi??n SSH activa para este tabId
             // Esto evita reconectar cuando un terminal se convierte en parte de un split
             const checkExistingConnection = async () => {
                 try {
                     const hasConnection = await window.electron.ipcRenderer.invoke('ssh:check-connection', tabId);
 
                     if (!hasConnection) {
-                        // Solo conectar si no existe una conexión activa
+                        // Solo conectar si no existe una conexi??n activa
                         window.electron.ipcRenderer.send('ssh:connect', { tabId, config: sshConfig });
                     } else {
                         // Si ya existe, solo enviar el evento ready localmente
@@ -373,13 +373,13 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             const dataHandler = term.current.onData(data => {
                 const { isBroadcastActive: currentBroadcast, onBroadcastData: currentBroadcastFn } = broadcastPropsRef.current;
 
-                // Local echo SSH: mostrar el carácter localmente ANTES del round-trip al servidor
-                // Solo para terminales SSH, solo si está habilitado, y solo para caracteres imprimibles
+                // Local echo SSH: mostrar el car??cter localmente ANTES del round-trip al servidor
+                // Solo para terminales SSH, solo si est?? habilitado, y solo para caracteres imprimibles
                 const isSSH = sshConfig && (sshConfig.host || sshConfig.bastionHost);
                 if (isSSH && sshLocalEchoRef.current) {
                     // Solo hacer echo de caracteres imprimibles (no secuencias de escape, no control chars)
                     // - Excluir: ESC (\x1b), caracteres de control (< 0x20), DEL (0x7f), backspace (0x08)
-                    // - Excluir: secuencias de más de 1 carácter (teclas especiales como flechas, F1..)
+                    // - Excluir: secuencias de m??s de 1 car??cter (teclas especiales como flechas, F1..)
                     const code = data.charCodeAt(0);
                     const isPrintable =
                         data.length === 1 &&
@@ -409,14 +409,14 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 cleanupContextMenu();
 
                 // Preservar el buffer del terminal antes de desmontarlo
-                // Guardar las últimas 500 líneas del buffer (o todo si hay menos)
+                // Guardar las ??ltimas 500 l??neas del buffer (o todo si hay menos)
                 // Esto asegura preservar suficiente historial sin el scrollback antiguo completo
                 if (term.current) {
                     try {
                         const buffer = term.current.buffer.active;
                         const lines = [];
 
-                        // Guardar las últimas 1500 líneas (historial extenso)
+                        // Guardar las ??ltimas 1500 l??neas (historial extenso)
                         const linesToSave = 1500;
                         const startLine = Math.max(0, buffer.length - linesToSave);
                         const endLine = buffer.length;
@@ -428,7 +428,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                             }
                         }
 
-                        // Eliminar líneas vacías al final para evitar espaciado extra
+                        // Eliminar l??neas vac??as al final para evitar espaciado extra
                         while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
                             lines.pop();
                         }
@@ -447,20 +447,20 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     }
                 }
 
-                // Delay para desconectar SSH: evita desconexión innecesaria cuando el componente
+                // Delay para desconectar SSH: evita desconexi??n innecesaria cuando el componente
                 // se desmonta temporalmente (ej: al convertir un terminal en split)
-                // Si el componente se vuelve a montar rápidamente, no se desconectará
+                // Si el componente se vuelve a montar r??pidamente, no se desconectar??
                 const disconnectTimer = setTimeout(() => {
                     window.electron.ipcRenderer.send('ssh:disconnect', tabId);
-                    // Limpiar el timer del registro después de ejecutar
+                    // Limpiar el timer del registro despu??s de ejecutar
                     if (window.__sshDisconnectTimers) {
                         delete window.__sshDisconnectTimers[tabId];
                     }
-                    // Limpiar el buffer guardado después de desconectar
+                    // Limpiar el buffer guardado despu??s de desconectar
                     if (window.__terminalBuffers) {
                         delete window.__terminalBuffers[tabId];
                     }
-                }, 2000); // Aumentado a 2000ms para dar más margen en splits complejos
+                }, 2000); // Aumentado a 2000ms para dar m??s margen en splits complejos
 
                 // Guardar el timer en una variable global para poder cancelarlo si se remonta
                 if (!window.__sshDisconnectTimers) window.__sshDisconnectTimers = {};
@@ -484,7 +484,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 }
             };
         } else {
-            term.current.writeln('\x1b[31mError: Electron API no disponible. El portapapeles y la comunicación no funcionarán.\x1b[0m');
+            term.current.writeln('\x1b[31mError: Electron API no disponible. El portapapeles y la comunicaci??n no funcionar??n.\x1b[0m');
             // Cleanup only the terminal if API is not ready
             return () => {
                 resizeObserver.disconnect();
@@ -500,7 +500,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         if (term.current && fontFamily) {
             term.current.options.fontFamily = fontFamily;
 
-            // CRÍTICO: Re-aplicar opciones de nitidez al cambiar de fuente
+            // CR??TICO: Re-aplicar opciones de nitidez al cambiar de fuente
             // xterm.js a veces resetea o recalcula el renderizado internamente
             term.current.options.fontWeight = '400';
             term.current.options.fontWeightBold = 'bold';
@@ -518,7 +518,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         if (term.current && fontSize) {
             term.current.options.fontSize = fontSize;
 
-            // CRÍTICO: Re-aplicar opciones de nitidez al cambiar el tamaño
+            // CR??TICO: Re-aplicar opciones de nitidez al cambiar el tama??o
             term.current.options.fontWeight = '400';
             term.current.options.fontWeightBold = 'bold';
             term.current.options.minimumContrastRatio = 1;
@@ -536,9 +536,9 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 ? { ...theme, background: 'rgba(0,0,0,0)' }
                 : theme;
         }
-    }, [theme]);
+    }, [theme, isIntegrated]);
 
-    // Focus automático cuando la pestaña se vuelve activa
+    // Focus autom??tico cuando la pesta??a se vuelve activa
     useEffect(() => {
         if (active && term.current) {
             term.current.focus();
@@ -546,7 +546,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         }
     }, [active]);
 
-    // Forzar fit tras el primer render (por si el layout cambia después del render)
+    // Forzar fit tras el primer render (por si el layout cambia despu??s del render)
     useEffect(() => {
         if (fitAddon.current) {
             const timer = setTimeout(() => {
@@ -590,7 +590,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                         minHeight: 0,
                         overflow: 'hidden',
                         background: isIntegrated ? 'transparent' : (theme?.background || 'inherit'),
-                        backgroundColor: isIntegrated ? 'transparent' : (theme?.background || 'inherit') // CRÍTICO: Asegurar que el fondo coincida también aquí
+                        backgroundColor: isIntegrated ? 'transparent' : (theme?.background || 'inherit') // CR??TICO: Asegurar que el fondo coincida tambi??n aqu??
                     }}
                 />
             </div>

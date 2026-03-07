@@ -51,13 +51,13 @@ const WSLTerminal = forwardRef(({
         };
     };
 
-    // Derivar icono de distro desde la sesión (mejor esfuerzo por nombre)
+    // Derivar icono de distro desde la sesi??n (mejor esfuerzo por nombre)
     useEffect(() => {
-        // Intentar detectar la distro ejecutando 'cat /etc/os-release' vía IPC de WSL
+        // Intentar detectar la distro ejecutando 'cat /etc/os-release' v??a IPC de WSL
         const detectDistro = async () => {
             try {
-                // Enviar una pequeña orden para que el backend devuelva la info en el canal de datos
-                // y parsear una única vez el NAME/ID. Si no llega, conservamos 'ubuntu'.
+                // Enviar una peque??a orden para que el backend devuelva la info en el canal de datos
+                // y parsear una ??nica vez el NAME/ID. Si no llega, conservamos 'ubuntu'.
                 const handler = (data) => {
                     try {
                         const text = String(data || '');
@@ -86,7 +86,7 @@ const WSLTerminal = forwardRef(({
             try { return Math.max(1, parseInt(localStorage.getItem(POLL_KEY) || '3', 10)) * 1000; } catch { return 3000; } // Reducido de 5s a 3s para locales
         };
 
-        // Optimización: pausar polling cuando la ventana pierda foco
+        // Optimizaci??n: pausar polling cuando la ventana pierda foco
         const handleFocus = () => {
             if (window.electronAPI?.send) {
                 window.electronAPI.send('window:focus-changed', true);
@@ -194,7 +194,7 @@ const WSLTerminal = forwardRef(({
     }));
 
     useEffect(() => {
-        // Leer scrollback desde configuración (configurable en Settings)
+        // Leer scrollback desde configuraci??n (configurable en Settings)
         const scrollbackLines = parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10);
 
         // Initialize Terminal with WSL-optimized settings
@@ -311,7 +311,7 @@ const WSLTerminal = forwardRef(({
                             term.current.focus();
                             setTimeout(() => {
                                 window.electron.ipcRenderer.send(`wsl:data:${tabId}`, text);
-                                // Restaurar el foco después de pegar
+                                // Restaurar el foco despu??s de pegar
                                 term.current.focus();
                             }, 10);
                         }
@@ -410,9 +410,13 @@ const WSLTerminal = forwardRef(({
     // Update theme dynamically
     useEffect(() => {
         if (term.current && theme) {
-            term.current.options.theme = { ...term.current.options.theme, ...theme };
+            term.current.options.theme = {
+                ...term.current.options.theme,
+                ...theme,
+                background: isIntegrated ? 'rgba(0,0,0,0)' : (theme?.background || '#002b36')
+            };
         }
-    }, [theme]);
+    }, [theme, isIntegrated]);
 
     // Auto-fit after render
     useEffect(() => {
@@ -427,7 +431,7 @@ const WSLTerminal = forwardRef(({
         }
     });
 
-    // Efecto adicional para asegurar el focus automático después del montaje
+    // Efecto adicional para asegurar el focus autom??tico despu??s del montaje
     useEffect(() => {
         const ensureFocus = () => {
             if (term.current) {
@@ -439,23 +443,13 @@ const WSLTerminal = forwardRef(({
             }
         };
 
-        // Aplicar focus múltiples veces para asegurar que se aplique correctamente
+        // Aplicar focus m??ltiples veces para asegurar que se aplique correctamente
         setTimeout(ensureFocus, 100);
         setTimeout(ensureFocus, 250);
         setTimeout(ensureFocus, 400);
         setTimeout(ensureFocus, 600);
     }, [tabId]);
 
-    // Update theme dynamically
-    useEffect(() => {
-        if (term.current && theme) {
-            term.current.options.theme = {
-                ...term.current.options.theme,
-                ...theme,
-                background: isIntegrated ? 'rgba(0,0,0,0)' : (theme?.background || '#0c0c0c')
-            };
-        }
-    }, [theme]);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: isIntegrated ? 'transparent' : (theme?.background || '#0c0c0c') }}>

@@ -92,7 +92,7 @@ const DockerTerminal = forwardRef(({
                     setCpuHistory(prev => [...prev, cpuVal].slice(-30));
                 }
             } catch (error) {
-                console.error('Error obteniendo estadísticas:', error);
+                console.error('Error obteniendo estad??sticas:', error);
             }
         };
 
@@ -116,7 +116,7 @@ const DockerTerminal = forwardRef(({
     useEffect(() => {
         if (!terminalRef.current) return;
 
-        // Leer scrollback desde configuración (configurable en Settings)
+        // Leer scrollback desde configuraci??n (configurable en Settings)
         const scrollbackLines = parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10);
 
         // Crear terminal
@@ -163,13 +163,13 @@ const DockerTerminal = forwardRef(({
 
         const handleDockerError = (errorMsg) => {
             if (term.current) {
-                term.current.write(`\r\n\x1b[31m❌ Error: ${errorMsg}\x1b[0m\r\n`);
+                term.current.write(`\r\n\x1b[31m??? Error: ${errorMsg}\x1b[0m\r\n`);
             }
         };
 
         const handleDockerExit = (exitCode) => {
             if (term.current) {
-                term.current.write(`\r\n\x1b[33m⏹️ Sesión terminada (código: ${exitCode})\x1b[0m\r\n`);
+                term.current.write(`\r\n\x1b[33m?????? Sesi??n terminada (c??digo: ${exitCode})\x1b[0m\r\n`);
             }
         };
 
@@ -178,13 +178,13 @@ const DockerTerminal = forwardRef(({
         const dockerExitEvent = `docker:exit:${tabId}`;
 
         // PASO 1: Registrar listeners PRIMERO (antes de iniciar Docker)
-        console.log(`🐳 Registrando listeners para ${tabId}...`);
+        console.log(`???? Registrando listeners para ${tabId}...`);
         if (window.electron) {
             window.electron.ipcRenderer.on(dockerDataEvent, handleDockerOutput);
             window.electron.ipcRenderer.on(dockerErrorEvent, handleDockerError);
             window.electron.ipcRenderer.on(dockerExitEvent, handleDockerExit);
         }
-        console.log(`✅ Listeners registrados para ${tabId}`);
+        console.log(`??? Listeners registrados para ${tabId}`);
 
         // Manejar input del usuario
         term.current.onData((data) => {
@@ -193,14 +193,14 @@ const DockerTerminal = forwardRef(({
             }
         });
 
-        // PASO 2: Ahora sí, iniciar sesión Docker
+        // PASO 2: Ahora s??, iniciar sesi??n Docker
         if (window.electron && window.electronAPI) {
             const containerName = dockerInfo?.containerName || 'unknown';
-            console.log(`🐳 Iniciando sesión Docker para ${containerName} en tab ${tabId}`);
+            console.log(`???? Iniciando sesi??n Docker para ${containerName} en tab ${tabId}`);
 
-            // Delay más largo para asegurar que listeners están COMPLETAMENTE listos en Electron
+            // Delay m??s largo para asegurar que listeners est??n COMPLETAMENTE listos en Electron
             setTimeout(() => {
-                console.log(`🐳 Enviando docker:start:${tabId} después del delay`);
+                console.log(`???? Enviando docker:start:${tabId} despu??s del delay`);
                 window.electron.ipcRenderer.send(`docker:start:${tabId}`, {
                     tabId: tabId,
                     containerName: containerName,
@@ -223,7 +223,18 @@ const DockerTerminal = forwardRef(({
                 term.current = null;
             }
         };
-    }, [tabId, dockerInfo, fontFamily, fontSize, theme]);
+    }, [tabId, dockerInfo, fontFamily, fontSize, isIntegrated]);
+
+    // Update theme dynamically
+    useEffect(() => {
+        if (term.current && theme) {
+            term.current.options.theme = {
+                ...term.current.options.theme,
+                ...theme,
+                background: isIntegrated ? 'rgba(0,0,0,0)' : (theme?.background || '#0c1a25')
+            };
+        }
+    }, [theme, isIntegrated]);
 
     // Manejar resize de la ventana
     useEffect(() => {
@@ -246,7 +257,7 @@ const DockerTerminal = forwardRef(({
         return () => window.removeEventListener('resize', handleResize);
     }, [tabId]);
 
-    // Exponer métodos
+    // Exponer m??todos
     useImperativeHandle(ref, () => ({
         fit: () => {
             try {

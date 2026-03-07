@@ -13,7 +13,7 @@ const UbuntuTerminal = forwardRef(({
     fontSize = 14,
     theme = {},
     tabId = 'default',
-    ubuntuInfo = null, // Mantener nombre por compatibilidad, pero puede ser cualquier distribución WSL
+    ubuntuInfo = null, // Mantener nombre por compatibilidad, pero puede ser cualquier distribuci??n WSL
     hideStatusBar = false,
     isIntegrated = false
 }, ref) => {
@@ -52,9 +52,9 @@ const UbuntuTerminal = forwardRef(({
         };
     };
 
-    // Deducir distro por metadatos y verificación desde dentro de la distro
+    // Deducir distro por metadatos y verificaci??n desde dentro de la distro
     useEffect(() => {
-        // Si tenemos ubuntuInfo con category, úsala; si no, intentar leer /etc/os-release
+        // Si tenemos ubuntuInfo con category, ??sala; si no, intentar leer /etc/os-release
         if (!ubuntuInfo?.category) {
             const channelPrefix = getChannelPrefix();
             const handler = (data) => {
@@ -83,7 +83,7 @@ const UbuntuTerminal = forwardRef(({
             try { return Math.max(1, parseInt(localStorage.getItem(POLL_KEY) || '3', 10)) * 1000; } catch { return 3000; } // Reducido de 5s a 3s para locales
         };
 
-        // Optimización: pausar polling cuando la ventana pierda foco
+        // Optimizaci??n: pausar polling cuando la ventana pierda foco
         const handleFocus = () => {
             if (window.electronAPI?.send) {
                 window.electronAPI.send('window:focus-changed', true);
@@ -154,7 +154,7 @@ const UbuntuTerminal = forwardRef(({
         return () => window.removeEventListener('storage', onStorage);
     }, []);
 
-    // Determinar el canal IPC basado en la categoría de la distribución
+    // Determinar el canal IPC basado en la categor??a de la distribuci??n
     const getChannelPrefix = () => {
         if (ubuntuInfo?.category === 'ubuntu') {
             return 'ubuntu';
@@ -203,7 +203,7 @@ const UbuntuTerminal = forwardRef(({
     }));
 
     useEffect(() => {
-        // Leer scrollback desde configuración (configurable en Settings)
+        // Leer scrollback desde configuraci??n (configurable en Settings)
         const scrollbackLines = parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10);
 
         // Initialize Terminal with Ubuntu-optimized settings
@@ -308,13 +308,13 @@ const UbuntuTerminal = forwardRef(({
             // Initialize Ubuntu session
             term.current.clear();
 
-            // Delay pequeño solo para tab-1 inicial para dar tiempo al backend
+            // Delay peque??o solo para tab-1 inicial para dar tiempo al backend
             const delay = tabId === 'tab-1' ? 300 : 0;
 
             setTimeout(() => {
                 const channelPrefix = getChannelPrefix();
 
-                // Usar el nombre de parámetro correcto según el canal
+                // Usar el nombre de par??metro correcto seg??n el canal
                 const dataToSend = {
                     cols: term.current.cols,
                     rows: term.current.rows
@@ -352,7 +352,7 @@ const UbuntuTerminal = forwardRef(({
                             term.current.focus();
                             setTimeout(() => {
                                 window.electron.ipcRenderer.send(`${getChannelPrefix()}:data:${tabId}`, text);
-                                // Restaurar el foco después de pegar
+                                // Restaurar el foco despu??s de pegar
                                 term.current.focus();
                             }, 10);
                         }
@@ -466,10 +466,10 @@ const UbuntuTerminal = forwardRef(({
             term.current.options.theme = {
                 ...term.current.options.theme,
                 ...theme,
-                background: 'rgba(0,0,0,0)'
+                background: isIntegrated ? 'rgba(0,0,0,0)' : (theme?.background || '#2c001e')
             };
         }
-    }, [theme]);
+    }, [theme, isIntegrated]);
 
     // Auto-fit after render
     useEffect(() => {
@@ -484,7 +484,7 @@ const UbuntuTerminal = forwardRef(({
         }
     });
 
-    // Efecto adicional para forzar redimensionamiento después del montaje
+    // Efecto adicional para forzar redimensionamiento despu??s del montaje
     useEffect(() => {
         const forceResize = () => {
             if (fitAddon.current) {
@@ -496,14 +496,14 @@ const UbuntuTerminal = forwardRef(({
             }
         };
 
-        // Intentar múltiples veces después del montaje
+        // Intentar m??ltiples veces despu??s del montaje
         forceResize();
         setTimeout(forceResize, 50);
         setTimeout(forceResize, 150);
         setTimeout(forceResize, 300);
     }, [tabId]);
 
-    // Efecto adicional para asegurar el focus automático después del montaje
+    // Efecto adicional para asegurar el focus autom??tico despu??s del montaje
     useEffect(() => {
         const ensureFocus = () => {
             if (term.current) {
@@ -515,7 +515,7 @@ const UbuntuTerminal = forwardRef(({
             }
         };
 
-        // Aplicar focus múltiples veces para asegurar que se aplique correctamente
+        // Aplicar focus m??ltiples veces para asegurar que se aplique correctamente
         setTimeout(ensureFocus, 100);
         setTimeout(ensureFocus, 250);
         setTimeout(ensureFocus, 400);

@@ -91,7 +91,7 @@ const CygwinTerminal = forwardRef(({
                     setCpuHistory(prev => [...prev, cpuVal].slice(-30));
                 }
             } catch (error) {
-                console.error('Error obteniendo estadísticas:', error);
+                console.error('Error obteniendo estad??sticas:', error);
             }
         };
 
@@ -158,7 +158,7 @@ const CygwinTerminal = forwardRef(({
     }));
 
     useEffect(() => {
-        // Leer scrollback desde configuración (configurable en Settings)
+        // Leer scrollback desde configuraci??n (configurable en Settings)
         const scrollbackLines = parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10);
 
         // Initialize Terminal con tema moderno estilo MobaXterm
@@ -184,7 +184,7 @@ const CygwinTerminal = forwardRef(({
                 magenta: '#FF73FD',
                 cyan: '#C6C5FE',
                 white: '#EEEEEE',
-                // Colores brillantes - más vibrantes
+                // Colores brillantes - m??s vibrantes
                 brightBlack: '#7C7C7C',
                 brightRed: '#FFB6B0',
                 brightGreen: '#CEFFAC',
@@ -272,7 +272,7 @@ const CygwinTerminal = forwardRef(({
 
             const delay = tabId === 'tab-1' ? 300 : 0;
             setTimeout(() => {
-                // console.log(`🚀 CygwinTerminal [${tabId}] enviando cygwin:start`, {
+                // console.log(`???? CygwinTerminal [${tabId}] enviando cygwin:start`, {
                 //     cols: term.current?.cols,
                 //     rows: term.current?.rows,
                 //     delay
@@ -281,7 +281,7 @@ const CygwinTerminal = forwardRef(({
                     cols: term.current.cols,
                     rows: term.current.rows
                 });
-                // console.log(`✅ CygwinTerminal [${tabId}] comando start enviado`);
+                // console.log(`??? CygwinTerminal [${tabId}] comando start enviado`);
             }, delay);
 
             // Copy/Paste handlers
@@ -320,7 +320,7 @@ const CygwinTerminal = forwardRef(({
             });
 
             const dataListener = (data) => {
-                // console.log(`📥 CygwinTerminal [${tabId}] recibió datos:`, { 
+                // console.log(`???? CygwinTerminal [${tabId}] recibi?? datos:`, { 
                 //     length: data?.length, 
                 //     preview: data?.substring(0, 50),
                 //     hasTerminal: !!term.current 
@@ -328,12 +328,12 @@ const CygwinTerminal = forwardRef(({
                 if (term.current) {
                     term.current.write(data);
                 } else {
-                    console.error(`🔴 Cygwin ${tabId}: Terminal no disponible`);
+                    console.error(`???? Cygwin ${tabId}: Terminal no disponible`);
                 }
             };
-            // console.log(`👂 CygwinTerminal [${tabId}] registrando listener en canal: cygwin:data:${tabId}`);
+            // console.log(`???? CygwinTerminal [${tabId}] registrando listener en canal: cygwin:data:${tabId}`);
             const onDataUnsubscribe = window.electron.ipcRenderer.on(`cygwin:data:${tabId}`, dataListener);
-            // console.log(`✅ CygwinTerminal [${tabId}] listener registrado`);
+            // console.log(`??? CygwinTerminal [${tabId}] listener registrado`);
 
             const errorListener = (error) => {
                 term.current?.writeln(`\x1b[31mCygwin Error: ${error}\x1b[0m`);
@@ -402,10 +402,10 @@ const CygwinTerminal = forwardRef(({
             term.current.options.theme = {
                 ...term.current.options.theme,
                 ...theme,
-                background: 'rgba(0,0,0,0)'
+                background: isIntegrated ? 'rgba(0,0,0,0)' : (theme?.background || '#0c0c0c')
             };
         }
-    }, [theme]);
+    }, [theme, isIntegrated]);
 
     // Auto-fit
     useEffect(() => {
@@ -438,7 +438,7 @@ const CygwinTerminal = forwardRef(({
         setTimeout(forceResize, 300);
     }, [tabId]);
 
-    // Efecto adicional para asegurar el focus automático después del montaje
+    // Efecto adicional para asegurar el focus autom??tico despu??s del montaje
     useEffect(() => {
         const ensureFocus = () => {
             if (term.current) {
@@ -450,7 +450,7 @@ const CygwinTerminal = forwardRef(({
             }
         };
 
-        // Aplicar focus múltiples veces para asegurar que se aplique correctamente
+        // Aplicar focus m??ltiples veces para asegurar que se aplique correctamente
         setTimeout(ensureFocus, 100);
         setTimeout(ensureFocus, 250);
         setTimeout(ensureFocus, 400);

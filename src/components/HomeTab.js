@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Rnd } from 'react-rnd';
 import { Card } from 'primereact/card';
 import { TabView, TabPanel } from 'primereact/tabview';
@@ -156,7 +156,7 @@ const HomeTab = ({
     }
   }, []);
 
-  // Medir el tamaño real del contenedor
+  // Medir el tama??o real del contenedor
   useEffect(() => {
     const updateSize = () => {
       if (mainAreaRef.current) {
@@ -165,7 +165,7 @@ const HomeTab = ({
       }
     };
 
-    updateSize(); // Medición inicial
+    updateSize(); // Medici??n inicial
 
     const observer = new ResizeObserver(updateSize);
     if (mainAreaRef.current) observer.observe(mainAreaRef.current);
@@ -177,13 +177,13 @@ const HomeTab = ({
     };
   }, []);
 
-  // Función para centrar y dimensionar el terminal
+  // Funci??n para centrar y dimensionar el terminal
   const centerAndSizeTerminal = () => {
     if (mainAreaRef.current) {
       const parentWidth = mainAreaRef.current.offsetWidth;
       const parentHeight = mainAreaRef.current.offsetHeight;
 
-      // Usar dimensiones mínimas si el padre aún no está listo
+      // Usar dimensiones m??nimas si el padre a??n no est?? listo
       if (parentWidth <= 0 || parentHeight <= 0) return;
 
       const initialWidth = Math.min(parentWidth * 0.8, 1200);
@@ -205,13 +205,13 @@ const HomeTab = ({
     }
   }, [containerHeight, containerWidth, isRndInitialized, hasUserMovedTerminal]);
 
-  // Asegurar que se centra si se muestra tras estar oculto o cambia tamaño
+  // Asegurar que se centra si se muestra tras estar oculto o cambia tama??o
   useEffect(() => {
     if (!terminalHidden && isRndInitialized && mainAreaRef.current) {
       const parentWidth = mainAreaRef.current.offsetWidth;
       const parentHeight = mainAreaRef.current.offsetHeight;
 
-      // Recalcular si está sustancialmente fuera de límites
+      // Recalcular si est?? sustancialmente fuera de l??mites
       if (typeof rndPosition.y === 'number' && (rndPosition.y > parentHeight - 50 || rndPosition.y < 0)) {
         centerAndSizeTerminal();
       } else if (typeof rndPosition.x === 'number' && (rndPosition.x > parentWidth - 50 || rndPosition.x + 100 < 0)) {
@@ -719,11 +719,11 @@ const HomeTab = ({
   }, []);
 
 
-  // Función para toggle de visibilidad del terminal
+  // Funci??n para toggle de visibilidad del terminal
   const handleToggleTerminalVisibility = () => {
     setTerminalHidden(prev => {
       const newHidden = !prev;
-      // Si se está mostrando el terminal, cambiar el estado a 'normal' (1/4 de página)
+      // Si se est?? mostrando el terminal, cambiar el estado a 'normal' (1/4 de p??gina)
       if (!newHidden) {
         setTerminalState('normal');
         setTerminalView(false); // Ocultar terminal embebido para evitar duplicidad
@@ -821,7 +821,7 @@ const HomeTab = ({
         embeddedTabbedTerminalRef.current.addTerminalTab(terminalType);
       } else if (!embeddedTerminalInitialized.current && terminalType) {
         embeddedTerminalInitialized.current = true;
-        // Solo para el terminal embebido, le agregamos el tab explícito si es la primera vez
+        // Solo para el terminal embebido, le agregamos el tab expl??cito si es la primera vez
         setTimeout(() => {
           try {
             if (embeddedTabbedTerminalRef.current?.addTerminalTab) {
@@ -831,7 +831,7 @@ const HomeTab = ({
             console.warn('[HomeTab] embedded addTerminalTab:', err);
           }
           window.dispatchEvent(new Event('resize'));
-        }, 150); // Dar algo más de tiempo para que se monte correctamente en el viewport antes de crear xterm
+        }, 150); // Dar algo m??s de tiempo para que se monte correctamente en el viewport antes de crear xterm
       } else {
         setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
       }
@@ -1054,52 +1054,52 @@ const HomeTab = ({
           }
 
           /* Force transparency for internal terminal elements */
-          .bottom-terminal-frame .xterm-viewport,
-          .bottom-terminal-frame .xterm-screen,
-          .bottom-terminal-frame .xterm-rows,
-          .bottom-terminal-frame .xterm-text-layer,
-          .bottom-terminal-frame .p-tabview-panels,
-          .bottom-terminal-frame .p-tabview-panel,
-          .bottom-terminal-frame .p-tabview,
-          .bottom-terminal-frame .xterm,
-          .terminal-frame-fixed .xterm-viewport,
-          .terminal-frame-fixed .xterm-screen,
-          .terminal-frame-fixed .xterm-rows,
-          .terminal-frame-fixed .xterm-text-layer,
-          .terminal-frame-fixed .p-tabview-panels,
-          .terminal-frame-fixed .p-tabview-panel,
-          .terminal-frame-fixed .p-tabview,
-          .terminal-frame-fixed .xterm {
-            background: transparent !important;
-            background-color: transparent !important;
+        .bottom-terminal-frame .xterm-viewport,
+        .bottom-terminal-frame .xterm-screen,
+        .bottom-terminal-frame .xterm-rows,
+        .bottom-terminal-frame .xterm-text-layer,
+        .bottom-terminal-frame .p-tabview-panels,
+        .bottom-terminal-frame .p-tabview-panel,
+        .bottom-terminal-frame .p-tabview,
+        .bottom-terminal-frame .xterm,
+        .terminal-frame-fixed .xterm-viewport,
+        .terminal-frame-fixed .xterm-screen,
+        .terminal-frame-fixed .xterm-rows,
+        .terminal-frame-fixed .xterm-text-layer,
+        .terminal-frame-fixed .p-tabview-panels,
+        .terminal-frame-fixed .p-tabview-panel,
+        .terminal-frame-fixed .p-tabview,
+        .terminal-frame-fixed .xterm {
+          background: transparent !important;
+        background-color: transparent !important;
           }
-          
-          /* Extra aggressive: target only specific terminal frames and their containers */
-          .bottom-terminal-frame .xterm, 
-          .bottom-terminal-frame .xterm-viewport, 
-          .bottom-terminal-frame .xterm-screen, 
-          .bottom-terminal-frame .xterm-screen canvas, 
-          .bottom-terminal-frame .xterm-rows,
-          .bottom-terminal-frame .xterm-text-layer, 
-          .bottom-terminal-frame .xterm-selection-layer, 
-          .bottom-terminal-frame .xterm-link-layer, 
-          .bottom-terminal-frame .xterm-cursor-layer,
-          .bottom-terminal-frame .xterm-decoration-container, 
-          .bottom-terminal-frame .xterm-helpers, 
-          .bottom-terminal-frame .p-tabview, 
-          .bottom-terminal-frame .p-tabview-panels, 
-          .bottom-terminal-frame .p-tabview-panel,
-          .terminal-frame-fixed .xterm, 
-          .terminal-frame-fixed .xterm-viewport, 
-          .terminal-frame-fixed .xterm-screen, 
-          .terminal-frame-fixed .xterm-screen canvas, 
-          .terminal-frame-fixed .xterm-rows,
-          .terminal-frame-fixed .xterm-text-layer, 
-          .terminal-frame-fixed .p-tabview, 
-          .terminal-frame-fixed .p-tabview-panels, 
-          .terminal-frame-fixed .p-tabview-panel {
-            background: transparent !important;
-            background-color: transparent !important;
+
+        /* Extra aggressive: target only specific terminal frames and their containers */
+        .bottom-terminal-frame .xterm,
+        .bottom-terminal-frame .xterm-viewport,
+        .bottom-terminal-frame .xterm-screen,
+        .bottom-terminal-frame .xterm-screen canvas,
+        .bottom-terminal-frame .xterm-rows,
+        .bottom-terminal-frame .xterm-text-layer,
+        .bottom-terminal-frame .xterm-selection-layer,
+        .bottom-terminal-frame .xterm-link-layer,
+        .bottom-terminal-frame .xterm-cursor-layer,
+        .bottom-terminal-frame .xterm-decoration-container,
+        .bottom-terminal-frame .xterm-helpers,
+        .bottom-terminal-frame .p-tabview,
+        .bottom-terminal-frame .p-tabview-panels,
+        .bottom-terminal-frame .p-tabview-panel,
+        .terminal-frame-fixed .xterm,
+        .terminal-frame-fixed .xterm-viewport,
+        .terminal-frame-fixed .xterm-screen,
+        .terminal-frame-fixed .xterm-screen canvas,
+        .terminal-frame-fixed .xterm-rows,
+        .terminal-frame-fixed .xterm-text-layer,
+        .terminal-frame-fixed .p-tabview,
+        .terminal-frame-fixed .p-tabview-panels,
+        .terminal-frame-fixed .p-tabview-panel {
+          background: transparent !important;
+        background-color: transparent !important;
           }
         `}
       </style>
@@ -1186,6 +1186,7 @@ const HomeTab = ({
                       localLinuxTerminalTheme={localLinuxTerminalTheme}
                       hideStatusBar={true}
                       hideTabs={true}
+                      isIntegrated={true}
                     />
                   </div>
                 </ConnectionHistory>
