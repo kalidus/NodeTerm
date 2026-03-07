@@ -145,6 +145,7 @@ const ConnectionHistory = ({
 	setTerminalFrameStyle = () => { },
 	terminalOpacity = 1.0,
 	onTerminalOpacityChange = () => { },
+	onToggleTerminalVisibility,
 	children
 }) => {
 	// Helper para ajustar la opacidad de los colores (Hex o RGBA)
