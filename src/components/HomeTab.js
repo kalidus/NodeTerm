@@ -1040,66 +1040,13 @@ const HomeTab = ({
           .matcha-dot:hover { color: #fff; background: rgba(255,255,255,0.1); }
 
           /* Force Opacity for all frame styles */
-          .bottom-terminal-frame, .terminal-frame-fixed,
+          .bottom-terminal-frame,
           .bottom-terminal-frame.macos, .bottom-terminal-frame.gnome,
           .bottom-terminal-frame.kde, .bottom-terminal-frame.windows,
           .bottom-terminal-frame.matcha, .bottom-terminal-frame.futuristic,
-          .bottom-terminal-frame.modern, .bottom-terminal-frame.retro,
-          .terminal-frame-fixed.macos, .terminal-frame-fixed.gnome,
-          .terminal-frame-fixed.kde, .terminal-frame-fixed.windows,
-          .terminal-frame-fixed.matcha, .terminal-frame-fixed.futuristic,
-          .terminal-frame-fixed.modern, .terminal-frame-fixed.retro {
+          .bottom-terminal-frame.modern, .bottom-terminal-frame.retro {
             background-color: ${localTerminalBg} !important;
             background: ${localTerminalBg} !important;
-          }
-
-          /* Force transparency for internal terminal elements */
-        .bottom-terminal-frame .xterm-viewport,
-        .bottom-terminal-frame .xterm-screen,
-        .bottom-terminal-frame .xterm-rows,
-        .bottom-terminal-frame .xterm-text-layer,
-        .bottom-terminal-frame .p-tabview-panels,
-        .bottom-terminal-frame .p-tabview-panel,
-        .bottom-terminal-frame .p-tabview,
-        .bottom-terminal-frame .xterm,
-        .terminal-frame-fixed .xterm-viewport,
-        .terminal-frame-fixed .xterm-screen,
-        .terminal-frame-fixed .xterm-rows,
-        .terminal-frame-fixed .xterm-text-layer,
-        .terminal-frame-fixed .p-tabview-panels,
-        .terminal-frame-fixed .p-tabview-panel,
-        .terminal-frame-fixed .p-tabview,
-        .terminal-frame-fixed .xterm {
-          background: transparent !important;
-        background-color: transparent !important;
-          }
-
-        /* Extra aggressive: target only specific terminal frames and their containers */
-        .bottom-terminal-frame .xterm,
-        .bottom-terminal-frame .xterm-viewport,
-        .bottom-terminal-frame .xterm-screen,
-        .bottom-terminal-frame .xterm-screen canvas,
-        .bottom-terminal-frame .xterm-rows,
-        .bottom-terminal-frame .xterm-text-layer,
-        .bottom-terminal-frame .xterm-selection-layer,
-        .bottom-terminal-frame .xterm-link-layer,
-        .bottom-terminal-frame .xterm-cursor-layer,
-        .bottom-terminal-frame .xterm-decoration-container,
-        .bottom-terminal-frame .xterm-helpers,
-        .bottom-terminal-frame .p-tabview,
-        .bottom-terminal-frame .p-tabview-panels,
-        .bottom-terminal-frame .p-tabview-panel,
-        .terminal-frame-fixed .xterm,
-        .terminal-frame-fixed .xterm-viewport,
-        .terminal-frame-fixed .xterm-screen,
-        .terminal-frame-fixed .xterm-screen canvas,
-        .terminal-frame-fixed .xterm-rows,
-        .terminal-frame-fixed .xterm-text-layer,
-        .terminal-frame-fixed .p-tabview,
-        .terminal-frame-fixed .p-tabview-panels,
-        .terminal-frame-fixed .p-tabview-panel {
-          background: transparent !important;
-        background-color: transparent !important;
           }
         `}
       </style>
@@ -1328,7 +1275,8 @@ const HomeTab = ({
             onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
             onMouseDown={(e) => e.stopPropagation()}
           />
-          <i
+          {/* Opacity toggle hidden for floating terminal since it is now opaque */}
+          {/* <i
             className="pi pi-eye no-drag"
             style={{
               fontSize: '0.9rem',
@@ -1348,7 +1296,7 @@ const HomeTab = ({
             onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
             onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
             onMouseDown={(e) => e.stopPropagation()}
-          />
+          /> */}
           <div style={{ width: '12px' }}></div>
         </div>
       </div>
@@ -1419,7 +1367,13 @@ const HomeTab = ({
         </div>
       </OverlayPanel>
 
-      <div style={{ flex: 1, overflow: 'hidden', display: terminalState === 'minimized' ? 'none' : 'flex', flexDirection: 'column' }}>
+      <div style={{
+        flex: 1,
+        overflow: 'hidden',
+        display: terminalState === 'minimized' ? 'none' : 'flex',
+        flexDirection: 'column',
+        minHeight: '100%'
+      }}>
         <TabbedTerminal
           ref={tabbedTerminalRef}
           onMinimize={handleMinimizeTerminal}
@@ -1430,7 +1384,7 @@ const HomeTab = ({
           localPowerShellTheme={localPowerShellTheme}
           localLinuxTerminalTheme={localLinuxTerminalTheme}
           hideStatusBar={true}
-          isIntegrated={true}
+          isIntegrated={false}
         />
       </div>
     </div>

@@ -559,7 +559,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     return (
         <>
             <div
-                className={`terminal-outer-padding ${isBroadcastActive && !broadcastExcludedTargets?.includes(tabId) ? 'broadcast-active' : ''}`}
+                className={`terminal-outer-padding ${isIntegrated ? 'integrated-terminal' : ''} ${isBroadcastActive && !broadcastExcludedTargets?.includes(tabId) ? 'broadcast-active' : ''}`}
                 style={{
                     display: 'flex',
                     flexDirection: 'column',

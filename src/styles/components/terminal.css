@@ -14,15 +14,21 @@
   padding: 0 !important;
   margin: 0 !important;
   box-sizing: border-box !important;
+}
+
+/* Solo aplicar transparencia si es un terminal integrado */
+.integrated-terminal .xterm,
+.integrated-terminal .xterm-viewport {
   background-color: transparent !important;
   /* CRÍTICO: Dejar que el contenedor maneje el fondo */
+}
 
-  /* MEJORA: Nitidez de fuente exclusiva para macOS similar a iTerm */
-  /* Solo se aplica en macOS para no romper el renderizado subpixel (ClearType/FreeType) de Windows/Linux */
-  .platform-darwin & {
-    -webkit-font-smoothing: antialiased !important;
-    -moz-osx-font-smoothing: grayscale !important;
-  }
+/* MEJORA: Nitidez de fuente exclusiva para macOS similar a iTerm */
+/* Solo se aplica en macOS para no romper el renderizado subpixel (ClearType/FreeType) de Windows/Linux */
+.platform-darwin .xterm,
+.platform-darwin .xterm-viewport {
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
 }
 
 .platform-darwin .xterm-rows {
@@ -30,7 +36,7 @@
   -moz-osx-font-smoothing: grayscale !important;
 }
 
-.xterm-screen {
+.integrated-terminal .xterm-screen {
   background-color: transparent !important;
 }
 

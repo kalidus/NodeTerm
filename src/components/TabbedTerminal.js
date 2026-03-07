@@ -2064,6 +2064,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     tabs.map((tab) => (
                         <div
                             key={tab.id}
+                            className={isIntegrated ? 'integrated-terminal' : ''}
                             style={{
                                 position: 'absolute',
                                 top: 0,
