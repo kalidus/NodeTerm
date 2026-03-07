@@ -4,6 +4,7 @@ import { Card } from 'primereact/card';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Divider } from 'primereact/divider';
 import { OverlayPanel } from 'primereact/overlaypanel';
+import { Slider } from 'primereact/slider';
 import { getVersionInfo } from '../version-info';
 import TabbedTerminal from './TabbedTerminal';
 import ConnectionHistory from './ConnectionHistory';
@@ -90,6 +91,19 @@ const HomeTab = ({
     }
   });
 
+  const [terminalOpacity, setTerminalOpacity] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nodeterm_terminal_opacity');
+      return saved !== null ? parseFloat(saved) : 1.0;
+    } catch {
+      return 1.0;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('nodeterm_terminal_opacity', terminalOpacity.toString());
+  }, [terminalOpacity]);
+
   // Configuraci\u00F3n de tipograf\u00EDa de HomeTab
   const [homeTabFont, setHomeTabFont] = useState(() => {
     try {
@@ -114,6 +128,7 @@ const HomeTab = ({
   const containerRef = useRef(null);
   const mainAreaRef = useRef(null);
   const frameStylePickerRef = useRef(null);
+  const terminalOpacityOverlayRef = useRef(null);
   const [containerHeight, setContainerHeight] = useState(window.innerHeight - 100);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth - 100);
   const [hasUserMovedTerminal, setHasUserMovedTerminal] = useState(false);
@@ -634,8 +649,9 @@ const HomeTab = ({
   }, [currentTheme]);
 
   const localTerminalBg = React.useMemo(() => {
-    return themes[localLinuxTerminalTheme]?.theme?.background || themes[localPowerShellTheme]?.theme?.background || '#222';
-  }, [localLinuxTerminalTheme, localPowerShellTheme]);
+    const baseColor = themes[localLinuxTerminalTheme]?.theme?.background || themes[localPowerShellTheme]?.theme?.background || '#222';
+    return adjustOpacity(baseColor, terminalOpacity);
+  }, [localLinuxTerminalTheme, localPowerShellTheme, terminalOpacity]);
 
   const localTerminalTheme = React.useMemo(() => {
     const t = themes[localLinuxTerminalTheme]?.theme || themes[localPowerShellTheme]?.theme || {};
@@ -1022,6 +1038,20 @@ const HomeTab = ({
             color: #aaa; cursor: pointer;
           }
           .matcha-dot:hover { color: #fff; background: rgba(255,255,255,0.1); }
+
+          /* Force Opacity for all frame styles */
+          .bottom-terminal-frame, .terminal-frame-fixed,
+          .bottom-terminal-frame.macos, .bottom-terminal-frame.gnome,
+          .bottom-terminal-frame.kde, .bottom-terminal-frame.windows,
+          .bottom-terminal-frame.matcha, .bottom-terminal-frame.futuristic,
+          .bottom-terminal-frame.modern, .bottom-terminal-frame.retro,
+          .terminal-frame-fixed.macos, .terminal-frame-fixed.gnome,
+          .terminal-frame-fixed.kde, .terminal-frame-fixed.windows,
+          .terminal-frame-fixed.matcha, .terminal-frame-fixed.futuristic,
+          .terminal-frame-fixed.modern, .terminal-frame-fixed.retro {
+            background-color: ${localTerminalBg} !important;
+            background: ${localTerminalBg} !important;
+          }
         `}
       </style>
       <div style={{
@@ -1093,6 +1123,8 @@ const HomeTab = ({
                   onToggleTerminalVisibility={handleToggleTerminalVisibility}
                   terminalFrameStyle={terminalFrameStyle}
                   setTerminalFrameStyle={setTerminalFrameStyle}
+                  terminalOpacity={terminalOpacity}
+                  onTerminalOpacityChange={setTerminalOpacity}
                 >
                   {/* Terminal body - always mounted to preserve state */}
                   <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -1246,9 +1278,47 @@ const HomeTab = ({
             onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
             onMouseDown={(e) => e.stopPropagation()}
           />
+          <i
+            className="pi pi-eye no-drag"
+            style={{
+              fontSize: '0.9rem',
+              color: terminalFrameStyle === 'futuristic' ? '#00f2ff' : (terminalFrameStyle === 'retro' ? '#0f0' : (themeColors.textPrimary || '#fff')),
+              opacity: 0.6,
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '4px',
+              transition: 'all 0.2s',
+              textShadow: terminalFrameStyle === 'futuristic' ? '0 0 8px #00f2ff' : (terminalFrameStyle === 'retro' ? '0 0 5px #0f0' : 'none'),
+            }}
+            title="Ajustar opacidad del terminal"
+            onClick={(e) => {
+              e.stopPropagation();
+              terminalOpacityOverlayRef.current?.toggle(e);
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+            onMouseDown={(e) => e.stopPropagation()}
+          />
           <div style={{ width: '12px' }}></div>
         </div>
       </div>
+
+      <OverlayPanel ref={terminalOpacityOverlayRef} style={{ background: themeColors.cardBackground || '#1e1e1e', width: '200px' }}>
+        <div style={{ padding: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
+            <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>Opacidad</span>
+            <span style={{ color: themeColors.textSecondary || '#aaa', fontSize: '0.8rem' }}>{Math.round(terminalOpacity * 100)}%</span>
+          </div>
+          <Slider
+            value={terminalOpacity * 100}
+            onChange={(e) => setTerminalOpacity(e.value / 100)}
+            min={5}
+            max={100}
+            step={1}
+            style={{ width: '100%' }}
+          />
+        </div>
+      </OverlayPanel>
 
       <OverlayPanel ref={frameStylePickerRef} className="theme-picker-overlay" style={{ background: themeColors.cardBackground || '#1e1e1e', width: '220px' }}>
         <div style={{ padding: '8px' }}>

@@ -10,6 +10,7 @@ import { InputText } from 'primereact/inputtext';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { themes } from '../themes';
 import { themeManager } from '../utils/themeManager';
+import { Slider } from 'primereact/slider';
 import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS, ANIMATED_UI_KEYS, NATURE_UI_KEYS } from '../themes/ui-themes';
 
 // Formatear "Hace 5m", "Hace 2 h", "Ayer", etc.
@@ -142,6 +143,8 @@ const ConnectionHistory = ({
 	onOpenSettings = null,
 	terminalFrameStyle = 'macos',
 	setTerminalFrameStyle = () => { },
+	terminalOpacity = 1.0,
+	onTerminalOpacityChange = () => { },
 	children
 }) => {
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
@@ -155,6 +158,7 @@ const ConnectionHistory = ({
 	const themePickerRef = useRef(null);
 	const uiThemePickerRef = useRef(null);
 	const frameStylePickerRef = useRef(null);
+	const terminalOpacityOverlayRef = useRef(null);
 	const [currentUITheme, setCurrentUITheme] = useState(() => localStorage.getItem('ui_theme') || 'Light');
 
 	const handleThemeSelect = (themeName) => {
@@ -1628,6 +1632,55 @@ const ConnectionHistory = ({
 					scrollbar-width: thin;
 					scrollbar-color: ${terminalTheme.brightBlack || '#444'} transparent;
 				}
+
+				/* Apply Opacity to Terminal Backgrounds (High Specificity Overrides) */
+				.recents-terminal-frame, .top-terminal-frame,
+				.recents-terminal-frame.macos, .top-terminal-frame.macos,
+				.recents-terminal-frame.gnome, .top-terminal-frame.gnome,
+				.recents-terminal-frame.kde, .top-terminal-frame.kde,
+				.recents-terminal-frame.windows, .top-terminal-frame.windows,
+				.recents-terminal-frame.matcha, .top-terminal-frame.matcha,
+				.recents-terminal-frame.futuristic, .top-terminal-frame.futuristic,
+				.recents-terminal-frame.modern, .top-terminal-frame.modern,
+				.recents-terminal-frame.retro, .top-terminal-frame.retro {
+					background-color: ${(() => {
+					const bg = terminalTheme.background || '#0d1117';
+					const adjustOpacity = (color, opacity) => {
+						if (!color) return `rgba(0,0,0,${opacity})`;
+						if (color.startsWith('rgba')) {
+							return color.replace(/[\d.]+\)$/g, `${opacity})`);
+						}
+						if (color.startsWith('#')) {
+							const hex = color.replace('#', '');
+							const r = parseInt(hex.substring(0, 2), 16) || 0;
+							const g = parseInt(hex.substring(2, 4), 16) || 0;
+							const b = parseInt(hex.substring(4, 6), 16) || 0;
+							return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+						}
+						return color;
+					};
+					return adjustOpacity(bg, terminalOpacity);
+				})()} !important;
+					background: ${(() => {
+					const bg = terminalTheme.background || '#0d1117';
+					const adjustOpacity = (color, opacity) => {
+						if (!color) return `rgba(0,0,0,${opacity})`;
+						if (color.startsWith('rgba')) {
+							return color.replace(/[\d.]+\)$/g, `${opacity})`);
+						}
+						if (color.startsWith('#')) {
+							const hex = color.replace('#', '');
+							const r = parseInt(hex.substring(0, 2), 16) || 0;
+							const g = parseInt(hex.substring(2, 4), 16) || 0;
+							const b = parseInt(hex.substring(4, 6), 16) || 0;
+							return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+						}
+						return color;
+					};
+					return adjustOpacity(bg, terminalOpacity);
+				})()} !important;
+				}
+
 				/* --- Grep-style connection rows --- */
 				.connection-list-body {
 					display: flex !important;
@@ -1905,6 +1958,25 @@ const ConnectionHistory = ({
 								onClick={(e) => {
 									e.stopPropagation();
 									uiThemePickerRef.current?.toggle(e);
+								}}
+								onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+								onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+							/>
+							<i
+								className="pi pi-eye"
+								style={{
+									fontSize: '0.9rem',
+									color: themeColors.textPrimary || '#fff',
+									opacity: 0.6,
+									cursor: 'pointer',
+									padding: '4px',
+									borderRadius: '4px',
+									transition: 'all 0.2s'
+								}}
+								title="Ajustar opacidad del terminal"
+								onClick={(e) => {
+									e.stopPropagation();
+									terminalOpacityOverlayRef.current?.toggle(e);
 								}}
 								onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
 								onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
@@ -2768,9 +2840,55 @@ const ConnectionHistory = ({
 							onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
 							onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
 						/>
+						<i
+							className="pi pi-eye"
+							style={{
+								fontSize: '0.9rem',
+								color: terminalTheme.foreground || '#c9d1d9',
+								opacity: 0.6,
+								cursor: 'pointer',
+								padding: '4px',
+								borderRadius: '4px',
+								transition: 'all 0.2s'
+							}}
+							title="Ajustar opacidad del terminal"
+							onClick={(e) => {
+								e.stopPropagation();
+								terminalOpacityOverlayRef.current?.toggle(e);
+							}}
+							onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+							onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+						/>
 						<i className="pi pi-th-large" style={{ fontSize: '0.9rem', color: terminalTheme.foreground || '#c9d1d9', opacity: 0.3, cursor: 'not-allowed', padding: '4px' }} title="Split Terminal (Próximamente)" />
 					</div>
 				</div>
+
+				<OverlayPanel
+					ref={terminalOpacityOverlayRef}
+					style={{
+						width: '200px',
+						backgroundColor: 'var(--ui-dialog-bg, #1e1e1e)',
+						border: '1px solid var(--ui-content-border, #444)',
+						boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+						borderRadius: '8px'
+					}}
+					className="theme-picker-overlay"
+				>
+					<div style={{ padding: '12px' }}>
+						<div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
+							<span style={{ color: 'var(--ui-dialog-text)', fontSize: '0.9rem', fontWeight: 'bold' }}>Opacidad</span>
+							<span style={{ color: 'var(--ui-dialog-text)', opacity: 0.6, fontSize: '0.8rem' }}>{Math.round(terminalOpacity * 100)}%</span>
+						</div>
+						<Slider
+							value={terminalOpacity * 100}
+							onChange={(e) => onTerminalOpacityChange(e.value / 100)}
+							min={5}
+							max={100}
+							step={1}
+							style={{ width: '100%' }}
+						/>
+					</div>
+				</OverlayPanel>
 
 				{/* Terminal Body - always kept alive */}
 				{children}
