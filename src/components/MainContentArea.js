@@ -1536,6 +1536,13 @@ const MainContentArea = ({
                           // Terminal props (específicas)
                           sshStatsByTabId={sshStatsByTabId}
                           getAllTabs={getAllTabs}
+                          // Nuevos manejadores para Quick Actions
+                          onStartRecording={handleStartRecording}
+                          onStopRecording={handleStopRecording}
+                          isRecordingTab={isRecordingTab}
+                          onShowSystemMonitor={(tabKey) => setSshSystemMonitorTabId(tabKey)}
+                          onShowFileExplorer={(tabKey) => setSshFileExplorerTabId(tabKey)}
+                          onToggleBroadcast={handleToggleBroadcast}
                         />
                         {/* SSH System Monitor: right-side panel inside per-tab absolute div */}
                         {(tab.type === 'terminal' || tab.type === 'local-terminal') && sshSystemMonitorTabId === tab.key && (

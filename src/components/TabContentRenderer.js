@@ -89,7 +89,12 @@ const TabContentRenderer = React.memo(({
   handleToggleBroadcastTarget,
   getAllTabs,
   masterKey,
-  secureStorage
+  secureStorage,
+  // Para Quick Actions
+  onStartRecording,
+  onStopRecording,
+  isRecordingTab,
+  onToggleBroadcast
 }) => {
   // 🚀 OPTIMIZACIÓN: Calcular conteos una sola vez cuando cambian los nodos o pestañas RDP
   const counts = React.useMemo(() => {
@@ -1545,6 +1550,14 @@ const TabContentRenderer = React.memo(({
         active={isActiveTab}
         stats={terminalSshStatsByTabId[tab.key]}
         statusBarIconTheme={statusBarIconTheme}
+        // Quick Actions props
+        onStartRecording={onStartRecording}
+        onStopRecording={onStopRecording}
+        isRecording={isRecordingTab ? isRecordingTab(tab.key) : false}
+        onShowSystemMonitor={() => onShowSystemMonitor && onShowSystemMonitor(tab.key)}
+        onShowFileExplorer={() => onShowFileExplorer && onShowFileExplorer(tab.key)}
+        onToggleBroadcast={() => onToggleBroadcast && onToggleBroadcast(tab.key)}
+        isBroadcastActive={tab.isBroadcastActive}
         onDrop={(e) => {
           // Manejador de Drop para convertir pestaña simple en split
           const draggedNode = (window.draggedConnectionNodeRef && window.draggedConnectionNodeRef.current) ||
@@ -1605,12 +1618,9 @@ const TabContentRenderer = React.memo(({
             e.dataTransfer.dropEffect = 'copy';
           }
         }}
-        isBroadcastActive={tab.isBroadcastActive || false}
         handleToggleBroadcastTarget={handleToggleBroadcastTarget}
         getAllTabs={getAllTabs}
         onBroadcastData={handleBroadcastData ? (data) => handleBroadcastData(tab.key, data) : undefined}
-        onShowSystemMonitor={onShowSystemMonitor}
-        onShowFileExplorer={onShowFileExplorer}
       />
     );
   }
