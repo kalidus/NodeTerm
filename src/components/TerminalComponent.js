@@ -635,17 +635,17 @@ const TerminalComponent = forwardRef(({
                 {sshConfig && (sshConfig.host || sshConfig.hostname) && !isIntegrated && (
                     <div className="terminal-quick-actions" style={{
                         position: 'absolute',
-                        top: '12px',
-                        right: '30px',
+                        top: '8px',
+                        right: '8px',
                         zIndex: 100,
                         display: 'flex',
-                        gap: '10px',
-                        padding: '6px 12px',
-                        borderRadius: '10px',
-                        background: theme?.background ? `${theme.background}99` : 'rgba(15, 15, 15, 0.6)',
+                        gap: '4px',
+                        padding: '2px 6px',
+                        borderRadius: '6px',
+                        background: 'var(--ui-dialog-bg, rgba(15, 15, 15, 0.8))',
                         backdropFilter: 'blur(12px)',
-                        border: `1px solid ${theme?.foreground ? `${theme.foreground}15` : 'rgba(255, 255, 255, 0.08)'}`,
-                        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.4)',
+                        border: '1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.15))',
+                        boxShadow: '0 4px 15px var(--ui-dialog-shadow, rgba(0, 0, 0, 0.4))',
                         opacity: 0.2, // Very low opacity when not hovered
                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         pointerEvents: 'auto',
@@ -654,20 +654,12 @@ const TerminalComponent = forwardRef(({
                         onMouseEnter={(e) => {
                             e.currentTarget.style.opacity = '1';
                             e.currentTarget.style.transform = 'translateY(1px)';
-                            if (theme?.background) {
-                                e.currentTarget.style.background = `${theme.background}cc`;
-                            } else {
-                                e.currentTarget.style.background = 'rgba(25, 25, 25, 0.8)';
-                            }
+                            e.currentTarget.style.boxShadow = '0 6px 20px var(--ui-dialog-shadow, rgba(0, 0, 0, 0.5))';
                         }}
                         onMouseLeave={(e) => {
                             e.currentTarget.style.opacity = '0.2';
                             e.currentTarget.style.transform = 'translateY(0)';
-                            if (theme?.background) {
-                                e.currentTarget.style.background = `${theme.background}99`;
-                            } else {
-                                e.currentTarget.style.background = 'rgba(15, 15, 15, 0.6)';
-                            }
+                            e.currentTarget.style.boxShadow = '0 4px 15px var(--ui-dialog-shadow, rgba(0, 0, 0, 0.4))';
                         }}
                     >
                         {/* System Monitor Button */}
@@ -678,23 +670,23 @@ const TerminalComponent = forwardRef(({
                             style={{
                                 background: 'transparent',
                                 border: 'none',
-                                color: theme?.foreground ? `${theme.foreground}cc` : 'rgba(255, 255, 255, 0.8)',
+                                color: 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
                                 cursor: 'pointer',
-                                fontSize: '14px',
+                                fontSize: '12px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                padding: '5px',
-                                borderRadius: '6px',
+                                padding: '3px',
+                                borderRadius: '4px',
                                 transition: 'all 0.2s'
                             }}
                             onMouseOver={(e) => {
-                                e.currentTarget.style.background = theme?.foreground ? `${theme.foreground}15` : 'rgba(255, 255, 255, 0.1)';
-                                e.currentTarget.style.color = theme?.foreground || '#fff';
+                                e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
+                                e.currentTarget.style.color = 'var(--primary-color, #fff)';
                             }}
                             onMouseOut={(e) => {
                                 e.currentTarget.style.background = 'transparent';
-                                e.currentTarget.style.color = theme?.foreground ? `${theme.foreground}cc` : 'rgba(255, 255, 255, 0.8)';
+                                e.currentTarget.style.color = 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
                             }}
                         >
                             <i className="pi pi-chart-bar" />
@@ -708,23 +700,23 @@ const TerminalComponent = forwardRef(({
                             style={{
                                 background: 'transparent',
                                 border: 'none',
-                                color: theme?.foreground ? `${theme.foreground}cc` : 'rgba(255, 255, 255, 0.8)',
+                                color: 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
                                 cursor: 'pointer',
-                                fontSize: '14px',
+                                fontSize: '12px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                padding: '5px',
-                                borderRadius: '6px',
+                                padding: '3px',
+                                borderRadius: '4px',
                                 transition: 'all 0.2s'
                             }}
                             onMouseOver={(e) => {
-                                e.currentTarget.style.background = theme?.foreground ? `${theme.foreground}15` : 'rgba(255, 255, 255, 0.1)';
-                                e.currentTarget.style.color = theme?.foreground || '#fff';
+                                e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
+                                e.currentTarget.style.color = 'var(--primary-color, #fff)';
                             }}
                             onMouseOut={(e) => {
                                 e.currentTarget.style.background = 'transparent';
-                                e.currentTarget.style.color = theme?.foreground ? `${theme.foreground}cc` : 'rgba(255, 255, 255, 0.8)';
+                                e.currentTarget.style.color = 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
                             }}
                         >
                             <i className="pi pi-folder-open" />
@@ -732,10 +724,11 @@ const TerminalComponent = forwardRef(({
 
                         <div style={{
                             width: '1px',
-                            height: '16px',
-                            background: theme?.foreground ? `${theme.foreground}22` : 'rgba(255, 255, 255, 0.1)',
+                            height: '12px',
+                            background: 'var(--ui-dialog-border, rgba(255, 255, 255, 0.1))',
                             alignSelf: 'center',
-                            margin: '0 2px'
+                            margin: '0 1px',
+                            opacity: 0.5
                         }} />
 
                         {/* Recording Button */}
@@ -746,23 +739,23 @@ const TerminalComponent = forwardRef(({
                             style={{
                                 background: 'transparent',
                                 border: 'none',
-                                color: isRecording ? '#ff4d4d' : (theme?.foreground ? `${theme.foreground}cc` : 'rgba(255, 255, 255, 0.8)'),
+                                color: isRecording ? '#ff4d4d' : 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
                                 cursor: 'pointer',
-                                fontSize: '14px',
+                                fontSize: '12px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                padding: '5px',
-                                borderRadius: '6px',
+                                padding: '3px',
+                                borderRadius: '4px',
                                 transition: 'all 0.2s'
                             }}
                             onMouseOver={(e) => {
-                                e.currentTarget.style.background = theme?.foreground ? `${theme.foreground}15` : 'rgba(255, 255, 255, 0.1)';
-                                e.currentTarget.style.color = isRecording ? '#ff4d4d' : (theme?.foreground || '#fff');
+                                e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
+                                e.currentTarget.style.color = isRecording ? '#ff4d4d' : 'var(--primary-color, #fff)';
                             }}
                             onMouseOut={(e) => {
                                 e.currentTarget.style.background = 'transparent';
-                                e.currentTarget.style.color = isRecording ? '#ff4d4d' : (theme?.foreground ? `${theme.foreground}cc` : 'rgba(255, 255, 255, 0.8)');
+                                e.currentTarget.style.color = isRecording ? '#ff4d4d' : 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
                             }}
                         >
                             <i className={`pi ${isRecording ? 'pi-stop-circle' : 'pi-circle-fill'}`} style={{ animation: isRecording ? 'pulse-red 2s infinite' : 'none' }} />
@@ -776,23 +769,23 @@ const TerminalComponent = forwardRef(({
                             style={{
                                 background: 'transparent',
                                 border: 'none',
-                                color: isBroadcastActive ? '#4da6ff' : (theme?.foreground ? `${theme.foreground}cc` : 'rgba(255, 255, 255, 0.8)'),
+                                color: isBroadcastActive ? '#4da6ff' : 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
                                 cursor: 'pointer',
-                                fontSize: '14px',
+                                fontSize: '12px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                padding: '5px',
-                                borderRadius: '6px',
+                                padding: '3px',
+                                borderRadius: '4px',
                                 transition: 'all 0.2s'
                             }}
                             onMouseOver={(e) => {
-                                e.currentTarget.style.background = theme?.foreground ? `${theme.foreground}15` : 'rgba(255, 255, 255, 0.1)';
+                                e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
                                 e.currentTarget.style.color = '#4da6ff';
                             }}
                             onMouseOut={(e) => {
                                 e.currentTarget.style.background = 'transparent';
-                                e.currentTarget.style.color = isBroadcastActive ? '#4da6ff' : (theme?.foreground ? `${theme.foreground}cc` : 'rgba(255, 255, 255, 0.8)');
+                                e.currentTarget.style.color = isBroadcastActive ? '#4da6ff' : 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
                             }}
                         >
                             <i className="pi pi-megaphone" />
