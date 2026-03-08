@@ -546,7 +546,7 @@ const PowerShellTerminal = forwardRef(({
                 <div
                     ref={terminalRef}
                     style={{
-                        padding: '0 0 0 8px',
+                        padding: '10px 10px 0 10px',
                         width: '100%',
                         height: '100%',
                         minWidth: 0,

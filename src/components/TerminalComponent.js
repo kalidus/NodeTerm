@@ -597,6 +597,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 <div
                     ref={terminalRef}
                     style={{
+                        padding: '10px 10px 0 10px',
                         width: '100%',
                         flex: 1,
                         minHeight: 0,
