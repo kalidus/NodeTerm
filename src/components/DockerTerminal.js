@@ -285,30 +285,52 @@ const DockerTerminal = forwardRef(({
                 height: '100%',
                 width: '100%',
                 backgroundColor: isIntegrated ? 'transparent' : (theme?.background || '#0c1a25'),
-                overflow: 'hidden'
+                overflow: 'hidden',
+                ...getScopedStatusBarCssVars()
             }}
         >
             {/* Terminal */}
             <div
-                ref={terminalRef}
+                className="terminal-outer-padding"
                 style={{
                     flex: 1,
+                    width: '100%',
+                    minWidth: 0,
+                    minHeight: 0,
                     overflow: 'hidden',
-                    width: '100%'
+                    position: 'relative',
+                    margin: 0,
+                    marginBottom: isIntegrated ? 0 : '-1px', // Solapamiento de 1px para ocultar huecos de renderizado
+                    zIndex: isIntegrated ? 0 : 1,
+                    background: isIntegrated ? 'transparent' : (theme?.background || '#0c1a25'),
+                    backgroundColor: isIntegrated ? 'transparent' : (theme?.background || '#0c1a25'),
+                    '--terminal-bg': isIntegrated ? 'transparent' : (theme?.background || '#0c1a25')
                 }}
-            />
+            >
+                <div
+                    ref={terminalRef}
+                    style={{
+                        padding: '0 0 0 8px',
+                        width: '100%',
+                        height: '100%',
+                        minWidth: 0,
+                        minHeight: 0,
+                        overflow: 'hidden',
+                        position: 'relative',
+                        background: isIntegrated ? 'transparent' : (theme?.background || '#0c1a25')
+                    }}
+                />
+            </div>
 
             {/* Status Bar */}
             {!hideStatusBar && (
-                <div style={getScopedStatusBarCssVars()}>
-                    <StatusBar
-                        stats={statusStats}
-                        isLoading={isLoadingStats}
-                        themeName={localStatusBarThemeName}
-                        iconTheme={statusBarIconTheme}
-                        showNetworkDisks={showNetworkDisks}
-                    />
-                </div>
+                <StatusBar
+                    stats={statusStats}
+                    isLoading={isLoadingStats}
+                    themeName={localStatusBarThemeName}
+                    iconTheme={statusBarIconTheme}
+                    showNetworkDisks={showNetworkDisks}
+                />
             )}
         </div>
     );

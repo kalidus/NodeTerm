@@ -1525,7 +1525,7 @@ const MainContentArea = ({
                           visibility: isActiveTab ? 'visible' : 'hidden',
                           zIndex: isActiveTab ? 1 : 0,
                           pointerEvents: isActiveTab ? 'auto' : 'none',
-                          background: (tab.type === TAB_TYPES.HOME && isActiveTab) ? localTerminalBg : (tab.type === 'terminal' ? (terminalTheme?.theme?.background || '#1e1e1e') : 'transparent')
+                          background: (tab.type === TAB_TYPES.HOME && isActiveTab) ? localTerminalBg : 'transparent'
                         }}
                       >
                         <TabContentRenderer

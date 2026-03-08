@@ -512,9 +512,22 @@ const PowerShellTerminal = forwardRef(({
     }, [tabId]);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', flex: 1, width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: isIntegrated ? 'transparent' : (theme?.background || '#012456') }}>
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'stretch',
+            flex: 1,
+            width: '100%',
+            height: '100%',
+            minWidth: 0,
+            minHeight: 0,
+            overflow: 'hidden',
+            position: 'relative',
+            background: isIntegrated ? 'transparent' : (theme?.background || '#012456'),
+            ...getScopedStatusBarCssVars()
+        }}>
             <div
-                ref={terminalRef}
+                className="terminal-outer-padding"
                 style={{
                     flex: 1,
                     width: '100%',
@@ -522,15 +535,30 @@ const PowerShellTerminal = forwardRef(({
                     minHeight: 0,
                     overflow: 'hidden',
                     position: 'relative',
-                    padding: '0 0 0 8px',
                     margin: 0,
-                    background: isIntegrated ? 'transparent' : (theme?.background || '#012456')
+                    marginBottom: isIntegrated ? 0 : '-1px', // Solapamiento de 1px para ocultar huecos de renderizado
+                    zIndex: isIntegrated ? 0 : 1,
+                    background: isIntegrated ? 'transparent' : (theme?.background || '#012456'),
+                    backgroundColor: isIntegrated ? 'transparent' : (theme?.background || '#012456'),
+                    '--terminal-bg': isIntegrated ? 'transparent' : (theme?.background || '#012456')
                 }}
-            />
+            >
+                <div
+                    ref={terminalRef}
+                    style={{
+                        padding: '0 0 0 8px',
+                        width: '100%',
+                        height: '100%',
+                        minWidth: 0,
+                        minHeight: 0,
+                        overflow: 'hidden',
+                        position: 'relative',
+                        background: isIntegrated ? 'transparent' : (theme?.background || '#012456')
+                    }}
+                />
+            </div>
             {!hideStatusBar && (
-                <div style={{ ...getScopedStatusBarCssVars() }}>
-                    <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} showNetworkDisks={showNetworkDisks} isLoading={isLoadingStats} />
-                </div>
+                <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} showNetworkDisks={showNetworkDisks} isLoading={isLoadingStats} />
             )}
         </div>
     );
