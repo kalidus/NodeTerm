@@ -31,7 +31,9 @@ const TerminalComponent = forwardRef(({
     isRecording,
     onShowSystemMonitor,
     onShowFileExplorer,
-    onToggleBroadcast
+    onToggleBroadcast,
+    onToggleBroadcastTarget,
+    isSplit = false
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -636,11 +638,11 @@ const TerminalComponent = forwardRef(({
                     <div className="terminal-quick-actions" style={{
                         position: 'absolute',
                         top: '8px',
-                        right: '8px',
+                        right: isSplit ? '26px' : '8px',
                         zIndex: 100,
                         display: 'flex',
-                        gap: '4px',
-                        padding: '2px 6px',
+                        gap: isSplit ? '0' : '4px',
+                        padding: isSplit ? '2px' : '2px 6px',
                         borderRadius: '6px',
                         background: 'var(--ui-dialog-bg, rgba(15, 15, 15, 0.8))',
                         backdropFilter: 'blur(12px)',
@@ -662,149 +664,173 @@ const TerminalComponent = forwardRef(({
                             e.currentTarget.style.boxShadow = '0 4px 15px var(--ui-dialog-shadow, rgba(0, 0, 0, 0.4))';
                         }}
                     >
-                        {/* System Monitor Button */}
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onShowSystemMonitor && onShowSystemMonitor(); }}
-                            title="Monitor de Sistema"
-                            className="quick-action-btn"
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '3px',
-                                borderRadius: '4px',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseOver={(e) => {
-                                e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
-                                e.currentTarget.style.color = 'var(--primary-color, #fff)';
-                            }}
-                            onMouseOut={(e) => {
-                                e.currentTarget.style.background = 'transparent';
-                                e.currentTarget.style.color = 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
-                            }}
-                        >
-                            <i className="pi pi-chart-bar" />
-                        </button>
+                        {/* System Monitor Button - Hidden in Split Mode */}
+                        {!isSplit && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onShowSystemMonitor && onShowSystemMonitor(); }}
+                                title="Monitor de Sistema"
+                                className="quick-action-btn"
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '3px',
+                                    borderRadius: '4px',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
+                                    e.currentTarget.style.color = 'var(--primary-color, #fff)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.background = 'transparent';
+                                    e.currentTarget.style.color = 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
+                                }}
+                            >
+                                <i className="pi pi-chart-bar" />
+                            </button>
+                        )}
 
-                        {/* File Explorer Button */}
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onShowFileExplorer && onShowFileExplorer(); }}
-                            title="Explorador de Archivos (SFTP)"
-                            className="quick-action-btn"
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '3px',
-                                borderRadius: '4px',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseOver={(e) => {
-                                e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
-                                e.currentTarget.style.color = 'var(--primary-color, #fff)';
-                            }}
-                            onMouseOut={(e) => {
-                                e.currentTarget.style.background = 'transparent';
-                                e.currentTarget.style.color = 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
-                            }}
-                        >
-                            <i className="pi pi-folder-open" />
-                        </button>
+                        {/* File Explorer Button - Hidden in Split Mode */}
+                        {!isSplit && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onShowFileExplorer && onShowFileExplorer(); }}
+                                title="Explorador de Archivos (SFTP)"
+                                className="quick-action-btn"
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '3px',
+                                    borderRadius: '4px',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
+                                    e.currentTarget.style.color = 'var(--primary-color, #fff)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.background = 'transparent';
+                                    e.currentTarget.style.color = 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
+                                }}
+                            >
+                                <i className="pi pi-folder-open" />
+                            </button>
+                        )}
 
-                        <div style={{
-                            width: '1px',
-                            height: '12px',
-                            background: 'var(--ui-dialog-border, rgba(255, 255, 255, 0.1))',
-                            alignSelf: 'center',
-                            margin: '0 1px',
-                            opacity: 0.5
-                        }} />
+                        {!isSplit && (
+                            <div style={{
+                                width: '1px',
+                                height: '12px',
+                                background: 'var(--ui-dialog-border, rgba(255, 255, 255, 0.1))',
+                                alignSelf: 'center',
+                                margin: '0 1px',
+                                opacity: 0.5
+                            }} />
+                        )}
 
-                        {/* Recording Button */}
-                        <button
-                            onClick={(e) => { e.stopPropagation(); isRecording ? onStopRecording(tabId) : onStartRecording(tabId); }}
-                            title={isRecording ? "Detener Grabación" : "Iniciar Grabación"}
-                            className="quick-action-btn"
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: isRecording ? '#ff4d4d' : 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '3px',
-                                borderRadius: '4px',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseOver={(e) => {
-                                e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
-                                e.currentTarget.style.color = isRecording ? '#ff4d4d' : 'var(--primary-color, #fff)';
-                            }}
-                            onMouseOut={(e) => {
-                                e.currentTarget.style.background = 'transparent';
-                                e.currentTarget.style.color = isRecording ? '#ff4d4d' : 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
-                            }}
-                        >
-                            <i className={`pi ${isRecording ? 'pi-stop-circle' : 'pi-circle-fill'}`} style={{ animation: isRecording ? 'pulse-red 2s infinite' : 'none' }} />
-                        </button>
+                        {/* Recording Button - Hidden in Split Mode */}
+                        {!isSplit && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); isRecording ? onStopRecording(tabId) : onStartRecording(tabId); }}
+                                title={isRecording ? "Detener Grabación" : "Iniciar Grabación"}
+                                className="quick-action-btn"
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: isRecording ? '#ff4d4d' : 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '3px',
+                                    borderRadius: '4px',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
+                                    e.currentTarget.style.color = isRecording ? '#ff4d4d' : 'var(--primary-color, #fff)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.background = 'transparent';
+                                    e.currentTarget.style.color = isRecording ? '#ff4d4d' : 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
+                                }}
+                            >
+                                <i className={`pi ${isRecording ? 'pi-stop-circle' : 'pi-circle-fill'}`} style={{ animation: isRecording ? 'pulse-red 2s infinite' : 'none' }} />
+                            </button>
+                        )}
 
-                        {/* Broadcast Button */}
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onToggleBroadcast && onToggleBroadcast(); }}
-                            title={isBroadcastActive ? "Desactivar Broadcast" : "Activar Broadcast"}
-                            className="quick-action-btn"
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: isBroadcastActive ? '#4da6ff' : 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '3px',
-                                borderRadius: '4px',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseOver={(e) => {
-                                e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
-                                e.currentTarget.style.color = '#4da6ff';
-                            }}
-                            onMouseOut={(e) => {
-                                e.currentTarget.style.background = 'transparent';
-                                e.currentTarget.style.color = isBroadcastActive ? '#4da6ff' : 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
-                            }}
-                        >
-                            <i className="pi pi-megaphone" />
-                        </button>
+                        {/* Broadcast Button - Always Visible */}
+                        {(() => {
+                            const isExcluded = broadcastExcludedTargets && broadcastExcludedTargets.includes(tabId);
+                            // Un terminal está "emitiendo" si el broadcast global está ON y este terminal no está excluido
+                            const isActiveForThisTerminal = isBroadcastActive && (isSplit ? !isExcluded : true);
 
-                        {/* CSS for pulse animation */}
-                        <style dangerouslySetInnerHTML={{
-                            __html: `
-                            @keyframes pulse-red {
-                                0% { opacity: 1; transform: scale(1); }
-                                50% { opacity: 0.5; transform: scale(1.2); }
-                                100% { opacity: 1; transform: scale(1); }
-                            }
-                        `}} />
+                            return (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (isSplit) {
+                                            onToggleBroadcastTarget && onToggleBroadcastTarget(tabId);
+                                        } else {
+                                            onToggleBroadcast && onToggleBroadcast();
+                                        }
+                                    }}
+                                    title={isActiveForThisTerminal ? "Desactivar Broadcast" : "Activar Broadcast"}
+                                    className="quick-action-btn"
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: isActiveForThisTerminal ? '#4da6ff' : 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
+                                        cursor: 'pointer',
+                                        fontSize: '12px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: '3px',
+                                        borderRadius: '4px',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseOver={(e) => {
+                                        e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
+                                        e.currentTarget.style.color = '#4da6ff';
+                                    }}
+                                    onMouseOut={(e) => {
+                                        e.currentTarget.style.background = 'transparent';
+                                        e.currentTarget.style.color = isActiveForThisTerminal ? '#4da6ff' : 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
+                                    }}
+                                >
+                                    <i className="pi pi-megaphone" />
+                                </button>
+                            );
+                        })()}
                     </div>
                 )}
+
+                {/* CSS for pulse animation */}
+                <style dangerouslySetInnerHTML={{
+                    __html: `
+                        @keyframes pulse-red {
+                            0% { opacity: 1; transform: scale(1); }
+                            50% { opacity: 0.5; transform: scale(1.2); }
+                            100% { opacity: 1; transform: scale(1); }
+                        }
+                    `
+                }} />
             </div>
             {!hideStatusBar && <StatusBar stats={{ ...stats, cpuHistory: cpuHistory }} active={active} statusBarIconTheme={statusBarIconTheme} />}
-        </div>
+        </div >
     );
 });
 

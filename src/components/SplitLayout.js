@@ -146,6 +146,8 @@ const SplitLayout = ({
   statusBarIconTheme = 'classic',
   isBroadcastActive = false,
   onBroadcastData = null,
+  onToggleBroadcast = null,
+  onToggleBroadcastTarget = null,
   broadcastExcludedTargets = [],
   externalPaneSize = null,
   onManualResize = null,
@@ -337,7 +339,10 @@ const SplitLayout = ({
             statusBarIconTheme={statusBarIconTheme}
             isBroadcastActive={isBroadcastActive}
             onBroadcastData={onBroadcastData}
+            onToggleBroadcast={onToggleBroadcast}
+            onToggleBroadcastTarget={onToggleBroadcastTarget}
             broadcastExcludedTargets={broadcastExcludedTargets}
+            isSplit={true}
           />
         </div>
       );
@@ -362,6 +367,8 @@ const SplitLayout = ({
           path={nodePath}
           isBroadcastActive={isBroadcastActive}
           onBroadcastData={onBroadcastData}
+          onToggleBroadcast={onToggleBroadcast}
+          onToggleBroadcastTarget={onToggleBroadcastTarget}
           broadcastExcludedTargets={broadcastExcludedTargets}
           style={{ '--terminal-theme-splitter': effectiveSplitterColor }}
         />
@@ -568,7 +575,10 @@ const SplitLayout = ({
             statusBarIconTheme={statusBarIconTheme}
             isBroadcastActive={isBroadcastActive}
             onBroadcastData={onBroadcastData}
+            onToggleBroadcast={onToggleBroadcast}
+            onToggleBroadcastTarget={onToggleBroadcastTarget}
             broadcastExcludedTargets={broadcastExcludedTargets}
+            isSplit={true}
             onDrop={(e) => {
               // Manejador de Drop para split
               const draggedNode = (window.draggedConnectionNodeRef && window.draggedConnectionNodeRef.current) ||
