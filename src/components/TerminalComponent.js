@@ -557,7 +557,18 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     }, []); // Solo al montar
 
     return (
-        <>
+        <div
+            className="terminal-component-wrapper"
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                width: '100%',
+                backgroundColor: isIntegrated ? 'transparent' : (theme?.background || '#1e1e1e'),
+                '--terminal-bg': theme?.background || '#1e1e1e',
+                overflow: 'hidden'
+            }}
+        >
             <div
                 className={`terminal-outer-padding ${isIntegrated ? 'integrated-terminal' : ''} ${isBroadcastActive && !broadcastExcludedTargets?.includes(tabId) ? 'broadcast-active' : ''}`}
                 style={{
@@ -572,8 +583,9 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     position: 'relative',
                     padding: 0,
                     margin: 0,
-                    backgroundColor: isIntegrated ? 'transparent' : (theme?.background || '#000'), // Usar transparente solo si es integrado
-                    // Configurar variables CSS para que los scrollbars coincidan con el tema del terminal
+                    marginBottom: isIntegrated ? 0 : '-1px', // Solapamiento de 1px para ocultar huecos de renderizado
+                    zIndex: isIntegrated ? 0 : 1,
+                    backgroundColor: isIntegrated ? 'transparent' : (theme?.background || 'var(--terminal-bg)'),
                     '--terminal-bg': theme?.background || 'transparent',
                     '--terminal-fg': theme?.foreground || 'inherit',
                     '--terminal-scrollbar-thumb': theme?.brightBlack || theme?.selectionBackground || '#555555',
@@ -586,16 +598,16 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     ref={terminalRef}
                     style={{
                         width: '100%',
-                        height: '100%',
+                        flex: 1,
                         minHeight: 0,
                         overflow: 'hidden',
-                        background: isIntegrated ? 'transparent' : (theme?.background || 'inherit'),
-                        backgroundColor: isIntegrated ? 'transparent' : (theme?.background || 'inherit') // CR??TICO: Asegurar que el fondo coincida tambi??n aqu??
+                        background: isIntegrated ? 'transparent' : (theme?.background || 'var(--terminal-bg)'),
+                        backgroundColor: isIntegrated ? 'transparent' : (theme?.background || 'var(--terminal-bg)')
                     }}
                 />
             </div>
             {!hideStatusBar && <StatusBar stats={{ ...stats, cpuHistory: cpuHistory }} active={active} statusBarIconTheme={statusBarIconTheme} />}
-        </>
+        </div>
     );
 });
 

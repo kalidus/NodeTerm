@@ -2,7 +2,7 @@
 
 /* Añade un margen interno al área del terminal para que el texto no esté pegado a los bordes */
 .xterm-viewport {
-  padding: 2px !important;
+  padding: 0 !important;
   /* Asegura que el padding no afecte al cálculo de tamaño del addon 'fit' */
   box-sizing: border-box !important;
 }
@@ -14,6 +14,8 @@
   padding: 0 !important;
   margin: 0 !important;
   box-sizing: border-box !important;
+  border: none !important;
+  outline: none !important;
 }
 
 /* Solo aplicar transparencia si es un terminal integrado */
@@ -219,11 +221,13 @@
 .terminal-outer-padding .xterm-viewport,
 .terminal-outer-padding .xterm {
   box-sizing: border-box !important;
+  background-color: transparent !important;
 }
 
 .terminal-outer-padding {
-  padding: 10px 10px 10px 10px !important;
+  padding: 10px 10px 0 10px !important;
   box-sizing: border-box !important;
+  background-color: var(--terminal-bg, #1e1e1e) !important;
 }
 
 /* Visual feedback for broadcast active state */

@@ -1504,59 +1504,62 @@ const MainContentArea = ({
                 )}
 
                 {/* SIEMPRE renderizar TODAS las pestañas para preservar conexiones SSH */}
-                {[...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs].map((tab) => {
-                  const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
-                  const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
-                  const isActiveTab = isInActiveGroup && tabIndexInActiveGroup === activeTabIndex;
+                {(() => {
+                  const terminalTheme = memoizedContentRendererProps?.terminalTheme;
+                  return [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs].map((tab) => {
+                    const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
+                    const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
+                    const isActiveTab = isInActiveGroup && tabIndexInActiveGroup === activeTabIndex;
 
-                  return (
-                    <div
-                      key={tab.key}
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        height: '100%',
-                        width: '100%',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        visibility: isActiveTab ? 'visible' : 'hidden',
-                        zIndex: isActiveTab ? 1 : 0,
-                        pointerEvents: isActiveTab ? 'auto' : 'none',
-                        background: (tab.type === TAB_TYPES.HOME && isActiveTab) ? localTerminalBg : undefined
-                      }}
-                    >
-                      <TabContentRenderer
-                        tab={tab}
-                        isActiveTab={isActiveTab}
-                        // Props memoizadas
-                        {...memoizedContentRendererProps}
-                        // Terminal props (específicas)
-                        sshStatsByTabId={sshStatsByTabId}
-                        getAllTabs={getAllTabs}
-                      />
-                      {/* SSH System Monitor: right-side panel inside per-tab absolute div */}
-                      {(tab.type === 'terminal' || tab.type === 'local-terminal') && sshSystemMonitorTabId === tab.key && (
-                        <SSHSystemMonitorPanel
-                          tabId={tab.key}
+                    return (
+                      <div
+                        key={tab.key}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          visibility: isActiveTab ? 'visible' : 'hidden',
+                          zIndex: isActiveTab ? 1 : 0,
+                          pointerEvents: isActiveTab ? 'auto' : 'none',
+                          background: (tab.type === TAB_TYPES.HOME && isActiveTab) ? localTerminalBg : (tab.type === 'terminal' ? (terminalTheme?.theme?.background || '#1e1e1e') : 'transparent')
+                        }}
+                      >
+                        <TabContentRenderer
                           tab={tab}
-                          stats={sshStatsByTabId?.[tab.key] || {}}
-                          onClose={() => setSshSystemMonitorTabId(null)}
+                          isActiveTab={isActiveTab}
+                          // Props memoizadas
+                          {...memoizedContentRendererProps}
+                          // Terminal props (específicas)
+                          sshStatsByTabId={sshStatsByTabId}
+                          getAllTabs={getAllTabs}
                         />
-                      )}
+                        {/* SSH System Monitor: right-side panel inside per-tab absolute div */}
+                        {(tab.type === 'terminal' || tab.type === 'local-terminal') && sshSystemMonitorTabId === tab.key && (
+                          <SSHSystemMonitorPanel
+                            tabId={tab.key}
+                            tab={tab}
+                            stats={sshStatsByTabId?.[tab.key] || {}}
+                            onClose={() => setSshSystemMonitorTabId(null)}
+                          />
+                        )}
 
-                      {/* SSH File Explorer: right-side panel inside per-tab absolute div */}
-                      {tab.type === 'terminal' && sshFileExplorerTabId === tab.key && (
-                        <SSHFileExplorerPanel
-                          tabId={tab.key}
-                          tab={tab}
-                          sshConfig={tab.sshConfig}
-                          onClose={() => setSshFileExplorerTabId(null)}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
+                        {/* SSH File Explorer: right-side panel inside per-tab absolute div */}
+                        {tab.type === 'terminal' && sshFileExplorerTabId === tab.key && (
+                          <SSHFileExplorerPanel
+                            tabId={tab.key}
+                            tab={tab}
+                            sshConfig={tab.sshConfig}
+                            onClose={() => setSshFileExplorerTabId(null)}
+                          />
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           ) : (
