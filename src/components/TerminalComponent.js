@@ -642,9 +642,9 @@ const TerminalComponent = forwardRef(({
                         gap: '10px',
                         padding: '6px 12px',
                         borderRadius: '10px',
-                        background: 'rgba(15, 15, 15, 0.6)',
+                        background: theme?.background ? `${theme.background}99` : 'rgba(15, 15, 15, 0.6)',
                         backdropFilter: 'blur(12px)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        border: `1px solid ${theme?.foreground ? `${theme.foreground}15` : 'rgba(255, 255, 255, 0.08)'}`,
                         boxShadow: '0 4px 15px rgba(0, 0, 0, 0.4)',
                         opacity: 0.2, // Very low opacity when not hovered
                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -654,64 +654,22 @@ const TerminalComponent = forwardRef(({
                         onMouseEnter={(e) => {
                             e.currentTarget.style.opacity = '1';
                             e.currentTarget.style.transform = 'translateY(1px)';
-                            e.currentTarget.style.background = 'rgba(25, 25, 25, 0.8)';
+                            if (theme?.background) {
+                                e.currentTarget.style.background = `${theme.background}cc`;
+                            } else {
+                                e.currentTarget.style.background = 'rgba(25, 25, 25, 0.8)';
+                            }
                         }}
                         onMouseLeave={(e) => {
                             e.currentTarget.style.opacity = '0.2';
                             e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.background = 'rgba(15, 15, 15, 0.6)';
+                            if (theme?.background) {
+                                e.currentTarget.style.background = `${theme.background}99`;
+                            } else {
+                                e.currentTarget.style.background = 'rgba(15, 15, 15, 0.6)';
+                            }
                         }}
                     >
-                        {/* Recording Button */}
-                        <button
-                            onClick={(e) => { e.stopPropagation(); isRecording ? onStopRecording(tabId) : onStartRecording(tabId); }}
-                            title={isRecording ? "Detener Grabación" : "Iniciar Grabación"}
-                            className="quick-action-btn"
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: isRecording ? '#ff4d4d' : 'rgba(255, 255, 255, 0.8)',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '5px',
-                                borderRadius: '6px',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.color = isRecording ? '#ff4d4d' : '#fff'; }}
-                            onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = isRecording ? '#ff4d4d' : 'rgba(255, 255, 255, 0.8)'; }}
-                        >
-                            <i className={`pi ${isRecording ? 'pi-stop-circle' : 'pi-circle-fill'}`} style={{ animation: isRecording ? 'pulse-red 2s infinite' : 'none' }} />
-                        </button>
-
-                        {/* Broadcast Button */}
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onToggleBroadcast && onToggleBroadcast(); }}
-                            title={isBroadcastActive ? "Desactivar Broadcast" : "Activar Broadcast"}
-                            className="quick-action-btn"
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: isBroadcastActive ? '#4da6ff' : 'rgba(255, 255, 255, 0.8)',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '5px',
-                                borderRadius: '6px',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.color = '#4da6ff'; }}
-                            onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = isBroadcastActive ? '#4da6ff' : 'rgba(255, 255, 255, 0.8)'; }}
-                        >
-                            <i className="pi pi-megaphone" />
-                        </button>
-
-                        <div style={{ width: '1px', height: '16px', background: 'rgba(255, 255, 255, 0.1)', alignSelf: 'center', margin: '0 2px' }} />
-
                         {/* System Monitor Button */}
                         <button
                             onClick={(e) => { e.stopPropagation(); onShowSystemMonitor && onShowSystemMonitor(); }}
@@ -720,7 +678,7 @@ const TerminalComponent = forwardRef(({
                             style={{
                                 background: 'transparent',
                                 border: 'none',
-                                color: 'rgba(255, 255, 255, 0.8)',
+                                color: theme?.foreground ? `${theme.foreground}cc` : 'rgba(255, 255, 255, 0.8)',
                                 cursor: 'pointer',
                                 fontSize: '14px',
                                 display: 'flex',
@@ -730,8 +688,14 @@ const TerminalComponent = forwardRef(({
                                 borderRadius: '6px',
                                 transition: 'all 0.2s'
                             }}
-                            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.color = '#fff'; }}
-                            onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)'; }}
+                            onMouseOver={(e) => {
+                                e.currentTarget.style.background = theme?.foreground ? `${theme.foreground}15` : 'rgba(255, 255, 255, 0.1)';
+                                e.currentTarget.style.color = theme?.foreground || '#fff';
+                            }}
+                            onMouseOut={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                                e.currentTarget.style.color = theme?.foreground ? `${theme.foreground}cc` : 'rgba(255, 255, 255, 0.8)';
+                            }}
                         >
                             <i className="pi pi-chart-bar" />
                         </button>
@@ -744,7 +708,7 @@ const TerminalComponent = forwardRef(({
                             style={{
                                 background: 'transparent',
                                 border: 'none',
-                                color: 'rgba(255, 255, 255, 0.8)',
+                                color: theme?.foreground ? `${theme.foreground}cc` : 'rgba(255, 255, 255, 0.8)',
                                 cursor: 'pointer',
                                 fontSize: '14px',
                                 display: 'flex',
@@ -754,10 +718,84 @@ const TerminalComponent = forwardRef(({
                                 borderRadius: '6px',
                                 transition: 'all 0.2s'
                             }}
-                            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.color = '#fff'; }}
-                            onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)'; }}
+                            onMouseOver={(e) => {
+                                e.currentTarget.style.background = theme?.foreground ? `${theme.foreground}15` : 'rgba(255, 255, 255, 0.1)';
+                                e.currentTarget.style.color = theme?.foreground || '#fff';
+                            }}
+                            onMouseOut={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                                e.currentTarget.style.color = theme?.foreground ? `${theme.foreground}cc` : 'rgba(255, 255, 255, 0.8)';
+                            }}
                         >
                             <i className="pi pi-folder-open" />
+                        </button>
+
+                        <div style={{
+                            width: '1px',
+                            height: '16px',
+                            background: theme?.foreground ? `${theme.foreground}22` : 'rgba(255, 255, 255, 0.1)',
+                            alignSelf: 'center',
+                            margin: '0 2px'
+                        }} />
+
+                        {/* Recording Button */}
+                        <button
+                            onClick={(e) => { e.stopPropagation(); isRecording ? onStopRecording(tabId) : onStartRecording(tabId); }}
+                            title={isRecording ? "Detener Grabación" : "Iniciar Grabación"}
+                            className="quick-action-btn"
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: isRecording ? '#ff4d4d' : (theme?.foreground ? `${theme.foreground}cc` : 'rgba(255, 255, 255, 0.8)'),
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '5px',
+                                borderRadius: '6px',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseOver={(e) => {
+                                e.currentTarget.style.background = theme?.foreground ? `${theme.foreground}15` : 'rgba(255, 255, 255, 0.1)';
+                                e.currentTarget.style.color = isRecording ? '#ff4d4d' : (theme?.foreground || '#fff');
+                            }}
+                            onMouseOut={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                                e.currentTarget.style.color = isRecording ? '#ff4d4d' : (theme?.foreground ? `${theme.foreground}cc` : 'rgba(255, 255, 255, 0.8)');
+                            }}
+                        >
+                            <i className={`pi ${isRecording ? 'pi-stop-circle' : 'pi-circle-fill'}`} style={{ animation: isRecording ? 'pulse-red 2s infinite' : 'none' }} />
+                        </button>
+
+                        {/* Broadcast Button */}
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onToggleBroadcast && onToggleBroadcast(); }}
+                            title={isBroadcastActive ? "Desactivar Broadcast" : "Activar Broadcast"}
+                            className="quick-action-btn"
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: isBroadcastActive ? '#4da6ff' : (theme?.foreground ? `${theme.foreground}cc` : 'rgba(255, 255, 255, 0.8)'),
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '5px',
+                                borderRadius: '6px',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseOver={(e) => {
+                                e.currentTarget.style.background = theme?.foreground ? `${theme.foreground}15` : 'rgba(255, 255, 255, 0.1)';
+                                e.currentTarget.style.color = '#4da6ff';
+                            }}
+                            onMouseOut={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                                e.currentTarget.style.color = isBroadcastActive ? '#4da6ff' : (theme?.foreground ? `${theme.foreground}cc` : 'rgba(255, 255, 255, 0.8)');
+                            }}
+                        >
+                            <i className="pi pi-megaphone" />
                         </button>
 
                         {/* CSS for pulse animation */}
