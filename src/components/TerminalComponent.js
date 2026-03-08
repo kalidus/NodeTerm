@@ -771,8 +771,8 @@ const TerminalComponent = forwardRef(({
                             </button>
                         )}
 
-                        {/* Broadcast Button - Always Visible */}
-                        {(() => {
+                        {/* Broadcast Button - Only Visible in Split Mode */}
+                        {isSplit && (() => {
                             const isExcluded = broadcastExcludedTargets && broadcastExcludedTargets.includes(tabId);
                             // Un terminal está "emitiendo" si el broadcast global está ON y este terminal no está excluido
                             const isActiveForThisTerminal = isBroadcastActive && (isSplit ? !isExcluded : true);
