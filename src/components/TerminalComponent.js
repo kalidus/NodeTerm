@@ -581,7 +581,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     minHeight: 0,
                     overflow: 'hidden',
                     position: 'relative',
-                    padding: 0,
+                    padding: '10px', // Padding ajustado para evitar huecos grandes
                     margin: 0,
                     marginBottom: isIntegrated ? 0 : '-1px', // Solapamiento de 1px para ocultar huecos de renderizado
                     zIndex: isIntegrated ? 0 : 1,
@@ -597,7 +597,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 <div
                     ref={terminalRef}
                     style={{
-                        padding: '10px 10px 0 10px',
+                        padding: 0,
                         width: '100%',
                         flex: 1,
                         minHeight: 0,

@@ -468,6 +468,8 @@ const WSLTerminal = forwardRef(({
             <div
                 className="terminal-outer-padding"
                 style={{
+                    display: 'flex',
+                    flexDirection: 'column',
                     flex: 1,
                     width: '100%',
                     minWidth: 0,
@@ -475,6 +477,7 @@ const WSLTerminal = forwardRef(({
                     overflow: 'hidden',
                     position: 'relative',
                     margin: 0,
+                    padding: '10px',
                     marginBottom: isIntegrated ? 0 : '-1px', // Solapamiento de 1px para ocultar huecos de renderizado
                     zIndex: isIntegrated ? 0 : 1,
                     background: isIntegrated ? 'transparent' : (theme?.background || '#0c0c0c'),
@@ -485,7 +488,7 @@ const WSLTerminal = forwardRef(({
                 <div
                     ref={terminalRef}
                     style={{
-                        padding: '10px 10px 0 10px',
+                        padding: 0,
                         width: '100%',
                         height: '100%',
                         minWidth: 0,
