@@ -1309,7 +1309,7 @@ const HomeTab = ({
         overflow: 'hidden',
         display: terminalState === 'minimized' ? 'none' : 'flex',
         flexDirection: 'column',
-        minHeight: '100%'
+        minHeight: 0,
       }}>
         <TabbedTerminal
           ref={tabbedTerminalRef}

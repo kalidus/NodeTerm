@@ -303,7 +303,7 @@ const DockerTerminal = forwardRef(({
                     position: 'relative',
                     margin: 0,
                     padding: '10px',
-                    marginBottom: isIntegrated ? 0 : '-1px', // Solapamiento de 1px para ocultar huecos de renderizado
+                    marginBottom: (isIntegrated || hideStatusBar) ? 0 : '-1px', // Solapamiento de 1px para ocultar huecos de renderizado, solo si hay StatusBar
                     zIndex: isIntegrated ? 0 : 1,
                     background: isIntegrated ? 'transparent' : (theme?.background || '#0c1a25'),
                     backgroundColor: isIntegrated ? 'transparent' : (theme?.background || '#0c1a25'),

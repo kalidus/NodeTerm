@@ -583,7 +583,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     position: 'relative',
                     padding: '10px', // Padding ajustado para evitar huecos grandes
                     margin: 0,
-                    marginBottom: isIntegrated ? 0 : '-1px', // Solapamiento de 1px para ocultar huecos de renderizado
+                    marginBottom: (isIntegrated || hideStatusBar) ? 0 : '-1px', // Solapamiento de 1px para ocultar huecos de renderizado, solo si hay StatusBar
                     zIndex: isIntegrated ? 0 : 1,
                     backgroundColor: isIntegrated ? 'transparent' : (theme?.background || 'var(--terminal-bg)'),
                     '--terminal-bg': theme?.background || 'transparent',
