@@ -146,6 +146,7 @@ const ConnectionHistory = ({
 	terminalOpacity = 1.0,
 	onTerminalOpacityChange = () => { },
 	onToggleTerminalVisibility,
+	onSwitchTerminal,
 	children
 }) => {
 	// Helper para ajustar la opacidad de los colores (Hex o RGBA)
@@ -182,7 +183,10 @@ const ConnectionHistory = ({
 	const uiThemePickerRef = useRef(null);
 	const frameStylePickerRef = useRef(null);
 	const terminalOpacityOverlayRef = useRef(null);
+	const terminalSwitcherOverlayRef = useRef(null);
 	const [currentUITheme, setCurrentUITheme] = useState(() => localStorage.getItem('ui_theme') || 'Light');
+	const [availableTerminals, setAvailableTerminals] = useState([]);
+	const [isDetectingTerminals, setIsDetectingTerminals] = useState(false);
 
 	const handleThemeSelect = (themeName) => {
 		if (setLocalLinuxTerminalTheme) {
@@ -250,6 +254,58 @@ const ConnectionHistory = ({
 		window.addEventListener('storage', handleStorageChange);
 		return () => window.removeEventListener('storage', handleStorageChange);
 	}, [masterKey, secureStorage]);
+
+	// Detectar terminales disponibles para el selector
+	useEffect(() => {
+		if (!terminalView) return;
+
+		const detectTerminals = async () => {
+			setIsDetectingTerminals(true);
+			try {
+				const platform = window.electron?.platform || 'unknown';
+				const shells = [];
+
+				if (platform === 'win32') {
+					shells.push({ label: 'PowerShell', value: 'powershell', icon: 'pi-desktop', color: '#4fc3f7' });
+
+					// WSL
+					if (window.electron && window.electron.ipcRenderer) {
+						const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
+						if (Array.isArray(distributions)) {
+							distributions.forEach(d => {
+								shells.push({
+									label: d.label || d.name,
+									value: d.name,
+									type: d.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro',
+									distroInfo: d,
+									icon: d.category === 'ubuntu' ? 'pi-server' : 'pi-server',
+									color: '#8ae234'
+								});
+							});
+						}
+					}
+
+					// Cygwin
+					try {
+						const result = await window.electronAPI.invoke('cygwin:detect');
+						if (result && result.available) {
+							shells.push({ label: 'Cygwin', value: 'cygwin', icon: 'pi-server', color: '#FFC107' });
+						}
+					} catch (e) { /* ignore */ }
+				} else {
+					shells.push({ label: platform === 'darwin' ? 'macOS Terminal' : 'Linux Terminal', value: 'powershell', icon: 'pi-desktop', color: '#4fc3f7' });
+				}
+
+				setAvailableTerminals(shells);
+			} catch (err) {
+				console.error('Error detecting terminals:', err);
+			} finally {
+				setIsDetectingTerminals(false);
+			}
+		};
+
+		detectTerminals();
+	}, [terminalView]);
 
 	// Funci\u00F3n para encontrar todas las conexiones en el \u00E1rbol
 	const findAllSidebarConnections = useCallback((nodesList) => {
@@ -2910,7 +2966,24 @@ const ConnectionHistory = ({
 							onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
 							onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
 						/>
-						<i className="pi pi-th-large" style={{ fontSize: '0.9rem', color: terminalTheme.foreground || '#c9d1d9', opacity: 0.3, cursor: 'not-allowed', padding: '4px' }} title="Split Terminal (Próximamente)" />
+						<i
+							className="pi pi-th-large"
+							style={{
+								fontSize: '0.9rem',
+								color: terminalTheme.foreground || '#c9d1d9',
+								opacity: isDetectingTerminals ? 0.3 : 0.6,
+								cursor: isDetectingTerminals ? 'wait' : 'pointer',
+								padding: '4px',
+								transition: 'all 0.2s'
+							}}
+							title="Cambiar terminal integrado"
+							onClick={(e) => {
+								e.stopPropagation();
+								terminalSwitcherOverlayRef.current?.toggle(e);
+							}}
+							onMouseEnter={(e) => { if (!isDetectingTerminals) e.currentTarget.style.opacity = '1'; }}
+							onMouseLeave={(e) => { if (!isDetectingTerminals) e.currentTarget.style.opacity = '0.6'; }}
+						/>
 					</div>
 				</div>
 
@@ -3170,6 +3243,70 @@ const ConnectionHistory = ({
 						onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
 					>
 						Gestión completa de temas...
+					</div>
+				</div>
+			</OverlayPanel>
+
+			<OverlayPanel
+				ref={terminalSwitcherOverlayRef}
+				style={{
+					width: '240px',
+					backgroundColor: 'var(--ui-dialog-bg, #1e1e1e)',
+					border: '1px solid var(--ui-content-border, #444)',
+					boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+					borderRadius: '8px'
+				}}
+				className="theme-picker-overlay"
+			>
+				<div style={{ padding: '8px' }}>
+					<div style={{
+						padding: '8px 12px',
+						fontWeight: '600',
+						fontSize: '14px',
+						color: 'var(--ui-dialog-text)',
+						borderBottom: '1px solid var(--ui-content-border, #444)',
+						marginBottom: '8px',
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'space-between'
+					}}>
+						<span>Seleccionar Terminal</span>
+						<i className="pi pi-th-large" style={{ opacity: 0.7 }} />
+					</div>
+					<div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+						{availableTerminals.length === 0 ? (
+							<div style={{ padding: '20px', textAlign: 'center', opacity: 0.5, fontSize: '0.8rem' }}>
+								{isDetectingTerminals ? 'Detectando shell...' : 'No se detectaron terminales'}
+							</div>
+						) : (
+							availableTerminals.map((shell, idx) => (
+								<div
+									key={`${shell.value}-${idx}`}
+									onClick={() => {
+										if (onSwitchTerminal) {
+											onSwitchTerminal(shell.type || shell.value, shell.distroInfo);
+										}
+										terminalSwitcherOverlayRef.current?.hide();
+									}}
+									style={{
+										display: 'flex',
+										alignItems: 'center',
+										gap: '12px',
+										padding: '10px 12px',
+										cursor: 'pointer',
+										borderRadius: '6px',
+										transition: 'all 0.2s',
+										margin: '2px 0'
+									}}
+									className="theme-picker-item"
+									onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
+									onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+								>
+									<i className={`pi ${shell.icon}`} style={{ color: shell.color, fontSize: '1rem' }} />
+									<span style={{ fontSize: '13px', color: 'var(--ui-dialog-text)', flex: 1 }}>{shell.label}</span>
+								</div>
+							))
+						)}
 					</div>
 				</div>
 			</OverlayPanel>

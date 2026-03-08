@@ -1121,6 +1121,11 @@ const HomeTab = ({
                   setTerminalFrameStyle={setTerminalFrameStyle}
                   terminalOpacity={terminalOpacity}
                   onTerminalOpacityChange={setTerminalOpacity}
+                  onSwitchTerminal={(type, info) => {
+                    if (embeddedTabbedTerminalRef.current?.addTerminalTab) {
+                      embeddedTabbedTerminalRef.current.addTerminalTab(type, info);
+                    }
+                  }}
                 >
                   {/* Terminal body - always mounted to preserve state */}
                   <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'transparent' }}>
