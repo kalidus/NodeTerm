@@ -713,10 +713,11 @@ const MainContentArea = ({
     buttonsContainer.style.cssText = `
       display: flex;
       align-items: center;
-      gap: 2px;
+      gap: 1px;
       flex-shrink: 0;
-      margin-left: 10px;
-      align-self: center;
+      margin-left: 4px;
+      margin-bottom: 1px;
+      align-self: flex-end;
     `;
 
     // Botón +
