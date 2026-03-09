@@ -2,6 +2,13 @@
   flex-shrink: 0 !important; /* Solución preventiva: Evita que el componente TabView se estire */
 }
 
+/* Integrar la barra de pestañas principal con el marco / fondo del área superior */
+.main-tab-view.p-tabview .p-tabview-nav {
+  background: transparent !important;
+  border-bottom: none !important;
+  margin-top: 0 !important;
+}
+
 /* Estilos para la barra de pestañas principal */
 .p-tabview .p-tabview-nav {
   position: relative;

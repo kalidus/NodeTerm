@@ -6,29 +6,32 @@ const TerminalFrame = ({
     title = '',
     headerExtra = null,
     showControls = true,
+    hideHeader = false,
     className = '',
     contentClassName = '',
     id
 }) => {
     return (
         <div className={`terminal-frame ${className}`} id={id}>
-            <div className="terminal-frame-header">
-                {showControls && (
-                    <div className="terminal-frame-controls">
-                        <div className="terminal-frame-dot red" />
-                        <div className="terminal-frame-dot yellow" />
-                        <div className="terminal-frame-dot green" />
-                    </div>
-                )}
+            {!hideHeader && (
+                <div className="terminal-frame-header">
+                    {showControls && (
+                        <div className="terminal-frame-controls">
+                            <div className="terminal-frame-dot red" />
+                            <div className="terminal-frame-dot yellow" />
+                            <div className="terminal-frame-dot green" />
+                        </div>
+                    )}
 
-                {title && <div className="terminal-frame-title">{title}</div>}
+                    {title && <div className="terminal-frame-title">{title}</div>}
 
-                {headerExtra && (
-                    <div className="terminal-frame-header-extra">
-                        {headerExtra}
-                    </div>
-                )}
-            </div>
+                    {headerExtra && (
+                        <div className="terminal-frame-header-extra">
+                            {headerExtra}
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div className={`terminal-frame-content ${contentClassName}`}>
                 {children}

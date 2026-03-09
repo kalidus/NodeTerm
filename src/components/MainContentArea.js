@@ -1228,7 +1228,7 @@ const MainContentArea = ({
             background: 'transparent'
           }}
         >
-          <TerminalFrame contentClassName="main-content-frame-content">
+          <TerminalFrame hideHeader={true} contentClassName="main-content-frame-content">
             {(homeTabs.length > 0 || sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
               <div style={{
                 width: '100%',
