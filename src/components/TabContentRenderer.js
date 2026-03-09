@@ -1245,7 +1245,7 @@ const TabContentRenderer = React.memo(({
         path={[]}
         openInSplit={openInSplit}
         isBroadcastActive={tab.isBroadcastActive || false}
-        onBroadcastData={handleBroadcastData ? (data) => handleBroadcastData(tab.key, data) : undefined}
+        onBroadcastData={handleBroadcastData}
         onToggleBroadcast={() => onToggleBroadcast && onToggleBroadcast(tab.key)}
         onToggleBroadcastTarget={(targetId) => handleToggleBroadcastTarget && handleToggleBroadcastTarget(tab.key, targetId)}
         broadcastExcludedTargets={tab.broadcastExcludedTargets || []}
@@ -1331,6 +1331,8 @@ const TabContentRenderer = React.memo(({
         fontSize={dockerFontSize}
         theme={dockerTheme}
         dockerInfo={tab.distroInfo}
+        onBroadcastData={handleBroadcastData}
+        isBroadcastActive={tab.isBroadcastActive}
       />
     );
   }
@@ -1350,6 +1352,8 @@ const TabContentRenderer = React.memo(({
           fontFamily={localFontFamily}
           fontSize={localFontSize}
           theme={powerShellTheme}
+          onBroadcastData={handleBroadcastData}
+          isBroadcastActive={tab.isBroadcastActive}
         />
       );
     }
@@ -1366,6 +1370,8 @@ const TabContentRenderer = React.memo(({
           fontFamily={localFontFamily}
           fontSize={localFontSize}
           theme={linuxTheme}
+          onBroadcastData={handleBroadcastData}
+          isBroadcastActive={tab.isBroadcastActive}
         />
       );
     }
@@ -1383,6 +1389,8 @@ const TabContentRenderer = React.memo(({
           fontSize={localFontSize}
           ubuntuInfo={tab.distroInfo}
           theme={linuxTheme}
+          onBroadcastData={handleBroadcastData}
+          isBroadcastActive={tab.isBroadcastActive}
         />
       );
     }
@@ -1398,6 +1406,8 @@ const TabContentRenderer = React.memo(({
           fontFamily={localFontFamily}
           fontSize={localFontSize}
           theme={linuxTheme}
+          onBroadcastData={handleBroadcastData}
+          isBroadcastActive={tab.isBroadcastActive}
         />
       );
     }
@@ -1412,6 +1422,8 @@ const TabContentRenderer = React.memo(({
         fontFamily={localFontFamily}
         fontSize={localFontSize}
         theme={powerShellTheme}
+        onBroadcastData={handleBroadcastData}
+        isBroadcastActive={tab.isBroadcastActive}
       />
     );
   }
@@ -1622,7 +1634,7 @@ const TabContentRenderer = React.memo(({
         }}
         handleToggleBroadcastTarget={handleToggleBroadcastTarget}
         getAllTabs={getAllTabs}
-        onBroadcastData={handleBroadcastData ? (data) => handleBroadcastData(tab.key, data) : undefined}
+        onBroadcastData={handleBroadcastData}
       />
     );
   }

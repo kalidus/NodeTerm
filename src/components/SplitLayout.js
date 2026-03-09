@@ -340,8 +340,8 @@ const SplitLayout = ({
             isBroadcastActive={isBroadcastActive}
             onBroadcastData={onBroadcastData}
             onToggleBroadcast={onToggleBroadcast}
-            onToggleBroadcastTarget={onToggleBroadcastTarget}
-            broadcastExcludedTargets={broadcastExcludedTargets}
+              onToggleBroadcastTarget={onToggleBroadcastTarget}
+              broadcastExcludedTargets={broadcastExcludedTargets}
             isSplit={true}
           />
         </div>
@@ -368,8 +368,8 @@ const SplitLayout = ({
           isBroadcastActive={isBroadcastActive}
           onBroadcastData={onBroadcastData}
           onToggleBroadcast={onToggleBroadcast}
-          onToggleBroadcastTarget={onToggleBroadcastTarget}
-          broadcastExcludedTargets={broadcastExcludedTargets}
+              onToggleBroadcastTarget={onToggleBroadcastTarget}
+              broadcastExcludedTargets={broadcastExcludedTargets}
           style={{ '--terminal-theme-splitter': effectiveSplitterColor }}
         />
       );
@@ -576,8 +576,8 @@ const SplitLayout = ({
             isBroadcastActive={isBroadcastActive}
             onBroadcastData={onBroadcastData}
             onToggleBroadcast={onToggleBroadcast}
-            onToggleBroadcastTarget={onToggleBroadcastTarget}
-            broadcastExcludedTargets={broadcastExcludedTargets}
+              onToggleBroadcastTarget={onToggleBroadcastTarget}
+              broadcastExcludedTargets={broadcastExcludedTargets}
             isSplit={true}
             onDrop={(e) => {
               // Manejador de Drop para split
@@ -1318,6 +1318,11 @@ const SplitLayout = ({
               stats={sshStatsByTabId?.[leftTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
+              isBroadcastActive={isBroadcastActive}
+              onBroadcastData={onBroadcastData}
+              onToggleBroadcast={onToggleBroadcast}
+              onToggleBroadcastTarget={onToggleBroadcastTarget}
+              broadcastExcludedTargets={broadcastExcludedTargets}
             />
           )}
         </div>
@@ -1379,6 +1384,11 @@ const SplitLayout = ({
               stats={sshStatsByTabId?.[rightTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
+              isBroadcastActive={isBroadcastActive}
+              onBroadcastData={onBroadcastData}
+              onToggleBroadcast={onToggleBroadcast}
+              onToggleBroadcastTarget={onToggleBroadcastTarget}
+              broadcastExcludedTargets={broadcastExcludedTargets}
             />
           )}
         </div>
@@ -1498,6 +1508,8 @@ const SplitLayout = ({
               isBroadcastActive={isBroadcastActive}
               onBroadcastData={onBroadcastData}
               broadcastExcludedTargets={broadcastExcludedTargets}
+              onToggleBroadcast={onToggleBroadcast}
+              onToggleBroadcastTarget={onToggleBroadcastTarget}
             />
           )}
         </div>
@@ -1566,6 +1578,8 @@ const SplitLayout = ({
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}
               onBroadcastData={onBroadcastData}
+              onToggleBroadcast={onToggleBroadcast}
+              onToggleBroadcastTarget={onToggleBroadcastTarget}
               broadcastExcludedTargets={broadcastExcludedTargets}
             />
           )}
@@ -1655,6 +1669,8 @@ const SplitLayout = ({
               isBroadcastActive={isBroadcastActive}
               onBroadcastData={onBroadcastData}
               broadcastExcludedTargets={broadcastExcludedTargets}
+              onToggleBroadcast={onToggleBroadcast}
+              onToggleBroadcastTarget={onToggleBroadcastTarget}
             />
           )}
         </div>
@@ -1706,12 +1722,15 @@ const SplitLayout = ({
               fontSize={fontSize}
               theme={theme}
               onContextMenu={onContextMenu}
+              active={true}
               stats={sshStatsByTabId?.[rightTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}
               onBroadcastData={onBroadcastData}
               broadcastExcludedTargets={broadcastExcludedTargets}
+              onToggleBroadcast={onToggleBroadcast}
+              onToggleBroadcastTarget={onToggleBroadcastTarget}
             />
           )}
         </div>

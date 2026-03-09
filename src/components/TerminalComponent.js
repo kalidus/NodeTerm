@@ -417,10 +417,15 @@ const TerminalComponent = forwardRef(({
                     }
                 }
 
+                // ✅ FIX: Siempre enviamos al backend propio para que no se "congele" el terminal
+                // si está excluido del broadcast o si el broadcast está activo pero el usuario escribe aquí.
+                window.electron.ipcRenderer.send('ssh:data', { tabId, data });
+
+                // ✅ FIX: Si el broadcast está activo, notificamos al gestor global
+                // Pasamos el tabId de origen para que handleBroadcastData pueda filtrarlo
+                // y evitar el eco (enviar dos veces al mismo terminal)
                 if (currentBroadcast && currentBroadcastFn) {
-                    currentBroadcastFn(data);
-                } else {
-                    window.electron.ipcRenderer.send('ssh:data', { tabId, data });
+                    currentBroadcastFn(tabId, data);
                 }
             });
 
