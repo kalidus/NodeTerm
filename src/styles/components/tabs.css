@@ -58,11 +58,11 @@
 
 /* Pestaña de inicio: ancho compacto para mostrar solo el ícono */
 .p-tabview .p-tabview-nav li.home-tab {
-  margin-right: 2px !important;
-  width: 46px !important;
-  min-width: 46px !important;
-  max-width: 46px !important;
-  flex: 0 0 46px !important;
+  margin-right: 0 !important;
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  flex: 0 0 42px !important;
 }
 
 /* El nav-link del home: igual altura que las demás, ícono centrado */
