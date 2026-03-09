@@ -693,7 +693,7 @@ const MainContentArea = ({
     return () => clearTimeout(timer);
   }, []);
 
-  // Efecto para añadir botones después de las pestañas usando DOM
+  // Efecto para añadir botones fijos a la derecha del nav container (fuera del área scrollable)
   useEffect(() => {
     const navContainer = tabsContainerRef.current;
     if (!navContainer) return;
@@ -701,25 +701,22 @@ const MainContentArea = ({
     const navList = navContainer.querySelector('.p-tabview-nav');
     if (!navList) return;
 
-    // Eliminar botones existentes si los hay para recrearlos
-    const existingButtons = navList.querySelector('.local-terminal-buttons');
+    // Eliminar botones existentes del navContainer
+    const existingButtons = navContainer.querySelector('.local-terminal-buttons');
     if (existingButtons) {
       existingButtons.remove();
     }
 
-    // Crear contenedor de botones
+    // Crear contenedor de botones (inline después de la última pestaña)
     const buttonsContainer = document.createElement('div');
     buttonsContainer.className = 'local-terminal-buttons';
     buttonsContainer.style.cssText = `
       display: flex;
       align-items: center;
       gap: 3px;
-      margin-left: 4px;
-      margin-right: 2px;
       flex-shrink: 0;
-      height: 26px;
-      padding-bottom: 0;
-      box-sizing: border-box;
+      margin-left: 6px;
+      align-self: center;
     `;
 
     // Botón +
@@ -745,14 +742,11 @@ const MainContentArea = ({
 
     plusButton.title = 'Nueva terminal local';
     plusButton.addEventListener('click', () => {
-      // Usar la configuración guardada; si no existe, último tipo local; luego fallback por plataforma
       const storedDefault = localStorage.getItem('nodeterm_default_local_terminal');
       const lastType = lastLocalTerminalTypeRef.current;
       const fallbackDefault = getDefaultTerminalFromConfig();
       let terminalTypeToUse = storedDefault || lastType || fallbackDefault;
-      console.log('Botón + presionado (barra superior). Tipo base:', terminalTypeToUse);
 
-      // Helper para localizar distro WSL por nombre/label (con o sin prefijo wsl-)
       const findDistro = (value) => {
         if (!value) return null;
         const normalized = value.startsWith('wsl-') ? value.replace('wsl-', '') : value;
@@ -765,22 +759,20 @@ const MainContentArea = ({
         );
       };
 
-      // Resolver docker o distro antes de crear
       if (terminalTypeToUse.startsWith('docker-')) {
         const containerName = terminalTypeToUse.replace('docker-', '');
         const container = dockerContainers.find(c => c.name === containerName);
         if (container) {
-          createLocalTerminalTab(terminalTypeToUse, { dockerContainer: container });
+          createLocalTerminalTabRef.current?.(terminalTypeToUse, { dockerContainer: container });
           return;
         }
       }
 
       const distro = findDistro(terminalTypeToUse);
       if (distro) {
-        // Forzar uso de info completa de la distro
-        createLocalTerminalTab(distro.name, distro);
+        createLocalTerminalTabRef.current?.(distro.name, distro);
       } else {
-        createLocalTerminalTab(terminalTypeToUse, null);
+        createLocalTerminalTabRef.current?.(terminalTypeToUse, null);
       }
     });
 
@@ -812,8 +804,9 @@ const MainContentArea = ({
 
     buttonsContainer.appendChild(plusButton);
     buttonsContainer.appendChild(dropdownButton);
+    // Insertar dentro de p-tabview-nav, después de la última pestaña
     navList.appendChild(buttonsContainer);
-  }, [filteredTabs, activeTabIndex, wslDistributions]); // Recrear botones cuando cambien las pestañas o distribuciones
+  }, [filteredTabs, activeTabIndex, wslDistributions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Función para crear una nueva pestaña de terminal local independiente
   const createLocalTerminalTab = (terminalType, distroInfo = null) => {

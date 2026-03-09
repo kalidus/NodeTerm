@@ -118,29 +118,30 @@
     color: var(--ui-sidebar-text, #fff) !important;
 }
 
-/* --- Marco principal: header (botones Mac) + barra de pestañas integrados --- */
-.terminal-frame.main-content-frame .terminal-frame-header {
-    background: var(--ui-content-bg, #1a1b26) !important;
-    border-bottom: none !important;
-    padding: 8px 10px 4px 14px;
-    min-height: 32px;
+/* --- Marco principal: nav container como única barra (dots + tabs + botones en una fila) --- */
+
+/* El nav container ocupa la misma altura que el header del sidebar (10px padding + 12px dots + 10px = 32px) */
+.terminal-frame.main-content-frame .p-tabview-nav-container {
+    height: 32px !important;
+    min-height: 32px !important;
     flex-shrink: 0;
+    background: var(--ui-content-bg, #1a1b26) !important;
+    border-bottom: 1px solid var(--ui-tabgroup-border, rgba(255, 255, 255, 0.06)) !important;
+    position: relative !important;
 }
 
-.terminal-frame.main-content-frame .terminal-frame-controls {
-    margin-right: 12px;
-}
-
+/* El nav ocupa todo el alto del container, con padding izquierdo para los dots */
 .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav {
-    position: relative;
+    height: 32px !important;
+    min-height: 32px !important;
     background: var(--ui-content-bg, #1a1b26) !important;
     border: none !important;
-    padding: 0 10px 6px 52px !important; /* espacio para los 3 puntos estilo mac */
-    margin-top: 0 !important;
-    border-bottom: 1px solid var(--ui-tabgroup-border, rgba(255, 255, 255, 0.06)) !important;
+    padding: 0 6px 0 52px !important;
+    border-bottom: none !important;
+    align-items: flex-end !important;
 }
 
-/* Puntos estilo mac integrados en la misma línea que las pestañas */
+/* Dots estilo mac en la misma línea que las pestañas, centrados verticalmente */
 .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav::before {
     content: '';
     position: absolute;
@@ -151,8 +152,9 @@
     height: 10px;
     border-radius: 50%;
     background: #ff5f56;
-    box-shadow: 14px 0 0 #ffbd2e, 28px 0 0 #27c93f; /* amarillo y verde */
+    box-shadow: 14px 0 0 #ffbd2e, 28px 0 0 #27c93f;
     opacity: 0.95;
+    z-index: 1;
 }
 
 /* TabView overrides within TerminalFrame */

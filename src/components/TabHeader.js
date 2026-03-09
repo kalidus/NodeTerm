@@ -206,8 +206,9 @@ const TabHeader = React.memo(({
         display: 'flex',
         alignItems: 'center',
         justifyContent: isHomeTab ? 'center' : 'flex-start',
-        maxWidth: isHomeTab ? 50 : 220,
-        minWidth: isHomeTab ? 50 : 130,
+        maxWidth: isHomeTab ? 40 : 220,
+        minWidth: isHomeTab ? 40 : 130,
+        width: isHomeTab ? 40 : undefined,
         opacity: isDragging ? 0.5 : 1,
         borderLeft: isDragOver ? '3px solid var(--primary-color)' : 'none',
         transition: 'opacity 0.2s, border-left 0.2s',
@@ -248,8 +249,8 @@ const TabHeader = React.memo(({
 
       {/* Icono específico para pestaña de inicio */}
       {tab.type === 'home' && (
-        <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: '0px' }}>
-          {getHomeTabIcon(26)}
+        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+          {getHomeTabIcon(16)}
         </span>
       )}
 

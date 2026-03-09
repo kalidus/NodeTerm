@@ -56,24 +56,18 @@
   margin-right: 2px !important;
 }
 
-/* Estilos para la pestaña de inicio SIEMPRE (bloqueada o no) */
+/* Pestaña de inicio: mismo ancho mínimo que las demás pero acotada al icono */
 .p-tabview .p-tabview-nav li.home-tab {
-  margin-right: 0px !important;
-  padding-right: 0px !important;
-  padding-left: 0px !important;
-  margin-left: 0px !important;
-  width: 50px !important;
-  min-width: 50px !important;
-  max-width: 50px !important;
-  flex: 0 0 50px !important;
+  margin-right: 2px !important;
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  flex: 0 0 40px !important;
 }
 
-/* El nav-link de la pestaña de inicio SIEMPRE centrado, sin padding */
+/* El nav-link del home centrado igual que las demás pestañas */
 .p-tabview .p-tabview-nav li.home-tab .p-tabview-nav-link {
-  padding-left: 0px !important;
-  padding-right: 0px !important;
-  margin-left: 0px !important;
-  margin-right: 0px !important;
+  padding: 0 !important;
   width: 100% !important;
   display: flex !important;
   justify-content: center !important;
