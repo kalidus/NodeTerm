@@ -1,10 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMicrochip, faMemory, faHdd, faClock, faArrowDown, faArrowUp, faServer, faDesktop } from '@fortawesome/free-solid-svg-icons';
+import { faMicrochip, faMemory, faHdd, faClock, faArrowDown, faArrowUp, faServer, faDesktop, faCog, faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons';
 import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora, FaWindows, FaNetworkWired } from 'react-icons/fa';
 import { SiDebian } from 'react-icons/si';
+import { OverlayPanel } from 'primereact/overlaypanel';
 import { getVersionInfo } from '../version-info';
 import { statusBarIconThemes } from '../themes/statusbar-icon-themes';
+import { statusBarThemes } from '../themes/status-bar-themes';
 
 const CpuSparkline = ({ history }) => (
     <div className="sparkline-container">
@@ -91,6 +93,7 @@ const DistroIcon = ({ distro }) => {
 };
 
 const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkDisks = true, isLoading = false, gpuStats = null }) => {
+    const op = useRef(null);
     // Obtener la versión de la aplicación de forma segura
     const { appVersion } = getVersionInfo();
 
@@ -373,7 +376,98 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
                         </span>
                     )}
                 </div>
+                <div
+                    className="status-bar-section settings-section"
+                    style={{
+                        marginLeft: '15px',
+                        cursor: 'pointer',
+                        opacity: 0.5,
+                        transition: 'opacity 0.2s',
+                        display: 'flex',
+                        alignItems: 'center'
+                    }}
+                    title="Configuración rápida de temas"
+                    onClick={(e) => op.current.toggle(e)}
+                >
+                    <FontAwesomeIcon icon={faCog} className="status-bar-settings-icon" />
+                </div>
             </div>
+
+            <OverlayPanel ref={op} className="statusbar-theme-overlay" style={{ width: '280px' }}>
+                <div className="statusbar-quick-presets">
+                    <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--statusbar-border, #333)', marginBottom: '8px', fontWeight: 'bold', fontSize: '0.9em', color: 'var(--statusbar-text)' }}>
+                        Temas de la barra de estado
+                    </div>
+                    <div className="theme-list-container" style={{ maxHeight: '300px', overflowY: 'auto', padding: '0 4px' }}>
+                        {Object.keys(statusBarThemes).map((themeName) => {
+                            const theme = statusBarThemes[themeName];
+                            return (
+                                <div
+                                    key={themeName}
+                                    className="theme-item"
+                                    style={{
+                                        padding: '10px 12px',
+                                        cursor: 'pointer',
+                                        borderRadius: '4px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        marginBottom: '2px',
+                                        transition: 'background 0.2s',
+                                        fontSize: '0.9em',
+                                        color: theme.colors.text,
+                                        background: theme.colors.background,
+                                        border: '1px solid transparent'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.borderColor = theme.colors.iconColor}
+                                    onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                                    onClick={() => {
+                                        // Aplicar tema localmente y notificar
+                                        localStorage.setItem('basicapp_statusbar_theme', themeName);
+                                        localStorage.setItem('localPowerShellStatusBarTheme', themeName);
+                                        window.dispatchEvent(new Event('storage'));
+                                        // Notificar a través de un evento custom si es necesario
+                                        window.dispatchEvent(new CustomEvent('statusbar-theme-changed', { detail: { theme: themeName } }));
+                                        op.current.hide();
+                                    }}
+                                >
+                                    <span>{themeName}</span>
+                                    <div style={{ display: 'flex', gap: '3px' }}>
+                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.colors.cpuBarColor }}></div>
+                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.colors.memoryBarColor }}></div>
+                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.colors.diskBarColor }}></div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div
+                        style={{
+                            marginTop: '10px',
+                            padding: '10px 12px',
+                            borderTop: '1px solid var(--statusbar-border, #333)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            color: 'var(--statusbar-text)',
+                            fontSize: '0.85em',
+                            opacity: 0.8
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = 0.8}
+                        onClick={() => {
+                            window.dispatchEvent(new CustomEvent('open-settings-dialog', {
+                                detail: { tab: 'appearance', subTab: 'status-bar' }
+                            }));
+                            op.current.hide();
+                        }}
+                    >
+                        <FontAwesomeIcon icon={faExternalLinkAlt} style={{ fontSize: '0.9em' }} />
+                        Configuración completa...
+                    </div>
+                </div>
+            </OverlayPanel>
         </div>
     );
 };
