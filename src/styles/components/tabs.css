@@ -56,7 +56,7 @@
   margin-right: 2px !important;
 }
 
-/* Pestaña de inicio: mismo ancho mínimo que las demás pero acotada al icono */
+/* Pestaña de inicio: ancho compacto para mostrar solo el ícono */
 .p-tabview .p-tabview-nav li.home-tab {
   margin-right: 2px !important;
   width: 40px !important;
@@ -65,10 +65,11 @@
   flex: 0 0 40px !important;
 }
 
-/* El nav-link del home centrado igual que las demás pestañas */
+/* El nav-link del home: igual altura que las demás, ícono centrado */
 .p-tabview .p-tabview-nav li.home-tab .p-tabview-nav-link {
-  padding: 0 !important;
+  height: 100% !important;
   width: 100% !important;
+  padding: 0 !important;
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;

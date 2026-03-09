@@ -136,9 +136,9 @@
     min-height: 32px !important;
     background: var(--ui-content-bg, #1a1b26) !important;
     border: none !important;
-    padding: 0 6px 0 52px !important;
+    padding: 0 6px 0 62px !important;
     border-bottom: none !important;
-    align-items: flex-end !important;
+    align-items: stretch !important;
 }
 
 /* Dots estilo mac en la misma línea que las pestañas, centrados verticalmente */
@@ -191,6 +191,13 @@
     font-size: 0.78rem !important;
     transition: all 0.2s ease !important;
     box-shadow: none !important;
+}
+
+/* Home tab: sin padding lateral, ícono centrado, misma altura que las demás */
+.terminal-frame .main-tab-view .p-tabview-nav li.home-tab .p-tabview-nav-link {
+    padding: 0 !important;
+    justify-content: center !important;
+    align-items: center !important;
 }
 
 .terminal-frame .main-tab-view .p-tabview-nav li.p-highlight .p-tabview-nav-link {
