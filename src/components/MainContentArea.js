@@ -7,6 +7,7 @@ import { Button } from 'primereact/button';
 import { FaWindows, FaUbuntu, FaLinux, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian, SiDocker } from 'react-icons/si';
 import Sidebar from './Sidebar';
+import TerminalFrame from './TerminalFrame';
 import TabHeader from './TabHeader';
 import TabContentRenderer from './TabContentRenderer';
 import TabContextMenu from './contextmenus/TabContextMenu';
@@ -1184,410 +1185,415 @@ const MainContentArea = ({
         pt={{
           gutter: {
             style: {
-              transition: 'none', // Clave: sin transición para fluidez
-              background: 'transparent', // Línea invisible pero área de detección amplia
-              borderColor: 'transparent',
-              width: '8px', // Área mucho más amplia para mejor detección
-              cursor: 'col-resize', // Asegurar cursor correcto
-              margin: '0 -4px' // Centrar el área de detección más amplia
+              width: '4px',
+              background: 'transparent',
+              zIndex: 100
             }
           }
         }}
       >
         <SplitterPanel
-          size={sidebarCollapsed ? 4 : sidebarSizePercent}
-          minSize={sidebarCollapsed ? 4 : 4}
+          size={sidebarCollapsed ? 4 : 15}
+          minSize={sidebarCollapsed ? 4 : 10}
           maxSize={sidebarCollapsed ? 4 : 35}
+          className="terminal-frame-container"
           style={sidebarCollapsed
-            ? { width: 44, minWidth: 44, maxWidth: 44, padding: 0, height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
-            : { padding: 0, height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
+            ? { width: 60, minWidth: 60, maxWidth: 60, padding: '8px 2px 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
+            : { padding: '8px 2px 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
           }
-          pt={{
-            root: {
-              style: {
-                minWidth: '44px !important',
-                width: 'auto'
-              }
-            }
+        >
+          <TerminalFrame
+            className={sidebarCollapsed ? 'sidebar-collapsed' : ''}
+            showControls={true}
+          >
+            <Sidebar
+              {...memoizedSidebarProps}
+              onOpenFileExplorer={handleSidebarOpenFileExplorer}
+              setSidebarCollapsed={handleSidebarToggle}
+              sidebarCollapsed={sidebarCollapsed}
+            />
+          </TerminalFrame>
+        </SplitterPanel>
+
+        <SplitterPanel
+          size={sidebarVisible ? 85 : 100}
+          className="terminal-frame-container"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            minWidth: 0,
+            width: '100%',
+            height: '100%',
+            padding: '8px 8px 8px 2px',
+            background: 'transparent'
           }}
         >
-          <Sidebar
-            {...memoizedSidebarProps}
-            onOpenFileExplorer={handleSidebarOpenFileExplorer}
-            setSidebarCollapsed={handleSidebarToggle}
-          />
-        </SplitterPanel>
-
-        <SplitterPanel size={sidebarVisible ? 85 : 100} style={{
-          display: 'flex',
-          flexDirection: 'column',
-          minWidth: 0,
-          width: '100%',
-          height: '100%',
-          background: isHomeTabActive ? localTerminalBg : undefined
-        }}>
-          {(homeTabs.length > 0 || sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
-            <div style={{
-              width: '100%',
-              minWidth: 0,
-              minHeight: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              flex: 1,
-              height: '100%',
-              background: isHomeTabActive ? localTerminalBg : undefined
-            }}>
-              {/* Barra de grupos como TabView scrollable */}
-              {renderGroupTabs()}
-
-              <div style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
-                {/* Solo mostrar TabView de pestañas si el grupo no está vacío */}
-                {!(activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0) && (
-                  <div style={{ position: 'relative' }}>
-                    <TabView
-                      activeIndex={activeTabIndex}
-                      onTabChange={(e) => {
-                        if (activatingNowRef.current) return; // bloquear cambios durante activación forzada
-                        setActiveTabIndex(e.index);
-                        // Solo guardar el nuevo índice si el grupo actual tiene pestañas
-                        const currentGroupKey = activeGroupId || GROUP_KEYS.DEFAULT;
-                        const currentTabs = getTabsInGroup(activeGroupId);
-
-                        if (currentTabs.length > 0) {
-                          setGroupActiveIndices(prev => ({
-                            ...prev,
-                            [currentGroupKey]: e.index
-                          }));
-                        }
-                      }}
-                      renderActiveOnly={false}
-                      scrollable={true}
-                      className={`main-tab-view ${homeButtonLocked ? 'home-locked' : 'home-unlocked'}`}
-                      pt={{
-                        navContainer: {
-                          ref: tabsContainerRef,
-                          style: {
-                            borderBottom: 'none',
-                            opacity: 1.0
-                          }
-                        }
-                      }}
-                    >
-                      {filteredTabs.map((tab, idx) => {
-                        // Con las pestañas híbridas, todas las pestañas visibles están en el contexto home, SSH o explorer
-                        // OJO: como reordenamos virtualmente (pin a índice 1), no podemos fiarnos de idx
-                        const isHomeTab = tab.type === TAB_TYPES.HOME;
-                        const isSSHTab = tab.type === TAB_TYPES.TERMINAL || tab.type === TAB_TYPES.SPLIT || tab.isExplorerInSSH;
-                        const originalIdx = idx; // No usamos originalIdx para decisiones críticas
-
-                        return (
-                          <TabPanel
-                            key={tab.key}
-                            header={tab.label}
-                            headerClassName={isHomeTab ? 'home-tab' : ''}
-                            headerTemplate={(options) => (
-                              <TabHeader
-                                // Props de PrimeReact
-                                className={`${options.className} ${isHomeTab ? 'home-tab' : ''}`}
-                                onClick={options.onClick}
-                                onKeyDown={options.onKeyDown}
-                                leftIcon={options.leftIcon}
-                                rightIcon={options.rightIcon}
-                                style={options.style}
-                                selected={options.selected}
-
-                                // Props específicas
-                                tab={tab}
-                                idx={idx}
-
-                                // Estados de drag & drop
-                                isDragging={memoizedTabProps.draggedTabIndex === idx}
-                                isDragOver={dragOverTabIndex === idx}
-                                dragStartTimer={memoizedTabProps.dragStartTimer}
-                                draggedTabIndex={memoizedTabProps.draggedTabIndex}
-
-                                // Props de iconos
-                                tabDistros={memoizedTabProps.tabDistros}
-
-                                // Event handlers (memoizados)
-                                onTabDragStart={tabHandlers.onTabDragStart}
-                                onTabDragOver={tabHandlers.onTabDragOver}
-                                onTabDragLeave={tabHandlers.onTabDragLeave}
-                                onTabDrop={tabHandlers.onTabDrop}
-                                onTabDragEnd={tabHandlers.onTabDragEnd}
-                                onTabContextMenu={tabHandlers.onTabContextMenu}
-                                onTabClose={tabHandlers.onTabClose}
-                              />
-                            )}
-                          />
-                        );
-                      })}
-                    </TabView>
-
-                    {/* Flecha izquierda */}
-                    {canScrollLeft && (
-                      <Button
-                        icon="pi pi-chevron-left"
-                        className="p-button-text p-button-sm tab-nav-arrow"
-                        style={{
-                          position: 'absolute',
-                          left: '4px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          zIndex: 1000,
-                          color: 'var(--ui-tab-text) !important',
-                          padding: '2px',
-                          minWidth: '16px',
-                          width: '16px',
-                          height: '16px',
-                          fontSize: '8px',
-                          background: 'rgba(0, 0, 0, 0.3) !important',
-                          border: 'none !important',
-                          borderRadius: '2px',
-                          opacity: 0.9,
-                          transition: 'opacity 0.2s ease'
-                        }}
-                        pt={{
-                          root: {
-                            style: {
-                              color: 'var(--ui-tab-text) !important',
-                              background: 'rgba(0, 0, 0, 0.3) !important',
-                              border: 'none !important'
-                            }
-                          },
-                          icon: {
-                            style: {
-                              color: 'var(--ui-tab-text) !important'
-                            }
-                          }
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.opacity = '1';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.opacity = '0.9';
-                        }}
-                        onClick={() => scrollTabs('left')}
-                        aria-label="Desplazar pestañas a la izquierda"
-                        title="Desplazar pestañas a la izquierda"
-                      />
-                    )}
-
-                    {/* Flecha derecha */}
-                    {canScrollRight && (
-                      <Button
-                        icon="pi pi-chevron-right"
-                        className="p-button-text p-button-sm tab-nav-arrow"
-                        style={{
-                          position: 'absolute',
-                          right: '4px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          zIndex: 1000,
-                          color: 'var(--ui-tab-text) !important',
-                          padding: '2px',
-                          minWidth: '16px',
-                          width: '16px',
-                          height: '16px',
-                          fontSize: '8px',
-                          background: 'rgba(0, 0, 0, 0.3) !important',
-                          border: 'none !important',
-                          borderRadius: '2px',
-                          opacity: 0.9,
-                          transition: 'opacity 0.2s ease'
-                        }}
-                        pt={{
-                          root: {
-                            style: {
-                              color: 'var(--ui-tab-text) !important',
-                              background: 'rgba(0, 0, 0, 0.3) !important',
-                              border: 'none !important'
-                            }
-                          },
-                          icon: {
-                            style: {
-                              color: 'var(--ui-tab-text) !important'
-                            }
-                          }
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.opacity = '1';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.opacity = '0.9';
-                        }}
-                        onClick={() => scrollTabs('right')}
-                        aria-label="Desplazar pestañas a la derecha"
-                        title="Desplazar pestañas a la derecha"
-                      />
-                    )}
-
-                    {/* ContextMenu para seleccionar tipo de terminal */}
-                    <ContextMenu
-                      ref={terminalSelectorMenuRef}
-                      className="context-menu-themed"
-                      model={terminalMenuItems}
-                    />
-                  </div>
-                )}
-
-
-                {/* Menús contextuales refactorizados */}
-                <TabContextMenu
-                  tabContextMenu={tabContextMenu}
-                  setTabContextMenu={setTabContextMenu}
-                  tabGroups={tabGroups}
-                  moveTabToGroup={moveTabToGroup}
-                  setShowCreateGroupDialog={setShowCreateGroupDialog}
-                  isGroupFavorite={isGroupFavorite}
-                  addGroupToFavorites={addGroupToFavorites}
-                  removeGroupFromFavorites={removeGroupFromFavorites}
-                  getTabsInGroup={getTabsInGroup}
-                  deleteGroup={deleteGroup}
-                  toast={toast}
-                  handleToggleBroadcast={handleToggleBroadcast}
-                  handleToggleBroadcastTarget={handleToggleBroadcastTarget}
-                  getAllTabs={getAllTabs}
-                />
-
-                <TerminalContextMenu
-                  terminalContextMenu={terminalContextMenu}
-                  setTerminalContextMenu={setTerminalContextMenu}
-                  onCopy={handleCopyFromTerminalWrapper}
-                  onPaste={handlePasteToTerminalWrapper}
-                  onSelectAll={handleSelectAllTerminalWrapper}
-                  onClear={handleClearTerminalWrapper}
-                  onStartRecording={handleStartRecording}
-                  onStopRecording={handleStopRecording}
-                  isRecording={terminalContextMenu ? isRecordingTab(terminalContextMenu.tabKey) : false}
-                  handleToggleBroadcast={handleToggleBroadcast}
-                  handleToggleBroadcastTarget={handleToggleBroadcastTarget}
-                  getAllTabs={getAllTabs}
-                  onShowSystemMonitor={(tabKey) => setSshSystemMonitorTabId(tabKey)}
-                  onShowFileExplorer={(tabKey) => setSshFileExplorerTabId(tabKey)}
-                  isSSHSession={terminalContextMenu ? (() => {
-                    const allT = getAllTabs ? getAllTabs() : [];
-                    const tab = allT.find(t => t.key === terminalContextMenu.tabKey);
-                    return tab ? (tab.type === 'terminal' || tab.type === TAB_TYPES.TERMINAL || tab.type === 'local-terminal') : false;
-                  })() : false}
-                />
-
-                <OverflowMenu
-                  showOverflowMenu={showOverflowMenu}
-                  setShowOverflowMenu={setShowOverflowMenu}
-                  overflowMenuPosition={overflowMenuPosition}
-                  overflowMenuItems={overflowMenuItems}
-                />
-              </div>
-
+          <TerminalFrame contentClassName="main-content-frame-content">
+            {(homeTabs.length > 0 || sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
               <div style={{
-                flexGrow: 1,
-                position: 'relative',
+                width: '100%',
+                minWidth: 0,
+                minHeight: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                flex: 1,
+                height: '100%',
                 background: isHomeTabActive ? localTerminalBg : undefined
               }}>
-                {/* SIEMPRE renderizar todas las pestañas para preservar conexiones SSH */}
-                {/* Overlay para grupo vacío se muestra por encima */}
-                {activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0 && (
-                  <div style={{
-                    position: 'absolute',
-                    top: 0, left: 0, right: 0, bottom: 0,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: 'var(--ui-content-bg, #222)',
-                    color: '#888', textAlign: 'center', padding: '2rem 0',
-                    zIndex: 1000,
-                    backdropFilter: 'blur(2px)'
-                  }}>
-                    <i className="pi pi-folder-open" style={{ fontSize: 64, marginBottom: 16, opacity: 0.5 }} />
-                    <div style={{ fontSize: 20, fontWeight: 500, marginBottom: 8 }}>Este grupo está vacío</div>
-                    <div style={{ fontSize: 15, marginBottom: 0 }}>Crea una nueva pestaña o arrastra aquí una existente.</div>
-                  </div>
-                )}
+                {/* Barra de grupos como TabView scrollable */}
+                {renderGroupTabs()}
 
-                {/* SIEMPRE renderizar TODAS las pestañas para preservar conexiones SSH */}
-                {(() => {
-                  const terminalTheme = memoizedContentRendererProps?.terminalTheme;
-                  return [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs].map((tab) => {
-                    const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
-                    const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
-                    const isActiveTab = isInActiveGroup && tabIndexInActiveGroup === activeTabIndex;
+                <div style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
+                  {/* Solo mostrar TabView de pestañas si el grupo no está vacío */}
+                  {!(activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0) && (
+                    <div style={{ position: 'relative' }}>
+                      <TabView
+                        activeIndex={activeTabIndex}
+                        onTabChange={(e) => {
+                          if (activatingNowRef.current) return; // bloquear cambios durante activación forzada
+                          setActiveTabIndex(e.index);
+                          // Solo guardar el nuevo índice si el grupo actual tiene pestañas
+                          const currentGroupKey = activeGroupId || GROUP_KEYS.DEFAULT;
+                          const currentTabs = getTabsInGroup(activeGroupId);
 
-                    return (
-                      <div
-                        key={tab.key}
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          visibility: isActiveTab ? 'visible' : 'hidden',
-                          zIndex: isActiveTab ? 1 : 0,
-                          pointerEvents: isActiveTab ? 'auto' : 'none',
-                          background: (tab.type === TAB_TYPES.HOME && isActiveTab) ? localTerminalBg : 'transparent'
+                          if (currentTabs.length > 0) {
+                            setGroupActiveIndices(prev => ({
+                              ...prev,
+                              [currentGroupKey]: e.index
+                            }));
+                          }
+                        }}
+                        renderActiveOnly={false}
+                        scrollable={true}
+                        className={`main-tab-view ${homeButtonLocked ? 'home-locked' : 'home-unlocked'}`}
+                        pt={{
+                          navContainer: {
+                            ref: tabsContainerRef,
+                            style: {
+                              borderBottom: 'none',
+                              opacity: 1.0
+                            }
+                          }
                         }}
                       >
-                        <TabContentRenderer
-                          tab={tab}
-                          isActiveTab={isActiveTab}
-                          // Props memoizadas
-                          {...memoizedContentRendererProps}
-                          // Terminal props (específicas)
-                          sshStatsByTabId={sshStatsByTabId}
-                          getAllTabs={getAllTabs}
-                          // Nuevos manejadores para Quick Actions
-                          onStartRecording={handleStartRecording}
-                          onStopRecording={handleStopRecording}
-                          isRecordingTab={isRecordingTab}
-                          onShowSystemMonitor={(tabKey) => setSshSystemMonitorTabId(tabKey)}
-                          onShowFileExplorer={(tabKey) => setSshFileExplorerTabId(tabKey)}
-                          onToggleBroadcast={handleToggleBroadcast}
-                        />
-                        {/* SSH System Monitor: right-side panel inside per-tab absolute div */}
-                        {(tab.type === 'terminal' || tab.type === 'local-terminal') && sshSystemMonitorTabId === tab.key && (
-                          <SSHSystemMonitorPanel
-                            tabId={tab.key}
-                            tab={tab}
-                            stats={sshStatsByTabId?.[tab.key] || {}}
-                            onClose={() => setSshSystemMonitorTabId(null)}
-                          />
-                        )}
+                        {filteredTabs.map((tab, idx) => {
+                          // Con las pestañas híbridas, todas las pestañas visibles están en el contexto home, SSH o explorer
+                          // OJO: como reordenamos virtualmente (pin a índice 1), no podemos fiarnos de idx
+                          const isHomeTab = tab.type === TAB_TYPES.HOME;
+                          const isSSHTab = tab.type === TAB_TYPES.TERMINAL || tab.type === TAB_TYPES.SPLIT || tab.isExplorerInSSH;
+                          const originalIdx = idx; // No usamos originalIdx para decisiones críticas
 
-                        {/* SSH File Explorer: right-side panel inside per-tab absolute div */}
-                        {tab.type === 'terminal' && sshFileExplorerTabId === tab.key && (
-                          <SSHFileExplorerPanel
-                            tabId={tab.key}
-                            tab={tab}
-                            sshConfig={tab.sshConfig}
-                            onClose={() => setSshFileExplorerTabId(null)}
-                          />
-                        )}
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            </div>
-          ) : (
-            <Card title="Contenido Principal" style={{ flex: 1, minWidth: 0, minHeight: 0, height: '100%' }}>
-              <p className="m-0">
-                Bienvenido a la aplicación de escritorio. Seleccione un archivo del panel lateral para ver su contenido.
-              </p>
-              {selectedNodeKey && (
-                <div className="mt-3">
-                  <p>Elemento seleccionado: {Object.keys(selectedNodeKey)[0]}</p>
+                          return (
+                            <TabPanel
+                              key={tab.key}
+                              header={tab.label}
+                              headerClassName={isHomeTab ? 'home-tab' : ''}
+                              headerTemplate={(options) => (
+                                <TabHeader
+                                  // Props de PrimeReact
+                                  className={`${options.className} ${isHomeTab ? 'home-tab' : ''}`}
+                                  onClick={options.onClick}
+                                  onKeyDown={options.onKeyDown}
+                                  leftIcon={options.leftIcon}
+                                  rightIcon={options.rightIcon}
+                                  style={options.style}
+                                  selected={options.selected}
+
+                                  // Props específicas
+                                  tab={tab}
+                                  idx={idx}
+
+                                  // Estados de drag & drop
+                                  isDragging={memoizedTabProps.draggedTabIndex === idx}
+                                  isDragOver={dragOverTabIndex === idx}
+                                  dragStartTimer={memoizedTabProps.dragStartTimer}
+                                  draggedTabIndex={memoizedTabProps.draggedTabIndex}
+
+                                  // Props de iconos
+                                  tabDistros={memoizedTabProps.tabDistros}
+
+                                  // Event handlers (memoizados)
+                                  onTabDragStart={tabHandlers.onTabDragStart}
+                                  onTabDragOver={tabHandlers.onTabDragOver}
+                                  onTabDragLeave={tabHandlers.onTabDragLeave}
+                                  onTabDrop={tabHandlers.onTabDrop}
+                                  onTabDragEnd={tabHandlers.onTabDragEnd}
+                                  onTabContextMenu={tabHandlers.onTabContextMenu}
+                                  onTabClose={tabHandlers.onTabClose}
+                                />
+                              )}
+                            />
+                          );
+                        })}
+                      </TabView>
+
+                      {/* Flecha izquierda */}
+                      {canScrollLeft && (
+                        <Button
+                          icon="pi pi-chevron-left"
+                          className="p-button-text p-button-sm tab-nav-arrow"
+                          style={{
+                            position: 'absolute',
+                            left: '4px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            zIndex: 1000,
+                            color: 'var(--ui-tab-text) !important',
+                            padding: '2px',
+                            minWidth: '16px',
+                            width: '16px',
+                            height: '16px',
+                            fontSize: '8px',
+                            background: 'rgba(0, 0, 0, 0.3) !important',
+                            border: 'none !important',
+                            borderRadius: '2px',
+                            opacity: 0.9,
+                            transition: 'opacity 0.2s ease'
+                          }}
+                          pt={{
+                            root: {
+                              style: {
+                                color: 'var(--ui-tab-text) !important',
+                                background: 'rgba(0, 0, 0, 0.3) !important',
+                                border: 'none !important'
+                              }
+                            },
+                            icon: {
+                              style: {
+                                color: 'var(--ui-tab-text) !important'
+                              }
+                            }
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.opacity = '1';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.opacity = '0.9';
+                          }}
+                          onClick={() => scrollTabs('left')}
+                          aria-label="Desplazar pestañas a la izquierda"
+                          title="Desplazar pestañas a la izquierda"
+                        />
+                      )}
+
+                      {/* Flecha derecha */}
+                      {canScrollRight && (
+                        <Button
+                          icon="pi pi-chevron-right"
+                          className="p-button-text p-button-sm tab-nav-arrow"
+                          style={{
+                            position: 'absolute',
+                            right: '4px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            zIndex: 1000,
+                            color: 'var(--ui-tab-text) !important',
+                            padding: '2px',
+                            minWidth: '16px',
+                            width: '16px',
+                            height: '16px',
+                            fontSize: '8px',
+                            background: 'rgba(0, 0, 0, 0.3) !important',
+                            border: 'none !important',
+                            borderRadius: '2px',
+                            opacity: 0.9,
+                            transition: 'opacity 0.2s ease'
+                          }}
+                          pt={{
+                            root: {
+                              style: {
+                                color: 'var(--ui-tab-text) !important',
+                                background: 'rgba(0, 0, 0, 0.3) !important',
+                                border: 'none !important'
+                              }
+                            },
+                            icon: {
+                              style: {
+                                color: 'var(--ui-tab-text) !important'
+                              }
+                            }
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.opacity = '1';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.opacity = '0.9';
+                          }}
+                          onClick={() => scrollTabs('right')}
+                          aria-label="Desplazar pestañas a la derecha"
+                          title="Desplazar pestañas a la derecha"
+                        />
+                      )}
+
+                      {/* ContextMenu para seleccionar tipo de terminal */}
+                      <ContextMenu
+                        ref={terminalSelectorMenuRef}
+                        className="context-menu-themed"
+                        model={terminalMenuItems}
+                      />
+                    </div>
+                  )}
+
+
+                  {/* Menús contextuales refactorizados */}
+                  <TabContextMenu
+                    tabContextMenu={tabContextMenu}
+                    setTabContextMenu={setTabContextMenu}
+                    tabGroups={tabGroups}
+                    moveTabToGroup={moveTabToGroup}
+                    setShowCreateGroupDialog={setShowCreateGroupDialog}
+                    isGroupFavorite={isGroupFavorite}
+                    addGroupToFavorites={addGroupToFavorites}
+                    removeGroupFromFavorites={removeGroupFromFavorites}
+                    getTabsInGroup={getTabsInGroup}
+                    deleteGroup={deleteGroup}
+                    toast={toast}
+                    handleToggleBroadcast={handleToggleBroadcast}
+                    handleToggleBroadcastTarget={handleToggleBroadcastTarget}
+                    getAllTabs={getAllTabs}
+                  />
+
+                  <TerminalContextMenu
+                    terminalContextMenu={terminalContextMenu}
+                    setTerminalContextMenu={setTerminalContextMenu}
+                    onCopy={handleCopyFromTerminalWrapper}
+                    onPaste={handlePasteToTerminalWrapper}
+                    onSelectAll={handleSelectAllTerminalWrapper}
+                    onClear={handleClearTerminalWrapper}
+                    onStartRecording={handleStartRecording}
+                    onStopRecording={handleStopRecording}
+                    isRecording={terminalContextMenu ? isRecordingTab(terminalContextMenu.tabKey) : false}
+                    handleToggleBroadcast={handleToggleBroadcast}
+                    handleToggleBroadcastTarget={handleToggleBroadcastTarget}
+                    getAllTabs={getAllTabs}
+                    onShowSystemMonitor={(tabKey) => setSshSystemMonitorTabId(tabKey)}
+                    onShowFileExplorer={(tabKey) => setSshFileExplorerTabId(tabKey)}
+                    isSSHSession={terminalContextMenu ? (() => {
+                      const allT = getAllTabs ? getAllTabs() : [];
+                      const tab = allT.find(t => t.key === terminalContextMenu.tabKey);
+                      return tab ? (tab.type === 'terminal' || tab.type === TAB_TYPES.TERMINAL || tab.type === 'local-terminal') : false;
+                    })() : false}
+                  />
+
+                  <OverflowMenu
+                    showOverflowMenu={showOverflowMenu}
+                    setShowOverflowMenu={setShowOverflowMenu}
+                    overflowMenuPosition={overflowMenuPosition}
+                    overflowMenuItems={overflowMenuItems}
+                  />
                 </div>
-              )}
-              <div className="mt-3">
-                <p>Puedes arrastrar y soltar elementos en el panel lateral para reorganizarlos.</p>
-                <p>Haz clic en el botón "+" para crear carpetas nuevas.</p>
-                <p>Para eliminar un elemento, haz clic en el botón de la papelera que aparece al pasar el ratón.</p>
+
+                <div style={{
+                  flexGrow: 1,
+                  position: 'relative',
+                  background: isHomeTabActive ? localTerminalBg : undefined
+                }}>
+                  {/* SIEMPRE renderizar todas las pestañas para preservar conexiones SSH */}
+                  {/* Overlay para grupo vacío se muestra por encima */}
+                  {activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0, left: 0, right: 0, bottom: 0,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: 'var(--ui-content-bg, #222)',
+                      color: '#888', textAlign: 'center', padding: '2rem 0',
+                      zIndex: 1000,
+                      backdropFilter: 'blur(2px)'
+                    }}>
+                      <i className="pi pi-folder-open" style={{ fontSize: 64, marginBottom: 16, opacity: 0.5 }} />
+                      <div style={{ fontSize: 20, fontWeight: 500, marginBottom: 8 }}>Este grupo está vacío</div>
+                      <div style={{ fontSize: 15, marginBottom: 0 }}>Crea una nueva pestaña o arrastra aquí una existente.</div>
+                    </div>
+                  )}
+
+                  {/* SIEMPRE renderizar TODAS las pestañas para preservar conexiones SSH */}
+                  {(() => {
+                    const terminalTheme = memoizedContentRendererProps?.terminalTheme;
+                    return [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs].map((tab) => {
+                      const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
+                      const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
+                      const isActiveTab = isInActiveGroup && tabIndexInActiveGroup === activeTabIndex;
+
+                      return (
+                        <div
+                          key={tab.key}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            visibility: isActiveTab ? 'visible' : 'hidden',
+                            zIndex: isActiveTab ? 1 : 0,
+                            pointerEvents: isActiveTab ? 'auto' : 'none',
+                            background: (tab.type === TAB_TYPES.HOME && isActiveTab) ? localTerminalBg : 'transparent'
+                          }}
+                        >
+                          <TabContentRenderer
+                            tab={tab}
+                            isActiveTab={isActiveTab}
+                            // Props memoizadas
+                            {...memoizedContentRendererProps}
+                            // Terminal props (específicas)
+                            sshStatsByTabId={sshStatsByTabId}
+                            getAllTabs={getAllTabs}
+                            // Nuevos manejadores para Quick Actions
+                            onStartRecording={handleStartRecording}
+                            onStopRecording={handleStopRecording}
+                            isRecordingTab={isRecordingTab}
+                            onShowSystemMonitor={(tabKey) => setSshSystemMonitorTabId(tabKey)}
+                            onShowFileExplorer={(tabKey) => setSshFileExplorerTabId(tabKey)}
+                            onToggleBroadcast={handleToggleBroadcast}
+                          />
+                          {/* SSH System Monitor: right-side panel inside per-tab absolute div */}
+                          {(tab.type === 'terminal' || tab.type === 'local-terminal') && sshSystemMonitorTabId === tab.key && (
+                            <SSHSystemMonitorPanel
+                              tabId={tab.key}
+                              tab={tab}
+                              stats={sshStatsByTabId?.[tab.key] || {}
+                              }
+                              onClose={() => setSshSystemMonitorTabId(null)}
+                            />
+                          )}
+
+                          {/* SSH File Explorer: right-side panel inside per-tab absolute div */}
+                          {tab.type === 'terminal' && sshFileExplorerTabId === tab.key && (
+                            <SSHFileExplorerPanel
+                              tabId={tab.key}
+                              tab={tab}
+                              sshConfig={tab.sshConfig}
+                              onClose={() => setSshFileExplorerTabId(null)}
+                            />
+                          )}
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
               </div>
-            </Card>
-          )}
+            ) : (
+              <Card title="Contenido Principal" style={{ flex: 1, minWidth: 0, minHeight: 0, height: '100%' }}>
+                <p className="m-0">
+                  Bienvenido a la aplicación de escritorio. Seleccione un archivo del panel lateral para ver su contenido.
+                </p>
+                {selectedNodeKey && (
+                  <div className="mt-3">
+                    <p>Elemento seleccionado: {Object.keys(selectedNodeKey)[0]}</p>
+                  </div>
+                )}
+                <div className="mt-3">
+                  <p>Puedes arrastrar y soltar elementos en el panel lateral para reorganizarlos.</p>
+                  <p>Haz clic en el botón "+" para crear carpetas nuevas.</p>
+                  <p>Para eliminar un elemento, haz clic en el botón de la papelera que aparece al pasar el ratón.</p>
+                </div>
+              </Card>
+            )}
+          </TerminalFrame>
         </SplitterPanel>
       </Splitter>
+
 
       {/* Context Menu para el árbol de la sidebar */}
       <ContextMenu

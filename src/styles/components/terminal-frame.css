@@ -1,0 +1,170 @@
+/* --- Component: TerminalFrame --- */
+
+.terminal-frame {
+    display: flex;
+    flex-direction: column;
+    background: var(--ui-sidebar-bg, #1a1b26);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+
+.terminal-frame-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.1);
+    user-select: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.terminal-frame-controls {
+    display: flex;
+    gap: 8px;
+    margin-right: 12px;
+}
+
+.terminal-frame-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    opacity: 0.8;
+}
+
+.terminal-frame-dot.red {
+    background: #ff5f56;
+}
+
+.terminal-frame-dot.yellow {
+    background: #ffbd2e;
+}
+
+.terminal-frame-dot.green {
+    background: #27c93f;
+}
+
+.terminal-frame-title {
+    font-size: 12px;
+    color: var(--ui-sidebar-text, #a9b1d6);
+    font-family: var(--font-family, sans-serif);
+    opacity: 0.6;
+    flex-grow: 1;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 10px;
+}
+
+.terminal-frame-content {
+    flex-grow: 1;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Efecto de separación (gap) en el layout */
+.terminal-frame-container {
+    padding: 8px;
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* Ajustes para la sidebar colapsada */
+.sidebar-collapsed .terminal-frame-header {
+    padding: 10px 0;
+    justify-content: center;
+}
+
+.sidebar-collapsed .terminal-frame-controls {
+    flex-direction: column;
+    margin-right: 0;
+    gap: 6px;
+}
+
+.sidebar-collapsed .terminal-frame-title {
+    display: none;
+}
+
+/* --- Integration Styles for internal components --- */
+
+/* Sidebar overrides within TerminalFrame */
+.terminal-frame .sidebar-container {
+    background: transparent !important;
+    border-right: none !important;
+    height: 100% !important;
+}
+
+/* Tree filter inside sidebar */
+.terminal-frame .sidebar-tree .p-tree-filter-container {
+    background: rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    margin: 8px !important;
+}
+
+.terminal-frame .sidebar-tree .p-tree-filter-container .p-inputtext {
+    background: transparent !important;
+    border: none !important;
+    color: var(--ui-sidebar-text, #fff) !important;
+}
+
+/* TabView overrides within TerminalFrame */
+.terminal-frame .main-tab-view.p-tabview {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.terminal-frame .main-tab-view .p-tabview-nav {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 10px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
+}
+
+.terminal-frame .main-tab-view .p-tabview-panels {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+/* Tab Buttons */
+.terminal-frame .main-tab-view .p-tabview-nav li .p-tabview-nav-link {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-bottom: none !important;
+    border-radius: 8px 8px 0 0 !important;
+    margin-right: 4px !important;
+    padding: 8px 16px !important;
+    font-size: 11px !important;
+    transition: all 0.2s ease !important;
+    box-shadow: none !important;
+}
+
+.terminal-frame .main-tab-view .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    color: var(--ui-sidebar-text, #fff) !important;
+}
+
+.terminal-frame .main-tab-view .p-tabview-nav li:not(.p-highlight):hover .p-tabview-nav-link {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Footer de la sidebar */
+.terminal-frame .sidebar-footer {
+    background: rgba(0, 0, 0, 0.1) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.03) !important;
+}

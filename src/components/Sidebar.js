@@ -2165,7 +2165,7 @@ const Sidebar = React.memo(({
         minWidth: sidebarCollapsed ? 44 : undefined,
         maxWidth: sidebarCollapsed ? 44 : undefined,
         padding: 0,
-        height: '100vh',
+        height: '100%',
         boxSizing: 'border-box',
         overflow: 'hidden',
         display: 'flex',
