@@ -122,8 +122,8 @@
 
 /* El nav container ocupa la misma altura que el header del sidebar (10px padding + 12px dots + 10px = 32px) */
 .terminal-frame.main-content-frame .p-tabview-nav-container {
-    height: 32px !important;
-    min-height: 32px !important;
+    height: 30px !important;
+    min-height: 30px !important;
     flex-shrink: 0;
     background: var(--ui-content-bg, #1a1b26) !important;
     border-bottom: 1px solid var(--ui-tabgroup-border, rgba(255, 255, 255, 0.06)) !important;
@@ -132,13 +132,13 @@
 
 /* El nav ocupa todo el alto del container, con padding izquierdo para los dots */
 .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav {
-    height: 32px !important;
-    min-height: 32px !important;
+    height: 30px !important;
+    min-height: 30px !important;
     background: var(--ui-content-bg, #1a1b26) !important;
     border: none !important;
-    padding: 0 6px 0 62px !important;
+    padding: 0 6px 0 68px !important;
     border-bottom: none !important;
-    align-items: stretch !important;
+    align-items: center !important;
 }
 
 /* Dots estilo mac en la misma línea que las pestañas, centrados verticalmente */
@@ -185,10 +185,10 @@
     color: var(--ui-tab-text, rgba(255, 255, 255, 0.85)) !important;
     border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.08)) !important;
     border-bottom: none !important;
-    border-radius: 6px 6px 0 0 !important;
-    margin-right: 4px !important;
-    padding: 6px 12px !important;
-    font-size: 0.78rem !important;
+    border-radius: 5px 5px 0 0 !important;
+    margin-right: 2px !important;
+    padding: 4px 10px !important;
+    font-size: 0.76rem !important;
     transition: all 0.2s ease !important;
     box-shadow: none !important;
 }

@@ -49,16 +49,16 @@
 
 .p-tabview .p-tabview-nav li {
   flex: 0 0 auto;
-  min-width: 130px !important;
-  max-width: 220px !important;
+  min-width: 118px !important;
+  max-width: 210px !important;
   margin-bottom: 0;
   padding-bottom: 0;
-  margin-right: 2px !important;
+  margin-right: 1px !important;
 }
 
 /* Pestaña de inicio: ancho compacto para mostrar solo el ícono */
 .p-tabview .p-tabview-nav li.home-tab {
-  margin-right: 2px !important;
+  margin-right: 7px !important;
   width: 40px !important;
   min-width: 40px !important;
   max-width: 40px !important;
@@ -76,8 +76,8 @@
 }
 
 .p-tabview .p-tabview-nav li .p-tabview-nav-link {
-  padding: 0 0.7rem !important;
-  font-size: 0.78rem !important;
+  padding: 0 0.55rem !important;
+  font-size: 0.76rem !important;
   height: 100%;
   min-height: 0;
   margin-bottom: 0;
@@ -423,12 +423,12 @@ button.tab-action-button,
 
 /* Botones cuadrados pequeños en el contenedor de terminales locales */
 .local-terminal-buttons .tab-action-button {
-  width: 18px !important;
-  min-width: 18px !important;
-  max-width: 18px !important;
-  height: 18px !important;
-  min-height: 18px !important;
-  max-height: 18px !important;
+  width: 17px !important;
+  min-width: 17px !important;
+  max-width: 17px !important;
+  height: 17px !important;
+  min-height: 17px !important;
+  max-height: 17px !important;
   padding: 0 !important;
   font-size: 13px !important;
   border-radius: 3px !important;
@@ -462,11 +462,11 @@ button.local-terminal-buttons .tab-action-button:hover,
 .local-terminal-buttons {
   display: flex !important;
   align-items: center !important;
-  gap: 3px !important;
-  margin-left: 4px !important;
+  gap: 2px !important;
+  margin-left: 8px !important;
   margin-right: 2px !important;
   flex-shrink: 0 !important;
-  height: 26px !important;
+  height: 24px !important;
   padding-bottom: 0 !important;
   box-sizing: border-box !important;
 }

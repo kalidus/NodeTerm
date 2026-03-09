@@ -713,9 +713,9 @@ const MainContentArea = ({
     buttonsContainer.style.cssText = `
       display: flex;
       align-items: center;
-      gap: 3px;
+      gap: 2px;
       flex-shrink: 0;
-      margin-left: 6px;
+      margin-left: 10px;
       align-self: center;
     `;
 
