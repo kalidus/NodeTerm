@@ -706,6 +706,27 @@ const MainContentArea = ({
     if (existingButtons) {
       existingButtons.remove();
     }
+    const existingTrafficLights = navContainer.querySelector('.main-nav-traffic-lights');
+    if (existingTrafficLights) {
+      existingTrafficLights.remove();
+    }
+
+    // Crear dots tipo macOS iguales a HomeTab
+    const trafficLights = document.createElement('div');
+    trafficLights.className = 'main-nav-traffic-lights';
+
+    const redDot = document.createElement('div');
+    redDot.className = 'traffic-dot red';
+
+    const yellowDot = document.createElement('div');
+    yellowDot.className = 'traffic-dot yellow';
+
+    const greenDot = document.createElement('div');
+    greenDot.className = 'traffic-dot green';
+
+    trafficLights.appendChild(redDot);
+    trafficLights.appendChild(yellowDot);
+    trafficLights.appendChild(greenDot);
 
     // Crear contenedor de botones (inline después de la última pestaña)
     const buttonsContainer = document.createElement('div');
@@ -805,6 +826,7 @@ const MainContentArea = ({
 
     buttonsContainer.appendChild(plusButton);
     buttonsContainer.appendChild(dropdownButton);
+    navList.appendChild(trafficLights);
     // Insertar dentro de p-tabview-nav, después de la última pestaña
     navList.appendChild(buttonsContainer);
   }, [filteredTabs, activeTabIndex, wslDistributions]); // eslint-disable-line react-hooks/exhaustive-deps
