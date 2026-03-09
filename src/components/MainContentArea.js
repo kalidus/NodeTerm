@@ -1264,6 +1264,7 @@ const MainContentArea = ({
                           navContainer: {
                             ref: tabsContainerRef,
                             style: {
+                              '--home-tab-theme-bg': localTerminalBg || 'var(--ui-content-bg, #1a1b26)',
                               borderBottom: 'none',
                               opacity: 1.0
                             }
