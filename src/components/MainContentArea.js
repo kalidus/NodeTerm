@@ -18,6 +18,9 @@ import SSHFileExplorerPanel from './SSHFileExplorerPanel';
 import { TAB_TYPES } from '../utils/constants';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
+import { applyTabTheme, getTabThemeList } from '../utils/tabThemeLoader';
+
+const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
 
 const MainContentArea = ({
   // Sidebar props
@@ -701,15 +704,9 @@ const MainContentArea = ({
     const navList = navContainer.querySelector('.p-tabview-nav');
     if (!navList) return;
 
-    // Eliminar botones existentes del navContainer
-    const existingButtons = navContainer.querySelector('.local-terminal-buttons');
-    if (existingButtons) {
-      existingButtons.remove();
-    }
-    const existingTrafficLights = navContainer.querySelector('.main-nav-traffic-lights');
-    if (existingTrafficLights) {
-      existingTrafficLights.remove();
-    }
+    // Eliminar botones existentes del nav
+    navContainer.querySelectorAll('.local-terminal-buttons, .tab-theme-button-wrapper').forEach((el) => el.remove());
+    navContainer.querySelector('.main-nav-traffic-lights')?.remove();
 
     // Crear dots tipo macOS iguales a HomeTab
     const trafficLights = document.createElement('div');
@@ -824,11 +821,144 @@ const MainContentArea = ({
       terminalSelectorMenuRef.current?.show(e);
     });
 
+    // Botón temas de pestañas: a la derecha del todo, mismo estilo que los selectores de tema de la HomeTab (pi pi-palette)
+    const themeButton = document.createElement('div');
+    themeButton.setAttribute('role', 'button');
+    themeButton.setAttribute('tabIndex', '0');
+    themeButton.title = 'Tema de pestañas';
+    themeButton.className = 'tab-theme-quick-button';
+    const themeIcon = document.createElement('i');
+    themeIcon.className = 'pi pi-palette';
+    themeIcon.style.cssText = `
+      font-size: 0.9rem;
+      color: var(--ui-tab-text, rgba(255,255,255,0.85));
+      opacity: 0.6;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      transition: all 0.2s;
+    `;
+    themeButton.appendChild(themeIcon);
+    themeButton.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    `;
+    themeButton.addEventListener('mouseenter', () => { themeIcon.style.opacity = '1'; });
+    themeButton.addEventListener('mouseleave', () => { themeIcon.style.opacity = '0.6'; });
+    themeButton.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        themeButton.click();
+      }
+    });
+    themeButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const existingPanel = document.getElementById('tab-theme-quick-panel');
+      if (existingPanel) {
+        existingPanel.remove();
+        return;
+      }
+      const rect = themeButton.getBoundingClientRect();
+      const currentTheme = localStorage.getItem(TAB_THEME_STORAGE_KEY) || 'default';
+      const themeList = getTabThemeList();
+      const panel = document.createElement('div');
+      panel.id = 'tab-theme-quick-panel';
+      panel.style.cssText = `
+        position: fixed;
+        right: 8px;
+        top: ${rect.bottom + 4}px;
+        width: 280px;
+        max-height: 380px;
+        overflow: auto;
+        background: var(--ui-dialog-bg, var(--ui-card-bg, #2d2d30));
+        border: 1px solid var(--ui-tab-border, rgba(255,255,255,0.12));
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+        z-index: 10000;
+        padding: 6px;
+        font-size: 12px;
+      `;
+      themeList.forEach(({ id, name, preview }) => {
+        const item = document.createElement('div');
+        item.dataset.themeId = id;
+        item.style.cssText = `
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 6px 8px;
+          cursor: pointer;
+          border-radius: 6px;
+          color: var(--ui-tab-text, rgba(255,255,255,0.9));
+          background: ${id === currentTheme ? 'var(--ui-tab-active-bg, rgba(255,255,255,0.12))' : 'transparent'};
+        `;
+        const swatch = document.createElement('div');
+        swatch.style.cssText = `
+          width: 28px;
+          height: 18px;
+          flex-shrink: 0;
+          border-radius: ${preview.borderRadius || '4px 4px 0 0'};
+          background: ${preview.background};
+          border: ${preview.border || '1px solid rgba(255,255,255,0.2)'};
+          box-shadow: ${preview.boxShadow || 'none'};
+        `;
+        const label = document.createElement('span');
+        label.textContent = name;
+        label.style.flex = '1';
+        label.style.overflow = 'hidden';
+        label.style.textOverflow = 'ellipsis';
+        label.style.whiteSpace = 'nowrap';
+        item.appendChild(swatch);
+        item.appendChild(label);
+        if (id === currentTheme) {
+          const check = document.createElement('i');
+          check.className = 'pi pi-check';
+          check.style.cssText = 'font-size: 0.7rem; opacity: 0.9; flex-shrink: 0;';
+          item.appendChild(check);
+        }
+        item.addEventListener('mouseenter', () => {
+          if (id !== currentTheme) item.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))';
+        });
+        item.addEventListener('mouseleave', () => {
+          if (id !== currentTheme) item.style.background = 'transparent';
+        });
+        item.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          applyTabTheme(id);
+          localStorage.setItem(TAB_THEME_STORAGE_KEY, id);
+          panel.remove();
+          document.removeEventListener('click', closeOutside);
+        });
+        panel.appendChild(item);
+      });
+      document.body.appendChild(panel);
+      const closeOutside = (e) => {
+        if (!panel.contains(e.target) && !themeButton.contains(e.target)) {
+          if (panel.parentNode) panel.remove();
+          document.removeEventListener('click', closeOutside);
+        }
+      };
+      setTimeout(() => document.addEventListener('click', closeOutside), 0);
+    });
+
+    const themeButtonWrapper = document.createElement('div');
+    themeButtonWrapper.className = 'tab-theme-button-wrapper';
+    themeButtonWrapper.style.cssText = `
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      align-self: flex-end;
+      margin-left: auto;
+      margin-bottom: 1px;
+    `;
+    themeButtonWrapper.appendChild(themeButton);
+
     buttonsContainer.appendChild(plusButton);
     buttonsContainer.appendChild(dropdownButton);
     navList.appendChild(trafficLights);
-    // Insertar dentro de p-tabview-nav, después de la última pestaña
     navList.appendChild(buttonsContainer);
+    navList.appendChild(themeButtonWrapper);
   }, [filteredTabs, activeTabIndex, wslDistributions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Función para crear una nueva pestaña de terminal local independiente

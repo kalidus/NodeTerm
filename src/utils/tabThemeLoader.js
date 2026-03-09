@@ -1324,6 +1324,28 @@ Object.assign(tabThemes, {
   } }
 });
 
+// Lista de temas para el selector rápido (id + nombre + preview para mostrar)
+const formatThemeKey = (key) =>
+  key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()).trim();
+
+export const getTabThemeList = () =>
+  Object.entries(tabThemes)
+    .map(([id, t]) => {
+      const styles = t.styles || {};
+      const preview = {
+        background: styles['--ui-tab-active-bg'] || styles['--ui-tab-bg'] || 'var(--ui-tab-active-bg, #333)',
+        borderRadius: styles['--tab-border-radius'] || '4px 4px 0 0',
+        border: styles['--ui-tab-border'] ? `1px solid ${styles['--ui-tab-border']}` : '1px solid rgba(255,255,255,0.2)',
+        boxShadow: styles['--tab-box-shadow'] || 'none'
+      };
+      return {
+        id,
+        name: t.name || formatThemeKey(id),
+        preview
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
 // Función para aplicar el tema de pestañas
 export const applyTabTheme = (themeName) => {
   const theme = tabThemes[themeName];

@@ -238,6 +238,17 @@
     background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.08)) !important;
 }
 
+/* Botón de tema de pestañas (dentro del nav, a la derecha con margin-left: auto) */
+.terminal-frame .main-tab-view .p-tabview-nav .tab-theme-button-wrapper {
+    flex-shrink: 0;
+    align-self: flex-end;
+}
+.terminal-frame .main-tab-view .p-tabview-nav .tab-theme-quick-button {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
 /* Footer de la sidebar */
 .terminal-frame .sidebar-footer {
     background: rgba(0, 0, 0, 0.1) !important;
