@@ -118,6 +118,43 @@
     color: var(--ui-sidebar-text, #fff) !important;
 }
 
+/* --- Marco principal: header (botones Mac) + barra de pestañas integrados --- */
+.terminal-frame.main-content-frame .terminal-frame-header {
+    background: var(--ui-content-bg, #1a1b26) !important;
+    border-bottom: none !important;
+    padding: 8px 10px 4px 14px;
+    min-height: 32px;
+    flex-shrink: 0;
+}
+
+.terminal-frame.main-content-frame .terminal-frame-controls {
+    margin-right: 12px;
+}
+
+.terminal-frame.main-content-frame .main-tab-view .p-tabview-nav {
+    position: relative;
+    background: var(--ui-content-bg, #1a1b26) !important;
+    border: none !important;
+    padding: 0 10px 6px 52px !important; /* espacio para los 3 puntos estilo mac */
+    margin-top: 0 !important;
+    border-bottom: 1px solid var(--ui-tabgroup-border, rgba(255, 255, 255, 0.06)) !important;
+}
+
+/* Puntos estilo mac integrados en la misma línea que las pestañas */
+.terminal-frame.main-content-frame .main-tab-view .p-tabview-nav::before {
+    content: '';
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ff5f56;
+    box-shadow: 14px 0 0 #ffbd2e, 28px 0 0 #27c93f; /* amarillo y verde */
+    opacity: 0.95;
+}
+
 /* TabView overrides within TerminalFrame */
 .terminal-frame .main-tab-view.p-tabview {
     display: flex;
@@ -140,27 +177,28 @@
     overflow: hidden;
 }
 
-/* Tab Buttons */
+/* Tab Buttons: usar variables de tema para que los temas de pestañas se apliquen */
 .terminal-frame .main-tab-view .p-tabview-nav li .p-tabview-nav-link {
-    background: rgba(255, 255, 255, 0.03) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    background: var(--ui-tab-bg, rgba(255, 255, 255, 0.05)) !important;
+    color: var(--ui-tab-text, rgba(255, 255, 255, 0.85)) !important;
+    border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.08)) !important;
     border-bottom: none !important;
-    border-radius: 8px 8px 0 0 !important;
+    border-radius: 6px 6px 0 0 !important;
     margin-right: 4px !important;
-    padding: 8px 16px !important;
-    font-size: 11px !important;
+    padding: 6px 12px !important;
+    font-size: 0.78rem !important;
     transition: all 0.2s ease !important;
     box-shadow: none !important;
 }
 
 .terminal-frame .main-tab-view .p-tabview-nav li.p-highlight .p-tabview-nav-link {
-    background: rgba(255, 255, 255, 0.08) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    color: var(--ui-sidebar-text, #fff) !important;
+    background: var(--ui-tab-active-bg) !important;
+    color: var(--ui-tab-active-text) !important;
+    border-color: var(--ui-tab-border, rgba(255, 255, 255, 0.15)) !important;
 }
 
 .terminal-frame .main-tab-view .p-tabview-nav li:not(.p-highlight):hover .p-tabview-nav-link {
-    background: rgba(255, 255, 255, 0.05) !important;
+    background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.08)) !important;
 }
 
 /* Footer de la sidebar */
