@@ -1121,6 +1121,7 @@ const HomeTab = ({
                   setTerminalFrameStyle={setTerminalFrameStyle}
                   terminalOpacity={terminalOpacity}
                   onTerminalOpacityChange={setTerminalOpacity}
+                  statusBarVisible={statusBarVisible}
                   onSwitchTerminal={(type, info) => {
                     if (embeddedTabbedTerminalRef.current?.addTerminalTab) {
                       embeddedTabbedTerminalRef.current.addTerminalTab(type, info);
@@ -1339,7 +1340,7 @@ const HomeTab = ({
       }}>
       <div
         style={{
-          height: statusBarVisible ? 'calc(100% - 40px)' : '100%',
+          height: (statusBarVisible && !terminalView) ? 'calc(100% - 40px)' : '100%',
           width: '100%',
           position: 'relative',
           overflow: 'hidden'
@@ -1432,7 +1433,7 @@ const HomeTab = ({
           />
         </div>
       </div>
-      <StandaloneStatusBar visible={statusBarVisible} />
+      <StandaloneStatusBar visible={statusBarVisible && !terminalView} />
     </div>
   );
 };

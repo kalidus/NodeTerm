@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 
-const StandaloneStatusBar = ({ visible = true }) => {
+const StandaloneStatusBar = ({ visible = true, style = {} }) => {
     const [statusStats, setStatusStats] = useState(null);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
     const [cpuHistory, setCpuHistory] = useState([]);
@@ -163,7 +163,8 @@ const StandaloneStatusBar = ({ visible = true }) => {
             left: 0,
             right: 0,
             zIndex: 10,
-            width: '100%'
+            width: '100%',
+            ...style
         }}>
             <StatusBar
                 stats={statusStats || {}}

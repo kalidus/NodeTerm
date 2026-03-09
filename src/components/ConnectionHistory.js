@@ -12,6 +12,7 @@ import { themes } from '../themes';
 import { themeManager } from '../utils/themeManager';
 import { Slider } from 'primereact/slider';
 import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS, ANIMATED_UI_KEYS, NATURE_UI_KEYS } from '../themes/ui-themes';
+import StandaloneStatusBar from './StandaloneStatusBar';
 
 // Formatear "Hace 5m", "Hace 2 h", "Ayer", etc.
 function formatRelativeTime(iso) {
@@ -147,6 +148,7 @@ const ConnectionHistory = ({
 	onTerminalOpacityChange = () => { },
 	onToggleTerminalVisibility,
 	onSwitchTerminal,
+	statusBarVisible = true,
 	children
 }) => {
 	// Helper para ajustar la opacidad de los colores (Hex o RGBA)
@@ -3016,6 +3018,23 @@ const ConnectionHistory = ({
 
 				{/* Terminal Body - always kept alive */}
 				{children}
+
+				{/* Integrated Status Bar */}
+				{statusBarVisible && (
+					<StandaloneStatusBar
+						visible={true}
+						style={{
+							position: 'relative',
+							bottom: 'auto',
+							left: 'auto',
+							right: 'auto',
+							width: '100%',
+							zIndex: 5,
+							borderTop: `1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '33' : 'rgba(255,255,255,0.05)'}`,
+							marginTop: 'auto'
+						}}
+					/>
+				)}
 			</div>
 
 			<OverlayPanel
