@@ -27,7 +27,10 @@ const STORAGE_KEYS = {
   LINUX_ICON_THEME: 'basicapp_linux_statusbar_icon_theme',
   // Docker
   DOCKER_THEME: 'localDockerStatusBarTheme',
-  DOCKER_ICON_THEME: 'basicapp_docker_statusbar_icon_theme'
+  DOCKER_ICON_THEME: 'basicapp_docker_statusbar_icon_theme',
+  // Cygwin
+  CYGWIN_THEME: 'localCygwinStatusBarTheme',
+  CYGWIN_ICON_THEME: 'basicapp_cygwin_statusbar_icon_theme'
 };
 
 // Terminal types for Status Bar
@@ -35,7 +38,8 @@ const TERMINAL_TYPES = [
   { id: 'ssh', name: 'SSH', icon: 'pi pi-server', iconClass: 'ssh' },
   { id: 'powershell', name: 'PowerShell', icon: 'pi pi-microsoft', iconClass: 'powershell' },
   { id: 'linux', name: 'Linux / WSL', icon: 'pi pi-desktop', iconClass: 'linux' },
-  { id: 'docker', name: 'Docker', icon: 'pi pi-box', iconClass: 'docker' }
+  { id: 'docker', name: 'Docker', icon: 'pi pi-box', iconClass: 'docker' },
+  { id: 'cygwin', name: 'Cygwin', icon: 'pi pi-desktop', iconClass: 'cygwin' }
 ];
 
 // Preview tabs
@@ -43,7 +47,8 @@ const PREVIEW_TABS = [
   { id: 'ssh', label: 'SSH', icon: 'pi pi-server' },
   { id: 'powershell', label: 'PS', icon: 'pi pi-microsoft' },
   { id: 'linux', label: 'Linux', icon: 'pi pi-desktop' },
-  { id: 'docker', label: 'Docker', icon: 'pi pi-box' }
+  { id: 'docker', label: 'Docker', icon: 'pi pi-box' },
+  { id: 'cygwin', label: 'Cygwin', icon: 'pi pi-desktop' }
 ];
 
 const StatusBarSettingsTab = ({
@@ -70,41 +75,47 @@ const StatusBarSettingsTab = ({
 
   // Theme per terminal type (colors)
   const [sshTheme, setSshTheme] = useState(() => statusBarTheme || 'Default Dark');
-  const [powershellTheme, setPowershellTheme] = useState(() => 
+  const [powershellTheme, setPowershellTheme] = useState(() =>
     localStorage.getItem(STORAGE_KEYS.POWERSHELL_THEME) || 'Monokai'
   );
-  const [linuxTheme, setLinuxTheme] = useState(() => 
+  const [linuxTheme, setLinuxTheme] = useState(() =>
     localStorage.getItem(STORAGE_KEYS.LINUX_THEME) || 'Dracula'
   );
-  const [dockerTheme, setDockerTheme] = useState(() => 
+  const [dockerTheme, setDockerTheme] = useState(() =>
     localStorage.getItem(STORAGE_KEYS.DOCKER_THEME) || 'One Dark'
+  );
+  const [cygwinTheme, setCygwinTheme] = useState(() =>
+    localStorage.getItem(STORAGE_KEYS.CYGWIN_THEME) || 'Default Dark'
   );
 
   // Icon theme per terminal type
-  const [sshIconTheme, setSshIconTheme] = useState(() => 
+  const [sshIconTheme, setSshIconTheme] = useState(() =>
     localStorage.getItem(STORAGE_KEYS.SSH_ICON_THEME) || statusBarIconTheme || 'classic'
   );
-  const [powershellIconTheme, setPowershellIconTheme] = useState(() => 
+  const [powershellIconTheme, setPowershellIconTheme] = useState(() =>
     localStorage.getItem(STORAGE_KEYS.POWERSHELL_ICON_THEME) || 'classic'
   );
-  const [linuxIconTheme, setLinuxIconTheme] = useState(() => 
+  const [linuxIconTheme, setLinuxIconTheme] = useState(() =>
     localStorage.getItem(STORAGE_KEYS.LINUX_ICON_THEME) || 'classic'
   );
-  const [dockerIconTheme, setDockerIconTheme] = useState(() => 
+  const [dockerIconTheme, setDockerIconTheme] = useState(() =>
     localStorage.getItem(STORAGE_KEYS.DOCKER_ICON_THEME) || 'classic'
+  );
+  const [cygwinIconTheme, setCygwinIconTheme] = useState(() =>
+    localStorage.getItem(STORAGE_KEYS.CYGWIN_ICON_THEME) || 'classic'
   );
 
   // Preview state
   const [activePreviewTab, setActivePreviewTab] = useState('ssh');
 
   // Options
-  const themeOptions = useMemo(() => 
+  const themeOptions = useMemo(() =>
     Object.keys(statusBarThemes).map(name => ({ label: name, value: name })), []
   );
-  const iconThemeOptions = useMemo(() => 
-    Object.entries(statusBarIconThemes).map(([key, theme]) => ({ 
-      label: theme.name, 
-      value: key 
+  const iconThemeOptions = useMemo(() =>
+    Object.entries(statusBarIconThemes).map(([key, theme]) => ({
+      label: theme.name,
+      value: key
     })), []
   );
 
@@ -151,9 +162,10 @@ const StatusBarSettingsTab = ({
       case 'powershell': return powershellTheme;
       case 'linux': return linuxTheme;
       case 'docker': return dockerTheme;
+      case 'cygwin': return cygwinTheme;
       default: return 'Default Dark';
     }
-  }, [sshTheme, powershellTheme, linuxTheme, dockerTheme]);
+  }, [sshTheme, powershellTheme, linuxTheme, dockerTheme, cygwinTheme]);
 
   const getIconThemeForType = useCallback((type) => {
     switch (type) {
@@ -161,9 +173,10 @@ const StatusBarSettingsTab = ({
       case 'powershell': return powershellIconTheme;
       case 'linux': return linuxIconTheme;
       case 'docker': return dockerIconTheme;
+      case 'cygwin': return cygwinIconTheme;
       default: return 'classic';
     }
-  }, [sshIconTheme, powershellIconTheme, linuxIconTheme, dockerIconTheme]);
+  }, [sshIconTheme, powershellIconTheme, linuxIconTheme, dockerIconTheme, cygwinIconTheme]);
 
   const handleThemeChange = useCallback((type, themeName) => {
     switch (type) {
@@ -196,6 +209,14 @@ const StatusBarSettingsTab = ({
           newValue: themeName
         }));
         break;
+      case 'cygwin':
+        setCygwinTheme(themeName);
+        localStorage.setItem(STORAGE_KEYS.CYGWIN_THEME, themeName);
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: STORAGE_KEYS.CYGWIN_THEME,
+          newValue: themeName
+        }));
+        break;
       default: break;
     }
   }, [setStatusBarTheme]);
@@ -220,6 +241,10 @@ const StatusBarSettingsTab = ({
       case 'docker':
         setDockerIconTheme(iconThemeName);
         localStorage.setItem(STORAGE_KEYS.DOCKER_ICON_THEME, iconThemeName);
+        break;
+      case 'cygwin':
+        setCygwinIconTheme(iconThemeName);
+        localStorage.setItem(STORAGE_KEYS.CYGWIN_ICON_THEME, iconThemeName);
         break;
       default: break;
     }
@@ -251,9 +276,9 @@ const StatusBarSettingsTab = ({
     return (
       <div className="statusbar-palette-mini">
         {paletteColors.map((color, idx) => (
-          <div 
-            key={idx} 
-            className="statusbar-palette-dot" 
+          <div
+            key={idx}
+            className="statusbar-palette-dot"
             style={{ background: color }}
             title={color}
           />
@@ -286,11 +311,12 @@ const StatusBarSettingsTab = ({
       ssh: 'server-01',
       powershell: 'DESKTOP-PC',
       linux: 'ubuntu@wsl',
-      docker: 'container-01'
+      docker: 'container-01',
+      cygwin: 'cygwin@win'
     };
 
     return (
-      <div 
+      <div
         className="statusbar-preview-bar"
         style={{
           background: colors.background,
@@ -309,7 +335,7 @@ const StatusBarSettingsTab = ({
         <div className="statusbar-preview-item">
           <span style={{ color: iconTheme.colors.cpu }}>{iconTheme.icons.cpu}</span>
           <span>45%</span>
-          <div 
+          <div
             className="statusbar-preview-gauge"
             style={{
               background: `linear-gradient(to right, ${colors.cpuBarColor} 45%, ${colors.border} 45%)`
@@ -407,7 +433,7 @@ const StatusBarSettingsTab = ({
             <div className="statusbar-setting-group">
               <span className="statusbar-mini-label statusbar-label-normal">Mostrar discos de red</span>
               <div className="statusbar-network-disks-control">
-                <div 
+                <div
                   className={`statusbar-toggle-switch ${showNetworkDisks ? 'active' : ''}`}
                   onClick={() => handleShowNetworkDisksChange(!showNetworkDisks)}
                   title={showNetworkDisks ? 'Ocultar discos de red' : 'Mostrar discos de red'}
@@ -417,7 +443,7 @@ const StatusBarSettingsTab = ({
             <div className="statusbar-setting-group">
               <span className="statusbar-mini-label statusbar-label-normal">Mostrar barra de estado</span>
               <div className="statusbar-network-disks-control">
-                <div 
+                <div
                   className={`statusbar-toggle-switch ${statusBarVisible ? 'active' : ''}`}
                   onClick={() => handleStatusBarVisibleChange(!statusBarVisible)}
                   title={statusBarVisible ? 'Ocultar barra de estado' : 'Mostrar barra de estado'}
@@ -530,7 +556,7 @@ const StatusBarSettingsTab = ({
                     { name: 'Iconos', color: colors.iconColor }
                   ];
                   return paletteColors.map((item, idx) => (
-                    <div 
+                    <div
                       key={idx}
                       className="statusbar-palette-item"
                       title={`${item.name}: ${item.color}`}

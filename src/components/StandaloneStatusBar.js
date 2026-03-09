@@ -15,7 +15,7 @@ const StandaloneStatusBar = ({ visible = true }) => {
         try { return (localStorage.getItem('localShowNetworkDisks') || 'true') === 'true'; } catch { return true; }
     });
     const [localStatusBarThemeName, setLocalStatusBarThemeName] = useState(() => {
-        try { return localStorage.getItem('localPowerShellStatusBarTheme') || localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark'; } catch { return 'Default Dark'; }
+        try { return localStorage.getItem('localLinuxStatusBarTheme') || localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark'; } catch { return 'Default Dark'; }
     });
 
     // Build CSS variable overrides for StatusBar
@@ -123,13 +123,19 @@ const StandaloneStatusBar = ({ visible = true }) => {
         const handleStorageChange = (e) => {
             if (e.key === 'basicapp_statusbar_icon_theme') {
                 setStatusBarIconTheme(e.newValue || 'classic');
-            } else if (e.key === 'localPowerShellStatusBarTheme' || e.key === 'basicapp_statusbar_theme') {
+            } else if (e.key === 'localLinuxStatusBarTheme' || e.key === 'basicapp_statusbar_theme') {
                 setLocalStatusBarThemeName(e.newValue || 'Default Dark');
             } else if (e.key === 'localShowNetworkDisks') {
                 setShowNetworkDisks((e.newValue || 'true') === 'true');
             }
         };
+        const onThemeChanged = (e) => {
+            if (e.detail && e.detail.terminalType === 'linux') {
+                setLocalStatusBarThemeName(e.detail.theme);
+            }
+        };
         window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('statusbar-theme-changed', onThemeChanged);
 
         // Inicializar
         fetchStats();
@@ -141,6 +147,7 @@ const StandaloneStatusBar = ({ visible = true }) => {
             window.removeEventListener('blur', handleBlur);
             window.removeEventListener('focus', handleFocus);
             window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('statusbar-theme-changed', onThemeChanged);
         };
     }, [visible]);
 
@@ -165,6 +172,7 @@ const StandaloneStatusBar = ({ visible = true }) => {
                 statusBarIconTheme={statusBarIconTheme}
                 showNetworkDisks={showNetworkDisks}
                 isLoading={isLoadingStats}
+                terminalType="linux"
             />
         </div>
     );

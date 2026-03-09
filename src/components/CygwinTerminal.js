@@ -121,8 +121,17 @@ const CygwinTerminal = forwardRef(({
                 setShowNetworkDisks((e.newValue || 'true') === 'true');
             }
         };
+        const onThemeChanged = (e) => {
+            if (e.detail && e.detail.terminalType === 'cygwin') {
+                setLocalStatusBarThemeName(e.detail.theme);
+            }
+        };
         window.addEventListener('storage', onStorage);
-        return () => window.removeEventListener('storage', onStorage);
+        window.addEventListener('statusbar-theme-changed', onThemeChanged);
+        return () => {
+            window.removeEventListener('storage', onStorage);
+            window.removeEventListener('statusbar-theme-changed', onThemeChanged);
+        };
     }, []);
 
     // Expose methods to parent
@@ -521,6 +530,7 @@ const CygwinTerminal = forwardRef(({
                     statusBarIconTheme={statusBarIconTheme}
                     showNetworkDisks={showNetworkDisks}
                     isLoading={isLoadingStats}
+                    terminalType="cygwin"
                 />
             )}
         </div>

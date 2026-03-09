@@ -148,8 +148,17 @@ const PowerShellTerminal = forwardRef(({
                 setShowNetworkDisks((e.newValue || 'true') === 'true');
             }
         };
+        const onThemeChanged = (e) => {
+            if (e.detail && e.detail.terminalType === 'powershell') {
+                setLocalStatusBarThemeName(e.detail.theme);
+            }
+        };
         window.addEventListener('storage', onStorage);
-        return () => window.removeEventListener('storage', onStorage);
+        window.addEventListener('statusbar-theme-changed', onThemeChanged);
+        return () => {
+            window.removeEventListener('storage', onStorage);
+            window.removeEventListener('statusbar-theme-changed', onThemeChanged);
+        };
     }, []);
 
     // Expose methods to parent component
@@ -569,7 +578,14 @@ const PowerShellTerminal = forwardRef(({
                 />
             </div>
             {!hideStatusBar && (
-                <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} showNetworkDisks={showNetworkDisks} isLoading={isLoadingStats} />
+                <StatusBar
+                    stats={{ ...(statusStats || {}), cpuHistory }}
+                    active={true}
+                    statusBarIconTheme={statusBarIconTheme}
+                    showNetworkDisks={showNetworkDisks}
+                    isLoading={isLoadingStats}
+                    terminalType="powershell"
+                />
             )}
         </div>
     );

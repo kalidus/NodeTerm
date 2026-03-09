@@ -92,7 +92,7 @@ const DistroIcon = ({ distro }) => {
     }
 };
 
-const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkDisks = true, isLoading = false, gpuStats = null }) => {
+const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkDisks = true, isLoading = false, gpuStats = null, terminalType = 'ssh' }) => {
     const op = useRef(null);
     // Obtener la versión de la aplicación de forma segura
     const { appVersion } = getVersionInfo();
@@ -422,12 +422,29 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
                                     onMouseEnter={(e) => e.currentTarget.style.borderColor = theme.colors.iconColor}
                                     onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
                                     onClick={() => {
+                                        // Mapeo de tipos de terminal a sus respectivas claves de localStorage
+                                        const themeStorageKeys = {
+                                            'ssh': 'basicapp_statusbar_theme',
+                                            'powershell': 'localPowerShellStatusBarTheme',
+                                            'linux': 'localLinuxStatusBarTheme',
+                                            'docker': 'localDockerStatusBarTheme',
+                                            'cygwin': 'localCygwinStatusBarTheme'
+                                        };
+
+                                        const storageKey = themeStorageKeys[terminalType] || 'basicapp_statusbar_theme';
+
                                         // Aplicar tema localmente y notificar
-                                        localStorage.setItem('basicapp_statusbar_theme', themeName);
-                                        localStorage.setItem('localPowerShellStatusBarTheme', themeName);
+                                        localStorage.setItem(storageKey, themeName);
+
+                                        // Si es el tema global (SSH), forzar actualización
+                                        if (terminalType === 'ssh') {
+                                            localStorage.setItem('basicapp_statusbar_theme', themeName);
+                                        }
+
                                         window.dispatchEvent(new Event('storage'));
-                                        // Notificar a través de un evento custom si es necesario
-                                        window.dispatchEvent(new CustomEvent('statusbar-theme-changed', { detail: { theme: themeName } }));
+                                        window.dispatchEvent(new CustomEvent('statusbar-theme-changed', {
+                                            detail: { theme: themeName, terminalType }
+                                        }));
                                         op.current.hide();
                                     }}
                                 >

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react';
+import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState, useMemo } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -7,6 +7,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 // import { ImageAddon } from '@xterm/addon-image'; // Comentado temporalmente por errores de require
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
+import { statusBarThemes } from '../themes/status-bar-themes';
 
 const TerminalComponent = forwardRef(({
     tabId,
@@ -35,15 +36,23 @@ const TerminalComponent = forwardRef(({
     onToggleBroadcastTarget,
     isSplit = false
 }, ref) => {
-    const terminalRef = useRef(null);
-    const term = useRef(null);
-    const fitAddon = useRef(null);
     const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
     const [cpuHistory, setCpuHistory] = useState([]);
+
+    // Detectar si es terminal local de forma robusta
+    const isLocalTerminal = useMemo(() => {
+        return !sshConfig || Object.keys(sshConfig).length === 0 || (!sshConfig.host && !sshConfig.username);
+    }, [sshConfig]);
+
     // Ref para local echo SSH (se lee de localStorage y se actualiza con eventos)
     const sshLocalEchoRef = useRef(
         localStorage.getItem('nodeterm_ssh_local_echo') === 'true'
     );
+    const [localStatusBarThemeName, setLocalStatusBarThemeName] = useState(() => {
+        const isSSH = !isLocalTerminal;
+        const storageKey = isSSH ? 'basicapp_statusbar_theme' : 'localLinuxStatusBarTheme';
+        try { return localStorage.getItem(storageKey) || 'Default Dark'; } catch { return 'Default Dark'; }
+    });
     // Ref para evitar regenerar el terminal si cambian los props de broadcast
     const broadcastPropsRef = useRef({ isBroadcastActive, onBroadcastData });
     useEffect(() => {
@@ -76,8 +85,52 @@ const TerminalComponent = forwardRef(({
         return () => window.removeEventListener('terminal-settings-changed', handleSettingsChange);
     }, []);
 
-    // Detectar si es terminal local de forma robusta para aplicar opacidad opcionalmente
-    const isLocalTerminal = !sshConfig || Object.keys(sshConfig).length === 0 || (!sshConfig.host && !sshConfig.username);
+    const terminalRef = useRef(null);
+    const term = useRef(null);
+    const fitAddon = useRef(null);
+
+    // Build CSS variable overrides for StatusBar
+    const getScopedStatusBarCssVars = () => {
+        const themeObj = statusBarThemes[localStatusBarThemeName] || statusBarThemes['Default Dark'];
+        const colors = themeObj.colors || {};
+        return {
+            '--statusbar-bg': colors.background,
+            '--statusbar-text': colors.text,
+            '--statusbar-border': colors.border,
+            '--statusbar-icon-color': colors.iconColor,
+            '--statusbar-cpu': colors.cpuBarColor,
+            '--statusbar-mem': colors.memoryBarColor,
+            '--statusbar-disk': colors.diskBarColor,
+            '--statusbar-red-up': colors.networkUpColor,
+            '--statusbar-red-down': colors.networkDownColor,
+            '--statusbar-sparkline-color': colors.sparklineColor
+        };
+    };
+
+    // Escuchar cambios de tema
+    useEffect(() => {
+        const handleStorage = (e) => {
+            if (!e) return;
+            const isSSH = !isLocalTerminal;
+            const storageKey = isSSH ? 'basicapp_statusbar_theme' : 'localLinuxStatusBarTheme';
+            if (e.key === storageKey) {
+                setLocalStatusBarThemeName(e.newValue || 'Default Dark');
+            }
+        };
+        const handleThemeChanged = (e) => {
+            const isSSH = !isLocalTerminal;
+            const targetType = isSSH ? 'ssh' : 'linux';
+            if (e.detail && e.detail.terminalType === targetType) {
+                setLocalStatusBarThemeName(e.detail.theme);
+            }
+        };
+        window.addEventListener('storage', handleStorage);
+        window.addEventListener('statusbar-theme-changed', handleThemeChanged);
+        return () => {
+            window.removeEventListener('storage', handleStorage);
+            window.removeEventListener('statusbar-theme-changed', handleThemeChanged);
+        };
+    }, [isLocalTerminal]);
 
     // Expose fit method to parent component
     useImperativeHandle(ref, () => ({
@@ -597,7 +650,8 @@ const TerminalComponent = forwardRef(({
                 width: '100%',
                 backgroundColor: isIntegrated ? 'transparent' : (theme?.background || '#1e1e1e'),
                 '--terminal-bg': theme?.background || '#1e1e1e',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                ...getScopedStatusBarCssVars()
             }}
         >
             <div
@@ -834,7 +888,12 @@ const TerminalComponent = forwardRef(({
                     `
                 }} />
             </div>
-            {!hideStatusBar && <StatusBar stats={{ ...stats, cpuHistory: cpuHistory }} active={active} statusBarIconTheme={statusBarIconTheme} />}
+            {!hideStatusBar && <StatusBar
+                stats={{ ...stats, cpuHistory: cpuHistory }}
+                active={active}
+                statusBarIconTheme={statusBarIconTheme}
+                terminalType={isLocalTerminal ? 'linux' : 'ssh'}
+            />}
         </div >
     );
 });

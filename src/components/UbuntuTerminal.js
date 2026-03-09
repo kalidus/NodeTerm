@@ -150,8 +150,17 @@ const UbuntuTerminal = forwardRef(({
             if (e.key === 'localShowNetworkDisks') setShowNetworkDisks((e.newValue || 'true') === 'true');
             if (e.key === 'localLinuxStatusBarTheme') setLocalStatusBarThemeName(e.newValue || 'Default Dark');
         };
+        const onThemeChanged = (e) => {
+            if (e.detail && e.detail.terminalType === 'linux') {
+                setLocalStatusBarThemeName(e.detail.theme);
+            }
+        };
         window.addEventListener('storage', onStorage);
-        return () => window.removeEventListener('storage', onStorage);
+        window.addEventListener('statusbar-theme-changed', onThemeChanged);
+        return () => {
+            window.removeEventListener('storage', onStorage);
+            window.removeEventListener('statusbar-theme-changed', onThemeChanged);
+        };
     }, []);
 
     // Determinar el canal IPC basado en la categor??a de la distribuci??n
@@ -575,7 +584,14 @@ const UbuntuTerminal = forwardRef(({
                 />
             </div>
             {!hideStatusBar && (
-                <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} showNetworkDisks={showNetworkDisks} isLoading={isLoadingStats} />
+                <StatusBar
+                    stats={{ ...(statusStats || {}), cpuHistory }}
+                    active={true}
+                    statusBarIconTheme={statusBarIconTheme}
+                    showNetworkDisks={showNetworkDisks}
+                    isLoading={isLoadingStats}
+                    terminalType="linux"
+                />
             )}
         </div>
     );

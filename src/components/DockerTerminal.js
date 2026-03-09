@@ -259,6 +259,34 @@ const DockerTerminal = forwardRef(({
         return () => window.removeEventListener('resize', handleResize);
     }, [tabId]);
 
+    // Listen for changes to icon theme and local docker status bar theme via storage updates
+    useEffect(() => {
+        const onStorage = (e) => {
+            if (!e) return;
+            if (e.key === 'basicapp_statusbar_icon_theme') {
+                setStatusBarIconTheme(e.newValue || 'classic');
+            } else if (e.key === 'localDockerStatusBarTheme') {
+                setLocalStatusBarThemeName(e.newValue || 'Default Dark');
+            } else if (e.key === 'localShowNetworkDisks') {
+                setShowNetworkDisks((e.newValue || 'true') === 'true');
+            }
+        };
+        window.addEventListener('storage', onStorage);
+
+        // También escuchar el evento customizado
+        const onThemeChanged = (e) => {
+            if (e.detail && e.detail.terminalType === 'docker') {
+                setLocalStatusBarThemeName(e.detail.theme);
+            }
+        };
+        window.addEventListener('statusbar-theme-changed', onThemeChanged);
+
+        return () => {
+            window.removeEventListener('storage', onStorage);
+            window.removeEventListener('statusbar-theme-changed', onThemeChanged);
+        };
+    }, []);
+
     // Exponer m??todos
     useImperativeHandle(ref, () => ({
         fit: () => {
@@ -334,9 +362,10 @@ const DockerTerminal = forwardRef(({
                 <StatusBar
                     stats={statusStats}
                     isLoading={isLoadingStats}
-                    themeName={localStatusBarThemeName}
-                    iconTheme={statusBarIconTheme}
+                    active={true}
+                    statusBarIconTheme={statusBarIconTheme}
                     showNetworkDisks={showNetworkDisks}
+                    terminalType="docker"
                 />
             )}
         </div>
