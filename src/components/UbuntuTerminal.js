@@ -170,10 +170,12 @@ const UbuntuTerminal = forwardRef(({
     useImperativeHandle(ref, () => ({
         fit: () => {
             try {
-                if (fitAddon.current) {
-                    fitAddon.current.fit();
-                } else {
-                    console.warn(`UbuntuTerminal fitAddon not available for tab ${tabId}`);
+                if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
+                    if (fitAddon.current) {
+                        fitAddon.current.fit();
+                    } else {
+                        console.warn(`UbuntuTerminal fitAddon not available for tab ${tabId}`);
+                    }
                 }
             } catch (e) {
                 console.error(`UbuntuTerminal fit() error for tab ${tabId}:`, e);
@@ -275,7 +277,7 @@ const UbuntuTerminal = forwardRef(({
 
         // ResizeObserver for dynamic resizing
         const resizeObserver = new ResizeObserver((entries) => {
-            if (fitAddon.current) {
+            if (fitAddon.current && terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
                 try {
                     fitAddon.current.fit();
                 } catch (e) {
@@ -291,7 +293,7 @@ const UbuntuTerminal = forwardRef(({
         const handleVisibilityChange = () => {
             if (!document.hidden) {
                 setTimeout(() => {
-                    if (fitAddon.current) {
+                    if (fitAddon.current && terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
                         try {
                             fitAddon.current.fit();
                         } catch (e) {
@@ -476,7 +478,9 @@ const UbuntuTerminal = forwardRef(({
         if (fitAddon.current) {
             setTimeout(() => {
                 try {
-                    fitAddon.current.fit();
+                    if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
+                        fitAddon.current?.fit();
+                    }
                 } catch (e) {
                     console.error(`UbuntuTerminal auto-fit error for tab ${tabId}:`, e);
                 }
@@ -487,7 +491,7 @@ const UbuntuTerminal = forwardRef(({
     // Efecto adicional para forzar redimensionamiento despu??s del montaje
     useEffect(() => {
         const forceResize = () => {
-            if (fitAddon.current) {
+            if (fitAddon.current && terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
                 try {
                     fitAddon.current.fit();
                 } catch (e) {

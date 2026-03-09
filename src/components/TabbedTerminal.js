@@ -255,8 +255,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                         ...currentFirstTab,
                         title: expectedTitle,
                         type: wslDistro.category === 'ubuntu' ? 'ubuntu' : (wslDistro.category === 'debian' ? 'debian' : 'wsl-distro'), // Corregido: incluir debian
-                        distroInfo: wslDistro, // Agregar información completa de la distribución
-                        _updateKey: Date.now() // Forzar re-render
+                        distroInfo: wslDistro // Agregar información completa de la distribución
                     };
                     // console.log('✅ [useEffect WSL] Pestaña actualizada:', {
                     //     antes: { type: currentFirstTab.type, title: currentFirstTab.title, hasDistroInfo: !!currentFirstTab.distroInfo },
@@ -365,8 +364,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                         ...currentFirstTab,
                         type: wslDistro.category === 'ubuntu' ? 'ubuntu' : (wslDistro.category === 'debian' ? 'debian' : 'wsl-distro'), // Corregido: incluir debian
                         title: expectedTitle, // Actualizar título también
-                        distroInfo: wslDistro, // Agregar distroInfo
-                        _updateKey: Date.now() // Forzar re-render
+                        distroInfo: wslDistro // Agregar distroInfo
                     };
                     // console.log('✅ [useEffect Corrección] Pestaña corregida:', {
                     //     antes: { type: currentFirstTab.type, title: currentFirstTab.title, hasDistroInfo: !!currentFirstTab.distroInfo },
@@ -435,8 +433,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     ...prevTabs[0],
                                     title: expectedTitle,
                                     type: wslDistro.category === 'ubuntu' ? 'ubuntu' : (wslDistro.category === 'debian' ? 'debian' : 'wsl-distro'), // Corregido: incluir debian
-                                    distroInfo: wslDistro, // Agregar información completa de la distribución
-                                    _updateKey: Date.now() // Forzar re-render
+                                    distroInfo: wslDistro // Agregar información completa de la distribución
                                 };
                                 console.log('✅ Pestaña actualizada por evento:', updatedTab);
                                 return [updatedTab, ...prevTabs.slice(1)];
@@ -2098,7 +2095,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             })()}
                             {tab.type === 'powershell' ? (
                                 <PowerShellTerminal
-                                    key={`${tab.id}-terminal-powershell-${tab._updateKey || ''}`}
+                                    key={`${tab.id}-terminal-powershell`}
                                     ref={(ref) => {
                                         if (ref) terminalRefs.current[tab.id] = ref;
                                     }}
@@ -2111,7 +2108,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 />
                             ) : tab.type === 'wsl' ? (
                                 <WSLTerminal
-                                    key={`${tab.id}-terminal-wsl-${tab._updateKey || ''}`}
+                                    key={`${tab.id}-terminal-wsl`}
                                     ref={(ref) => {
                                         if (ref) terminalRefs.current[tab.id] = ref;
                                     }}
@@ -2133,7 +2130,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     }
                                     return (
                                         <UbuntuTerminal
-                                            key={`${tab.id}-terminal-${tab.type}-${ubuntuInfo?.name || 'no-info'}-${tab._updateKey || ''}`}
+                                            key={`${tab.id}-terminal-${tab.type}-${ubuntuInfo?.name || 'no-info'}`}
                                             ref={(ref) => {
                                                 if (ref) terminalRefs.current[tab.id] = ref;
                                             }}

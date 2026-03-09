@@ -129,7 +129,9 @@ const CygwinTerminal = forwardRef(({
     useImperativeHandle(ref, () => ({
         fit: () => {
             try {
-                fitAddon.current?.fit();
+                if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
+                    fitAddon.current?.fit();
+                }
             } catch (e) {
                 console.error('Error fitting terminal:', e);
             }
@@ -242,10 +244,12 @@ const CygwinTerminal = forwardRef(({
         }
 
         const resizeObserver = new ResizeObserver(() => {
-            try {
-                fitAddon.current?.fit();
-            } catch (e) {
-                // Silently handle resize errors
+            if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
+                try {
+                    fitAddon.current?.fit();
+                } catch (e) {
+                    // Silently handle resize errors
+                }
             }
         });
 
@@ -256,10 +260,12 @@ const CygwinTerminal = forwardRef(({
         const handleVisibilityChange = () => {
             if (!document.hidden) {
                 setTimeout(() => {
-                    try {
-                        fitAddon.current?.fit();
-                    } catch (e) {
-                        // Silently handle
+                    if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
+                        try {
+                            fitAddon.current?.fit();
+                        } catch (e) {
+                            // Silently handle
+                        }
                     }
                 }, 100);
             }
@@ -412,9 +418,11 @@ const CygwinTerminal = forwardRef(({
         if (fitAddon.current) {
             setTimeout(() => {
                 try {
-                    fitAddon.current?.fit();
+                    if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
+                        fitAddon.current?.fit();
+                    }
                 } catch (e) {
-                    // Silently handle
+                    console.error('Error en fit:', e);
                 }
             }, 0);
         }
@@ -423,7 +431,7 @@ const CygwinTerminal = forwardRef(({
     // Force resize after mount
     useEffect(() => {
         const forceResize = () => {
-            if (fitAddon.current) {
+            if (fitAddon.current && terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
                 try {
                     fitAddon.current?.fit();
                 } catch (e) {

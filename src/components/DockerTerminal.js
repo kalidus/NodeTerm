@@ -149,7 +149,9 @@ const DockerTerminal = forwardRef(({
 
         // Hacer resize inicial
         try {
-            fitAddon.current.fit();
+            if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
+                fitAddon.current.fit();
+            }
         } catch (e) {
             console.error('Error en fit inicial de Docker:', e);
         }
@@ -239,7 +241,7 @@ const DockerTerminal = forwardRef(({
     // Manejar resize de la ventana
     useEffect(() => {
         const handleResize = () => {
-            if (fitAddon.current && term.current && terminalRef.current) {
+            if (fitAddon.current && term.current && terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
                 try {
                     fitAddon.current.fit();
                     const { cols, rows } = term.current;
@@ -261,7 +263,9 @@ const DockerTerminal = forwardRef(({
     useImperativeHandle(ref, () => ({
         fit: () => {
             try {
-                fitAddon.current?.fit();
+                if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
+                    fitAddon.current?.fit();
+                }
             } catch (e) {
                 console.error('Error en fit:', e);
             }
