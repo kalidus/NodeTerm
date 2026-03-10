@@ -45,16 +45,7 @@ const HomeTab = ({
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal'); // Estado normal para tama\u00F1o correcto
-  const [terminalHidden, setTerminalHidden] = useState(() => {
-    // Leer configuraci\u00F3n desde localStorage, por defecto visible (terminalHidden = false)
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE);
-      const isVisible = saved !== null ? saved === 'true' : true; // Por defecto true (visible)
-      return !isVisible; // terminalHidden es el inverso de isVisible
-    } catch {
-      return false; // Por defecto visible
-    }
-  });
+  const [terminalHidden, setTerminalHidden] = useState(true);
 
   const [terminalFrameStyle, setTerminalFrameStyle] = useState(() => {
     return localStorage.getItem(STORAGE_KEYS.TERMINAL_FRAME_STYLE) || 'macos';
@@ -133,7 +124,7 @@ const HomeTab = ({
   const [containerWidth, setContainerWidth] = useState(window.innerWidth - 100);
   const [hasUserMovedTerminal, setHasUserMovedTerminal] = useState(false);
 
-  // Estado para el terminal embebido como vista integrada (por defecto visible en Command Palette mode)
+  // Estado para el terminal embebido como vista integrada (por defecto visible)
   const [terminalView, setTerminalView] = useState(true);
   const [embeddedTerminalHeight, setEmbeddedTerminalHeight] = useState(360);
 
@@ -293,10 +284,10 @@ const HomeTab = ({
 
       try {
         const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE);
-        const isVisible = saved !== null ? saved === 'true' : true;
+        const isVisible = saved !== null ? saved === 'true' : false; // Por defecto false (oculto)
         setTerminalHidden(!isVisible);
       } catch {
-        setTerminalHidden(false);
+        setTerminalHidden(true); // Por defecto oculto en caso de error
       }
     };
 
@@ -727,6 +718,19 @@ const HomeTab = ({
   }, []);
 
 
+  // Funci\u00F3n para cerrar el terminal y guardar el estado
+  const handleCloseTerminal = () => {
+    setTerminalHidden(true);
+    setTerminalView(true); // Mostrar integrada al cerrar la flotante
+    try {
+      localStorage.setItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, 'false');
+      // Despachar evento para sincronizar con otros componentes (como SettingsDialog)
+      window.dispatchEvent(new CustomEvent('home-tab-local-terminal-visibility-changed'));
+    } catch (e) {
+      console.error('Error guardando visibilidad del terminal:', e);
+    }
+  };
+
   // Funci\u00F3n para toggle de visibilidad del terminal
   const handleToggleTerminalVisibility = () => {
     setTerminalHidden(prev => {
@@ -734,13 +738,17 @@ const HomeTab = ({
       // Guardar preferencia en localStorage
       try {
         localStorage.setItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, (!newHidden).toString());
+        // Despachar evento para sincronizar
+        window.dispatchEvent(new CustomEvent('home-tab-local-terminal-visibility-changed'));
       } catch (e) {
         console.error('Error guardando visibilidad del terminal:', e);
       }
-      // Si se est?? mostrando el terminal, cambiar el estado a 'normal' (1/4 de p??gina)
+      // Mantener exclusividad entre terminal flotante e integrado
       if (!newHidden) {
         setTerminalState('normal');
-        setTerminalView(false); // Ocultar terminal embebido para evitar duplicidad
+        setTerminalView(false); // Ocultar integrada si se muestra flotante
+      } else {
+        setTerminalView(true); // Mostrar integrada si se oculta flotante
       }
       return newHidden;
     });
@@ -1215,7 +1223,7 @@ const HomeTab = ({
               <div
                 className="no-drag"
                 onMouseDown={(e) => e.stopPropagation()}
-                onClick={() => setTerminalHidden(true)}
+                onClick={handleCloseTerminal}
                 style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56', cursor: 'pointer', border: '1px solid #e0443e' }}
                 title="Cerrar" />
               <div
@@ -1233,7 +1241,7 @@ const HomeTab = ({
             </>
           ) : terminalFrameStyle === 'gnome' ? (
             <div className="gnome-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="gnome-dot close" title="Cerrar" onClick={() => setTerminalHidden(true)}>
+              <div className="gnome-dot close" title="Cerrar" onClick={handleCloseTerminal}>
                 <i className="pi pi-times" />
               </div>
             </div>
@@ -1241,29 +1249,29 @@ const HomeTab = ({
             <div className="kde-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
               <div className="kde-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><div className="custom-icon icon-min" /></div>
               <div className="kde-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><div className="custom-icon icon-max" /></div>
-              <div className="kde-dot close" title="Cerrar" onClick={() => setTerminalHidden(true)}><div className="custom-icon icon-close" /></div>
+              <div className="kde-dot close" title="Cerrar" onClick={handleCloseTerminal}><div className="custom-icon icon-close" /></div>
             </div>
           ) : terminalFrameStyle === 'windows' ? (
             <div className="windows-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
               <div className="win-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><div className="custom-icon icon-min" /></div>
               <div className="win-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><div className="custom-icon icon-max" /></div>
-              <div className="win-dot close" title="Cerrar" onClick={() => setTerminalHidden(true)}><div className="custom-icon icon-close" /></div>
+              <div className="win-dot close" title="Cerrar" onClick={handleCloseTerminal}><div className="custom-icon icon-close" /></div>
             </div>
           ) : terminalFrameStyle === 'matcha' ? (
             <div className="matcha-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="matcha-dot" onClick={() => setTerminalHidden(true)} title="Cerrar"><i className="pi pi-times" /></div>
+              <div className="matcha-dot" onClick={handleCloseTerminal} title="Cerrar"><i className="pi pi-times" /></div>
             </div>
           ) : terminalFrameStyle === 'futuristic' ? (
             <div className="futuristic-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="cyber-dot" title="Cerrar Terminal" onClick={() => setTerminalHidden(true)}>EXE</div>
+              <div className="cyber-dot" title="Cerrar Terminal" onClick={handleCloseTerminal}>EXE</div>
             </div>
           ) : terminalFrameStyle === 'modern' ? (
             <div className="modern-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="glass-dot" title="Ocultar" onClick={() => setTerminalHidden(true)}><i className="pi pi-times" /></div>
+              <div className="glass-dot" title="Ocultar" onClick={handleCloseTerminal}><i className="pi pi-times" /></div>
             </div>
           ) : (
             <div className="retro-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="retro-switch on" title="OFF" onClick={() => setTerminalHidden(true)} />
+              <div className="retro-switch on" title="OFF" onClick={handleCloseTerminal} />
             </div>
           )}
         </div>

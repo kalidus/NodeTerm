@@ -326,9 +326,9 @@ const SettingsDialog = ({
   const [localTerminalVisible, setLocalTerminalVisible] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE);
-      return saved !== null ? saved === 'true' : true; // Por defecto true (visible)
+      return saved !== null ? saved === 'true' : false; // Por defecto false (oculto)
     } catch {
-      return true;
+      return false;
     }
   });
 
