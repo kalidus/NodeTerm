@@ -282,7 +282,15 @@ const HomeTab = ({
 
   // Escuchar cambios en la visibilidad del terminal local
   useEffect(() => {
-    const handleTerminalVisibilityChange = () => {
+    const handleTerminalVisibilityChange = (e) => {
+      // Solo actuar si el cambio es específicamente para la visibilidad del terminal 
+      // o si es el evento personalizado. Ignorar eventos de storage genéricos (como cambios de tema)
+      if (e && e.type === 'storage') {
+        if (e.key !== STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE) {
+          return;
+        }
+      }
+
       try {
         const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE);
         const isVisible = saved !== null ? saved === 'true' : true;
@@ -719,10 +727,16 @@ const HomeTab = ({
   }, []);
 
 
-  // Funci??n para toggle de visibilidad del terminal
+  // Funci\u00F3n para toggle de visibilidad del terminal
   const handleToggleTerminalVisibility = () => {
     setTerminalHidden(prev => {
       const newHidden = !prev;
+      // Guardar preferencia en localStorage
+      try {
+        localStorage.setItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, (!newHidden).toString());
+      } catch (e) {
+        console.error('Error guardando visibilidad del terminal:', e);
+      }
       // Si se est?? mostrando el terminal, cambiar el estado a 'normal' (1/4 de p??gina)
       if (!newHidden) {
         setTerminalState('normal');
@@ -817,6 +831,12 @@ const HomeTab = ({
   const handleTerminalToggle = React.useCallback((show, terminalType, addNewTab = false) => {
     if (show) {
       setTerminalView(true);
+      // Ocultar terminal flotante para evitar duplicidad si el integrado se muestra
+      setTerminalHidden(true);
+      try {
+        localStorage.setItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, 'false');
+      } catch (e) { }
+
       if (addNewTab && embeddedTabbedTerminalRef.current?.addTerminalTab) {
         embeddedTabbedTerminalRef.current.addTerminalTab(terminalType);
       } else if (!embeddedTerminalInitialized.current && terminalType) {
