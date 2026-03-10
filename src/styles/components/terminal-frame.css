@@ -134,49 +134,10 @@
     min-height: 36px !important;
     background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), var(--ui-sidebar-bg, #1a1b26) !important;
     border: none !important;
-    padding: 0 6px 0 78px !important;
+    padding: 0 6px 0 10px !important;
     border-bottom: none !important;
-    align-items: flex-end !important;
+    align-items: center !important;
     padding-bottom: 0 !important;
-}
-
-/* Dots estilo mac en la misma línea que las pestañas, iguales a HomeTab */
-.terminal-frame.main-content-frame .main-tab-view .p-tabview-nav::before {
-    content: none !important;
-}
-
-.terminal-frame.main-content-frame .main-tab-view .p-tabview-nav .main-nav-traffic-lights {
-    position: absolute;
-    left: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    gap: 5px;
-    align-items: center;
-    z-index: 2;
-    pointer-events: none;
-}
-
-.terminal-frame.main-content-frame .main-tab-view .p-tabview-nav .main-nav-traffic-lights .traffic-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.terminal-frame.main-content-frame .main-tab-view .p-tabview-nav .main-nav-traffic-lights .traffic-dot.red {
-    background: #ff5f56;
-    border: 1px solid #e0443e;
-}
-
-.terminal-frame.main-content-frame .main-tab-view .p-tabview-nav .main-nav-traffic-lights .traffic-dot.yellow {
-    background: #ffbd2e;
-    border: 1px solid #dea123;
-}
-
-.terminal-frame.main-content-frame .main-tab-view .p-tabview-nav .main-nav-traffic-lights .traffic-dot.green {
-    background: #27c93f;
-    border: 1px solid #1aab29;
 }
 
 /* TabView overrides within TerminalFrame */
@@ -201,7 +162,7 @@
     overflow: hidden;
 }
 
-/* Tab Buttons: usar variables de tema para que los temas de pestañas se apliquen */
+/* Tab Buttons: misma altura que Home, centrados en la barra */
 .terminal-frame .main-tab-view .p-tabview-nav li .p-tabview-nav-link {
     background: var(--ui-tab-bg, rgba(255, 255, 255, 0.05)) !important;
     color: var(--ui-tab-text, rgba(255, 255, 255, 0.85)) !important;
@@ -216,14 +177,40 @@
     height: 25px !important;
     min-height: 25px !important;
     margin-bottom: 0 !important;
-    align-self: flex-end !important;
+    align-self: center !important;
 }
 
-/* Home tab: sin padding lateral, ícono centrado, misma altura que las demás */
+/* Home tab: misma altura que el resto, más ancha, centrada */
+.terminal-frame .main-tab-view .p-tabview-nav li.home-tab {
+    margin-right: 6px !important;
+    width: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
+    flex: 0 0 42px !important;
+    align-self: center !important;
+}
+
 .terminal-frame .main-tab-view .p-tabview-nav li.home-tab .p-tabview-nav-link {
-    padding: 4px 8px !important;
+    padding: 0 !important;
+    height: 25px !important;
+    min-height: 25px !important;
+    align-self: center !important;
     justify-content: center !important;
     align-items: center !important;
+    box-sizing: border-box !important;
+    border-radius: 6px !important;
+    border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.15)) !important;
+    margin: 0 !important;
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s !important;
+}
+
+.terminal-frame .main-tab-view .p-tabview-nav li.home-tab.p-highlight .p-tabview-nav-link {
+    border-color: var(--primary-color, rgba(255, 255, 255, 0.35)) !important;
+    box-shadow: 0 0 0 1px var(--primary-color, rgba(255, 255, 255, 0.2)) !important;
+}
+
+.terminal-frame .main-tab-view .p-tabview-nav li.home-tab:not(.p-highlight) .p-tabview-nav-link:hover {
+    border-color: rgba(255, 255, 255, 0.25) !important;
 }
 
 .terminal-frame .main-tab-view .p-tabview-nav li.p-highlight .p-tabview-nav-link {

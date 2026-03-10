@@ -708,23 +708,6 @@ const MainContentArea = ({
     navContainer.querySelectorAll('.local-terminal-buttons, .tab-theme-button-wrapper').forEach((el) => el.remove());
     navContainer.querySelector('.main-nav-traffic-lights')?.remove();
 
-    // Crear dots tipo macOS iguales a HomeTab
-    const trafficLights = document.createElement('div');
-    trafficLights.className = 'main-nav-traffic-lights';
-
-    const redDot = document.createElement('div');
-    redDot.className = 'traffic-dot red';
-
-    const yellowDot = document.createElement('div');
-    yellowDot.className = 'traffic-dot yellow';
-
-    const greenDot = document.createElement('div');
-    greenDot.className = 'traffic-dot green';
-
-    trafficLights.appendChild(redDot);
-    trafficLights.appendChild(yellowDot);
-    trafficLights.appendChild(greenDot);
-
     // Crear contenedor de botones (inline después de la última pestaña)
     const buttonsContainer = document.createElement('div');
     buttonsContainer.className = 'local-terminal-buttons';
@@ -744,12 +727,12 @@ const MainContentArea = ({
     plusButton.className = 'p-button p-button-text p-button-sm tab-action-button';
     plusButton.style.cssText = `
       padding: 0 !important;
-      width: 18px !important;
-      min-width: 18px !important;
-      max-width: 18px !important;
-      height: 18px !important;
-      min-height: 18px !important;
-      max-height: 18px !important;
+      width: 25px !important;
+      min-width: 25px !important;
+      max-width: 25px !important;
+      height: 25px !important;
+      min-height: 25px !important;
+      max-height: 25px !important;
       font-size: 10px !important;
       display: flex !important;
       align-items: center !important;
@@ -801,12 +784,12 @@ const MainContentArea = ({
     dropdownButton.className = 'p-button p-button-text p-button-sm tab-action-button';
     dropdownButton.style.cssText = `
       padding: 0 !important;
-      width: 18px !important;
-      min-width: 18px !important;
-      max-width: 18px !important;
-      height: 18px !important;
-      min-height: 18px !important;
-      max-height: 18px !important;
+      width: 25px !important;
+      min-width: 25px !important;
+      max-width: 25px !important;
+      height: 25px !important;
+      min-height: 25px !important;
+      max-height: 25px !important;
       font-size: 9px !important;
       display: flex !important;
       align-items: center !important;
@@ -956,7 +939,6 @@ const MainContentArea = ({
 
     buttonsContainer.appendChild(plusButton);
     buttonsContainer.appendChild(dropdownButton);
-    navList.appendChild(trafficLights);
     navList.appendChild(buttonsContainer);
     navList.appendChild(themeButtonWrapper);
   }, [filteredTabs, activeTabIndex, wslDistributions]); // eslint-disable-line react-hooks/exhaustive-deps
