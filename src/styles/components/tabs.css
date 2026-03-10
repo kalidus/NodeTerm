@@ -17,11 +17,11 @@
   overflow-y: visible !important;
   flex-wrap: nowrap;
   white-space: nowrap;
-  height: 26px;
-  min-height: 26px;
+  height: 30px;
+  min-height: 30px;
   margin-bottom: 0;
   padding-bottom: 0;
-  background: var(--ui-content-bg) !important;
+  background: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1)), var(--ui-sidebar-bg) !important;
   border-bottom: none !important;
   /* Ocultar scrollbar */
   scrollbar-width: none !important; /* Firefox */

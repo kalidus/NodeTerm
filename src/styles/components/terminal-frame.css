@@ -17,7 +17,7 @@
 .terminal-frame-header {
     display: flex;
     align-items: center;
-    padding: 10px 14px;
+    padding: 12px 18px;
     background: rgba(0, 0, 0, 0.1);
     user-select: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.03);
@@ -120,21 +120,19 @@
 
 /* --- Marco principal: nav container como única barra (dots + tabs + botones en una fila) --- */
 
-/* El nav container ocupa la misma altura que el header del sidebar (10px padding + 12px dots + 10px = 32px) */
 .terminal-frame.main-content-frame .p-tabview-nav-container {
-    height: 30px !important;
-    min-height: 30px !important;
+    height: 36px !important;
+    min-height: 36px !important;
     flex-shrink: 0;
-    background: var(--home-tab-theme-bg, var(--ui-content-bg, #1a1b26)) !important;
+    background: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1)), var(--ui-sidebar-bg, #1a1b26) !important;
     border-bottom: 1px solid var(--ui-tabgroup-border, rgba(255, 255, 255, 0.06)) !important;
     position: relative !important;
 }
 
-/* El nav ocupa todo el alto del container, con padding izquierdo para los dots */
 .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav {
-    height: 30px !important;
-    min-height: 30px !important;
-    background: var(--home-tab-theme-bg, var(--ui-content-bg, #1a1b26)) !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    background: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1)), var(--ui-sidebar-bg, #1a1b26) !important;
     border: none !important;
     padding: 0 6px 0 78px !important;
     border-bottom: none !important;
