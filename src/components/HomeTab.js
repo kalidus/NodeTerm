@@ -609,7 +609,7 @@ const HomeTab = ({
   }, [themeVersion]);
 
   const dashboardBg = React.useMemo(() => {
-    return currentTheme.colors?.contentBackground || '#fafafa';
+    return currentTheme.colors?.sidebarBackground || currentTheme.colors?.contentBackground || '#fafafa';
   }, [currentTheme]);
 
   // Colores del tema para elementos de la lista
@@ -625,6 +625,7 @@ const HomeTab = ({
       itemBackground: currentTheme.colors?.tabBackground || 'rgba(255,255,255,0.05)',
       cardBorder: currentTheme.colors?.dialogBorder || currentTheme.colors?.contentBorder || 'rgba(255,255,255,0.1)',
       cardBackground: currentTheme.colors?.dialogBackground || 'rgba(16, 20, 28, 0.6)',
+      sidebarBackground: currentTheme.colors?.sidebarBackground || currentTheme.colors?.contentBackground || '#1e1e1e',
       primaryColor: currentTheme.colors?.buttonPrimary || currentTheme.colors?.primaryColor || '#2196f3',
       // Colores espec\u00EDficos para el buscador para asegurar que resalte en todos los temas
       searchBackground: getContrastBg(currentTheme.colors?.contentBackground || '#1e1e1e', 0.85),

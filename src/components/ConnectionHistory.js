@@ -1780,6 +1780,16 @@ const ConnectionHistory = ({
 				}
 				}
 
+				/* Tarjeta NodeTerm (hometab): mismo fondo que la sidebar */
+				.top-terminal-frame,
+				.top-terminal-frame.macos, .top-terminal-frame.gnome,
+				.top-terminal-frame.kde, .top-terminal-frame.windows,
+				.top-terminal-frame.matcha, .top-terminal-frame.futuristic,
+				.top-terminal-frame.modern, .top-terminal-frame.retro {
+					background-color: ${themeColors.sidebarBackground || terminalTheme.background || '#0d1117'} !important;
+					background: ${themeColors.sidebarBackground || terminalTheme.background || '#0d1117'} !important;
+				}
+
 				/* --- Grep-style connection rows --- */
 				.connection-list-body {
 					display: flex !important;
