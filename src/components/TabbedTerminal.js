@@ -1580,11 +1580,16 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         const tabActiveBg = rootStyles.getPropertyValue('--ui-tab-active-bg')?.trim() || '#1f2329';
         const tabText = rootStyles.getPropertyValue('--ui-tab-text')?.trim() || '#d6d8db';
         const tabActiveText = rootStyles.getPropertyValue('--ui-tab-active-text')?.trim() || '#ffffff';
+        const tabAccent = rootStyles.getPropertyValue('--primary-color')?.trim() || tabActiveBg;
 
-        return { tabBg, tabActiveBg, tabText, tabActiveText };
+        // Asegurar contraste para el círculo estilo macOS
+        const tabAccentCircle = adjustColorBrightness(tabAccent, 20);
+        const tabAccentBorder = adjustColorBrightness(tabAccent, -35);
+
+        return { tabBg, tabActiveBg, tabText, tabActiveText, tabAccent, tabAccentCircle, tabAccentBorder };
     };
 
-    const { tabBg, tabActiveBg, tabText, tabActiveText } = getTabColors();
+    const { tabBg, tabActiveBg, tabText, tabActiveText, tabAccent, tabAccentCircle, tabAccentBorder } = getTabColors();
 
     return (
         <div style={{
@@ -1605,6 +1610,20 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     minHeight: '40px',
                     overflow: 'hidden'
                 }}>
+                    {/* Indicador circular estilo macOS usando el color del tema */}
+                    <div
+                        style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: '50%',
+                            background: tabAccentCircle,
+                            boxShadow: `0 0 0 4px ${tabAccent}33`,
+                            border: `1px solid ${tabAccentBorder}`,
+                            marginLeft: 10,
+                            marginRight: 14,
+                            flexShrink: 0
+                        }}
+                    />
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',

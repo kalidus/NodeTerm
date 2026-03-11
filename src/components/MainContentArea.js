@@ -1135,6 +1135,42 @@ const MainContentArea = ({
         tabsContainerRef.current = tabNav;
         tabNav.addEventListener('scroll', checkScrollButtons);
         checkScrollButtons(); // Verificar estado inicial
+
+        // Crear indicador circular estilo macOS como separador fijo a la izquierda
+        let trafficLights = tabNav.querySelector('.main-nav-traffic-lights');
+        if (!trafficLights) {
+          trafficLights = document.createElement('div');
+          trafficLights.className = 'main-nav-traffic-lights';
+          trafficLights.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 10px 0 8px;
+            flex-shrink: 0;
+          `;
+
+          const rootStyles = getComputedStyle(document.documentElement);
+          const baseColor = rootStyles.getPropertyValue('--primary-color')?.trim() ||
+            rootStyles.getPropertyValue('--ui-tab-active-bg')?.trim() || '#3b82f6';
+
+          const createDot = () => {
+            const dot = document.createElement('div');
+            dot.style.width = '10px';
+            dot.style.height = '10px';
+            dot.style.borderRadius = '50%';
+            dot.style.background = baseColor;
+            dot.style.boxShadow = `0 0 0 4px ${baseColor}22`;
+            dot.style.border = '1px solid rgba(0,0,0,0.55)';
+            dot.style.flexShrink = '0';
+            return dot;
+          };
+
+          trafficLights.appendChild(createDot());
+
+          // Insertar antes del primer li para que aparezca pegado al borde izquierdo
+          tabNav.insertBefore(trafficLights, tabNav.firstChild);
+        }
+
         return true;
       }
       return false;
