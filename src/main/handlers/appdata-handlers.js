@@ -41,6 +41,7 @@ const SYNC_KEYS = [
     'iconThemeSidebar',
     'sessionActionIconTheme',
     'nodeterm_tab_theme', // Tema de pestañas
+    'nodeterm_tab_layout', // Layout de pestañas
     'nodeterm_expanded_keys', // Estado de expansión del sidebar
     'explorerFont',
     'explorerFontSize',

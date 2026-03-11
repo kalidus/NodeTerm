@@ -108,6 +108,173 @@
   align-items: center;
 }
 
+/* === Variantes de layout de pestañas === */
+:root[data-tab-layout="compact"] .p-tabview .p-tabview-nav {
+  height: 26px;
+  min-height: 26px;
+}
+
+:root[data-tab-layout="compact"] .p-tabview .p-tabview-nav li {
+  min-width: 102px !important;
+  max-width: 180px !important;
+}
+
+:root[data-tab-layout="compact"] .p-tabview .p-tabview-nav li.home-tab {
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  flex: 0 0 36px !important;
+}
+
+:root[data-tab-layout="compact"] .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+  padding: 0 0.4rem !important;
+  font-size: 0.72rem !important;
+}
+
+:root[data-tab-layout="spacious"] .p-tabview .p-tabview-nav {
+  height: 36px;
+  min-height: 36px;
+}
+
+:root[data-tab-layout="spacious"] .p-tabview .p-tabview-nav li {
+  min-width: 132px !important;
+  max-width: 240px !important;
+  margin-right: 3px !important;
+}
+
+:root[data-tab-layout="spacious"] .p-tabview .p-tabview-nav li.home-tab {
+  width: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
+  flex: 0 0 48px !important;
+}
+
+:root[data-tab-layout="spacious"] .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+  padding: 0 0.7rem !important;
+  font-size: 0.82rem !important;
+}
+
+:root[data-tab-layout="underline"] .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+:root[data-tab-layout="underline"] .p-tabview .p-tabview-nav li .p-tabview-nav-link:hover {
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.06)) !important;
+}
+
+:root[data-tab-layout="underline"] .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  background: transparent !important;
+  border-bottom-color: var(--primary-color) !important;
+}
+
+:root[data-tab-layout="boxed"] .p-tabview .p-tabview-nav li {
+  margin-right: 4px !important;
+}
+
+:root[data-tab-layout="boxed"] .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+  margin: 3px 0 !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.22)) !important;
+}
+
+:root[data-tab-layout="minimal"] .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+:root[data-tab-layout="minimal"] .p-tabview .p-tabview-nav li .p-tabview-nav-link:hover {
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.05)) !important;
+}
+
+:root[data-tab-layout="minimal"] .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  background: var(--ui-tab-active-bg, rgba(255, 255, 255, 0.08)) !important;
+}
+
+:root[data-tab-layout="vscode"] .p-tabview .p-tabview-nav {
+  height: 31px;
+  min-height: 31px;
+}
+
+:root[data-tab-layout="vscode"] .p-tabview .p-tabview-nav li {
+  margin-right: 0 !important;
+}
+
+:root[data-tab-layout="vscode"] .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+  border-radius: 0 !important;
+  border: none !important;
+  border-right: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.15)) !important;
+  border-top: 2px solid transparent !important;
+  box-shadow: none !important;
+}
+
+:root[data-tab-layout="vscode"] .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  border-top-color: var(--primary-color) !important;
+}
+
+:root[data-tab-layout="browser"] .p-tabview .p-tabview-nav {
+  height: 34px;
+  min-height: 34px;
+}
+
+:root[data-tab-layout="browser"] .p-tabview .p-tabview-nav li {
+  margin-right: 4px !important;
+}
+
+:root[data-tab-layout="browser"] .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+  margin-top: 3px !important;
+  border-radius: 10px 10px 0 0 !important;
+  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.22)) !important;
+}
+
+:root[data-tab-layout="classicBrowser"] .p-tabview .p-tabview-nav {
+  height: 32px;
+  min-height: 32px;
+}
+
+:root[data-tab-layout="classicBrowser"] .p-tabview .p-tabview-nav li {
+  margin-right: 2px !important;
+}
+
+:root[data-tab-layout="classicBrowser"] .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+  border-radius: 6px 6px 0 0 !important;
+  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.22)) !important;
+  border-bottom: none !important;
+}
+
+:root[data-tab-layout="retroTerminal"] .p-tabview .p-tabview-nav {
+  height: 30px;
+  min-height: 30px;
+}
+
+:root[data-tab-layout="retroTerminal"] .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+  border-radius: 0 !important;
+  border: 1px dashed var(--ui-tab-border, rgba(255, 255, 255, 0.35)) !important;
+  box-shadow: none !important;
+  font-family: "Consolas", "Courier New", monospace !important;
+  letter-spacing: 0.2px !important;
+}
+
+:root[data-tab-layout="arcPills"] .p-tabview .p-tabview-nav {
+  height: 34px;
+  min-height: 34px;
+}
+
+:root[data-tab-layout="arcPills"] .p-tabview .p-tabview-nav li {
+  margin-right: 4px !important;
+}
+
+:root[data-tab-layout="arcPills"] .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+  margin: 2px 0 !important;
+  border-radius: 999px !important;
+  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.22)) !important;
+}
+
 /* Barra de tinta para la pestaña activa */
 .p-tabview .p-tabview-nav .p-tabview-ink-bar {
   display: none !important;

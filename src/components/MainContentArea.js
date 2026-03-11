@@ -18,9 +18,10 @@ import SSHFileExplorerPanel from './SSHFileExplorerPanel';
 import { TAB_TYPES } from '../utils/constants';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
-import { applyTabTheme, getTabThemeList } from '../utils/tabThemeLoader';
+import { applyTabTheme, getTabThemeList, applyTabLayout, getTabLayoutList, loadSavedTabLayout } from '../utils/tabThemeLoader';
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
+const TAB_LAYOUT_STORAGE_KEY = 'nodeterm_tab_layout';
 
 const MainContentArea = ({
   // Sidebar props
@@ -335,6 +336,10 @@ const MainContentArea = ({
     return () => {
       window.removeEventListener('default-terminal-changed', handleDefaultTerminalChange);
     };
+  }, []);
+
+  useEffect(() => {
+    loadSavedTabLayout();
   }, []);
 
 
@@ -705,7 +710,7 @@ const MainContentArea = ({
     if (!navList) return;
 
     // Eliminar botones existentes del nav
-    navContainer.querySelectorAll('.local-terminal-buttons, .tab-theme-button-wrapper').forEach((el) => el.remove());
+    navContainer.querySelectorAll('.local-terminal-buttons, .tab-theme-button-wrapper, .tab-layout-button-wrapper').forEach((el) => el.remove());
     navContainer.querySelector('.main-nav-traffic-lights')?.remove();
 
     // Crear contenedor de botones (inline después de la última pestaña)
@@ -838,6 +843,8 @@ const MainContentArea = ({
     });
     themeButton.addEventListener('click', (e) => {
       e.stopPropagation();
+      const existingLayoutPanel = document.getElementById('tab-layout-quick-panel');
+      if (existingLayoutPanel) existingLayoutPanel.remove();
       const existingPanel = document.getElementById('tab-theme-quick-panel');
       if (existingPanel) {
         existingPanel.remove();
@@ -925,9 +932,151 @@ const MainContentArea = ({
       setTimeout(() => document.addEventListener('click', closeOutside), 0);
     });
 
-    const themeButtonWrapper = document.createElement('div');
-    themeButtonWrapper.className = 'tab-theme-button-wrapper';
-    themeButtonWrapper.style.cssText = `
+    // Botón de layout de pestañas
+    const layoutButton = document.createElement('div');
+    layoutButton.setAttribute('role', 'button');
+    layoutButton.setAttribute('tabIndex', '0');
+    layoutButton.title = 'Layout de pestañas';
+    layoutButton.className = 'tab-layout-quick-button';
+    const layoutIcon = document.createElement('i');
+    layoutIcon.className = 'pi pi-th-large';
+    layoutIcon.style.cssText = `
+      font-size: 0.9rem;
+      color: var(--ui-tab-text, rgba(255,255,255,0.85));
+      opacity: 0.6;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      transition: all 0.2s;
+    `;
+    layoutButton.appendChild(layoutIcon);
+    layoutButton.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    `;
+    layoutButton.addEventListener('mouseenter', () => { layoutIcon.style.opacity = '1'; });
+    layoutButton.addEventListener('mouseleave', () => { layoutIcon.style.opacity = '0.6'; });
+    layoutButton.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        layoutButton.click();
+      }
+    });
+    layoutButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const existingThemePanel = document.getElementById('tab-theme-quick-panel');
+      if (existingThemePanel) existingThemePanel.remove();
+      const existingPanel = document.getElementById('tab-layout-quick-panel');
+      if (existingPanel) {
+        existingPanel.remove();
+        return;
+      }
+      const rect = layoutButton.getBoundingClientRect();
+      const currentLayout = localStorage.getItem(TAB_LAYOUT_STORAGE_KEY) || 'default';
+      const layoutList = getTabLayoutList();
+      const panel = document.createElement('div');
+      panel.id = 'tab-layout-quick-panel';
+      panel.style.cssText = `
+        position: fixed;
+        right: 8px;
+        top: ${rect.bottom + 4}px;
+        width: 280px;
+        max-height: 340px;
+        overflow: auto;
+        background: var(--ui-dialog-bg, var(--ui-card-bg, #2d2d30));
+        border: 1px solid var(--ui-tab-border, rgba(255,255,255,0.12));
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+        z-index: 10000;
+        padding: 6px;
+        font-size: 12px;
+      `;
+      layoutList.forEach(({ id, name, description, preview }) => {
+        const item = document.createElement('div');
+        item.dataset.layoutId = id;
+        item.style.cssText = `
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 6px 8px;
+          cursor: pointer;
+          border-radius: 6px;
+          color: var(--ui-tab-text, rgba(255,255,255,0.9));
+          background: ${id === currentLayout ? 'var(--ui-tab-active-bg, rgba(255,255,255,0.12))' : 'transparent'};
+        `;
+        const swatch = document.createElement('div');
+        const previewBorderStyle = preview?.borderStyle;
+        const isMinimalPreview = previewBorderStyle === 'minimal';
+        const isUnderlinePreview = previewBorderStyle === 'underline';
+        const isBoxedPreview = previewBorderStyle === 'boxed';
+        const isVscodePreview = previewBorderStyle === 'vscode';
+        const isBrowserPreview = previewBorderStyle === 'browser';
+        const isRetroPreview = previewBorderStyle === 'retro';
+        const isPillsPreview = previewBorderStyle === 'pills';
+        const isClassicBrowserPreview = previewBorderStyle === 'classicBrowser';
+        swatch.style.cssText = `
+          width: 28px;
+          height: ${preview?.tabHeight || '30px'};
+          flex-shrink: 0;
+          border-radius: ${preview?.borderRadius || '4px 4px 0 0'};
+          border: ${isVscodePreview ? 'none' : '1px solid var(--ui-tab-border, rgba(255,255,255,0.25))'};
+          border-right: ${isVscodePreview ? '1px solid var(--ui-tab-border, rgba(255,255,255,0.25))' : 'none'};
+          border-top: ${isVscodePreview ? '2px solid var(--primary-color, #2196f3)' : '1px solid var(--ui-tab-border, rgba(255,255,255,0.25))'};
+          background: ${isMinimalPreview ? 'transparent' : 'var(--ui-tab-bg, rgba(255,255,255,0.05))'};
+          box-shadow: ${isBoxedPreview ? 'inset 0 0 0 1px var(--ui-tab-border, rgba(255,255,255,0.35))' : 'none'};
+          border-bottom: ${isUnderlinePreview ? '2px solid var(--primary-color, #2196f3)' : (isClassicBrowserPreview ? 'none' : '1px solid var(--ui-tab-border, rgba(255,255,255,0.25))')};
+          margin-top: ${isBrowserPreview ? '2px' : '0'};
+          font-family: ${isRetroPreview ? '"Consolas","Courier New",monospace' : 'inherit'};
+          border-radius: ${isPillsPreview ? '999px' : (preview?.borderRadius || '4px 4px 0 0')};
+        `;
+        const textWrap = document.createElement('div');
+        textWrap.style.cssText = 'display: flex; flex-direction: column; min-width: 0; flex: 1;';
+        const label = document.createElement('span');
+        label.textContent = name;
+        label.style.cssText = 'overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+        const subLabel = document.createElement('span');
+        subLabel.textContent = description || '';
+        subLabel.style.cssText = 'font-size: 10px; opacity: 0.72; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+        textWrap.appendChild(label);
+        textWrap.appendChild(subLabel);
+        item.appendChild(swatch);
+        item.appendChild(textWrap);
+        if (id === currentLayout) {
+          const check = document.createElement('i');
+          check.className = 'pi pi-check';
+          check.style.cssText = 'font-size: 0.7rem; opacity: 0.9; flex-shrink: 0;';
+          item.appendChild(check);
+        }
+        item.addEventListener('mouseenter', () => {
+          if (id !== currentLayout) item.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))';
+        });
+        item.addEventListener('mouseleave', () => {
+          if (id !== currentLayout) item.style.background = 'transparent';
+        });
+        item.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          applyTabLayout(id);
+          localStorage.setItem(TAB_LAYOUT_STORAGE_KEY, id);
+          panel.remove();
+          document.removeEventListener('click', closeOutside);
+        });
+        panel.appendChild(item);
+      });
+      document.body.appendChild(panel);
+      const closeOutside = (event) => {
+        if (!panel.contains(event.target) && !layoutButton.contains(event.target)) {
+          if (panel.parentNode) panel.remove();
+          document.removeEventListener('click', closeOutside);
+        }
+      };
+      setTimeout(() => document.addEventListener('click', closeOutside), 0);
+    });
+
+    const layoutButtonWrapper = document.createElement('div');
+    layoutButtonWrapper.className = 'tab-layout-button-wrapper';
+    layoutButtonWrapper.style.cssText = `
       display: flex;
       align-items: center;
       flex-shrink: 0;
@@ -935,11 +1084,24 @@ const MainContentArea = ({
       margin-left: auto;
       margin-bottom: 1px;
     `;
+    layoutButtonWrapper.appendChild(layoutButton);
+
+    const themeButtonWrapper = document.createElement('div');
+    themeButtonWrapper.className = 'tab-theme-button-wrapper';
+    themeButtonWrapper.style.cssText = `
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      align-self: flex-end;
+      margin-left: 2px;
+      margin-bottom: 1px;
+    `;
     themeButtonWrapper.appendChild(themeButton);
 
     buttonsContainer.appendChild(plusButton);
     buttonsContainer.appendChild(dropdownButton);
     navList.appendChild(buttonsContainer);
+    navList.appendChild(layoutButtonWrapper);
     navList.appendChild(themeButtonWrapper);
   }, [filteredTabs, activeTabIndex, wslDistributions]); // eslint-disable-line react-hooks/exhaustive-deps
 

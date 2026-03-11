@@ -1,6 +1,109 @@
 // Utilidad para cargar y aplicar el tema de pestañas al iniciar la aplicación
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
+const TAB_LAYOUT_STORAGE_KEY = 'nodeterm_tab_layout';
+
+const tabLayouts = {
+  default: {
+    name: 'Por defecto',
+    description: 'Layout base de pestañas',
+    preview: {
+      tabHeight: '30px',
+      borderRadius: '4px 4px 0 0',
+      borderStyle: 'solid'
+    }
+  },
+  compact: {
+    name: 'Compacto',
+    description: 'Pestañas más estrechas y densas',
+    preview: {
+      tabHeight: '26px',
+      borderRadius: '3px 3px 0 0',
+      borderStyle: 'solid'
+    }
+  },
+  spacious: {
+    name: 'Espacioso',
+    description: 'Más alto y con mayor separación',
+    preview: {
+      tabHeight: '36px',
+      borderRadius: '6px 6px 0 0',
+      borderStyle: 'solid'
+    }
+  },
+  underline: {
+    name: 'Subrayado',
+    description: 'Minimal con indicador inferior',
+    preview: {
+      tabHeight: '30px',
+      borderRadius: '0',
+      borderStyle: 'underline'
+    }
+  },
+  boxed: {
+    name: 'Caja',
+    description: 'Pestañas tipo cápsula con caja',
+    preview: {
+      tabHeight: '30px',
+      borderRadius: '8px',
+      borderStyle: 'boxed'
+    }
+  },
+  minimal: {
+    name: 'Minimal',
+    description: 'Muy limpio, sin adornos',
+    preview: {
+      tabHeight: '30px',
+      borderRadius: '0',
+      borderStyle: 'minimal'
+    }
+  },
+  vscode: {
+    name: 'VSCode',
+    description: 'Estilo editor moderno',
+    preview: {
+      tabHeight: '30px',
+      borderRadius: '0',
+      borderStyle: 'vscode'
+    }
+  },
+  browser: {
+    name: 'Navegador Web',
+    description: 'Pestañas tipo navegador',
+    preview: {
+      tabHeight: '32px',
+      borderRadius: '10px 10px 0 0',
+      borderStyle: 'browser'
+    }
+  },
+  retroTerminal: {
+    name: 'Retro Terminal',
+    description: 'Look terminal clasica retro',
+    preview: {
+      tabHeight: '30px',
+      borderRadius: '0',
+      borderStyle: 'retro'
+    }
+  },
+  arcPills: {
+    name: 'Arc Pills',
+    description: 'Pildoras flotantes modernas',
+    preview: {
+      tabHeight: '32px',
+      borderRadius: '999px',
+      borderStyle: 'pills'
+    }
+  },
+  classicBrowser: {
+    name: 'Classic Browser',
+    description: 'Navegador clasico con bordes',
+    preview: {
+      tabHeight: '31px',
+      borderRadius: '6px 6px 0 0',
+      borderStyle: 'classicBrowser'
+    }
+  }
+};
 
 // Definición de estilos de pestañas (copiada del TabThemeSelector)
 const tabThemes = {
@@ -1459,5 +1562,29 @@ export const loadSavedTabTheme = () => {
     // Aplicar tema por defecto en caso de error
     applyTabTheme('default');
     return 'default';
+  }
+};
+
+export const getTabLayoutList = () =>
+  Object.entries(tabLayouts).map(([id, layout]) => ({
+    id,
+    name: layout.name,
+    description: layout.description,
+    preview: layout.preview
+  }));
+
+export const applyTabLayout = (layoutName) => {
+  const selectedLayout = tabLayouts[layoutName] ? layoutName : 'default';
+  document.documentElement.setAttribute('data-tab-layout', selectedLayout);
+  return selectedLayout;
+};
+
+export const loadSavedTabLayout = () => {
+  try {
+    const savedLayout = localStorage.getItem(TAB_LAYOUT_STORAGE_KEY) || 'default';
+    return applyTabLayout(savedLayout);
+  } catch (error) {
+    console.error('[TAB-LAYOUT] Error cargando layout de tabs:', error);
+    return applyTabLayout('default');
   }
 };
