@@ -204,7 +204,7 @@
 }
 
 :root[data-tab-layout="vscode"] .p-tabview .p-tabview-nav li {
-  margin-right: 0 !important;
+  margin-right: 0 !important;           /* Sin huecos horizontales entre pestañas */
 }
 
 :root[data-tab-layout="vscode"] .p-tabview .p-tabview-nav li .p-tabview-nav-link {
@@ -217,6 +217,25 @@
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   align-items: center !important;  /* Texto centrado verticalmente */
+  margin: 0 !important;            /* Evitar desplazamientos verticales */
+}
+
+/* Home alineado igual que el resto en layout VSCode */
+:root[data-tab-layout="vscode"] .p-tabview .p-tabview-nav li.home-tab {
+  align-self: stretch !important;
+  margin-right: 0 !important;
+}
+
+:root[data-tab-layout="vscode"] .p-tabview .p-tabview-nav li.home-tab .p-tabview-nav-link {
+  height: 100% !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-right: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.15)) !important;
+  border-top: 2px solid transparent !important;
+  margin: 0 !important;
+  padding: 0 0.55rem !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
 :root[data-tab-layout="vscode"] .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
