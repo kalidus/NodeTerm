@@ -78,11 +78,59 @@ const TabHeader = React.memo(({
     return () => window.removeEventListener('theme-changed', handleThemeChange);
   }, []);
 
-  // Obtener el color primario del tema actual
-  const primaryColor = useMemo(() => {
-    const currentTheme = themeManager.getCurrentTheme() || uiThemes['Light'];
-    return currentTheme.colors?.buttonPrimary || currentTheme.colors?.primaryColor || '#2196f3';
+  // Obtener datos del tema actual
+  const { primaryColor, isDarkTheme, currentTheme } = useMemo(() => {
+    const theme = themeManager.getCurrentTheme() || uiThemes['Light'];
+    const primary =
+      theme.colors?.buttonPrimary ||
+      theme.colors?.primaryColor ||
+      '#2196f3';
+
+    const bg = theme.colors?.contentBackground || theme.colors?.sidebarBackground || '#1e1e1e';
+    const isDark =
+      theme.type === 'dark' ||
+      (theme.name && /dark|nord|dracula|one dark|midnight|matrix/i.test(theme.name)) ||
+      (() => {
+        // Heurística simple de brillo para detectar temas oscuros
+        if (!bg.startsWith('#')) return true;
+        const hex = bg.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16) || 0;
+        const g = parseInt(hex.substring(2, 4), 16) || 0;
+        const b = parseInt(hex.substring(4, 6), 16) || 0;
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        return brightness < 140;
+      })();
+
+    return {
+      primaryColor: primary,
+      isDarkTheme: isDark,
+      currentTheme: theme
+    };
   }, [themeVersion]);
+
+  // Estilos especiales para la pestaña Home
+  const homeTabStyles = useMemo(() => {
+    if (!isHomeTab) return {};
+
+    const idleBackground = isDarkTheme
+      ? 'rgba(255,255,255,0.03)'
+      : 'rgba(0,0,0,0.03)';
+
+    const selectedBackground =
+      currentTheme.colors?.tabSelectedBackground ||
+      `linear-gradient(90deg, ${primaryColor}25, ${primaryColor}55)`;
+
+    return {
+      background: selected ? selectedBackground : idleBackground,
+      borderRadius: 999,
+      border: selected
+        ? `1px solid ${primaryColor}`
+        : `1px solid transparent`,
+      boxShadow: selected
+        ? `0 0 0 1px ${primaryColor}40, 0 0 14px ${primaryColor}33`
+        : 'none'
+    };
+  }, [isHomeTab, selected, primaryColor, isDarkTheme, currentTheme]);
 
   // Función para obtener colores según la categoría (igual que en NodeTermStatus)
   const getColorForCategory = (category) => {
@@ -211,8 +259,9 @@ const TabHeader = React.memo(({
         width: isHomeTab ? '100%' : undefined,
         opacity: isDragging ? 0.5 : 1,
         borderLeft: isDragOver ? '3px solid var(--primary-color)' : 'none',
-        transition: 'opacity 0.2s, border-left 0.2s',
-        cursor: isDragging ? 'grabbing' : 'grab'
+        transition: 'opacity 0.2s, border-left 0.2s, box-shadow 0.2s, background 0.2s, border 0.2s',
+        cursor: isDragging ? 'grabbing' : 'grab',
+        ...(homeTabStyles || {})
       }}
       onClick={(e) => {
         // Prevenir click si está en proceso de drag o hay un timer activo
@@ -249,7 +298,16 @@ const TabHeader = React.memo(({
 
       {/* Icono específico para pestaña de inicio */}
       {tab.type === 'home' && (
-        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            height: '100%',
+            filter: isDarkTheme ? 'drop-shadow(0 0 4px rgba(0,0,0,0.85))' : 'none'
+          }}
+        >
           {getHomeTabIcon(22)}
         </span>
       )}

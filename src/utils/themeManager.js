@@ -226,6 +226,9 @@ class ThemeManager {
         /* Primary color - usado por checkboxes y otros componentes */
         --primary-color: ${colors.buttonPrimary};
         --primary-color-text: ${colors.buttonPrimaryText};
+        /* Pestaña Home: siempre paleta del tema (contorno y resaltado) */
+        --ui-home-tab-accent: ${colors.buttonPrimary};
+        --ui-home-tab-accent-subtle: ${hexToRgba(colors.buttonPrimary, 0.25)};
       }
 
       /* === SIDEBAR STYLES === */
