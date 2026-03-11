@@ -79,14 +79,19 @@
   box-sizing: border-box !important;
   align-self: center !important;
   border-radius: 6px !important;
-  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.15)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
   margin: 0 !important;
-  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s !important;
+  background: radial-gradient(circle at 50% 0%, rgba(120, 220, 255, 0.16), transparent 62%),
+    var(--home-tab-theme-bg, var(--ui-tab-bg, rgba(255, 255, 255, 0.04))) !important;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.15s !important;
+  outline: none !important;
 }
 
 .p-tabview .p-tabview-nav li.home-tab.p-highlight .p-tabview-nav-link {
   border-color: var(--primary-color, rgba(255, 255, 255, 0.35)) !important;
-  box-shadow: 0 0 0 1px var(--primary-color, rgba(255, 255, 255, 0.2)) !important;
+  background: radial-gradient(circle at 50% 0%, rgba(120, 220, 255, 0.26), transparent 70%),
+    var(--home-tab-theme-bg, var(--ui-tab-active-bg, rgba(255, 255, 255, 0.06))) !important;
+  box-shadow: none !important;
 }
 
 .p-tabview .p-tabview-nav li.home-tab:not(.p-highlight) .p-tabview-nav-link:hover {
@@ -440,16 +445,16 @@ button.tab-action-button,
   margin-bottom: 0 !important;
 }
 
-/* Botones en el contenedor de terminales locales: misma altura que las pestañas (25px) */
+/* Botones en el contenedor de terminales locales: más pequeños e integrados con la barra */
 .local-terminal-buttons .tab-action-button {
-  width: 25px !important;
-  min-width: 25px !important;
-  max-width: 25px !important;
-  height: 25px !important;
-  min-height: 25px !important;
-  max-height: 25px !important;
+  width: 20px !important;
+  min-width: 20px !important;
+  max-width: 20px !important;
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
   padding: 0 !important;
-  font-size: 13px !important;
+  font-size: 10px !important;
   border-radius: 5px !important;
   box-sizing: border-box !important;
   transition: all 0.2s ease !important;
@@ -478,13 +483,13 @@ button.local-terminal-buttons .tab-action-button:hover,
   color: var(--ui-tab-text, rgba(255, 255, 255, 1)) !important;
 }
 
-/* Contenedor de botones de acción: misma altura que las pestañas */
+/* Contenedor de botones de acción: integrado con la barra de pestañas */
 .local-terminal-buttons {
   display: flex !important;
   align-items: center !important;
-  gap: 1px !important;
-  margin-left: 3px !important;
-  margin-right: 1px !important;
+  gap: 2px !important;
+  margin-left: 6px !important;
+  margin-right: 2px !important;
   flex-shrink: 0 !important;
   height: 25px !important;
   align-self: center !important;

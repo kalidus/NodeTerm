@@ -17,9 +17,7 @@ const TerminalFrame = ({
                 <div className="terminal-frame-header">
                     {showControls && (
                         <div className="terminal-frame-controls">
-                            <div className="terminal-frame-dot red" />
-                            <div className="terminal-frame-dot yellow" />
-                            <div className="terminal-frame-dot green" />
+                            <div className="terminal-frame-dot theme" />
                         </div>
                     )}
 

@@ -36,6 +36,12 @@
     opacity: 0.8;
 }
 
+.terminal-frame-dot.theme {
+    background: var(--primary-color, #7c3aed);
+    box-shadow: none;
+    border: 1px solid rgba(0, 0, 0, 0.7);
+}
+
 .terminal-frame-dot.red {
     background: #ff5f56;
 }
@@ -162,14 +168,13 @@
     overflow: hidden;
 }
 
-/* Tab Buttons: misma altura que Home, centrados en la barra */
+/* Tab Buttons: recuadro completo como Home, misma altura */
 .terminal-frame .main-tab-view .p-tabview-nav li .p-tabview-nav-link {
     background: var(--ui-tab-bg, rgba(255, 255, 255, 0.05)) !important;
     color: var(--ui-tab-text, rgba(255, 255, 255, 0.85)) !important;
-    border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.08)) !important;
-    border-bottom: none !important;
-    border-radius: 5px 5px 0 0 !important;
-    margin-right: 2px !important;
+    border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.22)) !important;
+    border-radius: 6px !important;
+    margin-right: 4px !important;
     padding: 4px 10px !important;
     font-size: 0.76rem !important;
     transition: all 0.2s ease !important;
@@ -199,14 +204,23 @@
     align-items: center !important;
     box-sizing: border-box !important;
     border-radius: 6px !important;
-    border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.15)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
     margin: 0 !important;
-    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s !important;
+    background: radial-gradient(circle at 50% 0%, rgba(120, 220, 255, 0.16), transparent 62%),
+        var(--home-tab-theme-bg, rgba(255, 255, 255, 0.04)) !important;
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.15s !important;
+    outline: none !important;
+}
+
+.terminal-frame .main-tab-view .p-tabview-nav li.home-tab .p-tabview-nav-link svg {
+    filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 6px rgba(120, 220, 255, 0.6));
 }
 
 .terminal-frame .main-tab-view .p-tabview-nav li.home-tab.p-highlight .p-tabview-nav-link {
     border-color: var(--primary-color, rgba(255, 255, 255, 0.35)) !important;
-    box-shadow: 0 0 0 1px var(--primary-color, rgba(255, 255, 255, 0.2)) !important;
+    background: radial-gradient(circle at 50% 0%, rgba(120, 220, 255, 0.28), transparent 70%),
+        var(--home-tab-theme-bg, rgba(255, 255, 255, 0.05)) !important;
+    box-shadow: none !important;
 }
 
 .terminal-frame .main-tab-view .p-tabview-nav li.home-tab:not(.p-highlight) .p-tabview-nav-link:hover {
@@ -216,11 +230,35 @@
 .terminal-frame .main-tab-view .p-tabview-nav li.p-highlight .p-tabview-nav-link {
     background: var(--ui-tab-active-bg) !important;
     color: var(--ui-tab-active-text) !important;
-    border-color: var(--ui-tab-border, rgba(255, 255, 255, 0.15)) !important;
+    border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.28)) !important;
+    border-radius: 6px !important;
 }
 
 .terminal-frame .main-tab-view .p-tabview-nav li:not(.p-highlight):hover .p-tabview-nav-link {
     background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.08)) !important;
+}
+
+/* Botones + y v: más pequeños e integrados en la barra */
+.terminal-frame .main-tab-view .p-tabview-nav-container .local-terminal-buttons {
+    gap: 2px !important;
+    margin-left: 6px !important;
+    align-self: center !important;
+}
+.terminal-frame .main-tab-view .p-tabview-nav-container .local-terminal-buttons .tab-action-button {
+    width: 20px !important;
+    min-width: 20px !important;
+    max-width: 20px !important;
+    height: 20px !important;
+    min-height: 20px !important;
+    max-height: 20px !important;
+    font-size: 10px !important;
+    border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.22)) !important;
+    border-radius: 5px !important;
+    background: var(--ui-tab-bg, rgba(255, 255, 255, 0.05)) !important;
+}
+.terminal-frame .main-tab-view .p-tabview-nav-container .local-terminal-buttons .tab-action-button:hover {
+    background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.08)) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
 }
 
 /* Botón de tema de pestañas (dentro del nav, a la derecha con margin-left: auto) */

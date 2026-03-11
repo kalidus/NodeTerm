@@ -727,12 +727,12 @@ const MainContentArea = ({
     plusButton.className = 'p-button p-button-text p-button-sm tab-action-button';
     plusButton.style.cssText = `
       padding: 0 !important;
-      width: 25px !important;
-      min-width: 25px !important;
-      max-width: 25px !important;
-      height: 25px !important;
-      min-height: 25px !important;
-      max-height: 25px !important;
+      width: 20px !important;
+      min-width: 20px !important;
+      max-width: 20px !important;
+      height: 20px !important;
+      min-height: 20px !important;
+      max-height: 20px !important;
       font-size: 10px !important;
       display: flex !important;
       align-items: center !important;
@@ -784,13 +784,13 @@ const MainContentArea = ({
     dropdownButton.className = 'p-button p-button-text p-button-sm tab-action-button';
     dropdownButton.style.cssText = `
       padding: 0 !important;
-      width: 25px !important;
-      min-width: 25px !important;
-      max-width: 25px !important;
-      height: 25px !important;
-      min-height: 25px !important;
-      max-height: 25px !important;
-      font-size: 9px !important;
+      width: 20px !important;
+      min-width: 20px !important;
+      max-width: 20px !important;
+      height: 20px !important;
+      min-height: 20px !important;
+      max-height: 20px !important;
+      font-size: 10px !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
