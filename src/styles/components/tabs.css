@@ -196,6 +196,11 @@
   background: var(--ui-tab-active-bg, rgba(255, 255, 255, 0.08)) !important;
 }
 
+/* Contenedor de la barra: margen arriba para toda la fila (Home + pestañas) */
+:root[data-tab-layout="vscode"] .main-tab-view .p-tabview-nav-container {
+  padding-top: 6px !important;
+}
+
 :root[data-tab-layout="vscode"] .p-tabview .p-tabview-nav {
   height: 28px;
   min-height: 28px;

@@ -146,6 +146,22 @@
     padding-bottom: 0 !important;
 }
 
+/* Ajustes específicos cuando el layout de pestañas es VSCode:
+   - Barra algo más baja
+   - Pestañas pegadas abajo, con un pequeño margen superior visual */
+:root[data-tab-layout="vscode"] .terminal-frame.main-content-frame .p-tabview-nav-container {
+    height: 32px !important;
+    min-height: 32px !important;
+    padding-top: 4px !important;
+}
+
+:root[data-tab-layout="vscode"] .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav {
+    height: 28px !important;
+    min-height: 28px !important;
+    align-items: stretch !important;
+    padding: 0 6px 0 10px !important;
+}
+
 /* TabView overrides within TerminalFrame */
 .terminal-frame .main-tab-view.p-tabview {
     display: flex;
