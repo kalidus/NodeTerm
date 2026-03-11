@@ -197,8 +197,10 @@
 }
 
 :root[data-tab-layout="vscode"] .p-tabview .p-tabview-nav {
-  height: 31px;
-  min-height: 31px;
+  height: 28px;
+  min-height: 28px;
+  align-items: stretch !important;      /* Las pestañas ocupan toda la altura */
+  margin-bottom: -1px !important;       /* El borde inferior se solapa con el panel */
 }
 
 :root[data-tab-layout="vscode"] .p-tabview .p-tabview-nav li {
@@ -211,10 +213,15 @@
   border-right: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.15)) !important;
   border-top: 2px solid transparent !important;
   box-shadow: none !important;
+  height: 100% !important;         /* Ocupa toda la altura de la barra */
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  align-items: center !important;  /* Texto centrado verticalmente */
 }
 
 :root[data-tab-layout="vscode"] .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
-  border-top-color: var(--primary-color) !important;
+  /* El color de la línea superior toma el color del tema de pestañas */
+  border-top-color: var(--ui-tab-border, var(--primary-color)) !important;
 }
 
 :root[data-tab-layout="browser"] .p-tabview .p-tabview-nav {
