@@ -112,8 +112,10 @@ const TabHeader = React.memo(({
   const homeTabStyles = useMemo(() => {
     if (!isHomeTab) return {};
 
+    // En temas oscuros usamos un fondo algo más claro para que el botón Home
+    // siempre tenga contraste suficiente con la barra.
     const idleBackground = isDarkTheme
-      ? 'rgba(255,255,255,0.03)'
+      ? 'rgba(255,255,255,0.10)'
       : 'rgba(0,0,0,0.03)';
 
     const selectedBackground =
