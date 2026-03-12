@@ -41,22 +41,82 @@ const TerminalFrame = ({
         };
     }, [frameStyle]);
 
+    const frameStyleClass = frameStyle ? `terminal-frame-${frameStyle}` : '';
+
     return (
-        <div className={`terminal-frame ${className}`} id={id}>
+        <div className={`terminal-frame ${frameStyleClass} ${className}`} id={id}>
             {!hideHeader && (
                 <div className="terminal-frame-header">
                     {showControls && (
-                        <div className="terminal-frame-controls">
-                            {frameStyle === 'macos' ? (
-                                <>
-                                    <div className="terminal-frame-dot red" />
-                                    <div className="terminal-frame-dot yellow" />
-                                    <div className="terminal-frame-dot green" />
-                                </>
-                            ) : (
-                                <div className="terminal-frame-dot theme" />
-                            )}
-                        </div>
+                        frameStyle === 'macos' ? (
+                            <div className="terminal-frame-controls">
+                                <div className="terminal-frame-dot red" />
+                                <div className="terminal-frame-dot yellow" />
+                                <div className="terminal-frame-dot green" />
+                            </div>
+                        ) : frameStyle === 'gnome' ? (
+                            <div className="terminal-frame-controls gnome-controls">
+                                <div className="gnome-dot">
+                                    <span style={{ fontSize: 10 }}>×</span>
+                                </div>
+                            </div>
+                        ) : frameStyle === 'kde' ? (
+                            <div className="terminal-frame-controls kde-controls">
+                                <div className="kde-dot">
+                                    <div className="custom-icon icon-min" />
+                                </div>
+                                <div className="kde-dot">
+                                    <div className="custom-icon icon-max" />
+                                </div>
+                                <div className="kde-dot close">
+                                    <div className="custom-icon icon-close" />
+                                </div>
+                            </div>
+                        ) : frameStyle === 'windows' ? (
+                            <div className="terminal-frame-controls windows-controls">
+                                <div className="win-dot">
+                                    <div className="custom-icon icon-min" />
+                                </div>
+                                <div className="win-dot">
+                                    <div className="custom-icon icon-max" />
+                                </div>
+                                <div className="win-dot close">
+                                    <div className="custom-icon icon-close" />
+                                </div>
+                            </div>
+                        ) : frameStyle === 'matcha' ? (
+                            <div className="terminal-frame-controls matcha-controls">
+                                <div className="matcha-dot">
+                                    <span style={{ fontSize: 11 }}>✕</span>
+                                </div>
+                            </div>
+                        ) : frameStyle === 'futuristic' ? (
+                            <div className="terminal-frame-controls futuristic-controls">
+                                <div className="cyber-dot">EXE</div>
+                            </div>
+                        ) : frameStyle === 'modern' ? (
+                            <div className="terminal-frame-controls modern-controls">
+                                <div className="glass-dot">
+                                    <span style={{ fontSize: 10 }}>✕</span>
+                                </div>
+                            </div>
+                        ) : frameStyle === 'retro' ? (
+                            <div className="terminal-frame-controls retro-controls">
+                                <div className="retro-switch on" />
+                            </div>
+                        ) : (
+                            <div className="terminal-frame-controls">
+                                <div className="terminal-frame-window-btn minimize">
+                                    <span className="window-icon window-icon-min" />
+                                </div>
+                                <div className="terminal-frame-window-btn maximize">
+                                    <span className="window-icon window-icon-max" />
+                                </div>
+                                <div className="terminal-frame-window-btn close">
+                                    <span className="window-icon window-icon-close" />
+                                </div>
+                            </div>
+                        )
                     )}
 
                     {title && <div className="terminal-frame-title">{title}</div>}

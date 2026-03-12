@@ -54,6 +54,324 @@
     background: #27c93f;
 }
 
+.gnome-controls {
+    display: flex;
+    align-items: center;
+}
+
+.gnome-dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 10px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.gnome-dot:hover {
+    background: #e81123;
+}
+
+.kde-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.kde-dot {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ui-sidebar-text, #e5e9f0);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.kde-dot:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.kde-dot.close:hover {
+    background: #e81123;
+    color: #fff;
+}
+
+.custom-icon {
+    width: 10px;
+    height: 10px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+}
+
+.kde-dot:hover .custom-icon,
+.win-dot:hover .custom-icon {
+    opacity: 1;
+}
+
+.icon-min::after {
+    content: '';
+    width: 10px;
+    height: 1px;
+    background: currentColor;
+}
+
+.icon-max::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border: 1px solid currentColor;
+}
+
+.icon-close::before,
+.icon-close::after {
+    content: '';
+    position: absolute;
+    width: 11px;
+    height: 1px;
+    background: currentColor;
+}
+
+.icon-close::before {
+    transform: rotate(45deg);
+}
+
+.icon-close::after {
+    transform: rotate(-45deg);
+}
+
+.windows-controls {
+    display: flex;
+    align-items: center;
+}
+
+.win-dot {
+    width: 30px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ui-sidebar-text, #e5e9f0);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.win-dot:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.win-dot.close:hover {
+    background: #e81123;
+    color: #fff;
+}
+
+.futuristic-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cyber-dot {
+    width: 20px;
+    height: 20px;
+    border: 1px solid #00f2ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #00f2ff;
+    cursor: pointer;
+    text-shadow: 0 0 5px #00f2ff;
+    transform: skew(-15deg);
+    transition: all 0.2s ease;
+}
+
+.cyber-dot:hover {
+    background: #00f2ff;
+    color: #000;
+    box-shadow: 0 0 10px #00f2ff;
+}
+
+.modern-controls {
+    display: flex;
+    gap: 6px;
+}
+
+.glass-dot {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-dot:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+.retro-controls {
+    display: flex;
+    align-items: center;
+}
+
+.retro-switch {
+    width: 26px;
+    height: 14px;
+    background: #444;
+    border: 2px solid #555;
+    position: relative;
+    cursor: pointer;
+}
+
+.retro-switch::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 10px;
+    height: 6px;
+    background: #666;
+}
+
+.retro-switch.on::after {
+    left: auto;
+    right: 2px;
+    background: #0f0;
+    box-shadow: 0 0 5px #0f0;
+}
+
+.matcha-controls {
+    display: flex;
+    gap: 2px;
+}
+
+.matcha-dot {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #aaa;
+    cursor: pointer;
+}
+
+.matcha-dot:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.terminal-frame-futuristic {
+    border: 1px solid #00f2ff !important;
+    box-shadow: 0 0 15px rgba(0, 242, 255, 0.3) !important;
+    clip-path: polygon(0 0, 98% 0, 100% 8%, 100% 100%, 8% 100%, 0 92%);
+    background: transparent !important;
+}
+
+.terminal-frame-modern {
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    backdrop-filter: blur(25px) saturate(180%) !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 16px !important;
+}
+
+.terminal-frame-retro {
+    border: 10px solid #333 !important;
+    border-radius: 22px !important;
+    box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.9), 0 10px 32px rgba(0, 0, 0, 0.6) !important;
+    background: #000 !important;
+}
+
+.terminal-frame-matcha {
+    border-top: 3px solid #2eb398 !important;
+    border-radius: 8px !important;
+}
+
+.terminal-frame-window-btn {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+    color: var(--ui-sidebar-text, #a9b1d6);
+    opacity: 0.75;
+    transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.terminal-frame-window-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    opacity: 1;
+}
+
+.terminal-frame-window-btn.close:hover {
+    background: #e81123;
+    color: #fff;
+}
+
+.window-icon {
+    position: relative;
+    width: 10px;
+    height: 10px;
+}
+
+.window-icon-min::after {
+    content: '';
+    position: absolute;
+    left: 1px;
+    right: 1px;
+    bottom: 4px;
+    height: 1px;
+    background: currentColor;
+}
+
+.window-icon-max::after {
+    content: '';
+    position: absolute;
+    left: 1px;
+    top: 1px;
+    right: 1px;
+    bottom: 1px;
+    border: 1px solid currentColor;
+    box-sizing: border-box;
+}
+
+.window-icon-close::before,
+.window-icon-close::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    background: currentColor;
+}
+
+.window-icon-close::before {
+    transform: rotate(45deg);
+}
+
+.window-icon-close::after {
+    transform: rotate(-45deg);
+}
+
 .terminal-frame-title {
     font-size: 11.5px;
     color: var(--ui-sidebar-text, #a9b1d6);
