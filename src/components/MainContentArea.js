@@ -1518,7 +1518,7 @@ const MainContentArea = ({
             background: 'transparent'
           }}
         >
-          <TerminalFrame hideHeader={true} className="main-content-frame" contentClassName="main-content-frame-content">
+          <TerminalFrame className="main-content-frame" contentClassName="main-content-frame-content" title="NodeTerm · ~/sessions">
             {(homeTabs.length > 0 || sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
               <div style={{
                 width: '100%',
