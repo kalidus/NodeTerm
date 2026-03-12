@@ -5,7 +5,7 @@
 /* Integrar la barra de pestañas principal con el marco / fondo del área superior */
 .main-tab-view.p-tabview .p-tabview-nav {
   /* Mismo fondo que la sidebar, respetando el tema de interfaz */
-  background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), var(--ui-sidebar-bg) !important;
+  background: var(--ui-sidebar-bg) !important;
   border-bottom: none !important;
   margin-top: 0 !important;
 }
@@ -22,7 +22,7 @@
   min-height: 30px;
   margin-bottom: 0;
   padding-bottom: 0;
-  background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), var(--ui-sidebar-bg) !important;
+  background: var(--ui-sidebar-bg) !important;
   border-bottom: none !important;
   /* Ocultar scrollbar */
   scrollbar-width: none !important; /* Firefox */

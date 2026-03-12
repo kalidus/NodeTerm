@@ -133,7 +133,7 @@
     height: 36px !important;
     min-height: 36px !important;
     flex-shrink: 0;
-    background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), var(--ui-sidebar-bg, #1a1b26) !important;
+    background: var(--ui-sidebar-bg, #1a1b26) !important;
     border-bottom: 1px solid var(--ui-tabgroup-border, rgba(255, 255, 255, 0.06)) !important;
     position: relative !important;
 }
@@ -141,7 +141,7 @@
 .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav {
     height: 36px !important;
     min-height: 36px !important;
-    background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), var(--ui-sidebar-bg, #1a1b26) !important;
+    background: var(--ui-sidebar-bg, #1a1b26) !important;
     border: none !important;
     padding: 0 6px 0 10px !important;
     border-bottom: none !important;
