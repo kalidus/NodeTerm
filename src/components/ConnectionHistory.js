@@ -217,6 +217,28 @@ const ConnectionHistory = ({
 		{ id: 'nature', name: 'Naturaleza', keys: NATURE_UI_KEYS }
 	];
 
+	// Permitir que otros componentes (por ejemplo, MainContentArea) abran el selector de temas de interfaz
+	useEffect(() => {
+		const handleOpenUiThemePicker = (e) => {
+			try {
+				const originEvent = e?.detail?.originEvent;
+				if (originEvent && uiThemePickerRef.current?.toggle) {
+					uiThemePickerRef.current.toggle(originEvent);
+				} else if (uiThemePickerRef.current?.toggle) {
+					uiThemePickerRef.current.toggle(e);
+				}
+			} catch (err) {
+				console.warn('[ConnectionHistory] Error manejando open-ui-theme-picker:', err);
+			}
+		};
+
+		window.addEventListener('open-ui-theme-picker', handleOpenUiThemePicker);
+
+		return () => {
+			window.removeEventListener('open-ui-theme-picker', handleOpenUiThemePicker);
+		};
+	}, []);
+
 	// Cargar passwords desde localStorage (con soporte para encriptaci\u00F3n) - Igual que en TitleBar
 	useEffect(() => {
 		const loadPasswords = async () => {
@@ -2040,37 +2062,12 @@ const ConnectionHistory = ({
 								</div>
 							)}
 						</div>
-						<div className="header-path">
+					<div className="header-path">
 							<span className="header-brand">NodeTerm</span>
 							<span style={{ opacity: 0.4 }}>{'\u00B7'}</span>
 							<div style={{ opacity: 0.4, display: 'flex', alignItems: 'center', fontSize: '11px' }}>
 								<span className="path-tilde">~</span>/home
 							</div>
-						</div>
-						<div className="header-sessions-container" style={{ marginLeft: 'auto', zIndex: 10, display: 'flex', alignItems: 'center', gap: '8px' }}>
-							<span className="header-sessions" style={{ fontSize: '9px', fontWeight: 600 }}>
-								<i className="pi pi-circle-fill" style={{ fontSize: '5px' }} />
-								{activeIds.size} sessions
-							</span>
-							<i
-								className="pi pi-palette"
-								style={{
-									fontSize: '0.9rem',
-									color: themeColors.textPrimary || '#fff',
-									opacity: 0.6,
-									cursor: 'pointer',
-									padding: '4px',
-									borderRadius: '4px',
-									transition: 'all 0.2s'
-								}}
-								title="Cambiar tema de la interfaz"
-								onClick={(e) => {
-									e.stopPropagation();
-									uiThemePickerRef.current?.toggle(e);
-								}}
-								onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-								onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-							/>
 						</div>
 					</div>
 					<div className="top-terminal-body">

@@ -3033,6 +3033,9 @@ const App = () => {
           selectedNode={selectedNode}
           treeContextMenuRef={treeContextMenuRef}
 
+          // Active sessions info
+          activeIds={activeIds}
+
           // Sync settings props
           updateThemesFromSync={reloadThemes}
           updateStatusBarFromSync={updateStatusBarFromSync}

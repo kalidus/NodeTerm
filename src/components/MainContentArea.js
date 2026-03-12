@@ -111,7 +111,10 @@ const MainContentArea = ({
   getGeneralTreeContextMenuItems,
   getTreeContextMenuItems,
   selectedNode,
-  treeContextMenuRef
+  treeContextMenuRef,
+
+  // Active sessions info
+  activeIds
 }) => {
   // Estados para las flechas de navegación de pestañas
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -174,6 +177,17 @@ const MainContentArea = ({
     console.log('No hay terminales locales, usando último tipo guardado:', lastLocalTerminalType);
     return lastLocalTerminalType;
   };
+
+  const handleOpenUiThemePickerFromHeader = useCallback((event) => {
+    try {
+      const customEvent = new CustomEvent('open-ui-theme-picker', {
+        detail: { originEvent: event }
+      });
+      window.dispatchEvent(customEvent);
+    } catch (err) {
+      console.warn('[MainContentArea] Error dispatching open-ui-theme-picker:', err);
+    }
+  }, []);
 
   // Ref y estado para el menú contextual de selección de terminal
   const terminalSelectorMenuRef = useRef(null);
@@ -1518,7 +1532,52 @@ const MainContentArea = ({
             background: 'transparent'
           }}
         >
-          <TerminalFrame className="main-content-frame" contentClassName="main-content-frame-content" title="NodeTerm · ~/sessions">
+          <TerminalFrame
+            className="main-content-frame"
+            contentClassName="main-content-frame-content"
+            title="NodeTerm · ~/sessions"
+            headerExtra={
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span
+                  className="header-sessions"
+                  style={{
+                    fontSize: '9px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    background: 'rgba(129, 199, 132, 0.1)',
+                    padding: '2px 8px',
+                    borderRadius: 10,
+                    color: '#81c784',
+                    border: '1px solid rgba(129, 199, 132, 0.2)'
+                  }}
+                >
+                  <i className="pi pi-circle-fill" style={{ fontSize: '5px' }} />
+                  {(activeIds && typeof activeIds.size === 'number') ? activeIds.size : 0} sessions
+                </span>
+                <i
+                  className="pi pi-palette"
+                  style={{
+                    fontSize: '0.9rem',
+                    color: 'var(--ui-titlebar-text, #fff)',
+                    opacity: 0.7,
+                    cursor: 'pointer',
+                    padding: 4,
+                    borderRadius: 4,
+                    transition: 'all 0.2s'
+                  }}
+                  title="Cambiar tema de la interfaz"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenUiThemePickerFromHeader(e);
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; }}
+                />
+              </div>
+            }
+          >
             {(homeTabs.length > 0 || sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
               <div style={{
                 width: '100%',
@@ -1528,7 +1587,7 @@ const MainContentArea = ({
                 flexDirection: 'column',
                 flex: 1,
                 height: '100%',
-                background: isHomeTabActive ? localTerminalBg : undefined
+                background: isHomeTabActive ? 'var(--ui-content-bg, #1a1b26)' : undefined
               }}>
                 {/* Barra de grupos como TabView scrollable */}
                 {renderGroupTabs()}
@@ -1560,7 +1619,7 @@ const MainContentArea = ({
                           navContainer: {
                             ref: tabsContainerRef,
                             style: {
-                              '--home-tab-theme-bg': localTerminalBg || 'var(--ui-content-bg, #1a1b26)',
+                              '--home-tab-theme-bg': 'var(--ui-content-bg, #1a1b26)',
                               borderBottom: 'none',
                               opacity: 1.0
                             }
@@ -1777,7 +1836,7 @@ const MainContentArea = ({
                 <div style={{
                   flexGrow: 1,
                   position: 'relative',
-                  background: isHomeTabActive ? localTerminalBg : undefined
+                  background: isHomeTabActive ? 'var(--ui-content-bg, #1a1b26)' : undefined
                 }}>
                   {/* SIEMPRE renderizar todas las pestañas para preservar conexiones SSH */}
                   {/* Overlay para grupo vacío se muestra por encima */}
@@ -1819,7 +1878,7 @@ const MainContentArea = ({
                             visibility: isActiveTab ? 'visible' : 'hidden',
                             zIndex: isActiveTab ? 1 : 0,
                             pointerEvents: isActiveTab ? 'auto' : 'none',
-                            background: (tab.type === TAB_TYPES.HOME && isActiveTab) ? localTerminalBg : 'transparent'
+                            background: (tab.type === TAB_TYPES.HOME && isActiveTab) ? 'var(--ui-content-bg, #1a1b26)' : 'transparent'
                           }}
                         >
                           <TabContentRenderer
