@@ -52,7 +52,19 @@ const HomeTab = ({
   });
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.TERMINAL_FRAME_STYLE, terminalFrameStyle);
+    try {
+      localStorage.setItem(STORAGE_KEYS.TERMINAL_FRAME_STYLE, terminalFrameStyle);
+    } catch {
+      // Ignorar errores de persistencia
+    }
+
+    try {
+      window.dispatchEvent(new CustomEvent('terminal-frame-style-changed', {
+        detail: { style: terminalFrameStyle }
+      }));
+    } catch {
+      // Ignorar errores al despachar el evento
+    }
   }, [terminalFrameStyle]);
 
   const [rndSize, setRndSize] = useState({ width: '80%', height: 400 });
