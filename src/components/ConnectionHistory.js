@@ -1396,7 +1396,7 @@ const ConnectionHistory = ({
 					width: 100%;
 				}
 				.top-terminal-header {
-					height: 36px;
+					height: 30px;
 					box-sizing: border-box;
 					flex-shrink: 0;
 					background: ${terminalTheme.background ? terminalTheme.background + 'ee' : 'rgba(20,22,28,0.95)'};
@@ -1404,7 +1404,7 @@ const ConnectionHistory = ({
 					border-radius: 12px 12px 0 0;
 					display: flex;
 					align-items: center;
-					padding: 0 12px;
+					padding: 0 10px;
 					position: relative;
 					gap: 0;
 				}
@@ -1483,7 +1483,7 @@ const ConnectionHistory = ({
 					box-sizing: border-box;
 				}
 				.recents-terminal-header {
-					height: 36px;
+					height: 30px;
 					box-sizing: border-box;
 					flex-shrink: 0;
 					background: ${(() => {
