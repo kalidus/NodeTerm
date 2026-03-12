@@ -741,6 +741,15 @@ const MainContentArea = ({
     const navList = navContainer.querySelector('.p-tabview-nav');
     if (!navList) return;
 
+    // Asegurar que todos los elementos dentro de la barra de pestañas
+    // (pestañas e iconos de acción) se alineen verticalmente al centro
+    try {
+      navList.style.display = 'flex';
+      navList.style.alignItems = 'center';
+    } catch {
+      // ignorar si el estilo no se puede aplicar
+    }
+
     // Eliminar botones existentes del nav
     navContainer.querySelectorAll('.local-terminal-buttons, .tab-theme-button-wrapper, .tab-layout-button-wrapper').forEach((el) => el.remove());
     navContainer.querySelector('.main-nav-traffic-lights')?.remove();
@@ -754,8 +763,6 @@ const MainContentArea = ({
       gap: 1px;
       flex-shrink: 0;
       margin-left: 4px;
-      margin-bottom: 1px;
-      align-self: flex-end;
     `;
 
     // Botón +
@@ -1150,9 +1157,8 @@ const MainContentArea = ({
       display: flex;
       align-items: center;
       flex-shrink: 0;
-      align-self: flex-end;
       margin-left: auto;
-      margin-bottom: 1px;
+      height: 20px;
     `;
     layoutButtonWrapper.appendChild(layoutButton);
 
@@ -1162,9 +1168,8 @@ const MainContentArea = ({
       display: flex;
       align-items: center;
       flex-shrink: 0;
-      align-self: flex-end;
       margin-left: 2px;
-      margin-bottom: 1px;
+      height: 20px;
     `;
     themeButtonWrapper.appendChild(themeButton);
     themeButtonWrapper.appendChild(frameToggleButton);

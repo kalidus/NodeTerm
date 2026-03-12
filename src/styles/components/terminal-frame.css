@@ -642,10 +642,11 @@
     border-color: rgba(255, 255, 255, 0.3) !important;
 }
 
-/* Botón de tema de pestañas (dentro del nav, a la derecha con margin-left: auto) */
-.terminal-frame .main-tab-view .p-tabview-nav .tab-theme-button-wrapper {
+/* Botones de tema y layout de pestañas (dentro del nav, a la derecha con margin-left: auto) */
+.terminal-frame .main-tab-view .p-tabview-nav .tab-theme-button-wrapper,
+.terminal-frame .main-tab-view .p-tabview-nav .tab-layout-button-wrapper {
     flex-shrink: 0;
-    align-self: flex-end;
+    align-self: center;
 }
 .terminal-frame .main-tab-view .p-tabview-nav .tab-theme-quick-button {
     display: flex !important;
