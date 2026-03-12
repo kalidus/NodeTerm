@@ -470,81 +470,116 @@
 }
 
 
+/* === BARRA DE GRUPOS — Estilo compacto, fusionada con la barra de pestañas === */
+
+/* Los paneles del groups-bar no deben ocupar espacio — son solo navegación */
+.tabview-groups-bar .p-tabview-panels {
+  display: none !important;
+}
+
+/* Contenedor raíz del TabView de grupos */
+.tabview-groups-bar {
+  flex-shrink: 0;
+}
+
+/* Barra de navegación de grupos: 28px, alineada al fondo */
 .tabview-groups-bar .p-tabview-nav {
-  border-bottom: 2px solid #bdbdbd;
-  margin-bottom: 0;
+  height: 28px !important;
+  min-height: 28px !important;
+  background: var(--ui-sidebar-bg) !important;
+  border-bottom: none !important;
+  margin-bottom: 0 !important;
+  padding: 3px 4px 0 !important;
+  align-items: flex-end !important;
   z-index: 2;
   position: relative;
 }
 
-.tabview-groups-bar .p-tabview-nav .p-tabview-ink-bar {
-  background-color: var(--group-ink-bar-color, #bbb) !important;
-}
-
-/* Enfoque diferente: usar JavaScript para controlar la ink bar específicamente cuando Home está activo */
-.tabview-groups-bar[data-home-active="true"] .p-tabview-nav .p-tabview-ink-bar {
-  width: 50px !important;
-  max-width: 50px !important;
-  left: 0 !important;
-  right: auto !important;
-  transform: translateX(0) !important;
-}
-
-/* Alternativa: ocultar la ink bar completamente cuando el Home está activo */
+/* Ink bar oculta en toda la groups-bar */
+.tabview-groups-bar .p-tabview-nav .p-tabview-ink-bar,
 .tabview-groups-bar.home-active .p-tabview-nav .p-tabview-ink-bar {
   display: none !important;
 }
 
+/* Ítems de grupo */
 .tabview-groups-bar .p-tabview-nav li {
-  min-width: 90px !important;
-  max-width: 150px !important;
+  height: 24px !important;
+  min-width: 80px !important;
+  max-width: 140px !important;
+  margin-bottom: 0 !important;
+  align-self: flex-end !important;
 }
 
-/* Estilo específico para el botón Home (primera pestaña) */
+/* Primer ítem (icono de "sin grupo / home") — alineado con home-tab de la barra principal */
 .tabview-groups-bar .p-tabview-nav li:first-child {
-  min-width: 50px !important;
-  max-width: 50px !important;
-  margin-right: 0px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  margin-right: 4px !important;
 }
 
-/* Centrar el contenido del botón Home */
+/* Links de los grupos: pills con bordes superiores redondeados y borde sutil */
+.tabview-groups-bar .p-tabview-nav .p-tabview-nav-link {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  border-radius: 5px 5px 0 0 !important;
+  border: 1px solid var(--tab-border-color, rgba(255, 255, 255, 0.12)) !important;
+  border-bottom: none !important;
+  padding: 0 9px !important;
+  font-size: 0.72rem !important;
+  overflow: hidden;
+  position: relative;
+  background-color: var(--tab-bg-color, rgba(255, 255, 255, 0.06)) !important;
+  opacity: 0.6;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+  margin: 0 1px;
+}
+
+/* Hover en grupo inactivo */
+.tabview-groups-bar .p-tabview-nav li:not(.p-highlight) .p-tabview-nav-link:hover {
+  opacity: 0.85 !important;
+  background-color: var(--tab-bg-color, rgba(255, 255, 255, 0.10)) !important;
+}
+
+/* Grupo activo: totalmente visible + accent de 2px en color del grupo */
+.tabview-groups-bar .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  opacity: 1 !important;
+  background-color: var(--tab-bg-color, rgba(255, 255, 255, 0.11)) !important;
+  color: var(--ui-tab-text, rgba(255, 255, 255, 0.95)) !important;
+  border: 1px solid var(--tab-border-color, rgba(255, 255, 255, 0.18)) !important;
+  border-bottom: none !important;
+  height: 24px !important;
+  margin-bottom: 0 !important;
+}
+
+/* Indicador de 2px en la parte inferior del tab activo (color del grupo) */
+.tabview-groups-bar .p-tabview-nav li.p-highlight .p-tabview-nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--tab-border-color, var(--primary-color, rgba(255, 255, 255, 0.5)));
+  border-radius: 2px 2px 0 0;
+}
+
+/* Centrar el botón Home en la primera pestaña */
 .tabview-groups-bar .p-tabview-nav li:first-child .p-tabview-nav-link {
   justify-content: center !important;
   padding-left: 0 !important;
   padding-right: 0 !important;
 }
 
-/* Centrar el span dentro del botón Home */
 .tabview-groups-bar .p-tabview-nav li:first-child .p-tabview-nav-link > span {
   justify-content: center !important;
   align-items: center !important;
   width: 100% !important;
 }
 
-/* Ajustar la línea inferior (ink bar) del botón Home para que no sobresalga */
-.tabview-groups-bar .p-tabview-nav li:first-child .p-tabview-ink-bar {
-  max-width: 50px !important;
-  left: 0 !important;
-  right: auto !important;
-}
-
-/* Alternativa: ocultar completamente la línea inferior en el botón Home */
-.tabview-groups-bar .p-tabview-nav li:first-child.p-highlight .p-tabview-ink-bar {
-  width: 100% !important;
-  max-width: 50px !important;
-}
-
-.tabview-groups-bar .p-tabview-nav .p-tabview-nav-link {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  position: relative;
-  padding-right: 8px !important;
-  overflow: hidden;
-  background-color: var(--tab-bg-color, #f5f5f5) !important;
-  border: 1px solid var(--tab-border-color, #d0d0d0) !important;
-}
-
+/* Texto del grupo truncado */
 .tabview-groups-bar .p-tabview-nav .p-tabview-nav-link > span {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -553,12 +588,10 @@
   min-width: 0;
 }
 
+/* Botón X del grupo: posicionado relativo al flexbox */
 .tabview-groups-bar .group-delete-x {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  margin-left: 0;
+  flex-shrink: 0;
+  margin-left: 2px;
 }
 
 /* Botón X simple - usar los estilos por defecto de PrimeReact */
@@ -573,11 +606,17 @@
   opacity: 1 !important;
 }
 
-.p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link,
-.tabview-groups-bar .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+/* Pestaña activa en la barra principal */
+.p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
   background: var(--ui-tab-active-bg) !important;
   color: var(--ui-tab-active-text) !important;
   border-color: var(--ui-tab-border) !important;
+}
+/* Grupo activo: conserva el color del grupo (no usar --ui-tab-active-bg) */
+.tabview-groups-bar .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  background-color: var(--tab-bg-color, rgba(255, 255, 255, 0.13)) !important;
+  color: var(--ui-tab-text, rgba(255, 255, 255, 0.92)) !important;
+  border: none !important;
 }
 
 /* === ESTILOS PARA FLECHAS DE NAVEGACIÓN DE PESTAÑAS === */

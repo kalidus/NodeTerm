@@ -89,19 +89,21 @@ export const useTabRendering = ({
           }
         }}
         style={{ 
-          marginBottom: 0, 
-          '--group-ink-bar-color': activeGroupId === null ? '#bbb' : (tabGroups.find(g => g.id === activeGroupId)?.color || '#bbb')
+          margin: 0,
+          padding: 0,
+          flexShrink: 0,
+          '--group-ink-bar-color': 'transparent'
         }}
         className={`tabview-groups-bar ${activeGroupId === null ? 'home-active' : ''}`}
       >
         <TabPanel key="no-group" 
           style={{
-            '--tab-bg-color': '#f5f5f5',
-            '--tab-border-color': '#d0d0d0'
+            '--tab-bg-color': 'rgba(255, 255, 255, 0.06)',
+            '--tab-border-color': 'transparent'
           }}
           header={
             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-              {getGroupTabIcon(20)}
+              {getGroupTabIcon(22)}
             </span>
           }
         >
@@ -130,7 +132,7 @@ export const useTabRendering = ({
                   });
                 }}
               >
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: group.color, marginRight: 4 }} />
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: group.color, marginRight: 5, flexShrink: 0, boxShadow: `0 0 0 2px ${group.color}44` }} />
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 12 }}>{group.name}</span>
                 <Button
                   icon="pi pi-times"

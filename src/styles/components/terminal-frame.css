@@ -138,6 +138,32 @@
     position: relative !important;
 }
 
+/* --- Barra de grupos: anula la regla anterior — 3 clases > 2 clases --- */
+.terminal-frame.main-content-frame .tabview-groups-bar .p-tabview-nav-container {
+    height: 28px !important;
+    min-height: 28px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+    background: var(--ui-sidebar-bg, #1a1b26) !important;
+}
+
+/* Paneles de la groups-bar: completamente ocultos, sin espacio */
+.terminal-frame.main-content-frame .tabview-groups-bar .p-tabview-panels {
+    display: none !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* El wrapper .p-tabview de la groups-bar no debe crecer en flex */
+.terminal-frame.main-content-frame .tabview-groups-bar {
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+    height: auto !important;
+}
+
 .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav {
     height: 36px !important;
     min-height: 36px !important;
@@ -158,6 +184,14 @@
     padding-top: 4px !important;
 }
 
+/* Groups bar no hereda la altura del layout VSCode */
+:root[data-tab-layout="vscode"] .terminal-frame.main-content-frame .tabview-groups-bar .p-tabview-nav-container {
+    height: 28px !important;
+    min-height: 28px !important;
+    padding-top: 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
 :root[data-tab-layout="vscode"] .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav {
     height: 28px !important;
     min-height: 28px !important;
@@ -176,7 +210,7 @@
     background: transparent !important;
     border: none !important;
     padding: 0 10px !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
+    border-bottom: none !important;
 }
 
 .terminal-frame .main-tab-view .p-tabview-panels {
