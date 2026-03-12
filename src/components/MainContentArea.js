@@ -1535,27 +1535,19 @@ const MainContentArea = ({
           <TerminalFrame
             className="main-content-frame"
             contentClassName="main-content-frame-content"
-            title="NodeTerm · ~/sessions"
-            headerExtra={
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span
-                  className="header-sessions"
-                  style={{
-                    fontSize: '9px',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    background: 'rgba(129, 199, 132, 0.1)',
-                    padding: '2px 8px',
-                    borderRadius: 10,
-                    color: '#81c784',
-                    border: '1px solid rgba(129, 199, 132, 0.2)'
-                  }}
-                >
-                  <i className="pi pi-circle-fill" style={{ fontSize: '5px' }} />
+            title={
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontWeight: 'bold', color: 'var(--ui-titlebar-text, #fff)' }}>NodeTerm</span>
+                <span style={{ opacity: 0.5 }}>·</span>
+                <span style={{ opacity: 0.9 }}>~/sessions</span>
+                <span style={{ opacity: 0.5 }}>·</span>
+                <span style={{ color: '#81c784', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
                   {(activeIds && typeof activeIds.size === 'number') ? activeIds.size : 0} sessions
                 </span>
+              </span>
+            }
+            headerExtra={
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <i
                   className="pi pi-palette"
                   style={{
