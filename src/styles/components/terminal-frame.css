@@ -398,6 +398,11 @@
     flex-direction: column;
 }
 
+/* --- Header colapsable para el marco principal de sesiones --- */
+.terminal-frame.main-content-frame--header-collapsed .terminal-frame-header {
+    display: none;
+}
+
 /* Efecto de separación (gap) en el layout */
 .terminal-frame-container {
     padding: 8px;

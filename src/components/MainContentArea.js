@@ -121,6 +121,24 @@ const MainContentArea = ({
   const [canScrollRight, setCanScrollRight] = useState(false);
   const tabsContainerRef = useRef(null);
 
+  // Estado para mostrar/ocultar el marco superior del TerminalFrame principal
+  const [mainFrameHeaderCollapsed, setMainFrameHeaderCollapsed] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nodeterm_main_frame_header_collapsed');
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('nodeterm_main_frame_header_collapsed', mainFrameHeaderCollapsed.toString());
+    } catch {
+      // Ignorar errores de persistencia
+    }
+  }, [mainFrameHeaderCollapsed]);
+
   // Estado para el panel SSH System Monitor
   const [sshSystemMonitorTabId, setSshSystemMonitorTabId] = useState(null);
 
@@ -946,6 +964,44 @@ const MainContentArea = ({
       setTimeout(() => document.addEventListener('click', closeOutside), 0);
     });
 
+    // Botón para mostrar/ocultar el marco superior del TerminalFrame principal
+    const frameToggleButton = document.createElement('div');
+    frameToggleButton.setAttribute('role', 'button');
+    frameToggleButton.setAttribute('tabIndex', '0');
+    frameToggleButton.title = mainFrameHeaderCollapsed ? 'Mostrar marco superior' : 'Ocultar marco superior';
+    frameToggleButton.className = 'tab-frame-toggle-button';
+    const frameIcon = document.createElement('i');
+    frameIcon.className = `pi ${mainFrameHeaderCollapsed ? 'pi-angle-down' : 'pi-angle-up'}`;
+    frameIcon.style.cssText = `
+      font-size: 0.9rem;
+      color: var(--ui-tab-text, rgba(255,255,255,0.85));
+      opacity: 0.6;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      transition: all 0.2s;
+    `;
+    frameToggleButton.appendChild(frameIcon);
+    frameToggleButton.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-left: 2px;
+    `;
+    frameToggleButton.addEventListener('mouseenter', () => { frameIcon.style.opacity = '1'; });
+    frameToggleButton.addEventListener('mouseleave', () => { frameIcon.style.opacity = '0.6'; });
+    frameToggleButton.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        frameToggleButton.click();
+      }
+    });
+    frameToggleButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setMainFrameHeaderCollapsed(prev => !prev);
+    });
+
     // Botón de layout de pestañas
     const layoutButton = document.createElement('div');
     layoutButton.setAttribute('role', 'button');
@@ -1111,13 +1167,14 @@ const MainContentArea = ({
       margin-bottom: 1px;
     `;
     themeButtonWrapper.appendChild(themeButton);
+    themeButtonWrapper.appendChild(frameToggleButton);
 
     buttonsContainer.appendChild(plusButton);
     buttonsContainer.appendChild(dropdownButton);
     navList.appendChild(buttonsContainer);
     navList.appendChild(layoutButtonWrapper);
     navList.appendChild(themeButtonWrapper);
-  }, [filteredTabs, activeTabIndex, wslDistributions]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filteredTabs, activeTabIndex, wslDistributions, mainFrameHeaderCollapsed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Función para crear una nueva pestaña de terminal local independiente
   const createLocalTerminalTab = (terminalType, distroInfo = null) => {
@@ -1533,7 +1590,7 @@ const MainContentArea = ({
           }}
         >
           <TerminalFrame
-            className="main-content-frame"
+            className={`main-content-frame ${mainFrameHeaderCollapsed ? 'main-content-frame--header-collapsed' : ''}`}
             contentClassName="main-content-frame-content"
             title={
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
