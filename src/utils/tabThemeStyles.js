@@ -720,14 +720,14 @@ export const generateAdvancedCSS = (themeName, styles) => {
         padding: var(--tab-padding, 8px 12px) !important;
         min-width: var(--tab-min-width, 120px) !important;
         max-width: var(--tab-max-width, 240px) !important;
-        border-bottom: 1px solid var(--ui-tab-border) !important;
+        border-bottom: none !important; /* Sin línea extra bajo la pestaña */
         position: relative !important;
       }
       
       .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
-        border-bottom: 1px solid var(--ui-tab-active-bg) !important;
         background: var(--ui-tab-active-bg) !important;
         color: var(--ui-tab-active-text) !important;
+        border-bottom: none !important; /* Tab activa también sin borde inferior */
       }
       
       .p-tabview .p-tabview-nav li .p-tabview-nav-link:hover {

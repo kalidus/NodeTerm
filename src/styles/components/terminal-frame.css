@@ -496,12 +496,12 @@
 }
 
 /* Ajustes específicos cuando el layout de pestañas es VSCode:
-   - Barra algo más baja
-   - Pestañas pegadas abajo, con un pequeño margen superior visual */
+   Las pestañas deben ir totalmente pegadas a la parte superior e inferior, sin línea extra. */
 :root[data-tab-layout="vscode"] .terminal-frame.main-content-frame .p-tabview-nav-container {
-    height: 32px !important;
-    min-height: 32px !important;
-    padding-top: 4px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    padding-top: 0 !important;
+    border-bottom: 0 !important; /* Elimina la línea separadora para VSCode */
 }
 
 /* Groups bar no hereda la altura del layout VSCode */
@@ -516,7 +516,7 @@
     height: 28px !important;
     min-height: 28px !important;
     align-items: stretch !important;
-    padding: 0 6px 0 10px !important;
+    padding: 0 6px 0 0 !important; /* Home lo más a la izquierda posible */
 }
 
 /* TabView overrides within TerminalFrame */
@@ -539,6 +539,11 @@
     padding: 0 !important;
     flex-grow: 1;
     overflow: hidden;
+}
+
+/* En layout VSCode, solapamos 1px hacia arriba el contenido para borrar cualquier línea residual */
+:root[data-tab-layout="vscode"] .terminal-frame .main-tab-view .p-tabview-panels {
+    margin-top: -1px !important;
 }
 
 /* Tab Buttons: recuadro completo como Home, misma altura */

@@ -1,3 +1,7 @@
+/* Override: quitar hueco superior en layout VSCode para que las pestañas toquen arriba */
+::root[data-tab-layout="vscode"] .main-tab-view .p-tabview-nav-container {
+  padding-top: 0 !important;
+}
 .main-tab-view {
   flex-shrink: 0 !important; /* Solución preventiva: Evita que el componente TabView se estire */
 }
@@ -196,9 +200,9 @@
   background: var(--ui-tab-active-bg, rgba(255, 255, 255, 0.08)) !important;
 }
 
-/* Contenedor de la barra: margen arriba para toda la fila (Home + pestañas) */
+/* Contenedor de la barra para layout VSCode: sin margen superior extra */
 :root[data-tab-layout="vscode"] .main-tab-view .p-tabview-nav-container {
-  padding-top: 6px !important;
+  padding-top: 0 !important;
 }
 
 :root[data-tab-layout="vscode"] .p-tabview .p-tabview-nav {
