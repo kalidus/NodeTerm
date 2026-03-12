@@ -1565,7 +1565,7 @@ const MainContentArea = ({
         >
           <TerminalFrame
             className={sidebarCollapsed ? 'sidebar-collapsed' : ''}
-            showControls={true}
+            showControls={!sidebarCollapsed}
           >
             <Sidebar
               {...memoizedSidebarProps}

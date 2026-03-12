@@ -1231,7 +1231,7 @@ const HomeTab = ({
         onDoubleClick={handleMaximizeTerminal}
       >
         <div style={{ display: 'flex', gap: '8px', zIndex: 10 }}>
-          {terminalFrameStyle === 'macos' ? (
+          {terminalFrameStyle === 'minimal' ? null : terminalFrameStyle === 'macos' ? (
             <>
               <div
                 className="no-drag"
@@ -1282,6 +1282,8 @@ const HomeTab = ({
             <div className="modern-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
               <div className="glass-dot" title="Ocultar" onClick={handleCloseTerminal}><i className="pi pi-times" /></div>
             </div>
+          ) : terminalFrameStyle === 'minimal' ? (
+            <div className="minimal-controls no-drag" onMouseDown={(e) => e.stopPropagation()} />
           ) : (
             <div className="retro-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
               <div className="retro-switch on" title="OFF" onClick={handleCloseTerminal} />

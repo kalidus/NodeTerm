@@ -47,7 +47,7 @@ const TerminalFrame = ({
         <div className={`terminal-frame ${frameStyleClass} ${className}`} id={id}>
             {!hideHeader && (
                 <div className="terminal-frame-header">
-                    {showControls && (
+                    {showControls && frameStyle !== 'minimal' && (
                         frameStyle === 'macos' ? (
                             <div className="terminal-frame-controls">
                                 <div className="terminal-frame-dot red" />

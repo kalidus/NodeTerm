@@ -2056,6 +2056,8 @@ const ConnectionHistory = ({
 								<div className="modern-controls" style={{ marginLeft: '-8px' }}>
 									<div className="glass-dot"><i className="pi pi-times" /></div>
 								</div>
+							) : terminalFrameStyle === 'minimal' ? (
+								<div className="minimal-controls" style={{ marginLeft: '-8px' }} />
 							) : (
 								<div className="retro-controls" style={{ marginLeft: '-8px' }}>
 									<div className="retro-switch on" />
@@ -2554,6 +2556,8 @@ const ConnectionHistory = ({
 									<div className="modern-controls">
 										<div className="glass-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
 									</div>
+								) : terminalFrameStyle === 'minimal' ? (
+									<div className="minimal-controls" />
 								) : (
 									<div className="retro-controls">
 										<div className="retro-switch on" onClick={() => setActiveBottomView('all')} title="OFF" />
@@ -2683,6 +2687,8 @@ const ConnectionHistory = ({
 									<div className="modern-controls">
 										<div className="glass-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
 									</div>
+								) : terminalFrameStyle === 'minimal' ? (
+									<div className="minimal-controls" />
 								) : (
 									<div className="retro-controls">
 										<div className="retro-switch on" onClick={() => setActiveBottomView('all')} title="OFF" />
@@ -2791,7 +2797,7 @@ const ConnectionHistory = ({
 				{/* macOS-style header */}
 				<div className="recents-terminal-header">
 					<div className="traffic-lights">
-						{terminalFrameStyle === 'macos' ? (
+						{terminalFrameStyle === 'minimal' ? null : terminalFrameStyle === 'macos' ? (
 							<>
 								<div
 									className="traffic-dot red"
@@ -2888,6 +2894,8 @@ const ConnectionHistory = ({
 									<i className="pi pi-times" />
 								</div>
 							</div>
+						) : terminalFrameStyle === 'minimal' ? (
+							<div className="minimal-controls" />
 						) : (
 							<div className="retro-controls">
 								<div
@@ -3348,6 +3356,7 @@ const ConnectionHistory = ({
 						{ id: 'matcha', label: 'Matcha (Green)', line: '#2eb398', icons: ['pi-times'], right: true },
 						{ id: 'futuristic', label: 'Futurista (Cyber)', color: '#00f2ff', text: 'EXE' },
 						{ id: 'modern', label: 'Moderno (Glass)', rounded: true, icons: ['pi-times'], right: true },
+						{ id: 'minimal', label: 'Minimal (Sin botones)', noButtons: true },
 						{ id: 'retro', label: 'Retro (CRT)', color: '#0f0', switch: true }
 					].map(style => (
 						<div
@@ -3363,7 +3372,7 @@ const ConnectionHistory = ({
 								borderTop: style.line ? `2px solid ${style.line}` : undefined,
 								borderRadius: style.rounded ? '8px' : '4px'
 							}}>
-								{style.dots ? (
+								{style.noButtons ? null : style.dots ? (
 									<div style={{ display: 'flex', gap: '3px' }}>
 										{style.dots.map((c, i) => <div key={i} className="frame-preview-dot" style={{ background: c }} />)}
 									</div>
