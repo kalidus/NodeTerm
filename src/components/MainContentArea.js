@@ -978,7 +978,8 @@ const MainContentArea = ({
     frameToggleButton.title = mainFrameHeaderCollapsed ? 'Mostrar marco superior' : 'Ocultar marco superior';
     frameToggleButton.className = 'tab-frame-toggle-button';
     const frameIcon = document.createElement('i');
-    frameIcon.className = `pi ${mainFrameHeaderCollapsed ? 'pi-angle-down' : 'pi-angle-up'}`;
+    // Usar iconos de ventana completa / restaurar para el marco superior
+    frameIcon.className = `pi ${mainFrameHeaderCollapsed ? 'pi-window-minimize' : 'pi-window-maximize'}`;
     frameIcon.style.cssText = `
       font-size: 0.9rem;
       color: var(--ui-tab-text, rgba(255,255,255,0.85));
