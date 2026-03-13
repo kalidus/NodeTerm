@@ -1061,7 +1061,10 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         userSelect: 'none',
         WebkitAppRegion: 'drag',
         zIndex: 1000,
-        position: 'relative'
+        position: 'relative',
+        borderRadius: 10,
+        margin: '4px 6px 0 6px',
+        overflow: 'hidden'
       }}
     >
       {importBanner && (
