@@ -117,30 +117,16 @@ const MainContentArea = ({
   activeIds,
 
   // TitleBar state
-  titleBarCollapsed
+  titleBarCollapsed,
+
+  // Frame header state
+  mainFrameHeaderCollapsed,
+  setMainFrameHeaderCollapsed
 }) => {
   // Estados para las flechas de navegación de pestañas
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const tabsContainerRef = useRef(null);
-
-  // Estado para mostrar/ocultar el marco superior del TerminalFrame principal
-  const [mainFrameHeaderCollapsed, setMainFrameHeaderCollapsed] = useState(() => {
-    try {
-      const saved = localStorage.getItem('nodeterm_main_frame_header_collapsed');
-      return saved === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('nodeterm_main_frame_header_collapsed', mainFrameHeaderCollapsed.toString());
-    } catch {
-      // Ignorar errores de persistencia
-    }
-  }, [mainFrameHeaderCollapsed]);
 
   // Estado para el panel SSH System Monitor
   const [sshSystemMonitorTabId, setSshSystemMonitorTabId] = useState(null);
@@ -766,6 +752,7 @@ const MainContentArea = ({
       gap: 1px;
       flex-shrink: 0;
       margin-left: 4px;
+      -webkit-app-region: ${ (titleBarCollapsed && mainFrameHeaderCollapsed) ? 'no-drag' : 'inherit' };
     `;
 
     // Botón +
@@ -874,6 +861,7 @@ const MainContentArea = ({
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      -webkit-app-region: ${ (titleBarCollapsed && mainFrameHeaderCollapsed) ? 'no-drag' : 'inherit' };
     `;
     themeButton.addEventListener('mouseenter', () => { themeIcon.style.opacity = '1'; });
     themeButton.addEventListener('mouseleave', () => { themeIcon.style.opacity = '0.6'; });
@@ -999,6 +987,7 @@ const MainContentArea = ({
       justify-content: center;
       flex-shrink: 0;
       margin-left: 2px;
+      -webkit-app-region: ${ (titleBarCollapsed && mainFrameHeaderCollapsed) ? 'no-drag' : 'inherit' };
     `;
     frameToggleButton.addEventListener('mouseenter', () => { frameIcon.style.opacity = '1'; });
     frameToggleButton.addEventListener('mouseleave', () => { frameIcon.style.opacity = '0.6'; });
@@ -1036,6 +1025,7 @@ const MainContentArea = ({
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      -webkit-app-region: ${ (titleBarCollapsed && mainFrameHeaderCollapsed) ? 'no-drag' : 'inherit' };
     `;
     layoutButton.addEventListener('mouseenter', () => { layoutIcon.style.opacity = '1'; });
     layoutButton.addEventListener('mouseleave', () => { layoutIcon.style.opacity = '0.6'; });
@@ -1183,7 +1173,7 @@ const MainContentArea = ({
     navList.appendChild(buttonsContainer);
     navList.appendChild(layoutButtonWrapper);
     navList.appendChild(themeButtonWrapper);
-  }, [filteredTabs, activeTabIndex, wslDistributions, mainFrameHeaderCollapsed]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filteredTabs, activeTabIndex, wslDistributions, mainFrameHeaderCollapsed, titleBarCollapsed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Función para crear una nueva pestaña de terminal local independiente
   const createLocalTerminalTab = (terminalType, distroInfo = null) => {
@@ -1680,8 +1670,15 @@ const MainContentArea = ({
                             style: {
                               '--home-tab-theme-bg': 'var(--ui-content-bg, #1a1b26)',
                               borderBottom: 'none',
-                              opacity: 1.0
+                              opacity: 1.0,
+                              WebkitAppRegion: (titleBarCollapsed && mainFrameHeaderCollapsed) ? 'drag' : 'inherit'
                             }
+                          },
+                          nav: {
+                            style: (titleBarCollapsed && mainFrameHeaderCollapsed) ? { WebkitAppRegion: 'drag' } : {}
+                          },
+                          navcontent: {
+                            style: (titleBarCollapsed && mainFrameHeaderCollapsed) ? { WebkitAppRegion: 'drag' } : {}
                           }
                         }}
                       >
@@ -1729,6 +1726,7 @@ const MainContentArea = ({
                                   onTabDragEnd={tabHandlers.onTabDragEnd}
                                   onTabContextMenu={tabHandlers.onTabContextMenu}
                                   onTabClose={tabHandlers.onTabClose}
+                                  isDraggable={titleBarCollapsed && mainFrameHeaderCollapsed}
                                 />
                               )}
                             />
@@ -1764,7 +1762,8 @@ const MainContentArea = ({
                               style: {
                                 color: 'var(--ui-tab-text) !important',
                                 background: 'rgba(0, 0, 0, 0.3) !important',
-                                border: 'none !important'
+                                border: 'none !important',
+                                WebkitAppRegion: (titleBarCollapsed && mainFrameHeaderCollapsed) ? 'no-drag' : 'inherit'
                               }
                             },
                             icon: {
@@ -1813,7 +1812,8 @@ const MainContentArea = ({
                               style: {
                                 color: 'var(--ui-tab-text) !important',
                                 background: 'rgba(0, 0, 0, 0.3) !important',
-                                border: 'none !important'
+                                border: 'none !important',
+                                WebkitAppRegion: (titleBarCollapsed && mainFrameHeaderCollapsed) ? 'no-drag' : 'inherit'
                               }
                             },
                             icon: {

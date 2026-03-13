@@ -127,6 +127,24 @@ const App = () => {
     setTitleBarCollapsed(prev => !prev);
   }, []);
 
+  // Estado para mostrar/ocultar el marco superior del TerminalFrame principal
+  const [mainFrameHeaderCollapsed, setMainFrameHeaderCollapsed] = React.useState(() => {
+    try {
+      const saved = localStorage.getItem('nodeterm_main_frame_header_collapsed');
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('nodeterm_main_frame_header_collapsed', mainFrameHeaderCollapsed.toString());
+    } catch {
+      // Ignorar errores de persistencia
+    }
+  }, [mainFrameHeaderCollapsed]);
+
   // === SISTEMA DE ENCRIPTACIÓN ===
   const [secureStorage] = useState(() => new SecureStorage());
   const [needsUnlock, setNeedsUnlock] = useState(false);
@@ -1461,7 +1479,9 @@ const App = () => {
     setTabContextMenu,
     moveTabToGroup,
     deleteGroup,
-    toast
+    toast,
+    titleBarCollapsed,
+    mainFrameHeaderCollapsed
   });
 
 
@@ -3108,6 +3128,8 @@ const App = () => {
           exportTreeToJson={exportTreeToJson}
           importTreeFromJson={importTreeFromJson}
           sessionManager={sessionManager}
+          mainFrameHeaderCollapsed={mainFrameHeaderCollapsed}
+          setMainFrameHeaderCollapsed={setMainFrameHeaderCollapsed}
           titleBarCollapsed={titleBarCollapsed}
         />
 

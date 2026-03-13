@@ -38,7 +38,8 @@ const TabHeader = React.memo(({
   onTabDrop,
   onTabDragEnd,
   onTabContextMenu,
-  onTabClose
+  onTabClose,
+  isDraggable = false
 }) => {
   const isHomeTab = tab.type === 'home';
   const [homeIconVersion, setHomeIconVersion] = useState(0);
@@ -263,6 +264,7 @@ const TabHeader = React.memo(({
         borderLeft: isDragOver ? '3px solid var(--primary-color)' : 'none',
         transition: 'opacity 0.2s, border-left 0.2s, box-shadow 0.2s, background 0.2s, border 0.2s',
         cursor: isDragging ? 'grabbing' : 'grab',
+        WebkitAppRegion: isDraggable ? 'no-drag' : 'inherit',
         ...(homeTabStyles || {})
       }}
       onClick={(e) => {

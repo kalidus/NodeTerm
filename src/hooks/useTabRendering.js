@@ -23,9 +23,16 @@ export const useTabRendering = ({
   deleteGroup,
   
   // Toast
-  toast
+  toast,
+
+  // Estados de visibilidad
+  titleBarCollapsed,
+  mainFrameHeaderCollapsed
 }) => {
   
+  // Determinar si la barra de pestañas debe actuar como zona de arrastre
+  const isDraggable = !!(titleBarCollapsed && mainFrameHeaderCollapsed);
+
   // Estado para el icono de grupos
   const [groupIconVersion, setGroupIconVersion] = useState(0);
   
@@ -92,9 +99,18 @@ export const useTabRendering = ({
           margin: 0,
           padding: 0,
           flexShrink: 0,
-          '--group-ink-bar-color': 'transparent'
+          '--group-ink-bar-color': 'transparent',
+          WebkitAppRegion: isDraggable ? 'drag' : 'inherit'
         }}
         className={`tabview-groups-bar ${activeGroupId === null ? 'home-active' : ''}`}
+        pt={{
+          nav: {
+            style: isDraggable ? { WebkitAppRegion: 'drag' } : {}
+          },
+          navcontent: {
+            style: isDraggable ? { WebkitAppRegion: 'drag' } : {}
+          }
+        }}
       >
         <TabPanel key="no-group" 
           style={{
@@ -102,7 +118,13 @@ export const useTabRendering = ({
             '--tab-border-color': 'transparent'
           }}
           header={
-            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+            <span style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              width: '100%',
+              WebkitAppRegion: isDraggable ? 'no-drag' : 'inherit'
+            }}>
               {getGroupTabIcon(22)}
             </span>
           }
@@ -119,7 +141,12 @@ export const useTabRendering = ({
             header={
               <span 
                 className="group-hover"
-                style={{ display: 'flex', alignItems: 'center', maxWidth: 180 }}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  maxWidth: 180,
+                  WebkitAppRegion: isDraggable ? 'no-drag' : 'inherit'
+                }}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
