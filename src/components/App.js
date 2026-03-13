@@ -3108,6 +3108,7 @@ const App = () => {
           exportTreeToJson={exportTreeToJson}
           importTreeFromJson={importTreeFromJson}
           sessionManager={sessionManager}
+          titleBarCollapsed={titleBarCollapsed}
         />
 
         {/* 🚀 OPTIMIZACIÓN: Lazy loading con Suspense */}

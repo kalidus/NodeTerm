@@ -114,7 +114,10 @@ const MainContentArea = ({
   treeContextMenuRef,
 
   // Active sessions info
-  activeIds
+  activeIds,
+
+  // TitleBar state
+  titleBarCollapsed
 }) => {
   // Estados para las flechas de navegación de pestañas
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -1598,6 +1601,7 @@ const MainContentArea = ({
           <TerminalFrame
             className={`main-content-frame ${mainFrameHeaderCollapsed ? 'main-content-frame--header-collapsed' : ''}`}
             contentClassName="main-content-frame-content"
+            isDraggable={titleBarCollapsed}
             title={
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontWeight: 'bold', color: 'var(--ui-titlebar-text, #fff)' }}>NodeTerm</span>

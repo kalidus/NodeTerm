@@ -10,7 +10,8 @@ const TerminalFrame = ({
     hideHeader = false,
     className = '',
     contentClassName = '',
-    id
+    id,
+    isDraggable = false
 }) => {
     const [frameStyle, setFrameStyle] = useState(() => {
         try {
@@ -46,22 +47,25 @@ const TerminalFrame = ({
     return (
         <div className={`terminal-frame ${frameStyleClass} ${className}`} id={id}>
             {!hideHeader && (
-                <div className="terminal-frame-header">
+                <div 
+                    className="terminal-frame-header"
+                    style={isDraggable ? { WebkitAppRegion: 'drag' } : {}}
+                >
                     {showControls && frameStyle !== 'minimal' && (
                         frameStyle === 'macos' ? (
-                            <div className="terminal-frame-controls">
+                            <div className="terminal-frame-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
                                 <div className="terminal-frame-dot red" />
                                 <div className="terminal-frame-dot yellow" />
                                 <div className="terminal-frame-dot green" />
                             </div>
                         ) : frameStyle === 'gnome' ? (
-                            <div className="terminal-frame-controls gnome-controls">
+                            <div className="terminal-frame-controls gnome-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
                                 <div className="gnome-dot">
                                     <span style={{ fontSize: 10 }}>×</span>
                                 </div>
                             </div>
                         ) : frameStyle === 'kde' ? (
-                            <div className="terminal-frame-controls kde-controls">
+                            <div className="terminal-frame-controls kde-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
                                 <div className="kde-dot">
                                     <div className="custom-icon icon-min" />
                                 </div>
@@ -73,7 +77,7 @@ const TerminalFrame = ({
                                 </div>
                             </div>
                         ) : frameStyle === 'windows' ? (
-                            <div className="terminal-frame-controls windows-controls">
+                            <div className="terminal-frame-controls windows-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
                                 <div className="win-dot">
                                     <div className="custom-icon icon-min" />
                                 </div>
@@ -85,27 +89,27 @@ const TerminalFrame = ({
                                 </div>
                             </div>
                         ) : frameStyle === 'matcha' ? (
-                            <div className="terminal-frame-controls matcha-controls">
+                            <div className="terminal-frame-controls matcha-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
                                 <div className="matcha-dot">
                                     <span style={{ fontSize: 11 }}>✕</span>
                                 </div>
                             </div>
                         ) : frameStyle === 'futuristic' ? (
-                            <div className="terminal-frame-controls futuristic-controls">
+                            <div className="terminal-frame-controls futuristic-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
                                 <div className="cyber-dot">EXE</div>
                             </div>
                         ) : frameStyle === 'modern' ? (
-                            <div className="terminal-frame-controls modern-controls">
+                            <div className="terminal-frame-controls modern-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
                                 <div className="glass-dot">
                                     <span style={{ fontSize: 10 }}>✕</span>
                                 </div>
                             </div>
                         ) : frameStyle === 'retro' ? (
-                            <div className="terminal-frame-controls retro-controls">
+                            <div className="terminal-frame-controls retro-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
                                 <div className="retro-switch on" />
                             </div>
                         ) : (
-                            <div className="terminal-frame-controls">
+                            <div className="terminal-frame-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
                                 <div className="terminal-frame-window-btn minimize">
                                     <span className="window-icon window-icon-min" />
                                 </div>
@@ -122,7 +126,7 @@ const TerminalFrame = ({
                     {title && <div className="terminal-frame-title">{title}</div>}
 
                     {headerExtra && (
-                        <div className="terminal-frame-header-extra">
+                        <div className="terminal-frame-header-extra" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
                             {headerExtra}
                         </div>
                     )}
