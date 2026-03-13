@@ -106,6 +106,27 @@ const App = () => {
   const [isAppReady, setIsAppReady] = React.useState(false);
   const [importPreset, setImportPreset] = React.useState(null);
 
+  // Estado para mostrar/ocultar la titlebar superior
+  const [titleBarCollapsed, setTitleBarCollapsed] = React.useState(() => {
+    try {
+      return localStorage.getItem('nodeterm_titlebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('nodeterm_titlebar_collapsed', titleBarCollapsed.toString());
+    } catch {
+      // ignorar errores de persistencia
+    }
+  }, [titleBarCollapsed]);
+
+  const handleToggleTitleBar = React.useCallback(() => {
+    setTitleBarCollapsed(prev => !prev);
+  }, []);
+
   // === SISTEMA DE ENCRIPTACIÓN ===
   const [secureStorage] = useState(() => new SecureStorage());
   const [needsUnlock, setNeedsUnlock] = useState(false);
@@ -2588,16 +2609,18 @@ const App = () => {
           secureStorage={secureStorage}
         />
 
-        <TitleBar
-          sidebarFilter={sidebarFilter}
-          setSidebarFilter={setSidebarFilter}
-          allNodes={nodes}
-          findAllConnections={findAllConnections}
-          onOpenSSHConnection={onOpenSSHConnection}
-          onOpenRdpConnection={onOpenRdpConnection}
-          onOpenVncConnection={onOpenVncConnection}
-          onShowImportDialog={setShowImportDialog}
-          onShowExportDialog={setShowExportDialog}
+        {/* TitleBar superior - se puede ocultar */}
+        {!titleBarCollapsed && (
+          <TitleBar
+            sidebarFilter={sidebarFilter}
+            setSidebarFilter={setSidebarFilter}
+            allNodes={nodes}
+            findAllConnections={findAllConnections}
+            onOpenSSHConnection={onOpenSSHConnection}
+            onOpenRdpConnection={onOpenRdpConnection}
+            onOpenVncConnection={onOpenVncConnection}
+            onShowImportDialog={setShowImportDialog}
+            onShowExportDialog={setShowExportDialog}
           onShowImportExportDialog={setShowImportExportDialog}
           onShowImportWizard={setShowImportWizard}
           masterKey={masterKey}
@@ -2687,12 +2710,55 @@ const App = () => {
               setShowImportDialog(true);
             }
           }}
-          iconTheme={iconTheme}
-          expandedKeys={expandedKeys}
-        />
+            onToggleTitleBar={handleToggleTitleBar}
+            iconTheme={iconTheme}
+            expandedKeys={expandedKeys}
+          />
+        )}
+
+        {/* Botón flotante para restaurar titlebar cuando está oculta */}
+        {titleBarCollapsed && (
+          <div
+            title="Mostrar barra superior"
+            onClick={handleToggleTitleBar}
+            style={{
+              position: 'fixed',
+              top: 6,
+              right: 10,
+              width: 28,
+              height: 28,
+              borderRadius: 6,
+              background: 'var(--ui-titlebar-accent, #1976d2)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              zIndex: 9999,
+              opacity: 0.7,
+              transition: 'opacity 0.2s ease, transform 0.2s ease',
+              WebkitAppRegion: 'no-drag',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.opacity = '1';
+              e.currentTarget.style.transform = 'scale(1.1)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.opacity = '0.7';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 14 14">
+              {/* Flecha hacia abajo indicando "expandir" */}
+              <line x1="2" y1="5" x2="7" y2="10" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.6" strokeLinecap="round" />
+              <line x1="7" y1="10" x2="12" y2="5" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </div>
+        )}
 
         {/* Línea separadora debajo de la titlebar - Solo en temas futuristas */}
-        {FUTURISTIC_UI_KEYS.includes(uiTheme) && (
+        {!titleBarCollapsed && FUTURISTIC_UI_KEYS.includes(uiTheme) && (
           <div style={{
             height: '0.5px',
             background: 'var(--ui-tabgroup-border, #444)',
