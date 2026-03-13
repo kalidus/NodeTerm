@@ -2580,7 +2580,7 @@ const App = () => {
 
   return (
     <ErrorBoundary>
-      <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
+      <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0, background: 'var(--ui-content-bg, #0a0f1f)' }}>
         {/* UnlockDialog - Pide master password al inicio si existe */}
         <UnlockDialog
           visible={needsUnlock}
