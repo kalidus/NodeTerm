@@ -458,31 +458,7 @@ export const themes = {
       cursor: '#d8dee9'
     }
   },
-  'Atom One Light': {
-    name: 'Atom One Light',
-    theme: {
-      background: '#fafafa',
-      foreground: '#383a42',
-      black: '#000000',
-      brightBlack: '#4f525d',
-      red: '#e45649',
-      brightRed: '#e45649',
-      green: '#50a14f',
-      brightGreen: '#50a14f',
-      yellow: '#c18401',
-      brightYellow: '#c18401',
-      blue: '#4078f2',
-      brightBlue: '#4078f2',
-      magenta: '#a626a4',
-      brightMagenta: '#a626a4',
-      cyan: '#0184bc',
-      brightCyan: '#0184bc',
-      white: '#a0a1a7',
-      brightWhite: '#ffffff',
-      selectionBackground: '#e5e5e6',
-      cursor: '#383a42'
-    }
-  },
+
   'Breeze': {
     name: 'Breeze',
     theme: {
@@ -558,81 +534,7 @@ export const themes = {
       cursor: '#404040'
     }
   },
-  'Minimal Gray': {
-    name: 'Minimal Gray',
-    theme: {
-      background: '#fafafa',
-      foreground: '#505050',
-      black: '#2f2f2f',
-      brightBlack: '#707070',
-      red: '#d32f2f',
-      brightRed: '#f44336',
-      green: '#388e3c',
-      brightGreen: '#4caf50',
-      yellow: '#f57c00',
-      brightYellow: '#ff9800',
-      blue: '#1976d2',
-      brightBlue: '#2196f3',
-      magenta: '#7b1fa2',
-      brightMagenta: '#9c27b0',
-      cyan: '#00796b',
-      brightCyan: '#009688',
-      white: '#9e9e9e',
-      brightWhite: '#e0e0e0',
-      selectionBackground: '#f0f0f0',
-      cursor: '#505050'
-    }
-  },
-  'Paper': {
-    name: 'Paper',
-    theme: {
-      background: '#fefefe',
-      foreground: '#2b2b2b',
-      black: '#1f1f1f',
-      brightBlack: '#585858',
-      red: '#d73a49',
-      brightRed: '#f97583',
-      green: '#28a745',
-      brightGreen: '#85e89d',
-      yellow: '#ffd33d',
-      brightYellow: '#ffea7f',
-      blue: '#0366d6',
-      brightBlue: '#79b8ff',
-      magenta: '#6f42c1',
-      brightMagenta: '#b392f0',
-      cyan: '#0598bc',
-      brightCyan: '#56d4dd',
-      white: '#6a737d',
-      brightWhite: '#f6f8fa',
-      selectionBackground: '#f0f8ff',
-      cursor: '#2b2b2b'
-    }
-  },
-  'Soft Gray': {
-    name: 'Soft Gray',
-    theme: {
-      background: '#f7f7f7',
-      foreground: '#4a4a4a',
-      black: '#383838',
-      brightBlack: '#686868',
-      red: '#c62828',
-      brightRed: '#e57373',
-      green: '#2e7d32',
-      brightGreen: '#81c784',
-      yellow: '#f57f17',
-      brightYellow: '#ffb74d',
-      blue: '#1565c0',
-      brightBlue: '#64b5f6',
-      magenta: '#7b1fa2',
-      brightMagenta: '#ba68c8',
-      cyan: '#00695c',
-      brightCyan: '#4db6ac',
-      white: '#a0a0a0',
-      brightWhite: '#e8e8e8',
-      selectionBackground: '#eeeeee',
-      cursor: '#4a4a4a'
-    }
-  },
+
   'Arctic': {
     name: 'Arctic',
     theme: {

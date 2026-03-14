@@ -284,21 +284,7 @@ export const statusBarThemes = {
       sparklineColor: '#6699cc'
     }
   },
-  'Atom One Light': {
-    name: 'Atom One Light',
-    colors: {
-      background: '#fafafa',
-      text: '#383a42',
-      border: '#4f525d',
-      iconColor: '#4078f2',
-      cpuBarColor: '#4078f2',
-      memoryBarColor: '#50a14f',
-      diskBarColor: '#c18401',
-      networkUpColor: '#50a14f',
-      networkDownColor: '#0184bc',
-      sparklineColor: '#4078f2'
-    }
-  },
+
   'Breeze': {
     name: 'Breeze',
     colors: {
@@ -344,51 +330,7 @@ export const statusBarThemes = {
       sparklineColor: '#729fcf'
     }
   },
-  'Minimal Gray': {
-    name: 'Minimal Gray',
-    colors: {
-      background: '#fafafa',
-      text: '#505050',
-      border: '#e0e0e0',
-      iconColor: '#2196f3',
-      cpuBarColor: '#2196f3',
-      memoryBarColor: '#4caf50',
-      diskBarColor: '#ff9800',
-      networkUpColor: '#4caf50',
-      networkDownColor: '#009688',
-      sparklineColor: '#2196f3'
-    }
-  },
-  'Paper': {
-    name: 'Paper',
-    colors: {
-      background: '#fefefe',
-      text: '#2b2b2b',
-      border: '#e1e4e8',
-      iconColor: '#0366d6',
-      cpuBarColor: '#0366d6',
-      memoryBarColor: '#28a745',
-      diskBarColor: '#ffd33d',
-      networkUpColor: '#28a745',
-      networkDownColor: '#0598bc',
-      sparklineColor: '#0366d6'
-    }
-  },
-  'Soft Gray': {
-    name: 'Soft Gray',
-    colors: {
-      background: '#f7f7f7',
-      text: '#4a4a4a',
-      border: '#e8e8e8',
-      iconColor: '#64b5f6',
-      cpuBarColor: '#64b5f6',
-      memoryBarColor: '#81c784',
-      diskBarColor: '#ffb74d',
-      networkUpColor: '#81c784',
-      networkDownColor: '#4db6ac',
-      sparklineColor: '#64b5f6'
-    }
-  },
+
   'Arctic': {
     name: 'Arctic',
     colors: {

@@ -60,7 +60,7 @@ const applyEarlyBootTheme = () => {
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
     // Lista de temas claros conocidos (sincronizada con ThemeManager)
-    const lightThemes = ['Light', 'Solarized Light', 'Atom One Light', 'Paper', 'Silver', 'Soft Gray', 'Minimal Gray'];
+    const lightThemes = ['Light', 'Solarized Light', 'Silver'];
 
     // Determinar si es tema claro
     let isLight = false;
