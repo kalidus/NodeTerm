@@ -1254,21 +1254,34 @@ const ConnectionHistory = ({
 					justify-content: center;
 				}
 				.hero-title { 
-					font-size: 24px; 
-					font-weight: 800; 
-					background: linear-gradient(90deg, ${themeColors.textPrimary || '#ffffff'}, ${themeColors.primaryColor || '#4fc3f7'}); 
-					-webkit-background-clip: text; 
-					-webkit-text-fill-color: transparent; 
+					font-size: 28px; 
+					font-weight: 900; 
+					color: ${themeColors.textPrimary || '#ffffff'};
 					margin: 0; 
-					letter-spacing: -0.5px;
+					letter-spacing: 2px;
+					font-family: 'Fira Code', monospace;
+					text-transform: uppercase;
+					text-shadow: 0 0 10px ${terminalTheme.green || '#27c93f'}, 
+					            0 0 20px ${terminalTheme.green ? terminalTheme.green + '44' : 'rgba(0,0,0,0.2)'};
+					position: relative;
+				}
+				.hero-title::after {
+					content: '_';
+					animation: blink 1s step-end infinite;
+					color: ${terminalTheme.green || '#27c93f'};
+				}
+				@keyframes blink {
+					50% { opacity: 0; }
 				}
 				.hero-status { color: #81c784; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; font-family: 'Fira Code', monospace; }
 				.hero-search-container { 
 					width: 100%; 
-					max-width: 500px;
+					max-width: 550px;
 					margin: 0 auto;
 					position: relative; 
 					z-index: 100;
+					/* Terminal Glow Effect */
+					filter: drop-shadow(0 0 5px ${terminalTheme.green ? terminalTheme.green + '22' : 'rgba(0,0,0,0)'});
 				}
 				.hero-search-container::before {
 					content: "\u279C  ~";
@@ -1279,126 +1292,148 @@ const ConnectionHistory = ({
 					color: ${terminalTheme.green || '#27c93f'};
 					font-family: 'Fira Code', 'Consolas', monospace;
 					font-weight: bold;
-					font-size: 0.85rem;
+					font-size: 0.9rem;
 					z-index: 2;
 					pointer-events: none;
-					opacity: 0.8;
+					text-shadow: 0 0 8px ${terminalTheme.green || '#27c93f'};
+				}
+				/* Scanline animation for the search bar */
+				.hero-search-container::after {
+					content: "";
+					position: absolute;
+					top: 0; left: 0; right: 0; bottom: 0;
+					background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+					            linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+					background-size: 100% 2px, 3px 100%;
+					pointer-events: none;
+					z-index: 4;
+					border-radius: 6px;
+					opacity: 0.5;
 				}
 				.hero-search-input, .p-inputtext.hero-search-input:enabled:focus {
 					width: 100% !important;
-					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.05)'} !important;
-					border: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '55' : 'rgba(255,255,255,0.1)'} !important;
-					border-radius: 10px !important;
-					padding: 10px 70px 10px 65px !important;
+					background: ${terminalTheme.background || '#000'} !important;
+					border: 2px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '88' : 'rgba(255,255,255,0.2)'} !important;
+					border-radius: 6px !important;
+					padding: 12px 75px 12px 65px !important;
 					color: ${terminalTheme.foreground || '#fff'} !important;
-					font-size: 0.9rem;
-					font-family: 'Fira Code', 'Consolas', monospace !important;
+					font-size: 0.95rem;
+					font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace !important;
 					outline: none !important;
-					box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05) !important;
-					backdrop-filter: blur(16px);
-					transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+					box-shadow: 0 10px 30px rgba(0,0,0,0.6), inset 0 2px 2px rgba(0,0,0,0.5) !important;
+					transition: all 0.2s ease;
+					letter-spacing: 0.5px;
 				}
 				.hero-search-input::placeholder {
 					color: ${terminalTheme.foreground || '#fff'};
-					opacity: 0.45;
+					opacity: 0.3;
+					text-transform: uppercase;
+					font-size: 0.75rem;
+					letter-spacing: 2px;
 				}
 				.hero-search-input:focus, .p-inputtext.hero-search-input:enabled:focus {
 					border-color: ${terminalTheme.green || '#27c93f'} !important;
-					box-shadow: 0 0 20px ${terminalTheme.green ? terminalTheme.green + '44' : 'rgba(39, 201, 63, 0.2)'},
-					            inset 0 1px 1px rgba(255,255,255,0.05) !important;
-					background: ${terminalTheme.background || 'rgba(15, 18, 24, 0.95)'} !important;
-					transform: translateY(-1px);
+					box-shadow: 0 0 25px ${terminalTheme.green ? terminalTheme.green + '55' : 'rgba(39, 201, 63, 0.3)'},
+					            inset 0 0 10px ${terminalTheme.green ? terminalTheme.green + '22' : 'rgba(0,0,0,0.5)'} !important;
+					transform: translateY(-1px) scale(1.01);
 				}
-				/* Hide old search icon since we use terminal prompt */
-				.hero-search-icon { display: none; }
-				.hero-search-spinner { position: absolute; right: 70px; top: 50%; transform: translateY(-50%); color: ${terminalTheme.green || '#27c93f'}; font-size: 1.2rem; z-index: 2; }
+				.hero-search-spinner { position: absolute; right: 80px; top: 50%; transform: translateY(-50%); color: ${terminalTheme.green || '#27c93f'}; font-size: 1.2rem; z-index: 5; }
 				
 				.hero-terminal-btn {
 					position: absolute;
-					right: 8px;
+					right: 10px;
 					top: 50%;
 					transform: translateY(-50%);
-					height: 32px;
-					padding: 0 12px;
-					border-radius: 8px;
-					background: #000000;
-					border: 1px solid rgba(255,255,255,0.2);
-					color: #ffffff;
-					font-family: monospace;
+					height: 34px;
+					min-width: 50px;
+					padding: 0 10px;
+					border-radius: 4px;
+					background: #111;
+					border: 1px solid #333;
+					border-bottom: 3px solid #000;
+					color: ${terminalTheme.green || '#27c93f'};
+					font-family: 'Fira Code', monospace;
 					font-weight: bold;
-					font-size: 1rem;
+					font-size: 1.1rem;
 					display: flex;
 					align-items: center;
 					justify-content: center;
 					cursor: pointer;
-					z-index: 3;
-					transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-					box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+					z-index: 10;
+					transition: all 0.1s;
+					text-shadow: 0 0 5px ${terminalTheme.green || '#27c93f'};
 				}
 				.hero-terminal-btn:hover {
 					background: #1a1a1a;
-					border-color: rgba(255,255,255,0.4);
-					box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-					transform: translateY(-50%) scale(1.02);
+					border-color: #444;
+					transform: translateY(-50%) translateY(-1px);
 				}
 				.hero-terminal-btn:active {
-					background: #000000;
-					transform: translateY(-50%) scale(0.98);
-					box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+					border-bottom-width: 1px;
+					transform: translateY(-50%) translateY(1px);
+					background: #000;
 				}
 
 				.hero-action-buttons {
 					display: flex;
 					justify-content: center;
-					gap: 4px;
-					margin-top: 20px;
-					background: rgba(0, 0, 0, 0.2);
-					padding: 4px;
-					border-radius: 12px;
-					border: 1px solid rgba(255, 255, 255, 0.03);
-					backdrop-filter: blur(10px);
+					gap: 12px;
+					margin-top: 25px;
+					padding: 6px;
+					background: rgba(0, 0, 0, 0.4);
+					border-radius: 8px;
+					border: 1px solid rgba(255, 255, 255, 0.1);
+					box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
 				}
 				.hero-action-btn {
 					background: transparent;
 					border: 1px solid transparent;
-					border-radius: 10px;
-					padding: 8px 18px;
-					color: rgba(255,255,255,0.6);
-					font-size: 0.85rem;
-					font-weight: 500;
-					font-family: 'Inter', system-ui, -apple-system, sans-serif;
+					border-radius: 4px;
+					padding: 10px 22px;
+					color: rgba(255,255,255,0.4);
+					font-size: 0.8rem;
+					font-weight: 600;
+					font-family: 'Fira Code', 'Consolas', monospace;
+					text-transform: uppercase;
+					letter-spacing: 1px;
 					display: flex;
 					align-items: center;
-					gap: 8px;
+					gap: 10px;
 					cursor: pointer;
-					transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+					transition: all 0.2s;
+					position: relative;
+					overflow: hidden;
 				}
 				.hero-action-btn:hover {
 					color: #fff;
 					background: rgba(255, 255, 255, 0.05);
+					border-bottom: 2px solid rgba(255,255,255,0.2);
 				}
 				.hero-action-btn.active {
-					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.1)'};
+					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.05)'};
 					color: #fff;
-					border-color: rgba(255, 255, 255, 0.05);
-					box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+					border: 1px solid rgba(255, 255, 255, 0.2);
+					border-bottom: 3px solid ${terminalTheme.green || '#3fb950'};
+					box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+					text-shadow: 0 0 8px rgba(255,255,255,0.5);
 				}
 				.hero-action-btn i {
-					font-size: 0.9rem;
-					opacity: 0.6;
+					font-size: 1rem;
+					opacity: 0.5;
 				}
 				.hero-action-btn.active i {
 					opacity: 1;
 					color: ${terminalTheme.green || '#3fb950'};
 				}
 				.hero-action-btn.terminal-primary {
-					background: ${terminalTheme.green ? terminalTheme.green + '22' : 'rgba(39, 201, 63, 0.1)'};
+					background: rgba(0,0,0,0.5);
 					color: ${terminalTheme.green || '#3fb950'};
-					border: 1px solid ${terminalTheme.green ? terminalTheme.green + '44' : 'rgba(39, 201, 63, 0.2)'};
+					border: 1px solid ${terminalTheme.green ? terminalTheme.green + '44' : 'rgba(39, 201, 63, 0.3)'};
+					border-bottom: 3px solid ${terminalTheme.green || '#3fb950'};
 				}
 				.hero-action-btn.terminal-primary:hover {
-					background: ${terminalTheme.green ? terminalTheme.green + '33' : 'rgba(39, 201, 63, 0.15)'};
-					transform: translateY(-1px);
+					background: ${terminalTheme.green ? terminalTheme.green + '22' : 'rgba(39, 201, 63, 0.1)'};
+					filter: brightness(1.2);
 				}
 				
 				.hero-shortcuts { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.3)'}; font-size: 0.75rem; display: flex; justify-content: center; gap: 20px; font-weight: 500;}
@@ -1407,15 +1442,31 @@ const ConnectionHistory = ({
 				/* --- Top Terminal Frame (Search + Actions) --- */
 				.top-terminal-frame {
 					margin: 0 auto 24px auto;
-					border-radius: 12px;
+					border-radius: 8px;
 					overflow: hidden;
 					display: flex;
 					flex-direction: column;
-					border: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '55' : 'rgba(255,255,255,0.12)'};
-					background: ${terminalTheme.background || '#0d1117'};
-					box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
+					border: 2px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '88' : 'rgba(255,255,255,0.2)'};
+					background: ${terminalTheme.background || '#050505'};
+					box-shadow: 0 20px 50px rgba(0,0,0,0.8), 
+					            inset 0 0 100px rgba(0,0,0,0.5),
+					            0 0 20px ${terminalTheme.green ? terminalTheme.green + '11' : 'rgba(0,0,0,0)'};
 					max-width: 650px;
 					width: 100%;
+					position: relative;
+				}
+				.top-terminal-frame::before {
+					content: "";
+					position: absolute;
+					top: -2px; left: -2px; right: -2px; bottom: -2px;
+					background: linear-gradient(45deg, transparent, ${terminalTheme.green || '#27c93f'}, transparent);
+					padding: 2px;
+					border-radius: 8px;
+					-webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+					-webkit-mask-composite: xor;
+					mask-composite: exclude;
+					opacity: 0.3;
+					pointer-events: none;
 				}
 				.top-terminal-header {
 					height: 30px;
