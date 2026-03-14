@@ -1276,197 +1276,171 @@ const ConnectionHistory = ({
 				.hero-status { color: #81c784; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; font-family: 'Fira Code', monospace; }
 				.hero-search-container { 
 					width: 100%; 
-					max-width: 550px;
+					max-width: 480px;
 					margin: 0 auto;
 					position: relative; 
 					z-index: 100;
-					/* Terminal Glow Effect */
-					filter: drop-shadow(0 0 5px ${terminalTheme.green ? terminalTheme.green + '22' : 'rgba(0,0,0,0)'});
+					filter: drop-shadow(0 0 5px ${terminalTheme.green ? terminalTheme.green + '11' : 'rgba(0,0,0,0)'});
 				}
 				.hero-search-container::before {
 					content: "\u279C  ~";
 					position: absolute;
-					left: 20px;
+					left: 18px;
 					top: 50%;
 					transform: translateY(-50%);
 					color: ${terminalTheme.green || '#27c93f'};
 					font-family: 'Fira Code', 'Consolas', monospace;
 					font-weight: bold;
-					font-size: 0.9rem;
+					font-size: 0.8rem;
 					z-index: 2;
 					pointer-events: none;
-					text-shadow: 0 0 8px ${terminalTheme.green || '#27c93f'};
+					text-shadow: 0 0 5px ${terminalTheme.green || '#27c93f'};
 				}
 				/* Scanline animation for the search bar */
 				.hero-search-container::after {
 					content: "";
 					position: absolute;
 					top: 0; left: 0; right: 0; bottom: 0;
-					background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
-					            linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-					background-size: 100% 2px, 3px 100%;
+					background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.05) 50%);
+					background-size: 100% 2px;
 					pointer-events: none;
 					z-index: 4;
-					border-radius: 6px;
-					opacity: 0.5;
+					border-radius: 4px;
+					opacity: 0.3;
 				}
 				.hero-search-input, .p-inputtext.hero-search-input:enabled:focus {
 					width: 100% !important;
-					background: ${terminalTheme.background || '#000'} !important;
-					border: 2px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '88' : 'rgba(255,255,255,0.2)'} !important;
-					border-radius: 6px !important;
-					padding: 12px 75px 12px 65px !important;
+					background: ${terminalTheme.background ? adjustOpacity(terminalTheme.background, 0.6) : 'rgba(15, 15, 15, 0.6)'} !important;
+					border: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '66' : 'rgba(255,255,255,0.15)'} !important;
+					border-radius: 4px !important;
+					padding: 8px 65px 8px 55px !important;
 					color: ${terminalTheme.foreground || '#fff'} !important;
-					font-size: 0.95rem;
+					font-size: 0.85rem;
 					font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace !important;
 					outline: none !important;
-					box-shadow: 0 10px 30px rgba(0,0,0,0.6), inset 0 2px 2px rgba(0,0,0,0.5) !important;
+					box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.02) !important;
+					backdrop-filter: blur(8px);
 					transition: all 0.2s ease;
-					letter-spacing: 0.5px;
 				}
 				.hero-search-input::placeholder {
 					color: ${terminalTheme.foreground || '#fff'};
-					opacity: 0.3;
+					opacity: 0.25;
 					text-transform: uppercase;
-					font-size: 0.75rem;
-					letter-spacing: 2px;
+					font-size: 0.7rem;
+					letter-spacing: 1px;
 				}
 				.hero-search-input:focus, .p-inputtext.hero-search-input:enabled:focus {
-					border-color: ${terminalTheme.green || '#27c93f'} !important;
-					box-shadow: 0 0 25px ${terminalTheme.green ? terminalTheme.green + '55' : 'rgba(39, 201, 63, 0.3)'},
-					            inset 0 0 10px ${terminalTheme.green ? terminalTheme.green + '22' : 'rgba(0,0,0,0.5)'} !important;
-					transform: translateY(-1px) scale(1.01);
+					border-color: ${terminalTheme.green ? adjustOpacity(terminalTheme.green, 0.6) : 'rgba(39, 201, 63, 0.6)'} !important;
+					box-shadow: 0 0 15px ${terminalTheme.green ? terminalTheme.green + '33' : 'rgba(39, 201, 63, 0.2)'},
+					            inset 0 0 5px rgba(0,0,0,0.3) !important;
 				}
-				.hero-search-spinner { position: absolute; right: 80px; top: 50%; transform: translateY(-50%); color: ${terminalTheme.green || '#27c93f'}; font-size: 1.2rem; z-index: 5; }
+				.hero-search-spinner { position: absolute; right: 70px; top: 50%; transform: translateY(-50%); color: ${terminalTheme.green || '#27c93f'}; font-size: 1rem; z-index: 5; }
 				
 				.hero-terminal-btn {
 					position: absolute;
-					right: 10px;
+					right: 8px;
 					top: 50%;
 					transform: translateY(-50%);
-					height: 34px;
-					min-width: 50px;
-					padding: 0 10px;
-					border-radius: 4px;
-					background: #111;
-					border: 1px solid #333;
-					border-bottom: 3px solid #000;
+					height: 26px;
+					min-width: 44px;
+					padding: 0 8px;
+					border-radius: 3px;
+					background: rgba(30, 30, 30, 0.8);
+					border: 1px solid rgba(255, 255, 255, 0.1);
+					border-bottom: 2px solid #000;
 					color: ${terminalTheme.green || '#27c93f'};
 					font-family: 'Fira Code', monospace;
 					font-weight: bold;
-					font-size: 1.1rem;
+					font-size: 0.9rem;
 					display: flex;
 					align-items: center;
 					justify-content: center;
 					cursor: pointer;
 					z-index: 10;
 					transition: all 0.1s;
-					text-shadow: 0 0 5px ${terminalTheme.green || '#27c93f'};
 				}
 				.hero-terminal-btn:hover {
-					background: #1a1a1a;
-					border-color: #444;
+					background: rgba(50, 50, 50, 0.9);
+					border-color: rgba(255, 255, 255, 0.2);
 					transform: translateY(-50%) translateY(-1px);
 				}
 				.hero-terminal-btn:active {
 					border-bottom-width: 1px;
 					transform: translateY(-50%) translateY(1px);
-					background: #000;
 				}
 
 				.hero-action-buttons {
 					display: flex;
 					justify-content: center;
-					gap: 12px;
-					margin-top: 25px;
-					padding: 6px;
-					background: rgba(0, 0, 0, 0.4);
-					border-radius: 8px;
-					border: 1px solid rgba(255, 255, 255, 0.1);
-					box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+					gap: 8px;
+					margin-top: 20px;
+					padding: 4px;
+					background: rgba(0, 0, 0, 0.2);
+					border-radius: 6px;
+					border: 1px solid rgba(255, 255, 255, 0.05);
+					box-shadow: inset 0 1px 5px rgba(0,0,0,0.2);
+					backdrop-filter: blur(6px);
 				}
 				.hero-action-btn {
 					background: transparent;
 					border: 1px solid transparent;
 					border-radius: 4px;
-					padding: 10px 22px;
+					padding: 6px 16px;
 					color: rgba(255,255,255,0.4);
-					font-size: 0.8rem;
+					font-size: 0.75rem;
 					font-weight: 600;
 					font-family: 'Fira Code', 'Consolas', monospace;
 					text-transform: uppercase;
-					letter-spacing: 1px;
+					letter-spacing: 0.5px;
 					display: flex;
 					align-items: center;
-					gap: 10px;
+					gap: 8px;
 					cursor: pointer;
 					transition: all 0.2s;
-					position: relative;
-					overflow: hidden;
 				}
 				.hero-action-btn:hover {
 					color: #fff;
 					background: rgba(255, 255, 255, 0.05);
-					border-bottom: 2px solid rgba(255,255,255,0.2);
 				}
 				.hero-action-btn.active {
-					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.05)'};
+					background: ${terminalTheme.selectionBackground ? adjustOpacity(terminalTheme.selectionBackground, 0.2) : 'rgba(255,255,255,0.05)'};
 					color: #fff;
-					border: 1px solid rgba(255, 255, 255, 0.2);
-					border-bottom: 3px solid ${terminalTheme.green || '#3fb950'};
-					box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-					text-shadow: 0 0 8px rgba(255,255,255,0.5);
+					border-bottom: 2px solid ${terminalTheme.green || '#3fb950'};
+					box-shadow: 0 2px 10px rgba(0,0,0,0.2);
 				}
 				.hero-action-btn i {
-					font-size: 1rem;
-					opacity: 0.5;
+					font-size: 0.85rem;
+					opacity: 0.6;
 				}
 				.hero-action-btn.active i {
 					opacity: 1;
 					color: ${terminalTheme.green || '#3fb950'};
 				}
 				.hero-action-btn.terminal-primary {
-					background: rgba(0,0,0,0.5);
 					color: ${terminalTheme.green || '#3fb950'};
-					border: 1px solid ${terminalTheme.green ? terminalTheme.green + '44' : 'rgba(39, 201, 63, 0.3)'};
-					border-bottom: 3px solid ${terminalTheme.green || '#3fb950'};
+					border-bottom: 2px solid ${terminalTheme.green || '#3fb950'};
 				}
 				.hero-action-btn.terminal-primary:hover {
-					background: ${terminalTheme.green ? terminalTheme.green + '22' : 'rgba(39, 201, 63, 0.1)'};
-					filter: brightness(1.2);
+					background: ${terminalTheme.green ? terminalTheme.green + '11' : 'rgba(39, 201, 63, 0.05)'};
 				}
 				
-				.hero-shortcuts { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.3)'}; font-size: 0.75rem; display: flex; justify-content: center; gap: 20px; font-weight: 500;}
-				.hero-shortcuts kbd { background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); margin-right: 6px; font-family: monospace; color: rgba(255,255,255,0.7); }
+				.hero-shortcuts { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.2)'}; font-size: 0.7rem;}
+				.hero-shortcuts kbd { background: rgba(255,255,255,0.03); padding: 1px 4px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.05); margin-right: 4px; font-family: monospace; color: rgba(255,255,255,0.5); }
 
 				/* --- Top Terminal Frame (Search + Actions) --- */
 				.top-terminal-frame {
 					margin: 0 auto 24px auto;
-					border-radius: 8px;
+					border-radius: 6px;
 					overflow: hidden;
 					display: flex;
 					flex-direction: column;
-					border: 2px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '88' : 'rgba(255,255,255,0.2)'};
-					background: ${terminalTheme.background || '#050505'};
-					box-shadow: 0 20px 50px rgba(0,0,0,0.8), 
-					            inset 0 0 100px rgba(0,0,0,0.5),
-					            0 0 20px ${terminalTheme.green ? terminalTheme.green + '11' : 'rgba(0,0,0,0)'};
-					max-width: 650px;
+					border: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '44' : 'rgba(255,255,255,0.1)'};
+					background: ${terminalTheme.background ? adjustOpacity(terminalTheme.background, 0.8) : 'rgba(15, 15, 15, 0.8)'};
+					box-shadow: 0 15px 40px rgba(0,0,0,0.5), inset 0 0 80px rgba(0,0,0,0.2);
+					max-width: 600px;
 					width: 100%;
 					position: relative;
-				}
-				.top-terminal-frame::before {
-					content: "";
-					position: absolute;
-					top: -2px; left: -2px; right: -2px; bottom: -2px;
-					background: linear-gradient(45deg, transparent, ${terminalTheme.green || '#27c93f'}, transparent);
-					padding: 2px;
-					border-radius: 8px;
-					-webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-					-webkit-mask-composite: xor;
-					mask-composite: exclude;
-					opacity: 0.3;
-					pointer-events: none;
+					backdrop-filter: blur(12px);
 				}
 				.top-terminal-header {
 					height: 30px;
