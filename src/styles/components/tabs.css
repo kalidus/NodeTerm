@@ -92,7 +92,7 @@
 
 .p-tabview .p-tabview-nav li.home-tab.p-highlight .p-tabview-nav-link {
   border-color: var(--ui-home-tab-accent, var(--ui-button-primary)) !important;
-  background: var(--home-tab-theme-bg, var(--ui-tab-active-bg, rgba(255, 255, 255, 0.06))) !important;
+  background: var(--home-tab-active-bg, var(--ui-tab-active-bg, rgba(255, 255, 255, 0.06))) !important;
   box-shadow: 0 0 0 1px var(--ui-home-tab-accent-subtle, rgba(0,0,0,0.15)) !important;
 }
 
@@ -486,15 +486,15 @@
   flex-shrink: 0;
 }
 
-/* Barra de navegación de grupos: 28px, alineada al fondo */
+/* Barra de navegación de grupos: misma altura que main, misma apariencia base */
 .tabview-groups-bar .p-tabview-nav {
   height: 28px !important;
   min-height: 28px !important;
   background: var(--ui-sidebar-bg) !important;
-  border-bottom: none !important;
+  border-bottom: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.07)) !important;
   margin-bottom: 0 !important;
-  padding: 3px 4px 0 !important;
-  align-items: flex-end !important;
+  padding: 0 4px !important;
+  align-items: center !important; /* Centrado vertical como la barra principal */
   z-index: 2;
   position: relative;
 }
@@ -521,23 +521,23 @@
   margin-right: 4px !important;
 }
 
-/* Links de los grupos: pills con bordes superiores redondeados y borde sutil */
+/* Links de los grupos: siguen el estilo de las pestañas principales (TerminalFrame) */
 .tabview-groups-bar .p-tabview-nav .p-tabview-nav-link {
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
   height: 24px !important;
   min-height: 24px !important;
-  border-radius: 5px 5px 0 0 !important;
-  border: 1px solid var(--tab-border-color, rgba(255, 255, 255, 0.12)) !important;
-  border-bottom: none !important;
+  border-radius: 6px !important; /* Igual que en terminal-frame.css */
+  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.22)) !important;
   padding: 0 9px !important;
   font-size: 0.72rem !important;
   overflow: hidden;
   position: relative;
-  background-color: var(--tab-bg-color, rgba(255, 255, 255, 0.06)) !important;
-  opacity: 0.6;
-  transition: opacity 0.15s ease, background-color 0.15s ease;
+  background: var(--ui-tab-bg, rgba(255, 255, 255, 0.05)) !important;
+  color: var(--ui-tab-text, rgba(255, 255, 255, 0.85)) !important;
+  opacity: 0.85; /* Un poco menos opacas las inactivas */
+  transition: all 0.2s ease;
   margin: 0 1px;
 }
 
@@ -547,26 +547,25 @@
   background-color: var(--tab-bg-color, rgba(255, 255, 255, 0.10)) !important;
 }
 
-/* Grupo activo: totalmente visible + accent de 2px en color del grupo */
+/* Grupo activo: sigue el estilo de realce de la pestaña principal activa */
 .tabview-groups-bar .p-tabview-nav li.p-highlight .p-tabview-nav-link {
   opacity: 1 !important;
-  background-color: var(--tab-bg-color, rgba(255, 255, 255, 0.11)) !important;
-  color: var(--ui-tab-text, rgba(255, 255, 255, 0.95)) !important;
-  border: 1px solid var(--tab-border-color, rgba(255, 255, 255, 0.18)) !important;
-  border-bottom: none !important;
+  background: var(--ui-tab-active-bg, rgba(255, 255, 255, 0.15)) !important;
+  color: var(--ui-tab-active-text, #fff) !important;
+  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.4)) !important;
   height: 24px !important;
   margin-bottom: 0 !important;
 }
 
-/* Indicador de 2px en la parte inferior del tab activo (color del grupo) */
+/* Indicador de color del grupo: ahora sutil en la parte inferior o un punto lateral */
 .tabview-groups-bar .p-tabview-nav li.p-highlight .p-tabview-nav-link::after {
   content: '';
   position: absolute;
   bottom: 0;
-  left: 0;
-  right: 0;
+  left: 3px;
+  right: 3px;
   height: 2px;
-  background: var(--tab-border-color, var(--primary-color, rgba(255, 255, 255, 0.5)));
+  background: var(--group-indicator-color, var(--primary-color, rgba(255, 255, 255, 0.5)));
   border-radius: 2px 2px 0 0;
 }
 
@@ -614,13 +613,31 @@
 .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
   background: var(--ui-tab-active-bg) !important;
   color: var(--ui-tab-active-text) !important;
-  border-color: var(--ui-tab-border) !important;
+  border: 1px solid var(--ui-tab-border) !important;
+  opacity: 1 !important;
 }
-/* Grupo activo: conserva el color del grupo (no usar --ui-tab-active-bg) */
+
+/* Grupo activo: sigue el mismo tema que la pestaña activa principal */
 .tabview-groups-bar .p-tabview-nav li.p-highlight .p-tabview-nav-link {
-  background-color: var(--tab-bg-color, rgba(255, 255, 255, 0.13)) !important;
-  color: var(--ui-tab-text, rgba(255, 255, 255, 0.92)) !important;
-  border: none !important;
+  background: var(--ui-tab-active-bg, rgba(255, 255, 255, 0.13)) !important;
+  color: var(--ui-tab-active-text, #fff) !important;
+  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.4)) !important;
+  opacity: 1 !important;
+}
+
+/* Icono principal de grupos (No Group) - Mismo estilo que el Home Tab de main */
+.tabview-groups-bar .p-tabview-nav li:first-child .p-tabview-nav-link {
+  background: var(--home-tab-theme-bg, rgba(255, 255, 255, 0.04)) !important;
+  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.22)) !important;
+  border-radius: 6px !important;
+  opacity: 0.8;
+}
+
+.tabview-groups-bar .p-tabview-nav li:first-child.p-highlight .p-tabview-nav-link {
+  border-color: var(--ui-home-tab-accent, var(--primary-color)) !important;
+  background: var(--home-tab-active-bg, var(--ui-tab-active-bg, rgba(255, 255, 255, 0.06))) !important;
+  box-shadow: 0 0 0 1px var(--ui-home-tab-accent-subtle, rgba(0,0,0,0.15)) !important;
+  opacity: 1;
 }
 
 /* === ESTILOS PARA FLECHAS DE NAVEGACIÓN DE PESTAÑAS === */

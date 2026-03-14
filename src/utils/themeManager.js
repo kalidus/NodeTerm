@@ -185,9 +185,10 @@ class ThemeManager {
         --ui-tab-border: ${colors.tabBorder};
         --ui-tab-close-hover: ${colors.tabCloseHover};
         
-        --ui-tabgroup-bg: ${colors.tabGroupBackground};
-        --ui-tabgroup-text: ${colors.tabGroupText};
-        --ui-tabgroup-border: ${colors.tabGroupBorder};
+        /* Tab groups now use the same theme variables as the main tabs bar */
+        --ui-tabgroup-bg: ${colors.tabBackground};
+        --ui-tabgroup-text: ${colors.tabText};
+        --ui-tabgroup-border: ${colors.tabBorder};
         
         --ui-content-bg: ${colors.contentBackground};
         --ui-content-border: ${colors.contentBorder};
@@ -229,6 +230,8 @@ class ThemeManager {
         /* Pestaña Home: siempre paleta del tema (contorno y resaltado) */
         --ui-home-tab-accent: ${colors.buttonPrimary};
         --ui-home-tab-accent-subtle: ${hexToRgba(colors.buttonPrimary, 0.25)};
+        --home-tab-theme-bg: ${sidebarBgIsLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)'};
+        --home-tab-active-bg: ${colors.tabSelectedBackground || `linear-gradient(90deg, ${hexToRgba(colors.buttonPrimary, 0.15)}, ${hexToRgba(colors.buttonPrimary, 0.35)})`};
       }
 
       /* === SIDEBAR STYLES === */
@@ -294,7 +297,7 @@ class ThemeManager {
 
       /* === TAB STYLES === */
       .p-tabview .p-tabview-nav {
-        background: var(--ui-content-bg) !important;
+        background: var(--ui-sidebar-bg) !important;
         border-bottom: 1px solid var(--ui-tab-border) !important;
       }
 
@@ -325,19 +328,25 @@ class ThemeManager {
 
       /* === TAB GROUP STYLES === */
       .tabview-groups-bar {
-        background: var(--ui-tabgroup-bg) !important;
+        background: var(--ui-sidebar-bg) !important;
         border-bottom: 1px solid var(--ui-tabgroup-border) !important;
       }
 
+      .tabview-groups-bar .p-tabview-nav {
+         background: var(--ui-sidebar-bg) !important;
+      }
+
       .tabview-groups-bar .p-tabview-nav li .p-tabview-nav-link {
-        background: var(--ui-tabgroup-bg) !important;
-        color: var(--ui-tabgroup-text) !important;
-        border: 1px solid var(--ui-tabgroup-border) !important;
+        background: var(--ui-tab-bg) !important;
+        color: var(--ui-tab-text) !important;
+        border: 1px solid var(--ui-tab-border) !important;
+        opacity: 0.7;
       }
 
       .tabview-groups-bar .p-tabview-nav li.p-highlight .p-tabview-nav-link {
         background: var(--ui-tab-active-bg) !important;
         color: var(--ui-tab-active-text) !important;
+        opacity: 1;
       }
 
       /* === CONTENT AREA === */

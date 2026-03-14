@@ -113,10 +113,6 @@ export const useTabRendering = ({
         }}
       >
         <TabPanel key="no-group" 
-          style={{
-            '--tab-bg-color': 'rgba(255, 255, 255, 0.06)',
-            '--tab-border-color': 'transparent'
-          }}
           header={
             <span style={{ 
               display: 'flex', 
@@ -134,10 +130,6 @@ export const useTabRendering = ({
         {tabGroups.map((group) => (
           <TabPanel
             key={group.id}
-            style={{
-              '--tab-bg-color': group.color + '33',
-              '--tab-border-color': group.color + '66'
-            }}
             header={
               <span 
                 className="group-hover"
@@ -145,6 +137,7 @@ export const useTabRendering = ({
                   display: 'flex', 
                   alignItems: 'center', 
                   maxWidth: 180,
+                  '--group-indicator-color': group.color, // Pasar el color del grupo como variable para el indicador
                   WebkitAppRegion: isDraggable ? 'no-drag' : 'inherit'
                 }}
                 onContextMenu={(e) => {
