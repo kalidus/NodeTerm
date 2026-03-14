@@ -1421,7 +1421,7 @@ const ConnectionHistory = ({
 					height: 30px;
 					box-sizing: border-box;
 					flex-shrink: 0;
-					background: ${terminalTheme.background ? terminalTheme.background + 'ee' : 'rgba(20,22,28,0.95)'};
+					background: ${adjustOpacity(terminalTheme.background || '#0d1117', Math.min(terminalOpacity + 0.1, 1.0))};
 					border-bottom: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '44' : 'rgba(255,255,255,0.08)'};
 					border-radius: 12px 12px 0 0;
 					display: flex;
@@ -1808,8 +1808,8 @@ const ConnectionHistory = ({
 				.top-terminal-frame.kde, .top-terminal-frame.windows,
 				.top-terminal-frame.matcha, .top-terminal-frame.futuristic,
 				.top-terminal-frame.modern, .top-terminal-frame.retro {
-					background-color: ${themeColors.sidebarBackground || terminalTheme.background || '#0d1117'} !important;
-					background: ${themeColors.sidebarBackground || terminalTheme.background || '#0d1117'} !important;
+					background-color: ${adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)} !important;
+					background: ${adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)} !important;
 				}
 
 				/* --- Grep-style connection rows --- */
