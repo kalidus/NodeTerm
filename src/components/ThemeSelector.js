@@ -28,6 +28,22 @@ const THEME_DESCRIPTIONS = {
   'Gruvbox Dark': 'Tonos retro cálidos sobre fondo oscuro',
   'Nord': 'Paleta ártica fría y minimalista',
   'One Dark': 'Inspirado en Atom, moderno y profesional',
+  'Pro Cyberpunk': 'Estética neón futurista de alto contraste',
+  'Pro Aurora': 'Tonos polares suaves y relajantes',
+  'Pro Cosmic': 'Vastedad espacial con acentos estelares premium',
+  'Pro Emerald': 'Elegancia orgánica en verde esmeralda profundo',
+  'Pro Sakura': 'Sofisticación inspirada en los cerezos japoneses',
+  'Pro Autumn': 'Calidez otoñal profesional y reconfortante',
+  'Pro Cobalt': 'Azul real profundo con acentos oro, un clásico refinado',
+  'Pro Moonlight': 'Azul grisáceo minimalista para sesiones nocturnas',
+  'Pro Oceanic': 'Balance perfecto de verde azulado y tonos coral',
+  'Pro Everforest': 'Verde bosque orgánico y sereno para enfoque total',
+  'Pro Minty': 'Frescura digital con acentos menta sobre carbón',
+  'Pro Mirage': 'Gris cálido técnico con acentos naranja vibrante',
+  'Pro Solar Amber': 'Confort visual en tonos ámbar y miel vintage',
+  'Pro Magma': 'Potencia visual con rojo lava y naranja quemado',
+  'Pro Catppuccin': 'Paleta pastel reconfortante, tendencia en la comunidad',
+  'Pro Rosé Pine': 'Estética minimalista y zen con tonos lavanda',
   'default': 'Un tema personalizado para tu terminal'
 };
 
