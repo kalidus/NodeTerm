@@ -1181,6 +1181,7 @@ const HomeTab = ({
                       hideStatusBar={true}
                       hideTabs={true}
                       isIntegrated={true}
+                      onTabChange={(tab) => setTerminalTitle(tab.title)}
                     />
                   </div>
                 </ConnectionHistory>
@@ -1366,6 +1367,7 @@ const HomeTab = ({
           localLinuxTerminalTheme={localLinuxTerminalTheme}
           hideStatusBar={true}
           isIntegrated={false}
+          onTabChange={(tab) => setTerminalTitle(tab.title)}
         />
       </div>
     </div>

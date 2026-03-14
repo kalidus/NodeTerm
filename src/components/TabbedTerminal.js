@@ -26,7 +26,7 @@ function adjustColorBrightness(hex, percent) {
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
-const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localPowerShellTheme, localLinuxTerminalTheme, hideStatusBar = false, hideTabs = false, isIntegrated = false }, ref) => {
+const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localPowerShellTheme, localLinuxTerminalTheme, hideStatusBar = false, hideTabs = false, isIntegrated = false, onTabChange }, ref) => {
     // Referencias para control de scroll de pestañas
     const tabsContainerRef = useRef(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -1447,7 +1447,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 distroInfo: distroInfo, // Información específica para distribuciones WSL
                 active: true
             }];
-            // console.log('New tabs state:', newTabs);
+            
             return newTabs;
         });
 
@@ -1485,12 +1485,14 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     // Función para cambiar de pestaña activa
     const switchTab = (tabId) => {
         // console.log(`Switching to tab: ${tabId}`);
-        setTabs(prevTabs =>
-            prevTabs.map(tab => ({
+        setTabs(prevTabs => {
+            const newTabs = prevTabs.map(tab => ({
                 ...tab,
                 active: tab.id === tabId
-            }))
-        );
+            }));
+            
+            return newTabs;
+        });
 
         // Incrementar la key para forzar re-render
         setActiveTabKey(prev => prev + 1);
@@ -1546,6 +1548,14 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
     // Declarar activeTab solo una vez antes de la lógica de color y renderizado
     const activeTab = tabs.find(tab => tab.active);
+    // Notificar al padre sobre el cambio de pestaña activa
+    useEffect(() => {
+        const activeTab = tabs.find(t => t.active);
+        if (activeTab && onTabChange) {
+            onTabChange(activeTab);
+        }
+    }, [tabs, onTabChange]);
+
     // Al inicio del componente:
     const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
     const LOCAL_FONT_SIZE_STORAGE_KEY = 'basicapp_local_terminal_font_size';
