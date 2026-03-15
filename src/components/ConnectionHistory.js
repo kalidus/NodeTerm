@@ -2125,25 +2125,6 @@ const ConnectionHistory = ({
 						</div>
 						<div className="recents-header-right" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px', zIndex: 10 }}>
 							<i
-								className="pi pi-desktop"
-								style={{
-									fontSize: '0.9rem',
-									color: terminalTheme.foreground || '#c9d1d9',
-									opacity: 0.6,
-									cursor: 'pointer',
-									padding: '4px',
-									borderRadius: '4px',
-									transition: 'all 0.2s'
-								}}
-								title="Cambiar estilo de marco"
-								onClick={(e) => {
-									e.stopPropagation();
-									frameStylePickerRef.current?.toggle(e);
-								}}
-								onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-								onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-							/>
-							<i
 								className="pi pi-palette"
 								style={{
 									fontSize: '0.9rem',
@@ -2171,6 +2152,25 @@ const ConnectionHistory = ({
 											console.error('Error opening settings tab:', err);
 										}
 									}, 100);
+								}}
+								onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+								onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+							/>
+							<i
+								className="pi pi-desktop"
+								style={{
+									fontSize: '0.9rem',
+									color: terminalTheme.foreground || '#c9d1d9',
+									opacity: 0.6,
+									cursor: 'pointer',
+									padding: '4px',
+									borderRadius: '4px',
+									transition: 'all 0.2s'
+								}}
+								title="Cambiar estilo de marco"
+								onClick={(e) => {
+									e.stopPropagation();
+									frameStylePickerRef.current?.toggle(e);
 								}}
 								onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
 								onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
