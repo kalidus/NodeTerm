@@ -127,17 +127,17 @@ export const actionBarThemes = {
             boxShadow: 'none'
         },
         button: {
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
+            background: 'transparent',
+            border: 'none',
             boxShadow: 'none'
         },
         buttonHover: {
-            background: 'rgba(255, 255, 255, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
+            background: 'rgba(255, 255, 255, 0.08)',
+            border: 'none',
+            boxShadow: 'none'
         },
         iconBox: {
-            borderRadius: '50%'
+            borderRadius: '8px'
         }
     },
     frosted: {
