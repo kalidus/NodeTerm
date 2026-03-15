@@ -44,6 +44,8 @@ const TerminalComponent = forwardRef(({
     // Menú rápido de tema de terminal (abierto/cerrado)
     const [themeMenuOpen, setThemeMenuOpen] = useState(false);
     const themeMenuRef = useRef(null);
+    // En split: tema solo para este panel (no se guarda en localStorage ni afecta al global)
+    const [splitThemeOverride, setSplitThemeOverride] = useState(null);
 
     // Detectar si es terminal local de forma robusta
     const isLocalTerminal = useMemo(() => {
@@ -102,6 +104,14 @@ const TerminalComponent = forwardRef(({
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [themeMenuOpen]);
+
+    // Tema efectivo: en split con override local usa ese; si no, el que viene por props
+    const effectiveTheme = useMemo(() => {
+        if (isSplit && splitThemeOverride && themes && themes[splitThemeOverride]?.theme) {
+            return themes[splitThemeOverride].theme;
+        }
+        return theme || {};
+    }, [isSplit, splitThemeOverride, theme]);
 
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -631,14 +641,14 @@ const TerminalComponent = forwardRef(({
         }
     }, [fontSize]);
 
-    // Effect to update theme dynamically
+    // Effect to update theme dynamically (effectiveTheme = en split puede ser override local)
     useEffect(() => {
-        if (term.current && theme) {
+        if (term.current && effectiveTheme) {
             term.current.options.theme = isIntegrated
-                ? { ...theme, background: 'rgba(0,0,0,0)' }
-                : theme;
+                ? { ...effectiveTheme, background: 'rgba(0,0,0,0)' }
+                : effectiveTheme;
         }
-    }, [theme, isIntegrated]);
+    }, [effectiveTheme, isIntegrated]);
 
     // Focus autom??tico cuando la pesta??a se vuelve activa
     useEffect(() => {
@@ -666,8 +676,8 @@ const TerminalComponent = forwardRef(({
                 flexDirection: 'column',
                 height: '100%',
                 width: '100%',
-                backgroundColor: isIntegrated ? 'transparent' : (theme?.background || '#1e1e1e'),
-                '--terminal-bg': theme?.background || '#1e1e1e',
+                backgroundColor: isIntegrated ? 'transparent' : (effectiveTheme?.background || '#1e1e1e'),
+                '--terminal-bg': effectiveTheme?.background || '#1e1e1e',
                 overflow: 'hidden',
                 ...getScopedStatusBarCssVars()
             }}
@@ -688,11 +698,11 @@ const TerminalComponent = forwardRef(({
                     margin: 0,
                     marginBottom: (isIntegrated || hideStatusBar || !localStatusBarVisible) ? 0 : '-1px', // Solapamiento de 1px para ocultar huecos de renderizado, solo si hay StatusBar
                     zIndex: isIntegrated ? 0 : 1,
-                    backgroundColor: isIntegrated ? 'transparent' : (theme?.background || 'var(--terminal-bg)'),
-                    '--terminal-bg': theme?.background || 'transparent',
-                    '--terminal-fg': theme?.foreground || 'inherit',
-                    '--terminal-scrollbar-thumb': theme?.brightBlack || theme?.selectionBackground || '#555555',
-                    '--terminal-scrollbar-hover': theme?.white || theme?.foreground || '#cccccc'
+                    backgroundColor: isIntegrated ? 'transparent' : (effectiveTheme?.background || 'var(--terminal-bg)'),
+                    '--terminal-bg': effectiveTheme?.background || 'transparent',
+                    '--terminal-fg': effectiveTheme?.foreground || 'inherit',
+                    '--terminal-scrollbar-thumb': effectiveTheme?.brightBlack || effectiveTheme?.selectionBackground || '#555555',
+                    '--terminal-scrollbar-hover': effectiveTheme?.white || effectiveTheme?.foreground || '#cccccc'
                 }}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
@@ -705,8 +715,8 @@ const TerminalComponent = forwardRef(({
                         flex: 1,
                         minHeight: 0,
                         overflow: 'hidden',
-                        background: isIntegrated ? 'transparent' : (theme?.background || 'var(--terminal-bg)'),
-                        backgroundColor: isIntegrated ? 'transparent' : (theme?.background || 'var(--terminal-bg)')
+                        background: isIntegrated ? 'transparent' : (effectiveTheme?.background || 'var(--terminal-bg)'),
+                        backgroundColor: isIntegrated ? 'transparent' : (effectiveTheme?.background || 'var(--terminal-bg)')
                     }}
                 />
 
@@ -805,16 +815,22 @@ const TerminalComponent = forwardRef(({
                             </button>
                         )}
 
-                        {/* Terminal theme - menú rápido (temas SSH, mismo que Configuración > Terminal > SSH) - Hidden in Split Mode */}
-                        {!isSplit && (() => {
+                        {/* Terminal theme - menú rápido (temas SSH); en split solo aplica a este panel */}
+                        {(() => {
                             const SSH_THEME_KEY = 'basicapp_terminal_theme';
-                            const currentThemeName = typeof localStorage !== 'undefined' ? (localStorage.getItem(SSH_THEME_KEY) || 'Default Dark') : 'Default Dark';
+                            const currentThemeName = isSplit
+                                ? (splitThemeOverride || (typeof localStorage !== 'undefined' ? localStorage.getItem(SSH_THEME_KEY) : null) || 'Default Dark')
+                                : (typeof localStorage !== 'undefined' ? (localStorage.getItem(SSH_THEME_KEY) || 'Default Dark') : 'Default Dark');
                             const themeNames = themes ? Object.keys(themes) : [];
                             const applyTheme = (themeName) => {
                                 try {
-                                    localStorage.setItem(SSH_THEME_KEY, themeName);
-                                    window.dispatchEvent(new CustomEvent('terminal-theme-changed', { detail: { theme: themeName, terminalType: 'ssh' } }));
                                     setThemeMenuOpen(false);
+                                    if (isSplit) {
+                                        setSplitThemeOverride(themeName);
+                                    } else {
+                                        localStorage.setItem(SSH_THEME_KEY, themeName);
+                                        window.dispatchEvent(new CustomEvent('terminal-theme-changed', { detail: { theme: themeName, terminalType: 'ssh' } }));
+                                    }
                                 } catch (err) { /* noop */ }
                             };
                             return (
@@ -914,7 +930,7 @@ const TerminalComponent = forwardRef(({
                             );
                         })()}
 
-                        {/* Status Bar visibility toggle - Hidden in Split Mode */}
+                        {/* Status Bar visibility toggle - oculto en split (no aplica por panel) */}
                         {!isSplit && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); setLocalStatusBarVisible((v) => !v); }}
