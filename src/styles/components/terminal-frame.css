@@ -665,13 +665,12 @@
     border-color: rgba(255, 255, 255, 0.3) !important;
 }
 
-/* Botones de tema y layout de pestañas (dentro del nav, a la derecha con margin-left: auto) */
-.terminal-frame .main-tab-view .p-tabview-nav .tab-theme-button-wrapper,
-.terminal-frame .main-tab-view .p-tabview-nav .tab-layout-button-wrapper {
+/* Botón unificado tema + layout de pestañas (dentro del nav, a la derecha con margin-left: auto) */
+.terminal-frame .main-tab-view .p-tabview-nav .tab-appearance-button-wrapper {
     flex-shrink: 0;
     align-self: center;
 }
-.terminal-frame .main-tab-view .p-tabview-nav .tab-theme-quick-button {
+.terminal-frame .main-tab-view .p-tabview-nav .tab-appearance-quick-button {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
