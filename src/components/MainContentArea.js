@@ -1466,50 +1466,40 @@ const MainContentArea = ({
     setSidebarCollapsed(newCollapsedState);
   }, [sidebarCollapsed, setSidebarCollapsed, FIXED_EXPANDED_SIZE]);
 
-  // Función de resize sin colapso automático (para arrastre libre)
-  const handleResizeOnly = (e) => {
-    // No llamar handleResize durante el arrastre para evitar interferencias
+  // Umbral en píxeles: por debajo de esto la sidebar se replegará sola al soltar
+  const SIDEBAR_COLLAPSE_THRESHOLD_PX = 100;
+  const SIDEBAR_EXPAND_THRESHOLD_PX = 60;
+  // Ancho fijo cuando está colapsada (mismo valor que el botón de colapsar)
+  const SIDEBAR_COLLAPSED_WIDTH_PX = 60;
+
+  const handleResizeOnly = () => {
+    // Sin lógica durante el arrastre; el colapso se aplica al soltar en handleResizeEndWithAutoCollapse
   };
 
-  // Función de colapso automático solo al terminar el arrastre
+  // Al soltar el mouse: guardar tamaño y replegar/expandir según umbrales
   const handleResizeEndWithAutoCollapse = (e) => {
-
-    // Calcular ancho real del panel en píxeles
     const splitterElement = document.querySelector('.main-splitter');
     if (splitterElement) {
       const splitterWidth = splitterElement.offsetWidth;
       const sidebarPercentage = e.sizes[0];
       const sidebarWidthPx = (splitterWidth * sidebarPercentage) / 100;
 
-      // Umbrales optimizados para expansión muy fácil
-      const collapseThresholdPx = 80;   // Colapsar antes del límite físico
-      const expandThresholdPx = 60;     // Expandir muy fácilmente desde colapsado
-
-
-      // Guardar el tamaño resultante del arrastre
       setSidebarSizePercent(sidebarPercentage);
 
-      // Solo evaluar colapso/expansión al soltar el mouse
-      if (!sidebarCollapsed && sidebarWidthPx <= collapseThresholdPx) {
+      if (!sidebarCollapsed && sidebarWidthPx <= SIDEBAR_COLLAPSE_THRESHOLD_PX) {
+        requestAnimationFrame(() => setSidebarCollapsed(true));
+      } else if (sidebarCollapsed && sidebarWidthPx > SIDEBAR_EXPAND_THRESHOLD_PX) {
         requestAnimationFrame(() => {
-          setSidebarCollapsed(true);
-        });
-      } else if (sidebarCollapsed && sidebarWidthPx > expandThresholdPx) {
-        requestAnimationFrame(() => {
-          // Respetar el tamaño arrastrado al expandir
           setSidebarSizePercent(sidebarPercentage);
           setSidebarCollapsed(false);
         });
       }
     }
 
-    // Llamar al resize original solo al final (para redimensionar terminales)
-    if (handleResize) {
-      handleResize(e);
-    }
+    if (handleResize) handleResize(e);
   };
 
-  // Aplicar ancho actual del sidebar sin remount
+  // Aplicar ancho actual del sidebar; cuando está colapsada forzar siempre el mismo ancho (como el botón)
   React.useEffect(() => {
     const splitterElement = document.querySelector('.main-splitter');
     if (!splitterElement) return;
@@ -1519,17 +1509,32 @@ const MainContentArea = ({
     const leftPanel = panels[0];
 
     if (!sidebarCollapsed) {
-      // Expandido: aplicar tamaño actual deseado
       try {
+        leftPanel.style.flex = '';
         leftPanel.style.flexBasis = `${sidebarSizePercent}%`;
         leftPanel.style.width = '';
         leftPanel.style.minWidth = '';
         leftPanel.style.maxWidth = '';
       } catch { }
     } else {
-      // Colapsado: asegurar anchura mínima visual (alineado con estilos del panel)
+      // Colapsado: mismo ancho que al colapsar con el botón (evita que quede más estrecha por arrastre)
+      const applyCollapsedWidth = () => {
+        const panel = document.querySelector('.main-splitter .p-splitter-panel:first-child');
+        if (!panel) return;
+        const w = `${SIDEBAR_COLLAPSED_WIDTH_PX}px`;
+        panel.style.flex = `0 0 ${w}`;
+        panel.style.flexBasis = w;
+        panel.style.width = w;
+        panel.style.minWidth = w;
+        panel.style.maxWidth = w;
+      };
       try {
-        leftPanel.style.flexBasis = '44px';
+        applyCollapsedWidth();
+        // Reaplicar en el siguiente frame por si el splitter sobrescribe (p. ej. al colapsar por arrastre)
+        const raf = requestAnimationFrame(() => {
+          applyCollapsedWidth();
+        });
+        return () => cancelAnimationFrame(raf);
       } catch { }
     }
   }, [sidebarCollapsed, sidebarSizePercent]);
@@ -1554,11 +1559,11 @@ const MainContentArea = ({
       >
         <SplitterPanel
           size={sidebarCollapsed ? 4 : 15}
-          minSize={sidebarCollapsed ? 4 : 10}
+          minSize={sidebarCollapsed ? 4 : 3}
           maxSize={sidebarCollapsed ? 4 : 35}
           className="terminal-frame-container"
           style={sidebarCollapsed
-            ? { width: 60, minWidth: 60, maxWidth: 60, padding: '8px 2px 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
+            ? { width: SIDEBAR_COLLAPSED_WIDTH_PX, minWidth: SIDEBAR_COLLAPSED_WIDTH_PX, maxWidth: SIDEBAR_COLLAPSED_WIDTH_PX, padding: '8px 2px 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
             : { padding: '8px 2px 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
           }
         >
