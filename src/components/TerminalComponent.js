@@ -815,6 +815,45 @@ const TerminalComponent = forwardRef(({
                             </button>
                         )}
 
+                        {/* Broadcast Button - Solo en Split; va primero antes del tema */}
+                        {isSplit && (() => {
+                            const isExcluded = broadcastExcludedTargets && broadcastExcludedTargets.includes(tabId);
+                            const isActiveForThisTerminal = isBroadcastActive && !isExcluded;
+                            return (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleBroadcastTarget && onToggleBroadcastTarget(tabId);
+                                    }}
+                                    title={isActiveForThisTerminal ? "Desactivar Broadcast" : "Activar Broadcast"}
+                                    className="quick-action-btn"
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: isActiveForThisTerminal ? '#4da6ff' : 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
+                                        cursor: 'pointer',
+                                        fontSize: '12px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: '3px',
+                                        borderRadius: '4px',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseOver={(e) => {
+                                        e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
+                                        e.currentTarget.style.color = '#4da6ff';
+                                    }}
+                                    onMouseOut={(e) => {
+                                        e.currentTarget.style.background = 'transparent';
+                                        e.currentTarget.style.color = isActiveForThisTerminal ? '#4da6ff' : 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
+                                    }}
+                                >
+                                    <i className="pi pi-megaphone" />
+                                </button>
+                            );
+                        })()}
+
                         {/* Terminal theme - menú rápido (temas SSH); en split solo aplica a este panel */}
                         {(() => {
                             const SSH_THEME_KEY = 'basicapp_terminal_theme';
@@ -1004,51 +1043,6 @@ const TerminalComponent = forwardRef(({
                                 <i className={`pi ${isRecording ? 'pi-stop-circle' : 'pi-circle-fill'}`} style={{ animation: isRecording ? 'pulse-red 2s infinite' : 'none' }} />
                             </button>
                         )}
-
-                        {/* Broadcast Button - Only Visible in Split Mode */}
-                        {isSplit && (() => {
-                            const isExcluded = broadcastExcludedTargets && broadcastExcludedTargets.includes(tabId);
-                            // Un terminal está "emitiendo" si el broadcast global está ON y este terminal no está excluido
-                            const isActiveForThisTerminal = isBroadcastActive && (isSplit ? !isExcluded : true);
-
-                            return (
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (isSplit) {
-                                            onToggleBroadcastTarget && onToggleBroadcastTarget(tabId);
-                                        } else {
-                                            onToggleBroadcast && onToggleBroadcast();
-                                        }
-                                    }}
-                                    title={isActiveForThisTerminal ? "Desactivar Broadcast" : "Activar Broadcast"}
-                                    className="quick-action-btn"
-                                    style={{
-                                        background: 'transparent',
-                                        border: 'none',
-                                        color: isActiveForThisTerminal ? '#4da6ff' : 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
-                                        cursor: 'pointer',
-                                        fontSize: '12px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        padding: '3px',
-                                        borderRadius: '4px',
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseOver={(e) => {
-                                        e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
-                                        e.currentTarget.style.color = '#4da6ff';
-                                    }}
-                                    onMouseOut={(e) => {
-                                        e.currentTarget.style.background = 'transparent';
-                                        e.currentTarget.style.color = isActiveForThisTerminal ? '#4da6ff' : 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
-                                    }}
-                                >
-                                    <i className="pi pi-megaphone" />
-                                </button>
-                            );
-                        })()}
                     </div>
                 )}
 
