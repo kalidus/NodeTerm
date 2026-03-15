@@ -1346,35 +1346,54 @@ const ConnectionHistory = ({
 				
 				.hero-terminal-btn {
 					position: absolute;
-					right: 8px;
+					right: 10px;
 					top: 50%;
 					transform: translateY(-50%);
-					height: 26px;
+					height: 24px;
 					min-width: 44px;
-					padding: 0 8px;
-					border-radius: 3px;
-					background: rgba(30, 30, 30, 0.8);
-					border: 1px solid rgba(255, 255, 255, 0.1);
-					border-bottom: 2px solid #000;
-					color: ${terminalTheme.green || '#27c93f'};
+					padding: 0 10px;
+					border-radius: 6px;
+					background: rgba(255, 255, 255, 0.05);
+					border: 1px solid rgba(255, 255, 255, 0.12);
+					color: ${terminalTheme.foreground || '#fff'};
 					font-family: 'Fira Code', monospace;
-					font-weight: bold;
-					font-size: 0.9rem;
+					font-weight: 700;
+					font-size: 0.85rem;
 					display: flex;
 					align-items: center;
 					justify-content: center;
 					cursor: pointer;
 					z-index: 10;
-					transition: all 0.1s;
+					transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+					backdrop-filter: blur(10px);
+					box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+					letter-spacing: 1px;
+				}
+				.hero-terminal-btn .btn-prompt {
+					color: ${terminalTheme.green || '#27c93f'};
+					text-shadow: 0 0 5px ${terminalTheme.green ? terminalTheme.green + '55' : 'rgba(39, 201, 63, 0.3)'};
+				}
+				.hero-terminal-btn .btn-cursor {
+					opacity: 0.8;
+					animation: btn-blink 1s step-end infinite;
+					margin-left: 1px;
+				}
+				@keyframes btn-blink {
+					50% { opacity: 0; }
 				}
 				.hero-terminal-btn:hover {
-					background: rgba(50, 50, 50, 0.9);
-					border-color: rgba(255, 255, 255, 0.2);
-					transform: translateY(-50%) translateY(-1px);
+					background: ${terminalTheme.green ? terminalTheme.green + '15' : 'rgba(39, 201, 63, 0.1)'};
+					border-color: ${terminalTheme.green ? terminalTheme.green + '55' : 'rgba(39, 201, 63, 0.4)'};
+					transform: translateY(-50%) scale(1.04);
+					box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 0 8px ${terminalTheme.green ? terminalTheme.green + '22' : 'rgba(39, 201, 63, 0.1)'};
+				}
+				.hero-terminal-btn:hover .btn-cursor {
+					animation: none;
+					opacity: 1;
 				}
 				.hero-terminal-btn:active {
-					border-bottom-width: 1px;
-					transform: translateY(-50%) translateY(1px);
+					transform: translateY(-50%) scale(0.96);
+					background: ${terminalTheme.green ? terminalTheme.green + '25' : 'rgba(39, 201, 63, 0.2)'};
 				}
 
 				.hero-action-buttons {
@@ -2136,7 +2155,7 @@ const ConnectionHistory = ({
 									}
 								}}
 							>
-								$_
+								<span className="btn-prompt">$</span><span className="btn-cursor">_</span>
 							</button>
 
 							{showDropdown && ReactDOM.createPortal(
