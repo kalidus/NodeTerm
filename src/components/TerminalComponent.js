@@ -1062,6 +1062,7 @@ const TerminalComponent = forwardRef(({
                 active={active}
                 statusBarIconTheme={statusBarIconTheme}
                 terminalType={isLocalTerminal ? 'linux' : 'ssh'}
+                isLoading={!isLocalTerminal && (!stats || (typeof stats?.cpu === 'undefined' && !stats?.hostname))}
             />}
         </div >
     );
