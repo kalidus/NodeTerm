@@ -1232,7 +1232,7 @@ const HomeTab = ({
         onDoubleClick={handleMaximizeTerminal}
       >
         <div style={{ display: 'flex', gap: '8px', zIndex: 10 }}>
-          {terminalFrameStyle === 'minimal' ? null : terminalFrameStyle === 'macos' ? (
+          {terminalFrameStyle === 'macos' ? (
             <>
               <div
                 className="no-drag"
@@ -1255,6 +1255,12 @@ const HomeTab = ({
             </>
           ) : terminalFrameStyle === 'gnome' ? (
             <div className="gnome-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="gnome-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}>
+                <i className="pi pi-minus" style={{ fontSize: '8px' }} />
+              </div>
+              <div className="gnome-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}>
+                <i className="pi pi-stop" style={{ fontSize: '8px' }} />
+              </div>
               <div className="gnome-dot close" title="Cerrar" onClick={handleCloseTerminal}>
                 <i className="pi pi-times" />
               </div>
@@ -1273,20 +1279,32 @@ const HomeTab = ({
             </div>
           ) : terminalFrameStyle === 'matcha' ? (
             <div className="matcha-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="matcha-dot" onClick={handleMinimizeTerminal} title="Minimizar"><i className="pi pi-minus" style={{ fontSize: '10px' }} /></div>
+              <div className="matcha-dot" onClick={handleMaximizeTerminal} title="Maximizar"><i className="pi pi-stop" style={{ fontSize: '10px' }} /></div>
               <div className="matcha-dot" onClick={handleCloseTerminal} title="Cerrar"><i className="pi pi-times" /></div>
             </div>
           ) : terminalFrameStyle === 'futuristic' ? (
             <div className="futuristic-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="cyber-dot" title="Cerrar Terminal" onClick={handleCloseTerminal}>EXE</div>
+              <div className="cyber-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}>MIN</div>
+              <div className="cyber-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}>MAX</div>
+              <div className="cyber-dot close" title="Cerrar Terminal" onClick={handleCloseTerminal}>EXE</div>
             </div>
           ) : terminalFrameStyle === 'modern' ? (
             <div className="modern-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="glass-dot" title="Ocultar" onClick={handleCloseTerminal}><i className="pi pi-times" /></div>
+              <div className="glass-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><i className="pi pi-minus" style={{ fontSize: '10px' }} /></div>
+              <div className="glass-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><i className="pi pi-stop" style={{ fontSize: '10px' }} /></div>
+              <div className="glass-dot close" title="Ocultar" onClick={handleCloseTerminal}><i className="pi pi-times" /></div>
             </div>
           ) : terminalFrameStyle === 'minimal' ? (
-            <div className="minimal-controls no-drag" onMouseDown={(e) => e.stopPropagation()} />
+            <div className="minimal-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="win-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><div className="custom-icon icon-min" /></div>
+              <div className="win-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><div className="custom-icon icon-max" /></div>
+              <div className="win-dot close" title="Cerrar" onClick={handleCloseTerminal}><div className="custom-icon icon-close" /></div>
+            </div>
           ) : (
             <div className="retro-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="retro-switch minimize" title="MIN" onClick={handleMinimizeTerminal} />
+              <div className="retro-switch maximize" title="MAX" onClick={handleMaximizeTerminal} />
               <div className="retro-switch on" title="OFF" onClick={handleCloseTerminal} />
             </div>
           )}

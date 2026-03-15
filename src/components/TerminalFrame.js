@@ -11,7 +11,10 @@ const TerminalFrame = ({
     className = '',
     contentClassName = '',
     id,
-    isDraggable = false
+    isDraggable = false,
+    onClose = () => {},
+    onMinimize = () => {},
+    onMaximize = () => {}
 }) => {
     const [frameStyle, setFrameStyle] = useState(() => {
         try {
@@ -54,69 +57,93 @@ const TerminalFrame = ({
                     {showControls && frameStyle !== 'minimal' && (
                         frameStyle === 'macos' ? (
                             <div className="terminal-frame-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
-                                <div className="terminal-frame-dot red" />
-                                <div className="terminal-frame-dot yellow" />
-                                <div className="terminal-frame-dot green" />
+                                <div className="terminal-frame-dot red" onClick={onClose} title="Cerrar" />
+                                <div className="terminal-frame-dot yellow" onClick={onMinimize} title="Minimizar" />
+                                <div className="terminal-frame-dot green" onClick={onMaximize} title="Maximizar" />
                             </div>
                         ) : frameStyle === 'gnome' ? (
                             <div className="terminal-frame-controls gnome-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
-                                <div className="gnome-dot">
+                                <div className="gnome-dot minimize" onClick={onMinimize} title="Minimizar">
+                                    <span style={{ fontSize: 10 }}>−</span>
+                                </div>
+                                <div className="gnome-dot maximize" onClick={onMaximize} title="Maximizar">
+                                    <span style={{ fontSize: 10 }}>□</span>
+                                </div>
+                                <div className="gnome-dot close" onClick={onClose} title="Cerrar">
                                     <span style={{ fontSize: 10 }}>×</span>
                                 </div>
                             </div>
                         ) : frameStyle === 'kde' ? (
                             <div className="terminal-frame-controls kde-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
-                                <div className="kde-dot">
+                                <div className="kde-dot minimize" onClick={onMinimize} title="Minimizar">
                                     <div className="custom-icon icon-min" />
                                 </div>
-                                <div className="kde-dot">
+                                <div className="kde-dot maximize" onClick={onMaximize} title="Maximizar">
                                     <div className="custom-icon icon-max" />
                                 </div>
-                                <div className="kde-dot close">
+                                <div className="kde-dot close" onClick={onClose} title="Cerrar">
                                     <div className="custom-icon icon-close" />
                                 </div>
                             </div>
                         ) : frameStyle === 'windows' ? (
                             <div className="terminal-frame-controls windows-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
-                                <div className="win-dot">
+                                <div className="win-dot minimize" onClick={onMinimize} title="Minimizar">
                                     <div className="custom-icon icon-min" />
                                 </div>
-                                <div className="win-dot">
+                                <div className="win-dot maximize" onClick={onMaximize} title="Maximizar">
                                     <div className="custom-icon icon-max" />
                                 </div>
-                                <div className="win-dot close">
+                                <div className="win-dot close" onClick={onClose} title="Cerrar">
                                     <div className="custom-icon icon-close" />
                                 </div>
                             </div>
                         ) : frameStyle === 'matcha' ? (
                             <div className="terminal-frame-controls matcha-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
-                                <div className="matcha-dot">
+                                <div className="matcha-dot minimize" onClick={onMinimize} title="Minimizar">
+                                    <span style={{ fontSize: 11 }}>−</span>
+                                </div>
+                                <div className="matcha-dot maximize" onClick={onMaximize} title="Maximizar">
+                                    <span style={{ fontSize: 11 }}>□</span>
+                                </div>
+                                <div className="matcha-dot close" onClick={onClose} title="Cerrar">
                                     <span style={{ fontSize: 11 }}>✕</span>
                                 </div>
                             </div>
                         ) : frameStyle === 'futuristic' ? (
                             <div className="terminal-frame-controls futuristic-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
-                                <div className="cyber-dot">EXE</div>
+                                <div className="cyber-dot minimize" onClick={onMinimize} title="Minimizar">MIN</div>
+                                <div className="cyber-dot maximize" onClick={onMaximize} title="Maximizar">MAX</div>
+                                <div className="cyber-dot close" onClick={onClose} title="Cerrar">EXE</div>
                             </div>
                         ) : frameStyle === 'modern' ? (
                             <div className="terminal-frame-controls modern-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
-                                <div className="glass-dot">
+                                <div className="glass-dot minimize" onClick={onMinimize} title="Minimizar">
+                                    <span style={{ fontSize: 10 }}>−</span>
+                                </div>
+                                <div className="glass-dot maximize" onClick={onMaximize} title="Maximizar">
+                                    <span style={{ fontSize: 10 }}>□</span>
+                                </div>
+                                <div className="glass-dot close" onClick={onClose} title="Cerrar">
                                     <span style={{ fontSize: 10 }}>✕</span>
                                 </div>
                             </div>
                         ) : frameStyle === 'retro' ? (
                             <div className="terminal-frame-controls retro-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
-                                <div className="retro-switch on" />
+                                <div className="retro-switch minimize" onClick={onMinimize} title="Minimizar" />
+                                <div className="retro-switch maximize" onClick={onMaximize} title="Maximizar" />
+                                <div className="retro-switch on close" onClick={onClose} title="Cerrar" />
                             </div>
+                        ) : frameStyle === 'minimal' ? (
+                            null
                         ) : (
                             <div className="terminal-frame-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
-                                <div className="terminal-frame-window-btn minimize">
+                                <div className="terminal-frame-window-btn minimize" onClick={onMinimize} title="Minimizar">
                                     <span className="window-icon window-icon-min" />
                                 </div>
-                                <div className="terminal-frame-window-btn maximize">
+                                <div className="terminal-frame-window-btn maximize" onClick={onMaximize} title="Maximizar">
                                     <span className="window-icon window-icon-max" />
                                 </div>
-                                <div className="terminal-frame-window-btn close">
+                                <div className="terminal-frame-window-btn close" onClick={onClose} title="Cerrar">
                                     <span className="window-icon window-icon-close" />
                                 </div>
                             </div>

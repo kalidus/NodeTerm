@@ -75,8 +75,13 @@
     transition: background 0.2s ease;
 }
 
-.gnome-dot:hover {
+.gnome-dot.close:hover {
     background: #e81123;
+}
+
+.gnome-dot.minimize:hover,
+.gnome-dot.maximize:hover {
+    background: rgba(255, 255, 255, 0.15);
 }
 
 .kde-controls {
@@ -198,7 +203,15 @@
     transition: all 0.2s ease;
 }
 
-.cyber-dot:hover {
+.cyber-dot.close:hover {
+    background: #ff0055;
+    color: #000;
+    box-shadow: 0 0 10px #ff0055;
+    border-color: #ff0055;
+}
+
+.cyber-dot.minimize:hover,
+.cyber-dot.maximize:hover {
     background: #00f2ff;
     color: #000;
     box-shadow: 0 0 10px #00f2ff;
@@ -223,7 +236,13 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.glass-dot:hover {
+.glass-dot.close:hover {
+    background: rgba(232, 17, 35, 0.8);
+    transform: translateY(-1px);
+}
+
+.glass-dot.minimize:hover,
+.glass-dot.maximize:hover {
     background: rgba(255, 255, 255, 0.15);
     transform: translateY(-1px);
 }
@@ -277,6 +296,10 @@
 .matcha-dot:hover {
     color: #fff;
     background: rgba(255, 255, 255, 0.05);
+}
+
+.minimal-controls {
+    display: flex;
 }
 
 .terminal-frame-futuristic {
