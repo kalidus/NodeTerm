@@ -190,6 +190,14 @@ const ConnectionHistory = ({
 	const [availableTerminals, setAvailableTerminals] = useState([]);
 	const [isDetectingTerminals, setIsDetectingTerminals] = useState(false);
 
+	const activeViewName = useMemo(() => {
+		if (terminalView) return 'terminal';
+		if (activeBottomView === 'favorites') return 'favoritos';
+		return 'recientes';
+	}, [terminalView, activeBottomView]);
+
+
+
 	const handleThemeSelect = (themeName) => {
 		if (setLocalLinuxTerminalTheme) {
 			setLocalLinuxTerminalTheme(themeName);
@@ -2090,11 +2098,11 @@ const ConnectionHistory = ({
 							)}
 						</div>
 					<div className="header-path">
-							<span className="header-brand">NodeTerm</span>
-							<span style={{ opacity: 0.4 }}>{'\u00B7'}</span>
-							<div style={{ opacity: 0.4, display: 'flex', alignItems: 'center', fontSize: '11px' }}>
+							<span style={{ fontWeight: 'bold' }}>
 								<span className="path-tilde">~</span>/home
-							</div>
+							</span>
+							<span style={{ opacity: 0.5 }}>·</span>
+							<span style={{ opacity: 0.9 }}>{activeViewName}</span>
 						</div>
 					</div>
 					<div className="top-terminal-body">
