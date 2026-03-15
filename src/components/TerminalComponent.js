@@ -38,6 +38,8 @@ const TerminalComponent = forwardRef(({
 }, ref) => {
     const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
     const [cpuHistory, setCpuHistory] = useState([]);
+    // Visibilidad local del status bar (toggle desde el menú de la sesión SSH)
+    const [localStatusBarVisible, setLocalStatusBarVisible] = useState(true);
 
     // Detectar si es terminal local de forma robusta
     const isLocalTerminal = useMemo(() => {
@@ -668,7 +670,7 @@ const TerminalComponent = forwardRef(({
                     position: 'relative',
                     padding: '10px', // Padding ajustado para evitar huecos grandes
                     margin: 0,
-                    marginBottom: (isIntegrated || hideStatusBar) ? 0 : '-1px', // Solapamiento de 1px para ocultar huecos de renderizado, solo si hay StatusBar
+                    marginBottom: (isIntegrated || hideStatusBar || !localStatusBarVisible) ? 0 : '-1px', // Solapamiento de 1px para ocultar huecos de renderizado, solo si hay StatusBar
                     zIndex: isIntegrated ? 0 : 1,
                     backgroundColor: isIntegrated ? 'transparent' : (theme?.background || 'var(--terminal-bg)'),
                     '--terminal-bg': theme?.background || 'transparent',
@@ -787,6 +789,38 @@ const TerminalComponent = forwardRef(({
                             </button>
                         )}
 
+                        {/* Status Bar visibility toggle - Hidden in Split Mode */}
+                        {!isSplit && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setLocalStatusBarVisible((v) => !v); }}
+                                title={localStatusBarVisible ? 'Ocultar barra de estado' : 'Mostrar barra de estado'}
+                                className="quick-action-btn"
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '3px',
+                                    borderRadius: '4px',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
+                                    e.currentTarget.style.color = 'var(--primary-color, #fff)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.background = 'transparent';
+                                    e.currentTarget.style.color = 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
+                                }}
+                            >
+                                <i className="pi pi-bars" />
+                            </button>
+                        )}
+
                         {!isSplit && (
                             <div style={{
                                 width: '1px',
@@ -888,7 +922,7 @@ const TerminalComponent = forwardRef(({
                     `
                 }} />
             </div>
-            {!hideStatusBar && <StatusBar
+            {!hideStatusBar && localStatusBarVisible && <StatusBar
                 stats={{ ...stats, cpuHistory: cpuHistory }}
                 active={active}
                 statusBarIconTheme={statusBarIconTheme}
