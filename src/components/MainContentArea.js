@@ -1579,6 +1579,7 @@ const MainContentArea = ({
           <TerminalFrame
             className={sidebarCollapsed ? 'sidebar-collapsed' : ''}
             showControls={!sidebarCollapsed}
+            hideHeader={mainFrameHeaderCollapsed}
           >
             <Sidebar
               {...memoizedSidebarProps}
