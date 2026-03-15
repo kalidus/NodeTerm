@@ -2116,12 +2116,84 @@ const ConnectionHistory = ({
 								</div>
 							)}
 						</div>
-					<div className="header-path">
+						<div className="header-path">
 							<span style={{ fontWeight: 'bold' }}>
 								<span className="path-tilde">~</span>/home
 							</span>
 							<span style={{ opacity: 0.5 }}>·</span>
 							<span style={{ opacity: 0.9 }}>{activeViewName}</span>
+						</div>
+						<div className="recents-header-right" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px', zIndex: 10 }}>
+							<i
+								className="pi pi-desktop"
+								style={{
+									fontSize: '0.9rem',
+									color: terminalTheme.foreground || '#c9d1d9',
+									opacity: 0.6,
+									cursor: 'pointer',
+									padding: '4px',
+									borderRadius: '4px',
+									transition: 'all 0.2s'
+								}}
+								title="Cambiar estilo de marco"
+								onClick={(e) => {
+									e.stopPropagation();
+									frameStylePickerRef.current?.toggle(e);
+								}}
+								onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+								onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+							/>
+							<i
+								className="pi pi-palette"
+								style={{
+									fontSize: '0.9rem',
+									color: terminalTheme.foreground || '#c9d1d9',
+									opacity: 0.6,
+									cursor: 'pointer',
+									padding: '4px',
+									borderRadius: '4px',
+									transition: 'all 0.2s'
+								}}
+								title="Fijar Tema Linux/WSL... (clic derecho para Preferencias)"
+								onClick={(e) => {
+									e.stopPropagation();
+									themePickerRef.current?.toggle(e);
+								}}
+								onContextMenu={(e) => {
+									e.preventDefault();
+									if (onOpenSettings) onOpenSettings();
+									setTimeout(() => {
+										try {
+											window.dispatchEvent(new CustomEvent('open-settings-dialog', {
+												detail: { tab: 'appearance', subTab: 'terminal' }
+											}));
+										} catch (err) {
+											console.error('Error opening settings tab:', err);
+										}
+									}, 100);
+								}}
+								onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+								onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+							/>
+							<i
+								className="pi pi-eye"
+								style={{
+									fontSize: '0.9rem',
+									color: terminalTheme.foreground || '#c9d1d9',
+									opacity: 0.6,
+									cursor: 'pointer',
+									padding: '4px',
+									borderRadius: '4px',
+									transition: 'all 0.2s'
+								}}
+								title="Ajustar opacidad del terminal"
+								onClick={(e) => {
+									e.stopPropagation();
+									terminalOpacityOverlayRef.current?.toggle(e);
+								}}
+								onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+								onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+							/>
 						</div>
 					</div>
 					<div className="top-terminal-body">
@@ -2965,76 +3037,6 @@ const ConnectionHistory = ({
 						<span className="path-tilde">~</span>{terminalTitle}
 					</div>
 					<div className="recents-header-right" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-						<i
-							className="pi pi-desktop"
-							style={{
-								fontSize: '0.9rem',
-								color: terminalTheme.foreground || '#c9d1d9',
-								opacity: 0.6,
-								cursor: 'pointer',
-								padding: '4px',
-								borderRadius: '4px',
-								transition: 'all 0.2s'
-							}}
-							title="Cambiar estilo de marco"
-							onClick={(e) => {
-								e.stopPropagation();
-								frameStylePickerRef.current?.toggle(e);
-							}}
-							onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-							onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-						/>
-						<i
-							className="pi pi-palette"
-							style={{
-								fontSize: '0.9rem',
-								color: terminalTheme.foreground || '#c9d1d9',
-								opacity: 0.6,
-								cursor: 'pointer',
-								padding: '4px',
-								borderRadius: '4px',
-								transition: 'all 0.2s'
-							}}
-							title="Fijar Tema Linux/WSL... (clic derecho para Preferencias)"
-							onClick={(e) => {
-								e.stopPropagation();
-								themePickerRef.current?.toggle(e);
-							}}
-							onContextMenu={(e) => {
-								e.preventDefault();
-								if (onOpenSettings) onOpenSettings();
-								setTimeout(() => {
-									try {
-										window.dispatchEvent(new CustomEvent('open-settings-dialog', {
-											detail: { tab: 'appearance', subTab: 'terminal' }
-										}));
-									} catch (err) {
-										console.error('Error opening settings tab:', err);
-									}
-								}, 100);
-							}}
-							onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-							onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-						/>
-						<i
-							className="pi pi-eye"
-							style={{
-								fontSize: '0.9rem',
-								color: terminalTheme.foreground || '#c9d1d9',
-								opacity: 0.6,
-								cursor: 'pointer',
-								padding: '4px',
-								borderRadius: '4px',
-								transition: 'all 0.2s'
-							}}
-							title="Ajustar opacidad del terminal"
-							onClick={(e) => {
-								e.stopPropagation();
-								terminalOpacityOverlayRef.current?.toggle(e);
-							}}
-							onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-							onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-						/>
 						<i
 							className="pi pi-th-large"
 							style={{
