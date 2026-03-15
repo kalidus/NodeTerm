@@ -8,6 +8,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
+import { themes } from '../themes';
 
 const TerminalComponent = forwardRef(({
     tabId,
@@ -40,6 +41,9 @@ const TerminalComponent = forwardRef(({
     const [cpuHistory, setCpuHistory] = useState([]);
     // Visibilidad local del status bar (toggle desde el menú de la sesión SSH)
     const [localStatusBarVisible, setLocalStatusBarVisible] = useState(true);
+    // Menú rápido de tema de terminal (abierto/cerrado)
+    const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+    const themeMenuRef = useRef(null);
 
     // Detectar si es terminal local de forma robusta
     const isLocalTerminal = useMemo(() => {
@@ -86,6 +90,18 @@ const TerminalComponent = forwardRef(({
         window.addEventListener('terminal-settings-changed', handleSettingsChange);
         return () => window.removeEventListener('terminal-settings-changed', handleSettingsChange);
     }, []);
+
+    // Cerrar menú de tema al hacer clic fuera
+    useEffect(() => {
+        if (!themeMenuOpen) return;
+        const handleClickOutside = (e) => {
+            if (themeMenuRef.current && !themeMenuRef.current.contains(e.target)) {
+                setThemeMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [themeMenuOpen]);
 
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -788,6 +804,115 @@ const TerminalComponent = forwardRef(({
                                 <i className="pi pi-folder-open" />
                             </button>
                         )}
+
+                        {/* Terminal theme - menú rápido (temas SSH, mismo que Configuración > Terminal > SSH) - Hidden in Split Mode */}
+                        {!isSplit && (() => {
+                            const SSH_THEME_KEY = 'basicapp_terminal_theme';
+                            const currentThemeName = typeof localStorage !== 'undefined' ? (localStorage.getItem(SSH_THEME_KEY) || 'Default Dark') : 'Default Dark';
+                            const themeNames = themes ? Object.keys(themes) : [];
+                            const applyTheme = (themeName) => {
+                                try {
+                                    localStorage.setItem(SSH_THEME_KEY, themeName);
+                                    window.dispatchEvent(new CustomEvent('terminal-theme-changed', { detail: { theme: themeName, terminalType: 'ssh' } }));
+                                    setThemeMenuOpen(false);
+                                } catch (err) { /* noop */ }
+                            };
+                            return (
+                                <div ref={themeMenuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setThemeMenuOpen((v) => !v); }}
+                                        title="Tema de la terminal SSH"
+                                        className="quick-action-btn"
+                                        style={{
+                                            background: themeMenuOpen ? 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))' : 'transparent',
+                                            border: 'none',
+                                            color: 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
+                                            cursor: 'pointer',
+                                            fontSize: '12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '3px',
+                                            borderRadius: '4px',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseOver={(e) => {
+                                            if (!themeMenuOpen) e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
+                                            e.currentTarget.style.color = 'var(--primary-color, #fff)';
+                                        }}
+                                        onMouseOut={(e) => {
+                                            if (!themeMenuOpen) e.currentTarget.style.background = 'transparent';
+                                            e.currentTarget.style.color = 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
+                                        }}
+                                    >
+                                        <i className="pi pi-palette" />
+                                    </button>
+                                    {themeMenuOpen && (
+                                        <div
+                                            style={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                right: 0,
+                                                marginTop: '4px',
+                                                minWidth: '180px',
+                                                maxHeight: '280px',
+                                                overflowY: 'auto',
+                                                background: 'var(--ui-dialog-bg, rgba(20, 20, 22, 0.98))',
+                                                border: '1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.15))',
+                                                borderRadius: '8px',
+                                                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                                                padding: '6px 0',
+                                                zIndex: 9999
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {themeNames.map((themeKey) => {
+                                                const t = themes[themeKey]?.theme || {};
+                                                const bg = t.background || '#1e1e1e';
+                                                const accent = t.cursor || t.green || t.foreground || '#fff';
+                                                const isSelected = themeKey === currentThemeName;
+                                                return (
+                                                    <div
+                                                        key={themeKey}
+                                                        onClick={() => applyTheme(themeKey)}
+                                                        style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '8px',
+                                                            padding: '6px 10px',
+                                                            cursor: 'pointer',
+                                                            borderRadius: '4px',
+                                                            margin: '0 4px',
+                                                            background: isSelected ? 'rgba(79, 195, 247, 0.15)' : 'transparent',
+                                                            transition: 'all 0.15s'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            if (!isSelected) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            if (!isSelected) e.currentTarget.style.background = 'transparent';
+                                                        }}
+                                                    >
+                                                        <div
+                                                            style={{
+                                                                width: '14px',
+                                                                height: '14px',
+                                                                borderRadius: '3px',
+                                                                background: `linear-gradient(135deg, ${bg} 0%, ${accent} 100%)`,
+                                                                border: '1px solid rgba(255,255,255,0.25)',
+                                                                flexShrink: 0
+                                                            }}
+                                                        />
+                                                        <span style={{ fontSize: '12px', color: 'var(--ui-dialog-text)', fontWeight: isSelected ? 600 : 400, flex: 1 }}>{themeKey}</span>
+                                                        {isSelected && <i className="pi pi-check" style={{ fontSize: '10px', color: '#4fc3f7' }} />}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
 
                         {/* Status Bar visibility toggle - Hidden in Split Mode */}
                         {!isSplit && (

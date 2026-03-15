@@ -87,6 +87,23 @@ export const useThemeManagement = () => {
     };
   }, []);
 
+  // Escuchar cambio de tema desde menú rápido (SSH = tema terminal SSH, sin terminalType = Linux/WSL)
+  useEffect(() => {
+    const handleTerminalThemeChanged = (e) => {
+      const themeName = e.detail?.theme;
+      const terminalType = e.detail?.terminalType;
+      if (!themeName) return;
+      if (terminalType === 'ssh') {
+        const themeObj = themes && themes[themeName] ? themes[themeName] : { name: themeName, theme: {} };
+        setTerminalTheme(themeObj);
+      } else {
+        setLocalLinuxTerminalTheme(themeName);
+      }
+    };
+    window.addEventListener('terminal-theme-changed', handleTerminalThemeChanged);
+    return () => window.removeEventListener('terminal-theme-changed', handleTerminalThemeChanged);
+  }, []);
+
   // Icon and explorer theme states
   const [iconTheme, setIconTheme] = useState(() => {
     try {
