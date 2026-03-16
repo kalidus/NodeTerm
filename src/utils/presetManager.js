@@ -150,11 +150,19 @@ class PresetManager {
   applyPreset(preset) {
     if (!preset || !preset.settings) return;
 
-    // 1. Write all keys to localStorage
+    // 1. Reset ALL managed keys first, then apply the preset values.
+    // This ensures that keys present in a previous preset but absent in the new
+    // one are cleared from localStorage (instead of staying from the old preset).
+    PRESET_SETTINGS_KEYS.forEach(key => {
+      if (!(key in preset.settings)) {
+        localStorage.removeItem(key);
+      }
+    });
+
     Object.entries(preset.settings).forEach(([key, value]) => {
       if (value !== null && value !== undefined && value !== '') {
         localStorage.setItem(key, value);
-      } else if (value === '') {
+      } else {
         localStorage.removeItem(key);
       }
     });

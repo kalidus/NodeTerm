@@ -475,7 +475,11 @@ export const useThemeManagement = () => {
 
       root.style.setProperty('--sidebar-font-family', updatedSidebarFont);
       if (updatedSidebarFontSize) root.style.setProperty('--sidebar-font-size', `${updatedSidebarFontSize}px`);
-      if (updatedSidebarFontColor) root.style.setProperty('--sidebar-font-color', updatedSidebarFontColor);
+      if (updatedSidebarFontColor) {
+        root.style.setProperty('--ui-sidebar-text', updatedSidebarFontColor);
+      } else {
+        root.style.removeProperty('--ui-sidebar-text');
+      }
 
       // Temas
       statusBarThemeManager.applyTheme(updatedStatusBarTheme);
