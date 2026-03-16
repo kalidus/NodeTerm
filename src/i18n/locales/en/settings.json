@@ -27,6 +27,7 @@
     "statusBar": "Status Bar",
     "sessionExplorer": "Session Explorer",
     "fileExplorer": "File Explorer",
+    "presets": "Presets",
     "rdp": "RDP",
     "aiClients": "AI Clients",
     "updates": "Updates",
@@ -290,5 +291,27 @@
     "select": "Select",
     "loading": "Loading...",
     "selectIcon": "Select"
+  },
+  "presets": {
+    "title": "Appearance Presets",
+    "description": "Save and restore your entire visual configuration with a single click",
+    "saveSection": "Save current configuration",
+    "saveDescription": "Capture all current themes, fonts, icons, and cursor styles as a new custom preset.",
+    "saveCurrent": "Save as preset…",
+    "saveDialogTitle": "Save as preset",
+    "nameLabel": "Preset name",
+    "namePlaceholder": "E.g. My work setup",
+    "iconLabel": "Icon (emoji)",
+    "save": "Save",
+    "cancel": "Cancel",
+    "apply": "Apply",
+    "applying": "Applying…",
+    "active": "Active",
+    "builtin": "Included presets",
+    "custom": "My presets",
+    "rename": "Rename",
+    "renameDialogTitle": "Rename preset",
+    "delete": "Delete",
+    "confirmDelete": "Delete?"
   }
 }

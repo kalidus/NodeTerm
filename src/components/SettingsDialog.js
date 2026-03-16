@@ -35,6 +35,7 @@ import { groupTabIcons, setGroupTabIcon } from '../themes/group-tab-icons';
 import AIClientsTab from './AIClientsTab';
 import SettingsSidebarNav from './SettingsSidebarNav';
 import TerminalSettingsTab from './TerminalSettingsTab';
+import PresetSelector from './PresetSelector';
 import { useDialogResize } from '../hooks/useDialogResize';
 import { treeThemes, treeThemeOptions, getTreeTheme } from '../themes/tree-themes';
 import { actionBarThemes } from '../themes/action-bar-themes';
@@ -194,7 +195,8 @@ const SettingsDialog = ({
       'terminal': { parent: 'apariencia', index: 3 },
       'status-bar': { parent: 'apariencia', index: 4 },
       'explorador-sesiones': { parent: 'apariencia', index: 5 },
-      'explorador-archivos': { parent: 'apariencia', index: 6 }
+      'explorador-archivos': { parent: 'apariencia', index: 6 },
+      'presets': { parent: 'apariencia', index: 7 }
     };
     return subTabMap[subTab];
   };
@@ -4343,6 +4345,9 @@ const SettingsDialog = ({
                 )}
                 {activeSubTab === 'pestanas' && (
                   <TabThemeSelector />
+                )}
+                {activeSubTab === 'presets' && (
+                  <PresetSelector />
                 )}
                 {activeSubTab === 'pagina-inicio' && (
                   <div className="general-settings-container" style={{ maxWidth: '100%', margin: '0 auto' }}>

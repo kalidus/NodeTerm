@@ -7,6 +7,8 @@ import { STORAGE_KEYS } from '../utils/constants';
 import { TREE_THEME_STORAGE_KEY } from '../themes/tree-themes';
 import { getAvailableFonts } from '../utils/fontsList';
 import { applyTabTheme } from '../utils/tabThemeLoader';
+import { presetManager } from '../utils/presetManager';
+import { ACTIVE_PRESET_STORAGE_KEY } from '../themes/presets/index';
 
 export const useThemeManagement = () => {
   // Storage keys
@@ -395,6 +397,11 @@ export const useThemeManagement = () => {
     initializeThemes();
   }, []);
 
+  // Active preset state
+  const [activePresetId, setActivePresetId] = useState(() =>
+    localStorage.getItem(ACTIVE_PRESET_STORAGE_KEY) || null
+  );
+
   // Función para actualizar temas desde sincronización
   const updateThemesFromSync = () => {
     const updatedStatusBarTheme = localStorage.getItem(STATUSBAR_THEME_STORAGE_KEY) || 'Default Dark';
@@ -486,16 +493,28 @@ export const useThemeManagement = () => {
     }
   };
 
+  /**
+   * Apply a preset object and update all React states immediately.
+   */
+  const applyPreset = (preset) => {
+    presetManager.applyPreset(preset);
+    setActivePresetId(preset.id);
+    updateThemesFromSync();
+  };
+
+  /**
+   * Snapshot all current appearance settings into a named user preset.
+   */
+  const saveCurrentAsPreset = (name, icon = '⭐') =>
+    presetManager.saveCurrentAsPreset(name, icon);
+
   // Listener para actualizaciones de configuración desde sincronización
   useEffect(() => {
     const handleSettingsUpdate = (event) => {
-      if (event.detail?.source === 'sync' || event.key) {
-        // Actualizando estados React tras sincronización
-
-        // Actualizar temas desde sincronización usando el hook
+      if (event.detail?.source === 'sync' || event.detail?.source === 'preset' || event.key) {
         updateThemesFromSync();
-
-        // Estados React actualizados
+        const newPresetId = localStorage.getItem(ACTIVE_PRESET_STORAGE_KEY) || null;
+        setActivePresetId(newPresetId);
       }
     };
 
@@ -571,6 +590,11 @@ export const useThemeManagement = () => {
 
     // Utility functions
     reloadThemes: updateThemesFromSync,
-    updateThemesFromSync
+    updateThemesFromSync,
+
+    // Preset management
+    activePresetId,
+    applyPreset,
+    saveCurrentAsPreset
   };
 };

@@ -27,6 +27,7 @@
     "statusBar": "Status Bar",
     "sessionExplorer": "Expl. Sesiones",
     "fileExplorer": "Expl. Archivos",
+    "presets": "Presets",
     "rdp": "RDP",
     "aiClients": "Clientes de IA",
     "updates": "Actualizaciones",
@@ -283,5 +284,27 @@
     "wsl": "WSL",
     "docker": "Docker",
     "native": "Nativo (local)"
+  },
+  "presets": {
+    "title": "Presets de Apariencia",
+    "description": "Guarda y restaura toda tu configuración visual de un solo clic",
+    "saveSection": "Guardar configuración actual",
+    "saveDescription": "Captura todos los temas, fuentes, iconos y estilos de cursor actuales como un nuevo preset personalizado.",
+    "saveCurrent": "Guardar como preset…",
+    "saveDialogTitle": "Guardar como preset",
+    "nameLabel": "Nombre del preset",
+    "namePlaceholder": "Ej: Mi configuración de trabajo",
+    "iconLabel": "Icono (emoji)",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "apply": "Aplicar",
+    "applying": "Aplicando…",
+    "active": "Activo",
+    "builtin": "Presets incluidos",
+    "custom": "Mis presets",
+    "rename": "Renombrar",
+    "renameDialogTitle": "Renombrar preset",
+    "delete": "Eliminar",
+    "confirmDelete": "¿Eliminar?"
   }
 }

@@ -45,7 +45,8 @@ const SettingsSidebarNav = ({
         { id: 'terminal', label: t('sidebar.terminal'), icon: 'pi pi-desktop' },
         { id: 'status-bar', label: t('sidebar.statusBar'), icon: 'pi pi-sliders-h' },
         { id: 'explorador-sesiones', label: t('sidebar.sessionExplorer'), icon: 'pi pi-sitemap' },
-        { id: 'explorador-archivos', label: t('sidebar.fileExplorer'), icon: 'pi pi-folder-open' }
+        { id: 'explorador-archivos', label: t('sidebar.fileExplorer'), icon: 'pi pi-folder-open' },
+        { id: 'presets', label: t('sidebar.presets'), icon: 'pi pi-star' }
       ]
     },
     {
