@@ -108,112 +108,111 @@ const PresetSelector = () => {
         className={`preset-card ${isActive ? 'preset-card--active' : ''}`}
         title={preset.description || preset.name}
       >
-        <div className="preset-card__header">
-          <span className="preset-card__icon">{preset.icon || '🎨'}</span>
-          <div className="preset-card__meta">
-            <span className="preset-card__name">{preset.name}</span>
-            {preset.description && (
-              <span className="preset-card__description">{preset.description}</span>
-            )}
+        <div className="preset-card__content">
+          <div className="preset-card__header-info">
+            <span className="preset-card__icon">{preset.icon || '🎨'}</span>
+            <div className="preset-card__meta">
+              <span className="preset-card__name">{preset.name}</span>
+              {preset.description && (
+                <span className="preset-card__description">{preset.description}</span>
+              )}
+            </div>
           </div>
-          {isActive && (
-            <span className="preset-card__badge">
+          
+          {isActive ? (
+            <div className="preset-card__status">
               <i className="pi pi-check-circle" /> {t('presets.active') || 'Activo'}
-            </span>
+            </div>
+          ) : (
+            <div className="preset-card__actions">
+              <Button
+                label={isApplying ? (t('presets.applying') || '...') : (t('presets.apply') || 'Aplicar')}
+                icon={isApplying ? 'pi pi-spin pi-spinner' : 'pi pi-play'}
+                size="small"
+                disabled={isApplying}
+                onClick={() => handleApply(preset)}
+                className="preset-card__btn-apply"
+              />
+            </div>
           )}
         </div>
 
-        <div className="preset-card__actions">
-          <Button
-            label={isApplying ? (t('presets.applying') || 'Aplicando…') : (t('presets.apply') || 'Aplicar')}
-            icon={isApplying ? 'pi pi-spin pi-spinner' : 'pi pi-play'}
-            size="small"
-            disabled={isApplying}
-            onClick={() => handleApply(preset)}
-            className="preset-card__btn-apply"
-          />
-
-          {!preset.isBuiltin && (
-            <>
-              {isConfirmingUpdate ? (
-                <span className="preset-card__confirm-inline">
-                  <Button
-                    icon="pi pi-check"
-                    size="small"
-                    severity="warning"
-                    tooltip={t('presets.confirmUpdate') || '¿Sobrescribir?'}
-                    tooltipOptions={{ position: 'top' }}
-                    onClick={() => handleUpdateConfirm(preset.id)}
-                    className="preset-card__btn-icon"
-                  />
-                  <Button
-                    icon="pi pi-times"
-                    size="small"
-                    text
-                    severity="secondary"
-                    onClick={() => setConfirmUpdateId(null)}
-                    className="preset-card__btn-icon"
-                  />
-                </span>
-              ) : (
+        {!preset.isBuiltin && (
+          <div className="preset-card__manage-actions">
+            {isConfirmingUpdate ? (
+              <span className="preset-card__confirm-inline">
                 <Button
-                  icon="pi pi-refresh"
+                  icon="pi pi-check"
+                  size="small"
+                  severity="warning"
+                  onClick={() => handleUpdateConfirm(preset.id)}
+                  className="preset-card__btn-icon-sm"
+                />
+                <Button
+                  icon="pi pi-times"
                   size="small"
                   text
-                  severity="warning"
-                  tooltip={t('presets.update') || 'Actualizar con config actual'}
-                  tooltipOptions={{ position: 'top' }}
-                  onClick={() => setConfirmUpdateId(preset.id)}
-                  className="preset-card__btn-icon"
+                  severity="secondary"
+                  onClick={() => setConfirmUpdateId(null)}
+                  className="preset-card__btn-icon-sm"
                 />
-              )}
-
+              </span>
+            ) : (
               <Button
-                icon="pi pi-pencil"
+                icon="pi pi-refresh"
                 size="small"
                 text
-                severity="secondary"
-                tooltip={t('presets.rename') || 'Renombrar'}
+                severity="warning"
+                tooltip={t('presets.update') || 'Actualizar'}
                 tooltipOptions={{ position: 'top' }}
-                onClick={() => handleRenameOpen(preset)}
-                className="preset-card__btn-icon"
+                onClick={() => setConfirmUpdateId(preset.id)}
+                className="preset-card__btn-icon-sm"
               />
+            )}
 
-              {isConfirmingDelete ? (
-                <span className="preset-card__confirm-inline">
-                  <Button
-                    icon="pi pi-check"
-                    size="small"
-                    severity="danger"
-                    tooltip={t('presets.confirmDelete') || '¿Eliminar?'}
-                    tooltipOptions={{ position: 'top' }}
-                    onClick={() => handleDeleteConfirm(preset.id)}
-                    className="preset-card__btn-icon"
-                  />
-                  <Button
-                    icon="pi pi-times"
-                    size="small"
-                    text
-                    severity="secondary"
-                    onClick={() => setConfirmDeleteId(null)}
-                    className="preset-card__btn-icon"
-                  />
-                </span>
-              ) : (
+            <Button
+              icon="pi pi-pencil"
+              size="small"
+              text
+              severity="secondary"
+              tooltip={t('presets.rename') || 'Renombrar'}
+              tooltipOptions={{ position: 'top' }}
+              onClick={() => handleRenameOpen(preset)}
+              className="preset-card__btn-icon-sm"
+            />
+
+            {isConfirmingDelete ? (
+              <span className="preset-card__confirm-inline">
                 <Button
-                  icon="pi pi-trash"
+                  icon="pi pi-check"
+                  size="small"
+                  severity="danger"
+                  onClick={() => handleDeleteConfirm(preset.id)}
+                  className="preset-card__btn-icon-sm"
+                />
+                <Button
+                  icon="pi pi-times"
                   size="small"
                   text
-                  severity="danger"
-                  tooltip={t('presets.delete') || 'Eliminar'}
-                  tooltipOptions={{ position: 'top' }}
-                  onClick={() => setConfirmDeleteId(preset.id)}
-                  className="preset-card__btn-icon"
+                  severity="secondary"
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="preset-card__btn-icon-sm"
                 />
-              )}
-            </>
-          )}
-        </div>
+              </span>
+            ) : (
+              <Button
+                icon="pi pi-trash"
+                size="small"
+                text
+                severity="danger"
+                tooltip={t('presets.delete') || 'Eliminar'}
+                tooltipOptions={{ position: 'top' }}
+                onClick={() => setConfirmDeleteId(preset.id)}
+                className="preset-card__btn-icon-sm"
+              />
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -221,21 +220,24 @@ const PresetSelector = () => {
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="preset-selector general-settings-container" style={{ width: '100%', maxWidth: '100%' }}>
+    <div className="preset-selector" style={{ width: '100%', maxWidth: '100%' }}>
       <style>{PRESET_SELECTOR_STYLES}</style>
 
       {/* Header */}
-      <div className="general-settings-header-wrapper">
+      <div className="general-settings-header-wrapper" style={{ marginBottom: '1rem' }}>
         <div className="general-header-content">
           <span className="general-header-icon protocol-dialog-header-icon" style={{
             background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
-            boxShadow: '0 2px 8px rgba(124, 58, 237, 0.25)'
+            boxShadow: '0 2px 8px rgba(124, 58, 237, 0.25)',
+            width: '32px',
+            height: '32px',
+            fontSize: '1rem'
           }}>
             <i className="pi pi-star" />
           </span>
           <div className="general-header-text">
-            <h3 className="general-header">{t('presets.title') || 'Presets de Apariencia'}</h3>
-            <p className="general-description">
+            <h3 className="general-header" style={{ fontSize: '1rem', marginBottom: '2px' }}>{t('presets.title') || 'Presets de Apariencia'}</h3>
+            <p className="general-description" style={{ fontSize: '0.8rem', opacity: 0.7 }}>
               {t('presets.description') || 'Guarda y restaura toda tu configuración visual de un solo clic'}
             </p>
           </div>
@@ -243,28 +245,33 @@ const PresetSelector = () => {
       </div>
 
       {/* Save current settings button */}
-      <div className="general-settings-section" style={{ marginBottom: '1.25rem' }}>
-        <div className="general-section-header">
-          <div className="general-section-icon" style={{
-            background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
-            boxShadow: '0 2px 8px rgba(124, 58, 237, 0.3)'
-          }}>
-            <i className="pi pi-save" />
+      <div className="general-settings-section" style={{ marginBottom: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.1)' }}>
+        <div style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div className="general-section-icon" style={{
+              background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
+              boxShadow: '0 2px 8px rgba(124, 58, 237, 0.3)',
+              width: '28px',
+              height: '28px',
+              fontSize: '0.9rem'
+            }}>
+              <i className="pi pi-save" />
+            </div>
+            <div>
+              <h4 className="general-section-title" style={{ fontSize: '0.9rem', marginBottom: '0' }}>
+                {t('presets.saveSection') || 'Guardar configuración actual'}
+              </h4>
+              <p style={{ margin: '0', fontSize: '0.75rem', color: 'var(--ui-dialog-text, #666)', opacity: 0.6 }}>
+                {t('presets.saveDescription') || 'Crea un nuevo preset con el tema, fuentes e iconos actuales.'}
+              </p>
+            </div>
           </div>
-          <h4 className="general-section-title">
-            {t('presets.saveSection') || 'Guardar configuración actual'}
-          </h4>
-        </div>
-        <div style={{ padding: '0.75rem 1.25rem' }}>
-          <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', color: 'var(--ui-dialog-text, #666)', opacity: 0.8 }}>
-            {t('presets.saveDescription') || 'Captura todos los temas, fuentes, iconos y estilos de cursor actuales como un nuevo preset personalizado.'}
-          </p>
           <Button
-            label={t('presets.saveCurrent') || 'Guardar como preset…'}
+            label={t('presets.saveCurrent') || 'Guardar como...'}
             icon="pi pi-plus"
             onClick={handleSaveOpen}
             size="small"
-            style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)', border: 'none' }}
+            style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)', border: 'none', padding: '4px 12px' }}
           />
         </div>
       </div>
@@ -272,18 +279,21 @@ const PresetSelector = () => {
       {/* User presets */}
       {userPresets.length > 0 && (
         <div className="general-settings-section" style={{ marginBottom: '1.25rem' }}>
-          <div className="general-section-header">
+          <div className="general-section-header" style={{ padding: '0.5rem 1rem' }}>
             <div className="general-section-icon" style={{
               background: 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)',
-              boxShadow: '0 2px 8px rgba(8, 145, 178, 0.3)'
+              boxShadow: '0 2px 8px rgba(8, 145, 178, 0.3)',
+              width: '24px',
+              height: '24px',
+              fontSize: '0.8rem'
             }}>
               <i className="pi pi-user" />
             </div>
-            <h4 className="general-section-title">
+            <h4 className="general-section-title" style={{ fontSize: '0.85rem' }}>
               {t('presets.custom') || 'Mis presets'}
             </h4>
           </div>
-          <div className="preset-grid" style={{ padding: '0.75rem 1.25rem' }}>
+          <div className="preset-grid" style={{ padding: '0.5rem 1rem 1rem' }}>
             {userPresets.map(renderPresetCard)}
           </div>
         </div>
@@ -291,18 +301,21 @@ const PresetSelector = () => {
 
       {/* Built-in presets */}
       <div className="general-settings-section">
-        <div className="general-section-header">
+        <div className="general-section-header" style={{ padding: '0.5rem 1rem' }}>
           <div className="general-section-icon" style={{
             background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-            boxShadow: '0 2px 8px rgba(5, 150, 105, 0.3)'
+            boxShadow: '0 2px 8px rgba(5, 150, 105, 0.3)',
+            width: '24px',
+            height: '24px',
+            fontSize: '0.8rem'
           }}>
             <i className="pi pi-palette" />
           </div>
-          <h4 className="general-section-title">
+          <h4 className="general-section-title" style={{ fontSize: '0.85rem' }}>
             {t('presets.builtin') || 'Presets incluidos'}
           </h4>
         </div>
-        <div className="preset-grid" style={{ padding: '0.75rem 1.25rem' }}>
+        <div className="preset-grid" style={{ padding: '0.5rem 1rem 1rem' }}>
           {builtins.map(renderPresetCard)}
         </div>
       </div>
@@ -405,43 +418,64 @@ const PresetSelector = () => {
 const PRESET_SELECTOR_STYLES = `
   .preset-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.6rem;
   }
 
   .preset-card {
-    border: 1px solid var(--ui-content-border, rgba(255,255,255,0.08));
-    border-radius: 10px;
-    background: var(--ui-content-bg, rgba(255,255,255,0.03));
-    padding: 0.9rem 1rem;
+    border: 1px solid var(--ui-content-border, rgba(255,255,253,0.06));
+    border-radius: 12px;
+    background: var(--ui-content-bg, rgba(255,255,255,0.02));
+    padding: 0.75rem;
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
-    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    gap: 0.5rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(4px);
   }
 
   .preset-card:hover {
     border-color: var(--ui-button-primary, #7c3aed);
-    box-shadow: 0 2px 12px rgba(124, 58, 237, 0.15);
+    background: var(--ui-tab-hover-bg, rgba(255,255,255,0.05));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   }
 
   .preset-card--active {
     border-color: var(--ui-button-primary, #7c3aed) !important;
-    background: color-mix(in srgb, var(--ui-button-primary, #7c3aed) 8%, transparent) !important;
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ui-button-primary, #7c3aed) 30%, transparent);
+    background: color-mix(in srgb, var(--ui-button-primary, #7c3aed) 12%, transparent) !important;
+    box-shadow: 0 0 0 1px var(--ui-button-primary, #7c3aed), 0 4px 20px rgba(124, 58, 237, 0.15) !important;
   }
 
-  .preset-card__header {
+  .preset-card__content {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .preset-card__header-info {
+    display: flex;
+    align-items: center;
     gap: 0.6rem;
+    flex: 1;
+    min-width: 0;
   }
 
   .preset-card__icon {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     line-height: 1;
     flex-shrink: 0;
-    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
   }
 
   .preset-card__meta {
@@ -452,7 +486,7 @@ const PRESET_SELECTOR_STYLES = `
   .preset-card__name {
     display: block;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--ui-dialog-text, inherit);
     white-space: nowrap;
     overflow: hidden;
@@ -461,46 +495,82 @@ const PRESET_SELECTOR_STYLES = `
 
   .preset-card__description {
     display: block;
-    font-size: 0.75rem;
-    opacity: 0.65;
+    font-size: 0.7rem;
+    opacity: 0.55;
     color: var(--ui-dialog-text, inherit);
-    margin-top: 2px;
+    margin-top: 1px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .preset-card__badge {
-    font-size: 0.7rem;
+  .preset-card__status {
+    font-size: 0.75rem;
     font-weight: 600;
     color: var(--ui-button-primary, #7c3aed);
-    white-space: nowrap;
     display: flex;
     align-items: center;
-    gap: 3px;
+    gap: 4px;
+    padding: 4px 8px;
+    background: rgba(124, 58, 237, 0.1);
+    border-radius: 20px;
     flex-shrink: 0;
   }
 
   .preset-card__actions {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    justify-content: flex-end;
+    flex-shrink: 0;
   }
 
   .preset-card__btn-apply {
-    flex: 1;
+    padding: 4px 10px !important;
+    font-size: 0.75rem !important;
+    height: 28px !important;
   }
 
-  .preset-card__btn-icon {
-    flex-shrink: 0;
+  .preset-card__manage-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    margin-top: 0.25rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+    opacity: 0.4;
+    transition: opacity 0.2s;
+  }
+
+  .preset-card:hover .preset-card__manage-actions {
+    opacity: 1;
+  }
+
+  .preset-card__btn-icon-sm {
+    width: 24px !important;
+    height: 24px !important;
+    padding: 0 !important;
+  }
+
+  .preset-card__btn-icon-sm i {
+    font-size: 0.75rem !important;
   }
 
   .preset-card__confirm-inline {
     display: flex;
     align-items: center;
     gap: 0.2rem;
-    flex-shrink: 0;
+  }
+
+  /* Custom Scrollbar for the selector */
+  .preset-selector::-webkit-scrollbar {
+    width: 6px;
+  }
+  .preset-selector::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .preset-selector::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+  }
+  .preset-selector::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
   }
 `;
 

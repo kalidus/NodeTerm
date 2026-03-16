@@ -2010,9 +2010,32 @@ const SettingsDialog = ({
             }
             /* Apariencia tab container también necesita la altura correcta */
             .apariencia-tab-container {
-              height: var(--content-height, 1000px) !important;
-              max-height: var(--content-height, 1000px) !important;
-              min-height: var(--content-height, 1000px) !important;
+              height: 100% !important;
+              max-height: 100% !important;
+              min-height: 0 !important;
+              display: flex !important;
+              flex-direction: column !important;
+              overflow: hidden !important;
+            }
+            .presets-tab-wrapper {
+              flex: 1 !important;
+              overflow-y: auto !important;
+              padding-right: 4px;
+            }
+            /* Garantizar el scrollbar visible */
+            .presets-tab-wrapper::-webkit-scrollbar {
+              width: 8px !important;
+              display: block !important;
+            }
+            .presets-tab-wrapper::-webkit-scrollbar-track {
+              background: rgba(0,0,0,0.1) !important;
+            }
+            .presets-tab-wrapper::-webkit-scrollbar-thumb {
+              background: rgba(255,255,255,0.1) !important;
+              border-radius: 4px !important;
+            }
+            .presets-tab-wrapper::-webkit-scrollbar-thumb:hover {
+              background: rgba(255,255,255,0.2) !important;
             }
           `}</style>
           <TabView
@@ -4347,7 +4370,9 @@ const SettingsDialog = ({
                   <TabThemeSelector />
                 )}
                 {activeSubTab === 'presets' && (
-                  <PresetSelector />
+                  <div className="apariencia-tab-container presets-tab-wrapper">
+                    <PresetSelector />
+                  </div>
                 )}
                 {activeSubTab === 'pagina-inicio' && (
                   <div className="general-settings-container" style={{ maxWidth: '100%', margin: '0 auto' }}>
