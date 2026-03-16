@@ -64,6 +64,7 @@ export const PRESET_SETTINGS_KEYS = [
   // Tree / session / action bar
   'nodeterm_tree_theme',
   'sessionActionIconTheme',
+  'actionBarIconTheme',
   // Status bar misc
   'basicapp_statusbar_height',
 ];

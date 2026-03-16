@@ -186,6 +186,14 @@ class PresetManager {
       window.dispatchEvent(new CustomEvent('tab-layout-changed', { detail: tabLayout }));
     }
 
+    // Action bar icon theme change (iconos superiores de la sidebar)
+    const actionBarIconTheme = preset.settings['actionBarIconTheme'];
+    if (actionBarIconTheme) {
+      window.dispatchEvent(new CustomEvent('action-bar-icon-theme-changed', {
+        detail: { theme: actionBarIconTheme }
+      }));
+    }
+
     // Terminal theme change (SSH)
     const terminalTheme = preset.settings['basicapp_terminal_theme'];
     if (terminalTheme) {
