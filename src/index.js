@@ -2,6 +2,8 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './components/App';
 import { fontLoader } from './utils/fontLoader';
+import { presetManager } from './utils/presetManager';
+import { builtinPresets } from './themes/presets/index';
 
 // PrimeReact - Los CSS se cargan normalmente (webpack los optimiza)
 // 🚀 OPTIMIZACIÓN: Estos imports son necesarios pero webpack los procesa eficientemente
@@ -108,49 +110,58 @@ const initializeGlobalThemes = () => {
     const hasLinuxTerminalTheme = localStorage.getItem('localLinuxTerminalTheme');
 
     if (!hasUITheme) {
-      console.log('[THEME] Aplicando tema UI por defecto...');
-      localStorage.setItem('ui_theme', 'Nord');
+      console.log('[THEME] Primer arranque detectado. Aplicando preset Pro Ocean por defecto...');
+      const proOcean = builtinPresets.find(p => p.id === 'pro-ocean');
+      if (proOcean) {
+        presetManager.applyPreset(proOcean);
+      } else {
+        // Fallback si por alguna razón no se encuentra el preset
+        localStorage.setItem('ui_theme', 'Pro Ocean');
+      }
+    } else {
+      // Solo aplicar defaults individuales si ya existe un tema (no es el primer arranque)
+      // pero faltan algunas claves específicas.
+      if (!hasStatusBarTheme) {
+        console.log('[THEME] Aplicando tema status bar por defecto...');
+        localStorage.setItem('basicapp_statusbar_theme', 'Night Owl');
+      }
+
+      if (!hasTabTheme) {
+        console.log('[THEME] Aplicando tema tabs por defecto...');
+        localStorage.setItem('nodeterm_tab_theme', 'nord');
+      }
+
+      if (!hasTerminalTheme) {
+        console.log('[THEME] Aplicando tema terminal por defecto...');
+        localStorage.setItem('basicapp_terminal_theme', 'Night Owl');
+      }
+
+      if (!hasIconTheme) {
+        console.log('[THEME] Aplicando tema iconos por defecto...');
+        localStorage.setItem('iconTheme', 'nord');
+      }
+
+      if (!hasIconThemeSidebar) {
+        console.log('[THEME] Aplicando tema iconos sidebar por defecto...');
+        localStorage.setItem('iconThemeSidebar', 'nord');
+      }
+
+      if (!hasPowerShellTheme) {
+        console.log('[THEME] Aplicando tema PowerShell por defecto...');
+        localStorage.setItem('localPowerShellTheme', 'Night Owl');
+      }
+
+      if (!hasPowerShellStatusBarTheme) {
+        console.log('[THEME] Aplicando tema PowerShell Status Bar por defecto...');
+        localStorage.setItem('localPowerShellStatusBarTheme', 'Night Owl');
+      }
+
+      if (!hasLinuxTerminalTheme) {
+        console.log('[THEME] Aplicando tema Linux Terminal por defecto...');
+        localStorage.setItem('localLinuxTerminalTheme', 'Night Owl');
+      }
     }
 
-    if (!hasStatusBarTheme) {
-      console.log('[THEME] Aplicando tema status bar por defecto...');
-      localStorage.setItem('basicapp_statusbar_theme', 'Night Owl');
-    }
-
-    if (!hasTabTheme) {
-      console.log('[THEME] Aplicando tema tabs por defecto...');
-      localStorage.setItem('nodeterm_tab_theme', 'nord');
-    }
-
-    if (!hasTerminalTheme) {
-      console.log('[THEME] Aplicando tema terminal por defecto...');
-      localStorage.setItem('basicapp_terminal_theme', 'Night Owl');
-    }
-
-    if (!hasIconTheme) {
-      console.log('[THEME] Aplicando tema iconos por defecto...');
-      localStorage.setItem('iconTheme', 'nord');
-    }
-
-    if (!hasIconThemeSidebar) {
-      console.log('[THEME] Aplicando tema iconos sidebar por defecto...');
-      localStorage.setItem('iconThemeSidebar', 'nord');
-    }
-
-    if (!hasPowerShellTheme) {
-      console.log('[THEME] Aplicando tema PowerShell por defecto...');
-      localStorage.setItem('localPowerShellTheme', 'Night Owl');
-    }
-
-    if (!hasPowerShellStatusBarTheme) {
-      console.log('[THEME] Aplicando tema PowerShell Status Bar por defecto...');
-      localStorage.setItem('localPowerShellStatusBarTheme', 'Night Owl');
-    }
-
-    if (!hasLinuxTerminalTheme) {
-      console.log('[THEME] Aplicando tema Linux Terminal por defecto...');
-      localStorage.setItem('localLinuxTerminalTheme', 'Night Owl');
-    }
 
     // Inicializar velocidad de animaciones globalmente
     const ANIM_SPEED_KEY = 'nodeterm_ui_anim_speed';
