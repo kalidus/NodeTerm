@@ -305,6 +305,8 @@
     "rename": "Renombrar",
     "renameDialogTitle": "Renombrar preset",
     "delete": "Eliminar",
-    "confirmDelete": "¿Eliminar?"
+    "confirmDelete": "¿Eliminar?",
+    "update": "Actualizar con config actual",
+    "confirmUpdate": "¿Sobrescribir?"
   }
 }

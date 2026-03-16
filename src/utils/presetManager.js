@@ -117,6 +117,29 @@ class PresetManager {
     this._notifyChange();
   }
 
+  /**
+   * Overwrites the settings of an existing user preset with the current
+   * localStorage values, keeping its name, icon and id intact.
+   * @param {string} id
+   */
+  updateUserPreset(id) {
+    const userPresets = this.getUserPresets();
+    const index = userPresets.findIndex(p => p.id === id);
+    if (index === -1) return;
+
+    const existing = userPresets[index];
+    const freshSettings = this.captureCurrentSettings(existing.name, existing.icon);
+
+    userPresets[index] = {
+      ...existing,
+      settings: freshSettings.settings,
+      description: `Actualizado el ${new Date().toLocaleDateString('es-ES')}`,
+    };
+
+    this._saveUserPresets(userPresets);
+    this._notifyChange();
+  }
+
   // ─── Apply ───────────────────────────────────────────────────────────────────
 
   /**

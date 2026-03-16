@@ -312,6 +312,8 @@
     "rename": "Rename",
     "renameDialogTitle": "Rename preset",
     "delete": "Delete",
-    "confirmDelete": "Delete?"
+    "confirmDelete": "Delete?",
+    "update": "Update with current config",
+    "confirmUpdate": "Overwrite?"
   }
 }

@@ -23,6 +23,7 @@ const PresetSelector = () => {
   const [renameTarget, setRenameTarget] = useState(null);
   const [renameValue, setRenameValue] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [confirmUpdateId, setConfirmUpdateId] = useState(null);
   const [applyingId, setApplyingId] = useState(null);
 
   // Refresh preset list when presetManager notifies changes
@@ -76,6 +77,13 @@ const PresetSelector = () => {
     setRenameTarget(null);
   };
 
+  // ─── Update (overwrite) ──────────────────────────────────────────────────────
+
+  const handleUpdateConfirm = (id) => {
+    presetManager.updateUserPreset(id);
+    setConfirmUpdateId(null);
+  };
+
   // ─── Delete ──────────────────────────────────────────────────────────────────
 
   const handleDeleteConfirm = (id) => {
@@ -92,6 +100,7 @@ const PresetSelector = () => {
     const isActive = activePresetId === preset.id;
     const isApplying = applyingId === preset.id;
     const isConfirmingDelete = confirmDeleteId === preset.id;
+    const isConfirmingUpdate = confirmUpdateId === preset.id;
 
     return (
       <div
@@ -119,13 +128,46 @@ const PresetSelector = () => {
             label={isApplying ? (t('presets.applying') || 'Aplicando…') : (t('presets.apply') || 'Aplicar')}
             icon={isApplying ? 'pi pi-spin pi-spinner' : 'pi pi-play'}
             size="small"
-            disabled={isActive || isApplying}
+            disabled={isApplying}
             onClick={() => handleApply(preset)}
             className="preset-card__btn-apply"
           />
 
           {!preset.isBuiltin && (
             <>
+              {isConfirmingUpdate ? (
+                <span className="preset-card__confirm-inline">
+                  <Button
+                    icon="pi pi-check"
+                    size="small"
+                    severity="warning"
+                    tooltip={t('presets.confirmUpdate') || '¿Sobrescribir?'}
+                    tooltipOptions={{ position: 'top' }}
+                    onClick={() => handleUpdateConfirm(preset.id)}
+                    className="preset-card__btn-icon"
+                  />
+                  <Button
+                    icon="pi pi-times"
+                    size="small"
+                    text
+                    severity="secondary"
+                    onClick={() => setConfirmUpdateId(null)}
+                    className="preset-card__btn-icon"
+                  />
+                </span>
+              ) : (
+                <Button
+                  icon="pi pi-refresh"
+                  size="small"
+                  text
+                  severity="warning"
+                  tooltip={t('presets.update') || 'Actualizar con config actual'}
+                  tooltipOptions={{ position: 'top' }}
+                  onClick={() => setConfirmUpdateId(preset.id)}
+                  className="preset-card__btn-icon"
+                />
+              )}
+
               <Button
                 icon="pi pi-pencil"
                 size="small"
@@ -138,14 +180,15 @@ const PresetSelector = () => {
               />
 
               {isConfirmingDelete ? (
-                <span className="preset-card__confirm-delete">
+                <span className="preset-card__confirm-inline">
                   <Button
-                    label={t('presets.confirmDelete') || '¿Eliminar?'}
-                    icon="pi pi-trash"
+                    icon="pi pi-check"
                     size="small"
                     severity="danger"
+                    tooltip={t('presets.confirmDelete') || '¿Eliminar?'}
+                    tooltipOptions={{ position: 'top' }}
                     onClick={() => handleDeleteConfirm(preset.id)}
-                    className="preset-card__btn-confirm"
+                    className="preset-card__btn-icon"
                   />
                   <Button
                     icon="pi pi-times"
@@ -453,10 +496,11 @@ const PRESET_SELECTOR_STYLES = `
     flex-shrink: 0;
   }
 
-  .preset-card__confirm-delete {
+  .preset-card__confirm-inline {
     display: flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.2rem;
+    flex-shrink: 0;
   }
 `;
 
