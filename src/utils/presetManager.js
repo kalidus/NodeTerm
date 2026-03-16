@@ -1,6 +1,6 @@
 import { themeManager } from './themeManager';
 import { statusBarThemeManager } from './statusBarThemeManager';
-import { applyTabTheme } from './tabThemeLoader';
+import { applyTabTheme, applyTabLayout } from './tabThemeLoader';
 import {
   PRESET_STORAGE_KEY,
   ACTIVE_PRESET_STORAGE_KEY,
@@ -152,10 +152,15 @@ class PresetManager {
       statusBarThemeManager.applyTheme(statusBarTheme);
     }
 
-    // 5. Apply tab theme
+    // 5. Apply tab theme and layout
     const tabTheme = preset.settings['nodeterm_tab_theme'];
     if (tabTheme) {
       applyTabTheme(tabTheme);
+    }
+
+    const tabLayout = preset.settings['nodeterm_tab_layout'];
+    if (tabLayout) {
+      applyTabLayout(tabLayout);
     }
 
     // 6. Fire global events so all React components re-read from localStorage
@@ -174,6 +179,11 @@ class PresetManager {
     // Tab theme change
     if (tabTheme) {
       window.dispatchEvent(new CustomEvent('tab-theme-changed', { detail: tabTheme }));
+    }
+
+    // Tab layout change
+    if (tabLayout) {
+      window.dispatchEvent(new CustomEvent('tab-layout-changed', { detail: tabLayout }));
     }
 
     // Terminal theme change (SSH)

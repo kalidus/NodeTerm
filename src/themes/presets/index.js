@@ -15,9 +15,11 @@ export const ACTIVE_PRESET_STORAGE_KEY = 'nodeterm_active_preset';
 export const PRESET_SETTINGS_KEYS = [
   // UI theme
   'ui_theme',
-  // Tab theme and layout
+  // Tab theme, layout and animation
   'nodeterm_tab_theme',
   'nodeterm_tab_layout',
+  'nodeterm_tab_reduced_motion',
+  'nodeterm_tab_anim_speed',
   // Terminal themes per type
   'basicapp_terminal_theme',
   'localPowerShellTheme',
