@@ -2286,14 +2286,14 @@ const Sidebar = React.memo(({
           <div className="sidebar-header-glass-stack" style={{
             display: 'flex',
             alignItems: 'center',
-            padding: '10px 16px',
+            padding: '6px 12px',
             background: 'rgba(255, 255, 255, 0.03)',
             backdropFilter: 'blur(20px)',
-            borderRadius: '12px',
-            margin: '8px 10px',
+            borderRadius: '10px',
+            margin: '4px 8px',
             border: '1px solid rgba(255, 255, 255, 0.08)',
             boxShadow: `
-              0 4px 15px rgba(0, 0, 0, 0.4),
+              0 2px 10px rgba(0, 0, 0, 0.3),
               inset 0 0 1px 1px rgba(255, 255, 255, 0.05)
             `,
             position: 'relative'
@@ -2302,7 +2302,7 @@ const Sidebar = React.memo(({
             <div style={{
               position: 'absolute',
               inset: 0,
-              borderRadius: '12px',
+              borderRadius: '10px',
               background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)',
               pointerEvents: 'none'
             }} />
@@ -2313,12 +2313,12 @@ const Sidebar = React.memo(({
               tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')}
               tooltipOptions={{ position: 'bottom' }}
               style={{
-                marginRight: 8,
+                marginRight: 6,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: '40px',
-                height: '40px',
+                width: '32px',
+                height: '32px',
                 padding: 0
               }}
             >
@@ -2363,13 +2363,13 @@ const Sidebar = React.memo(({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '36px',
-                  height: '36px',
+                  width: '32px',
+                  height: '32px',
                   padding: 0,
                   background: 'rgba(255, 255, 255, 0.05)',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
-                  borderRadius: '10px',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                  borderRadius: '8px',
                   transition: 'all 0.2s ease'
                 }}
               >
@@ -2393,13 +2393,13 @@ const Sidebar = React.memo(({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '36px',
-                  height: '36px',
+                  width: '32px',
+                  height: '32px',
                   padding: 0,
                   background: 'rgba(255, 255, 255, 0.05)',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
-                  borderRadius: '10px',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                  borderRadius: '8px',
                   transition: 'all 0.2s ease'
                 }}
               >
@@ -2423,13 +2423,13 @@ const Sidebar = React.memo(({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '36px',
-                  height: '36px',
+                  width: '32px',
+                  height: '32px',
                   padding: 0,
                   background: 'rgba(255, 255, 255, 0.05)',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
-                  borderRadius: '10px',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                  borderRadius: '8px',
                   transition: 'all 0.2s ease'
                 }}
               >
@@ -2454,13 +2454,13 @@ const Sidebar = React.memo(({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '36px',
-                    height: '36px',
+                    width: '32px',
+                    height: '32px',
                     padding: 0,
                     background: 'rgba(255, 255, 255, 0.05)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
-                    borderRadius: '10px',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                    borderRadius: '8px',
                     transition: 'all 0.2s ease'
                   }}
                 >
@@ -2485,13 +2485,13 @@ const Sidebar = React.memo(({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '36px',
-                  height: '36px',
+                  width: '32px',
+                  height: '32px',
                   padding: 0,
                   background: 'rgba(255, 255, 255, 0.05)',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
-                  borderRadius: '10px',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                  borderRadius: '8px',
                   transition: 'all 0.2s ease'
                 }}
               >
