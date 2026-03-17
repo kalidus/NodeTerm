@@ -202,6 +202,40 @@ const Sidebar = React.memo(({
   const sshSyncHandleRef = useRef(null); // idle callback id o timeout id
   const sidebarResizeRafRef = useRef(null);
   const sidebarResizeBucketRef = useRef(null); // 'wide' | 'narrow' | 'tiny'
+  const hasEverExpandedRef = useRef(!sidebarCollapsed);
+  const [disableFirstExpandTransition, setDisableFirstExpandTransition] = useState(false);
+  const firstExpandTimeoutRef = useRef(null);
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+
+      // Primera vez: expandir sin transición para evitar micro-lag residual
+      if (prev && !next && !hasEverExpandedRef.current) {
+        hasEverExpandedRef.current = true;
+        setDisableFirstExpandTransition(true);
+
+        if (firstExpandTimeoutRef.current) {
+          clearTimeout(firstExpandTimeoutRef.current);
+        }
+        firstExpandTimeoutRef.current = setTimeout(() => {
+          setDisableFirstExpandTransition(false);
+          firstExpandTimeoutRef.current = null;
+        }, 50);
+      }
+
+      return next;
+    });
+  }, [setSidebarCollapsed]);
+
+  useEffect(() => {
+    return () => {
+      if (firstExpandTimeoutRef.current) {
+        clearTimeout(firstExpandTimeoutRef.current);
+        firstExpandTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // 🔗 Sincronizar conexiones SSH a window para que AIChatPanel las acceda
   useEffect(() => {
@@ -2252,7 +2286,7 @@ const Sidebar = React.memo(({
           <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
             <Button
               className="p-button-rounded p-button-text sidebar-action-button glass-button"
-              onClick={() => setSidebarCollapsed(v => !v)}
+              onClick={toggleSidebar}
               tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')}
               tooltipOptions={{ position: 'bottom' }}
               style={{
@@ -2614,7 +2648,7 @@ const Sidebar = React.memo(({
       ref={sidebarRef}
       className="sidebar-container"
       style={{
-        transition: 'all 0.15s ease-out',
+        transition: disableFirstExpandTransition ? 'none' : 'all 0.15s ease-out',
         width: sidebarCollapsed ? 44 : undefined,
         minWidth: sidebarCollapsed ? 44 : undefined,
         maxWidth: sidebarCollapsed ? 44 : undefined,
@@ -2662,7 +2696,7 @@ const Sidebar = React.memo(({
               {/* Botón de colapsar */}
               <Button
                 className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                onClick={() => setSidebarCollapsed(v => !v)}
+                onClick={toggleSidebar}
                 tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')}
                 tooltipOptions={{ position: 'right' }}
                 style={{
