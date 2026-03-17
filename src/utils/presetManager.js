@@ -167,13 +167,24 @@ class PresetManager {
       }
     });
 
+    // Track whether sidebar font color comes from a preset vs user custom.
+    // Preset-sourced overrides should NOT stick when the user changes UI theme manually.
+    try {
+      const presetSidebarColor = preset.settings['sidebarFontColor'];
+      if (presetSidebarColor) {
+        localStorage.setItem('sidebarFontColorSource', 'preset');
+      } else {
+        localStorage.removeItem('sidebarFontColorSource');
+      }
+    } catch { }
+
     // 2. Mark this preset as active
     localStorage.setItem(ACTIVE_PRESET_STORAGE_KEY, preset.id);
 
     // 3. Apply UI theme via ThemeManager (handles CSS custom properties + animations)
     const uiTheme = preset.settings['ui_theme'];
     if (uiTheme && themeManager) {
-      themeManager.applyTheme(uiTheme);
+      themeManager.applyTheme(uiTheme, { source: 'preset', preserveSidebarFontColor: true });
       localStorage.setItem('ui_theme', uiTheme);
     }
 

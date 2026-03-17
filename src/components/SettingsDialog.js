@@ -1479,6 +1479,13 @@ const SettingsDialog = ({
     }
     colorTimeoutRef.current = setTimeout(() => {
       if (setSidebarFontColor && typeof setSidebarFontColor === 'function') {
+        try {
+          if (newColor) {
+            localStorage.setItem('sidebarFontColorSource', 'user');
+          } else {
+            localStorage.removeItem('sidebarFontColorSource');
+          }
+        } catch { }
         setSidebarFontColor(newColor);
       }
     }, 150); // Debounce de 150ms
@@ -3657,6 +3664,9 @@ const SettingsDialog = ({
                                     className="p-button-text p-button-rounded"
                                     onClick={() => {
                                       console.log('[SettingsDialog] Restaurando color por defecto');
+                                      try {
+                                        localStorage.removeItem('sidebarFontColorSource');
+                                      } catch { }
                                       setSidebarFontColor('');
                                     }}
                                     tooltip={t('appearance.sessionExplorer.restoreColor')}

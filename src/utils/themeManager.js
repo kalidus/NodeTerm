@@ -87,11 +87,11 @@ class ThemeManager {
     document.head.appendChild(this.styleElement);
   }
 
-  applyTheme(themeName) {
-    this._applyThemeInternal(themeName, true);
+  applyTheme(themeName, options = {}) {
+    this._applyThemeInternal(themeName, true, options);
   }
 
-  _applyThemeInternal(themeName, save = true) {
+  _applyThemeInternal(themeName, save = true, options = {}) {
     const theme = uiThemes[themeName];
     if (!theme) {
       console.warn(`[THEME] Theme "${themeName}" not found. Available themes:`, Object.keys(uiThemes));
@@ -100,6 +100,33 @@ class ThemeManager {
 
     this.currentTheme = theme;
     this.generateCSS(theme);
+
+    // Sidebar text override handling:
+    // - `sidebarFontColor` may be set by presets (temporary) or by the user (custom).
+    // - Inline `--ui-sidebar-text` has higher priority than the generated CSS variables,
+    //   so we must remove it when it shouldn't persist.
+    try {
+      const root = document.documentElement;
+      const color = localStorage.getItem('sidebarFontColor') || '';
+      const source = localStorage.getItem('sidebarFontColorSource') || '';
+      const preserve = options?.preserveSidebarFontColor === true || options?.source === 'preset';
+
+      if (color && (source === 'user' || preserve)) {
+        root.style.setProperty('--ui-sidebar-text', color);
+      } else {
+        root.style.removeProperty('--ui-sidebar-text');
+        // If the color came from a preset, clear it on manual theme switches.
+        if (color && source === 'preset' && !preserve) {
+          localStorage.removeItem('sidebarFontColor');
+          localStorage.removeItem('sidebarFontColorSource');
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('settings-updated', {
+              detail: { source: 'sync' }
+            }));
+          }
+        }
+      }
+    } catch { }
 
     // Aplicar animaciones si es un tema animado
     this.applyAnimations(theme);
