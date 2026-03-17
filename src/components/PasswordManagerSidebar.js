@@ -1549,37 +1549,71 @@ const PasswordManagerSidebar = ({
 
   return (
     <>
-      {/* Header igual que la sidebar de conexiones */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
+      <div className="sidebar-header-glass-stack" style={{
+        display: 'flex',
+        alignItems: 'center',
+        padding: '6px 12px',
+        background: 'rgba(255, 255, 255, 0.03)',
+        backdropFilter: 'blur(20px)',
+        borderRadius: '10px',
+        margin: '4px 8px',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        boxShadow: `
+          0 2px 10px rgba(0, 0, 0, 0.3),
+          inset 0 0 1px 1px rgba(255, 255, 255, 0.05)
+        `,
+        position: 'relative'
+      }}>
+        {/* Brillo de profundidad 3D */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: '10px',
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)',
+          pointerEvents: 'none'
+        }} />
+
         <Button 
           className="p-button-rounded p-button-text sidebar-action-button glass-button" 
           onClick={() => setSidebarCollapsed && setSidebarCollapsed(v => !v)} 
           tooltip={sidebarCollapsed ? tCommon('tooltips.expandSidebar') : tCommon('tooltips.collapseSidebar')} 
           tooltipOptions={{ position: 'bottom' }} 
           style={{ 
-            marginRight: 8,
+            marginRight: 4,
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
-            width: '40px',
-            height: '40px',
-            padding: 0
+            width: '38px',
+            height: '38px',
+            padding: 0,
+            transition: 'all 0.3s ease'
           }} 
         >
           <span style={{ 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
-            width: '20px',
-            height: '20px',
-            color: 'var(--ui-sidebar-text)'
+            width: '24px',
+            height: '24px',
+            color: 'var(--ui-sidebar-text)',
+            opacity: 0.9
           }}>
             {sidebarCollapsed 
               ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
               : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft}
           </span>
         </Button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
+
+        {/* SEPARADOR IDÉNTICO AL PRIMERO */}
+        <div style={{
+          width: '1px',
+          height: '24px',
+          background: 'linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.15), transparent)',
+          margin: '0 8px',
+          boxShadow: '0 0 5px rgba(255, 255, 255, 0.05)'
+        }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative', zIndex: 2 }}>
           <Button 
             className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={() => {
@@ -1594,9 +1628,14 @@ const PasswordManagerSidebar = ({
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
-              width: '40px',
-              height: '40px',
-              padding: 0
+              width: '32px',
+              height: '32px',
+              padding: 0,
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+              borderRadius: '8px',
+              transition: 'all 0.2s ease'
             }}
           >
             <span style={{ 
@@ -1619,9 +1658,14 @@ const PasswordManagerSidebar = ({
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
-              width: '40px',
-              height: '40px',
-              padding: 0
+              width: '32px',
+              height: '32px',
+              padding: 0,
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+              borderRadius: '8px',
+              transition: 'all 0.2s ease'
             }}
           >
             <span style={{ 
@@ -1651,9 +1695,14 @@ const PasswordManagerSidebar = ({
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
-              width: '40px',
-              height: '40px',
-              padding: 0
+              width: '32px',
+              height: '32px',
+              padding: 0,
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+              borderRadius: '8px',
+              transition: 'all 0.2s ease'
             }}
           >
             <span style={{ 
@@ -1667,6 +1716,16 @@ const PasswordManagerSidebar = ({
               {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
             </span>
           </Button>
+
+          {/* SEPARADOR IDÉNTICO AL PRIMERO */}
+          <div style={{
+            width: '1px',
+            height: '24px',
+            background: 'linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.15), transparent)',
+            margin: '0 8px',
+            boxShadow: '0 0 5px rgba(255, 255, 255, 0.05)'
+          }} />
+
           <Button 
             className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={onBackToConnections} 
@@ -1676,9 +1735,14 @@ const PasswordManagerSidebar = ({
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
-              width: '40px',
-              height: '40px',
-              padding: 0
+              width: '32px',
+              height: '32px',
+              padding: 0,
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+              borderRadius: '8px',
+              transition: 'all 0.2s ease'
             }}
           >
             <span style={{ 
@@ -1716,7 +1780,6 @@ const PasswordManagerSidebar = ({
           </Button>
         </div>
       </div>
-      <Divider className="my-2" />
       
       {/* Árbol de passwords - igual que la sidebar de conexiones */}
       <div 
