@@ -198,6 +198,11 @@ const Sidebar = React.memo(({
   const [initialFilesystemPath, setInitialFilesystemPath] = useState(null);
   const [localExplorerPath, setLocalExplorerPath] = useState(null);
 
+  // Refs de rendimiento: evitar trabajo repetido durante transiciones/resize
+  const sshSyncHandleRef = useRef(null); // idle callback id o timeout id
+  const sidebarResizeRafRef = useRef(null);
+  const sidebarResizeBucketRef = useRef(null); // 'wide' | 'narrow' | 'tiny'
+
   // 🔗 Sincronizar conexiones SSH a window para que AIChatPanel las acceda
   useEffect(() => {
     const extractSSHNodes = (treeNodes) => {
@@ -218,14 +223,57 @@ const Sidebar = React.memo(({
       return sshNodes;
     };
 
-    const sshConnections = extractSSHNodes(nodes);
-    window.sshConnectionsFromSidebar = sshConnections;
-    // console.log(`🔗 [Sidebar] Sincronizadas ${sshConnections.length} conexiones SSH a window`);
+    // Cancelar una sincronización previa si aún está pendiente
+    if (sshSyncHandleRef.current) {
+      try {
+        if (typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'function') {
+          window.cancelIdleCallback(sshSyncHandleRef.current);
+        } else {
+          clearTimeout(sshSyncHandleRef.current);
+        }
+      } catch (_) {
+        // noop
+      }
+      sshSyncHandleRef.current = null;
+    }
 
-    // Disparar evento para que AIChatPanel se resincronice
-    window.dispatchEvent(new CustomEvent('sidebar-ssh-connections-updated', {
-      detail: { count: sshConnections.length }
-    }));
+    const runSync = () => {
+      const sshConnections = extractSSHNodes(nodes);
+      window.sshConnectionsFromSidebar = sshConnections;
+
+      // Disparar evento para que AIChatPanel se resincronice
+      window.dispatchEvent(new CustomEvent('sidebar-ssh-connections-updated', {
+        detail: { count: sshConnections.length }
+      }));
+    };
+
+    // Diferir a idle para no competir con layout/transiciones iniciales
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      sshSyncHandleRef.current = window.requestIdleCallback(() => {
+        sshSyncHandleRef.current = null;
+        runSync();
+      }, { timeout: 1000 });
+    } else {
+      sshSyncHandleRef.current = setTimeout(() => {
+        sshSyncHandleRef.current = null;
+        runSync();
+      }, 0);
+    }
+
+    return () => {
+      if (sshSyncHandleRef.current) {
+        try {
+          if (typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'function') {
+            window.cancelIdleCallback(sshSyncHandleRef.current);
+          } else {
+            clearTimeout(sshSyncHandleRef.current);
+          }
+        } catch (_) {
+          // noop
+        }
+        sshSyncHandleRef.current = null;
+      }
+    };
   }, [nodes]);
 
   // Sincronizar selectedNodeForDetails cuando cambia el nodo en el árbol
@@ -566,43 +614,70 @@ const Sidebar = React.memo(({
   useEffect(() => {
     if (!sidebarRef.current || sidebarCollapsed) return;
 
-    const handleSidebarResize = () => {
-      const sidebarElement = sidebarRef.current;
-      if (!sidebarElement) return;
+    const sidebarElement = sidebarRef.current;
+    const headerElement = sidebarElement.querySelector('div:first-child');
+    const buttonsContainer = headerElement?.querySelector('div:last-child');
+    if (!buttonsContainer) return;
 
-      const sidebarWidth = sidebarElement.offsetWidth;
-      const headerElement = sidebarElement.querySelector('div:first-child');
-      const buttonsContainer = headerElement?.querySelector('div:last-child');
+    const applyBucketStyles = (bucket) => {
+      if (sidebarResizeBucketRef.current === bucket) return;
+      sidebarResizeBucketRef.current = bucket;
 
-      if (buttonsContainer) {
-        // Ocultar botones adicionales cuando el ancho es muy pequeño
-        if (sidebarWidth <= 120) {
-          buttonsContainer.style.opacity = '0.3';
-          buttonsContainer.style.transform = 'scale(0.8)';
-          buttonsContainer.style.pointerEvents = 'none';
-        } else {
-          buttonsContainer.style.opacity = '1';
-          buttonsContainer.style.transform = 'scale(1)';
-          buttonsContainer.style.pointerEvents = 'auto';
-        }
-
-        // Ocultar completamente cuando es muy estrecho
-        if (sidebarWidth <= 80) {
-          buttonsContainer.style.display = 'none';
-        } else {
-          buttonsContainer.style.display = 'flex';
-        }
+      if (bucket === 'tiny') {
+        buttonsContainer.style.opacity = '0.3';
+        buttonsContainer.style.transform = 'scale(0.8)';
+        buttonsContainer.style.pointerEvents = 'none';
+        buttonsContainer.style.display = 'none';
+        return;
       }
+
+      if (bucket === 'narrow') {
+        buttonsContainer.style.opacity = '0.3';
+        buttonsContainer.style.transform = 'scale(0.8)';
+        buttonsContainer.style.pointerEvents = 'none';
+        buttonsContainer.style.display = 'flex';
+        return;
+      }
+
+      // wide
+      buttonsContainer.style.opacity = '1';
+      buttonsContainer.style.transform = 'scale(1)';
+      buttonsContainer.style.pointerEvents = 'auto';
+      buttonsContainer.style.display = 'flex';
+    };
+
+    const widthToBucket = (w) => {
+      if (w <= 80) return 'tiny';
+      if (w <= 120) return 'narrow';
+      return 'wide';
+    };
+
+    const scheduleUpdate = (width) => {
+      if (sidebarResizeRafRef.current) {
+        cancelAnimationFrame(sidebarResizeRafRef.current);
+      }
+      sidebarResizeRafRef.current = requestAnimationFrame(() => {
+        sidebarResizeRafRef.current = null;
+        applyBucketStyles(widthToBucket(width));
+      });
     };
 
     // Observar cambios en el tamaño de la sidebar
-    const resizeObserver = new ResizeObserver(handleSidebarResize);
-    resizeObserver.observe(sidebarRef.current);
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries?.[0];
+      const width = entry?.contentRect?.width ?? sidebarElement.getBoundingClientRect().width;
+      scheduleUpdate(width);
+    });
+    resizeObserver.observe(sidebarElement);
 
     // Llamar una vez al inicio
-    handleSidebarResize();
+    scheduleUpdate(sidebarElement.getBoundingClientRect().width);
 
     return () => {
+      if (sidebarResizeRafRef.current) {
+        cancelAnimationFrame(sidebarResizeRafRef.current);
+        sidebarResizeRafRef.current = null;
+      }
       resizeObserver.disconnect();
     };
   }, [sidebarCollapsed]);
@@ -2155,6 +2230,385 @@ const Sidebar = React.memo(({
     }
   };
 
+  const fullSidebar = (
+    // Sidebar completa
+    <>
+      {viewMode === 'connections' ? (
+        // Vista de conexiones (árbol normal)
+        <>
+          {FUTURISTIC_UI_KEYS.includes(uiTheme) && (
+            <div style={{
+              width: '100%',
+              height: '0.5px',
+              backgroundColor: 'var(--ui-sidebar-border)',
+              opacity: 0.6,
+              margin: 0,
+              padding: 0,
+              boxSizing: 'border-box',
+              border: 'none',
+              outline: 'none'
+            }} />
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
+            <Button
+              className="p-button-rounded p-button-text sidebar-action-button glass-button"
+              onClick={() => setSidebarCollapsed(v => !v)}
+              tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')}
+              tooltipOptions={{ position: 'bottom' }}
+              style={{
+                marginRight: 8,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '40px',
+                height: '40px',
+                padding: 0
+              }}
+            >
+              <span style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '20px',
+                height: '20px',
+                color: 'var(--ui-sidebar-text)'
+              }}>
+                {sidebarCollapsed
+                  ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
+                  : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft
+                }
+              </span>
+            </Button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
+              <Button
+                className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                onClick={() => {
+                  // Abrir diálogo de selección de protocolo
+                  if (sidebarCallbacksRef?.current?.showProtocolSelection) {
+                    sidebarCallbacksRef.current.showProtocolSelection();
+                  } else {
+                    // Fallback: usar evento personalizado
+                    window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
+                  }
+                }}
+                tooltip={t('tooltips.newConnection')}
+                tooltipOptions={{ position: 'bottom' }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '40px',
+                  height: '40px',
+                  padding: 0
+                }}
+              >
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: 'var(--ui-sidebar-text)'
+                }}>
+                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
+                </span>
+              </Button>
+              <Button
+                className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                onClick={() => setShowFolderDialog(true)}
+                tooltip={t('tooltips.createFolder')}
+                tooltipOptions={{ position: 'bottom' }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '40px',
+                  height: '40px',
+                  padding: 0
+                }}
+              >
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: 'var(--ui-sidebar-text)'
+                }}>
+                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
+                </span>
+              </Button>
+              <Button
+                className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                onClick={() => setShowCreateGroupDialog(true)}
+                tooltip={t('tooltips.createGroup')}
+                tooltipOptions={{ position: 'bottom' }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '40px',
+                  height: '40px',
+                  padding: 0
+                }}
+              >
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: 'var(--ui-sidebar-text)'
+                }}>
+                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
+                </span>
+              </Button>
+              {hasActiveSshSession && onOpenFileExplorer && (
+                <Button
+                  className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                  onClick={() => onOpenFileExplorer()}
+                  tooltip="Explorador SSH"
+                  tooltipOptions={{ position: 'bottom' }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '40px',
+                    height: '40px',
+                    padding: 0
+                  }}
+                >
+                  <span style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '20px',
+                    height: '20px',
+                    color: 'var(--ui-sidebar-text)'
+                  }}>
+                    <i className="pi pi-folder-open" style={{ color: '#eab308', fontSize: '1.2rem' }} />
+                  </span>
+                </Button>
+              )}
+              <Button
+                className="p-button-rounded p-button-text sidebar-action-button glass-button key-button"
+                onClick={() => setViewMode('passwords')}
+                tooltip={t('tooltips.passwordManager')}
+                tooltipOptions={{ position: 'bottom' }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '40px',
+                  height: '40px',
+                  padding: 0
+                }}
+              >
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: '#ffc107'
+                }}>
+                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
+                </span>
+              </Button>
+              {filesystemAvailable && isAIChatActive && (
+                <Button
+                  icon="pi pi-folder-open"
+                  className={`p-button-rounded p-button-text sidebar-action-button glass-button ${viewMode === 'filesystem' ? 'active' : ''}`}
+                  onClick={() => setViewMode('filesystem')}
+                  tooltip={t('tooltips.mcpExplorer')}
+                  tooltipOptions={{ position: 'bottom' }}
+                  style={{
+                    borderColor: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : undefined,
+                    color: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : undefined
+                  }}
+                />
+              )}
+              {isAIChatActive && onToggleLocalTerminalForAIChat && (
+                <Button
+                  icon="pi pi-desktop"
+                  className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                  onClick={() => onToggleLocalTerminalForAIChat()}
+                  tooltip={t('tooltips.localTerminal')}
+                  tooltipOptions={{ position: 'bottom' }}
+                  style={{
+                    borderColor: '#90caf9',
+                    color: '#90caf9'
+                  }}
+                />
+              )}
+            </div>
+          </div>
+          <Divider className="my-2" />
+
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              overflowY: 'auto',
+              overflowX: 'auto',
+              position: 'relative',
+              fontSize: `${explorerFontSize}px`,
+              color: explorerFontColor || undefined,
+              ...(explorerFontColor ? { '--ui-sidebar-text': explorerFontColor } : {})
+            }}
+            onContextMenu={onTreeAreaContextMenu}
+            className="tree-container"
+            onDragStart={handleExternalDragStart}
+          >
+            {nodes.length === 0 ? (
+              <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+                No hay elementos en el árbol.<br />Usa el botón "+" para crear una carpeta o conexión.
+              </div>
+            ) : (
+              <Tree
+                key={`tree-${iconTheme}-${explorerFontSize}-${treeTheme}-${explorerFontColor || 'default'}`} // Forzar re-render cuando cambie el tema
+                value={nodes}
+                selectionMode="single"
+                selectionKeys={selectedNodeKey}
+                onSelectionChange={e => {
+                  setSelectedNodeKey(e.value);
+
+                  // Encontrar el nodo completo para el panel de detalles
+                  const findNode = (nodeList, key) => {
+                    for (const node of nodeList) {
+                      if (node.key === key) return node;
+                      if (node.children) {
+                        const found = findNode(node.children, key);
+                        if (found) return found;
+                      }
+                    }
+                    return null;
+                  };
+
+                  // e.value puede ser un objeto { "key": true } o directamente un string "key"
+                  let selectedKey = null;
+                  if (typeof e.value === 'string') {
+                    selectedKey = e.value;
+                  } else if (e.value && typeof e.value === 'object') {
+                    selectedKey = Object.keys(e.value)[0];
+                  }
+
+                  const node = selectedKey ? findNode(nodes, selectedKey) : null;
+                  setSelectedNodeForDetails(node);
+                }}
+                expandedKeys={expandedKeys}
+                onToggle={e => setExpandedKeys(e.value)}
+                dragdropScope="sidebar"
+                onDragDrop={onDragDrop}
+                onDragEnd={() => {
+                  // Limpiar el nodo SSH arrastrado al finalizar el drag
+                  if (window.draggedSSHNodeRef) {
+                    window.draggedSSHNodeRef.current = null;
+                  }
+                }}
+                className={`sidebar-tree tree-theme-${treeTheme}`}
+                data-icon-theme={iconTheme}
+                data-tree-theme={treeTheme}
+                data-font-color={explorerFontColor || ''}
+                style={{
+                  fontSize: `${explorerFontSize}px`,
+                  color: explorerFontColor || undefined,
+                  '--icon-size': `${iconSize}px`,
+                  ...(explorerFontColor ? {
+                    '--ui-sidebar-text': explorerFontColor,
+                    '--tree-text-color': explorerFontColor
+                  } : {})
+                }}
+                nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })}
+              />
+            )}
+          </div>
+
+          {/* Panel de detalles de conexión */}
+          <ConnectionDetailsPanel
+            selectedNode={selectedNodeForDetails}
+            uiTheme={uiTheme}
+            iconTheme={iconTheme}
+            sessionActionIconTheme={sessionActionIconTheme}
+            onNodeUpdate={updateNodeInTree}
+            onOpenSSHConnection={onOpenSSHConnection}
+            onOpenVncConnection={onOpenVncConnection}
+          />
+
+          <SidebarFooter
+            onConfigClick={() => setShowSettingsDialog(true)}
+            allExpanded={allExpanded}
+            toggleExpandAll={toggleExpandAll}
+            collapsed={sidebarCollapsed}
+            onShowImportDialog={onShowImportDialog || setShowImportDialog}
+            onShowExportDialog={onShowExportDialog}
+            onShowImportExportDialog={onShowImportExportDialog}
+            onShowImportWizard={onShowImportWizard}
+            sessionActionIconTheme={sessionActionIconTheme}
+          />
+        </>
+      ) : viewMode === 'filesystem' ? (
+        <SidebarFilesystemExplorer
+          status={filesystemStatus}
+          onBackToConnections={() => setViewMode('connections')}
+          sidebarCollapsed={sidebarCollapsed}
+          setSidebarCollapsed={setSidebarCollapsed}
+          explorerFont={explorerFont}
+          explorerFontSize={explorerFontSize}
+          uiTheme={uiTheme}
+          showToast={showToast}
+          sessionActionIconTheme={sessionActionIconTheme}
+          initialPath={initialFilesystemPath}
+          onPathNavigated={() => setInitialFilesystemPath(null)}
+        />
+      ) : viewMode === 'localExplorer' ? (
+        <LocalFileExplorerSidebar
+          initialPath={localExplorerPath}
+          onBackToConnections={() => {
+            setViewMode('connections');
+            setLocalExplorerPath(null);
+          }}
+          sidebarCollapsed={sidebarCollapsed}
+          setSidebarCollapsed={setSidebarCollapsed}
+          explorerFont={explorerFont}
+          explorerFontSize={explorerFontSize}
+          uiTheme={uiTheme}
+          showToast={showToast}
+          setShowSettingsDialog={setShowSettingsDialog}
+          sessionActionIconTheme={sessionActionIconTheme}
+          iconTheme={iconTheme}
+          iconSize={iconSize}
+          folderIconSize={folderIconSize}
+        />
+      ) : (
+        // Vista de passwords
+        <PasswordManagerSidebar
+          nodes={nodes}
+          setNodes={setNodes}
+          showToast={showToast}
+          confirmDialog={confirmDialog}
+          uiTheme={uiTheme}
+          onBackToConnections={() => setViewMode('connections')}
+          sidebarCollapsed={sidebarCollapsed}
+          setSidebarCollapsed={setSidebarCollapsed}
+          iconTheme={iconTheme}
+          iconSize={iconSize}
+          folderIconSize={folderIconSize}
+          connectionIconSize={connectionIconSize}
+          explorerFont={explorerFont}
+          explorerFontSize={explorerFontSize}
+          masterKey={masterKey}
+          secureStorage={secureStorage}
+          setShowSettingsDialog={setShowSettingsDialog}
+          onShowImportDialog={setShowImportDialog}
+          sessionActionIconTheme={sessionActionIconTheme}
+          sidebarFilter={sidebarFilter}
+          treeTheme={treeTheme}
+        />
+      )}
+    </>
+  );
+
   return (
     <div
       ref={sidebarRef}
@@ -2612,382 +3066,7 @@ const Sidebar = React.memo(({
           </div>
         </div>
       ) : (
-        // Sidebar completa
-        <>
-          {viewMode === 'connections' ? (
-            // Vista de conexiones (árbol normal)
-            <>
-              {FUTURISTIC_UI_KEYS.includes(uiTheme) && (
-                <div style={{
-                  width: '100%',
-                  height: '0.5px',
-                  backgroundColor: 'var(--ui-sidebar-border)',
-                  opacity: 0.6,
-                  margin: 0,
-                  padding: 0,
-                  boxSizing: 'border-box',
-                  border: 'none',
-                  outline: 'none'
-                }} />
-              )}
-              <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
-                <Button
-                  className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                  onClick={() => setSidebarCollapsed(v => !v)}
-                  tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')}
-                  tooltipOptions={{ position: 'bottom' }}
-                  style={{
-                    marginRight: 8,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '40px',
-                    height: '40px',
-                    padding: 0
-                  }}
-                >
-                  <span style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '20px',
-                    height: '20px',
-                    color: 'var(--ui-sidebar-text)'
-                  }}>
-                    {sidebarCollapsed
-                      ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
-                      : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft
-                    }
-                  </span>
-                </Button>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
-                  <Button
-                    className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                    onClick={() => {
-                      // Abrir diálogo de selección de protocolo
-                      if (sidebarCallbacksRef?.current?.showProtocolSelection) {
-                        sidebarCallbacksRef.current.showProtocolSelection();
-                      } else {
-                        // Fallback: usar evento personalizado
-                        window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
-                      }
-                    }}
-                    tooltip={t('tooltips.newConnection')}
-                    tooltipOptions={{ position: 'bottom' }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '40px',
-                      height: '40px',
-                      padding: 0
-                    }}
-                  >
-                    <span style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '20px',
-                      height: '20px',
-                      color: 'var(--ui-sidebar-text)'
-                    }}>
-                      {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
-                    </span>
-                  </Button>
-                  <Button
-                    className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                    onClick={() => setShowFolderDialog(true)}
-                    tooltip={t('tooltips.createFolder')}
-                    tooltipOptions={{ position: 'bottom' }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '40px',
-                      height: '40px',
-                      padding: 0
-                    }}
-                  >
-                    <span style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '20px',
-                      height: '20px',
-                      color: 'var(--ui-sidebar-text)'
-                    }}>
-                      {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
-                    </span>
-                  </Button>
-                  <Button
-                    className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                    onClick={() => setShowCreateGroupDialog(true)}
-                    tooltip={t('tooltips.createGroup')}
-                    tooltipOptions={{ position: 'bottom' }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '40px',
-                      height: '40px',
-                      padding: 0
-                    }}
-                  >
-                    <span style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '20px',
-                      height: '20px',
-                      color: 'var(--ui-sidebar-text)'
-                    }}>
-                      {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
-                    </span>
-                  </Button>
-                  {hasActiveSshSession && onOpenFileExplorer && (
-                    <Button
-                      className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                      onClick={() => onOpenFileExplorer()}
-                      tooltip="Explorador SSH"
-                      tooltipOptions={{ position: 'bottom' }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '40px',
-                        height: '40px',
-                        padding: 0
-                      }}
-                    >
-                      <span style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '20px',
-                        height: '20px',
-                        color: 'var(--ui-sidebar-text)'
-                      }}>
-                        <i className="pi pi-folder-open" style={{ color: '#eab308', fontSize: '1.2rem' }} />
-                      </span>
-                    </Button>
-                  )}
-                  <Button
-                    className="p-button-rounded p-button-text sidebar-action-button glass-button key-button"
-                    onClick={() => setViewMode('passwords')}
-                    tooltip={t('tooltips.passwordManager')}
-                    tooltipOptions={{ position: 'bottom' }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '40px',
-                      height: '40px',
-                      padding: 0
-                    }}
-                  >
-                    <span style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '20px',
-                      height: '20px',
-                      color: '#ffc107'
-                    }}>
-                      {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
-                    </span>
-                  </Button>
-                  {filesystemAvailable && isAIChatActive && (
-                    <Button
-                      icon="pi pi-folder-open"
-                      className={`p-button-rounded p-button-text sidebar-action-button glass-button ${viewMode === 'filesystem' ? 'active' : ''}`}
-                      onClick={() => setViewMode('filesystem')}
-                      tooltip={t('tooltips.mcpExplorer')}
-                      tooltipOptions={{ position: 'bottom' }}
-                      style={{
-                        borderColor: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : undefined,
-                        color: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : undefined
-                      }}
-                    />
-                  )}
-                  {isAIChatActive && onToggleLocalTerminalForAIChat && (
-                    <Button
-                      icon="pi pi-desktop"
-                      className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                      onClick={() => onToggleLocalTerminalForAIChat()}
-                      tooltip={t('tooltips.localTerminal')}
-                      tooltipOptions={{ position: 'bottom' }}
-                      style={{
-                        borderColor: '#90caf9',
-                        color: '#90caf9'
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
-              <Divider className="my-2" />
-
-              <div
-                style={{
-                  flex: 1,
-                  minHeight: 0,
-                  overflowY: 'auto',
-                  overflowX: 'auto',
-                  position: 'relative',
-                  fontSize: `${explorerFontSize}px`,
-                  color: explorerFontColor || undefined,
-                  ...(explorerFontColor ? { '--ui-sidebar-text': explorerFontColor } : {})
-                }}
-                onContextMenu={onTreeAreaContextMenu}
-                className="tree-container"
-                onDragStart={handleExternalDragStart}
-              >
-                {nodes.length === 0 ? (
-                  <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
-                    No hay elementos en el árbol.<br />Usa el botón "+" para crear una carpeta o conexión.
-                  </div>
-                ) : (
-                  <Tree
-                    key={`tree-${iconTheme}-${explorerFontSize}-${treeTheme}-${explorerFontColor || 'default'}`} // Forzar re-render cuando cambie el tema
-                    value={nodes}
-                    selectionMode="single"
-                    selectionKeys={selectedNodeKey}
-                    onSelectionChange={e => {
-                      setSelectedNodeKey(e.value);
-
-                      // Encontrar el nodo completo para el panel de detalles
-                      const findNode = (nodeList, key) => {
-                        for (const node of nodeList) {
-                          if (node.key === key) return node;
-                          if (node.children) {
-                            const found = findNode(node.children, key);
-                            if (found) return found;
-                          }
-                        }
-                        return null;
-                      };
-
-                      // e.value puede ser un objeto { "key": true } o directamente un string "key"
-                      let selectedKey = null;
-                      if (typeof e.value === 'string') {
-                        selectedKey = e.value;
-                      } else if (e.value && typeof e.value === 'object') {
-                        selectedKey = Object.keys(e.value)[0];
-                      }
-
-                      const node = selectedKey ? findNode(nodes, selectedKey) : null;
-                      setSelectedNodeForDetails(node);
-                    }}
-                    expandedKeys={expandedKeys}
-                    onToggle={e => setExpandedKeys(e.value)}
-                    dragdropScope="sidebar"
-                    onDragDrop={onDragDrop}
-                    onDragEnd={() => {
-                      // Limpiar el nodo SSH arrastrado al finalizar el drag
-                      if (window.draggedSSHNodeRef) {
-                        window.draggedSSHNodeRef.current = null;
-                      }
-                    }}
-                    className={`sidebar-tree tree-theme-${treeTheme}`}
-                    data-icon-theme={iconTheme}
-                    data-tree-theme={treeTheme}
-                    data-font-color={explorerFontColor || ''}
-                    style={{
-                      fontSize: `${explorerFontSize}px`,
-                      color: explorerFontColor || undefined,
-                      '--icon-size': `${iconSize}px`,
-                      ...(explorerFontColor ? {
-                        '--ui-sidebar-text': explorerFontColor,
-                        '--tree-text-color': explorerFontColor
-                      } : {})
-                    }}
-                    nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })}
-                  />
-                )}
-              </div>
-
-              {/* Panel de detalles de conexión */}
-              <ConnectionDetailsPanel
-                selectedNode={selectedNodeForDetails}
-                uiTheme={uiTheme}
-                iconTheme={iconTheme}
-                sessionActionIconTheme={sessionActionIconTheme}
-                onNodeUpdate={updateNodeInTree}
-                onOpenSSHConnection={onOpenSSHConnection}
-                onOpenVncConnection={onOpenVncConnection}
-              />
-
-              <SidebarFooter
-                onConfigClick={() => setShowSettingsDialog(true)}
-                allExpanded={allExpanded}
-                toggleExpandAll={toggleExpandAll}
-                collapsed={sidebarCollapsed}
-                onShowImportDialog={onShowImportDialog || setShowImportDialog}
-                onShowExportDialog={onShowExportDialog}
-                onShowImportExportDialog={onShowImportExportDialog}
-                onShowImportWizard={onShowImportWizard}
-                sessionActionIconTheme={sessionActionIconTheme}
-              />
-            </>
-          ) : viewMode === 'filesystem' ? (
-            <SidebarFilesystemExplorer
-              status={filesystemStatus}
-              onBackToConnections={() => setViewMode('connections')}
-              sidebarCollapsed={sidebarCollapsed}
-              setSidebarCollapsed={setSidebarCollapsed}
-              explorerFont={explorerFont}
-              explorerFontSize={explorerFontSize}
-              uiTheme={uiTheme}
-              showToast={showToast}
-              sessionActionIconTheme={sessionActionIconTheme}
-              initialPath={initialFilesystemPath}
-              onPathNavigated={() => setInitialFilesystemPath(null)}
-            />
-          ) : viewMode === 'localExplorer' ? (
-            <LocalFileExplorerSidebar
-              initialPath={localExplorerPath}
-              onBackToConnections={() => {
-                setViewMode('connections');
-                setLocalExplorerPath(null);
-              }}
-              sidebarCollapsed={sidebarCollapsed}
-              setSidebarCollapsed={setSidebarCollapsed}
-              explorerFont={explorerFont}
-              explorerFontSize={explorerFontSize}
-              uiTheme={uiTheme}
-              showToast={showToast}
-              setShowSettingsDialog={setShowSettingsDialog}
-              sessionActionIconTheme={sessionActionIconTheme}
-              iconTheme={iconTheme}
-              iconSize={iconSize}
-              folderIconSize={folderIconSize}
-            />
-          ) : (
-            // Vista de passwords
-            <PasswordManagerSidebar
-              nodes={nodes}
-              setNodes={setNodes}
-              showToast={showToast}
-              confirmDialog={confirmDialog}
-              uiTheme={uiTheme}
-              onBackToConnections={() => setViewMode('connections')}
-              sidebarCollapsed={sidebarCollapsed}
-              setSidebarCollapsed={setSidebarCollapsed}
-              iconTheme={iconTheme}
-              iconSize={iconSize}
-              folderIconSize={folderIconSize}
-              connectionIconSize={connectionIconSize}
-              explorerFont={explorerFont}
-              explorerFontSize={explorerFontSize}
-              masterKey={masterKey}
-              secureStorage={secureStorage}
-              setShowSettingsDialog={setShowSettingsDialog}
-              onShowImportDialog={setShowImportDialog}
-              sessionActionIconTheme={sessionActionIconTheme}
-              sidebarFilter={sidebarFilter}
-              treeTheme={treeTheme}
-            />
-          )}
-        </>
+        fullSidebar
       )}
 
       <FolderDialog

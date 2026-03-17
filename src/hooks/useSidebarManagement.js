@@ -112,6 +112,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
 
   const lastExpandedKeysHashRef = useRef(localStorage.getItem(STORAGE_KEYS.EXPANDED_KEYS) || '');
   const isExternalExpandedKeysReloadRef = useRef(false);
+  const expandedKeysReloadHandleRef = useRef(null); // idle callback id o timeout id
 
   // Escuchar eventos de sincronización para actualizar expandedKeys
   useEffect(() => {
@@ -124,7 +125,32 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
             // console.log('[Sidebar] 📥 Reloading expanded keys from sync');
             lastExpandedKeysHashRef.current = remoteExpanded;
             isExternalExpandedKeysReloadRef.current = true;
-            setExpandedKeys(JSON.parse(remoteExpanded));
+
+            // Cancelar un reload pendiente para evitar trabajo repetido
+            if (expandedKeysReloadHandleRef.current) {
+              try {
+                if (typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'function') {
+                  window.cancelIdleCallback(expandedKeysReloadHandleRef.current);
+                } else {
+                  clearTimeout(expandedKeysReloadHandleRef.current);
+                }
+              } catch (_) {
+                // noop
+              }
+              expandedKeysReloadHandleRef.current = null;
+            }
+
+            const apply = () => {
+              expandedKeysReloadHandleRef.current = null;
+              setExpandedKeys(JSON.parse(remoteExpanded));
+            };
+
+            // Diferir parsing/setState para no bloquear interacciones (sidebar/tabs/resize)
+            if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+              expandedKeysReloadHandleRef.current = window.requestIdleCallback(apply, { timeout: 500 });
+            } else {
+              expandedKeysReloadHandleRef.current = setTimeout(apply, 0);
+            }
           }
         } catch (e) {
           console.error('Error reloading expanded keys', e);
@@ -138,6 +164,19 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     return () => {
       window.removeEventListener('settings-updated', handleSettingsUpdate);
       window.removeEventListener('storage', handleSettingsUpdate);
+
+      if (expandedKeysReloadHandleRef.current) {
+        try {
+          if (typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'function') {
+            window.cancelIdleCallback(expandedKeysReloadHandleRef.current);
+          } else {
+            clearTimeout(expandedKeysReloadHandleRef.current);
+          }
+        } catch (_) {
+          // noop
+        }
+        expandedKeysReloadHandleRef.current = null;
+      }
     };
   }, []);
 

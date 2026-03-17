@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
 import { FaWindows, FaUbuntu, FaLinux } from 'react-icons/fa';
@@ -469,6 +469,42 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     const createNewTabRef = useRef(null);
     const pendingCommands = useRef({}); // Cola de comandos pendientes por terminal
     const terminalReadyFlags = useRef({}); // Flags de terminals listos
+    const fitRafIdRef = useRef(null);
+    const fitTimeoutIdsRef = useRef([]);
+
+    const cancelScheduledFit = useCallback(() => {
+        if (fitRafIdRef.current) {
+            cancelAnimationFrame(fitRafIdRef.current);
+            fitRafIdRef.current = null;
+        }
+        if (fitTimeoutIdsRef.current.length) {
+            fitTimeoutIdsRef.current.forEach(id => clearTimeout(id));
+            fitTimeoutIdsRef.current = [];
+        }
+    }, []);
+
+    const scheduleFitForTab = useCallback((tabId) => {
+        cancelScheduledFit();
+
+        const doFit = () => {
+            const terminalRef = terminalRefs.current[tabId];
+            if (terminalRef && terminalRef.fit) {
+                try {
+                    terminalRef.fit();
+                } catch (error) {
+                    // Silently handle errors
+                }
+            }
+        };
+
+        // Un RAF + 2 intentos diferidos suele ser suficiente sin saturar el main thread
+        fitRafIdRef.current = requestAnimationFrame(() => {
+            fitRafIdRef.current = null;
+            doFit();
+        });
+        fitTimeoutIdsRef.current.push(setTimeout(doFit, 60));
+        fitTimeoutIdsRef.current.push(setTimeout(doFit, 220));
+    }, [cancelScheduledFit]);
 
     // Exponer métodos para uso externo
     useImperativeHandle(ref, () => ({
@@ -1088,94 +1124,31 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     useEffect(() => {
         const activeTab = tabs.find(tab => tab.active);
         if (activeTab) {
-            // console.log(`Tab change effect triggered for tab: ${activeTab.id}, key: ${activeTabKey}`);
-
-            // Forzar re-render del terminal activo con múltiples intentos
-            const resizeTerminal = () => {
-                const terminalRef = terminalRefs.current[activeTab.id];
-                if (terminalRef && terminalRef.fit) {
-                    try {
-                        terminalRef.fit();
-                        // console.log(`Terminal ${activeTab.id} resized successfully (key: ${activeTabKey})`);
-                    } catch (error) {
-                        // console.error(`Error resizing terminal ${activeTab.id}:`, error);
-                    }
-                } else {
-                    // console.warn(`Terminal ref not found for tab ${activeTab.id}`);
-                }
-            };
-
-            // Intentar redimensionar con diferentes delays para asegurar que el DOM esté listo
-            resizeTerminal();
-            setTimeout(resizeTerminal, 10);
-            setTimeout(resizeTerminal, 50);
-            setTimeout(resizeTerminal, 100);
-            setTimeout(resizeTerminal, 200);
-            setTimeout(resizeTerminal, 500);
-
-            // También intentar después de que el navegador haya procesado el cambio de visibilidad
-            requestAnimationFrame(() => {
-                setTimeout(resizeTerminal, 0);
-                setTimeout(resizeTerminal, 50);
-            });
+            scheduleFitForTab(activeTab.id);
         }
-    }, [tabs, activeTabKey]);
+        return () => {
+            // Si el efecto se reemplaza rápidamente (tab change), cancelamos fits pendientes
+            cancelScheduledFit();
+        };
+    }, [tabs, activeTabKey, scheduleFitForTab, cancelScheduledFit]);
 
     // Efecto adicional que se ejecuta cuando cambia la key activa
     useEffect(() => {
         const activeTab = tabs.find(tab => tab.active);
         if (activeTab && activeTabKey > 0) {
-            // console.log(`Active tab key changed to ${activeTabKey}, forcing resize for tab: ${activeTab.id}`);
-
-            const forceResize = () => {
-                const terminalRef = terminalRefs.current[activeTab.id];
-                if (terminalRef && terminalRef.fit) {
-                    try {
-                        terminalRef.fit();
-                        // console.log(`Force resize successful for tab ${activeTab.id} (key: ${activeTabKey})`);
-                    } catch (error) {
-                        // console.error(`Force resize error for tab ${activeTab.id}:`, error);
-                    }
-                }
-            };
-
-            // Forzar redimensionamiento inmediato y con delays
-            forceResize();
-            setTimeout(forceResize, 0);
-            setTimeout(forceResize, 10);
-            setTimeout(forceResize, 50);
-            setTimeout(forceResize, 100);
-            setTimeout(forceResize, 200);
+            scheduleFitForTab(activeTab.id);
         }
-    }, [activeTabKey, tabs]);
+        return () => cancelScheduledFit();
+    }, [activeTabKey, tabs, scheduleFitForTab, cancelScheduledFit]);
 
     // Efecto para redimensionar terminales cuando cambia el estado (minimized/maximized/normal)
     useEffect(() => {
         const activeTab = tabs.find(tab => tab.active);
         if (activeTab && terminalState) {
-            const forceResize = () => {
-                const terminalRef = terminalRefs.current[activeTab.id];
-                if (terminalRef && terminalRef.fit) {
-                    try {
-                        terminalRef.fit();
-                    } catch (error) {
-                        // Silently handle errors
-                    }
-                }
-            };
-
-            // Redimensionar cuando cambia el estado del terminal
-            // Usar requestAnimationFrame para asegurar que el layout se haya actualizado
-            requestAnimationFrame(() => {
-                forceResize();
-                setTimeout(forceResize, 0);
-                setTimeout(forceResize, 50);
-                setTimeout(forceResize, 100);
-                setTimeout(forceResize, 200);
-                setTimeout(forceResize, 400);
-            });
+            scheduleFitForTab(activeTab.id);
         }
-    }, [terminalState, tabs]);
+        return () => cancelScheduledFit();
+    }, [terminalState, tabs, scheduleFitForTab, cancelScheduledFit]);
 
     // Opciones para el selector de tipo de terminal (dinámicas basadas en SO y distribuciones disponibles)
     const getTerminalOptions = () => {
@@ -1497,23 +1470,8 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         // Incrementar la key para forzar re-render
         setActiveTabKey(prev => prev + 1);
 
-        // Forzar redimensionamiento agresivo
-        setTimeout(() => {
-            const terminalRef = terminalRefs.current[tabId];
-            if (terminalRef && terminalRef.fit) {
-                // console.log(`Forcing aggressive resize for tab: ${tabId}`);
-                try {
-                    terminalRef.fit();
-                    // Intentar múltiples veces
-                    setTimeout(() => terminalRef.fit(), 10);
-                    setTimeout(() => terminalRef.fit(), 50);
-                    setTimeout(() => terminalRef.fit(), 100);
-                    setTimeout(() => terminalRef.fit(), 200);
-                } catch (error) {
-                    // console.error(`Error in aggressive resize for tab ${tabId}:`, error);
-                }
-            }
-        }, 0);
+        // Redimensionar el terminal activo sin saturar el main thread
+        scheduleFitForTab(tabId);
     };
 
     // Función para cerrar una pestaña

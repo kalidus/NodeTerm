@@ -20,6 +20,9 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
 
   // Ref para throttling del resize
   // const resizeTimeoutRef = useRef(null); // Ahora viene desde fuera
+  // Nota: `resizeTimeoutRef` se comparte con otros hooks; evitamos reutilizarlo para ids mixtos (RAF/timeout)
+  const resizeRafIdRef = useRef(null);
+  const resizeThrottleTimerIdRef = useRef(null);
 
   // ============ EFECTOS PARA EVENTOS GLOBALES ============
 
@@ -48,23 +51,19 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
     if (!activeTab) return;
 
     // Cancelar resize anterior si existe
-    if (resizeTimeoutRef.current) {
-      cancelAnimationFrame(resizeTimeoutRef.current);
-    }
+    if (resizeRafIdRef.current) cancelAnimationFrame(resizeRafIdRef.current);
 
     // Usar requestAnimationFrame para máxima fluidez
-    resizeTimeoutRef.current = requestAnimationFrame(() => {
+    resizeRafIdRef.current = requestAnimationFrame(() => {
       resizeTerminals(activeTab, [], []); // homeTabs y fileExplorerTabs los pasamos vacíos ya que están en el hook de tabs
     });
   }, [getFilteredTabs, activeTabIndex, resizeTerminals]);
 
   // Versión con throttling para onResize del splitter
   const handleResizeThrottled = useCallback(() => {
-    if (resizeTimeoutRef.current) {
-      clearTimeout(resizeTimeoutRef.current);
-    }
+    if (resizeThrottleTimerIdRef.current) clearTimeout(resizeThrottleTimerIdRef.current);
 
-    resizeTimeoutRef.current = setTimeout(() => {
+    resizeThrottleTimerIdRef.current = setTimeout(() => {
       handleResize();
     }, 32); // ~30fps - Optimización para macOS donde el redimensionamiento es más pesado
   }, [handleResize]);
@@ -83,12 +82,40 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
 
   // useEffect para redimensionar terminal cuando se colapsa/expande el sidebar
   useEffect(() => {
-    // Necesitamos un pequeño delay para que el CSS termine la transición
-    const timeoutId = setTimeout(() => {
-      handleResize();
-    }, 250); // Coincide con la duración de la transición CSS (0.2s + buffer)
+    let done = false;
+    let fallbackTimeoutId = null;
 
-    return () => clearTimeout(timeoutId);
+    const runOnce = () => {
+      if (done) return;
+      done = true;
+      handleResize();
+    };
+
+    // Esperar fin de transición del ancho para evitar resize durante reflow
+    const sidebarEl = document.querySelector('.sidebar-container');
+    const onTransitionEnd = (e) => {
+      // Dependiendo del layout/PrimeReact, puede ser width/flex-basis/max-width
+      if (e?.propertyName && !['width', 'flex-basis', 'max-width', 'min-width'].includes(e.propertyName)) {
+        return;
+      }
+      runOnce();
+    };
+
+    if (sidebarEl && sidebarEl.addEventListener) {
+      sidebarEl.addEventListener('transitionend', onTransitionEnd, { passive: true });
+      // Fallback por si no dispara transitionend (o el CSS no transiciona)
+      fallbackTimeoutId = setTimeout(runOnce, 320);
+    } else {
+      // Fallback más simple si no encontramos el elemento
+      fallbackTimeoutId = setTimeout(runOnce, 250);
+    }
+
+    return () => {
+      if (fallbackTimeoutId) clearTimeout(fallbackTimeoutId);
+      if (sidebarEl && sidebarEl.removeEventListener) {
+        sidebarEl.removeEventListener('transitionend', onTransitionEnd);
+      }
+    };
   }, [sidebarCollapsed, handleResize]); // Se ejecuta cuando cambia el estado del sidebar
 
   // Optimización para redimensionamiento fluido del splitter
@@ -126,9 +153,8 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
   // Cleanup del timeout al desmontar
   useEffect(() => {
     return () => {
-      if (resizeTimeoutRef.current) {
-        cancelAnimationFrame(resizeTimeoutRef.current);
-      }
+      if (resizeRafIdRef.current) cancelAnimationFrame(resizeRafIdRef.current);
+      if (resizeThrottleTimerIdRef.current) clearTimeout(resizeThrottleTimerIdRef.current);
     };
   }, []);
 
