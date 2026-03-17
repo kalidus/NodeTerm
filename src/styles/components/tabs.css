@@ -644,20 +644,21 @@
 /* Forzar el color correcto de las flechas de navegación */
 .tab-nav-arrow {
   color: var(--ui-tab-text) !important;
-  background: rgba(0, 0, 0, 0.3) !important;
+  background: transparent !important;
   border: none !important;
-  backdrop-filter: blur(2px);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .tab-nav-arrow:hover {
   color: var(--ui-tab-text) !important;
-  background: rgba(0, 0, 0, 0.4) !important;
+  background: rgba(0, 0, 0, 0.18) !important;
 }
 
 .tab-nav-arrow:active,
 .tab-nav-arrow:focus {
   color: var(--ui-tab-text) !important;
-  background: rgba(0, 0, 0, 0.5) !important;
+  background: rgba(0, 0, 0, 0.26) !important;
   box-shadow: none !important;
 }
 
@@ -667,13 +668,13 @@
 
 .tab-nav-arrow.p-button:not(:disabled):hover {
   color: var(--ui-tab-text) !important;
-  background: rgba(0, 0, 0, 0.4) !important;
+  background: rgba(0, 0, 0, 0.18) !important;
   border-color: transparent !important;
 }
 
 .tab-nav-arrow.p-button:not(:disabled):active {
   color: var(--ui-tab-text) !important;
-  background: rgba(0, 0, 0, 0.5) !important;
+  background: rgba(0, 0, 0, 0.26) !important;
   border-color: transparent !important;
 }
 

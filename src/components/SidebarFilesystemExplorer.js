@@ -756,14 +756,17 @@ const SidebarFilesystemExplorer = ({
         autoZIndex={true}
       />
       
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        padding: '0.5rem 0.5rem 0.25rem 0.5rem',
-        width: '100%',
-        boxSizing: 'border-box',
-        overflow: 'visible'
-      }}>
+      <div
+        className="sidebar-top-toolbar"
+        style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          padding: '0.5rem 0.5rem 0.25rem 0.5rem',
+          width: '100%',
+          boxSizing: 'border-box',
+          overflow: 'visible'
+        }}
+      >
         <Button 
           className="p-button-rounded p-button-text sidebar-action-button glass-button" 
           onClick={() => setSidebarCollapsed(v => !v)} 

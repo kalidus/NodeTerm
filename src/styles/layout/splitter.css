@@ -14,6 +14,12 @@
   width: 100%;
 }
 
+/* Evitar “banda difuminada” en la unión sidebar <-> panel derecho:
+   la sombra del contenedor principal (TerminalFrame) se proyecta hacia la izquierda. */
+.main-splitter .p-splitter-panel:last-child .terminal-frame {
+  box-shadow: none !important;
+}
+
 /* Tamaño mínimo para el panel lateral */
 .p-splitter .p-splitter-panel:first-child {
   min-height: 47px !important;

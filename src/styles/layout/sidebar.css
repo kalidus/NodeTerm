@@ -694,8 +694,10 @@
 }
 /* Sidebar optimizada sin interferir con eventos */
 .sidebar-container {
-  transform: translateZ(0);
-  backface-visibility: hidden;
+  /* Evita artefactos visuales (fade/banda gris) en Electron/Chromium
+     causados por la composición GPU en los bordes del panel. */
+  transform: none !important;
+  backface-visibility: visible !important;
 }
 /* Solo aplicar will-change durante el redimensionamiento */
 .p-splitter.p-splitter-resizing .sidebar-container {
@@ -932,6 +934,15 @@
   border: none !important;
   box-shadow: none !important;
   transition: opacity 0.2s ease !important;
+}
+
+/* Fondo sólido para la toolbar superior del sidebar (evita “fade/blur” lateral) */
+.sidebar-top-toolbar {
+  background: var(--ui-sidebar-bg, #1a1b26) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+  filter: none !important;
 }
 
 .sidebar-action-button.glass-button:hover {
