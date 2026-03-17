@@ -2313,22 +2313,24 @@ const Sidebar = React.memo(({
               tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')}
               tooltipOptions={{ position: 'bottom' }}
               style={{
-                marginRight: 6,
+                marginRight: 4,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: '32px',
-                height: '32px',
-                padding: 0
+                width: '38px',
+                height: '38px',
+                padding: 0,
+                transition: 'all 0.3s ease'
               }}
             >
               <span style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: '20px',
-                height: '20px',
-                color: 'var(--ui-sidebar-text)'
+                width: '24px',
+                height: '24px',
+                color: 'var(--ui-sidebar-text)',
+                opacity: 0.9
               }}>
                 {sidebarCollapsed
                   ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
@@ -2337,12 +2339,21 @@ const Sidebar = React.memo(({
               </span>
             </Button>
 
+            {/* SEPARADOR TIPO GLASS */}
+            <div style={{
+              width: '1px',
+              height: '24px',
+              background: 'linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.15), transparent)',
+              margin: '0 8px',
+              boxShadow: '0 0 5px rgba(255, 255, 255, 0.05)'
+            }} />
+
             {/* BARRA DE ACCIONES: GLASS STACK EFFECT */}
             <div className="sidebar-action-glass-group" style={{
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              marginLeft: 'auto',
+              marginLeft: '0',
               position: 'relative',
               zIndex: 2
             }}>
@@ -2444,6 +2455,48 @@ const Sidebar = React.memo(({
                   {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
                 </span>
               </Button>
+
+              {/* SEPARADOR IDÉNTICO AL PRIMERO */}
+              <div style={{
+                width: '1px',
+                height: '24px',
+                background: 'linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.15), transparent)',
+                margin: '0 8px',
+                boxShadow: '0 0 5px rgba(255, 255, 255, 0.05)'
+              }} />
+
+              <Button
+                className="p-button-rounded p-button-text sidebar-action-button glass-button key-button"
+                onClick={() => setViewMode('passwords')}
+                tooltip={t('tooltips.passwordManager')}
+                tooltipOptions={{ position: 'bottom' }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px',
+                  padding: 0,
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                  borderRadius: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: '#ffc107'
+                }}>
+                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
+                </span>
+              </Button>
+
+              {/* EXPLORADOR SSH A LA DERECHA DEL TODO */}
               {hasActiveSshSession && onOpenFileExplorer && (
                 <Button
                   className="p-button-rounded p-button-text sidebar-action-button glass-button"
@@ -2476,36 +2529,6 @@ const Sidebar = React.memo(({
                   </span>
                 </Button>
               )}
-              <Button
-                className="p-button-rounded p-button-text sidebar-action-button glass-button key-button"
-                onClick={() => setViewMode('passwords')}
-                tooltip={t('tooltips.passwordManager')}
-                tooltipOptions={{ position: 'bottom' }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '32px',
-                  height: '32px',
-                  padding: 0,
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-                  borderRadius: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
-                  color: '#ffc107'
-                }}>
-                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
-                </span>
-              </Button>
             </div>
             {(filesystemAvailable && isAIChatActive) || (isAIChatActive && onToggleLocalTerminalForAIChat) ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8 }}>
