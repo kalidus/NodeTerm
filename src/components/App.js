@@ -3040,6 +3040,8 @@ const App = () => {
           memoizedSidebarProps={memoizedSidebarProps}
           treeTheme={treeTheme}
           setTreeTheme={setTreeTheme}
+          sessionActionIconTheme={sessionActionIconTheme}
+          setSessionActionIconTheme={setSessionActionIconTheme}
 
           // Tab management props
           homeTabs={homeTabs}
