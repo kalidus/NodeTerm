@@ -302,6 +302,20 @@ export const sessionActionIconThemes = {
                 strokeLinecap="round"
                 filter="url(#modernSettingsShadow)"/>
         </svg>
+      ),
+      treeTheme: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="modernTreeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#0ea5e9" />
+              <stop offset="100%" stopColor="#2563eb" />
+            </linearGradient>
+          </defs>
+          <path d="M20 12h-8m0 0V5m0 7v7" stroke="url(#modernTreeGrad)" strokeWidth="2" strokeLinecap="round"/>
+          <rect x="4" y="10" width="4" height="4" rx="1" stroke="url(#modernTreeGrad)" strokeWidth="2"/>
+          <rect x="16" y="4" width="4" height="4" rx="1" stroke="url(#modernTreeGrad)" strokeWidth="2"/>
+          <rect x="16" y="16" width="4" height="4" rx="1" stroke="url(#modernTreeGrad)" strokeWidth="2"/>
+        </svg>
       )
     }
   },
@@ -388,6 +402,14 @@ export const sessionActionIconThemes = {
                 stroke="currentColor" 
                 strokeWidth="1.5" 
                 strokeLinecap="round"/>
+        </svg>
+      ),
+      treeTheme: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 12h-8m0 0V5m0 7v7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <rect x="4" y="10" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="2"/>
+          <rect x="16" y="4" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="2"/>
+          <rect x="16" y="16" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="2"/>
         </svg>
       )
     }
@@ -480,6 +502,14 @@ export const sessionActionIconThemes = {
                 stroke="currentColor" 
                 strokeWidth="1.5" 
                 strokeLinecap="round"/>
+        </svg>
+      ),
+      treeTheme: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 12h-8m0 0V5m0 7v7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <rect x="4" y="10" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="2" fill="currentColor" opacity="0.1"/>
+          <rect x="16" y="4" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="2" fill="currentColor" opacity="0.1"/>
+          <rect x="16" y="16" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="2" fill="currentColor" opacity="0.1"/>
         </svg>
       )
     }
@@ -688,6 +718,27 @@ export const sessionActionIconThemes = {
                 strokeLinecap="round" 
                 filter="url(#neonSettingsGlow)"/>
         </svg>
+      ),
+      treeTheme: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="neonTreeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ff00ff" />
+              <stop offset="100%" stopColor="#00ffff" />
+            </linearGradient>
+            <filter id="neonTreeGlow">
+              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <path d="M20 12h-8m0 0V5m0 7v7" stroke="url(#neonTreeGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#neonTreeGlow)"/>
+          <rect x="4" y="10" width="4" height="4" rx="1" stroke="url(#neonTreeGrad)" strokeWidth="2" filter="url(#neonTreeGlow)"/>
+          <rect x="16" y="4" width="4" height="4" rx="1" stroke="url(#neonTreeGrad)" strokeWidth="2" filter="url(#neonTreeGlow)"/>
+          <rect x="16" y="16" width="4" height="4" rx="1" stroke="url(#neonTreeGrad)" strokeWidth="2" filter="url(#neonTreeGlow)"/>
+        </svg>
       )
     }
   },
@@ -816,6 +867,14 @@ export const sessionActionIconThemes = {
                 strokeWidth="1.5" 
                 strokeLinecap="round"/>
         </svg>
+      ),
+      treeTheme: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 12h-8m0 0V5m0 7v7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <rect x="4" y="10" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="2"/>
+          <rect x="16" y="4" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="2"/>
+          <rect x="16" y="16" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="2"/>
+        </svg>
       )
     }
   },
@@ -898,6 +957,14 @@ export const sessionActionIconThemes = {
                 stroke="currentColor" 
                 strokeWidth="2" 
                 strokeLinecap="round"/>
+        </svg>
+      ),
+      treeTheme: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 12h-8m0 0V5m0 7v7" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+          <rect x="3" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="3" fill="currentColor" opacity="0.2"/>
+          <rect x="15" y="3" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="3" fill="currentColor" opacity="0.2"/>
+          <rect x="15" y="15" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="3" fill="currentColor" opacity="0.2"/>
         </svg>
       )
     }
@@ -995,6 +1062,14 @@ export const sessionActionIconThemes = {
                 strokeWidth="2" 
                 strokeLinecap="round"/>
         </svg>
+      ),
+      treeTheme: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 12h-8m0 0V5m0 7v7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+          <rect x="4" y="10" width="4" height="4" rx="1.5" stroke="currentColor" strokeWidth="2.5" fill="currentColor" opacity="0.2"/>
+          <rect x="16" y="4" width="4" height="4" rx="1.5" stroke="currentColor" strokeWidth="2.5" fill="currentColor" opacity="0.2"/>
+          <rect x="16" y="16" width="4" height="4" rx="1.5" stroke="currentColor" strokeWidth="2.5" fill="currentColor" opacity="0.2"/>
+        </svg>
       )
     }
   },
@@ -1068,6 +1143,14 @@ export const sessionActionIconThemes = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <polygon points="12,1 15,9 23,9 17,14 19,22 12,18 5,22 7,14 1,9 9,9" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2"/>
           <circle cx="12" cy="12" r="2.5" fill="currentColor"/>
+        </svg>
+      ),
+      treeTheme: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 12h8m-8-8v16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <polygon points="2,12 6,8 10,12 6,16" stroke="currentColor" strokeWidth="2" fill="currentColor" opacity="0.2"/>
+          <polygon points="16,2 20,6 16,10 12,6" stroke="currentColor" strokeWidth="2" fill="currentColor" opacity="0.2"/>
+          <polygon points="16,14 20,18 16,22 12,18" stroke="currentColor" strokeWidth="2" fill="currentColor" opacity="0.2"/>
         </svg>
       )
     }
@@ -1151,6 +1234,14 @@ export const sessionActionIconThemes = {
                 stroke="currentColor" 
                 strokeWidth="2.5" 
                 strokeLinecap="round"/>
+        </svg>
+      ),
+      treeTheme: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 12h-8m0 0V5m0 7v7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+          <rect x="4" y="10" width="4" height="4" rx="1" fill="currentColor"/>
+          <rect x="16" y="4" width="4" height="4" rx="1" fill="currentColor"/>
+          <rect x="16" y="16" width="4" height="4" rx="1" fill="currentColor"/>
         </svg>
       )
     }
@@ -1249,6 +1340,14 @@ export const sessionActionIconThemes = {
                 strokeWidth="2" 
                 strokeLinecap="round"
                 opacity="0.6"/>
+        </svg>
+      ),
+      treeTheme: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 12h-8m0 0V5m0 7v7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.6"/>
+          <rect x="4" y="10" width="4" height="4" rx="1" fill="currentColor" opacity="0.3"/>
+          <rect x="16" y="4" width="4" height="4" rx="1" fill="currentColor" opacity="0.4"/>
+          <rect x="16" y="16" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
         </svg>
       )
     }
@@ -1351,6 +1450,15 @@ export const sessionActionIconThemes = {
           <rect x="10" y="17" width="4" height="6" fill="currentColor"/>
           <rect x="1" y="10" width="6" height="4" fill="currentColor"/>
           <rect x="17" y="10" width="6" height="4" fill="currentColor"/>
+        </svg>
+      ),
+      treeTheme: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="2" width="4" height="20" fill="currentColor" opacity="0.3"/>
+          <rect x="10" y="10" width="10" height="4" fill="currentColor" opacity="0.3"/>
+          <rect x="2" y="9" width="6" height="6" fill="currentColor"/>
+          <rect x="16" y="3" width="6" height="6" fill="currentColor"/>
+          <rect x="16" y="15" width="6" height="6" fill="currentColor"/>
         </svg>
       )
     }
@@ -1466,6 +1574,14 @@ export const sessionActionIconThemes = {
                 strokeLinecap="round" 
                 strokeLinejoin="round" 
                 fill="none"/>
+        </svg>
+      ),
+      treeTheme: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 12h-8m0 0V5m0 7v7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <rect x="4" y="10" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <rect x="16" y="4" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <rect x="16" y="16" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       )
     }

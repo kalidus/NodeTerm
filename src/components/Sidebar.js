@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from 'primereact/button';
+import { OverlayPanel } from 'primereact/overlaypanel';
 import { Tree } from 'primereact/tree';
 import { Divider } from 'primereact/divider';
 import SidebarFooter from './SidebarFooter';
@@ -20,7 +21,7 @@ import localStorageSyncService from '../services/LocalStorageSyncService';
 import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorite as isFavoriteConn } from '../utils/connectionStore';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { STORAGE_KEYS } from '../utils/constants';
-import { getTreeTheme } from '../themes/tree-themes';
+import { treeThemes, treeThemeOptions, getTreeTheme } from '../themes/tree-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/tree-themes.css';
 
@@ -128,6 +129,7 @@ const Sidebar = React.memo(({
 
   // Tema del árbol
   treeTheme = 'default',
+  setTreeTheme,
 
   // Tema de iconos de acción
   sessionActionIconTheme = 'modern',
@@ -144,6 +146,8 @@ const Sidebar = React.memo(({
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
+  
+
 
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
@@ -2496,6 +2500,8 @@ const Sidebar = React.memo(({
                 </span>
               </Button>
 
+
+
               {/* EXPLORADOR SSH A LA DERECHA DEL TODO */}
               {hasActiveSshSession && onOpenFileExplorer && (
                 <Button
@@ -3214,6 +3220,8 @@ const Sidebar = React.memo(({
         themeName={iconThemes[iconTheme]?.name || 'Material'}
       />
       {/* Los diálogos de edición SSH y RDP ahora se manejan en DialogsManager */}
+
+
 
       <ImportDialog
         visible={showImportDialog}

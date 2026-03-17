@@ -454,6 +454,18 @@
 }
 
 /* --- Integration Styles for internal components --- */
+.tree-theme-overlay-fix.p-overlaypanel {
+    overflow: visible !important;
+}
+
+.tree-theme-overlay-fix.p-overlaypanel .p-overlaypanel-content {
+    overflow: visible !important;
+    padding: 0 !important;
+}
+
+.tree-theme-overlay-fix .theme-item:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+}
 
 /* Sidebar overrides within TerminalFrame */
 .terminal-frame .sidebar-container {

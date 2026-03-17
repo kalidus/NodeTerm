@@ -19,6 +19,9 @@ import { TAB_TYPES } from '../utils/constants';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import { applyTabTheme, getTabThemeList, applyTabLayout, getTabLayoutList, loadSavedTabLayout } from '../utils/tabThemeLoader';
+import { OverlayPanel } from 'primereact/overlaypanel';
+import { treeThemes, treeThemeOptions } from '../themes/tree-themes';
+import '../styles/components/tree-themes.css';
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
 const TAB_LAYOUT_STORAGE_KEY = 'nodeterm_tab_layout';
@@ -31,6 +34,8 @@ const MainContentArea = ({
   handleResize,
   handleResizeThrottled,
   memoizedSidebarProps,
+  treeTheme,
+  setTreeTheme,
 
   // Tab management props
   homeTabs,
@@ -127,6 +132,7 @@ const MainContentArea = ({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const tabsContainerRef = useRef(null);
+  const treeThemePanelRef = useRef(null);
 
   // Estado para el panel SSH System Monitor
   const [sshSystemMonitorTabId, setSshSystemMonitorTabId] = useState(null);
@@ -1580,6 +1586,28 @@ const MainContentArea = ({
             className={sidebarCollapsed ? 'sidebar-collapsed' : ''}
             showControls={!sidebarCollapsed}
             hideHeader={mainFrameHeaderCollapsed}
+            headerExtra={!sidebarCollapsed && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                <Button 
+                  icon="pi pi-palette" 
+                  className="p-button-rounded p-button-text p-button-plain" 
+                  style={{ 
+                    width: '18px', 
+                    height: '18px', 
+                    padding: 0, 
+                    color: 'var(--ui-sidebar-text, rgba(255,255,255,0.7))',
+                    fontSize: '0.75rem',
+                    background: 'transparent',
+                    border: 'none',
+                    boxShadow: 'none',
+                    opacity: 0.6
+                  }} 
+                  onClick={(e) => treeThemePanelRef.current?.toggle(e)}
+                  tooltip="Tema del Árbol"
+                  tooltipOptions={{ position: 'bottom' }}
+                />
+              </div>
+            )}
           >
             <Sidebar
               {...memoizedSidebarProps}
@@ -1588,6 +1616,116 @@ const MainContentArea = ({
               sidebarCollapsed={sidebarCollapsed}
             />
           </TerminalFrame>
+
+          {/* Overlay Panel para selección de tema de árbol */}
+          <OverlayPanel 
+            ref={treeThemePanelRef} 
+            id="tree_theme_panel_main" 
+            style={{ 
+              width: '260px', 
+              background: 'var(--ui-dialog-bg, #1a1a1e)', 
+              border: '1px solid var(--ui-tab-border, rgba(255,255,255,0.1))', 
+              borderRadius: '12px', 
+              boxShadow: '0 15px 50px rgba(0,0,0,0.8)', 
+              backdropFilter: 'blur(30px)', 
+              zIndex: 10001,
+              marginTop: '5px'
+            }}
+            className="glass-panel tree-theme-overlay-fix"
+            appendTo={document.body}
+          >
+            <div style={{ padding: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', padding: '0 8px' }}>
+                <i className="pi pi-palette" style={{ color: 'var(--primary-color)', fontSize: '1rem' }}></i>
+                <span style={{ fontWeight: '600', fontSize: '0.95rem', color: 'var(--ui-sidebar-text)', letterSpacing: '0.5px' }}>Temas del Árbol</span>
+              </div>
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '4px', 
+                maxHeight: '400px', 
+                overflowY: 'auto', 
+                paddingRight: '4px',
+                scrollbarWidth: 'thin'
+              }}>
+                {treeThemeOptions.map((opt) => {
+                  const theme = treeThemes[opt.value] || {};
+                  const isActive = treeTheme === opt.value;
+                  return (
+                    <div 
+                      key={opt.value}
+                      onClick={() => setTreeTheme?.(opt.value)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '10px 12px',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        background: isActive ? 'rgba(var(--primary-rgb, 33, 150, 243), 0.15)' : 'transparent',
+                        border: '1px solid',
+                        borderColor: isActive ? 'rgba(var(--primary-rgb, 33, 150, 243), 0.3)' : 'transparent',
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        position: 'relative'
+                      }}
+                      className="theme-item"
+                    >
+                      <div style={{
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'rgba(0,0,0,0.3)',
+                        fontSize: '1.2rem',
+                        flexShrink: 0
+                      }}>
+                        {opt.value === 'default' && <i className="pi pi-sitemap" style={{ color: '#4fc3f7' }} />}
+                        {opt.value === 'minimal' && <i className="pi pi-minus" style={{ color: '#90a4ae' }} />}
+                        {opt.value === 'connected' && <i className="pi pi-share-alt" style={{ color: '#81c784' }} />}
+                        {opt.value === 'compact' && <i className="pi pi-align-justify" style={{ color: '#ce93d8' }} />}
+                        {opt.value === 'neon' && <i className="pi pi-bolt" style={{ color: '#ff4081' }} />}
+                        {opt.value === 'cyber' && <i className="pi pi-code" style={{ color: '#00e5ff' }} />}
+                        {opt.value === 'modern' && <i className="pi pi-objects-column" style={{ color: '#ffb74d' }} />}
+                        {opt.value === 'dotted' && <i className="pi pi-ellipsis-v" style={{ color: '#fff176' }} />}
+                        {opt.value === 'matrix' && <i className="pi pi-microsoft" style={{ color: '#4caf50' }} />}
+                        {opt.value.includes('Compact') && <i className="pi pi-compress" style={{ color: '#90caf9' }} />}
+                        {!['default', 'minimal', 'connected', 'compact', 'neon', 'cyber', 'modern', 'dotted', 'matrix'].includes(opt.value) && !opt.value.includes('Compact') && <i className="pi pi-folder" style={{ color: 'var(--primary-color)' }} />}
+                      </div>
+                      <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        minWidth: 0, 
+                        flex: 1,
+                        lineHeight: '1.2' 
+                      }}>
+                        <div style={{ 
+                          fontSize: '0.82rem', 
+                          fontWeight: isActive ? '600' : '500', 
+                          color: isActive ? 'var(--primary-color)' : 'var(--ui-sidebar-text)',
+                          marginBottom: '2px'
+                        }}>
+                          {opt.label}
+                        </div>
+                        <div style={{ 
+                          fontSize: '0.68rem', 
+                          opacity: 0.5, 
+                          whiteSpace: 'nowrap', 
+                          overflow: 'hidden', 
+                          textOverflow: 'ellipsis',
+                          color: 'var(--ui-sidebar-text)'
+                        }}>
+                          {theme.description || ''}
+                        </div>
+                      </div>
+                      {isActive && <i className="pi pi-check" style={{ color: 'var(--primary-color)', fontSize: '0.8rem' }} />}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </OverlayPanel>
         </SplitterPanel>
 
         <SplitterPanel

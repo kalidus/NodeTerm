@@ -150,10 +150,18 @@ const TerminalFrame = ({
                         )
                     )}
 
-                    {title && <div className="terminal-frame-title">{title}</div>}
+                    {/* Título - actúa como espaciador si no hay título pero sí extra */}
+                    <div className="terminal-frame-title" style={{ flex: title ? '1' : '1', visibility: title ? 'visible' : 'hidden' }}>
+                        {title}
+                    </div>
 
                     {headerExtra && (
-                        <div className="terminal-frame-header-extra" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
+                        <div className="terminal-frame-header-extra" style={{ 
+                            display: 'flex', 
+                            alignItems: 'center',
+                            zIndex: 10,
+                            ...(isDraggable ? { WebkitAppRegion: 'no-drag' } : {}) 
+                        }}>
                             {headerExtra}
                         </div>
                     )}
