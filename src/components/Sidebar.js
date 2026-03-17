@@ -2283,7 +2283,30 @@ const Sidebar = React.memo(({
               outline: 'none'
             }} />
           )}
-          <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
+          <div className="sidebar-header-glass-stack" style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '10px 16px',
+            background: 'rgba(255, 255, 255, 0.03)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: '12px',
+            margin: '8px 10px',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            boxShadow: `
+              0 4px 15px rgba(0, 0, 0, 0.4),
+              inset 0 0 1px 1px rgba(255, 255, 255, 0.05)
+            `,
+            position: 'relative'
+          }}>
+            {/* Brillo de profundidad 3D */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)',
+              pointerEvents: 'none'
+            }} />
+            {/* Eliminamos el indicador de estado neón de la opción anterior */}
             <Button
               className="p-button-rounded p-button-text sidebar-action-button glass-button"
               onClick={toggleSidebar}
@@ -2313,7 +2336,16 @@ const Sidebar = React.memo(({
                 }
               </span>
             </Button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
+
+            {/* BARRA DE ACCIONES: GLASS STACK EFFECT */}
+            <div className="sidebar-action-glass-group" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              marginLeft: 'auto',
+              position: 'relative',
+              zIndex: 2
+            }}>
               <Button
                 className="p-button-rounded p-button-text sidebar-action-button glass-button"
                 onClick={() => {
@@ -2331,9 +2363,14 @@ const Sidebar = React.memo(({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '40px',
-                  height: '40px',
-                  padding: 0
+                  width: '36px',
+                  height: '36px',
+                  padding: 0,
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
+                  borderRadius: '10px',
+                  transition: 'all 0.2s ease'
                 }}
               >
                 <span style={{
@@ -2356,9 +2393,14 @@ const Sidebar = React.memo(({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '40px',
-                  height: '40px',
-                  padding: 0
+                  width: '36px',
+                  height: '36px',
+                  padding: 0,
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
+                  borderRadius: '10px',
+                  transition: 'all 0.2s ease'
                 }}
               >
                 <span style={{
@@ -2381,9 +2423,14 @@ const Sidebar = React.memo(({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '40px',
-                  height: '40px',
-                  padding: 0
+                  width: '36px',
+                  height: '36px',
+                  padding: 0,
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
+                  borderRadius: '10px',
+                  transition: 'all 0.2s ease'
                 }}
               >
                 <span style={{
@@ -2407,9 +2454,14 @@ const Sidebar = React.memo(({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '40px',
-                    height: '40px',
-                    padding: 0
+                    width: '36px',
+                    height: '36px',
+                    padding: 0,
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
+                    borderRadius: '10px',
+                    transition: 'all 0.2s ease'
                   }}
                 >
                   <span style={{
@@ -2433,9 +2485,14 @@ const Sidebar = React.memo(({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '40px',
-                  height: '40px',
-                  padding: 0
+                  width: '36px',
+                  height: '36px',
+                  padding: 0,
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
+                  borderRadius: '10px',
+                  transition: 'all 0.2s ease'
                 }}
               >
                 <span style={{
@@ -2449,35 +2506,45 @@ const Sidebar = React.memo(({
                   {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
                 </span>
               </Button>
-              {filesystemAvailable && isAIChatActive && (
-                <Button
-                  icon="pi pi-folder-open"
-                  className={`p-button-rounded p-button-text sidebar-action-button glass-button ${viewMode === 'filesystem' ? 'active' : ''}`}
-                  onClick={() => setViewMode('filesystem')}
-                  tooltip={t('tooltips.mcpExplorer')}
-                  tooltipOptions={{ position: 'bottom' }}
-                  style={{
-                    borderColor: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : undefined,
-                    color: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : undefined
-                  }}
-                />
-              )}
-              {isAIChatActive && onToggleLocalTerminalForAIChat && (
-                <Button
-                  icon="pi pi-desktop"
-                  className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                  onClick={() => onToggleLocalTerminalForAIChat()}
-                  tooltip={t('tooltips.localTerminal')}
-                  tooltipOptions={{ position: 'bottom' }}
-                  style={{
-                    borderColor: '#90caf9',
-                    color: '#90caf9'
-                  }}
-                />
-              )}
             </div>
+            {(filesystemAvailable && isAIChatActive) || (isAIChatActive && onToggleLocalTerminalForAIChat) ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8 }}>
+                {filesystemAvailable && isAIChatActive && (
+                  <Button
+                    icon="pi pi-folder-open"
+                    className={`p-button-rounded p-button-text sidebar-action-button glass-button ${viewMode === 'filesystem' ? 'active' : ''}`}
+                    onClick={() => setViewMode('filesystem')}
+                    tooltip={t('tooltips.mcpExplorer')}
+                    tooltipOptions={{ position: 'bottom' }}
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderColor: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : 'transparent',
+                      color: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : undefined,
+                      background: 'rgba(255, 255, 255, 0.03)'
+                    }}
+                  />
+                )}
+                {isAIChatActive && onToggleLocalTerminalForAIChat && (
+                  <Button
+                    icon="pi pi-desktop"
+                    className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                    onClick={() => onToggleLocalTerminalForAIChat()}
+                    tooltip={t('tooltips.localTerminal')}
+                    tooltipOptions={{ position: 'bottom' }}
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderColor: 'transparent',
+                      color: '#90caf9',
+                      background: 'rgba(255, 255, 255, 0.03)'
+                    }}
+                  />
+                )}
+              </div>
+            ) : null}
           </div>
-          <Divider className="my-2" />
+          {/* Eliminamos el Divider ya que la Línea Técnica actúa como separador */}
 
           <div
             style={{
