@@ -5,6 +5,26 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-03-18
+
+### 📡 Nuevas Características de Terminal SSH
+- **Broadcasting**: Nueva funcionalidad para enviar comandos a múltiples terminales simultáneamente.
+- **Monitor de Sistema**: Integración de estadísticas en tiempo real (CPU, RAM, Red) dentro de cada sesión SSH.
+- **Menú Flotante (Action Hub)**: Nuevo menú interactivo para controles rápidos en los terminales.
+
+### 🎨 Mejoras de UI/UX (Premium Overhaul)
+- **Glass Stack Design**: Rediseño visual masivo con efectos de desenfrenado (blur) y capas de cristal.
+- **Nuevos Temas de Iconos**: Adición de los temas **Acrylic**, **Neumorphic** y **Fluent**.
+- **Gestión de Temas Unificada**: Selector centralizado para temas de árbol e iconos.
+- **Refinamiento de Password Manager**: Interfaz mejorada e integración profunda en la barra lateral.
+- **Tipografía**: Actualización a fuentes modernas para mayor legibilidad.
+
+### 🐛 Correcciones de Bugs y Estabilidad
+- **Alineación de Sidebar**: Solucionada la desincronización de iconos y botones al redimensionar.
+- **Artefactos Visuales**: Eliminado el color blur residual en el estilo minimalista.
+- **Centrado de Iconos**: Perfeccionado el centrado de iconos en la barra de sesiones lateral.
+- **Sidebar Ghosting**: Fix de problemas de renderizado al colapsar el sidebar dinámicamente.
+
 ## [1.6.4] - 2026-02-16
 
 ### 🚀 Mejoras de Release y GitHub

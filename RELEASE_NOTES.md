@@ -1,3 +1,57 @@
+# 🚀 NodeTerm v1.7.0 - Release Notes
+
+**Fecha de Release**: 2026-03-18  
+**Tipo de Release**: Feature & UI Overhaul  
+**Versión Anterior**: v1.6.4
+
+---
+
+## 🎉 ¡Bienvenido a NodeTerm v1.7.0!
+
+Esta versión es una de nuestras actualizaciones más ambiciosas hasta la fecha. Hemos rediseñado por completo la **interfaz de usuario (Premium UI)** y añadido herramientas de productividad crítica para terminales SSH como el **Broadcasting**, un **Monitor de Sistema** integrado y un nuevo **Menú Flotante** interactivo.
+
+---
+
+## ✨ Características Principales
+
+### 📡 Terminal SSH: Broadcasting
+- **Control Multi-Terminal**: Ahora puedes enviar comandos simultáneamente a múltiples terminales SSH abiertos. Ideal para gestión de clusters y despliegues masivos.
+- **Activación Selectiva**: Activa o desactiva el modo de difusión con un solo clic desde la barra de herramientas.
+
+### 📊 Monitor de Sistema Integrado
+- **Stats en Tiempo Real**: Visualiza el consumo de CPU, RAM y red directamente en cada terminal SSH.
+- **Gráficas Dinámicas**: Monitorización visual fluida que te permite anticipar problemas de rendimiento en tus servidores remotos sin salir de la sesión.
+
+### 🍱 Nuevo Menú Flotante (Action Hub)
+- **Acceso Rápido**: Un nuevo menú interactivo y flotante para los terminales que agrupa todas las acciones frecuentes.
+- **Diseño Ergonómico**: Optimizado para minimizar los movimientos del ratón y mejorar el flujo de trabajo.
+
+### 🎨 Premium UI & Glass Stack Design
+- **Estética Vanguardista**: Implementación del diseño "Glass Stack" con efectos de desenfrenado (blur) y transparencias sofisticadas.
+- **Nuevos Temas de Iconos**: Añadidos tres nuevos temas premium:
+  - **Acrylic**: Elegancia cristalina.
+  - **Neumorphic**: Suavidad táctil y sombras modernas.
+  - **Fluent**: Inspirado en el lenguaje de diseño más actual.
+- **Tipografía Modernizada**: Uso de fuentes premium que mejoran drásticamente la legibilidad.
+
+### 🔐 Password Manager Refinado
+- **Sidebar Unificado**: Integración profunda del gestor de contraseñas en la barra lateral principal.
+- **UX Mejorada**: Proceso de búsqueda y uso de credenciales más intuitivo y rápido.
+
+### ⚙️ Gestión de Temas Unificada
+- **Panel Centralizado**: Nueva interfaz para cambiar tanto el tema del árbol de conexiones como el de los iconos en un solo lugar.
+- **Sincronización Total**: Tus preferencias se aplican instantáneamente en toda la aplicación.
+
+---
+
+## 🔧 Correcciones de Experiencia (UX)
+- **Alineación de Sidebar**: Corregidos problemas de desalineación en los iconos del encabezado y botones de acción.
+- **Limpieza de Artefactos**: Eliminados artefactos visuales y brillos innecesarios en el diseño "minimal".
+- **Centrado de Iconos**: Optimización del centrado de iconos en la barra de acciones lateral.
+- **Fix de Resize**: El sidebar ahora se comporta de forma consistente y fluida al redimensionar.
+
+---
+
 # 🚀 NodeTerm v1.6.4 - Release Notes
 
 **Fecha de Release**: 2026-02-16  
