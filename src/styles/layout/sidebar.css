@@ -704,77 +704,22 @@
   will-change: width, min-width, max-width !important;
 }
 
-/* === BOTÓN DE COLAPSAR SIEMPRE VISIBLE === */
-/* Contenedor del header de la sidebar expandida */
-.sidebar-container > div:first-child {
+/* === COMPORTAMIENTO DEL HEADER CONTROLADO POR JS Y CLASES === */
+.sidebar-header-glass-stack {
   position: relative;
-  min-width: 44px; /* Ancho mínimo para mostrar al menos el botón de colapsar */
-  overflow: visible; /* Permitir que el botón sea visible */
+  overflow: visible;
   display: flex !important;
   align-items: center !important;
 }
 
-/* Botón de colapsar (primer botón del header) con máxima prioridad */
-.sidebar-container > div:first-child > .sidebar-action-button:first-child {
-  position: relative !important;
-  z-index: 1000 !important;
-  flex-shrink: 0 !important; /* No permitir que se reduzca */
-  min-width: 40px !important;
-  min-height: 40px !important;
-  width: 40px !important;
-  height: 40px !important;
-  margin-right: 8px !important;
+.sidebar-action-glass-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px;
+  margin-left: 0 !important; /* Desactivar el auto margin que causaba desalineación */
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-/* Contenedor de botones adicionales que pueden ocultarse */
-.sidebar-container > div:first-child > div:last-child {
-  overflow: hidden; /* Ocultar botones que no caben */
-  white-space: nowrap;
-  flex-shrink: 1; /* Permitir que se reduzca */
-  display: flex;
-  gap: 4px;
-  margin-left: auto;
-}
-
-/* Durante el redimensionamiento, asegurar que el botón de colapsar sea visible */
-.p-splitter.p-splitter-resizing .sidebar-container > div:first-child > .sidebar-action-button:first-child {
-  visibility: visible !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  position: relative !important;
-  z-index: 1001 !important;
-}
-
-/* Comportamiento responsivo basado en el ancho del contenedor */
-.sidebar-container[style*="width: "] > div:first-child > div:last-child .sidebar-action-button {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-/* Cuando la sidebar es muy estrecha, ocultar botones adicionales gradualmente */
-.sidebar-container[style*="width: "] {
-  --sidebar-width: 200px; /* Valor por defecto */
-}
-
-/* Usar CSS container queries si están disponibles, sino usar JavaScript */
-@supports (container-type: inline-size) {
-  .sidebar-container {
-    container-type: inline-size;
-  }
-  
-  @container (max-width: 120px) {
-    .sidebar-container > div:first-child > div:last-child .sidebar-action-button {
-      opacity: 0.3;
-      transform: scale(0.8);
-      pointer-events: none;
-    }
-  }
-  
-  @container (max-width: 80px) {
-    .sidebar-container > div:first-child > div:last-child {
-      display: none !important;
-    }
-  }
-}
 /* Restablecer estilos del árbol para asegurar funcionalidad */
 .sidebar-tree .p-tree,
 .sidebar-tree .p-treenode {

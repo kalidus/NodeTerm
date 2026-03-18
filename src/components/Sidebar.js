@@ -650,14 +650,23 @@ const Sidebar = React.memo(({
 
   // Efecto para manejar la visibilidad de botones durante el redimensionamiento
   useEffect(() => {
-    if (!sidebarRef.current || sidebarCollapsed) return;
+    if (!sidebarRef.current || sidebarCollapsed) {
+      // Si está colapsado, limpiar el bucket para que se reaplique al expandir
+      sidebarResizeBucketRef.current = null;
+      return;
+    }
 
     const sidebarElement = sidebarRef.current;
-    const headerElement = sidebarElement.querySelector('div:first-child');
-    const buttonsContainer = headerElement?.querySelector('div:last-child');
-    if (!buttonsContainer) return;
 
     const applyBucketStyles = (bucket) => {
+      // Re-probar los elementos en cada llamada para asegurar que tenemos los actuales (ej: tras cambio de vista)
+      const headerElement = sidebarElement.querySelector('.sidebar-header-glass-stack');
+      const buttonsContainer = headerElement?.querySelector('.sidebar-action-glass-group');
+      
+      if (!buttonsContainer) return;
+
+      // Si el bucket es el mismo, no hacemos nada (optimización)
+      // Pero si cambiamos de vista, necesitamos forzar una aplicación inicial
       if (sidebarResizeBucketRef.current === bucket) return;
       sidebarResizeBucketRef.current = bucket;
 
@@ -700,6 +709,9 @@ const Sidebar = React.memo(({
       });
     };
 
+    // Al cambiar de vista, resetear el bucket para forzar aplicación de estilos al nuevo DOM
+    sidebarResizeBucketRef.current = null;
+
     // Observar cambios en el tamaño de la sidebar
     const resizeObserver = new ResizeObserver((entries) => {
       const entry = entries?.[0];
@@ -718,7 +730,7 @@ const Sidebar = React.memo(({
       }
       resizeObserver.disconnect();
     };
-  }, [sidebarCollapsed]);
+  }, [sidebarCollapsed, viewMode]);
 
   // Helpers
   const deepCopy = (obj) => JSON.parse(JSON.stringify(obj));
@@ -1978,10 +1990,11 @@ const Sidebar = React.memo(({
               // Temas originales que deben mantener sus colores
               'monokai', 'onedark', 'gruvbox', 'tokyonight', 'palenight', 'minimal',
               // Nuevos temas añadidos
-              'cyberpunk', 'retroGaming', 'corporate', 'nature', 'space', 'ocean',
+              'cyberpunk', 'retroGaming', 'corporate', 'space', 'ocean',
               'fire', 'ice', 'forest', 'sunset', 'matrix', 'neon', 'gradient',
               'rainbow', 'metallic', 'holographic', 'glitch',
-              'vaporwave', 'minimalist', 'geometric', 'organic', 'tech', 'gaming', 'professional'
+              'vaporwave', 'minimalist', 'geometric', 'organic', 'tech', 'gaming', 'professional',
+              'acrylic', 'neumorphic', 'fluent'
             ];
 
             // Si es un tema que debe preservar colores originales, no modificar nada

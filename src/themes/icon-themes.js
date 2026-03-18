@@ -2228,5 +2228,224 @@ export const iconThemes = {
         </svg>
       )
     }
+  },
+
+  cyberpunk: {
+    name: 'Cyberpunk',
+    icons: {
+      folder: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f600ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <defs>
+            <filter id="cyberGlowFold">
+              <feGaussianBlur stdDeviation="1.5" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+          </defs>
+          <path d="M2 6h7l2-2h11v16H2V6z" fill="#f600ff" fillOpacity="0.1" filter="url(#cyberGlowFold)" />
+          <path d="M2 10h20" stroke="#00ffff" strokeWidth="1.5" filter="url(#cyberGlowFold)" />
+        </svg>
+      ),
+      folderOpen: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f600ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 6h7l2-2h11v16H2V6z" fill="#f600ff" fillOpacity="0.2" filter="url(#cyberGlowFold)" />
+          <path d="M2 10h20" stroke="#00ffff" strokeWidth="1.5" filter="url(#cyberGlowFold)" />
+          <path d="M12 13h6" stroke="#00ffff" strokeWidth="1" filter="url(#cyberGlowFold)" />
+        </svg>
+      ),
+      ssh: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00ffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" fill="#00ffff" fillOpacity="0.1" filter="url(#cyberGlowFold)" />
+          <path d="M6 7h12M6 11h8M6 15h6" stroke="#f600ff" strokeWidth="1.5" filter="url(#cyberGlowFold)" />
+        </svg>
+      ),
+      rdp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00ffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" fill="#00ffff" fillOpacity="0.1" filter="url(#cyberGlowFold)" />
+          <circle cx="12" cy="10" r="3" stroke="#f600ff" strokeWidth="2" filter="url(#cyberGlowFold)" />
+        </svg>
+      ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00ffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" fill="#00ffff" fillOpacity="0.1" filter="url(#cyberGlowFold)" />
+          <ellipse cx="12" cy="10" rx="4" ry="3" stroke="#f600ff" strokeWidth="1.5" filter="url(#cyberGlowFold)" />
+          <circle cx="12" cy="10" r="1.5" fill="#00ffff" filter="url(#cyberGlowFold)" />
+        </svg>
+      ),
+      file: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffe600" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" fill="#ffe600" fillOpacity="0.05" filter="url(#cyberGlowFold)" />
+          <polyline points="13 2 13 9 20 9" filter="url(#cyberGlowFold)" />
+        </svg>
+      )
+    }
+  },
+
+  glass: {
+    name: 'Glassmorphism',
+    icons: {
+      folder: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="glassIconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="rgba(255,255,255,0.4)" />
+              <stop offset="100%" stopColor="rgba(255,255,255,0.1)" />
+            </linearGradient>
+          </defs>
+          <path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z" fill="url(#glassIconGrad)" stroke="rgba(255,255,255,0.4)" strokeWidth="1" />
+        </svg>
+      ),
+      folderOpen: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z" fill="url(#glassIconGrad)" stroke="rgba(255,255,255,0.6)" strokeWidth="1" />
+          <path d="M2 10h20" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
+        </svg>
+      ),
+      ssh: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" fill="url(#glassIconGrad)" stroke="rgba(255,255,255,0.4)" />
+          <path d="M7 8h10M7 12h7" strokeOpacity="0.5" />
+        </svg>
+      ),
+      rdp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" fill="url(#glassIconGrad)" stroke="rgba(255,255,255,0.4)" />
+          <circle cx="12" cy="10" r="3" strokeOpacity="0.6" />
+        </svg>
+      ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" fill="url(#glassIconGrad)" stroke="rgba(255,255,255,0.4)" />
+          <ellipse cx="12" cy="10" rx="4" ry="3" strokeOpacity="0.6" />
+        </svg>
+      ),
+      file: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" fill="url(#glassIconGrad)" stroke="rgba(255,255,255,0.4)" />
+          <polyline points="13 2 13 9 20 9" />
+        </svg>
+      )
+    }
+  },
+
+  acrylic: {
+    name: 'Acrylic',
+    icons: {
+      folder: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
+          <path d="M2 10h20" stroke="#00d2ff" strokeWidth="1" opacity="0.3" />
+        </svg>
+      ),
+      folderOpen: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+          <path d="M2 10h10l2-2h8" stroke="#00d2ff" strokeWidth="1" />
+        </svg>
+      ),
+      ssh: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00d2ff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" fill="rgba(255,255,255,0.05)" />
+          <path d="M7 8h10M7 12h7" opacity="0.5" />
+        </svg>
+      ),
+      rdp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00d2ff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" fill="rgba(255,255,255,0.05)" />
+          <circle cx="12" cy="10" r="3" opacity="0.6" />
+        </svg>
+      ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00d2ff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" fill="rgba(255,255,255,0.05)" />
+          <ellipse cx="12" cy="10" rx="4" ry="3" opacity="0.6" />
+        </svg>
+      ),
+      file: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5">
+          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+          <polyline points="13 2 13 9 20 9" />
+        </svg>
+      )
+    }
+  },
+
+  neumorphic: {
+    name: 'Neumórfico',
+    icons: {
+      folder: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f06595" strokeWidth="2">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10z" fill="#000" fillOpacity="0.1" />
+        </svg>
+      ),
+      folderOpen: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f06595" strokeWidth="2.5">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10z" />
+        </svg>
+      ),
+      ssh: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#748ffc" strokeWidth="2" strokeLinecap="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" fill="#000" fillOpacity="0.1" />
+          <path d="M6 7h12M6 11h8" opacity="0.5" />
+        </svg>
+      ),
+      rdp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#748ffc" strokeWidth="2">
+          <rect x="2" y="3" width="20" height="14" rx="2" fill="#000" fillOpacity="0.1" />
+          <circle cx="12" cy="10" r="3" />
+        </svg>
+      ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#748ffc" strokeWidth="2">
+          <rect x="2" y="3" width="20" height="14" rx="2" fill="#000" fillOpacity="0.1" />
+          <ellipse cx="12" cy="10" rx="4" ry="3" />
+        </svg>
+      ),
+      file: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#adb5bd" strokeWidth="2">
+          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+        </svg>
+      )
+    }
+  },
+
+  fluent: {
+    name: 'Fluent',
+    icons: {
+      folder: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffb900" strokeWidth="1.5">
+          <path d="M4 6a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z" fill="#ffb900" fillOpacity="0.1" />
+        </svg>
+      ),
+      folderOpen: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffb900" strokeWidth="2">
+          <path d="M4 6a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z" />
+          <path d="M4 10h16" opacity="0.5" />
+        </svg>
+      ),
+      ssh: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0078d4" strokeWidth="1.5">
+          <rect x="3" y="4" width="18" height="14" rx="2" fill="#0078d4" fillOpacity="0.1" />
+          <path d="M7 8h10M7 12h7" opacity="0.6" />
+        </svg>
+      ),
+      rdp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0078d4" strokeWidth="1.5">
+          <rect x="3" y="4" width="18" height="14" rx="2" fill="#0078d4" fillOpacity="0.1" />
+          <circle cx="12" cy="11" r="3" strokeWidth="2" />
+        </svg>
+      ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0078d4" strokeWidth="1.5">
+          <rect x="3" y="4" width="18" height="14" rx="2" fill="#0078d4" fillOpacity="0.1" />
+          <ellipse cx="12" cy="11" rx="4" ry="3" strokeWidth="2" />
+        </svg>
+      ),
+      file: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#605e5c" strokeWidth="1.5">
+          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+          <polyline points="13 2 13 9 20 9" />
+        </svg>
+      )
+    }
   }
 }; 

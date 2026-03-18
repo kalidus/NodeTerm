@@ -1562,6 +1562,7 @@ const PasswordManagerSidebar = ({
           0 2px 10px rgba(0, 0, 0, 0.3),
           inset 0 0 1px 1px rgba(255, 255, 255, 0.05)
         `,
+        width: 'calc(100% - 16px)',
         position: 'relative'
       }}>
         {/* Brillo de profundidad 3D */}
@@ -1613,7 +1614,14 @@ const PasswordManagerSidebar = ({
           boxShadow: '0 0 5px rgba(255, 255, 255, 0.05)'
         }} />
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative', zIndex: 2 }}>
+        <div className="sidebar-action-glass-group" style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 6, 
+          marginLeft: '0',
+          position: 'relative', 
+          zIndex: 2 
+        }}>
           <Button 
             className="p-button-rounded p-button-text sidebar-action-button glass-button" 
             onClick={() => {
