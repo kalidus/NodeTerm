@@ -575,6 +575,76 @@ const originalIcons = {
   )
 };
 
+// Glassmorphism Icons (matching session-action-icons "glass" style)
+const glassIcons = {
+  nuevo: (size = 20, color = '#22c55e') => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id="glassBarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.4)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0.1)" />
+        </linearGradient>
+      </defs>
+      <circle cx="12" cy="12" r="9" fill="url(#glassBarGrad)" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" />
+      <path d="M12 8v8M8 12h8" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+  grupo: (size = 20, color = '#ff9800') => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="3" width="7" height="7" rx="2" fill="url(#glassBarGrad)" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="2" fill="url(#glassBarGrad)" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="2" fill="url(#glassBarGrad)" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" />
+      <path d="M16 17h4M18 15v4" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ),
+  conexiones: (size = 20, color = '#64C8FF') => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="4" width="6" height="5" rx="1" fill="url(#glassBarGrad)" stroke="rgba(255,255,255,0.4)" strokeWidth="1" />
+      <rect x="9" y="4" width="6" height="5" rx="1" fill="url(#glassBarGrad)" stroke="rgba(255,255,255,0.4)" strokeWidth="1" />
+      <rect x="16" y="4" width="6" height="5" rx="1" fill="url(#glassBarGrad)" stroke="rgba(255,255,255,0.4)" strokeWidth="1" />
+      <path d="M5 14 L12 17 L19 14" stroke={color} strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <circle cx="12" cy="19" r="2" stroke={color} strokeWidth="1.5" fill="none"/>
+    </svg>
+  ),
+  contraseñas: (size = 20, color = '#FFC107') => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="12" r="4" fill="url(#glassBarGrad)" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" />
+      <path d="M13 12h7M16 12v2M18.5 12v2" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ),
+  audit: (size = 20, color = '#a855f7') => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" fill="url(#glassBarGrad)" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
+      <path d="M10 8 L10 16 L16 12 Z" fill={color}/>
+    </svg>
+  ),
+  nettools: (size = 20, color = '#06b6d4') => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M14.7 6.3a1 1 0 0 0-1.4 0l-7 7a1 1 0 0 0 0 1.4l1.4 1.4a1 1 0 0 0 1.4 0l7-7a1 1 0 0 0 0-1.4L14.7 6.3z" fill="url(#glassBarGrad)" stroke="rgba(255,255,255,0.5)" />
+      <path d="M20 4l-4 4M18 6l-2-2" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+  config: (size = 20, color = '#4fc3f7') => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="3.5" fill="url(#glassBarGrad)" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" />
+      <path d="M12 2v2M12 20v2M2 12h2M20 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4" stroke={color} strokeWidth="1.2" />
+    </svg>
+  ),
+  terminal: (size = 20, color = '#00BCD4') => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="5" width="18" height="14" rx="2" fill="url(#glassBarGrad)" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" />
+      <path d="M8 10 L11 12 L8 14" fill={color}/>
+      <line x1="14" y1="14" x2="18" y2="14" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  ),
+  statusbar: (size = 20, color = '#4fc3f7') => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="4" width="20" height="16" rx="2" fill="url(#glassBarGrad)" stroke="rgba(255,255,255,0.4)" strokeWidth="1.2" />
+      <path d="M5 12h2M8 10h2M11 8h2M14 11h2M17 13h2" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+};
+
 /**
  * Objeto principal de temas de iconos de la barra de acciones.
  * Cada tema tiene un nombre para mostrar y un conjunto de iconos.
@@ -589,6 +659,11 @@ export const actionBarIconThemes = {
     name: 'Nodeterm',
     description: 'Iconos rediseñados de NodeTerm',
     icons: nodetermIcons
+  },
+  glass: {
+    name: 'Glassmorphism',
+    description: 'Diseño traslúcido con suaves gradientes',
+    icons: glassIcons
   },
   minimal: {
     name: 'Minimal',

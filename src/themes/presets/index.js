@@ -111,14 +111,14 @@ export const builtinPresets = [
       sidebarFontSize: "15",
       nodeterm_cursor_style: "bar",
       nodeterm_cursor_blink: "true",
-      iconTheme: "nord",
-      iconThemeSidebar: "nord",
+      iconTheme: "glass",
+      iconThemeSidebar: "glass",
       iconSize: "20",
       folderIconSize: "20",
       connectionIconSize: "20",
       nodeterm_tree_theme: "default",
-      sessionActionIconTheme: "minimal",
-      actionBarIconTheme: "nodeterm",
+      sessionActionIconTheme: "glass",
+      actionBarIconTheme: "glass",
       basicapp_statusbar_height: "32"
     }
   },
