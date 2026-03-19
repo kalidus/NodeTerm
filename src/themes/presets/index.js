@@ -67,6 +67,8 @@ export const PRESET_SETTINGS_KEYS = [
   'actionBarIconTheme',
   // Status bar misc
   'basicapp_statusbar_height',
+  // Terminal Opacity
+  'nodeterm_terminal_opacity',
 ];
 
 /**
@@ -119,6 +121,7 @@ export const builtinPresets = [
       nodeterm_tree_theme: "default",
       sessionActionIconTheme: "glass",
       actionBarIconTheme: "glass",
+      nodeterm_terminal_opacity: "0.5",
       basicapp_statusbar_height: "32"
     }
   },

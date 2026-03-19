@@ -107,6 +107,31 @@ const HomeTab = ({
     localStorage.setItem('nodeterm_terminal_opacity', terminalOpacity.toString());
   }, [terminalOpacity]);
 
+  // Sincronizar opacidad cuando se cambia desde fuera (ej: preset o di??logo de ajustes)
+  useEffect(() => {
+    const syncOpacity = () => {
+      try {
+        const saved = localStorage.getItem('nodeterm_terminal_opacity');
+        if (saved !== null) {
+          const val = parseFloat(saved);
+          if (!isNaN(val) && Math.abs(val - terminalOpacity) > 0.001) {
+            setTerminalOpacity(val);
+          }
+        } else if (terminalOpacity !== 1.0) {
+          // Si se elimina de localStorage (ej: por otro preset), volver al valor por defecto
+          setTerminalOpacity(1.0);
+        }
+      } catch (err) { }
+    };
+
+    window.addEventListener('settings-updated', syncOpacity);
+    window.addEventListener('storage', syncOpacity);
+    return () => {
+      window.removeEventListener('settings-updated', syncOpacity);
+      window.removeEventListener('storage', syncOpacity);
+    };
+  }, [terminalOpacity]);
+
   // Configuraci\u00F3n de tipograf\u00EDa de HomeTab
   const [homeTabFont, setHomeTabFont] = useState(() => {
     try {
