@@ -89,7 +89,7 @@ export const builtinPresets = [
       nodeterm_tab_layout: "default",
       basicapp_terminal_theme: "Tokyo Night",
       localPowerShellTheme: "Tokyo Night",
-      localLinuxTerminalTheme: "Neon Blue",
+      localLinuxTerminalTheme: "Winter Snowfall Animated",
       localDockerTerminalTheme: "Tokyo Night",
       basicapp_statusbar_theme: "Tokyo Night",
       localPowerShellStatusBarTheme: "Tokyo Night",
