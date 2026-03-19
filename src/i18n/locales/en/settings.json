@@ -50,6 +50,10 @@
         "sidebarStartCollapsed": {
           "label": "Sidebar Initially Collapsed",
           "description": "Start the application with the sidebar collapsed"
+        },
+        "mainFrameHeaderStartCollapsed": {
+          "label": "Top Frame Initially Collapsed",
+          "description": "Start the application with the terminal top frame collapsed"
         }
       },
       "visual": {

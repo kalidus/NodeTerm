@@ -344,6 +344,34 @@ const SettingsDialog = ({
     }
   });
 
+  // Configuración para el marco superior inicialmente colapsado
+  const [mainFrameHeaderCollapsed, setMainFrameHeaderCollapsed] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED);
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  // Sincronizar mainFrameHeaderCollapsed con App y persistencia
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED, mainFrameHeaderCollapsed.toString());
+    window.dispatchEvent(new CustomEvent('main-frame-header-toggle', {
+      detail: { collapsed: mainFrameHeaderCollapsed }
+    }));
+  }, [mainFrameHeaderCollapsed]);
+
+  useEffect(() => {
+    const handleSync = (e) => {
+      if (e.detail?.collapsed !== undefined) {
+        setMainFrameHeaderCollapsed(e.detail.collapsed);
+      }
+    };
+    window.addEventListener('main-frame-header-visibility-changed', handleSync);
+    return () => window.removeEventListener('main-frame-header-visibility-changed', handleSync);
+  }, []);
+
   // RDP settings (persisted in localStorage)
   // Ahora en MINUTOS para los umbrales de inactividad/actividad
   const [rdpIdleMinutes, setRdpIdleMinutes] = useState(() => {
@@ -2142,6 +2170,29 @@ const SettingsDialog = ({
                                 id="sidebar-start-collapsed"
                                 checked={sidebarStartCollapsed}
                                 onChange={(e) => setSidebarStartCollapsed(e.checked)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="general-setting-card" onClick={() => setMainFrameHeaderCollapsed(!mainFrameHeaderCollapsed)}>
+                          <div className="general-setting-content">
+                            <div className="general-setting-icon">
+                              <i className="pi pi-window-maximize"></i>
+                            </div>
+                            <div className="general-setting-info">
+                              <label htmlFor="main-frame-header-start-collapsed" className="general-setting-label">
+                                {t('general.sections.behavior.mainFrameHeaderStartCollapsed.label')}
+                              </label>
+                              <p className="general-setting-description">
+                                {t('general.sections.behavior.mainFrameHeaderStartCollapsed.description')}
+                              </p>
+                            </div>
+                            <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                id="main-frame-header-start-collapsed"
+                                checked={mainFrameHeaderCollapsed}
+                                onChange={(e) => setMainFrameHeaderCollapsed(e.checked)}
                               />
                             </div>
                           </div>

@@ -50,6 +50,10 @@
         "sidebarStartCollapsed": {
           "label": "Sidebar Inicialmente Colapsada",
           "description": "Inicia la aplicación con la barra lateral colapsada"
+        },
+        "mainFrameHeaderStartCollapsed": {
+          "label": "Marco Superior Inicialmente Colapsado",
+          "description": "Inicia la aplicación con el marco superior del terminal colapsado"
         }
       },
       "visual": {

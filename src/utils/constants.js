@@ -10,7 +10,8 @@ export const STORAGE_KEYS = {
   HOME_TAB_STATUS_BAR_VISIBLE: 'homeTab_statusBarVisible',
   HOME_TAB_RIGHT_COLUMN_COLLAPSED: 'homeTab_rightColumnCollapsed',
   HOME_TAB_RIGHT_COLUMN_SECTIONS: 'homeTab_rightColumn_sections',
-  TERMINAL_FRAME_STYLE: 'nodeterm_terminal_frame_style'
+  TERMINAL_FRAME_STYLE: 'nodeterm_terminal_frame_style',
+  MAIN_FRAME_HEADER_START_COLLAPSED: 'nodeterm_main_frame_header_start_collapsed'
 };
 
 // Constantes de grupos

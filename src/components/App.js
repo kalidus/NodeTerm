@@ -130,7 +130,7 @@ const App = () => {
   // Estado para mostrar/ocultar el marco superior del TerminalFrame principal
   const [mainFrameHeaderCollapsed, setMainFrameHeaderCollapsed] = React.useState(() => {
     try {
-      const saved = localStorage.getItem('nodeterm_main_frame_header_collapsed');
+      const saved = localStorage.getItem(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED);
       return saved === 'true';
     } catch {
       return false;
@@ -139,11 +139,37 @@ const App = () => {
 
   React.useEffect(() => {
     try {
-      localStorage.setItem('nodeterm_main_frame_header_collapsed', mainFrameHeaderCollapsed.toString());
+      localStorage.setItem(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED, mainFrameHeaderCollapsed.toString());
+      // Despachar evento para sincronizar con SettingsDialog si es necesario
+      window.dispatchEvent(new CustomEvent('main-frame-header-visibility-changed', {
+        detail: { collapsed: mainFrameHeaderCollapsed }
+      }));
     } catch {
       // Ignorar errores de persistencia
     }
   }, [mainFrameHeaderCollapsed]);
+
+  // 🔥 Sincronizar estado cuando cambia externamente (Settings o Storage)
+  useEffect(() => {
+    const handleUpdate = (e) => {
+      if (e.detail?.collapsed !== undefined) {
+        setMainFrameHeaderCollapsed(e.detail.collapsed);
+      }
+    };
+    
+    const handleStorage = (e) => {
+      if (e.key === STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED) {
+        setMainFrameHeaderCollapsed(e.newValue === 'true');
+      }
+    };
+
+    window.addEventListener('main-frame-header-toggle', handleUpdate);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('main-frame-header-toggle', handleUpdate);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
 
   // === SISTEMA DE ENCRIPTACIÓN ===
   const [secureStorage] = useState(() => new SecureStorage());
