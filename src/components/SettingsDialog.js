@@ -366,10 +366,17 @@ const SettingsDialog = ({
     const handleSync = (e) => {
       if (e.detail?.collapsed !== undefined) {
         setMainFrameHeaderCollapsed(e.detail.collapsed);
+      } else if (e.detail?.source === 'preset') {
+        const saved = localStorage.getItem(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED);
+        setMainFrameHeaderCollapsed(saved === 'true');
       }
     };
     window.addEventListener('main-frame-header-visibility-changed', handleSync);
-    return () => window.removeEventListener('main-frame-header-visibility-changed', handleSync);
+    window.addEventListener('settings-updated', handleSync);
+    return () => {
+      window.removeEventListener('main-frame-header-visibility-changed', handleSync);
+      window.removeEventListener('settings-updated', handleSync);
+    };
   }, []);
 
   // RDP settings (persisted in localStorage)

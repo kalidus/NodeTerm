@@ -149,11 +149,15 @@ const App = () => {
     }
   }, [mainFrameHeaderCollapsed]);
 
-  // 🔥 Sincronizar estado cuando cambia externamente (Settings o Storage)
+  // 🔥 Sincronizar estado cuando cambia externamente (Settings o Storage o Presets)
   useEffect(() => {
     const handleUpdate = (e) => {
       if (e.detail?.collapsed !== undefined) {
         setMainFrameHeaderCollapsed(e.detail.collapsed);
+      } else if (e.detail?.source === 'preset') {
+        // Al aplicar un preset, leer el nuevo valor de localStorage
+        const saved = localStorage.getItem(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED);
+        setMainFrameHeaderCollapsed(saved === 'true');
       }
     };
     
@@ -164,9 +168,11 @@ const App = () => {
     };
 
     window.addEventListener('main-frame-header-toggle', handleUpdate);
+    window.addEventListener('settings-updated', handleUpdate);
     window.addEventListener('storage', handleStorage);
     return () => {
       window.removeEventListener('main-frame-header-toggle', handleUpdate);
+      window.removeEventListener('settings-updated', handleUpdate);
       window.removeEventListener('storage', handleStorage);
     };
   }, []);

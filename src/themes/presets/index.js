@@ -69,6 +69,7 @@ export const PRESET_SETTINGS_KEYS = [
   'basicapp_statusbar_height',
   // Terminal Opacity
   'nodeterm_terminal_opacity',
+  'nodeterm_main_frame_header_start_collapsed'
 ];
 
 /**
@@ -122,7 +123,8 @@ export const builtinPresets = [
       sessionActionIconTheme: "glass",
       actionBarIconTheme: "glass",
       nodeterm_terminal_opacity: "0.5",
-      basicapp_statusbar_height: "32"
+      basicapp_statusbar_height: "32",
+      nodeterm_main_frame_header_start_collapsed: "true"
     }
   },
   {
