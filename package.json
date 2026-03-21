@@ -8,15 +8,15 @@
     "download-fonts": "node scripts/download-fonts.js",
     "build": "npm run download-fonts && webpack --mode production",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation concurrently --kill-others \"webpack --watch --mode development\" \"wait-on dist/index.html -t 60000 && cross-env NODE_OPTIONS=--no-deprecation electron .\"",
-    "pack": "npm run build && electron-builder --dir",
-    "dist": "npm run build && npm prune --omit=optional --no-audit --no-fund && electron-builder",
+    "rm-cpu-features": "node -e \"const fs=require('fs'),path=require('path'),r=process.cwd();[path.join(r,'node_modules','cpu-features'),path.join(r,'node_modules','ssh2','node_modules','cpu-features')].forEach(p=>{try{fs.rmSync(p,{recursive:true,force:true})}catch(e){}})\"",
+    "pack": "npm run build && npm run rm-cpu-features && electron-builder --dir",
+    "dist": "npm run build && npm prune --no-audit --no-fund && npm run rm-cpu-features && electron-builder",
     "dist:linux": "npm run build && electron-builder --linux",
     "version:patch": "npm version patch --no-git-tag-version",
     "version:minor": "npm version minor --no-git-tag-version",
     "version:major": "npm version major --no-git-tag-version",
     "version:build": "npm run build && npm run pack",
-    "release": "node scripts/release.js",
-    "postinstall": "node scripts/fix-mac-pty.js"
+    "release": "node scripts/release.js"
   },
   "build": {
     "appId": "com.electron.nodeterm",
@@ -253,8 +253,6 @@
     "ssh2": "1.17.0",
     "tar": "7.5.11",
     "elliptic": "6.6.1",
-    "ajv": "^8.18.0",
-    "ajv-keywords": "^5.1.0",
     "@electron/asar": "^4.0.1",
     "glob": "^13.0.5",
     "rimraf": "^6.1.3",

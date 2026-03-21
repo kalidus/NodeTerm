@@ -50,6 +50,10 @@ const { initializeDOMMatrixPolyfill } = require('./src/main/polyfills/dommatrix-
 initializeDOMMatrixPolyfill();
 logTiming('Polyfill DOMMatrix cargado');
 
+// macOS: permisos de spawn-helper antes de cargar servicios que requieren node-pty
+require('./src/main/utils/ensureMacPtyPermissions')();
+logTiming('ensureMacPtyPermissions (macOS)');
+
 // Declarar variables
 let alternativePtyConfig, SafeWindowsTerminal, registerAllHandlers, cleanupTunnels;
 let orphanCleanupInterval = null;
