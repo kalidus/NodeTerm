@@ -36,6 +36,56 @@ function getOutput(command) {
     }
 }
 
+/** ahead / behind respecto a origin/<branch>; null si no hay remoto o ref inválida */
+function getAheadBehind(branch) {
+    const lr = getOutput(`git rev-list --left-right --count ${branch}...origin/${branch}`);
+    if (!lr || !/^\d+\s+\d+$/.test(lr.replace(/\t/g, ' '))) return null;
+    const [a, b] = lr.split(/\s+/).map((n) => parseInt(n, 10));
+    return { ahead: a, behind: b };
+}
+
+/**
+ * Trae refs remotas y, si la rama está detrás de origin, ofrece integrar con rebase
+ * para que git push no falle por non-fast-forward.
+ */
+async function ensureSyncWithRemote(branch) {
+    if (!await runCommand('git fetch origin', 'Obteniendo estado de origin (fetch)')) {
+        return false;
+    }
+    const ab = getAheadBehind(branch);
+    if (!ab) {
+        console.log('\x1b[33mℹ️  No se pudo comparar con origin/' + branch + ' (¿primer push?). Se continuará.\x1b[0m');
+        return true;
+    }
+    if (ab.behind === 0) {
+        return true;
+    }
+    console.log(
+        `\n\x1b[33m⚠️  Tu rama está \x1b[1m${ab.behind} commit(s) detrás\x1b[0m\x1b[33m de origin/${branch}` +
+            (ab.ahead > 0 ? ` y \x1b[1m${ab.ahead} adelante\x1b[0m\x1b[33m (historial divergente)` : '') +
+            '.\x1b[0m'
+    );
+    const ans = await question(`¿Integrar con \x1b[36mgit pull --rebase origin ${branch}\x1b[0m antes de subir? (S/n): `);
+    if (ans.toLowerCase() === 'n') {
+        console.log('\x1b[33mℹ️  Sin integrar: el push puede fallar si el remoto no acepta fast-forward.\x1b[0m');
+        return true;
+    }
+    return await runCommand(`git pull --rebase origin ${branch}`, 'Integrando cambios remotos (rebase)');
+}
+
+/** Sube la rama; empuja solo el tag v<versión>, no todos los tags (--tags choca con tags ya existentes en GitHub). */
+async function pushBranchAndReleaseTag(branch, version) {
+    const tagName = `v${version}`;
+    if (!await runCommand(`git push origin ${branch}`, `Subiendo rama ${branch}`)) {
+        return false;
+    }
+    const hasTag = getOutput(`git tag -l ${tagName}`);
+    if (!hasTag) {
+        return true;
+    }
+    return await runCommand(`git push origin ${tagName}`, `Subiendo etiqueta ${tagName}`);
+}
+
 function getReleaseNotes(version) {
     const changelogPath = path.join(__dirname, '..', 'CHANGELOG.md');
     if (!fs.existsSync(changelogPath)) return '';
@@ -61,7 +111,7 @@ function getReleaseNotes(version) {
 
 async function main() {
     console.log('\n\x1b[1m\x1b[35m═══════════════════════════════════════════════════\x1b[0m');
-    console.log('\x1b[1m\x1b[35m       ASISTENTE DE RELEASE PROFESIONAL (v2.1)     \x1b[0m');
+    console.log('\x1b[1m\x1b[35m       ASISTENTE DE RELEASE PROFESIONAL (v2.2)     \x1b[0m');
     console.log('\x1b[1m\x1b[35m═══════════════════════════════════════════════════\x1b[0m\n');
 
     // --- ESTADO INICIAL ---
@@ -268,20 +318,25 @@ async function main() {
     // ETAPA FINAL: TAGS (Solo si es publicación)
     // =========================================================================
     if (isPublish) {
-        console.log('\n\x1b[1m\x1b[36m--- ETAPA FINAL: ETIQUETADO ---\x1b[0m');
+        console.log('\n\x1b[1m\x1b[36m--- ETAPA FINAL: ETIQUETADO Y SINCRONIZACIÓN ---\x1b[0m');
         const tagExists = getOutput(`git tag -l v${nextVersion}`);
 
         if (tagExists) {
-            console.log(`\n\x1b[33mℹ️  La etiqueta v${nextVersion} ya existe.\x1b[0m`);
-            const doPushTags = await question('¿Sincronizar etiquetas con GitHub de todos modos? (S/n): ');
+            console.log(`\n\x1b[33mℹ️  La etiqueta v${nextVersion} ya existe en local.\x1b[0m`);
+            const doPushTags = await question('¿Subir rama y esa etiqueta a GitHub? (S/n): ');
             if (doPushTags.toLowerCase() !== 'n') {
-                await runCommand(`git push origin ${branchForBuild} --tags`, 'Subiendo etiquetas');
+                if (await ensureSyncWithRemote(branchForBuild)) {
+                    await pushBranchAndReleaseTag(branchForBuild, nextVersion);
+                }
             }
         } else {
             const doTag = await question(`\n¿Crear y subir tag v${nextVersion}? (S/n): `);
             if (doTag.toLowerCase() !== 'n') {
-                await runCommand(`git tag v${nextVersion}`, `Creando tag v${nextVersion}`);
-                await runCommand(`git push origin ${branchForBuild} --tags`, 'Sincronizando con GitHub');
+                if (await runCommand(`git tag v${nextVersion}`, `Creando tag v${nextVersion}`)) {
+                    if (await ensureSyncWithRemote(branchForBuild)) {
+                        await pushBranchAndReleaseTag(branchForBuild, nextVersion);
+                    }
+                }
             }
         }
     }
