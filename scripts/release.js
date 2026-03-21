@@ -10,10 +10,17 @@ const rl = readline.createInterface({
 
 const question = (query) => new Promise((resolve) => rl.question(query, resolve));
 
+/** Raíz del repo: electron-builder y npm deben ejecutarse aquí, no en scripts/ */
+const REPO_ROOT = path.resolve(__dirname, '..');
+
 async function runCommand(command, description) {
     console.log(`\n\x1b[36m[Ejecutando]\x1b[0m ${description}...`);
     try {
-        execSync(command, { stdio: 'inherit', env: { ...process.env } });
+        execSync(command, {
+            stdio: 'inherit',
+            env: { ...process.env },
+            cwd: REPO_ROOT
+        });
         return true;
     } catch (error) {
         console.error(`\x1b[31m[Error]\x1b[0m Error al ejecutar "${command}": ${error.message}`);
@@ -23,7 +30,7 @@ async function runCommand(command, description) {
 
 function getOutput(command) {
     try {
-        return execSync(command).toString().trim();
+        return execSync(command, { cwd: REPO_ROOT }).toString().trim();
     } catch (e) {
         return '';
     }
