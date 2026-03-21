@@ -249,6 +249,9 @@ async function main() {
     // Build de React/Webpack (necesario siempre)
     await runCommand('npm run build', 'Compilando código fuente (Webpack)');
 
+    // ssh2 opcional: cpu-features falla al recompilar con Electron; no es necesario en runtime
+    await runCommand('npm run rm-cpu-features', 'Preparando dependencias nativas (omitir cpu-features)');
+
     if (await runCommand(ebCommand, isPublish ? 'Generando paquetes y publicando' : 'Generando paquetes locales')) {
         console.log('\n\x1b[32m✅ Compilación finalizada correctamente.\x1b[0m');
 
