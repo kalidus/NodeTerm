@@ -5,7 +5,7 @@
   <br>
   <b>Cliente SSH moderno y multiplataforma para administradores y devs</b>
   <br><br>
-  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.6.4-blue.svg"/></a>
+  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.6.5-blue.svg"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg"/></a>
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/electron-latest-brightgreen.svg"/></a>
   <a href="#donaciones"><img src="https://img.shields.io/badge/💰-Donate_Crypto-yellow.svg"/></a>
@@ -138,7 +138,22 @@ npm run build:win
 
 ---
 
-## 🎉 Versión Actual: v1.6.4 (16 Febrero 2026)
+## 🎉 Versión Actual: v1.6.5 (21 Marzo 2026)
+
+### 🎨 Presets, sidebar y terminal
+- **Presets de tema e iconos**: Configuración desde la barra lateral con panel usable y mejoras por versiones.
+- **Acciones rápidas en la sidebar**: Barra de acciones con separadores y enlace al gestor de contraseñas.
+- **Ocean Pro — marco colapsado**: Estilo opcional para el marco de la barra lateral colapsada.
+- **Sidebar**: Menos lag, corrección de color difuminado y mejor comportamiento al redimensionar y al alternar preset/temas.
+- **Tema del terminal**: Ajustes de sombras, iconos por defecto y procesamiento del tema.
+
+### 🚀 Release y dependencias
+- **Scripts de release**: Correcciones de rutas y flujo del asistente.
+- **Build**: Ajustes en despliegue (`cpu-features`) y actualización de dependencias por vulnerabilidades.
+
+---
+
+## 🎉 Versión Anterior: v1.6.4 (16 Febrero 2026)
 
 ### 🔧 Fixes y Mejoras de Release
 - **GitHub Release Notes**: Sistema mejorado para forzar notas de release vía API.
@@ -151,7 +166,7 @@ npm run build:win
 
 ---
 
-## 🎉 Versión Anterior: v1.6.3 (10 Febrero 2026)
+## 🎉 v1.6.3 (10 Febrero 2026)
 
 ### 🚀 Múltiples Instancias y Sincronización
 - **Soporte Multi-Instancia**: Abre múltiples ventanas de NodeTerm simultáneamente.
@@ -265,7 +280,8 @@ NodeTerm/
 
 | Versión | Características | Estado |
 |---------|----------------|--------|
-| **v1.6.4** | 🔧 Fixes y Mejoras de Release | ✅ Actual |
+| **v1.6.5** | 🎨 Presets, sidebar rápida y fixes de UI | ✅ Actual |
+| **v1.6.4** | 🔧 Fixes y Mejoras de Release | ✅ Completado |
 | **v1.6.3** | 🔄 Múltiples Instancias e Importación | ✅ Completado |
 | **v1.6.1** | 🐛 Fix de Conexión WALLIX | ✅ Completado |
 | **v1.6.0** | 🔄 Sistema de Actualización Automática + Configuración Avanzada + Canales Stable/Beta | ✅ Completado |
@@ -281,7 +297,13 @@ NodeTerm/
 
 ## 📝 Changelog
 
-### v1.6.4 (16 Febrero 2026) - ACTUAL
+### v1.6.5 (21 Marzo 2026) - ACTUAL
+- 🎨 **Presets y sidebar** - Presets de tema/iconos, acciones rápidas, opción Ocean Pro (marco colapsado)
+- 🖥️ **Terminal** - Mejoras de tema, sombras e iconos por defecto
+- 🐛 **Sidebar** - Menos lag, color difuminado y redimensionado corregidos; alternancia preset/temas
+- 🚀 **Release** - Scripts de release y despliegue (`cpu-features`); dependencias actualizadas
+
+### v1.6.4 (16 Febrero 2026)
 - 🚀 **GitHub Release Fix** - Implementado script de post-release para garantizar notas en GitHub
 - 🔐 **SSH Password Fix** - Corregido el guardado de contraseñas tras reintento manual
 - 🎨 **Iconos Premium** - Nuevos iconos de colapso/expansión más modernos

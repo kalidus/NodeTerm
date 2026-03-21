@@ -22,7 +22,7 @@ Una vez el código está en `main`, se procede a la construcción y entrega.
 *   **Build Unificado**: El script compila el código y genera los ejecutables en un solo paso eficiente, evitando compilaciones duplicadas.
 *   **Artefactos**: Se genera el **Instalador** (`-Setup.exe`) y la **Versión Portable** (`.exe` sin Setup).
 *   **GitHub Publishing**: Sube binarios y el archivo de actualización (**`latest.yml`**) directamente. Si no tienes el token configurado, el script te lo pedirá.
-*   **Git Tag**: Crea una etiqueta oficial (ej. `v1.6.4`) y la sube al repositorio.
+*   **Git Tag**: Crea una etiqueta oficial (ej. `v1.6.5`) y la sube al repositorio.
 
 ---
 

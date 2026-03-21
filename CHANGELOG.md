@@ -7,23 +7,20 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
-### 📡 Nuevas Características de Terminal SSH
-- **Broadcasting**: Nueva funcionalidad para enviar comandos a múltiples terminales simultáneamente.
-- **Monitor de Sistema**: Integración de estadísticas en tiempo real (CPU, RAM, Red) dentro de cada sesión SSH.
-- **Menú Flotante (Action Hub)**: Nuevo menú interactivo para controles rápidos en los terminales.
+## [1.6.5] - 2026-03-21
 
-### 🎨 Mejoras de UI/UX (Premium Overhaul)
-- **Glass Stack Design**: Rediseño visual masivo con efectos de desenfrenado (blur) y capas de cristal.
-- **Nuevos Temas de Iconos**: Adición de los temas **Acrylic**, **Neumorphic** y **Fluent**.
-- **Gestión de Temas Unificada**: Selector centralizado para temas de árbol e iconos.
-- **Refinamiento de Password Manager**: Interfaz mejorada e integración profunda en la barra lateral.
-- **Tipografía**: Actualización a fuentes modernas para mayor legibilidad.
+### 🎨 Presets, tema y barra lateral
+- **Presets de tema e iconos**: Configuración de presets desde la barra lateral (scroll, mejoras progresivas v1.0–v1.4).
+- **Acciones rápidas en la sidebar**: Barra de acciones rápidas con separadores y acceso al gestor de contraseñas integrado.
+- **Opción de marco colapsado (Ocean Pro)**: Estilo de marco para la barra lateral en estado colapsado.
+- **Tema del terminal**: Ajustes de procesamiento de tema, sombras e iconos por defecto.
+- **Cambio preset ↔ temas**: Corrección al alternar entre presets y temas personalizados.
+- **Rendimiento y estética del sidebar**: Reducción de lag, corrección de color difuminado y mejoras al redimensionar.
 
-### 🐛 Correcciones de Bugs y Estabilidad
-- **Alineación de Sidebar**: Solucionada la desincronización de iconos y botones al redimensionar.
-- **Artefactos Visuales**: Eliminado el color blur residual en el estilo minimalista.
-- **Centrado de Iconos**: Perfeccionado el centrado de iconos en la barra de sesiones lateral.
-- **Sidebar Ghosting**: Fix de problemas de renderizado al colapsar el sidebar dinámicamente.
+### 🚀 Release y dependencias
+- **Scripts de release**: Correcciones en rutas y flujo del asistente de release.
+- **Despliegue**: Ajustes relacionados con `cpu-features` en builds.
+- **Seguridad**: Actualización de dependencias por vulnerabilidades reportadas.
 
 ## [1.6.4] - 2026-02-16
 

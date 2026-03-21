@@ -1,3 +1,35 @@
+# 🚀 NodeTerm v1.6.5 - Release Notes
+
+**Fecha de Release**: 2026-03-21  
+**Tipo de Release**: UI, Presets & Sidebar Release  
+**Versión Anterior**: v1.6.4
+
+---
+
+## 🎉 ¡Bienvenido a NodeTerm v1.6.5!
+
+Esta versión refuerza la **personalización visual** con **presets de tema e iconos** y **acciones rápidas en la barra lateral**, mejora el **rendimiento y la estética del sidebar** (incluida la opción **Ocean Pro** para el marco colapsado), afina el **tema del terminal** y el **pipeline de release**. Debajo conservamos las notas de **v1.6.4** y anteriores como referencia.
+
+---
+
+## ✨ Características principales (v1.6.5)
+
+### 🎨 Presets y barra lateral
+- **Presets integrados**: Configura combinaciones de tema de árbol e iconos desde la barra lateral, con panel con scroll y mejoras iterativas.
+- **Acciones rápidas**: Nueva barra de acciones en la sidebar (separadores, evolución hasta integración con el gestor de contraseñas).
+- **Ocean Pro — marco colapsado**: Opción de estilo de marco cuando la barra lateral está colapsada.
+- **Menos lag, mejor pinta**: Correcciones de lag, color difuminado del sidebar y comportamiento al **redimensionar** y al **cambiar entre presets y temas** personalizados.
+
+### 🖥️ Terminal y estética
+- **Tema del terminal**: Mejoras en el procesamiento del tema, sombras e iconos por defecto.
+
+### 🚀 Release y mantenimiento
+- **Scripts de release**: Rutas y flujo del asistente alineados con el repo.
+- **Build / despliegue**: Ajustes en torno a `cpu-features` para empaquetado.
+- **Dependencias**: Actualización por vulnerabilidades conocidas.
+
+---
+
 # 🚀 NodeTerm v1.6.4 - Release Notes
 
 **Fecha de Release**: 2026-02-16  
@@ -371,7 +403,7 @@ src/mcp-servers/
 
 ## 📜 Versiones anteriores a v1.6.3
 
-Este archivo incluye notas detalladas para **v1.6.4** (arriba) y **v1.6.3** (bloque siguiente). Para **v1.6.1**, **v1.6.0** y releases previas, el listado completo de cambios está en [`CHANGELOG.md`](CHANGELOG.md).
+Este archivo incluye notas detalladas para **v1.6.5** (arriba), **v1.6.4** y **v1.6.3** (bloques siguientes). Para **v1.6.1**, **v1.6.0** y releases previas, el listado completo de cambios está en [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
@@ -393,8 +425,8 @@ Este archivo incluye notas detalladas para **v1.6.4** (arriba) y **v1.6.3** (blo
 git clone https://github.com/kalidus/NodeTerm.git
 cd NodeTerm
 
-# Cambiar a la rama o tag v1.6.4
-git checkout v1.6.4
+# Cambiar a la rama o tag v1.6.5
+git checkout v1.6.5
 
 # Instalar dependencias
 npm install
@@ -477,4 +509,4 @@ Puedes invitarme a un café ☕ o dejar una estrella ⭐ en GitHub. ¡Gracias!
 
 ---
 
-**¡Disfruta de NodeTerm v1.6.4!** 🚀
+**¡Disfruta de NodeTerm v1.6.5!** 🚀
