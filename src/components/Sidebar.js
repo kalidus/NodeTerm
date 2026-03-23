@@ -2772,8 +2772,8 @@ const Sidebar = React.memo(({
       className={`sidebar-container${disableFirstExpandTransition ? ' sidebar-no-transition' : ''}`}
       style={{
         transition: disableFirstExpandTransition ? 'none' : 'all 0.15s ease-out',
-        width: sidebarCollapsed ? 44 : undefined,
-        minWidth: sidebarCollapsed ? 44 : undefined,
+        width: sidebarCollapsed ? 44 : '100%',
+        minWidth: sidebarCollapsed ? 44 : 0,
         maxWidth: sidebarCollapsed ? 44 : undefined,
         padding: 0,
         height: '100%',
@@ -3234,7 +3234,7 @@ const Sidebar = React.memo(({
             position: 'absolute',
             left: 0,
             top: 0,
-            width: 280,
+            width: '100%',
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
