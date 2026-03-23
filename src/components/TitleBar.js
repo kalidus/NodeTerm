@@ -1063,8 +1063,10 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         WebkitAppRegion: 'drag',
         zIndex: 1000,
         position: 'relative',
+        border: '1px solid var(--ui-titlebar-border, rgba(255,255,255,0.14))',
+        boxSizing: 'border-box',
         borderRadius: 10,
-        margin: '4px 6px 0 6px',
+        margin: '8px 6px 0 6px',
         overflow: 'hidden'
       }}
     >

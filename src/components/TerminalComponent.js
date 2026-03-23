@@ -116,23 +116,6 @@ const TerminalComponent = forwardRef(({
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
-    const [forceUpdateCounter, setForceUpdateCounter] = useState(0); // <-- NUEVO
-    const [cpuHistory, setCpuHistory] = useState([]);
-
-    // Actualizar cpuHistory cada vez que cambie stats.cpu, pero solo si es válido
-    useEffect(() => {
-        const cpuValue = stats && typeof stats.cpu === 'string'
-            ? parseFloat(stats.cpu)
-            : stats && typeof stats.cpu === 'number'
-                ? stats.cpu
-                : null;
-        if (cpuValue !== null && !isNaN(cpuValue)) {
-            setCpuHistory(prev => {
-                const newArr = [...prev, cpuValue].slice(-30);
-                return newArr;
-            });
-        }
-    }, [stats?.cpu]);
 
     // Build CSS variable overrides for StatusBar
     const getScopedStatusBarCssVars = () => {
