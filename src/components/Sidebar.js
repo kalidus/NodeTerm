@@ -2350,6 +2350,8 @@ const Sidebar = React.memo(({
                 justifyContent: 'center',
                 width: '38px',
                 height: '38px',
+                minWidth: '38px',
+                flexShrink: 0,
                 padding: 0,
                 transition: 'all 0.3s ease'
               }}
@@ -2376,7 +2378,8 @@ const Sidebar = React.memo(({
               height: '24px',
               background: 'linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.15), transparent)',
               margin: '0 8px',
-              boxShadow: '0 0 5px rgba(255, 255, 255, 0.05)'
+              boxShadow: '0 0 5px rgba(255, 255, 255, 0.05)',
+              flexShrink: 0
             }} />
 
             {/* BARRA DE ACCIONES: GLASS STACK EFFECT */}
@@ -2386,7 +2389,10 @@ const Sidebar = React.memo(({
               gap: 6,
               marginLeft: '0',
               position: 'relative',
-              zIndex: 2
+              zIndex: 2,
+              flexShrink: 1,
+              minWidth: 0,
+              overflow: 'hidden'
             }}>
               <Button
                 className="p-button-rounded p-button-text sidebar-action-button glass-button"
