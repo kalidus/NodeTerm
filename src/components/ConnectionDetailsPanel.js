@@ -7,6 +7,7 @@ import '../styles/components/connection-details-panel.css';
 import { iconThemes } from '../themes/icon-themes';
 import { FolderIconPresets, FolderIconRenderer } from './FolderIconSelector';
 import { SSHIconPresets, SSHIconRenderer } from './SSHIconSelector';
+import TerminalFrame from './TerminalFrame';
 
 // Componente para campos editables
 const EditableField = ({
@@ -342,196 +343,185 @@ const ConnectionDetailsPanel = ({
     return null;
   }
 
+  // Define shared wrapper
+  const Wrapper = ({ children, iconNode, rightButtons }) => (
+    <TerminalFrame
+      className={`connection-details-panel ${collapsed ? 'collapsed' : ''} ${isResizing ? 'resizing' : ''}`}
+      style={!collapsed ? { height: `${panelHeight}px`, maxHeight: `${panelHeight}px` } : {}}
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+          {iconNode}
+          <span>{label}</span>
+        </div>
+      }
+      headerExtra={
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+          {rightButtons}
+        </div>
+      }
+      onMinimize={(e) => { e?.stopPropagation(); setCollapsed(true); }}
+      onMaximize={(e) => { e?.stopPropagation(); setCollapsed(false); }}
+      onClose={(e) => { e?.stopPropagation(); setCollapsed(true); }}
+    >
+      {!collapsed && (
+        <div
+          className="panel-resizer"
+          onMouseDown={handleResizeStart}
+          style={{ zIndex: 100 }}
+        />
+      )}
+      {!collapsed && (
+        <div className="details-content" ref={panelRef}>
+          {children}
+        </div>
+      )}
+    </TerminalFrame>
+  );
+
+  const chevronBtn = (
+    <Button
+      icon={collapsed ? "pi pi-chevron-up" : "pi pi-chevron-down"}
+      className="p-button-text p-button-sm panel-toggle-button"
+      onClick={(e) => { e.stopPropagation(); setCollapsed(!collapsed); }}
+    />
+  );
+
   // Si es una carpeta, mostrar información básica
   if (isFolder) {
     return (
-      <div
-        ref={panelRef}
-        className={`connection-details-panel ${collapsed ? 'collapsed' : ''} ${isResizing ? 'resizing' : ''}`}
-        style={!collapsed ? { height: `${panelHeight}px`, maxHeight: `${panelHeight}px` } : {}}
+      <Wrapper
+        iconNode={<i className="pi pi-folder" style={{ fontSize: '14px', color: selectedNode.color || 'var(--ui-folder-color, #ffa726)' }}></i>}
+        rightButtons={chevronBtn}
       >
-        {!collapsed && (
-          <div
-            className="panel-resizer"
-            onMouseDown={handleResizeStart}
-          />
-        )}
-        <div className="details-header" onClick={() => setCollapsed(!collapsed)}>
-          <div className="details-title">
-            <i className="pi pi-folder" style={{ fontSize: '14px', color: selectedNode.color || 'var(--ui-folder-color, #ffa726)' }}></i>
-            <span>{label}</span>
+        <div className="details-section">
+          <div className="section-title">Display</div>
+          <div className="detail-row">
+            <div className="detail-label">Name</div>
+            <div className="detail-value">{label}</div>
           </div>
-          <Button
-            icon={collapsed ? "pi pi-chevron-up" : "pi pi-chevron-down"}
-            className="p-button-text p-button-sm panel-toggle-button"
-            onClick={(e) => { e.stopPropagation(); setCollapsed(!collapsed); }}
-          />
-        </div>
-        {!collapsed && (
-          <div className="details-content">
-            <div className="details-section">
-              <div className="section-title">Display</div>
-              <div className="detail-row">
-                <div className="detail-label">Name</div>
-                <div className="detail-value">{label}</div>
-              </div>
-              <div className="detail-row">
-                <div className="detail-label">Icon</div>
-                <div className="detail-value">
-                  {selectedNode.icon ?
-                    <span style={{ fontSize: '16px' }}>{selectedNode.icon.emoji}</span> :
-                    'Folder'
-                  }
-                </div>
-              </div>
-              {selectedNode.color && (
-                <div className="detail-row">
-                  <div className="detail-label">Color</div>
-                  <div className="detail-value">
-                    <span
-                      className="color-indicator"
-                      style={{ backgroundColor: selectedNode.color }}
-                    ></span>
-                    {selectedNode.color}
-                  </div>
-                </div>
-              )}
+          <div className="detail-row">
+            <div className="detail-label">Icon</div>
+            <div className="detail-value">
+              {selectedNode.icon ?
+                <span style={{ fontSize: '16px' }}>{selectedNode.icon.emoji}</span> :
+                'Folder'
+              }
             </div>
           </div>
-        )}
-      </div>
+          {selectedNode.color && (
+            <div className="detail-row">
+              <div className="detail-label">Color</div>
+              <div className="detail-value">
+                <span
+                  className="color-indicator"
+                  style={{ backgroundColor: selectedNode.color }}
+                ></span>
+                {selectedNode.color}
+              </div>
+            </div>
+          )}
+        </div>
+      </Wrapper>
     );
   }
 
   // Si es un password, mostrar información del password manager
   if (isPassword) {
     return (
-      <div
-        ref={panelRef}
-        className={`connection-details-panel ${collapsed ? 'collapsed' : ''} ${isResizing ? 'resizing' : ''}`}
-        style={!collapsed ? { height: `${panelHeight}px`, maxHeight: `${panelHeight}px` } : {}}
+      <Wrapper
+        iconNode={<i className="pi pi-key" style={{ fontSize: '14px', color: '#ffc107' }}></i>}
+        rightButtons={chevronBtn}
       >
-        {!collapsed && (
-          <div
-            className="panel-resizer"
-            onMouseDown={handleResizeStart}
-          />
-        )}
-        <div className="details-header" onClick={() => setCollapsed(!collapsed)}>
-          <div className="details-title">
-            <i className="pi pi-key" style={{ fontSize: '14px', color: '#ffc107' }}></i>
-            <span>{label}</span>
+        <div className="details-section">
+          <div className="section-title">Display</div>
+          <div className="detail-row">
+            <div className="detail-label">Name</div>
+            <div className="detail-value">{label}</div>
           </div>
-          <Button
-            icon={collapsed ? "pi pi-chevron-up" : "pi pi-chevron-down"}
-            className="p-button-text p-button-sm panel-toggle-button"
-            onClick={(e) => { e.stopPropagation(); setCollapsed(!collapsed); }}
-          />
-        </div>
-        {!collapsed && (
-          <div className="details-content">
-            <div className="details-section">
-              <div className="section-title">Display</div>
-              <div className="detail-row">
-                <div className="detail-label">Name</div>
-                <div className="detail-value">{label}</div>
-              </div>
-              {data?.username && (
-                <div className="detail-row">
-                  <div className="detail-label">Username</div>
-                  <div className="detail-value">{data.username}</div>
-                </div>
-              )}
-              {data?.url && (
-                <div className="detail-row">
-                  <div className="detail-label">URL</div>
-                  <div className="detail-value">{data.url}</div>
-                </div>
-              )}
-              {data?.notes && (
-                <div className="detail-row">
-                  <div className="detail-label">Notes</div>
-                  <div className="detail-value notes-value">{data.notes}</div>
-                </div>
-              )}
+          {data?.username && (
+            <div className="detail-row">
+              <div className="detail-label">Username</div>
+              <div className="detail-value">{data.username}</div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+          {data?.url && (
+            <div className="detail-row">
+              <div className="detail-label">URL</div>
+              <div className="detail-value">{data.url}</div>
+            </div>
+          )}
+          {data?.notes && (
+            <div className="detail-row">
+              <div className="detail-label">Notes</div>
+              <div className="detail-value notes-value">{data.notes}</div>
+            </div>
+          )}
+        </div>
+      </Wrapper>
     );
   }
 
+  // Helper for node icon
+  const getNodeIcon = () => {
+    const themeIcons = (iconThemes[iconTheme] || iconThemes['nord'])?.icons || iconThemes['nord'].icons;
+    const iconSize = 14;
+
+    if (selectedNode.icon && selectedNode.icon.emoji) {
+      return <span style={{ fontSize: `${iconSize}px`, lineHeight: '1' }}>{selectedNode.icon.emoji}</span>;
+    }
+
+    if (data?.customIcon && data.customIcon !== 'default' && SSHIconPresets && SSHIconPresets[data.customIcon.toUpperCase()]) {
+      const preset = SSHIconPresets[data.customIcon.toUpperCase()];
+      return <SSHIconRenderer preset={preset} pixelSize={iconSize} />;
+    }
+
+    if (isFolder && selectedNode.folderIcon && selectedNode.folderIcon !== 'general' && FolderIconPresets && FolderIconPresets[selectedNode.folderIcon.toUpperCase()]) {
+      const preset = FolderIconPresets[selectedNode.folderIcon.toUpperCase()];
+      return <FolderIconRenderer preset={preset} pixelSize={iconSize} />;
+    }
+
+    if (isSSH) {
+      const sshIcon = themeIcons.ssh;
+      if (sshIcon) {
+        return React.cloneElement(sshIcon, { width: iconSize, height: iconSize, style: { width: `${iconSize}px`, height: `${iconSize}px` } });
+      }
+      return <i className="pi pi-desktop" style={{ fontSize: `${iconSize}px`, color: '#4caf50' }}></i>;
+    } else if (isRDP) {
+      const rdpIcon = themeIcons.rdp;
+      if (rdpIcon) {
+        return React.cloneElement(rdpIcon, { width: iconSize, height: iconSize, style: { width: `${iconSize}px`, height: `${iconSize}px` } });
+      }
+      return <i className="pi pi-window-maximize" style={{ fontSize: `${iconSize}px`, color: '#2196f3' }}></i>;
+    } else if (isVNC) {
+      const vncIcon = themeIcons.vnc || themeIcons.rdp;
+      if (vncIcon) {
+        return React.cloneElement(vncIcon, { width: iconSize, height: iconSize, style: { width: `${iconSize}px`, height: `${iconSize}px` } });
+      }
+      return <i className="pi pi-eye" style={{ fontSize: `${iconSize}px`, color: '#ff9800' }}></i>;
+    } else if (isFolder) {
+      const folderIcon = themeIcons.folder;
+      const folderColor = selectedNode.color || 'var(--ui-folder-color, #ffa726)';
+      if (folderIcon) {
+        return React.cloneElement(folderIcon, {
+          width: iconSize,
+          height: iconSize,
+          style: { width: `${iconSize}px`, height: `${iconSize}px`, color: folderColor, fill: folderColor, '--icon-color': folderColor }
+        });
+      }
+      return <i className="pi pi-folder" style={{ fontSize: `${iconSize}px`, color: folderColor }}></i>;
+    } else if (isPassword) {
+      return <i className="pi pi-key" style={{ fontSize: `${iconSize}px`, color: '#ffc107' }}></i>;
+    }
+
+    return <i className={`pi ${selectedNode.icon && typeof selectedNode.icon === 'string' ? selectedNode.icon : 'pi-file'}`} style={{ fontSize: `${iconSize}px` }}></i>;
+  };
+
   // Para conexiones SSH, RDP, VNC
   return (
-    <div
-      ref={panelRef}
-      className={`connection-details-panel ${collapsed ? 'collapsed' : ''} ${isResizing ? 'resizing' : ''}`}
-      style={!collapsed ? { height: `${panelHeight}px`, maxHeight: `${panelHeight}px` } : {}}
-    >
-      {!collapsed && (
-        <div
-          className="panel-resizer"
-          onMouseDown={handleResizeStart}
-        />
-      )}
-      <div className="details-header" onClick={() => setCollapsed(!collapsed)}>
-        <div className="details-title">
-          {(() => {
-            const themeIcons = (iconThemes[iconTheme] || iconThemes['nord'])?.icons || iconThemes['nord'].icons;
-            const iconSize = 14;
-
-            if (selectedNode.icon && selectedNode.icon.emoji) {
-              return <span style={{ fontSize: `${iconSize}px`, lineHeight: '1' }}>{selectedNode.icon.emoji}</span>;
-            }
-
-            if (data?.customIcon && data.customIcon !== 'default' && SSHIconPresets && SSHIconPresets[data.customIcon.toUpperCase()]) {
-              const preset = SSHIconPresets[data.customIcon.toUpperCase()];
-              return <SSHIconRenderer preset={preset} pixelSize={iconSize} />;
-            }
-
-            if (isFolder && selectedNode.folderIcon && selectedNode.folderIcon !== 'general' && FolderIconPresets && FolderIconPresets[selectedNode.folderIcon.toUpperCase()]) {
-              const preset = FolderIconPresets[selectedNode.folderIcon.toUpperCase()];
-              return <FolderIconRenderer preset={preset} pixelSize={iconSize} />;
-            }
-
-            if (isSSH) {
-              const sshIcon = themeIcons.ssh;
-              if (sshIcon) {
-                return React.cloneElement(sshIcon, { width: iconSize, height: iconSize, style: { width: `${iconSize}px`, height: `${iconSize}px` } });
-              }
-              return <i className="pi pi-desktop" style={{ fontSize: `${iconSize}px`, color: '#4caf50' }}></i>;
-            } else if (isRDP) {
-              const rdpIcon = themeIcons.rdp;
-              if (rdpIcon) {
-                return React.cloneElement(rdpIcon, { width: iconSize, height: iconSize, style: { width: `${iconSize}px`, height: `${iconSize}px` } });
-              }
-              return <i className="pi pi-window-maximize" style={{ fontSize: `${iconSize}px`, color: '#2196f3' }}></i>;
-            } else if (isVNC) {
-              const vncIcon = themeIcons.vnc || themeIcons.rdp;
-              if (vncIcon) {
-                return React.cloneElement(vncIcon, { width: iconSize, height: iconSize, style: { width: `${iconSize}px`, height: `${iconSize}px` } });
-              }
-              return <i className="pi pi-eye" style={{ fontSize: `${iconSize}px`, color: '#ff9800' }}></i>;
-            } else if (isFolder) {
-              const folderIcon = themeIcons.folder;
-              const folderColor = selectedNode.color || 'var(--ui-folder-color, #ffa726)';
-              if (folderIcon) {
-                return React.cloneElement(folderIcon, {
-                  width: iconSize,
-                  height: iconSize,
-                  style: { width: `${iconSize}px`, height: `${iconSize}px`, color: folderColor, fill: folderColor, '--icon-color': folderColor }
-                });
-              }
-              return <i className="pi pi-folder" style={{ fontSize: `${iconSize}px`, color: folderColor }}></i>;
-            } else if (isPassword) {
-              return <i className="pi pi-key" style={{ fontSize: `${iconSize}px`, color: '#ffc107' }}></i>;
-            }
-
-            return <i className={`pi ${selectedNode.icon && typeof selectedNode.icon === 'string' ? selectedNode.icon : 'pi-file'}`} style={{ fontSize: `${iconSize}px` }}></i>;
-          })()}
-          <span>{label}</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+    <Wrapper
+      iconNode={getNodeIcon()}
+      rightButtons={
+        <>
           <Button
             icon="pi pi-play"
             className="p-button-text p-button-sm panel-toggle-button"
@@ -540,16 +530,10 @@ const ConnectionDetailsPanel = ({
             tooltipOptions={{ showDelay: 500, position: 'bottom' }}
             style={{ color: 'var(--ui-primary-color, #4caf50)', opacity: 0.8 }}
           />
-          <Button
-            icon={collapsed ? "pi pi-chevron-up" : "pi pi-chevron-down"}
-            className="p-button-text p-button-sm panel-toggle-button"
-            onClick={(e) => { e.stopPropagation(); setCollapsed(!collapsed); }}
-          />
-        </div>
-      </div>
-
-      {!collapsed && (
-        <div className="details-content">
+          {chevronBtn}
+        </>
+      }
+    >
           {/* Sección Display */}
           <div className="details-section">
             <div className="section-title">Display</div>
@@ -779,9 +763,7 @@ const ConnectionDetailsPanel = ({
               </div>
             </div>
           )}
-        </div>
-      )}
-    </div>
+    </Wrapper>
   );
 };
 

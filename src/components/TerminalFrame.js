@@ -11,6 +11,7 @@ const TerminalFrame = ({
     className = '',
     contentClassName = '',
     id,
+    style = {},
     isDraggable = false,
     onClose = () => {},
     onMinimize = () => {},
@@ -48,7 +49,7 @@ const TerminalFrame = ({
     const frameStyleClass = frameStyle ? `terminal-frame-${frameStyle}` : '';
 
     return (
-        <div className={`terminal-frame ${frameStyleClass} ${className}`} id={id}>
+        <div className={`terminal-frame ${frameStyleClass} ${className}`} id={id} style={style}>
             {!hideHeader && (
                 <div 
                     className="terminal-frame-header"
@@ -176,3 +177,4 @@ const TerminalFrame = ({
 };
 
 export default TerminalFrame;
+
