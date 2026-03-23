@@ -345,37 +345,42 @@ const ConnectionDetailsPanel = ({
 
   // Define shared wrapper
   const Wrapper = ({ children, iconNode, rightButtons }) => (
-    <TerminalFrame
+    <div
       className={`connection-details-panel ${collapsed ? 'collapsed' : ''} ${isResizing ? 'resizing' : ''}`}
       style={!collapsed ? { height: `${panelHeight}px`, maxHeight: `${panelHeight}px` } : {}}
-      title={
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-          {iconNode}
-          <span>{label}</span>
-        </div>
-      }
-      headerExtra={
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-          {rightButtons}
-        </div>
-      }
-      onMinimize={(e) => { e?.stopPropagation(); setCollapsed(true); }}
-      onMaximize={(e) => { e?.stopPropagation(); setCollapsed(false); }}
-      onClose={(e) => { e?.stopPropagation(); setCollapsed(true); }}
+      ref={panelRef}
     >
       {!collapsed && (
         <div
           className="panel-resizer"
           onMouseDown={handleResizeStart}
-          style={{ zIndex: 100 }}
+          style={{ zIndex: 100, top: '-2px', height: '6px' }}
         />
       )}
-      {!collapsed && (
-        <div className="details-content" ref={panelRef}>
-          {children}
-        </div>
-      )}
-    </TerminalFrame>
+      <TerminalFrame
+        style={{ height: '100%', width: '100%' }}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            {iconNode}
+            <span>{label}</span>
+          </div>
+        }
+        headerExtra={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+            {rightButtons}
+          </div>
+        }
+        onMinimize={(e) => { e?.stopPropagation(); setCollapsed(true); }}
+        onMaximize={(e) => { e?.stopPropagation(); setCollapsed(false); }}
+        onClose={(e) => { e?.stopPropagation(); setCollapsed(true); }}
+      >
+        {!collapsed && (
+          <div className="details-content">
+            {children}
+          </div>
+        )}
+      </TerminalFrame>
+    </div>
   );
 
   const chevronBtn = (
