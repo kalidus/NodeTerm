@@ -329,18 +329,12 @@ const TerminalComponent = forwardRef(({
                     clearTimeout(resizeTimeout);
                 }
 
-                // Usar RAF + timeout para asegurar que el DOM est?? completamente estable
-                // RAF para el siguiente frame, timeout adicional para splits complejos
                 resizeRaf = requestAnimationFrame(() => {
                     resizeTimeout = setTimeout(() => {
                         try {
-                            // Simplemente hacer fit sin tocar el scroll
-                            // xterm.js maneja el scroll autom??ticamente
                             fitAddon.current.fit();
-                        } catch (e) {
-                            // Silenciar errores
-                        }
-                    }, 150); // Timeout de 150ms para dar tiempo al DOM en splits complejos
+                        } catch (e) { /* silenciar */ }
+                    }, 16); // 1 frame - suficiente para layout; menos delay = respuesta más rápida
                 });
             }
         });

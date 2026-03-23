@@ -42,6 +42,14 @@
   transition: all 0.15s ease-out !important;
 }
 
+/* Primera expansión: sin transiciones en sidebar Y panel para evitar lag (override !important) */
+.sidebar-container.sidebar-no-transition {
+  transition: none !important;
+}
+.main-splitter:has(.sidebar-container.sidebar-no-transition) .p-splitter-panel:first-child {
+  transition: none !important;
+}
+
 /* Área de detección ampliada para el gutter principal */
 .main-splitter .p-splitter-gutter {
   width: 12px !important;

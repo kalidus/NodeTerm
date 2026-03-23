@@ -209,25 +209,39 @@ const Sidebar = React.memo(({
   const hasEverExpandedRef = useRef(!sidebarCollapsed);
   const [disableFirstExpandTransition, setDisableFirstExpandTransition] = useState(false);
   const firstExpandTimeoutRef = useRef(null);
+  const expandedContentReady = true;
+  const expandedContentRef = useRef(null);
+
+  // Forzar layout del contenido pre-montado lo antes posible para reducir lag en 1ª expansión
+  useEffect(() => {
+    if (!sidebarCollapsed) return;
+    const warmup = () => {
+      const el = expandedContentRef.current;
+      if (el) {
+        try {
+          void el.offsetHeight;
+          const tree = el.querySelector('.tree-container');
+          if (tree) void tree.offsetHeight;
+        } catch (_) {}
+      }
+    };
+    // Doble rAF: layout en siguiente frame; más agresivo que idle para que esté listo antes del primer expand
+    const rafId = requestAnimationFrame(() => requestAnimationFrame(warmup));
+    return () => cancelAnimationFrame(rafId);
+  }, [sidebarCollapsed]);
 
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed(prev => {
       const next = !prev;
-
-      // Primera vez: expandir sin transición para evitar micro-lag residual
       if (prev && !next && !hasEverExpandedRef.current) {
         hasEverExpandedRef.current = true;
         setDisableFirstExpandTransition(true);
-
-        if (firstExpandTimeoutRef.current) {
-          clearTimeout(firstExpandTimeoutRef.current);
-        }
+        if (firstExpandTimeoutRef.current) clearTimeout(firstExpandTimeoutRef.current);
         firstExpandTimeoutRef.current = setTimeout(() => {
           setDisableFirstExpandTransition(false);
           firstExpandTimeoutRef.current = null;
         }, 50);
       }
-
       return next;
     });
   }, [setSidebarCollapsed]);
@@ -2755,7 +2769,7 @@ const Sidebar = React.memo(({
   return (
     <div
       ref={sidebarRef}
-      className="sidebar-container"
+      className={`sidebar-container${disableFirstExpandTransition ? ' sidebar-no-transition' : ''}`}
       style={{
         transition: disableFirstExpandTransition ? 'none' : 'all 0.15s ease-out',
         width: sidebarCollapsed ? 44 : undefined,
@@ -2765,6 +2779,7 @@ const Sidebar = React.memo(({
         height: '100%',
         boxSizing: 'border-box',
         overflow: 'hidden',
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         fontFamily: explorerFont,
@@ -2773,14 +2788,15 @@ const Sidebar = React.memo(({
         ...(explorerFontColor ? { '--ui-sidebar-text': explorerFontColor } : {})
       }}>
       {sidebarCollapsed ? (
-        // Layout de sidebar colapsada: botón de colapsar arriba a la izquierda, menú y config abajo
+        /* Layout colapsado - encima del contenido expandido */
         <div style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
           width: '100%',
           height: '100%',
-          position: 'relative'
+          position: 'relative',
+          zIndex: 10
         }}>
           {/* Botones superiores: colapsar, nueva conexión, nuevo grupo */}
           <div style={{
@@ -3208,8 +3224,31 @@ const Sidebar = React.memo(({
             </Button>
           </div>
         </div>
-      ) : (
-        fullSidebar
+      ) : null}
+      {/* Contenido expandido: siempre montado; solo translateX para mostrar/ocultar (sin reflow, GPU) */}
+      {(expandedContentReady || !sidebarCollapsed) && (
+        <div
+          ref={expandedContentRef}
+          aria-hidden={!!sidebarCollapsed}
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            width: 280,
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+            overflow: 'hidden',
+            transform: sidebarCollapsed ? 'translateX(-100%)' : 'translateX(0)',
+            /* Colapsar: sin transición (evita flash de items). Expandir: animación suave, salvo 1ª vez */
+            transition: sidebarCollapsed ? 'none' : (disableFirstExpandTransition ? 'none' : 'transform 0.15s ease-out'),
+            pointerEvents: sidebarCollapsed ? 'none' : 'auto',
+            zIndex: sidebarCollapsed ? 0 : 1
+          }}
+        >
+          {fullSidebar}
+        </div>
       )}
 
       <FolderDialog

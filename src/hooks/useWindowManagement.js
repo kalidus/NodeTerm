@@ -84,6 +84,7 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
   useEffect(() => {
     let done = false;
     let fallbackTimeoutId = null;
+    let idleId = null;
 
     const runOnce = () => {
       if (done) return;
@@ -91,28 +92,32 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
       handleResize();
     };
 
-    // Esperar fin de transición del ancho para evitar resize durante reflow
     const sidebarEl = document.querySelector('.sidebar-container');
+    const tr = sidebarEl ? window.getComputedStyle(sidebarEl).transition : '';
+    const hasTransition = !!sidebarEl && tr !== 'none' && !/^all 0s|^none/i.test(tr || '');
+
     const onTransitionEnd = (e) => {
-      // Dependiendo del layout/PrimeReact, puede ser width/flex-basis/max-width
-      if (e?.propertyName && !['width', 'flex-basis', 'max-width', 'min-width'].includes(e.propertyName)) {
-        return;
-      }
+      if (e?.propertyName && !['width', 'flex-basis', 'max-width', 'min-width'].includes(e.propertyName)) return;
       runOnce();
     };
 
-    if (sidebarEl && sidebarEl.addEventListener) {
+    if (sidebarEl?.addEventListener && hasTransition) {
       sidebarEl.addEventListener('transitionend', onTransitionEnd, { passive: true });
-      // Fallback por si no dispara transitionend (o el CSS no transiciona)
       fallbackTimeoutId = setTimeout(runOnce, 320);
     } else {
-      // Fallback más simple si no encontramos el elemento
-      fallbackTimeoutId = setTimeout(runOnce, 250);
+      // Sin transición: doble rAF para que layout termine (~32ms) - más predecible que requestIdleCallback
+      const rafId = requestAnimationFrame(() => {
+        requestAnimationFrame(runOnce);
+      });
+      return () => {
+        cancelAnimationFrame(rafId);
+      };
     }
 
     return () => {
       if (fallbackTimeoutId) clearTimeout(fallbackTimeoutId);
-      if (sidebarEl && sidebarEl.removeEventListener) {
+      if (idleId != null && typeof cancelIdleCallback !== 'undefined') cancelIdleCallback(idleId);
+      if (sidebarEl?.removeEventListener && hasTransition) {
         sidebarEl.removeEventListener('transitionend', onTransitionEnd);
       }
     };
