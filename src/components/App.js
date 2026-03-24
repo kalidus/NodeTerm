@@ -127,6 +127,12 @@ const App = () => {
     setTitleBarCollapsed(prev => !prev);
   }, []);
 
+  React.useEffect(() => {
+    const toggleTitlebarEvent = () => handleToggleTitleBar();
+    window.addEventListener('toggle-titlebar', toggleTitlebarEvent);
+    return () => window.removeEventListener('toggle-titlebar', toggleTitlebarEvent);
+  }, [handleToggleTitleBar]);
+
   // Estado para mostrar/ocultar el marco superior del TerminalFrame principal
   const [mainFrameHeaderCollapsed, setMainFrameHeaderCollapsed] = React.useState(() => {
     try {
@@ -2767,47 +2773,6 @@ const App = () => {
             iconTheme={iconTheme}
             expandedKeys={expandedKeys}
           />
-        )}
-
-        {/* Botón flotante para restaurar titlebar cuando está oculta */}
-        {titleBarCollapsed && (
-          <div
-            title="Mostrar barra superior"
-            onClick={handleToggleTitleBar}
-            style={{
-              position: 'fixed',
-              top: 6,
-              right: 10,
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              background: 'var(--ui-titlebar-accent, #1976d2)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              zIndex: 9999,
-              opacity: 0.7,
-              transition: 'opacity 0.2s ease, transform 0.2s ease',
-              WebkitAppRegion: 'no-drag',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.opacity = '1';
-              e.currentTarget.style.transform = 'scale(1.1)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.opacity = '0.7';
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 14 14">
-              {/* Flecha hacia abajo indicando "expandir" */}
-              <line x1="2" y1="5" x2="7" y2="10" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.6" strokeLinecap="round" />
-              <line x1="7" y1="10" x2="12" y2="5" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-          </div>
         )}
 
         {/* Línea separadora debajo de la titlebar - Solo en temas futuristas */}

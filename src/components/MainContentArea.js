@@ -1185,6 +1185,49 @@ const MainContentArea = ({
       margin-left: auto;
       height: 20px;
     `;
+    
+    // Botón para mostrar la titlebar (solo se muestra cuando la titlebar ESTÁ oculta)
+    if (titleBarCollapsed) {
+      const showTitleBarButton = document.createElement('div');
+      showTitleBarButton.setAttribute('role', 'button');
+      showTitleBarButton.setAttribute('tabIndex', '0');
+      showTitleBarButton.title = 'Mostrar barra superior';
+      showTitleBarButton.className = 'tab-titlebar-toggle-button';
+      const tbIcon = document.createElement('i');
+      tbIcon.className = 'pi pi-chevron-down';
+      tbIcon.style.cssText = `
+        font-size: 0.9rem;
+        color: var(--ui-tab-text, rgba(255,255,255,0.85));
+        opacity: 0.6;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        transition: all 0.2s;
+      `;
+      showTitleBarButton.appendChild(tbIcon);
+      showTitleBarButton.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-left: 2px;
+        -webkit-app-region: ${ mainFrameHeaderCollapsed ? 'no-drag' : 'inherit' };
+      `;
+      showTitleBarButton.addEventListener('mouseenter', () => { tbIcon.style.opacity = '1'; });
+      showTitleBarButton.addEventListener('mouseleave', () => { tbIcon.style.opacity = '0.6'; });
+      showTitleBarButton.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          showTitleBarButton.click();
+        }
+      });
+      showTitleBarButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.dispatchEvent(new CustomEvent('toggle-titlebar'));
+      });
+      appearanceButtonWrapper.appendChild(showTitleBarButton);
+    }
+    
     appearanceButtonWrapper.appendChild(frameToggleButton);
     appearanceButtonWrapper.appendChild(appearanceButton);
 
