@@ -855,7 +855,7 @@ const MainContentArea = ({
     appearanceButton.title = 'Tema y diseño de pestañas';
     appearanceButton.className = 'tab-appearance-quick-button';
     const appearanceIcon = document.createElement('i');
-    appearanceIcon.className = 'pi pi-palette';
+    appearanceIcon.className = 'pi pi-cog';
     appearanceIcon.style.cssText = `
       font-size: 0.9rem;
       color: var(--ui-tab-text, rgba(255,255,255,0.85));
@@ -1185,8 +1185,8 @@ const MainContentArea = ({
       margin-left: auto;
       height: 20px;
     `;
-    appearanceButtonWrapper.appendChild(appearanceButton);
     appearanceButtonWrapper.appendChild(frameToggleButton);
+    appearanceButtonWrapper.appendChild(appearanceButton);
 
     buttonsContainer.appendChild(plusButton);
     buttonsContainer.appendChild(dropdownButton);
@@ -1808,7 +1808,7 @@ const MainContentArea = ({
             headerExtra={
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <i
-                  className="pi pi-palette"
+                  className="pi pi-cog"
                   style={{
                     fontSize: '0.9rem',
                     color: 'var(--ui-titlebar-text, #fff)',
