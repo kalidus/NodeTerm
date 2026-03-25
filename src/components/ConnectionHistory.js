@@ -1252,7 +1252,7 @@ const ConnectionHistory = ({
 				.connection-history-section { border: none !important; background: transparent !important; }
 				.hero-splash-header {
 					text-align: center;
-					padding: 3vh 20px 3vh;
+					padding: 10px 20px 10px;
 					background: transparent;
 					position: relative;
 					margin-bottom: 0px;
@@ -1400,8 +1400,8 @@ const ConnectionHistory = ({
 					display: flex;
 					justify-content: center;
 					gap: 8px;
-					margin-top: 20px;
-					padding: 4px;
+					margin-top: 10px;
+					padding: 3px;
 					background: rgba(0, 0, 0, 0.2);
 					border-radius: 6px;
 					border: 1px solid rgba(255, 255, 255, 0.05);
@@ -1456,7 +1456,7 @@ const ConnectionHistory = ({
 
 				/* --- Top Terminal Frame (Search + Actions) --- */
 				.top-terminal-frame {
-					margin: 0 auto 24px auto;
+					margin: 0 auto 12px auto;
 					border-radius: 6px;
 					overflow: hidden;
 					display: flex;
@@ -1536,7 +1536,7 @@ const ConnectionHistory = ({
 				.top-terminal-header .header-path .path-tilde { color: ${terminalTheme.green || '#3fb950'}; opacity: 0.8; }
 				
 				.top-terminal-body {
-					padding: 18px 20px 22px;
+					padding: 10px 20px 12px;
 					display: flex;
 					flex-direction: column;
 					align-items: center;
@@ -2069,7 +2069,7 @@ const ConnectionHistory = ({
 
 
 
-			<div className="hero-splash-header" style={{ paddingBottom: '20px' }}>
+			<div className="hero-splash-header" style={{ paddingBottom: '8px' }}>
 
 				<div className={`top-terminal-frame ${terminalFrameStyle}`}>
 					<div className="top-terminal-header">
@@ -2197,7 +2197,7 @@ const ConnectionHistory = ({
 						</div>
 					</div>
 					<div className="top-terminal-body">
-						<div className="hero-search-container" style={{ margin: '0 0 12px 0' }}>
+						<div className="hero-search-container" style={{ margin: '0 0 6px 0' }}>
 							<InputText
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
