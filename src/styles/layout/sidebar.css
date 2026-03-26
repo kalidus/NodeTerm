@@ -716,8 +716,20 @@
   display: flex !important;
   align-items: center !important;
   gap: 6px;
-  margin-left: 0 !important; /* Desactivar el auto margin que causaba desalineación */
+  margin-left: 0 !important;
   transition: opacity 0.3s ease, transform 0.3s ease;
+  padding: 4px 8px !important;
+  border-radius: 10px !important;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.03) 55%,
+    rgba(255, 255, 255, 0.01) 100%
+  ) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.08) !important;
 }
 
 /* Restablecer estilos del árbol para asegurar funcionalidad */
