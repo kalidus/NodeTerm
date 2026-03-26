@@ -348,10 +348,16 @@ class AnythingLLMService {
       volumeArgs.push(`-v "${hostPath}:${vol.containerPath}"`);
     }
 
+    // Asegurar que la red nodeterm-network existe
+    try {
+      await execAsync(this.buildDockerCommand('network create nodeterm-network'));
+    } catch (_) {}
+
     const args = [
       'run -d',
       `--name ${this.containerName}`,
       '--restart unless-stopped',
+      '--network nodeterm-network',
       `-p ${this.hostPort}:${this.containerPort}`,
       ...volumeArgs,
       '-e DISABLE_TELEMETRY=true',
