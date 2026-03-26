@@ -27,19 +27,25 @@ const getConversationCache = (conversationId) => {
   return cacheByConversation.get(conversationId);
 };
 
-const prune = (conversationCache) => {
+const prune = (conversationId, conversationCache) => {
   const now = Date.now();
   for (const [key, entry] of conversationCache.entries()) {
     if (now - entry.timestamp > CACHE_TTL_MS) {
       conversationCache.delete(key);
     }
   }
+
+  // Si ya no queda nada en la caché de esa conversación, eliminar el Map
+  // para evitar que `cacheByConversation` crezca indefinidamente.
+  if (conversationCache.size === 0) {
+    cacheByConversation.delete(conversationId);
+  }
 };
 
 export const rememberToolExecution = (conversationId, toolName, args = {}, data = {}) => {
   const conversationCache = getConversationCache(conversationId);
   if (!conversationCache) return;
-  prune(conversationCache);
+  prune(conversationId, conversationCache);
   const key = makeKey(toolName, args);
   conversationCache.set(key, {
     summary: data.summary || '',
@@ -52,7 +58,7 @@ export const rememberToolExecution = (conversationId, toolName, args = {}, data 
 export const getRecentToolExecution = (conversationId, toolName, args = {}) => {
   const conversationCache = getConversationCache(conversationId);
   if (!conversationCache) return null;
-  prune(conversationCache);
+  prune(conversationId, conversationCache);
   const key = makeKey(toolName, args);
   return conversationCache.get(key) || null;
 };

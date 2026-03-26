@@ -17,6 +17,7 @@ let _rdpHandlers = null;
 let _guacamoleHandlers = null;
 let _anythingLLMHandlers = null;
 let _openWebUIHandlers = null;
+let _libreChatHandlers = null;
 let _sshHandlers = null;
 let _mcpHandlers = null;
 let _nextcloudHandlers = null;
@@ -61,6 +62,11 @@ function getAnythingLLMHandlers() {
 function getOpenWebUIHandlers() {
   if (!_openWebUIHandlers) _openWebUIHandlers = require('./openwebui-handlers');
   return _openWebUIHandlers;
+}
+
+function getLibreChatHandlers() {
+  if (!_libreChatHandlers) _libreChatHandlers = require('./librechat-handlers');
+  return _libreChatHandlers;
 }
 
 function getSSHHandlers() {
@@ -178,6 +184,7 @@ function registerSecondaryHandlers(dependencies) {
   getGuacamoleHandlers().registerGuacamoleHandlers(dependencies);
   getAnythingLLMHandlers().registerAnythingLLMHandlers(dependencies);
   getOpenWebUIHandlers().registerOpenWebUIHandlers(dependencies);
+  getLibreChatHandlers().registerLibreChatHandlers(dependencies);
 
   // Handlers SSH
   getSSHHandlers()(dependencies);
@@ -247,6 +254,7 @@ module.exports = {
   getGuacamoleHandlers,
   getAnythingLLMHandlers,
   getOpenWebUIHandlers,
+  getLibreChatHandlers,
   getSSHHandlers,
   getMCPHandlers,
   getNextcloudHandlers,

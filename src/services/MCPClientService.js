@@ -14,6 +14,8 @@ import mcpLogger from '../utils/mcpLogger';
 class MCPClientService {
   constructor() {
     this.initialized = false;
+    this.initializingPromise = null;
+    this.refreshInFlight = null;
     this.servers = [];
     this.toolsCache = [];
     this.resourcesCache = [];
@@ -28,27 +30,34 @@ class MCPClientService {
    */
   async initialize() {
     if (this.initialized) return { success: true };
+    if (this.initializingPromise) return this.initializingPromise;
 
-    try {
-      const result = await window.electron.mcp.initialize();
-      
-      if (result.success) {
-        this.initialized = true;
+    this.initializingPromise = (async () => {
+      try {
+        const result = await window.electron.mcp.initialize();
         
-        // Cargar estado inicial
-        await this.refreshAll();
+        if (result.success) {
+          this.initialized = true;
+          
+          // Cargar estado inicial
+          await this.refreshAll();
+          
+          // Auto-refresh cada 30 segundos
+          this.startAutoRefresh();
+        } else {
+          console.error('❌ [MCP Client] Error inicializando:', result.error);
+        }
         
-        // Auto-refresh cada 30 segundos
-        this.startAutoRefresh();
-      } else {
-        console.error('❌ [MCP Client] Error inicializando:', result.error);
+        return result;
+      } catch (error) {
+        console.error('❌ [MCP Client] Error inicializando:', error);
+        return { success: false, error: error.message };
+      } finally {
+        this.initializingPromise = null;
       }
-      
-      return result;
-    } catch (error) {
-      console.error('❌ [MCP Client] Error inicializando:', error);
-      return { success: false, error: error.message };
-    }
+    })();
+
+    return this.initializingPromise;
   }
 
   /**
@@ -80,22 +89,32 @@ class MCPClientService {
    * Refrescar todo el estado (servidores + tools + resources + prompts)
    */
   async refreshAll() {
-    try {
-      await Promise.all([
-        this.refreshServers(),
-        this.refreshTools(),
-        this.refreshResources(),
-        this.refreshPrompts()
-      ]);
-
-      this.lastRefresh = Date.now();
-      this.notifyListeners('refresh', { timestamp: this.lastRefresh });
-      
-      return { success: true };
-    } catch (error) {
-      console.error('[MCP Client] Error refrescando:', error);
-      return { success: false, error: error.message };
+    if (this.refreshInFlight) {
+      return this.refreshInFlight;
     }
+
+    this.refreshInFlight = (async () => {
+      try {
+        await Promise.all([
+          this.refreshServers(),
+          this.refreshTools(),
+          this.refreshResources(),
+          this.refreshPrompts()
+        ]);
+
+        this.lastRefresh = Date.now();
+        this.notifyListeners('refresh', { timestamp: this.lastRefresh });
+        
+        return { success: true };
+      } catch (error) {
+        console.error('[MCP Client] Error refrescando:', error);
+        return { success: false, error: error.message };
+      } finally {
+        this.refreshInFlight = null;
+      }
+    })();
+
+    return this.refreshInFlight;
   }
 
   /**

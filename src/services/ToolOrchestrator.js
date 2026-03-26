@@ -240,7 +240,12 @@ class ToolOrchestrator {
 
     let iteration = 0;
     let currentToolCall = initialToolCall;
-    const limit = Number.isFinite(maxIterations) ? Math.max(1, maxIterations) : Infinity;
+    // IMPORTANTE: si maxIterations no se pasa (p.ej. modo remoto), NO dejarlo en Infinity.
+    // Eso puede provocar loops infinitos y crecimiento de memoria en conversación.
+    const resolvedMaxIterations = Number.isFinite(maxIterations)
+      ? Math.max(1, maxIterations)
+      : (Number.isFinite(options?.maxIterations) ? Math.max(1, options.maxIterations) : 8);
+    const limit = resolvedMaxIterations;
     const seenInTurn = new Set();
     let lastToolName = null;
     let sameToolCount = 0;
@@ -463,7 +468,18 @@ class ToolOrchestrator {
         return errorFollowUp;
       }
 
-      const cleanText = this._formatToolResult(result, toolName, args);
+      let cleanText = this._formatToolResult(result, toolName, args);
+
+      // Truncar resultados enormes para evitar que la conversación/caché crezcan sin parar.
+      // `search_nodeterm` se renderiza con estructura parseada, pero aquí guardamos también texto.
+      const isSearchNodetermTool =
+        toolName === 'search_nodeterm' || toolName.includes('search_nodeterm');
+      const MAX_SEARCH_NODE_TERM_CHARS = 20000;
+      if (isSearchNodetermTool && typeof cleanText === 'string' && cleanText.length > MAX_SEARCH_NODE_TERM_CHARS) {
+        const omitted = cleanText.length - MAX_SEARCH_NODE_TERM_CHARS;
+        cleanText = cleanText.slice(0, MAX_SEARCH_NODE_TERM_CHARS) +
+          `\n\n[... ${omitted} caracteres omitidos para evitar consumo excesivo de memoria]`;
+      }
       
       // ✅ IMPROVED: Detectar lenguaje para archivos de texto
       let detectedLanguage = '';
@@ -544,7 +560,24 @@ class ToolOrchestrator {
           // Guardar el resultado parseado si tiene la estructura esperada
           if (parsedResult && typeof parsedResult === 'object' && 
               (parsedResult.ssh_results || parsedResult.password_results || parsedResult.message)) {
-            metadata.originalToolResult = parsedResult;
+            // Evitar OOM: el renderer puede intentar mapear cientos de items.
+            // En el UI se renderiza con ssh_results/password_results.map(...) sin paginación.
+            const MAX_SSH_RESULTS = 30;
+            const MAX_PASSWORD_RESULTS = 30;
+
+            const pruned = { ...parsedResult };
+            if (Array.isArray(pruned.ssh_results) && pruned.ssh_results.length > MAX_SSH_RESULTS) {
+              pruned.ssh_results = pruned.ssh_results.slice(0, MAX_SSH_RESULTS);
+              pruned._truncatedSshResults = true;
+              pruned._sshResultsTruncatedCount = parsedResult.ssh_results.length - MAX_SSH_RESULTS;
+            }
+            if (Array.isArray(pruned.password_results) && pruned.password_results.length > MAX_PASSWORD_RESULTS) {
+              pruned.password_results = pruned.password_results.slice(0, MAX_PASSWORD_RESULTS);
+              pruned._truncatedPasswordResults = true;
+              pruned._passwordResultsTruncatedCount = parsedResult.password_results.length - MAX_PASSWORD_RESULTS;
+            }
+
+            metadata.originalToolResult = pruned;
           }
         } catch (error) {
           console.error(`❌ [ToolOrchestrator] Error guardando originalToolResult para search_nodeterm:`, error);

@@ -239,6 +239,20 @@ const MainContentArea = ({
     }));
   }, []);
 
+  const dispatchLibreChatTab = useCallback(() => {
+    const tabId = `librechat-${Date.now()}`;
+    const newTab = {
+      key: tabId,
+      label: 'LibreChat',
+      type: 'librechat',
+      createdAt: Date.now(),
+      groupId: null
+    };
+    window.dispatchEvent(new CustomEvent('create-librechat-tab', {
+      detail: { tab: newTab }
+    }));
+  }, []);
+
   // Manejador para abrir el explorador desde el botón de la sidebar
   const handleSidebarOpenFileExplorer = useCallback(() => {
     // 1. Intentar con la pestaña activa si es SSH
@@ -378,7 +392,8 @@ const MainContentArea = ({
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
     nodeterm: true,
     anythingllm: false,
-    openwebui: false
+    openwebui: false,
+    librechat: false
   });
 
   // Cargar configuración de clientes de IA desde localStorage
@@ -391,14 +406,16 @@ const MainContentArea = ({
           setAiClientsEnabled({
             nodeterm: parsed.nodeterm === true, // Solo activo si está explícitamente configurado
             anythingllm: parsed.anythingllm === true,
-            openwebui: parsed.openwebui === true
+            openwebui: parsed.openwebui === true,
+            librechat: parsed.librechat === true
           });
         } else {
           // Si no hay configuración, todos desactivados por defecto
           setAiClientsEnabled({
             nodeterm: false,
             anythingllm: false,
-            openwebui: false
+            openwebui: false,
+            librechat: false
           });
         }
       } catch (error) {
@@ -643,6 +660,17 @@ const MainContentArea = ({
         });
       }
 
+      // LibreChat - Solo si está activado
+      if (aiClientsEnabled.librechat) {
+        menuItems.push({
+          label: 'LibreChat',
+          icon: 'pi pi-comment',
+          command: () => {
+            dispatchLibreChatTab();
+          }
+        });
+      }
+
       setTerminalMenuItems(menuItems);
     } else {
       const linuxMenuItems = [
@@ -702,10 +730,21 @@ const MainContentArea = ({
         });
       }
 
+      // LibreChat - Solo si está activado
+      if (aiClientsEnabled.librechat) {
+        linuxMenuItems.push({
+          label: 'LibreChat',
+          icon: 'pi pi-comment',
+          command: () => {
+            dispatchLibreChatTab();
+          }
+        });
+      }
+
       setTerminalMenuItems(linuxMenuItems);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wslDistributions, dockerContainers, dispatchAnythingLLMTab, dispatchOpenWebUITab, aiClientsEnabled]);
+  }, [wslDistributions, dockerContainers, dispatchAnythingLLMTab, dispatchOpenWebUITab, dispatchLibreChatTab, aiClientsEnabled]);
 
   // 🚀 OPTIMIZACIÓN: Detectar distribuciones WSL DIFERIDO
   useEffect(() => {

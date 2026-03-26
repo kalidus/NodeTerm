@@ -250,6 +250,7 @@ const { fork } = require('child_process');
 let _guacdService = null;
 let _anythingLLMService = null;
 let _openWebUIService = null;
+let _libreChatService = null;
 
 function getGuacdService() {
   if (!_guacdService) {
@@ -273,6 +274,14 @@ function getOpenWebUIService() {
     _openWebUIService = new OpenWebUIService();
   }
   return _openWebUIService;
+}
+
+function getLibreChatService() {
+  if (!_libreChatService) {
+    const LibreChatService = require('./src/services/LibreChatService');
+    _libreChatService = new LibreChatService();
+  }
+  return _libreChatService;
 }
 
 // ============================================================================
@@ -1031,6 +1040,7 @@ function createWindow() {
         guacdInactivityTimeoutMs,
         anythingLLMService: getAnythingLLMService(),
         openWebUIService: getOpenWebUIService(),
+        libreChatService: getLibreChatService(),
         packageJson,
         sshConnections,
         sshConnectionPool,
@@ -1213,6 +1223,7 @@ function createWindow() {
       guacdInactivityTimeoutMs,
       anythingLLMService: getAnythingLLMService(),
       openWebUIService: getOpenWebUIService(),
+      libreChatService: getLibreChatService(),
       packageJson,
       sshConnections,
       sshConnectionPool,
@@ -2800,3 +2811,6 @@ app.on('before-quit', (event) => {
 // ✅ OPTIMIZACIÓN: Manejadores de Nextcloud movidos a nextcloud-handlers.js
 // Se registran automáticamente desde registerSecondaryHandlers() en handlers/index.js
 // NO es necesario registrarlos aquí para evitar ejecución prematura
+// Restart attempt
+
+// Domain fix attempt

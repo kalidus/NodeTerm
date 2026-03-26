@@ -17,13 +17,15 @@ const AIClientsTab = ({ themeColors }) => {
   const [clients, setClients] = useState({
     nodeterm: false,
     anythingllm: false,
-    openwebui: false
+    openwebui: false,
+    librechat: false
   });
 
   // Estado de carga para verificar servicios Docker
   const [dockerStatus, setDockerStatus] = useState({
     anythingllm: { loading: false, running: false, error: null },
-    openwebui: { loading: false, running: false, error: null }
+    openwebui: { loading: false, running: false, error: null },
+    librechat: { loading: false, running: false, error: null }
   });
 
   // Cargar configuración desde localStorage al montar
@@ -47,7 +49,10 @@ const AIClientsTab = ({ themeColors }) => {
     if (clients.openwebui) {
       checkDockerServiceStatus('openwebui');
     }
-  }, [clients.anythingllm, clients.openwebui]);
+    if (clients.librechat) {
+      checkDockerServiceStatus('librechat');
+    }
+  }, [clients.anythingllm, clients.openwebui, clients.librechat]);
 
   // Guardar configuración en localStorage cuando cambia
   const saveClientsConfig = (newClients) => {
@@ -69,7 +74,7 @@ const AIClientsTab = ({ themeColors }) => {
     saveClientsConfig(newClients);
 
     // Si se activa un servicio Docker, verificar su estado
-    if (newClients[clientKey] && (clientKey === 'anythingllm' || clientKey === 'openwebui')) {
+    if (newClients[clientKey] && (clientKey === 'anythingllm' || clientKey === 'openwebui' || clientKey === 'librechat')) {
       await checkDockerServiceStatus(clientKey);
     }
   };
@@ -82,7 +87,11 @@ const AIClientsTab = ({ themeColors }) => {
     }));
 
     try {
-      const ipcKey = serviceKey === 'anythingllm' ? 'anythingllm:get-status' : 'openwebui:get-status';
+      let ipcKey = '';
+      if (serviceKey === 'anythingllm') ipcKey = 'anythingllm:get-status';
+      else if (serviceKey === 'openwebui') ipcKey = 'openwebui:get-status';
+      else if (serviceKey === 'librechat') ipcKey = 'librechat:get-status';
+
       const result = await window.electron.ipcRenderer.invoke(ipcKey);
       
       if (result.success) {
@@ -124,7 +133,11 @@ const AIClientsTab = ({ themeColors }) => {
     }));
 
     try {
-      const ipcKey = serviceKey === 'anythingllm' ? 'anythingllm:start' : 'openwebui:start';
+      let ipcKey = '';
+      if (serviceKey === 'anythingllm') ipcKey = 'anythingllm:start';
+      else if (serviceKey === 'openwebui') ipcKey = 'openwebui:start';
+      else if (serviceKey === 'librechat') ipcKey = 'librechat:start';
+
       const result = await window.electron.ipcRenderer.invoke(ipcKey);
       
       if (result.success) {
@@ -199,6 +212,20 @@ const AIClientsTab = ({ themeColors }) => {
       requiresDocker: true,
       port: 3000,
       url: 'http://127.0.0.1:3000'
+    },
+    {
+      key: 'librechat',
+      name: 'LibreChat',
+      icon: 'pi pi-comment',
+      color: '#9C27B0',
+      description: 'Interfaz de chat de IA avanzada y personalizable. Soporta múltiples proveedores y modelos con una experiencia premium.',
+      features: ['Multi-proveedor', 'Presets de búsqueda', 'Historial avanzado', 'Plugins y herramientas'],
+      badges: [
+        { label: 'DOCKER', severity: 'info', icon: 'pi pi-box' }
+      ],
+      requiresDocker: true,
+      port: 3080,
+      url: 'http://127.0.0.1:3080'
     }
   ];
 

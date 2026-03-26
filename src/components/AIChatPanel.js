@@ -194,24 +194,28 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
         // localStorage es la fuente de verdad. Siempre sincronizamos desde allí.
         // Solo mantenemos mensajes "streaming" temporales si el usuario está esperando respuesta.
         
-        // Verificar si hay NUEVOS mensajes persistidos
-        const prevPersistedIds = new Set(prev.filter(m => !m.streaming).map(m => m.id));
-        const persistedIds = new Set(persisted.map(m => m.id));
-        const newPersistedIds = persisted.filter(m => !prevPersistedIds.has(m.id)).map(m => m.id);
-        const hasNewPersistedMessages = newPersistedIds.length > 0;
-        
-        // Si hay nuevos mensajes persistidos, eliminar TODOS los streaming
-        // Si NO hay nuevos mensajes, mantener streaming existentes
-        const streaming = hasNewPersistedMessages ? [] : prev.filter(m => m.streaming === true);
-        
-        // Si NO hay cambios (mismo número de mensajes persistidos y no hay streaming), no hacer nada
-        if (!hasNewPersistedMessages && streaming.length === 0 && prev.length === persisted.length) {
+        // Merge robusto: mantenemos placeholders "streaming" SOLO si
+        // su contenido no coincide con ningún mensaje ya persistido.
+        // Esto evita que un evento de persistencia (p.ej. system/tool)
+        // borre el placeholder del primer mensaje antes de que el persistido llegue.
+        const normalize = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
+        const persistedSignatures = new Set(
+          persisted.map(m => `${m.role}|${normalize(m.content)}`)
+        );
+
+        const streaming = prev.filter(m => m.streaming === true)
+          .filter(m => !persistedSignatures.has(`${m.role}|${normalize(m.content)}`));
+
+        const merged = [...persisted, ...streaming];
+
+        // Evitar re-renders si el arreglo ya coincide por ids y orden
+        if (
+          prev.length === merged.length &&
+          prev.every((m, idx) => m?.id === merged[idx]?.id)
+        ) {
           return prev;
         }
-        
-        // Merge: Combinar persistidos + streaming
-        const merged = [...persisted, ...streaming];
-        
+
         return merged;
       });
     };
@@ -571,13 +575,15 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
       console.error('Error inicializando MCP client:', error);
     });
 
-    // Iniciar MCPs marcados como por defecto después de 1 segundo
-    // (dar tiempo a que se inicialice MCPClient)
+  }, []);
+
+  // Iniciar MCPs seleccionados por defecto cuando cambian
+  useEffect(() => {
     const initDefaultMcps = setTimeout(() => {
       if (selectedMcpServers.length > 0) {
         const allServers = mcpClient.getAllServers();
         const serverMap = new Map(allServers.map(s => [s.id, s]));
-        
+
         // Filtrar: solo MCPs que existen AND están habilitados
         const validServerIds = selectedMcpServers.filter(id => {
           const server = serverMap.get(id);
@@ -1468,11 +1474,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
             baseName,
             hasCommand: !!toolData.args?.command,
             isError: isErrorResult,
-            shouldOpen: (baseName === 'execute_local' || baseName === 'execute_ssh') && toolData.args?.command && !isErrorResult,
+            shouldOpen: baseName === 'execute_local' && toolData.args?.command && !isErrorResult,
             hasCallback: typeof onExecuteCommandInTerminal === 'function'
           });
           
-          if ((baseName === 'execute_local' || baseName === 'execute_ssh') && toolData.args?.command && !isErrorResult) {
+          if (baseName === 'execute_local' && toolData.args?.command && !isErrorResult) {
             console.log('✅ Llamando callback para abrir terminal:', {
               baseName,
               command: toolData.args.command,
@@ -3271,7 +3277,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
       
       console.log('🖥️ handleOpenInTerminal (botón) called:', { cleanToolName, command, hostId });
       
-      if ((cleanToolName === 'execute_local' || cleanToolName === 'execute_ssh') && command) {
+      if (cleanToolName === 'execute_local' && command) {
         const commandData = {
           command,
           workingDir,
@@ -3292,7 +3298,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
     };
     
     // Determinar si mostrar el botón de terminal
-    const showTerminalButton = (cleanToolName === 'execute_local' || cleanToolName === 'execute_ssh') && toolArgs?.command;
+    const showTerminalButton = cleanToolName === 'execute_local' && toolArgs?.command;
 
     return (
       <div className="tool-execution-card">

@@ -1,0 +1,164 @@
+.librechat-tab {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: var(--bg-primary, #0f172a);
+  color: var(--text-primary, #f8fafc);
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.librechat-webview-wrapper {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.librechat-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 10;
+  transition: opacity 0.5s ease;
+}
+
+.librechat-overlay.fading {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.librechat-status-card,
+.librechat-error-card,
+.librechat-disabled-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg-secondary, #1e293b);
+  padding: 2.5rem;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  max-width: 450px;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.librechat-status-card h3,
+.librechat-error-card h3,
+.librechat-disabled-card h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.librechat-status-card p,
+.librechat-error-card p,
+.librechat-disabled-card p {
+  color: var(--text-secondary, #94a3b8);
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+
+.librechat-meta {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+}
+
+.librechat-meta div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.librechat-meta span:first-child {
+  color: #64748b;
+}
+
+.librechat-toolbar {
+  position: absolute;
+  bottom: 2rem;
+  right: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  padding: 0.6rem 1rem;
+  border-radius: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.librechat-toolbar:hover {
+  transform: scale(1.05);
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.librechat-status-pill {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-right: 0.5rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.librechat-status-pill .state {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.librechat-status-pill .state::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.librechat-status-pill .state.ready { color: #4ade80; }
+.librechat-status-pill .state.ready::before { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+
+.librechat-status-pill .state.pending { color: #fbbf24; }
+.librechat-status-pill .state.pending::before { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
+
+.librechat-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.librechat-action-btn.p-button.p-button-sm {
+  background: transparent !important;
+  border: none !important;
+  color: #94a3b8 !important;
+  transition: all 0.2s ease;
+}
+
+.librechat-action-btn.p-button.p-button-sm:hover {
+  color: #f8fafc !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+}

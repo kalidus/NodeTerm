@@ -1660,7 +1660,12 @@ class AIService {
     })();
     const inferredIntent = this._inferFilesystemIntent(lastUserGoal || '');
     
-    const limit = Number.isFinite(maxIterations) ? Math.max(1, maxIterations) : Infinity;
+    // IMPORTANTE: nunca dejar Infinity en loops de tool-calls en runtime local.
+    // Sin límite puede provocar crecimiento de memoria si el modelo insiste.
+    const resolvedMaxIterations = Number.isFinite(maxIterations)
+      ? Math.max(1, maxIterations)
+      : (Number.isFinite(options?.maxIterations) ? Math.max(1, options.maxIterations) : 8);
+    const limit = resolvedMaxIterations;
     const limitInfo = Number.isFinite(limit) ? limit : null;
     
     debugLogger.debug('AIService.MCP', 'Iniciando loop de tool calls', { maxIterations: limitInfo });

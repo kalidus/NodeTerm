@@ -571,7 +571,8 @@ const Sidebar = React.memo(({
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
     nodeterm: true,
     anythingllm: false,
-    openwebui: false
+    openwebui: false,
+    librechat: false
   });
 
   // Cargar configuración de clientes de IA desde localStorage
@@ -584,14 +585,16 @@ const Sidebar = React.memo(({
           setAiClientsEnabled({
             nodeterm: parsed.nodeterm === true, // Solo activo si está explícitamente configurado
             anythingllm: parsed.anythingllm === true,
-            openwebui: parsed.openwebui === true
+            openwebui: parsed.openwebui === true,
+            librechat: parsed.librechat === true
           });
         } else {
           // Si no hay configuración, todos desactivados por defecto
           setAiClientsEnabled({
             nodeterm: false,
             anythingllm: false,
-            openwebui: false
+            openwebui: false,
+            librechat: false
           });
         }
       } catch (error) {
@@ -647,6 +650,19 @@ const Sidebar = React.memo(({
       groupId: null
     };
     window.dispatchEvent(new CustomEvent('create-openwebui-tab', {
+      detail: { tab: newTab }
+    }));
+  };
+
+  const openLibreChatTab = () => {
+    const newTab = {
+      key: `librechat-${Date.now()}`,
+      label: 'LibreChat',
+      type: 'librechat',
+      createdAt: Date.now(),
+      groupId: null
+    };
+    window.dispatchEvent(new CustomEvent('create-librechat-tab', {
       detail: { tab: newTab }
     }));
   };
@@ -2963,7 +2979,7 @@ const Sidebar = React.memo(({
               </Button>
 
               {/* Separador para clientes de IA */}
-              {(aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui) && (
+              {(aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat) && (
                 <div style={{
                   width: '28px',
                   height: '1px',
@@ -3063,6 +3079,31 @@ const Sidebar = React.memo(({
                     visibility: 'visible !important',
                     opacity: '1 !important',
                     color: '#2196F3'
+                  }}
+                />
+              )}
+
+              {aiClientsEnabled.librechat && (
+                <Button
+                  icon="pi pi-comment"
+                  className="p-button-rounded p-button-text sidebar-action-button"
+                  onClick={openLibreChatTab}
+                  tooltip={t('tooltips.libreChat')}
+                  tooltipOptions={{ position: 'right' }}
+                  style={{
+                    margin: 0,
+                    width: 40,
+                    height: 40,
+                    minWidth: 40,
+                    minHeight: 40,
+                    fontSize: 18,
+                    border: 'none',
+                    display: 'flex !important',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    visibility: 'visible !important',
+                    opacity: '1 !important',
+                    color: '#9C27B0'
                   }}
                 />
               )}
