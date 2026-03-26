@@ -2317,24 +2317,21 @@ const Sidebar = React.memo(({
           <div className="sidebar-header-glass-stack" style={{
             display: 'flex',
             alignItems: 'center',
-            padding: '6px 12px',
-            background: 'rgba(255, 255, 255, 0.03)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '10px',
-            margin: '4px 8px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            boxShadow: `
-              0 2px 10px rgba(0, 0, 0, 0.3),
-              inset 0 0 1px 1px rgba(255, 255, 255, 0.05)
-            `,
+            padding: '6px 8px',
+            background: 'var(--ui-sidebar-bg)',
+            backdropFilter: 'none',
+            borderRadius: 0,
+            margin: 0,
+            border: 'none',
+            boxShadow: 'none',
             position: 'relative'
           }}>
             {/* Brillo de profundidad 3D */}
             <div style={{
               position: 'absolute',
               inset: 0,
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)',
+              borderRadius: 0,
+              background: 'transparent',
               pointerEvents: 'none'
             }} />
             {/* Eliminamos el indicador de estado neón de la opción anterior */}
