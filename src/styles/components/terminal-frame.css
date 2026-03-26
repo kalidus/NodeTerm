@@ -14,6 +14,12 @@
     transition: all 0.3s ease;
 }
 
+/* Permitir unificado total: cuando están en el splitter principal, los marcos son transparentes
+   para que se vea el fondo único del app-container. */
+.main-splitter .terminal-frame {
+    background: transparent !important;
+}
+
 .terminal-frame-header {
     display: flex;
     align-items: center;
@@ -493,8 +499,10 @@
     height: 36px !important;
     min-height: 36px !important;
     flex-shrink: 0;
-    background: var(--ui-sidebar-bg, #1a1b26) !important;
-    border-bottom: 1px solid var(--ui-tabgroup-border, rgba(255, 255, 255, 0.06)) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    backdrop-filter: blur(20px) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
     position: relative !important;
 }
 
@@ -503,7 +511,8 @@
     height: 28px !important;
     min-height: 28px !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
-    background: var(--ui-sidebar-bg, #1a1b26) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    backdrop-filter: blur(20px) !important;
 }
 
 /* Paneles de la groups-bar: completamente ocultos, sin espacio */
@@ -527,7 +536,7 @@
 .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav {
     height: 36px !important;
     min-height: 36px !important;
-    background: var(--ui-sidebar-bg, #1a1b26) !important;
+    background: transparent !important; /* Dejamos que se vea el container oscurecido */
     border: none !important;
     padding: 0 6px 0 10px !important;
     border-bottom: none !important;

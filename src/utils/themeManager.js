@@ -680,7 +680,7 @@ class ThemeManager {
 
       /* === SPLITTER STYLES === */
       .p-splitter-panel {
-        background: var(--ui-content-bg) !important;
+        background: transparent !important;
       }
 
       /* File Explorer específico */
@@ -706,7 +706,7 @@ class ThemeManager {
 
       /* === GUTTER SPLITTER === */
       .p-splitter-gutter {
-        background-color: var(--ui-sidebar-gutter-bg) !important;
+        background-color: transparent !important;
         border: none !important;
         transition: background-color 0.2s;
       }

@@ -1602,9 +1602,9 @@ const MainContentArea = ({
   }, [sidebarCollapsed, sidebarSizePercent]);
 
   return (
-    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%' }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%', background: 'transparent' }}>
       <Splitter
-        style={{ height: '100%', width: '100%' }}
+        style={{ height: '100%', width: '100%', background: 'transparent' }}
         onResizeEnd={handleResizeEndWithAutoCollapse}
         onResize={handleResizeOnly} // Sin colapso durante arrastre
         disabled={false}
