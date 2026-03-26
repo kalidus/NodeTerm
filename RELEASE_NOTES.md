@@ -23,6 +23,12 @@ Esta versión refuerza la **personalización visual** con **presets de tema e ic
 ### 🖥️ Terminal y estética
 - **Tema del terminal**: Mejoras en el procesamiento del tema, sombras e iconos por defecto.
 
+### 🤖 IA y Clientes Externos
+- **LibreChat Integrado**: Incorporación de LibreChat como cliente de IA gestionado vía Docker, con interfaz unificada.
+- **Zero-Config & Portabilidad**: Generación automática de secretos, persistencia de datos en el perfil de usuario y configuración de red interna (`nodeterm-network`) compartida con AnythingLLM para una comunicación fluida entre servicios.
+- **Registro Simplificado**: Habilitado el registro de usuarios local en el primer arranque para una experiencia lista para usar.
+- **Fixes de Navegación**: Corrección de errores en el cierre de pestañas (`librechat` type) y optimización de la carga del webview (silenciado de `ERR_ABORTED`).
+
 ### 🚀 Release y mantenimiento
 - **Scripts de release**: Rutas y flujo del asistente alineados con el repo.
 - **Build / despliegue**: Ajustes en torno a `cpu-features` para empaquetado.
