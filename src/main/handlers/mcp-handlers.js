@@ -4,6 +4,7 @@
  */
 
 const { ipcMain } = require('electron');
+const { mcpService } = require('../services/MCPService');
 
 // Variables para tracking de cambios
 let lastConnectionCount = 0;
@@ -13,6 +14,180 @@ let lastPasswordCount = 0;
  * Registra todos los manejadores IPC relacionados con MCP
  */
 function registerMCPHandlers() {
+  // Inicialización del servicio MCP (idempotente)
+  ipcMain.handle('mcp:initialize', async () => {
+    try {
+      await mcpService.initialize();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('mcp:list-installed', async () => {
+    try {
+      await mcpService.initialize();
+      const servers = mcpService.listInstalledServers();
+      return { success: true, servers };
+    } catch (error) {
+      return { success: false, error: error.message, servers: [] };
+    }
+  });
+
+  ipcMain.handle('mcp:install', async (_, { serverId, config } = {}) => {
+    try {
+      await mcpService.initialize();
+      if (!serverId || !config) {
+        return { success: false, error: 'Parámetros inválidos: serverId y config son requeridos' };
+      }
+      return await mcpService.installMCPServer(serverId, config);
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('mcp:uninstall', async (_, serverId) => {
+    try {
+      await mcpService.initialize();
+      if (!serverId) {
+        return { success: false, error: 'Parámetro inválido: serverId es requerido' };
+      }
+      return await mcpService.uninstallMCPServer(serverId);
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('mcp:toggle', async (_, { serverId, enabled } = {}) => {
+    try {
+      await mcpService.initialize();
+      if (!serverId || typeof enabled !== 'boolean') {
+        return { success: false, error: 'Parámetros inválidos: serverId y enabled(boolean) son requeridos' };
+      }
+      return await mcpService.toggleMCPServer(serverId, enabled);
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('mcp:start', async (_, serverId) => {
+    try {
+      await mcpService.initialize();
+      if (!serverId) {
+        return { success: false, error: 'Parámetro inválido: serverId es requerido' };
+      }
+      return await mcpService.startMCPServer(serverId);
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('mcp:stop', async (_, serverId) => {
+    try {
+      await mcpService.initialize();
+      if (!serverId) {
+        return { success: false, error: 'Parámetro inválido: serverId es requerido' };
+      }
+      return await mcpService.stopMCPServer(serverId);
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('mcp:update-config', async (_, { serverId, config } = {}) => {
+    try {
+      await mcpService.initialize();
+      if (!serverId || !config) {
+        return { success: false, error: 'Parámetros inválidos: serverId y config son requeridos' };
+      }
+      return await mcpService.updateMCPServerConfig(serverId, config);
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('mcp:list-tools', async () => {
+    try {
+      await mcpService.initialize();
+      const tools = mcpService.listAllTools();
+      return { success: true, tools };
+    } catch (error) {
+      return { success: false, error: error.message, tools: [] };
+    }
+  });
+
+  ipcMain.handle('mcp:list-resources', async () => {
+    try {
+      await mcpService.initialize();
+      const resources = mcpService.listAllResources();
+      return { success: true, resources };
+    } catch (error) {
+      return { success: false, error: error.message, resources: [] };
+    }
+  });
+
+  ipcMain.handle('mcp:list-prompts', async () => {
+    try {
+      await mcpService.initialize();
+      const prompts = mcpService.listAllPrompts();
+      return { success: true, prompts };
+    } catch (error) {
+      return { success: false, error: error.message, prompts: [] };
+    }
+  });
+
+  ipcMain.handle('mcp:call-tool', async (_, { serverId, toolName, args } = {}) => {
+    try {
+      await mcpService.initialize();
+      if (!serverId || !toolName) {
+        return { success: false, error: 'Parámetros inválidos: serverId y toolName son requeridos' };
+      }
+      const result = await mcpService.callTool(serverId, toolName, args || {});
+      return { success: true, result };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('mcp:get-resource', async (_, { serverId, resourceUri } = {}) => {
+    try {
+      await mcpService.initialize();
+      if (!serverId || !resourceUri) {
+        return { success: false, error: 'Parámetros inválidos: serverId y resourceUri son requeridos' };
+      }
+      const result = await mcpService.getResource(serverId, resourceUri);
+      return { success: true, result };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('mcp:get-prompt', async (_, { serverId, promptName, args } = {}) => {
+    try {
+      await mcpService.initialize();
+      if (!serverId || !promptName) {
+        return { success: false, error: 'Parámetros inválidos: serverId y promptName son requeridos' };
+      }
+      const result = await mcpService.getPrompt(serverId, promptName, args || {});
+      return { success: true, result };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('mcp:refresh-capabilities', async (_, serverId) => {
+    try {
+      await mcpService.initialize();
+      if (!serverId) {
+        return { success: false, error: 'Parámetro inválido: serverId es requerido' };
+      }
+      await mcpService.refreshServerCapabilities(serverId);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   // 🔗 IPC Handler para sincronizar conexiones SSH con el MCP (EN MEMORIA, SIN ARCHIVO)
   ipcMain.on('app:save-ssh-connections-for-mcp', async (event, connections) => {
     try {
