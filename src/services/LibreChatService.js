@@ -169,6 +169,7 @@ class LibreChatService {
     // 2. Asegurar aplicación (LibreChat)
     await this.ensureImagePresent(this.imageName, 'LibreChat');
     await this.ensureDataDir();
+    await this.ensureBootstrapConfigFiles();
 
     const running = await this.isContainerRunning(this.containerName);
     if (!running) {
@@ -183,6 +184,7 @@ class LibreChatService {
     }
 
     await this.waitForHealth();
+    await this.ensureDefaultSeedData();
 
     this.status.isRunning = true;
     this.status.phase = 'ready';
@@ -191,6 +193,127 @@ class LibreChatService {
     this.status.lastError = null;
 
     return this.getStatus();
+  }
+
+  _escapeForShellDoubleQuotes(value) {
+    return String(value)
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"')
+      .replace(/\$/g, '\\$');
+  }
+
+  async _runMongoEval(jsCode) {
+    const escaped = this._escapeForShellDoubleQuotes(jsCode);
+    const cmd = this.buildDockerCommand(
+      `exec ${this.mongoContainerName} mongosh --quiet --eval "${escaped}"`
+    );
+    const { stdout } = await execAsync(cmd);
+    return (stdout || '').trim();
+  }
+
+  async ensureDefaultSeedData() {
+    this.status.phase = 'seed';
+    this.status.message = 'Aplicando configuración inicial (MCP + agente)';
+
+    let userId = '';
+    try {
+      userId = await this._runMongoEval(
+        "const u=db.getSiblingDB('LibreChat').users.findOne({role:'ADMIN'},{_id:1}); if(u&&u._id){print(u._id.valueOf())}"
+      );
+    } catch (_) {
+      return;
+    }
+
+    if (!userId) {
+      return;
+    }
+
+    const seedCode = [
+      "const dbx=db.getSiblingDB('LibreChat');",
+      `const userId=ObjectId('${userId}');`,
+      "const now=new Date();",
+      "let agent=dbx.agents.findOne({id:'agent_prueba_nodeterm'});",
+      "if(!agent){",
+      "  dbx.agents.insertOne({",
+      "    id:'agent_prueba_nodeterm',",
+      "    name:'NodeTerm Assistant (Demo)',",
+      "    description:'Asistente inicial para operaciones locales con filesystem y terminal.',",
+      "    instructions:'Responde siempre en espanol. Para tareas de archivos o consola, prioriza los MCP configurados antes de proponer pasos manuales. Explica riesgos de comandos destructivos y confirma cuando falte contexto.',",
+      "    provider:'openAI',",
+      "    model:'gpt-4o-mini',",
+      "    author:userId,",
+      "    category:'general',",
+      "    tools:[],",
+      "    mcpServerNames:['filesystem-default','ssh-default'],",
+      "    createdAt:now,",
+      "    updatedAt:now",
+      "  });",
+      "  agent=dbx.agents.findOne({id:'agent_prueba_nodeterm'});",
+      "}",
+      "dbx.agents.updateOne(",
+      "  {id:'agent_prueba_nodeterm'},",
+      "  {$set:{",
+      "    name:'NodeTerm Assistant (Demo)',",
+      "    description:'Asistente inicial para operaciones locales con filesystem y terminal.',",
+      "    instructions:'Responde siempre en espanol. Para tareas de archivos o consola, prioriza los MCP configurados antes de proponer pasos manuales. Explica riesgos de comandos destructivos y confirma cuando falte contexto.',",
+      "    mcpServerNames:['filesystem-default','ssh-default'],",
+      "    updatedAt:now",
+      "  }}",
+      ");",
+      "if(!dbx.mcpservers.findOne({serverName:'filesystem-default',author:userId})){",
+      "  dbx.mcpservers.insertOne({",
+      "    serverName:'filesystem-default',",
+      "    author:userId,",
+      "    config:{type:'stdio',command:'npx',args:['-y','@modelcontextprotocol/server-filesystem','/app']},",
+      "    createdAt:now,",
+      "    updatedAt:now",
+      "  });",
+      "}",
+      "if(!dbx.mcpservers.findOne({serverName:'ssh-default',author:userId})){",
+      "  dbx.mcpservers.insertOne({",
+      "    serverName:'ssh-default',",
+      "    author:userId,",
+      "    config:{type:'streamable-http',url:'https://example.com/mcp'},",
+      "    createdAt:now,",
+      "    updatedAt:now",
+      "  });",
+      "}",
+      "const fsSrv=dbx.mcpservers.findOne({serverName:'filesystem-default',author:userId});",
+      "const sshSrv=dbx.mcpservers.findOne({serverName:'ssh-default',author:userId});",
+      "const roleAgent=dbx.accessroles.findOne({resourceType:'agent',name:'com_ui_role_owner'});",
+      "const roleRemote=dbx.accessroles.findOne({resourceType:'remoteAgent',name:'com_ui_remote_agent_role_owner'});",
+      "const roleMcp=dbx.accessroles.findOne({resourceType:'mcpServer',name:'com_ui_mcp_server_role_owner'});",
+      "function upsertAcl(resourceType, resourceId, roleDoc){",
+      "  if(!resourceId || !roleDoc){ return; }",
+      "  dbx.aclentries.replaceOne(",
+      "    {principalType:'user',principalId:userId,resourceType,resourceId},",
+      "    {",
+      "      principalType:'user',",
+      "      principalId:userId,",
+      "      principalModel:'User',",
+      "      resourceType,",
+      "      resourceId,",
+      "      permBits:roleDoc.permBits || 15,",
+      "      accessRoleId:roleDoc._id,",
+      "      grantedBy:userId,",
+      "      createdAt:now,",
+      "      updatedAt:now",
+      "    },",
+      "    {upsert:true}",
+      "  );",
+      "}",
+      "upsertAcl('agent', agent && agent._id, roleAgent);",
+      "upsertAcl('remoteAgent', agent && agent._id, roleRemote);",
+      "upsertAcl('mcpServer', fsSrv && fsSrv._id, roleMcp);",
+      "upsertAcl('mcpServer', sshSrv && sshSrv._id, roleMcp);",
+      "print('seed-ok');"
+    ].join('');
+
+    try {
+      await this._runMongoEval(seedCode);
+    } catch (_) {
+      // Seed best-effort: no bloquear el arranque por este paso
+    }
   }
 
   async ensureDockerAvailable() {
@@ -269,6 +392,46 @@ class LibreChatService {
     // Crear carpetas necesarias para LibreChat
     await fs.promises.mkdir(path.join(this.dataDir, 'images'), { recursive: true });
     await fs.promises.mkdir(path.join(this.dataDir, 'logs'), { recursive: true });
+    await fs.promises.mkdir(path.join(this.dataDir, 'config'), { recursive: true });
+    await fs.promises.mkdir(path.join(this.dataDir, 'api-data'), { recursive: true });
+  }
+
+  async ensureBootstrapConfigFiles() {
+    const configDir = path.join(this.dataDir, 'config');
+    const apiDataDir = path.join(this.dataDir, 'api-data');
+    const yamlPath = path.join(configDir, 'librechat.yaml');
+    const authPath = path.join(apiDataDir, 'auth.json');
+
+    const defaultYaml = [
+      'version: 1.3.6',
+      'endpoints:',
+      '  custom: []',
+      'mcpServers:',
+      '  filesystem:',
+      '    type: stdio',
+      '    command: npx',
+      '    args:',
+      '      - -y',
+      '      - "@modelcontextprotocol/server-filesystem"',
+      `      - "${this.dataDir.replace(/\\/g, '/')}"`,
+      '  ssh-terminal:',
+      '    type: stdio',
+      '    command: npx',
+      '    args:',
+      '      - -y',
+      '      - "mcp-ssh-server"',
+      ''
+    ].join('\n');
+
+    const defaultAuth = '{\n  "serviceKey": ""\n}\n';
+
+    if (!fs.existsSync(yamlPath)) {
+      await fs.promises.writeFile(yamlPath, defaultYaml, 'utf8');
+    }
+
+    if (!fs.existsSync(authPath)) {
+      await fs.promises.writeFile(authPath, defaultAuth, 'utf8');
+    }
   }
 
   async isContainerRunning(name) {
@@ -311,6 +474,12 @@ class LibreChatService {
     const volumeHostPath = process.platform === 'win32'
       ? this.dataDir
       : this.dataDir.replace(/\\/g, '/');
+    const configHostPath = process.platform === 'win32'
+      ? path.join(this.dataDir, 'config').replace(/\\/g, '/')
+      : path.join(this.dataDir, 'config');
+    const apiDataHostPath = process.platform === 'win32'
+      ? path.join(this.dataDir, 'api-data').replace(/\\/g, '/')
+      : path.join(this.dataDir, 'api-data');
 
     // Configuración de red: LibreChat necesita conectarse a Mongo
     // Usaremos --link para simplicidad o simplemente la IP si fuera necesario, 
@@ -356,6 +525,8 @@ class LibreChatService {
       `-p ${this.hostPort}:${this.containerPort}`,
       `-v "${volumeHostPath}/images:/app/client/public/images"`,
       `-v "${volumeHostPath}/logs:/app/api/logs"`,
+      `-v "${configHostPath}/librechat.yaml:/app/librechat.yaml"`,
+      `-v "${apiDataHostPath}/auth.json:/app/api/data/auth.json"`,
       ...envVars,
       this.imageName
     ].join(' ');

@@ -86,6 +86,7 @@ class MCPService {
         this.mcpConfig = JSON.parse(data);
         console.log(`📄 [MCP] Configuración cargada: ${Object.keys(this.mcpConfig.mcpServers || {}).length} servidores`);
         this.verboseLogs = !!this.mcpConfig.verbose || !!process.env.MCP_VERBOSE;
+        this.mcpConfig.mcpServers = this.mcpConfig.mcpServers || {};
         
         // 🔒 AUTO-FIX: Corregir configuración de Tenable si está usando npx incorrecto
         const tenableConfig = this.mcpConfig.mcpServers?.tenable;
@@ -158,15 +159,74 @@ class MCPService {
         } catch (e) {
           console.warn('⚠️ [MCP] No se pudo aplicar migración para cli-mcp-server:', e.message);
         }
+
+        // Asegurar servidores base disponibles en todas las instalaciones
+        let defaultsChanged = false;
+        const homePath = app.getPath('home');
+        if (!this.mcpConfig.mcpServers.filesystem) {
+          this.mcpConfig.mcpServers.filesystem = {
+            command: 'npx',
+            args: ['-y', '@modelcontextprotocol/server-filesystem', homePath],
+            enabled: true,
+            autostart: true,
+            autoRestart: true
+          };
+          defaultsChanged = true;
+          console.log('🔧 [MCP] Agregado servidor por defecto: filesystem');
+        }
+
+        if (!this.mcpConfig.mcpServers['ssh-terminal']) {
+          this.mcpConfig.mcpServers['ssh-terminal'] = {
+            type: 'native',
+            enabled: true,
+            autostart: true,
+            autoRestart: false,
+            options: {
+              preferredTerminal: 'wsl',
+              allowedDir: '',
+              allowedCommands: 'all',
+              commandTimeout: 30,
+              sshConnections: []
+            }
+          };
+          defaultsChanged = true;
+          console.log('🔧 [MCP] Agregado servidor por defecto: ssh-terminal');
+        }
+
+        if (defaultsChanged) {
+          await this.saveConfig();
+        }
       } else {
-        // Crear configuración por defecto
+        // Crear configuración por defecto con servidores útiles listos para usar
+        const defaultAllowedPath = app.getPath('home');
         this.mcpConfig = {
-          mcpServers: {},
+          mcpServers: {
+            filesystem: {
+              command: 'npx',
+              args: ['-y', '@modelcontextprotocol/server-filesystem', defaultAllowedPath],
+              enabled: true,
+              autostart: true,
+              autoRestart: true
+            },
+            'ssh-terminal': {
+              type: 'native',
+              enabled: true,
+              autostart: true,
+              autoRestart: false,
+              options: {
+                preferredTerminal: 'wsl',
+                allowedDir: '',
+                allowedCommands: 'all',
+                commandTimeout: 30,
+                sshConnections: []
+              }
+            }
+          },
           version: '1.0.0',
           verbose: false
         };
         await this.saveConfig();
-        console.log('📄 [MCP] Configuración por defecto creada');
+        console.log('📄 [MCP] Configuración por defecto creada (filesystem + ssh-terminal)');
       }
     } catch (error) {
       console.error('❌ [MCP] Error cargando configuración:', error);
