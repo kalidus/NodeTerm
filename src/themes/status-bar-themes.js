@@ -420,5 +420,185 @@ export const statusBarThemes = {
       networkDownColor: '#00bcd4',
       sparklineColor: '#2196f3'
     }
+  },
+  'Pro Aurora': {
+    name: 'Pro Aurora',
+    colors: {
+      background: '#0b1b2b',
+      text: '#d6f3ff',
+      border: '#21425e',
+      iconColor: '#5fcde4',
+      cpuBarColor: '#5fcde4',
+      memoryBarColor: '#7ce2b0',
+      diskBarColor: '#f8d27a',
+      networkUpColor: '#7ce2b0',
+      networkDownColor: '#8cd3ff',
+      sparklineColor: '#5fcde4'
+    }
+  },
+  'Pro Cosmic': {
+    name: 'Pro Cosmic',
+    colors: {
+      background: '#111528',
+      text: '#e3e9ff',
+      border: '#2a3155',
+      iconColor: '#8aa4ff',
+      cpuBarColor: '#8aa4ff',
+      memoryBarColor: '#6fe7c7',
+      diskBarColor: '#ffd166',
+      networkUpColor: '#6fe7c7',
+      networkDownColor: '#7dd3fc',
+      sparklineColor: '#8aa4ff'
+    }
+  },
+  'Pro Emerald': {
+    name: 'Pro Emerald',
+    colors: {
+      background: '#0f1f1c',
+      text: '#d9f5ee',
+      border: '#24463f',
+      iconColor: '#39c6a3',
+      cpuBarColor: '#39c6a3',
+      memoryBarColor: '#6fdd8d',
+      diskBarColor: '#f5cc6f',
+      networkUpColor: '#6fdd8d',
+      networkDownColor: '#64d2c8',
+      sparklineColor: '#39c6a3'
+    }
+  },
+  'Pro Sakura': {
+    name: 'Pro Sakura',
+    colors: {
+      background: '#241826',
+      text: '#f6e8f2',
+      border: '#4a3550',
+      iconColor: '#d78ac9',
+      cpuBarColor: '#d78ac9',
+      memoryBarColor: '#8cd9a6',
+      diskBarColor: '#ffd18a',
+      networkUpColor: '#8cd9a6',
+      networkDownColor: '#9fc5ff',
+      sparklineColor: '#d78ac9'
+    }
+  },
+  'Pro Autumn': {
+    name: 'Pro Autumn',
+    colors: {
+      background: '#2a1f1a',
+      text: '#f0e3d6',
+      border: '#5d4738',
+      iconColor: '#d9825b',
+      cpuBarColor: '#d9825b',
+      memoryBarColor: '#8fc98c',
+      diskBarColor: '#f3be75',
+      networkUpColor: '#8fc98c',
+      networkDownColor: '#6fb5d9',
+      sparklineColor: '#d9825b'
+    }
+  },
+  'Pro Cobalt': {
+    name: 'Pro Cobalt',
+    colors: {
+      background: '#101c36',
+      text: '#e6edff',
+      border: '#2d436b',
+      iconColor: '#5d87ff',
+      cpuBarColor: '#5d87ff',
+      memoryBarColor: '#63d99d',
+      diskBarColor: '#f2c166',
+      networkUpColor: '#63d99d',
+      networkDownColor: '#6fc3ff',
+      sparklineColor: '#5d87ff'
+    }
+  },
+  'Pro Moonlight': {
+    name: 'Pro Moonlight',
+    colors: {
+      background: '#141923',
+      text: '#d8deea',
+      border: '#303948',
+      iconColor: '#8aa0bf',
+      cpuBarColor: '#8aa0bf',
+      memoryBarColor: '#89c7a0',
+      diskBarColor: '#d8bf8b',
+      networkUpColor: '#89c7a0',
+      networkDownColor: '#86b7de',
+      sparklineColor: '#8aa0bf'
+    }
+  },
+  'Pro Oceanic': {
+    name: 'Pro Oceanic',
+    colors: {
+      background: '#0f1f2a',
+      text: '#d7ecf5',
+      border: '#2c495b',
+      iconColor: '#59b6d6',
+      cpuBarColor: '#59b6d6',
+      memoryBarColor: '#6ed0a7',
+      diskBarColor: '#efc66e',
+      networkUpColor: '#6ed0a7',
+      networkDownColor: '#7fc9f4',
+      sparklineColor: '#59b6d6'
+    }
+  },
+  'Pro Everforest': {
+    name: 'Pro Everforest',
+    colors: {
+      background: '#1a241f',
+      text: '#dce7dc',
+      border: '#3b4b43',
+      iconColor: '#83b187',
+      cpuBarColor: '#83b187',
+      memoryBarColor: '#a7c080',
+      diskBarColor: '#dbbc7f',
+      networkUpColor: '#a7c080',
+      networkDownColor: '#7fb4ca',
+      sparklineColor: '#83b187'
+    }
+  },
+  'Pro Solar Amber': {
+    name: 'Pro Solar Amber',
+    colors: {
+      background: '#2a2117',
+      text: '#f7e7c8',
+      border: '#5b4830',
+      iconColor: '#f2b84b',
+      cpuBarColor: '#f2b84b',
+      memoryBarColor: '#92c97a',
+      diskBarColor: '#ffd27c',
+      networkUpColor: '#92c97a',
+      networkDownColor: '#76b5e6',
+      sparklineColor: '#f2b84b'
+    }
+  },
+  'Pro Catppuccin': {
+    name: 'Pro Catppuccin',
+    colors: {
+      background: '#1e1e2e',
+      text: '#cdd6f4',
+      border: '#313244',
+      iconColor: '#89b4fa',
+      cpuBarColor: '#89b4fa',
+      memoryBarColor: '#a6e3a1',
+      diskBarColor: '#f9e2af',
+      networkUpColor: '#a6e3a1',
+      networkDownColor: '#94e2d5',
+      sparklineColor: '#89b4fa'
+    }
+  },
+  'Pro Rosé Pine': {
+    name: 'Pro Rosé Pine',
+    colors: {
+      background: '#191724',
+      text: '#e0def4',
+      border: '#403d52',
+      iconColor: '#9ccfd8',
+      cpuBarColor: '#9ccfd8',
+      memoryBarColor: '#31748f',
+      diskBarColor: '#f6c177',
+      networkUpColor: '#31748f',
+      networkDownColor: '#c4a7e7',
+      sparklineColor: '#9ccfd8'
+    }
   }
 };
