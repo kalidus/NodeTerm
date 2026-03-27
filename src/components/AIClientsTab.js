@@ -174,18 +174,6 @@ const AIClientsTab = ({ themeColors }) => {
   // Definición de los clientes de IA
   const clientsDefinition = [
     {
-      key: 'nodeterm',
-      name: 'Chat IA NodeTerm',
-      icon: 'pi pi-comments',
-      color: '#00BCD4',
-      description: 'Cliente de IA integrado en NodeTerm con Ollama local. Perfecto para desarrollo y uso offline.',
-      features: ['Ollama local', 'Privacidad total', 'Modelos personalizados', 'Sin límites de uso'],
-      badges: [
-        { label: 'EXPERIMENTAL', severity: 'warning', icon: 'pi pi-exclamation-triangle' }
-      ],
-      requiresDocker: false
-    },
-    {
       key: 'anythingllm',
       name: 'AnythingLLM',
       icon: 'pi pi-cloud',
@@ -226,6 +214,18 @@ const AIClientsTab = ({ themeColors }) => {
       requiresDocker: true,
       port: 3080,
       url: 'http://127.0.0.1:3080'
+    },
+    {
+      key: 'nodeterm',
+      name: 'Chat IA NodeTerm',
+      icon: 'pi pi-comments',
+      color: '#00BCD4',
+      description: 'Cliente de IA integrado en NodeTerm con Ollama local. Perfecto para desarrollo y uso offline.',
+      features: ['Ollama local', 'Privacidad total', 'Modelos personalizados', 'Sin límites de uso'],
+      badges: [
+        { label: 'EXPERIMENTAL', severity: 'warning', icon: 'pi pi-exclamation-triangle' }
+      ],
+      requiresDocker: false
     }
   ];
 
@@ -242,7 +242,7 @@ const AIClientsTab = ({ themeColors }) => {
         <div className="ai-client-icon-wrapper" style={{ 
           background: `linear-gradient(135deg, ${client.color}, ${client.color}CC)` 
         }}>
-          <i className={client.icon} style={{ fontSize: '2rem', color: 'white' }} />
+          <i className={client.icon} style={{ fontSize: '1.25rem', color: 'white' }} />
         </div>
         <div className="ai-client-header-info">
           <h3 className="ai-client-name">{client.name}</h3>
@@ -290,7 +290,7 @@ const AIClientsTab = ({ themeColors }) => {
             checked={isEnabled} 
             onChange={() => handleToggleClient(client.key)}
             style={{
-              transform: 'scale(1.2)'
+              transform: 'scale(1.05)'
             }}
           />
         </div>
@@ -417,7 +417,8 @@ const AIClientsTab = ({ themeColors }) => {
             <strong>Requisitos de Docker</strong>
             <p>
               Para usar AnythingLLM y OpenWebUI necesitas Docker Desktop instalado y en ejecución. 
-              La primera vez que actives un servicio, se descargará la imagen correspondiente.
+              LibreChat también requiere Docker. La primera vez que actives un servicio,
+              se descargará la imagen correspondiente.
             </p>
           </div>
         </div>
