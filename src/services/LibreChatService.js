@@ -8,6 +8,12 @@ const crypto = require('crypto');
 
 const execAsync = util.promisify(exec);
 
+/** Ruta del template relativa a la raíz del repo / app.asar (no es el `librechat.yaml` generado en userData). */
+const LIBRECHAT_BUNDLE_YAML_REL = path.join('config', 'librechat.full.yaml');
+
+/** Sube este número cuando cambies `config/librechat.full.yaml` para forzar la copia al YAML usado por Docker. */
+const LIBRECHAT_YAML_REVISION = 6;
+
 let electronApp = null;
 try {
   electronApp = require('electron').app;
@@ -169,7 +175,7 @@ class LibreChatService {
     // 2. Asegurar aplicación (LibreChat)
     await this.ensureImagePresent(this.imageName, 'LibreChat');
     await this.ensureDataDir();
-    await this.ensureBootstrapConfigFiles();
+    const { configRefreshed } = await this.ensureBootstrapConfigFiles();
 
     const running = await this.isContainerRunning(this.containerName);
     if (!running) {
@@ -177,6 +183,10 @@ class LibreChatService {
       if (exists) {
         await this.removeContainer(this.containerName);
       }
+      await this.startContainer();
+    } else if (configRefreshed) {
+      this.status.message = 'Actualizando configuración de LibreChat…';
+      await this.removeContainer(this.containerName);
       await this.startContainer();
     } else {
       this.status.phase = 'running';
@@ -396,96 +406,77 @@ class LibreChatService {
     await fs.promises.mkdir(path.join(this.dataDir, 'api-data'), { recursive: true });
   }
 
+  /**
+   * Lee `config/librechat.full.yaml` del paquete (junto a package.json en el asar).
+   * Ese fichero es la fuente de verdad; el contenedor monta `config/librechat.yaml` generado aquí.
+   */
+  _readBundledLibreChatFullYaml() {
+    const candidates = [
+      path.join(__dirname, '..', '..', LIBRECHAT_BUNDLE_YAML_REL)
+    ];
+    try {
+      if (electronApp && typeof electronApp.getAppPath === 'function') {
+        candidates.push(path.join(electronApp.getAppPath(), LIBRECHAT_BUNDLE_YAML_REL));
+      }
+    } catch (_) {}
+    try {
+      if (process.resourcesPath) {
+        candidates.push(path.join(process.resourcesPath, LIBRECHAT_BUNDLE_YAML_REL));
+      }
+    } catch (_) {}
+    for (const p of candidates) {
+      if (p && fs.existsSync(p)) {
+        try {
+          return fs.readFileSync(p, 'utf8');
+        } catch (e) {
+          console.warn('[LibreChat] No se pudo leer', p, e.message);
+        }
+      }
+    }
+    return null;
+  }
+
   async ensureBootstrapConfigFiles() {
     const configDir = path.join(this.dataDir, 'config');
     const apiDataDir = path.join(this.dataDir, 'api-data');
     const yamlPath = path.join(configDir, 'librechat.yaml');
+    const revisionPath = path.join(configDir, '.librechat-yaml-revision');
     const authPath = path.join(apiDataDir, 'auth.json');
 
-    const defaultYaml = [
-      'version: 1.3.6',
-      'cache: true',
-      'registration:',
-      '  socialLogins: []',
-      '',
-      'endpoints:',
-      '  custom:',
-      '    - name: "Ollama"',
-      '      apiKey: "ollama"',
-      '      baseURL: "http://host.docker.internal:11434/v1"',
-      '      models:',
-      '        default: ["llama3.2:3b", "llama3.1:8b", "qwen2.5:7b"]',
-      '      modelDisplayLabel: "Ollama Local"',
-      '',
-      '    - name: "OpenAI"',
-      '      apiKey: "${OPENAI_API_KEY}"',
-      '      baseURL: "https://api.openai.com/v1"',
-      '      models:',
-      '        default: ["gpt-4o-mini", "gpt-4.1-mini"]',
-      '      modelDisplayLabel: "OpenAI"',
-      '',
-      '    - name: "Anthropic"',
-      '      apiKey: "${ANTHROPIC_API_KEY}"',
-      '      baseURL: "https://api.anthropic.com/v1"',
-      '      models:',
-      '        default: ["claude-3-5-haiku-latest"]',
-      '      modelDisplayLabel: "Anthropic"',
-      '',
-      '    - name: "Google"',
-      '      apiKey: "${GOOGLE_API_KEY}"',
-      '      baseURL: "https://generativelanguage.googleapis.com/v1beta/openai"',
-      '      models:',
-      '        default: ["gemini-2.0-flash"]',
-      '      modelDisplayLabel: "Google Gemini"',
-      '',
-      '    - name: "Mistral"',
-      '      apiKey: "${MISTRAL_API_KEY}"',
-      '      baseURL: "https://api.mistral.ai/v1"',
-      '      models:',
-      '        default: ["mistral-small-latest"]',
-      '      modelDisplayLabel: "Mistral"',
-      '',
-      '    - name: "Groq"',
-      '      apiKey: "${GROQ_API_KEY}"',
-      '      baseURL: "https://api.groq.com/openai/v1"',
-      '      models:',
-      '        default: ["llama-3.3-70b-versatile"]',
-      '      modelDisplayLabel: "Groq"',
-      '',
-      '    - name: "OpenRouter"',
-      '      apiKey: "${OPENROUTER_API_KEY}"',
-      '      baseURL: "https://openrouter.ai/api/v1"',
-      '      models:',
-      '        default: ["openai/gpt-4o-mini"]',
-      '      modelDisplayLabel: "OpenRouter"',
-      '',
-      '    - name: "Together"',
-      '      apiKey: "${TOGETHER_API_KEY}"',
-      '      baseURL: "https://api.together.xyz/v1"',
-      '      models:',
-      '        default: ["meta-llama/Llama-3.1-8B-Instruct-Turbo"]',
-      '      modelDisplayLabel: "Together"',
-      '',
-      'mcpServers:',
-      '  filesystem:',
-      '    type: stdio',
-      '    command: npx',
-      '    args:',
-      '      - -y',
-      '      - "@modelcontextprotocol/server-filesystem"',
-      `      - "${this.dataDir.replace(/\\/g, '/')}"`,
-      ''
-    ].join('\n');
+    let currentRev = 0;
+    try {
+      if (fs.existsSync(revisionPath)) {
+        currentRev = parseInt(fs.readFileSync(revisionPath, 'utf8').trim(), 10) || 0;
+      }
+    } catch (_) {}
+
+    const shouldWriteYaml = !fs.existsSync(yamlPath) || currentRev < LIBRECHAT_YAML_REVISION;
+
+    if (shouldWriteYaml) {
+      let yamlBody = this._readBundledLibreChatFullYaml();
+      if (!yamlBody) {
+        console.error(
+          '[LibreChat] Falta config/librechat.full.yaml en la instalación. Reinstala NodeTerm o copia ese fichero en la app.'
+        );
+        throw new Error(
+          'No se encontró config/librechat.full.yaml. Añade el fichero del repositorio o reinstala la aplicación.'
+        );
+      }
+      yamlBody = yamlBody.replace(
+        /^(\s+-\s+)\"\/app\"\r?$/m,
+        `$1"${this.dataDir.replace(/\\/g, '/')}"`
+      );
+      await fs.promises.writeFile(yamlPath, yamlBody, 'utf8');
+      await fs.promises.writeFile(revisionPath, String(LIBRECHAT_YAML_REVISION), 'utf8');
+    }
 
     const defaultAuth = '{\n  "serviceKey": ""\n}\n';
-
-    if (!fs.existsSync(yamlPath)) {
-      await fs.promises.writeFile(yamlPath, defaultYaml, 'utf8');
-    }
 
     if (!fs.existsSync(authPath)) {
       await fs.promises.writeFile(authPath, defaultAuth, 'utf8');
     }
+
+    return { configRefreshed: shouldWriteYaml };
   }
 
   async isContainerRunning(name) {

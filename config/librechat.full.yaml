@@ -1,0 +1,153 @@
+version: 1.3.6
+cache: true
+registration:
+  socialLogins: []
+
+endpoints:
+  custom:
+    - name: "Ollama"
+      apiKey: "ollama"
+      baseURL: "http://host.docker.internal:11434/v1"
+      models:
+        default:
+          # Poca VRAM
+          - "llama3.2:3b"
+          - "llama3.1:8b"
+          - "qwen2.5:7b"
+          - "mistral:7b"
+          # ~8–24 GB VRAM según cuantización
+          - "qwen2.5:14b"
+          - "deepseek-r1:14b"
+          - "deepseek-coder-v2:16b"
+          - "deepseek-r1:32b"
+          - "qwen2.5:32b"
+          - "codellama:34b"
+          - "mixtral:8x7b"
+          # Modelos grandes (GPU potente o varias GPUs)
+          - "llama3.1:70b"
+          - "llama3.3:70b"
+          - "qwen2.5:72b"
+          - "deepseek-r1:70b"
+          - "llama3.1:405b"
+      modelDisplayLabel: "Ollama Local (GPU)"
+
+    - name: "DeepSeek"
+      apiKey: "${DEEPSEEK_API_KEY}"
+      baseURL: "https://api.deepseek.com/v1"
+      models:
+        # API oficial: solo chat + reasoner (V3.2); fetch sincroniza con GET /v1/models
+        default:
+          - "deepseek-chat"
+          - "deepseek-reasoner"
+        fetch: true
+      modelDisplayLabel: "DeepSeek"
+
+    - name: "OpenAI"
+      apiKey: "${OPENAI_API_KEY}"
+      baseURL: "https://api.openai.com/v1"
+      models:
+        default:
+          # Serie GPT-5.4 (frontier actual)
+          - "gpt-5.4"
+          - "gpt-5.4-mini"
+          - "gpt-5.4-nano"
+          # GPT-4.x / 4o
+          - "gpt-4.1"
+          - "gpt-4.1-mini"
+          - "gpt-4.1-nano"
+          - "gpt-4o"
+          - "gpt-4o-mini"
+          - "gpt-4-turbo"
+          - "gpt-4"
+          - "gpt-3.5-turbo"
+          # Razonamiento (o-series)
+          - "o1"
+          - "o1-mini"
+          - "o1-preview"
+          - "o3-mini"
+          - "o4-mini"
+      modelDisplayLabel: "OpenAI"
+
+    - name: "Anthropic"
+      apiKey: "${ANTHROPIC_API_KEY}"
+      baseURL: "https://api.anthropic.com/v1"
+      models:
+        default:
+          # Claude 4.6 (última generación)
+          - "claude-opus-4-6"
+          - "claude-sonnet-4-6"
+          - "claude-haiku-4-5"
+          - "claude-haiku-4-5-20251001"
+          # Claude 4.5
+          - "claude-sonnet-4-5"
+          - "claude-sonnet-4-5-20250929"
+          - "claude-opus-4-5"
+          - "claude-opus-4-5-20251101"
+          # Claude 4.1 / 4.0
+          - "claude-opus-4-1"
+          - "claude-opus-4-1-20250805"
+          - "claude-sonnet-4-0"
+          - "claude-opus-4-0"
+          - "claude-sonnet-4-20250514"
+          - "claude-opus-4-20250514"
+          # Claude 3.5 (aún usados / compatibilidad)
+          - "claude-3-5-sonnet-latest"
+          - "claude-3-5-sonnet-20241022"
+          - "claude-3-5-haiku-latest"
+          - "claude-3-5-haiku-20241022"
+          - "claude-3-opus-latest"
+          - "claude-3-opus-20240229"
+      modelDisplayLabel: "Anthropic"
+
+    - name: "Mistral"
+      apiKey: "${MISTRAL_API_KEY}"
+      baseURL: "https://api.mistral.ai/v1"
+      models:
+        default: ["mistral-small-latest"]
+      modelDisplayLabel: "Mistral"
+
+    - name: "Groq"
+      apiKey: "${GROQ_API_KEY}"
+      baseURL: "https://api.groq.com/openai/v1"
+      models:
+        default: ["llama-3.3-70b-versatile"]
+      modelDisplayLabel: "Groq"
+
+    - name: "OpenRouter"
+      apiKey: "${OPENROUTER_API_KEY}"
+      baseURL: "https://openrouter.ai/api/v1"
+      models:
+        default:
+          - "openai/gpt-4o-mini"
+          - "deepseek/deepseek-v3.2"
+          - "deepseek/deepseek-v3.2-speciale"
+          - "deepseek/deepseek-v3.2-exp"
+          - "deepseek/deepseek-v3.1-terminus"
+          - "deepseek/deepseek-chat-v3.1"
+          - "deepseek/deepseek-chat-v3-0324"
+          - "deepseek/deepseek-chat"
+          - "deepseek/deepseek-r1"
+          - "deepseek/deepseek-r1-0528"
+          - "deepseek/deepseek-r1-distill-llama-70b"
+          - "tngtech/deepseek-r1t2-chimera"
+          - "nex-agi/deepseek-v3.1-nex-n1"
+      modelDisplayLabel: "OpenRouter"
+
+    - name: "Together"
+      apiKey: "${TOGETHER_API_KEY}"
+      baseURL: "https://api.together.xyz/v1"
+      models:
+        default:
+          - "meta-llama/Llama-3.1-8B-Instruct-Turbo"
+          - "meta-llama/Llama-3.1-70B-Instruct-Turbo"
+          - "Qwen/Qwen2.5-72B-Instruct-Turbo"
+      modelDisplayLabel: "Together (GPU cloud)"
+
+mcpServers:
+  filesystem:
+    type: stdio
+    command: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-filesystem"
+      - "/app"

@@ -27,6 +27,7 @@
       "dist/",
       "binaries/**",
       "main.js",
+      "config/librechat.full.yaml",
       "preload.js",
       "splash.html",
       "system-stats-worker.js",
