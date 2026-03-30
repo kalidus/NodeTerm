@@ -1175,15 +1175,14 @@ const MainContentArea = ({
       setTimeout(() => document.addEventListener('click', closeOutside), 0);
     });
 
-    // Botón para mostrar/ocultar el marco superior del TerminalFrame principal
+    // Botón de apariencia: abre menú con opciones de marco superior y title bar
     const frameToggleButton = document.createElement('div');
     frameToggleButton.setAttribute('role', 'button');
     frameToggleButton.setAttribute('tabIndex', '0');
-    frameToggleButton.title = mainFrameHeaderCollapsed ? 'Mostrar marco superior' : 'Ocultar marco superior';
+    frameToggleButton.title = 'Opciones de barra superior';
     frameToggleButton.className = 'tab-frame-toggle-button';
     const frameIcon = document.createElement('i');
-    // Usar iconos de ventana completa / restaurar para el marco superior
-    frameIcon.className = `pi ${mainFrameHeaderCollapsed ? 'pi-window-minimize' : 'pi-window-maximize'}`;
+    frameIcon.className = 'pi pi-window-maximize';
     frameIcon.style.cssText = `
       font-size: 0.9rem;
       color: var(--ui-tab-text, rgba(255,255,255,0.85));
@@ -1200,7 +1199,7 @@ const MainContentArea = ({
       justify-content: center;
       flex-shrink: 0;
       margin-left: 2px;
-      -webkit-app-region: ${ (titleBarCollapsed && mainFrameHeaderCollapsed) ? 'no-drag' : 'inherit' };
+      -webkit-app-region: no-drag;
     `;
     frameToggleButton.addEventListener('mouseenter', () => { frameIcon.style.opacity = '1'; });
     frameToggleButton.addEventListener('mouseleave', () => { frameIcon.style.opacity = '0.6'; });
@@ -1212,7 +1211,81 @@ const MainContentArea = ({
     });
     frameToggleButton.addEventListener('click', (e) => {
       e.stopPropagation();
-      setMainFrameHeaderCollapsed(prev => !prev);
+
+      const existingMenu = document.querySelector('.tab-appearance-toggle-menu');
+      if (existingMenu) {
+        existingMenu.remove();
+        return;
+      }
+
+      const menu = document.createElement('div');
+      menu.className = 'tab-appearance-toggle-menu';
+      menu.style.cssText = `
+        position: fixed;
+        background: var(--ui-context-bg, #2b2f33);
+        border: 1px solid var(--ui-context-border, #444);
+        border-radius: 6px;
+        box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0,0,0,0.3));
+        z-index: 9999;
+        min-width: 200px;
+        padding: 4px 0;
+        font-size: 12px;
+        color: var(--ui-context-text, #fff);
+      `;
+
+      const createMenuAction = (label, onClick) => {
+        const item = document.createElement('div');
+        item.setAttribute('role', 'button');
+        item.setAttribute('tabIndex', '0');
+        item.textContent = label;
+        item.style.cssText = `
+          padding: 8px 12px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          transition: background-color 0.15s ease;
+        `;
+        item.addEventListener('mouseenter', () => { item.style.background = 'var(--ui-context-hover, rgba(255,255,255,0.08))'; });
+        item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
+        item.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter' || ev.key === ' ') {
+            ev.preventDefault();
+            item.click();
+          }
+        });
+        item.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          onClick();
+          menu.remove();
+          document.removeEventListener('click', closeOutsideMenu);
+        });
+        return item;
+      };
+
+      const frameLabel = mainFrameHeaderCollapsed ? 'Mostrar marco superior' : 'Ocultar marco superior';
+      const titleBarLabel = titleBarCollapsed ? 'Mostrar title bar' : 'Ocultar title bar';
+      menu.appendChild(createMenuAction(frameLabel, () => setMainFrameHeaderCollapsed(prev => !prev)));
+      menu.appendChild(createMenuAction(titleBarLabel, () => window.dispatchEvent(new CustomEvent('toggle-titlebar'))));
+
+      document.body.appendChild(menu);
+      const rect = frameToggleButton.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      let left = rect.right - menuRect.width;
+      if (left < 8) left = 8;
+      let top = rect.bottom + 6;
+      if (top + menuRect.height > window.innerHeight - 8) {
+        top = rect.top - menuRect.height - 6;
+      }
+      menu.style.left = `${left}px`;
+      menu.style.top = `${top}px`;
+
+      const closeOutsideMenu = (ev) => {
+        if (!menu.contains(ev.target) && !frameToggleButton.contains(ev.target)) {
+          menu.remove();
+          document.removeEventListener('click', closeOutsideMenu);
+        }
+      };
+      setTimeout(() => document.addEventListener('click', closeOutsideMenu), 0);
     });
 
     const appearanceButtonWrapper = document.createElement('div');
@@ -1224,48 +1297,6 @@ const MainContentArea = ({
       margin-left: auto;
       height: 20px;
     `;
-    
-    // Botón para mostrar la titlebar (solo se muestra cuando la titlebar ESTÁ oculta)
-    if (titleBarCollapsed) {
-      const showTitleBarButton = document.createElement('div');
-      showTitleBarButton.setAttribute('role', 'button');
-      showTitleBarButton.setAttribute('tabIndex', '0');
-      showTitleBarButton.title = 'Mostrar barra superior';
-      showTitleBarButton.className = 'tab-titlebar-toggle-button';
-      const tbIcon = document.createElement('i');
-      tbIcon.className = 'pi pi-chevron-down';
-      tbIcon.style.cssText = `
-        font-size: 0.9rem;
-        color: var(--ui-tab-text, rgba(255,255,255,0.85));
-        opacity: 0.6;
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 4px;
-        transition: all 0.2s;
-      `;
-      showTitleBarButton.appendChild(tbIcon);
-      showTitleBarButton.style.cssText = `
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        margin-left: 2px;
-        -webkit-app-region: ${ mainFrameHeaderCollapsed ? 'no-drag' : 'inherit' };
-      `;
-      showTitleBarButton.addEventListener('mouseenter', () => { tbIcon.style.opacity = '1'; });
-      showTitleBarButton.addEventListener('mouseleave', () => { tbIcon.style.opacity = '0.6'; });
-      showTitleBarButton.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          showTitleBarButton.click();
-        }
-      });
-      showTitleBarButton.addEventListener('click', (e) => {
-        e.stopPropagation();
-        window.dispatchEvent(new CustomEvent('toggle-titlebar'));
-      });
-      appearanceButtonWrapper.appendChild(showTitleBarButton);
-    }
     
     appearanceButtonWrapper.appendChild(frameToggleButton);
     appearanceButtonWrapper.appendChild(appearanceButton);
