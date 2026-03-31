@@ -261,6 +261,27 @@ function findGuacdExeUnder(rootDir, maxDepth = 6) {
   return null;
 }
 
+/** Binario guacd sin extensión (Linux/macOS) dentro de un árbol extraído */
+function findGuacdUnixBinaryUnder(rootDir, maxDepth = 6) {
+  if (process.platform === 'win32') return null;
+  try {
+    const entries = fs.readdirSync(rootDir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(rootDir, entry.name);
+      if (entry.isFile() && entry.name === 'guacd') {
+        try {
+          fs.accessSync(fullPath, fs.constants.X_OK);
+          return fullPath;
+        } catch (_) { }
+      } else if (entry.isDirectory() && maxDepth > 0) {
+        const found = findGuacdUnixBinaryUnder(fullPath, maxDepth - 1);
+        if (found) return found;
+      }
+    }
+  } catch (_) { }
+  return null;
+}
+
 async function extractZip(zipPath, extractPath) {
   await fs.promises.mkdir(extractPath, { recursive: true });
   // Intento 1: unzipper puro
@@ -303,7 +324,7 @@ async function ensureGuacdExtracted() {
   const installRootDir = path.join(getUserDataDir(), 'guacd');
 
   // Si ya existe, intentar detectar el ejecutable
-  let exePath = findGuacdExeUnder(installRootDir);
+  let exePath = findGuacdExeUnder(installRootDir) || findGuacdUnixBinaryUnder(installRootDir);
   if (exePath) {
     return { exePath, cwd: path.dirname(exePath) };
   }
@@ -316,7 +337,7 @@ async function ensureGuacdExtracted() {
     if (process.platform === 'win32') {
       const downloaded = await attemptDownloadAndExtract(installRootDir);
       if (downloaded) {
-        const exeAfter = findGuacdExeUnder(installRootDir);
+        const exeAfter = findGuacdExeUnder(installRootDir) || findGuacdUnixBinaryUnder(installRootDir);
         if (exeAfter) {
           return { exePath: exeAfter, cwd: path.dirname(exeAfter) };
         }
@@ -342,12 +363,12 @@ async function ensureGuacdExtracted() {
     }
   }
 
-  exePath = findGuacdExeUnder(installRootDir);
+  exePath = findGuacdExeUnder(installRootDir) || findGuacdUnixBinaryUnder(installRootDir);
   if (exePath) {
     return { exePath, cwd: path.dirname(exePath) };
   }
 
-  console.log('❌ No se encontró guacd.exe tras la extracción.');
+  console.log('❌ No se encontró guacd tras la extracción.');
   return null;
 }
 
@@ -417,7 +438,7 @@ async function attemptDownloadAndExtract(installRootDir) {
         await extractZip(tempZip, installRootDir);
         try { fs.unlinkSync(tempZip); } catch { }
         // Intentar encontrar guacd.exe dentro de lo extraído (no debería existir en zip de fuentes)
-        const exeMaybe = findGuacdExeUnder(installRootDir);
+        const exeMaybe = findGuacdExeUnder(installRootDir) || findGuacdUnixBinaryUnder(installRootDir);
         if (exeMaybe) {
           console.log('✅ Descarga y extracción completadas (binarios presentes)');
           return true;
@@ -435,6 +456,110 @@ async function attemptDownloadAndExtract(installRootDir) {
   return false;
 }
 
+function parseLinuxOsRelease() {
+  try {
+    const raw = fs.readFileSync('/etc/os-release', 'utf8');
+    const map = {};
+    for (const line of raw.split('\n')) {
+      const i = line.indexOf('=');
+      if (i <= 0) continue;
+      const k = line.slice(0, i).trim();
+      let v = line.slice(i + 1).trim();
+      if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+        v = v.slice(1, -1);
+      }
+      map[k] = v;
+    }
+    return map;
+  } catch (_) {
+    return {};
+  }
+}
+
+/**
+ * Script shell único para instalar guacd según la familia de distro (ejecutado como root).
+ */
+function getLinuxGuacdInstallShellScript() {
+  const os = parseLinuxOsRelease();
+  const id = (os.ID || '').toLowerCase();
+  const idLike = (os.ID_LIKE || '').toLowerCase();
+
+  const debianLike = id === 'debian' || id === 'ubuntu' || id === 'linuxmint' || id === 'pop' || id === 'zorin'
+    || idLike.includes('debian') || idLike.includes('ubuntu');
+  if (debianLike) {
+    return 'export DEBIAN_FRONTEND=noninteractive; apt-get update -qq && apt-get install -y -qq guacd';
+  }
+
+  const rhelLike = id === 'fedora' || id === 'rhel' || id === 'centos' || id === 'rocky' || id === 'almalinux' || id === 'ol'
+    || idLike.includes('rhel') || idLike.includes('fedora') || idLike.includes('centos');
+  if (rhelLike) {
+    if (fileExistsSync('/usr/bin/dnf') || fileExistsSync('/bin/dnf')) {
+      return 'dnf install -y -q guacd';
+    }
+    return 'yum install -y -q guacd';
+  }
+
+  if (id === 'opensuse-leap' || id === 'opensuse-tumbleweed' || id === 'sles' || idLike.includes('suse')) {
+    return 'zypper --non-interactive install -y guacd';
+  }
+
+  if (id === 'arch' || id === 'manjaro' || idLike.includes('arch')) {
+    return 'pacman -S --noconfirm guacd';
+  }
+
+  if (id === 'alpine') {
+    return 'apk add --no-cache guacamole-server';
+  }
+
+  if (id === 'void') {
+    return 'xbps-install -y guacd';
+  }
+
+  return null;
+}
+
+function whichExecutable(binaryName) {
+  return new Promise((resolve) => {
+    execFile('which', [binaryName], (err, stdout) => {
+      if (err || !stdout) return resolve(null);
+      const line = String(stdout).trim().split('\n')[0];
+      resolve(line || null);
+    });
+  });
+}
+
+function runElevatedLinuxShellScript(script) {
+  return new Promise((resolve) => {
+    const env = { ...process.env, DEBIAN_FRONTEND: 'noninteractive' };
+    execFile('sudo', ['-n', 'sh', '-c', script], { env, timeout: 600000 }, (sudoErr) => {
+      if (!sudoErr) {
+        resolve(true);
+        return;
+      }
+      execFile('pkexec', ['sh', '-c', script], { env, timeout: 600000 }, (pkErr) => {
+        resolve(!pkErr);
+      });
+    });
+  });
+}
+
+async function tryLinuxNativeGuacdInstall() {
+  if (process.platform !== 'linux') return false;
+  const script = getLinuxGuacdInstallShellScript();
+  if (!script) {
+    console.log('⚠️ [GuacdService] Distro Linux no soportada para instalación automática de guacd. Instala el paquete guacd o usa Docker.');
+    return false;
+  }
+  console.log('📦 [GuacdService] Intentando instalar guacd con el gestor de paquetes (sudo -n o pkexec)...');
+  const ok = await runElevatedLinuxShellScript(script);
+  if (ok) {
+    console.log('✅ [GuacdService] Paquete guacd instalado');
+    return true;
+  }
+  console.error('❌ [GuacdService] Instalación automática fallida. Ejemplo: sudo apt install -y guacd (Debian/Ubuntu) o sudo dnf install -y guacd (Fedora).');
+  return false;
+}
+
 class GuacdService {
   constructor() {
     this.guacdProcess = null;
@@ -442,8 +567,17 @@ class GuacdService {
     this.port = 4822;
     this.host = '127.0.0.1'; // Usar IPv4 específicamente
     this.platform = process.platform;
-    // Método preferido configurable: docker | wsl | native | mock (según SO)
-    this.preferredMethod = (process.env.NODETERM_GUACD_METHOD || process.env.GUACD_METHOD || 'docker').toLowerCase();
+    // Método preferido: env > Linux por defecto nativo (sin depender de Docker) > docker
+    const envMethod = (process.env.NODETERM_GUACD_METHOD || process.env.GUACD_METHOD || '').toLowerCase();
+    if (envMethod) {
+      this.preferredMethod = envMethod;
+    } else if (process.platform === 'linux') {
+      this.preferredMethod = 'native';
+    } else {
+      this.preferredMethod = 'docker';
+    }
+    /** Una vez por ciclo de vida: evita bucles de pkexec */
+    this._linuxNativeInstallAttempted = false;
     this.detectedMethod = null;
     this.wslDistro = null;
     // Si detectamos guacd en WSL escuchando solo en 127.0.0.1, Windows no podrá acceder via localhost-forwarding.
@@ -736,7 +870,7 @@ class GuacdService {
 
   setPreferredMethod(method) {
     const m = String(method || '').toLowerCase();
-    if (m === 'docker' || m === 'wsl' || m === 'mock') {
+    if (m === 'docker' || m === 'wsl' || m === 'mock' || m === 'native') {
       this.preferredMethod = m;
     }
   }
@@ -756,6 +890,7 @@ class GuacdService {
       // Limpiar estado
       this.isRunning = false;
       this.detectedMethod = null;
+      this._linuxNativeInstallAttempted = false;
 
       // Pequeña pausa para asegurar que el puerto se libere
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -930,55 +1065,58 @@ class GuacdService {
       // Buscar guacd en diferentes ubicaciones predefinidas (solo Linux)
       const userDataInstallDir = path.join(getUserDataDir(), 'guacd');
       const possiblePaths = [
-        // PATH del sistema
         'guacd',
-        // Copias locales en el workspace (dev)
+        '/usr/sbin/guacd',
+        '/usr/bin/guacd',
         path.join(__dirname, '..', '..', 'binaries', 'guacd', 'guacd'),
         path.join(__dirname, '..', '..', 'binaries', 'guacd', 'bin', 'guacd'),
-        // Instalación previa en userData (prod)
         path.join(userDataInstallDir, 'bin', 'guacd')
       ];
 
       let guacdPath = null;
       let spawnCwd = null;
 
-      // Verificar cada ubicación conocida
-      for (const testPath of possiblePaths) {
+      const resolveCandidate = async (testPath) => {
+        if (testPath === 'guacd') {
+          return whichExecutable('guacd');
+        }
         try {
-          await new Promise((testResolve) => {
-            exec(`"${testPath}" --version`, (error) => {
-              if (!error) {
-                guacdPath = testPath;
-                spawnCwd = path.dirname(testPath);
-                console.log(`✅ guacd encontrado en: ${testPath}`);
-              }
-              testResolve();
-            });
-          });
-          if (guacdPath) break;
+          fs.accessSync(testPath, fs.constants.X_OK);
+          return testPath;
         } catch (_) {
-          // continuar
+          return null;
+        }
+      };
+
+      for (const testPath of possiblePaths) {
+        const resolved = await resolveCandidate(testPath);
+        if (resolved) {
+          guacdPath = resolved;
+          spawnCwd = path.dirname(resolved);
+          console.log(`✅ guacd encontrado en: ${resolved}`);
+          break;
         }
       }
 
-      // Si no se encontró, intentar auto-extraer desde binaries/guacd.zip
       if (!guacdPath) {
         console.log('🔎 guacd no encontrado. Intentando auto-extracción...');
         const extracted = await ensureGuacdExtracted();
         if (extracted && extracted.exePath) {
-          // Validar ejecutable
-          try {
-            await new Promise((testResolve) => {
-              exec(`"${extracted.exePath}" --version`, (error) => {
-                if (!error) {
-                  guacdPath = extracted.exePath;
-                  spawnCwd = extracted.cwd || path.dirname(extracted.exePath);
-                  console.log(`✅ guacd preparado en: ${guacdPath}`);
-                }
-                testResolve();
-              });
-            });
-          } catch (_) { }
+          const resolved = await resolveCandidate(extracted.exePath);
+          if (resolved) {
+            guacdPath = resolved;
+            spawnCwd = extracted.cwd || path.dirname(extracted.exePath);
+            console.log(`✅ guacd preparado en: ${guacdPath}`);
+          }
+        }
+      }
+
+      if (!guacdPath && !this._linuxNativeInstallAttempted) {
+        this._linuxNativeInstallAttempted = true;
+        const installed = await tryLinuxNativeGuacdInstall();
+        if (installed) {
+          guacdPath = await whichExecutable('guacd');
+          if (guacdPath) spawnCwd = path.dirname(guacdPath);
         }
       }
 
@@ -994,7 +1132,9 @@ class GuacdService {
       // Iniciar guacd nativo
       console.log(`🚀 Iniciando guacd desde: ${guacdPath}`);
       try {
-        const finalCwd = spawnCwd || path.dirname(guacdPath);
+        // Evitar directorios del sistema (p.ej. /usr/sbin) como cwd del proceso.
+        // Si algún parámetro usa rutas relativas, queremos un directorio escribible.
+        const finalCwd = (spawnCwd && !spawnCwd.startsWith('/usr/')) ? spawnCwd : os.homedir();
         const envVars = { ...process.env };
         // Asegurar resolución de DLLs desde el directorio del ejecutable (solo Windows)
         if (isWindows) {
@@ -1011,7 +1151,9 @@ class GuacdService {
           }
         } catch (_) { }
 
-        this.guacdProcess = spawn(guacdPath, ['-f', '-p', this.port.toString()], {
+        // Forzar bind IPv4 para que el health-check en 127.0.0.1 sea consistente.
+        // guacd: -l = puerto de escucha; -p = PID file (NO usar para puertos).
+        this.guacdProcess = spawn(guacdPath, ['-f', '-b', '127.0.0.1', '-l', this.port.toString()], {
           cwd: finalCwd,
           env: envVars
         });
@@ -1286,26 +1428,40 @@ class GuacdService {
    * Verifica si un puerto está disponible (true = disponible, false = ocupado)
    */
   async isPortAvailable(port) {
-    return new Promise((resolve) => {
+    const hostsToTry = [];
+    const preferredHost = this.host || '127.0.0.1';
+    hostsToTry.push(preferredHost);
+    if (!hostsToTry.includes('127.0.0.1')) hostsToTry.push('127.0.0.1');
+    if (!hostsToTry.includes('::1')) hostsToTry.push('::1');
+
+    const canConnect = (host) => new Promise((resolve) => {
       const socket = new net.Socket();
-
-      socket.setTimeout(1000); // Timeout optimizado para conexión más rápida
-
+      socket.setTimeout(1000);
       socket.on('connect', () => {
-        socket.destroy();
-        resolve(false); // Puerto ocupado (guacd corriendo)
+        try { socket.destroy(); } catch { }
+        resolve(true);
       });
-
       socket.on('timeout', () => {
-        socket.destroy();
-        resolve(true); // Puerto disponible
+        try { socket.destroy(); } catch { }
+        resolve(false);
       });
-
-      socket.on('error', (error) => {
-        resolve(true); // Puerto disponible
+      socket.on('error', () => {
+        resolve(false);
       });
-      socket.connect(port, this.host);
+      try {
+        socket.connect(port, host);
+      } catch (_) {
+        resolve(false);
+      }
     });
+
+    for (const host of hostsToTry) {
+      // Si conecta en cualquier host, el puerto está ocupado (servicio activo)
+      // por lo tanto "NO disponible" => false
+      // eslint-disable-next-line no-await-in-loop
+      if (await canConnect(host)) return false;
+    }
+    return true;
   }
 
   /**
@@ -1429,7 +1585,9 @@ class GuacdService {
   _continueDetection(resolve) {
     // Intentar detectar WSL (solo en Windows)
     if (process.platform !== 'win32') {
-      this.detectedMethod = 'unknown';
+      // En Linux/macOS, si el puerto ya está ocupado y no fue Docker,
+      // lo más probable es un guacd local/preexistente.
+      this.detectedMethod = process.platform === 'linux' ? 'native' : 'external';
       resolve();
       return;
     }

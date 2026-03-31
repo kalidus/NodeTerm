@@ -152,7 +152,7 @@ function registerGuacamoleHandlers({
     }
   });
 
-  // Permitir establecer el método preferido desde la UI (docker|wsl|mock)
+  // Permitir establecer el método preferido desde la UI (docker|wsl|native|mock)
   ipcMain.handle('guacamole:set-preferred-method', async (event, method) => {
     try {
       if (guacdService && typeof guacdService.setPreferredMethod === 'function') {

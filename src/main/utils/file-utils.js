@@ -22,7 +22,7 @@ function getGuacdPrefPath() {
 
 /**
  * Guarda la preferencia del método Guacd de forma persistente
- * @param {string} method - Método preferido (docker|wsl|mock)
+ * @param {string} method - Método preferido (docker|wsl|native|mock)
  * @returns {Promise<boolean>} true si se guardó exitosamente
  */
 async function savePreferredGuacdMethod(method) {
@@ -50,7 +50,7 @@ async function loadPreferredGuacdMethod() {
     const raw = fs.readFileSync(prefPath, 'utf8');
     const json = JSON.parse(raw || '{}');
     const m = String(json.preferredMethod || '').toLowerCase();
-    return (m === 'docker' || m === 'wsl' || m === 'mock') ? m : null;
+    return (m === 'docker' || m === 'wsl' || m === 'native' || m === 'mock') ? m : null;
   } catch { 
     return null; 
   }
