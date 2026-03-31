@@ -135,8 +135,13 @@ const MainContentArea = ({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const tabsContainerRef = useRef(null);
+  const titleBarCollapsedRef = useRef(titleBarCollapsed);
+  const mainFrameHeaderCollapsedRef = useRef(mainFrameHeaderCollapsed);
   const [sidebarSettingsView, setSidebarSettingsView] = useState('choice'); // 'choice', 'tree', 'icons'
   const treeThemePanelRef = useRef(null);
+
+  titleBarCollapsedRef.current = titleBarCollapsed;
+  mainFrameHeaderCollapsedRef.current = mainFrameHeaderCollapsed;
 
   // Estado para el panel SSH System Monitor
   const [sshSystemMonitorTabId, setSshSystemMonitorTabId] = useState(null);
@@ -1262,8 +1267,12 @@ const MainContentArea = ({
         return item;
       };
 
-      const frameLabel = mainFrameHeaderCollapsed ? 'Mostrar marco superior' : 'Ocultar marco superior';
-      const titleBarLabel = titleBarCollapsed ? 'Mostrar title bar' : 'Ocultar title bar';
+      const frameLabel = mainFrameHeaderCollapsedRef.current
+        ? 'Mostrar marco superior'
+        : 'Ocultar marco superior';
+      const titleBarLabel = titleBarCollapsedRef.current
+        ? 'Mostrar barra de titulo'
+        : 'Ocultar barra de titulo';
       menu.appendChild(createMenuAction(frameLabel, () => setMainFrameHeaderCollapsed(prev => !prev)));
       menu.appendChild(createMenuAction(titleBarLabel, () => window.dispatchEvent(new CustomEvent('toggle-titlebar'))));
 
