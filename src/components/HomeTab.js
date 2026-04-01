@@ -93,6 +93,14 @@ const HomeTab = ({
       return false;
     }
   });
+  const [rightColumnVisible, setRightColumnVisible] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_VISIBLE);
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
 
   const [terminalOpacity, setTerminalOpacity] = useState(() => {
     try {
@@ -157,6 +165,7 @@ const HomeTab = ({
   const mainAreaRef = useRef(null);
 
   const terminalOpacityOverlayRef = useRef(null);
+  const homeOptionsOverlayRef = useRef(null);
   const [containerHeight, setContainerHeight] = useState(window.innerHeight - 100);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth - 100);
   const [hasUserMovedTerminal, setHasUserMovedTerminal] = useState(false);
@@ -821,6 +830,16 @@ const HomeTab = ({
     });
   };
 
+  const handleToggleRightColumnVisibility = () => {
+    setRightColumnVisible(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_VISIBLE, next.toString());
+      } catch (e) { }
+      return next;
+    });
+  };
+
   useEffect(() => {
     const handleExternalToggle = () => {
       if (!showAIChat) return;
@@ -1122,10 +1141,77 @@ const HomeTab = ({
         background: dashboardBg,
         display: 'flex',
         flexDirection: 'column',
+        position: 'relative',
         opacity: terminalState === 'maximized' ? 0 : 1,
         visibility: terminalState === 'maximized' ? 'hidden' : 'visible',
         transition: 'opacity 0.1s ease, visibility 0.1s ease'
       }}>
+        <button
+          type="button"
+          title="Opciones de Home"
+          onClick={(e) => homeOptionsOverlayRef.current?.toggle(e)}
+          style={{
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            zIndex: 30,
+            width: '34px',
+            height: '34px',
+            borderRadius: '10px',
+            border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.15)'}`,
+            background: themeColors.cardBackground || 'rgba(16, 20, 28, 0.6)',
+            color: themeColors.textPrimary || '#fff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backdropFilter: 'blur(8px) saturate(140%)',
+            WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.22)'
+          }}
+        >
+          <i className="pi pi-sliders-h" />
+        </button>
+        <OverlayPanel ref={homeOptionsOverlayRef} style={{ width: '260px', background: themeColors.cardBackground || '#1e1e1e' }}>
+          <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.9rem', fontWeight: 600 }}>Opacidad</span>
+                <span style={{ color: themeColors.textSecondary || '#aaa', fontSize: '0.8rem' }}>{Math.round(terminalOpacity * 100)}%</span>
+              </div>
+              <Slider
+                value={terminalOpacity * 100}
+                onChange={(e) => setTerminalOpacity(e.value / 100)}
+                min={5}
+                max={100}
+                step={1}
+                style={{ width: '100%' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem' }}>Barra derecha (accesos rápidos)</span>
+              <button
+                type="button"
+                onClick={handleToggleRightColumnVisibility}
+                style={{
+                  border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.2)'}`,
+                  background: rightColumnVisible
+                    ? (themeColors.primaryColor || '#2196f3')
+                    : 'rgba(120,120,120,0.25)',
+                  color: '#fff',
+                  borderRadius: '999px',
+                  padding: '0.2rem 0.65rem',
+                  cursor: 'pointer',
+                  fontSize: '0.78rem',
+                  fontWeight: 600
+                }}
+              >
+                {rightColumnVisible ? 'Visible' : 'Oculta'}
+              </button>
+            </div>
+          </div>
+        </OverlayPanel>
         <div className="home-page-scroll" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
           {/* Layout principal: \u00E1rea central + columna derecha */}
           <div style={{
@@ -1503,22 +1589,24 @@ const HomeTab = ({
           </div>
 
           {/* Sidebar Area - Outside the vertical split to remain at full height */}
-          <NodeTermStatus
-            variant="rightColumn"
-            collapsed={rightColumnCollapsed}
-            sshConnectionsCount={sshConnectionsCount}
-            foldersCount={foldersCount}
-            rdpConnectionsCount={rdpConnectionsCount}
-            themeColors={themeColors}
-            onOpenSettings={onOpenSettings}
-            onToggleTerminalVisibility={handleToggleTerminalVisibility}
-            onToggleAIChat={handleToggleAIChat}
-            onToggleStatusBar={handleToggleStatusBar}
-            onCollapse={handleToggleRightColumn}
-            showAIChat={showAIChat}
-            statusBarVisible={statusBarVisible}
-            setShowCreateGroupDialog={setShowCreateGroupDialog}
-          />
+          {rightColumnVisible && (
+            <NodeTermStatus
+              variant="rightColumn"
+              collapsed={rightColumnCollapsed}
+              sshConnectionsCount={sshConnectionsCount}
+              foldersCount={foldersCount}
+              rdpConnectionsCount={rdpConnectionsCount}
+              themeColors={themeColors}
+              onOpenSettings={onOpenSettings}
+              onToggleTerminalVisibility={handleToggleTerminalVisibility}
+              onToggleAIChat={handleToggleAIChat}
+              onToggleStatusBar={handleToggleStatusBar}
+              onCollapse={handleToggleRightColumn}
+              showAIChat={showAIChat}
+              statusBarVisible={statusBarVisible}
+              setShowCreateGroupDialog={setShowCreateGroupDialog}
+            />
+          )}
         </div>
       </div>
       <StandaloneStatusBar visible={statusBarVisible && !terminalView} />
