@@ -18,26 +18,59 @@ const CONNECTION_TYPE_LABELS = {
   'ssh-tunnel': { label: 'Túnel', icon: 'pi pi-arrows-h', color: '#00bcd4' },
 };
 
+const WALLIX_PATTERN = /^(.+)@(.+)@(.+):(.+):(.+)$/;
+
 function getTypeInfo(type) {
   return CONNECTION_TYPE_LABELS[type] || { label: type || 'SSH', icon: 'pi pi-server', color: '#607d8b' };
+}
+
+/**
+ * Extrae el usuario destino de una cadena Wallix/Bastion.
+ * Formato: <bastionUser>@<domain>@<targetServer>:<protocol>:<targetUser>
+ * Ejemplo: sdeng_dSN@INTERNAL_SERVICE@ESAH-DSAM-DN02M:SSH:rt01119 → rt01119
+ */
+export function extractBastionTargetUser(bastionUserStr) {
+  if (!bastionUserStr) return null;
+  const match = bastionUserStr.match(WALLIX_PATTERN);
+  if (match) return match[5];
+  const lastColon = bastionUserStr.lastIndexOf(':');
+  if (lastColon !== -1 && lastColon < bastionUserStr.length - 1) {
+    return bastionUserStr.substring(lastColon + 1);
+  }
+  return bastionUserStr;
+}
+
+const SSH_LIKE_TYPES = new Set(['ssh', 'rdp', 'rdp-guacamole', 'vnc', 'vnc-guacamole', 'sftp', 'ftp', 'scp', 'ssh-tunnel']);
+
+/**
+ * Devuelve true si la cadena tiene formato Wallix: user@domain@server:protocol:targetUser
+ */
+function isWallixString(str) {
+  return str ? WALLIX_PATTERN.test(str) : false;
 }
 
 function extractUsersFromNodes(nodes, result = new Map()) {
   if (!Array.isArray(nodes)) return result;
   for (const node of nodes) {
-    const username = node.data?.user || node.data?.username;
     const type = node.type || node.data?.type;
-    const hasCredentials = username && type && CONNECTION_TYPE_LABELS[type] !== undefined;
-    const isSSHLike = username && type && (
-      type === 'ssh' || type === 'rdp' || type === 'rdp-guacamole' ||
-      type === 'vnc' || type === 'vnc-guacamole' || type === 'sftp' ||
-      type === 'ftp' || type === 'scp' || type === 'ssh-tunnel'
-    );
-    if (username && isSSHLike) {
-      if (!result.has(username)) {
-        result.set(username, []);
+    if (type && SSH_LIKE_TYPES.has(type)) {
+      let username;
+      // Caso 1: bastion configurado explícitamente con bastionUser
+      if (node.data?.useBastionWallix && node.data?.bastionUser) {
+        username = extractBastionTargetUser(node.data.bastionUser);
+      } else {
+        const rawUser = node.data?.user || node.data?.username;
+        // Caso 2: el campo user contiene directamente una cadena Wallix (legacy/importado)
+        if (rawUser && isWallixString(rawUser)) {
+          username = extractBastionTargetUser(rawUser);
+        } else {
+          username = rawUser;
+        }
       }
-      result.get(username).push(node);
+      if (username) {
+        if (!result.has(username)) result.set(username, []);
+        result.get(username).push(node);
+      }
     }
     if (node.children?.length) {
       extractUsersFromNodes(node.children, result);
@@ -64,6 +97,10 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword }) => {
       connections,
       count: connections.length,
       types: [...new Set(connections.map(n => n.type || n.data?.type).filter(Boolean))],
+      hasBastion: connections.some(n =>
+        (n.data?.useBastionWallix && n.data?.bastionUser) ||
+        isWallixString(n.data?.user || n.data?.username)
+      ),
     }));
     if (!searchText.trim()) return arr;
     const lower = searchText.toLowerCase();
@@ -251,8 +288,24 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword }) => {
                     {user.username.charAt(0)}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.8375rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {user.username}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span style={{ fontWeight: 600, fontSize: '0.8375rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {user.username}
+                      </span>
+                      {user.hasBastion && (
+                        <span style={{
+                          fontSize: '0.55rem',
+                          padding: '1px 5px',
+                          borderRadius: 3,
+                          background: isSelected ? 'rgba(255,255,255,0.25)' : '#ff572222',
+                          color: isSelected ? '#fff' : '#ff5722',
+                          fontWeight: 700,
+                          flexShrink: 0,
+                          letterSpacing: '0.03em',
+                        }}>
+                          Bastion
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: '0.7125rem', opacity: 0.7, marginTop: 2 }}>
                       {user.count} {user.count === 1 ? 'conexión' : 'conexiones'}
@@ -390,10 +443,19 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword }) => {
               {selectedUser.connections.map(conn => {
                 const type = conn.type || conn.data?.type;
                 const info = getTypeInfo(type);
-                const host = conn.data?.host || conn.data?.hostname || conn.data?.server || conn.data?.targetServer || '';
+                const explicitBastion = !!(conn.data?.useBastionWallix && conn.data?.bastionUser);
+                const rawUserWallix = !explicitBastion && isWallixString(conn.data?.user || conn.data?.username)
+                  ? (conn.data?.user || conn.data?.username)
+                  : null;
+                const isBastion = explicitBastion || !!rawUserWallix;
+                const bastionString = explicitBastion ? conn.data.bastionUser : rawUserWallix;
+                const host = isBastion
+                  ? (conn.data?.targetServer || conn.data?.bastionHost || conn.data?.host || '')
+                  : (conn.data?.host || conn.data?.hostname || conn.data?.server || conn.data?.targetServer || '');
                 const port = conn.data?.port;
                 const isChecked = selectedConnectionKeys.has(conn.key);
                 const hasPassword = !!(conn.data?.password);
+                const bastionSubtitle = isBastion ? bastionString : null;
                 return (
                   <div
                     key={conn.key}
@@ -422,13 +484,13 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword }) => {
                       width: 30,
                       height: 30,
                       borderRadius: 6,
-                      background: info.color + '22',
+                      background: isBastion ? '#ff572222' : info.color + '22',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
                     }}>
-                      <i className={info.icon} style={{ fontSize: '0.85rem', color: info.color }} />
+                      <i className={isBastion ? 'pi pi-shield' : info.icon} style={{ fontSize: '0.85rem', color: isBastion ? '#ff5722' : info.color }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
@@ -449,11 +511,28 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword }) => {
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
-                      }}>
-                        {host}{port ? `:${port}` : ''}{!host && 'Sin host configurado'}
+                      }}
+                        title={bastionSubtitle || undefined}
+                      >
+                        {isBastion
+                          ? (bastionSubtitle || host)
+                          : `${host}${port ? `:${port}` : ''}${!host ? 'Sin host configurado' : ''}`
+                        }
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+                      {isBastion && (
+                        <span style={{
+                          fontSize: '0.6rem',
+                          padding: '2px 6px',
+                          borderRadius: 4,
+                          background: '#ff572222',
+                          color: '#ff5722',
+                          fontWeight: 600,
+                        }}>
+                          Bastion
+                        </span>
+                      )}
                       <span style={{
                         fontSize: '0.6rem',
                         padding: '2px 6px',

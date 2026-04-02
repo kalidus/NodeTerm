@@ -439,9 +439,27 @@ const App = () => {
 
   // Handler para actualizar la contraseña de un usuario en todas sus conexiones
   const handleUpdateUserPassword = useCallback((username, newPassword, nodeIds = null) => {
+    const WALLIX_PATTERN = /^(.+)@(.+)@(.+):(.+):(.+)$/;
+    const getBastionTargetUser = (str) => {
+      if (!str) return null;
+      const m = str.match(WALLIX_PATTERN);
+      if (m) return m[5];
+      const i = str.lastIndexOf(':');
+      return i !== -1 && i < str.length - 1 ? str.substring(i + 1) : str;
+    };
+    const getEffectiveUser = (n) => {
+      if (n.data?.useBastionWallix && n.data?.bastionUser) {
+        return getBastionTargetUser(n.data.bastionUser);
+      }
+      const rawUser = n.data?.user || n.data?.username;
+      if (rawUser && WALLIX_PATTERN.test(rawUser)) {
+        return getBastionTargetUser(rawUser);
+      }
+      return rawUser;
+    };
     const updateNodesRecursive = (list) => list.map(n => {
-      const nodeUser = n.data?.user || n.data?.username;
-      const shouldUpdate = nodeUser === username && (nodeIds === null || nodeIds.includes(n.key));
+      const effectiveUser = getEffectiveUser(n);
+      const shouldUpdate = effectiveUser === username && (nodeIds === null || nodeIds.includes(n.key));
       return {
         ...n,
         ...(shouldUpdate ? { data: { ...n.data, password: newPassword } } : {}),
