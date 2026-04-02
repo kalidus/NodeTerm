@@ -185,7 +185,7 @@ const ConnectionHistory = ({
 	const themePickerRef = useRef(null);
 	const uiThemePickerRef = useRef(null);
 	const frameStylePickerRef = useRef(null);
-	const terminalOpacityOverlayRef = useRef(null);
+
 	const terminalSwitcherOverlayRef = useRef(null);
 	const [currentUITheme, setCurrentUITheme] = useState(() => localStorage.getItem('ui_theme') || 'Light');
 	const [availableTerminals, setAvailableTerminals] = useState([]);
@@ -2177,25 +2177,7 @@ const ConnectionHistory = ({
 								onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
 								onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
 							/>
-							<i
-								className="pi pi-eye"
-								style={{
-									fontSize: '0.9rem',
-									color: terminalTheme.foreground || '#c9d1d9',
-									opacity: 0.6,
-									cursor: 'pointer',
-									padding: '4px',
-									borderRadius: '4px',
-									transition: 'all 0.2s'
-								}}
-								title="Ajustar opacidad del terminal"
-								onClick={(e) => {
-									e.stopPropagation();
-									terminalOpacityOverlayRef.current?.toggle(e);
-								}}
-								onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-								onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-							/>
+
 						</div>
 					</div>
 					<div className="top-terminal-body">
@@ -3061,32 +3043,7 @@ const ConnectionHistory = ({
 					</div>
 				</div>
 
-				<OverlayPanel
-					ref={terminalOpacityOverlayRef}
-					style={{
-						width: '200px',
-						backgroundColor: 'var(--ui-dialog-bg, #1e1e1e)',
-						border: '1px solid var(--ui-content-border, #444)',
-						boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-						borderRadius: '8px'
-					}}
-					className="theme-picker-overlay"
-				>
-					<div style={{ padding: '12px' }}>
-						<div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
-							<span style={{ color: 'var(--ui-dialog-text)', fontSize: '0.9rem', fontWeight: 'bold' }}>Opacidad</span>
-							<span style={{ color: 'var(--ui-dialog-text)', opacity: 0.6, fontSize: '0.8rem' }}>{Math.round(terminalOpacity * 100)}%</span>
-						</div>
-						<Slider
-							value={terminalOpacity * 100}
-							onChange={(e) => onTerminalOpacityChange(e.value / 100)}
-							min={5}
-							max={100}
-							step={1}
-							style={{ width: '100%' }}
-						/>
-					</div>
-				</OverlayPanel>
+
 
 				{/* Terminal Body - always kept alive */}
 				{children}

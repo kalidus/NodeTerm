@@ -173,7 +173,7 @@ const HomeTab = ({
   const containerRef = useRef(null);
   const mainAreaRef = useRef(null);
 
-  const terminalOpacityOverlayRef = useRef(null);
+
   const homeOptionsOverlayRef = useRef(null);
   const [containerHeight, setContainerHeight] = useState(window.innerHeight - 100);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth - 100);
@@ -1477,47 +1477,12 @@ const HomeTab = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
 
           {/* Opacity toggle hidden for floating terminal since it is now opaque */}
-          {/* <i
-            className="pi pi-eye no-drag"
-            style={{
-              fontSize: '0.9rem',
-              color: terminalFrameStyle === 'futuristic' ? '#00f2ff' : (terminalFrameStyle === 'retro' ? '#0f0' : (themeColors.textPrimary || '#fff')),
-              opacity: 0.6,
-              cursor: 'pointer',
-              padding: '4px',
-              borderRadius: '4px',
-              transition: 'all 0.2s',
-              textShadow: terminalFrameStyle === 'futuristic' ? '0 0 8px #00f2ff' : (terminalFrameStyle === 'retro' ? '0 0 5px #0f0' : 'none'),
-            }}
-            title="Ajustar opacidad del terminal"
-            onClick={(e) => {
-              e.stopPropagation();
-              terminalOpacityOverlayRef.current?.toggle(e);
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-            onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-            onMouseDown={(e) => e.stopPropagation()}
-          /> */}
+
           <div style={{ width: '12px' }}></div>
         </div>
       </div>
 
-      <OverlayPanel ref={terminalOpacityOverlayRef} style={{ background: themeColors.cardBackground || '#1e1e1e', width: '200px' }}>
-        <div style={{ padding: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
-            <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>Opacidad</span>
-            <span style={{ color: themeColors.textSecondary || '#aaa', fontSize: '0.8rem' }}>{Math.round(terminalOpacity * 100)}%</span>
-          </div>
-          <Slider
-            value={terminalOpacity * 100}
-            onChange={(e) => setTerminalOpacity(e.value / 100)}
-            min={5}
-            max={100}
-            step={1}
-            style={{ width: '100%' }}
-          />
-        </div>
-      </OverlayPanel>
+
 
 
       <div style={{
