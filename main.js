@@ -358,6 +358,8 @@ const { getRecordingsDirectory } = require('./src/main/utils/recording-utils');
 
 let mainWindow;
 const isAppQuitting = { value: false }; // Flag para evitar operaciones durante el cierre
+let appCleanupInProgress = false;
+let appCleanupCompleted = false;
 
 // Los handlers SSH se registrarán después de definir findSSHConnection
 
@@ -2277,7 +2279,18 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
 // Handler app-quit movido a src/main/handlers/application-handlers.js
 
 // Limpieza robusta también en before-quit
-app.on('before-quit', async () => {
+app.on('before-quit', async (event) => {
+  if (appCleanupCompleted) {
+    return;
+  }
+
+  if (appCleanupInProgress) {
+    event.preventDefault();
+    return;
+  }
+
+  appCleanupInProgress = true;
+  event.preventDefault();
   isAppQuitting.value = true;
 
   // ✅ MEMORY LEAK FIX: Limpiar intervalo de limpieza de conexiones huérfanas
@@ -2332,6 +2345,39 @@ app.on('before-quit', async () => {
       console.error('Error cleaning up Docker processes:', error);
     }
   }
+
+  // Cleanup AI client containers even if services were lazily loaded.
+  const stopTasks = [];
+  if (_anythingLLMService && typeof _anythingLLMService.stop === 'function') {
+    stopTasks.push(_anythingLLMService.stop().catch(() => null));
+  }
+  if (_openWebUIService && typeof _openWebUIService.stop === 'function') {
+    stopTasks.push(_openWebUIService.stop().catch(() => null));
+  }
+  if (_libreChatService && typeof _libreChatService.stop === 'function') {
+    stopTasks.push(_libreChatService.stop().catch(() => null));
+  }
+
+  // Fallback hard-stop by known container names to guarantee shutdown.
+  try {
+    const { exec } = require('child_process');
+    const util = require('util');
+    const execAsync = util.promisify(exec);
+    const forcedContainerStops = [
+      'nodeterm-anythingllm',
+      'nodeterm-openwebui',
+      'nodeterm-librechat',
+      'nodeterm-librechat-mongo'
+    ].map((name) => execAsync(`docker rm -f ${name}`).catch(() => null));
+    stopTasks.push(...forcedContainerStops);
+  } catch (_) {
+    // Ignore fallback docker cleanup errors during shutdown.
+  }
+
+  await Promise.all(stopTasks);
+  appCleanupCompleted = true;
+  appCleanupInProgress = false;
+  app.quit();
 });
 
 // Handlers del sistema (clipboard, dialog, import) movidos a main/handlers/system-handlers.js
