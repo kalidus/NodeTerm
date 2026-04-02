@@ -79,7 +79,7 @@ function extractUsersFromNodes(nodes, result = new Map()) {
   return result;
 }
 
-const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword }) => {
+const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword, onEditConnection }) => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchText, setSearchText] = useState('');
   const [changePasswordVisible, setChangePasswordVisible] = useState(false);
@@ -166,6 +166,13 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword }) => {
       setSelectedConnectionKeys(new Set(selectedUser.connections.map(n => n.key)));
     }
   }, [selectedUser, selectedConnectionKeys]);
+
+  const handleEditConnection = useCallback((conn, event) => {
+    event?.stopPropagation();
+    if (onEditConnection) {
+      onEditConnection(conn);
+    }
+  }, [onEditConnection]);
 
   const containerStyle = {
     display: 'flex',
@@ -521,6 +528,32 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword }) => {
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+                      {onEditConnection && (
+                        <button
+                          type="button"
+                          title="Editar conexión"
+                          aria-label="Editar conexión"
+                          onClick={(e) => handleEditConnection(conn, e)}
+                          style={{
+                            fontSize: '0.6rem',
+                            padding: '2px 6px',
+                            borderRadius: 4,
+                            border: '1px solid var(--ui-dialog-border)',
+                            background: 'rgba(255,255,255,0.04)',
+                            color: 'var(--ui-dialog-text)',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: '24px',
+                            height: '18px',
+                            cursor: 'pointer',
+                            opacity: 0.85
+                          }}
+                        >
+                          <i className="pi pi-pencil" style={{ fontSize: '0.52rem' }} />
+                        </button>
+                      )}
                       {isBastion && (
                         <span style={{
                           fontSize: '0.6rem',

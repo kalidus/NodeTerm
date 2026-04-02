@@ -247,7 +247,8 @@ const DialogsManager = ({
   onMasterPasswordConfigured,
 
   // Gestión de usuarios
-  onUpdateUserPassword
+  onUpdateUserPassword,
+  onEditConnection
 }) => {
   // Debug: verificar que el prop se recibe correctamente (deshabilitado)
   // useEffect(() => {
@@ -470,6 +471,7 @@ const DialogsManager = ({
         onMasterPasswordConfigured={onMasterPasswordConfigured}
         nodes={nodes}
         onUpdateUserPassword={onUpdateUserPassword}
+        onEditConnection={onEditConnection}
       />}
 
       {/* Sync Settings Dialog - solo se monta cuando es visible */}

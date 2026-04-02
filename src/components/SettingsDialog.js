@@ -109,7 +109,8 @@ const SettingsDialog = ({
   sessionActionIconTheme = 'modern',
   setSessionActionIconTheme,
   nodes = [],
-  onUpdateUserPassword
+  onUpdateUserPassword,
+  onEditConnection
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -3224,6 +3225,7 @@ const SettingsDialog = ({
                 <UsersSettingsTab
                   nodes={nodes}
                   onUpdateUserPassword={onUpdateUserPassword}
+                  onEditConnection={onEditConnection}
                 />
               </div>
             </TabPanel>

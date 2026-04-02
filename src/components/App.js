@@ -2101,6 +2101,37 @@ const App = () => {
     };
   }, [handleSaveFileConnectionToSidebar]);
 
+  const handleEditConnectionFromUsers = useCallback((node) => {
+    if (!node) return;
+
+    const type = node.type || node.data?.type;
+
+    if (type === 'rdp' || type === 'rdp-guacamole') {
+      openEditRdpDialog(node);
+      return;
+    }
+
+    if (type === 'vnc' || type === 'vnc-guacamole') {
+      openEditVncDialog(node);
+      return;
+    }
+
+    if (type === 'sftp' || type === 'ftp' || type === 'scp') {
+      openEditFileConnectionDialog(node);
+      return;
+    }
+
+    if (type === 'ssh-tunnel') {
+      if (openEditSSHTunnelDialog) {
+        openEditSSHTunnelDialog(node);
+      }
+      return;
+    }
+
+    // Fallback: tratar conexiones desconocidas como SSH para mantener compatibilidad.
+    openEditSSHDialog(node);
+  }, [openEditRdpDialog, openEditVncDialog, openEditFileConnectionDialog, openEditSSHTunnelDialog, openEditSSHDialog]);
+
   // Listener para abrir diálogo unificado de nueva conexión
   useEffect(() => {
     const handleOpenNewUnifiedConnectionDialog = (e) => {
@@ -3057,6 +3088,7 @@ const App = () => {
           onMasterPasswordConfigured={handleMasterPasswordConfigured}
           onMasterPasswordChanged={handleMasterPasswordChanged}
           onUpdateUserPassword={handleUpdateUserPassword}
+          onEditConnection={handleEditConnectionFromUsers}
         />
 
         {/* Menú contextual del árbol de la sidebar */}
