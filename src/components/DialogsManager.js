@@ -244,7 +244,10 @@ const DialogsManager = ({
   sessionManager,
 
   // Encriptación
-  onMasterPasswordConfigured
+  onMasterPasswordConfigured,
+
+  // Gestión de usuarios
+  onUpdateUserPassword
 }) => {
   // Debug: verificar que el prop se recibe correctamente (deshabilitado)
   // useEffect(() => {
@@ -465,6 +468,8 @@ const DialogsManager = ({
         importTreeFromJson={importTreeFromJson}
         sessionManager={sessionManager}
         onMasterPasswordConfigured={onMasterPasswordConfigured}
+        nodes={nodes}
+        onUpdateUserPassword={onUpdateUserPassword}
       />}
 
       {/* Sync Settings Dialog - solo se monta cuando es visible */}

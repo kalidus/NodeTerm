@@ -437,6 +437,20 @@ const App = () => {
     // Actualizar el estado con la nueva clave después del cambio
   }, []);
 
+  // Handler para actualizar la contraseña de un usuario en todas sus conexiones
+  const handleUpdateUserPassword = useCallback((username, newPassword, nodeIds = null) => {
+    const updateNodesRecursive = (list) => list.map(n => {
+      const nodeUser = n.data?.user || n.data?.username;
+      const shouldUpdate = nodeUser === username && (nodeIds === null || nodeIds.includes(n.key));
+      return {
+        ...n,
+        ...(shouldUpdate ? { data: { ...n.data, password: newPassword } } : {}),
+        children: n.children ? updateNodesRecursive(n.children) : n.children,
+      };
+    });
+    setNodes(prev => updateNodesRecursive(prev));
+  }, [setNodes]);
+
   // Lógica unificada de importación con deduplicación/merge y actualización de fuentes vinculadas
   const unifiedHandleImportComplete = async (importResult) => {
     const normalizeExact = (v) => (v || '').toString().trim().toLowerCase();
@@ -3024,6 +3038,7 @@ const App = () => {
           // Encriptación
           onMasterPasswordConfigured={handleMasterPasswordConfigured}
           onMasterPasswordChanged={handleMasterPasswordChanged}
+          onUpdateUserPassword={handleUpdateUserPassword}
         />
 
         {/* Menú contextual del árbol de la sidebar */}

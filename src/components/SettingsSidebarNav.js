@@ -35,6 +35,12 @@ const SettingsSidebarNav = ({
       ]
     },
     {
+      id: 'usuarios',
+      label: t('sidebar.users'),
+      icon: 'pi pi-users',
+      subitems: []
+    },
+    {
       id: 'apariencia',
       label: t('sidebar.appearance'),
       icon: 'pi pi-palette',

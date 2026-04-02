@@ -37,6 +37,7 @@ import SettingsSidebarNav from './SettingsSidebarNav';
 import TerminalSettingsTab from './TerminalSettingsTab';
 import PresetSelector from './PresetSelector';
 import { useDialogResize } from '../hooks/useDialogResize';
+import UsersSettingsTab from './UsersSettingsTab';
 import { treeThemes, treeThemeOptions, getTreeTheme } from '../themes/tree-themes';
 import { actionBarThemes } from '../themes/action-bar-themes';
 import { sessionActionIconThemes, getDefaultSessionActionIconTheme } from '../themes/session-action-icons';
@@ -106,7 +107,9 @@ const SettingsDialog = ({
   treeTheme = 'default',
   setTreeTheme,
   sessionActionIconTheme = 'modern',
-  setSessionActionIconTheme
+  setSessionActionIconTheme,
+  nodes = [],
+  onUpdateUserPassword
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -168,12 +171,13 @@ const SettingsDialog = ({
     const mainTabMap = {
       'general': 0,
       'seguridad': 1,
-      'apariencia': 2,
-      'rdp': 3,
-      'clientes-ia': 4,
-      'actualizaciones': 5,
-      'sincronizacion': 6,
-      'informacion': 7
+      'usuarios': 2,
+      'apariencia': 3,
+      'rdp': 4,
+      'clientes-ia': 5,
+      'actualizaciones': 6,
+      'sincronizacion': 7,
+      'informacion': 8
     };
     return mainTabMap[mainTab] || 0;
   };
@@ -234,6 +238,7 @@ const SettingsDialog = ({
       // Mapping de nombres cortos/ingles a las claves internas en español
       const tabMap = {
         'security': 'seguridad',
+        'users': 'usuarios',
         'sync': 'sincronizacion',
         'appearance': 'apariencia',
         'updates': 'actualizaciones',
@@ -3211,6 +3216,15 @@ const SettingsDialog = ({
                     </div>
                   )}
                 </div>
+              </div>
+            </TabPanel>
+
+            <TabPanel header="Usuarios" leftIcon="pi pi-users" style={{ '--content-height': `${contentHeight}px` }}>
+              <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
+                <UsersSettingsTab
+                  nodes={nodes}
+                  onUpdateUserPassword={onUpdateUserPassword}
+                />
               </div>
             </TabPanel>
 
