@@ -149,6 +149,7 @@ const ConnectionHistory = ({
 	onToggleTerminalVisibility,
 	onSwitchTerminal,
 	statusBarVisible = true,
+	homeCardVisible = true,
 	children
 }) => {
 	// Helper para ajustar la opacidad de los colores (Hex o RGBA)
@@ -2071,16 +2072,17 @@ const ConnectionHistory = ({
 
 			<div className="hero-splash-header" style={{ paddingBottom: '8px' }}>
 
-				<div className={`top-terminal-frame ${terminalFrameStyle}`}>
-					<div className="top-terminal-header">
-						<div className="traffic-lights">
-							{terminalFrameStyle === 'macos' ? (
-								<>
-									<div className="traffic-dot red" />
-									<div className="traffic-dot yellow" />
-									<div className="traffic-dot green" />
-								</>
-							) : terminalFrameStyle === 'gnome' ? (
+				{homeCardVisible && (
+					<div className={`top-terminal-frame ${terminalFrameStyle}`}>
+						<div className="top-terminal-header">
+							<div className="traffic-lights">
+								{terminalFrameStyle === 'macos' ? (
+									<>
+										<div className="traffic-dot red" />
+										<div className="traffic-dot yellow" />
+										<div className="traffic-dot green" />
+									</>
+								) : terminalFrameStyle === 'gnome' ? (
 								<div className="gnome-controls" style={{ marginLeft: '-8px' }}>
 									<div className="gnome-dot close" title="Cerrar"><i className="pi pi-times" /></div>
 								</div>
@@ -2315,6 +2317,7 @@ const ConnectionHistory = ({
 						</div>
 					</div>
 				</div>
+				)}
 			</div > {/* FilterPanel Dropdown - Rendered in Portal to avoid clipping */}
 			{
 				ReactDOM.createPortal(

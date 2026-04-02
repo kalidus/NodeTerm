@@ -102,6 +102,15 @@ const HomeTab = ({
     }
   });
 
+  const [homeCardVisible, setHomeCardVisible] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_CARD_VISIBLE);
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
   const [terminalOpacity, setTerminalOpacity] = useState(() => {
     try {
       const saved = localStorage.getItem('nodeterm_terminal_opacity');
@@ -840,6 +849,16 @@ const HomeTab = ({
     });
   };
 
+  const handleToggleHomeCardVisibility = () => {
+    setHomeCardVisible(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem(STORAGE_KEYS.HOME_TAB_CARD_VISIBLE, next.toString());
+      } catch (e) { }
+      return next;
+    });
+  };
+
   useEffect(() => {
     const handleExternalToggle = () => {
       if (!showAIChat) return;
@@ -1210,6 +1229,28 @@ const HomeTab = ({
                 {rightColumnVisible ? 'Visible' : 'Oculta'}
               </button>
             </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem' }}>Tarjeta Home (Buscador/Acciones)</span>
+              <button
+                type="button"
+                onClick={handleToggleHomeCardVisibility}
+                style={{
+                  border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.2)'}`,
+                  background: homeCardVisible
+                    ? (themeColors.primaryColor || '#2196f3')
+                    : 'rgba(120,120,120,0.25)',
+                  color: '#fff',
+                  borderRadius: '999px',
+                  padding: '0.2rem 0.65rem',
+                  cursor: 'pointer',
+                  fontSize: '0.78rem',
+                  fontWeight: 600
+                }}
+              >
+                {homeCardVisible ? 'Visible' : 'Oculta'}
+              </button>
+            </div>
           </div>
         </OverlayPanel>
         <div className="home-page-scroll" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -1273,6 +1314,7 @@ const HomeTab = ({
                   setTerminalFrameStyle={setTerminalFrameStyle}
                   terminalOpacity={terminalOpacity}
                   onTerminalOpacityChange={setTerminalOpacity}
+                  homeCardVisible={homeCardVisible}
                   statusBarVisible={statusBarVisible}
                   onSwitchTerminal={(type, info) => {
                     if (embeddedTabbedTerminalRef.current?.addTerminalTab) {
