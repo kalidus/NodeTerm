@@ -144,9 +144,10 @@ class AgentZeroService {
     if (!running) {
       const exists = await this.isContainerExisting(this.containerName);
       if (exists) {
-        await this.removeContainer(this.containerName);
+        await this.startExistingContainer(this.containerName);
+      } else {
+        await this.startContainer();
       }
-      await this.startContainer();
     } else {
       this.status.phase = 'running';
       this.status.message = 'Contenedor Agent Zero en ejecución';
@@ -236,6 +237,13 @@ class AgentZeroService {
     } catch (_) {}
   }
 
+  /** Arranca un contenedor ya creado (conserva datos dentro del contenedor / volúmenes anónimos). */
+  async startExistingContainer(name) {
+    this.status.phase = 'starting';
+    this.status.message = 'Arrancando contenedor Agent Zero existente';
+    await execAsync(this.buildDockerCommand(`start ${name}`));
+  }
+
   async startContainer() {
     this.status.phase = 'starting';
     this.status.message = 'Iniciando contenedor Agent Zero';
@@ -315,11 +323,11 @@ class AgentZeroService {
   async stop() {
     this.status.phase = 'stopping';
     this.status.message = 'Deteniendo Agent Zero';
+    // Solo stop: no docker rm, para no borrar el estado de Agent Zero (chats, config en /a0, etc.).
     try {
       await execAsync(this.buildDockerCommand(`stop ${this.containerName}`));
-      await execAsync(this.buildDockerCommand(`rm ${this.containerName}`));
     } catch (_) {}
-    
+
     this.status.isRunning = false;
     this.status.phase = 'idle';
     this.status.message = 'Agent Zero detenido';

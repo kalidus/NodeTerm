@@ -2381,10 +2381,12 @@ app.on('before-quit', async (event) => {
       'nodeterm-anythingllm',
       'nodeterm-openwebui',
       'nodeterm-librechat',
-      'nodeterm-librechat-mongo',
-      'nodeterm-agentzero'
+      'nodeterm-librechat-mongo'
     ].map((name) => execAsync(`docker rm -f ${name}`).catch(() => null));
     stopTasks.push(...forcedContainerStops);
+    // Agent Zero: solo stop (no rm -f), para conservar datos del contenedor al cerrar NodeTerm.
+    const agentZeroContainer = (process.env.NODETERM_AGENTZERO_CONTAINER || 'nodeterm-agentzero').trim();
+    stopTasks.push(execAsync(`docker stop ${agentZeroContainer}`).catch(() => null));
   } catch (_) {
     // Ignore fallback docker cleanup errors during shutdown.
   }
