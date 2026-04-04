@@ -52,6 +52,11 @@ class AgentZeroService {
 
     this.dataDir = this._resolveDataDir();
     this.status.dataDir = this.dataDir;
+
+    // Ollama en el host: desde el contenedor, localhost no es el PC anfitrión.
+    // LiteLLM usa OLLAMA_API_BASE si no hay api_base en el modelo (venv site-packages litellm/llms/ollama).
+    // A0_SET__model_config__* aplica al cargar default_config.yaml del plugin (sin config.json previo).
+    this.ollamaBaseUrl = (process.env.NODETERM_AGENTZERO_OLLAMA_BASE_URL || 'http://host.docker.internal:11434').trim();
   }
 
   _resolveDataDir() {
@@ -253,6 +258,11 @@ class AgentZeroService {
       '--restart unless-stopped',
       `--network nodeterm-network`,
       `-p ${this.hostPort}:${this.containerPort}`,
+      ...(process.platform === 'linux' ? ['--add-host host.docker.internal:host-gateway'] : []),
+      `-e OLLAMA_API_BASE=${this.ollamaBaseUrl}`,
+      `-e OLLAMA_BASE_URL=${this.ollamaBaseUrl}`,
+      `-e A0_SET__model_config__chat_model__api_base=${this.ollamaBaseUrl}`,
+      `-e A0_SET__model_config__utility_model__api_base=${this.ollamaBaseUrl}`,
       // Montamos las carpetas para exponer metadatos localmente
       /* Descomentar en el futuro si soportamos montaje total:
       `-v "${configHostPath}:/app/conf"`,
