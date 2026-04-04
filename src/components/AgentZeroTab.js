@@ -224,41 +224,47 @@ const AgentZeroTab = () => {
     );
   };
 
+  const renderToolbar = () => (
+    <div className="agentzero-toolbar agentzero-toolbar--floating" role="toolbar" aria-label="Agent Zero">
+      <div className="agentzero-status-pill">
+        <span className={`state ${isReady ? 'ready' : 'pending'}`}>
+          {isReady ? 'Listo' : '…'}
+        </span>
+      </div>
+      <div className="agentzero-actions">
+        <Button
+          icon="pi pi-sync"
+          size="small"
+          className="agentzero-action-btn"
+          onClick={startService}
+          tooltip={t('tooltips.retry') || 'Reintentar'}
+          tooltipOptions={{ position: 'left' }}
+        />
+        <Button
+          icon="pi pi-refresh"
+          size="small"
+          className="agentzero-action-btn"
+          disabled={!isReady}
+          onClick={handleReloadWebView}
+          tooltip={t('tooltips.reloadUI') || 'Recargar UI'}
+          tooltipOptions={{ position: 'left' }}
+        />
+      </div>
+    </div>
+  );
+
   return (
     <div className="agentzero-tab">
       <Toast ref={toast} />
-      
-      {status.phase === 'disabled' && renderDisabled()}
-      {status.phase !== 'disabled' && error && renderError()}
-      {status.phase !== 'disabled' && !error && (!isReady || !url) && renderStatusCard()}
-      {status.phase !== 'disabled' && !error && isReady && url && renderWebView()}
-      
-      <div className="agentzero-toolbar">
-        <div className="agentzero-status-pill">
-          <span className={`state ${isReady ? 'ready' : 'pending'}`}>
-            {isReady ? 'Listo' : 'Preparando'}
-          </span>
-        </div>
-        <div className="agentzero-actions">
-          <Button
-            icon="pi pi-sync"
-            size="small"
-            className="agentzero-action-btn"
-            onClick={startService}
-            tooltip={t('tooltips.retry') || 'Reintentar'}
-            tooltipOptions={{ position: 'top' }}
-          />
-          <Button
-            icon="pi pi-refresh"
-            size="small"
-            className="agentzero-action-btn"
-            disabled={!isReady}
-            onClick={handleReloadWebView}
-            tooltip={t('tooltips.reloadUI') || 'Recargar UI'}
-            tooltipOptions={{ position: 'top' }}
-          />
-        </div>
+
+      <div className="agentzero-body">
+        {status.phase === 'disabled' && renderDisabled()}
+        {status.phase !== 'disabled' && error && renderError()}
+        {status.phase !== 'disabled' && !error && (!isReady || !url) && renderStatusCard()}
+        {status.phase !== 'disabled' && !error && isReady && url && renderWebView()}
       </div>
+
+      {status.phase !== 'disabled' && !error && renderToolbar()}
     </div>
   );
 };
