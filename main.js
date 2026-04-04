@@ -2368,6 +2368,9 @@ app.on('before-quit', async (event) => {
   if (_libreChatService && typeof _libreChatService.stop === 'function') {
     stopTasks.push(_libreChatService.stop().catch(() => null));
   }
+  if (_agentZeroService && typeof _agentZeroService.stop === 'function') {
+    stopTasks.push(_agentZeroService.stop().catch(() => null));
+  }
 
   // Fallback hard-stop by known container names to guarantee shutdown.
   try {
@@ -2378,7 +2381,8 @@ app.on('before-quit', async (event) => {
       'nodeterm-anythingllm',
       'nodeterm-openwebui',
       'nodeterm-librechat',
-      'nodeterm-librechat-mongo'
+      'nodeterm-librechat-mongo',
+      'nodeterm-agentzero'
     ].map((name) => execAsync(`docker rm -f ${name}`).catch(() => null));
     stopTasks.push(...forcedContainerStops);
   } catch (_) {
