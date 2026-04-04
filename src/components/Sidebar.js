@@ -586,7 +586,8 @@ const Sidebar = React.memo(({
             nodeterm: parsed.nodeterm === true, // Solo activo si está explícitamente configurado
             anythingllm: parsed.anythingllm === true,
             openwebui: parsed.openwebui === true,
-            librechat: parsed.librechat === true
+            librechat: parsed.librechat === true,
+            agentzero: parsed.agentzero === true
           });
         } else {
           // Si no hay configuración, todos desactivados por defecto
@@ -594,7 +595,8 @@ const Sidebar = React.memo(({
             nodeterm: false,
             anythingllm: false,
             openwebui: false,
-            librechat: false
+            librechat: false,
+            agentzero: false
           });
         }
       } catch (error) {
@@ -663,6 +665,19 @@ const Sidebar = React.memo(({
       groupId: null
     };
     window.dispatchEvent(new CustomEvent('create-librechat-tab', {
+      detail: { tab: newTab }
+    }));
+  };
+
+  const openAgentZeroTab = () => {
+    const newTab = {
+      key: `agentzero-${Date.now()}`,
+      label: 'Agent Zero',
+      type: 'agentzero',
+      createdAt: Date.now(),
+      groupId: null
+    };
+    window.dispatchEvent(new CustomEvent('create-agentzero-tab', {
       detail: { tab: newTab }
     }));
   };
@@ -2979,7 +2994,7 @@ const Sidebar = React.memo(({
               </Button>
 
               {/* Separador para clientes de IA */}
-              {(aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat) && (
+              {(aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat || aiClientsEnabled.agentzero) && (
                 <div style={{
                   width: '28px',
                   height: '1px',
@@ -3104,6 +3119,31 @@ const Sidebar = React.memo(({
                     visibility: 'visible !important',
                     opacity: '1 !important',
                     color: '#9C27B0'
+                  }}
+                />
+              )}
+
+              {aiClientsEnabled.agentzero && (
+                <Button
+                  icon="pi pi-android"
+                  className="p-button-rounded p-button-text sidebar-action-button"
+                  onClick={openAgentZeroTab}
+                  tooltip="Agent Zero"
+                  tooltipOptions={{ position: 'right' }}
+                  style={{
+                    margin: 0,
+                    width: 40,
+                    height: 40,
+                    minWidth: 40,
+                    minHeight: 40,
+                    fontSize: 18,
+                    border: 'none',
+                    display: 'flex !important',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    visibility: 'visible !important',
+                    opacity: '1 !important',
+                    color: '#E91E63'
                   }}
                 />
               )}

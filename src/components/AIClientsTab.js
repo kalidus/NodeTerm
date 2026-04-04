@@ -18,14 +18,16 @@ const AIClientsTab = ({ themeColors }) => {
     nodeterm: false,
     anythingllm: false,
     openwebui: false,
-    librechat: false
+    librechat: false,
+    agentzero: false
   });
 
   // Estado de carga para verificar servicios Docker
   const [dockerStatus, setDockerStatus] = useState({
     anythingllm: { loading: false, running: false, error: null },
     openwebui: { loading: false, running: false, error: null },
-    librechat: { loading: false, running: false, error: null }
+    librechat: { loading: false, running: false, error: null },
+    agentzero: { loading: false, running: false, error: null }
   });
 
   // Cargar configuración desde localStorage al montar
@@ -52,7 +54,10 @@ const AIClientsTab = ({ themeColors }) => {
     if (clients.librechat) {
       checkDockerServiceStatus('librechat');
     }
-  }, [clients.anythingllm, clients.openwebui, clients.librechat]);
+    if (clients.agentzero) {
+      checkDockerServiceStatus('agentzero');
+    }
+  }, [clients.anythingllm, clients.openwebui, clients.librechat, clients.agentzero]);
 
   // Guardar configuración en localStorage cuando cambia
   const saveClientsConfig = (newClients) => {
@@ -91,6 +96,7 @@ const AIClientsTab = ({ themeColors }) => {
       if (serviceKey === 'anythingllm') ipcKey = 'anythingllm:get-status';
       else if (serviceKey === 'openwebui') ipcKey = 'openwebui:get-status';
       else if (serviceKey === 'librechat') ipcKey = 'librechat:get-status';
+      else if (serviceKey === 'agentzero') ipcKey = 'agentzero:get-status';
 
       const result = await window.electron.ipcRenderer.invoke(ipcKey);
       
@@ -137,6 +143,7 @@ const AIClientsTab = ({ themeColors }) => {
       if (serviceKey === 'anythingllm') ipcKey = 'anythingllm:start';
       else if (serviceKey === 'openwebui') ipcKey = 'openwebui:start';
       else if (serviceKey === 'librechat') ipcKey = 'librechat:start';
+      else if (serviceKey === 'agentzero') ipcKey = 'agentzero:start';
 
       const result = await window.electron.ipcRenderer.invoke(ipcKey);
       
@@ -214,6 +221,20 @@ const AIClientsTab = ({ themeColors }) => {
       requiresDocker: true,
       port: 3080,
       url: 'http://127.0.0.1:3080'
+    },
+    {
+      key: 'agentzero',
+      name: 'Agent Zero',
+      icon: 'pi pi-android',
+      color: '#E91E63',
+      description: 'Framework de IA agente. Una interfaz innovadora para interactuar con agentes autónomos usando modelos locales o en la nube.',
+      features: ['Agentes Autónomos', 'Ejecución de Código', 'Búsqueda Web', 'Archivos'],
+      badges: [
+        { label: 'DOCKER', severity: 'info', icon: 'pi pi-box' }
+      ],
+      requiresDocker: true,
+      port: 3081,
+      url: 'http://127.0.0.1:3081'
     },
     {
       key: 'nodeterm',

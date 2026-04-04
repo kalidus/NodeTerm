@@ -77,6 +77,7 @@
     "anythingLLM": "AnythingLLM",
     "openWebUI": "Open WebUI",
     "libreChat": "LibreChat",
+    "agentZero": "Agent Zero",
     "filesystemMCP": "Filesystem MCP",
     "localTerminal": "Local terminal",
     "settings": "Settings",

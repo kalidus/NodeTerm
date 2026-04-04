@@ -251,6 +251,7 @@ let _guacdService = null;
 let _anythingLLMService = null;
 let _openWebUIService = null;
 let _libreChatService = null;
+let _agentZeroService = null;
 
 function getGuacdService() {
   if (!_guacdService) {
@@ -282,6 +283,14 @@ function getLibreChatService() {
     _libreChatService = new LibreChatService();
   }
   return _libreChatService;
+}
+
+function getAgentZeroService() {
+  if (!_agentZeroService) {
+    const AgentZeroService = require('./src/services/AgentZeroService');
+    _agentZeroService = new AgentZeroService();
+  }
+  return _agentZeroService;
 }
 
 // ============================================================================
@@ -1043,6 +1052,7 @@ function createWindow() {
         anythingLLMService: getAnythingLLMService(),
         openWebUIService: getOpenWebUIService(),
         libreChatService: getLibreChatService(),
+        agentZeroService: getAgentZeroService(),
         packageJson,
         sshConnections,
         sshConnectionPool,
@@ -1226,6 +1236,7 @@ function createWindow() {
       anythingLLMService: getAnythingLLMService(),
       openWebUIService: getOpenWebUIService(),
       libreChatService: getLibreChatService(),
+      agentZeroService: getAgentZeroService(),
       packageJson,
       sshConnections,
       sshConnectionPool,

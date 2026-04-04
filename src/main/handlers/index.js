@@ -18,6 +18,7 @@ let _guacamoleHandlers = null;
 let _anythingLLMHandlers = null;
 let _openWebUIHandlers = null;
 let _libreChatHandlers = null;
+let _agentZeroHandlers = null;
 let _sshHandlers = null;
 let _mcpHandlers = null;
 let _nextcloudHandlers = null;
@@ -67,6 +68,11 @@ function getOpenWebUIHandlers() {
 function getLibreChatHandlers() {
   if (!_libreChatHandlers) _libreChatHandlers = require('./librechat-handlers');
   return _libreChatHandlers;
+}
+
+function getAgentZeroHandlers() {
+  if (!_agentZeroHandlers) _agentZeroHandlers = require('./agentzero-handlers');
+  return _agentZeroHandlers;
 }
 
 function getSSHHandlers() {
@@ -185,6 +191,7 @@ function registerSecondaryHandlers(dependencies) {
   getAnythingLLMHandlers().registerAnythingLLMHandlers(dependencies);
   getOpenWebUIHandlers().registerOpenWebUIHandlers(dependencies);
   getLibreChatHandlers().registerLibreChatHandlers(dependencies);
+  getAgentZeroHandlers().registerAgentZeroHandlers(dependencies);
 
   // Handlers SSH
   getSSHHandlers()(dependencies);
@@ -255,6 +262,7 @@ module.exports = {
   getAnythingLLMHandlers,
   getOpenWebUIHandlers,
   getLibreChatHandlers,
+  getAgentZeroHandlers,
   getSSHHandlers,
   getMCPHandlers,
   getNextcloudHandlers,

@@ -149,6 +149,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^anythingllm:.*$/,
         /^openwebui:.*$/,
         /^librechat:.*$/,
+        /^agentzero:.*$/,
         /^import:.*$/,
         /^updater:.*$/,
         /^system:.*$/,
@@ -194,6 +195,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^guacamole:.*$/,
         /^anythingllm:.*$/,
         /^librechat:.*$/,
+        /^agentzero:.*$/,
         /^updater-event$/,
         /^network-tools:.*$/,
         /^system:.*$/, // Eventos de suspensión/reanudación del sistema
@@ -226,6 +228,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^docker:.*$/,
         /^rdp:.*$/,
         /^librechat:.*$/,
+        /^agentzero:.*$/,
         /^updater-event$/,
         /^network-tools:.*$/,
         /^system:.*$/, // Eventos de suspensión/reanudación del sistema

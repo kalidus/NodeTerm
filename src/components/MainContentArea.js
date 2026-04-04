@@ -258,6 +258,20 @@ const MainContentArea = ({
     }));
   }, []);
 
+  const dispatchAgentZeroTab = useCallback(() => {
+    const tabId = `agentzero-${Date.now()}`;
+    const newTab = {
+      key: tabId,
+      label: 'Agent Zero',
+      type: 'agentzero',
+      createdAt: Date.now(),
+      groupId: null
+    };
+    window.dispatchEvent(new CustomEvent('create-agentzero-tab', {
+      detail: { tab: newTab }
+    }));
+  }, []);
+
   // Manejador para abrir el explorador desde el botón de la sidebar
   const handleSidebarOpenFileExplorer = useCallback(() => {
     // 1. Intentar con la pestaña activa si es SSH
@@ -398,7 +412,8 @@ const MainContentArea = ({
     nodeterm: true,
     anythingllm: false,
     openwebui: false,
-    librechat: false
+    librechat: false,
+    agentzero: false
   });
 
   // Cargar configuración de clientes de IA desde localStorage
@@ -412,7 +427,8 @@ const MainContentArea = ({
             nodeterm: parsed.nodeterm === true, // Solo activo si está explícitamente configurado
             anythingllm: parsed.anythingllm === true,
             openwebui: parsed.openwebui === true,
-            librechat: parsed.librechat === true
+            librechat: parsed.librechat === true,
+            agentzero: parsed.agentzero === true
           });
         } else {
           // Si no hay configuración, todos desactivados por defecto
@@ -420,7 +436,8 @@ const MainContentArea = ({
             nodeterm: false,
             anythingllm: false,
             openwebui: false,
-            librechat: false
+            librechat: false,
+            agentzero: false
           });
         }
       } catch (error) {
@@ -676,6 +693,17 @@ const MainContentArea = ({
         });
       }
 
+      // Agent Zero - Solo si está activado
+      if (aiClientsEnabled.agentzero) {
+        menuItems.push({
+          label: 'Agent Zero',
+          icon: 'pi pi-android',
+          command: () => {
+            dispatchAgentZeroTab();
+          }
+        });
+      }
+
       setTerminalMenuItems(menuItems);
     } else {
       const linuxMenuItems = [
@@ -746,10 +774,21 @@ const MainContentArea = ({
         });
       }
 
+      // Agent Zero - Solo si está activado
+      if (aiClientsEnabled.agentzero) {
+        linuxMenuItems.push({
+          label: 'Agent Zero',
+          icon: 'pi pi-android',
+          command: () => {
+            dispatchAgentZeroTab();
+          }
+        });
+      }
+
       setTerminalMenuItems(linuxMenuItems);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wslDistributions, dockerContainers, dispatchAnythingLLMTab, dispatchOpenWebUITab, dispatchLibreChatTab, aiClientsEnabled]);
+  }, [wslDistributions, dockerContainers, dispatchAnythingLLMTab, dispatchOpenWebUITab, dispatchLibreChatTab, dispatchAgentZeroTab, aiClientsEnabled]);
 
   // 🚀 OPTIMIZACIÓN: Detectar distribuciones WSL DIFERIDO
   useEffect(() => {
