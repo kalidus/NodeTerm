@@ -14,6 +14,7 @@ import ImportDialog from './ImportDialog';
 import PasswordManagerSidebar from './PasswordManagerSidebar';
 import SidebarFilesystemExplorer from './SidebarFilesystemExplorer';
 import LocalFileExplorerSidebar from './LocalFileExplorerSidebar';
+import AIClientBrandIcon from './AIClientBrandIcon';
 import ConnectionDetailsPanel from './ConnectionDetailsPanel';
 import { unblockAllInputs, detectBlockedInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
@@ -3064,7 +3065,6 @@ const Sidebar = React.memo(({
               {/* Botón de AnythingLLM - Solo visible si está activado */}
               {aiClientsEnabled.anythingllm && (
                 <Button
-                  icon="pi pi-box"
                   className="p-button-rounded p-button-text sidebar-action-button"
                   onClick={openAnythingLLMTab}
                   tooltip={t('tooltips.anythingLLM')}
@@ -3075,22 +3075,22 @@ const Sidebar = React.memo(({
                     height: 40,
                     minWidth: 40,
                     minHeight: 40,
-                    fontSize: 18,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
                     justifyContent: 'center',
                     visibility: 'visible !important',
                     opacity: '1 !important',
-                    color: '#9c27b0'
+                    padding: 0
                   }}
-                />
+                >
+                  <AIClientBrandIcon tabType="anything-llm" size={22} />
+                </Button>
               )}
 
               {/* Botón de Open WebUI - Solo visible si está activado */}
               {aiClientsEnabled.openwebui && (
                 <Button
-                  icon="pi pi-globe"
                   className="p-button-rounded p-button-text sidebar-action-button"
                   onClick={openOpenWebUITab}
                   tooltip={t('tooltips.openWebUI')}
@@ -3101,21 +3101,21 @@ const Sidebar = React.memo(({
                     height: 40,
                     minWidth: 40,
                     minHeight: 40,
-                    fontSize: 18,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
                     justifyContent: 'center',
                     visibility: 'visible !important',
                     opacity: '1 !important',
-                    color: '#2196F3'
+                    padding: 0
                   }}
-                />
+                >
+                  <AIClientBrandIcon tabType="openwebui" size={22} />
+                </Button>
               )}
 
               {aiClientsEnabled.librechat && (
                 <Button
-                  icon="pi pi-comment"
                   className="p-button-rounded p-button-text sidebar-action-button"
                   onClick={openLibreChatTab}
                   tooltip={t('tooltips.libreChat')}
@@ -3126,21 +3126,21 @@ const Sidebar = React.memo(({
                     height: 40,
                     minWidth: 40,
                     minHeight: 40,
-                    fontSize: 18,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
                     justifyContent: 'center',
                     visibility: 'visible !important',
                     opacity: '1 !important',
-                    color: '#9C27B0'
+                    padding: 0
                   }}
-                />
+                >
+                  <AIClientBrandIcon tabType="librechat" size={22} />
+                </Button>
               )}
 
               {aiClientsEnabled.agentzero && (
                 <Button
-                  icon="pi pi-android"
                   className="p-button-rounded p-button-text sidebar-action-button"
                   onClick={openAgentZeroTab}
                   tooltip="Agent Zero"
@@ -3151,21 +3151,21 @@ const Sidebar = React.memo(({
                     height: 40,
                     minWidth: 40,
                     minHeight: 40,
-                    fontSize: 18,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
                     justifyContent: 'center',
                     visibility: 'visible !important',
                     opacity: '1 !important',
-                    color: '#E91E63'
+                    padding: 0
                   }}
-                />
+                >
+                  <AIClientBrandIcon tabType="agentzero" size={22} />
+                </Button>
               )}
 
               {aiClientsEnabled.openclaw && (
                 <Button
-                  icon="pi pi-bolt"
                   className="p-button-rounded p-button-text sidebar-action-button"
                   onClick={openOpenClawTab}
                   tooltip="OpenClaw"
@@ -3176,16 +3176,17 @@ const Sidebar = React.memo(({
                     height: 40,
                     minWidth: 40,
                     minHeight: 40,
-                    fontSize: 18,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
                     justifyContent: 'center',
                     visibility: 'visible !important',
                     opacity: '1 !important',
-                    color: '#FF6B35'
+                    padding: 0
                   }}
-                />
+                >
+                  <AIClientBrandIcon tabType="openclaw" size={22} />
+                </Button>
               )}
             </div>
 

@@ -3,6 +3,7 @@ import { Button } from 'primereact/button';
 import { FaWindows, FaUbuntu, FaLinux, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian, SiDocker } from 'react-icons/si';
 import DistroIcon from './DistroIcon';
+import AIClientBrandIcon from './AIClientBrandIcon';
 import { getHomeTabIcon } from '../themes/home-tab-icons';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
@@ -343,6 +344,26 @@ const TabHeader = React.memo(({
 
       {/* Icono específico para terminales locales - usar misma lógica que NodeTermStatus */}
       {(tab.type === 'local-terminal' || tab.type === 'docker') && getLocalTerminalIcon(tab)}
+
+      {/* Iconos de marca: Chat IA integrado y clientes embebidos (logos oficiales) */}
+      {tab.type === 'ai-chat' && (
+        <i className="pi pi-comments" style={{ fontSize: '12px', marginRight: '6px', color: primaryColor }} />
+      )}
+      {tab.type === 'anything-llm' && (
+        <AIClientBrandIcon tabType="anything-llm" size={12} style={{ marginRight: '6px' }} />
+      )}
+      {tab.type === 'openwebui' && (
+        <AIClientBrandIcon tabType="openwebui" size={12} style={{ marginRight: '6px' }} />
+      )}
+      {tab.type === 'librechat' && (
+        <AIClientBrandIcon tabType="librechat" size={12} style={{ marginRight: '6px' }} />
+      )}
+      {tab.type === 'agentzero' && (
+        <AIClientBrandIcon tabType="agentzero" size={12} style={{ marginRight: '6px' }} />
+      )}
+      {tab.type === 'openclaw' && (
+        <AIClientBrandIcon tabType="openclaw" size={12} style={{ marginRight: '6px' }} />
+      )}
 
       {/* Mostrar label solo si NO es pestaña de inicio (las pestañas de inicio nunca muestran texto) */}
       {!isHomeTab && (
