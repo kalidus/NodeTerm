@@ -622,7 +622,6 @@ class LibreChatService {
     this.status.message = 'Deteniendo LibreChat';
     try {
       await execAsync(this.buildDockerCommand(`stop ${this.containerName}`));
-      await execAsync(this.buildDockerCommand(`rm ${this.containerName}`));
       // No detenemos Mongo por defecto para mantener la DB rápida si reinicia
     } catch (_) {}
     

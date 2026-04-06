@@ -410,7 +410,6 @@ class AnythingLLMService {
     this.status.message = 'Deteniendo AnythingLLM';
     try {
       await execAsync(this.buildDockerCommand(`stop ${this.containerName}`));
-      await execAsync(this.buildDockerCommand(`rm ${this.containerName}`));
     } catch (_) {
       // ignore errors when stopping
     }

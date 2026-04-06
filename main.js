@@ -2300,6 +2300,41 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
 
 // Handler app-quit movido a src/main/handlers/application-handlers.js
 
+/**
+ * Detiene contenedores Docker de clientes de IA lo antes posible al cerrar.
+ * - Usa siempre get*Service() para aplicar buildDockerCommand (ruta a docker.exe en Windows empaquetado).
+ * - Se ejecuta antes de cleanupTunnels/SSH para que un túnel lento no deje OpenClaw/Agent Zero en marcha.
+ */
+async function stopAiClientDockerContainersOnQuit() {
+  const { exec } = require('child_process');
+  const util = require('util');
+  const execAsync = util.promisify(exec);
+
+  const dockerBin = getAgentZeroService().resolveDockerCommand();
+  const dockerPrefix = /\s/.test(dockerBin) ? `"${dockerBin}"` : dockerBin;
+
+  const stopTasks = [
+    getAnythingLLMService().stop().catch(() => null),
+    getOpenWebUIService().stop().catch(() => null),
+    getLibreChatService().stop().catch(() => null),
+    getAgentZeroService().stop().catch(() => null),
+    getOpenClawService().stop().catch(() => null)
+  ];
+
+  // Respaldo conservador: SOLO stop para no perder estado/contenido de contenedores.
+  const forcedNames = [
+    'nodeterm-anythingllm',
+    'nodeterm-openwebui',
+    'nodeterm-librechat',
+    'nodeterm-librechat-mongo'
+  ];
+  for (const name of forcedNames) {
+    stopTasks.push(execAsync(`${dockerPrefix} stop ${name}`).catch(() => null));
+  }
+
+  await Promise.all(stopTasks);
+}
+
 // Limpieza robusta también en before-quit
 app.on('before-quit', async (event) => {
   if (appCleanupCompleted) {
@@ -2319,6 +2354,12 @@ app.on('before-quit', async (event) => {
   if (orphanCleanupInterval) {
     clearInterval(orphanCleanupInterval);
     orphanCleanupInterval = null;
+  }
+
+  try {
+    await stopAiClientDockerContainersOnQuit();
+  } catch (e) {
+    console.error('[quit] Error deteniendo contenedores Docker de clientes IA:', e?.message || e);
   }
 
   // ✅ REFACTORIZADO: Limpiar todas las conexiones SSH con SSHConnectionCleanupService
@@ -2368,47 +2409,6 @@ app.on('before-quit', async (event) => {
     }
   }
 
-  // Cleanup AI client containers even if services were lazily loaded.
-  const stopTasks = [];
-  if (_anythingLLMService && typeof _anythingLLMService.stop === 'function') {
-    stopTasks.push(_anythingLLMService.stop().catch(() => null));
-  }
-  if (_openWebUIService && typeof _openWebUIService.stop === 'function') {
-    stopTasks.push(_openWebUIService.stop().catch(() => null));
-  }
-  if (_libreChatService && typeof _libreChatService.stop === 'function') {
-    stopTasks.push(_libreChatService.stop().catch(() => null));
-  }
-  if (_agentZeroService && typeof _agentZeroService.stop === 'function') {
-    stopTasks.push(_agentZeroService.stop().catch(() => null));
-  }
-  if (_openClawService && typeof _openClawService.stop === 'function') {
-    stopTasks.push(_openClawService.stop().catch(() => null));
-  }
-
-  // Fallback hard-stop by known container names to guarantee shutdown.
-  try {
-    const { exec } = require('child_process');
-    const util = require('util');
-    const execAsync = util.promisify(exec);
-    const forcedContainerStops = [
-      'nodeterm-anythingllm',
-      'nodeterm-openwebui',
-      'nodeterm-librechat',
-      'nodeterm-librechat-mongo'
-    ].map((name) => execAsync(`docker rm -f ${name}`).catch(() => null));
-    stopTasks.push(...forcedContainerStops);
-    // Agent Zero: solo stop (no rm -f), para conservar datos del contenedor al cerrar NodeTerm.
-    const agentZeroContainer = (process.env.NODETERM_AGENTZERO_CONTAINER || 'nodeterm-agentzero').trim();
-    stopTasks.push(execAsync(`docker stop ${agentZeroContainer}`).catch(() => null));
-    // OpenClaw: solo stop (no rm -f), para conservar configuración y workspace.
-    const openClawContainer = (process.env.NODETERM_OPENCLAW_CONTAINER || 'nodeterm-openclaw').trim();
-    stopTasks.push(execAsync(`docker stop ${openClawContainer}`).catch(() => null));
-  } catch (_) {
-    // Ignore fallback docker cleanup errors during shutdown.
-  }
-
-  await Promise.all(stopTasks);
   appCleanupCompleted = true;
   appCleanupInProgress = false;
   app.quit();

@@ -329,7 +329,6 @@ class OpenWebUIService {
     this.status.message = 'Deteniendo Open WebUI';
     try {
       await execAsync(this.buildDockerCommand(`stop ${this.containerName}`));
-      await execAsync(this.buildDockerCommand(`rm ${this.containerName}`));
     } catch (_) {
       // ignore errors when stopping
     }
