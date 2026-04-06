@@ -6,6 +6,7 @@ const http = require('http');
 const util = require('util');
 
 const execAsync = util.promisify(exec);
+const DOCKER_CHECK_TTL_MS = 20_000;
 
 let electronApp = null;
 try {
@@ -39,6 +40,7 @@ class AgentZeroService {
     this.lastHealthCheck = null;
     this.lastError = null;
     this._dockerCommand = null;
+    this._dockerCheckedAt = 0;
 
     this.status = {
       isRunning: false,
@@ -137,8 +139,10 @@ class AgentZeroService {
   async _ensureContainerRunning() {
     await this.ensureDockerAvailable();
 
-    await this.ensureImagePresent(this.imageName, 'Agent Zero');
-    await this.ensureDataDir();
+    await Promise.all([
+      this.ensureImagePresent(this.imageName, 'Agent Zero'),
+      this.ensureDataDir()
+    ]);
 
     const running = await this.isContainerRunning(this.containerName);
     if (!running) {
@@ -165,6 +169,9 @@ class AgentZeroService {
   }
 
   async ensureDockerAvailable() {
+    if (Date.now() - this._dockerCheckedAt < DOCKER_CHECK_TTL_MS) {
+      return;
+    }
     this.status.phase = 'docker-check';
     this.status.message = 'Verificando Docker Desktop';
 
@@ -184,6 +191,7 @@ class AgentZeroService {
     } catch (error) {
       throw new Error('Docker Desktop no está en ejecución. Inícialo e inténtalo nuevamente.');
     }
+    this._dockerCheckedAt = Date.now();
   }
 
   async ensureImagePresent(imageName, label) {

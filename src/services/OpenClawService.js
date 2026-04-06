@@ -7,6 +7,7 @@ const http = require('http');
 const util = require('util');
 
 const execAsync = util.promisify(exec);
+const DOCKER_CHECK_TTL_MS = 20_000;
 
 /** Sube este valor si cambia la plantilla embebida de openclaw.json para forzar recreación del contenedor. */
 const OPENCLAW_EMBEDDED_CONFIG_REVISION = 2;
@@ -38,12 +39,13 @@ class OpenClawService {
     this.baseUrl = configuredBase;
     this.healthUrl = configuredBase;
     this.healthTimeoutMs = 300_000;
-    this.healthIntervalMs = 3_000;
+    this.healthIntervalMs = 1_500;
 
     this.ensurePromise = null;
     this.lastHealthCheck = null;
     this.lastError = null;
     this._dockerCommand = null;
+    this._dockerCheckedAt = 0;
     this._gatewayToken = null;
 
     this.status = {
@@ -137,8 +139,10 @@ class OpenClawService {
 
   async _ensureContainerRunning() {
     await this.ensureDockerAvailable();
-    await this.ensureImagePresent();
-    await this.ensureDataDir();
+    await Promise.all([
+      this.ensureImagePresent(),
+      this.ensureDataDir()
+    ]);
 
     // OpenClaw por defecto escucha solo en 127.0.0.1 dentro del contenedor; con red bridge
     // y -p host:contenedor el host no llega al proceso. Hay que usar --bind lan (0.0.0.0).
@@ -193,6 +197,9 @@ class OpenClawService {
   }
 
   async ensureDockerAvailable() {
+    if (Date.now() - this._dockerCheckedAt < DOCKER_CHECK_TTL_MS) {
+      return;
+    }
     this.status.phase = 'docker-check';
     this.status.message = 'Verificando Docker Desktop';
 
@@ -212,6 +219,7 @@ class OpenClawService {
     } catch (error) {
       throw new Error('Docker Desktop no está en ejecución. Inícialo e inténtalo nuevamente.');
     }
+    this._dockerCheckedAt = Date.now();
   }
 
   async ensureImagePresent() {
