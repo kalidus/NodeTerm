@@ -430,6 +430,13 @@ const MainContentArea = ({
     agentzero: false,
     openclaw: false
   });
+  const aiPrewarmInFlightRef = useRef({
+    anythingllm: false,
+    openwebui: false,
+    librechat: false,
+    agentzero: false,
+    openclaw: false
+  });
 
   // Cargar configuración de clientes de IA desde localStorage
   React.useEffect(() => {
@@ -475,6 +482,48 @@ const MainContentArea = ({
       window.removeEventListener('ai-clients-config-changed', handleConfigChange);
     };
   }, []);
+
+  // Precalentamiento en segundo plano: reduce el "cold start" al abrir las pestañas.
+  React.useEffect(() => {
+    const prewarmServiceIfNeeded = async (serviceKey, options = {}) => {
+      if (!window.electron?.ipcRenderer) return;
+      if (aiPrewarmInFlightRef.current[serviceKey]) return;
+
+      const {
+        enabled = aiClientsEnabled[serviceKey] === true,
+        getStatusChannel = `${serviceKey}:get-status`,
+        startChannel = `${serviceKey}:start`,
+        isRunning = (statusRes) => Boolean(statusRes?.success && statusRes?.status?.isRunning)
+      } = options;
+
+      if (!enabled) return;
+
+      aiPrewarmInFlightRef.current[serviceKey] = true;
+      try {
+        const statusRes = await window.electron.ipcRenderer.invoke(getStatusChannel);
+        const alreadyRunning = isRunning(statusRes);
+        if (!alreadyRunning && startChannel) {
+          await window.electron.ipcRenderer.invoke(startChannel);
+        }
+      } catch (error) {
+        console.warn(`[AI Prewarm] No se pudo precalentar ${serviceKey}:`, error?.message || error);
+      } finally {
+        aiPrewarmInFlightRef.current[serviceKey] = false;
+      }
+    };
+
+    prewarmServiceIfNeeded('anythingllm');
+    prewarmServiceIfNeeded('openwebui');
+    prewarmServiceIfNeeded('librechat');
+    prewarmServiceIfNeeded('agentzero');
+    prewarmServiceIfNeeded('openclaw');
+  }, [
+    aiClientsEnabled.anythingllm,
+    aiClientsEnabled.openwebui,
+    aiClientsEnabled.librechat,
+    aiClientsEnabled.agentzero,
+    aiClientsEnabled.openclaw
+  ]);
 
   // Generar opciones del menú de terminales
   useEffect(() => {
