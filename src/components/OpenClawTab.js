@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Button } from 'primereact/button';
-import { InputText } from 'primereact/inputtext';
-import { Message } from 'primereact/message';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Toast } from 'primereact/toast';
 import { useTranslation } from '../i18n/hooks/useTranslation';
@@ -13,6 +11,8 @@ const INITIAL_STATUS = {
   isRunning: false
 };
 
+const TOKEN_FETCH_MS = 12_000;
+
 const OpenClawTab = () => {
   const { t } = useTranslation('common');
 
@@ -23,7 +23,13 @@ const OpenClawTab = () => {
   const [reloadKey, setReloadKey] = useState(0);
   const [webviewState, setWebviewState] = useState('idle');
   const [webviewError, setWebviewError] = useState(null);
-  const [gatewayToken, setGatewayToken] = useState('');
+  /** OpenClaw Control UI lee #token= del fragmento y lo guarda en sessionStorage (persist:openclaw). */
+  const [tokenBootstrap, setTokenBootstrap] = useState({
+    loading: false,
+    token: '',
+    error: null,
+    timedOut: false
+  });
   const webviewRef = useRef(null);
   const mountedRef = useRef(true);
   const toast = useRef(null);
@@ -50,6 +56,7 @@ const OpenClawTab = () => {
     setError(null);
     setIsReady(false);
     setWebviewState('idle');
+    setTokenBootstrap({ loading: true, token: '', error: null, timedOut: false });
     setStatus((prev) => ({
       ...prev,
       phase: 'starting',
@@ -71,6 +78,7 @@ const OpenClawTab = () => {
       }
     } catch (err) {
       if (!mountedRef.current) return;
+      setTokenBootstrap({ loading: false, token: '', error: null, timedOut: false });
       setError(err.message || 'No se pudo iniciar OpenClaw.');
     }
   }, [invokeOpenClaw]);
@@ -99,8 +107,8 @@ const OpenClawTab = () => {
             isRunning: false
           });
         }
-      } catch (error) {
-        console.error('[OpenClaw] Error:', error);
+      } catch (e) {
+        console.error('[OpenClaw] Error:', e);
         setStatus({
           phase: 'error',
           message: 'Error al verificar configuración',
@@ -114,45 +122,82 @@ const OpenClawTab = () => {
 
   useEffect(() => {
     if (!isReady || !url || !window.electron?.ipcRenderer) return undefined;
+
+    setTokenBootstrap((prev) => ({ ...prev, loading: true, error: null, timedOut: false }));
     let cancelled = false;
+    const timer = setTimeout(() => {
+      if (cancelled) return;
+      setTokenBootstrap((prev) => {
+        if (!prev.loading || prev.token) return prev;
+        return { loading: false, token: '', error: 'Tiempo de espera al obtener el token', timedOut: true };
+      });
+    }, TOKEN_FETCH_MS);
+
     (async () => {
       try {
         const res = await window.electron.ipcRenderer.invoke('openclaw:get-gateway-token');
-        if (!cancelled && res?.success && res.token) {
-          setGatewayToken(res.token);
+        if (cancelled) return;
+        clearTimeout(timer);
+        if (res?.success && res.token) {
+          setTokenBootstrap({ loading: false, token: res.token, error: null, timedOut: false });
+        } else {
+          setTokenBootstrap({
+            loading: false,
+            token: '',
+            error: res?.error || 'No se obtuvo el token',
+            timedOut: false
+          });
         }
       } catch (e) {
-        console.warn('[OpenClawTab] No se pudo cargar el token del gateway:', e);
+        if (cancelled) return;
+        clearTimeout(timer);
+        setTokenBootstrap({
+          loading: false,
+          token: '',
+          error: e.message || 'Error obteniendo token',
+          timedOut: false
+        });
       }
     })();
+
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [isReady, url]);
 
+  const webviewSrc = useMemo(() => {
+    if (!url) return null;
+    const base = url.replace(/#.*$/, '');
+    if (tokenBootstrap.token) {
+      return `${base}#token=${encodeURIComponent(tokenBootstrap.token)}`;
+    }
+    return base;
+  }, [url, tokenBootstrap.token]);
+
   const copyGatewayToken = useCallback(async () => {
-    if (!gatewayToken) return;
+    if (!tokenBootstrap.token) return;
     try {
-      await navigator.clipboard.writeText(gatewayToken);
+      await navigator.clipboard.writeText(tokenBootstrap.token);
       toast.current?.show({
         severity: 'success',
         summary: 'Copiado',
-        detail: 'Pega el token en Ajustes del Control UI de OpenClaw.',
-        life: 3500
+        detail: 'Pégalo en Ajustes del Control UI si hiciera falta.',
+        life: 2500
       });
-    } catch (e) {
+    } catch {
       toast.current?.show({
         severity: 'warn',
         summary: 'Portapapeles',
-        detail: 'Selecciona el token y cópialo manualmente (Ctrl+C).',
-        life: 4000
+        detail: 'Selecciona el token en los logs o en openclaw-data y cópialo a mano.',
+        life: 3500
       });
     }
-  }, [gatewayToken]);
+  }, [tokenBootstrap.token]);
 
   useEffect(() => {
     const view = webviewRef.current;
-    if (!view || !url) return undefined;
+    if (!view || !webviewSrc) return undefined;
 
     const handleLoadStart = () => {
       setWebviewState(prev => prev === 'ready' ? 'ready' : 'loading');
@@ -188,7 +233,7 @@ const OpenClawTab = () => {
       view.removeEventListener('dom-ready', handleDomReady);
       view.removeEventListener('did-fail-load', handleFail);
     };
-  }, [url, reloadKey]);
+  }, [webviewSrc, reloadKey]);
 
   const handleReloadWebView = () => {
     setWebviewState('loading');
@@ -206,6 +251,14 @@ const OpenClawTab = () => {
           <span>{status.imageName || 'ghcr.io/openclaw/openclaw:latest'}</span>
         </div>
       </div>
+    </div>
+  );
+
+  const renderTokenBootstrapCard = () => (
+    <div className="agentzero-status-card">
+      <ProgressSpinner style={{ width: '40px', height: '40px' }} />
+      <h3>Conectando al Control UI…</h3>
+      <p>Obteniendo credenciales para iniciar sesión automáticamente (se guardan en esta pestaña).</p>
     </div>
   );
 
@@ -241,10 +294,23 @@ const OpenClawTab = () => {
   );
 
   const renderWebView = () => {
-    if (!url) return null;
+    if (!webviewSrc) return null;
     const overlayClass = webviewState === 'ready' ? 'agentzero-overlay fading' : 'agentzero-overlay';
     return (
       <div className="agentzero-webview-wrapper">
+        {tokenBootstrap.error && !tokenBootstrap.token && (
+          <div
+            style={{
+              flexShrink: 0,
+              padding: '0.5rem 0.75rem',
+              fontSize: '0.85rem',
+              color: 'var(--orange-400, #ffb74d)',
+              borderBottom: '1px solid var(--surface-border, rgba(255,255,255,0.12))'
+            }}
+          >
+            No se pudo inyectar el token automáticamente ({tokenBootstrap.error}). Usa «Copiar token» en la barra y pégalo en Ajustes del Control UI, o pulsa Reintentar servicio.
+          </div>
+        )}
         {webviewState !== 'ready' && (
           <div className={overlayClass}>
             <ProgressSpinner style={{ width: '36px', height: '36px' }} />
@@ -252,9 +318,9 @@ const OpenClawTab = () => {
           </div>
         )}
         <webview
-          key={`${url}-${reloadKey}`}
+          key={`${webviewSrc}-${reloadKey}`}
           ref={webviewRef}
-          src={url}
+          src={webviewSrc}
           partition="persist:openclaw"
           allowpopups="true"
           style={{ width: '100%', height: '100%', border: 'none', borderRadius: '12px', background: 'transparent' }}
@@ -272,6 +338,16 @@ const OpenClawTab = () => {
         </span>
       </div>
       <div className="agentzero-actions">
+        {tokenBootstrap.token ? (
+          <Button
+            icon="pi pi-copy"
+            size="small"
+            className="agentzero-action-btn"
+            onClick={copyGatewayToken}
+            tooltip="Copiar token del gateway (por si falla el inicio automático)"
+            tooltipOptions={{ position: 'left' }}
+          />
+        ) : null}
         <Button
           icon="pi pi-sync"
           size="small"
@@ -284,7 +360,7 @@ const OpenClawTab = () => {
           icon="pi pi-refresh"
           size="small"
           className="agentzero-action-btn"
-          disabled={!isReady}
+          disabled={!isReady || !webviewSrc}
           onClick={handleReloadWebView}
           tooltip={t('tooltips.reloadUI') || 'Recargar UI'}
           tooltipOptions={{ position: 'left' }}
@@ -292,6 +368,21 @@ const OpenClawTab = () => {
       </div>
     </div>
   );
+
+  const showWebview =
+    status.phase !== 'disabled' &&
+    !error &&
+    isReady &&
+    url &&
+    webviewSrc &&
+    !tokenBootstrap.loading;
+
+  const showTokenWait =
+    status.phase !== 'disabled' &&
+    !error &&
+    isReady &&
+    url &&
+    tokenBootstrap.loading;
 
   return (
     <div className="agentzero-tab">
@@ -301,32 +392,8 @@ const OpenClawTab = () => {
         {status.phase === 'disabled' && renderDisabled()}
         {status.phase !== 'disabled' && error && renderError()}
         {status.phase !== 'disabled' && !error && (!isReady || !url) && renderStatusCard()}
-        {status.phase !== 'disabled' && !error && isReady && url && gatewayToken && (
-          <div
-            className="openclaw-gateway-token-hint"
-            style={{
-              flexShrink: 0,
-              padding: '0.5rem 0.75rem 0.75rem',
-              borderBottom: '1px solid var(--surface-border, rgba(255,255,255,0.12))'
-            }}
-          >
-            <Message
-              severity="info"
-              text="Tras el último arranque, el token ya está en openclaw.json y en el contenedor. Pulsa conectar o recarga la página; si el Control UI sigue pidiendo secreto compartido, pega abajo el mismo token en Ajustes del Control UI."
-              style={{ width: '100%', marginBottom: '0.5rem' }}
-            />
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <InputText
-                readOnly
-                value={gatewayToken}
-                className="font-mono"
-                style={{ flex: '1 1 200px', minWidth: 0, fontFamily: 'ui-monospace, monospace', fontSize: '0.85rem' }}
-              />
-              <Button type="button" label="Copiar token" icon="pi pi-copy" size="small" onClick={copyGatewayToken} />
-            </div>
-          </div>
-        )}
-        {status.phase !== 'disabled' && !error && isReady && url && renderWebView()}
+        {showTokenWait && renderTokenBootstrapCard()}
+        {showWebview && renderWebView()}
       </div>
 
       {status.phase !== 'disabled' && !error && renderToolbar()}
