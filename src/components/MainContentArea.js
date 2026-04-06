@@ -272,6 +272,20 @@ const MainContentArea = ({
     }));
   }, []);
 
+  const dispatchOpenClawTab = useCallback(() => {
+    const tabId = `openclaw-${Date.now()}`;
+    const newTab = {
+      key: tabId,
+      label: 'OpenClaw',
+      type: 'openclaw',
+      createdAt: Date.now(),
+      groupId: null
+    };
+    window.dispatchEvent(new CustomEvent('create-openclaw-tab', {
+      detail: { tab: newTab }
+    }));
+  }, []);
+
   // Manejador para abrir el explorador desde el botón de la sidebar
   const handleSidebarOpenFileExplorer = useCallback(() => {
     // 1. Intentar con la pestaña activa si es SSH
@@ -413,7 +427,8 @@ const MainContentArea = ({
     anythingllm: false,
     openwebui: false,
     librechat: false,
-    agentzero: false
+    agentzero: false,
+    openclaw: false
   });
 
   // Cargar configuración de clientes de IA desde localStorage
@@ -428,7 +443,8 @@ const MainContentArea = ({
             anythingllm: parsed.anythingllm === true,
             openwebui: parsed.openwebui === true,
             librechat: parsed.librechat === true,
-            agentzero: parsed.agentzero === true
+            agentzero: parsed.agentzero === true,
+            openclaw: parsed.openclaw === true
           });
         } else {
           // Si no hay configuración, todos desactivados por defecto
@@ -437,7 +453,8 @@ const MainContentArea = ({
             anythingllm: false,
             openwebui: false,
             librechat: false,
-            agentzero: false
+            agentzero: false,
+            openclaw: false
           });
         }
       } catch (error) {
@@ -704,6 +721,17 @@ const MainContentArea = ({
         });
       }
 
+      // OpenClaw - Solo si está activado
+      if (aiClientsEnabled.openclaw) {
+        menuItems.push({
+          label: 'OpenClaw',
+          icon: 'pi pi-bolt',
+          command: () => {
+            dispatchOpenClawTab();
+          }
+        });
+      }
+
       setTerminalMenuItems(menuItems);
     } else {
       const linuxMenuItems = [
@@ -785,10 +813,21 @@ const MainContentArea = ({
         });
       }
 
+      // OpenClaw - Solo si está activado
+      if (aiClientsEnabled.openclaw) {
+        linuxMenuItems.push({
+          label: 'OpenClaw',
+          icon: 'pi pi-bolt',
+          command: () => {
+            dispatchOpenClawTab();
+          }
+        });
+      }
+
       setTerminalMenuItems(linuxMenuItems);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wslDistributions, dockerContainers, dispatchAnythingLLMTab, dispatchOpenWebUITab, dispatchLibreChatTab, dispatchAgentZeroTab, aiClientsEnabled]);
+  }, [wslDistributions, dockerContainers, dispatchAnythingLLMTab, dispatchOpenWebUITab, dispatchLibreChatTab, dispatchAgentZeroTab, dispatchOpenClawTab, aiClientsEnabled]);
 
   // 🚀 OPTIMIZACIÓN: Detectar distribuciones WSL DIFERIDO
   useEffect(() => {

@@ -252,6 +252,7 @@ let _anythingLLMService = null;
 let _openWebUIService = null;
 let _libreChatService = null;
 let _agentZeroService = null;
+let _openClawService = null;
 
 function getGuacdService() {
   if (!_guacdService) {
@@ -291,6 +292,14 @@ function getAgentZeroService() {
     _agentZeroService = new AgentZeroService();
   }
   return _agentZeroService;
+}
+
+function getOpenClawService() {
+  if (!_openClawService) {
+    const OpenClawService = require('./src/services/OpenClawService');
+    _openClawService = new OpenClawService();
+  }
+  return _openClawService;
 }
 
 // ============================================================================
@@ -1053,6 +1062,7 @@ function createWindow() {
         openWebUIService: getOpenWebUIService(),
         libreChatService: getLibreChatService(),
         agentZeroService: getAgentZeroService(),
+        openClawService: getOpenClawService(),
         packageJson,
         sshConnections,
         sshConnectionPool,
@@ -1237,6 +1247,7 @@ function createWindow() {
       openWebUIService: getOpenWebUIService(),
       libreChatService: getLibreChatService(),
       agentZeroService: getAgentZeroService(),
+      openClawService: getOpenClawService(),
       packageJson,
       sshConnections,
       sshConnectionPool,
@@ -2371,6 +2382,9 @@ app.on('before-quit', async (event) => {
   if (_agentZeroService && typeof _agentZeroService.stop === 'function') {
     stopTasks.push(_agentZeroService.stop().catch(() => null));
   }
+  if (_openClawService && typeof _openClawService.stop === 'function') {
+    stopTasks.push(_openClawService.stop().catch(() => null));
+  }
 
   // Fallback hard-stop by known container names to guarantee shutdown.
   try {
@@ -2387,6 +2401,9 @@ app.on('before-quit', async (event) => {
     // Agent Zero: solo stop (no rm -f), para conservar datos del contenedor al cerrar NodeTerm.
     const agentZeroContainer = (process.env.NODETERM_AGENTZERO_CONTAINER || 'nodeterm-agentzero').trim();
     stopTasks.push(execAsync(`docker stop ${agentZeroContainer}`).catch(() => null));
+    // OpenClaw: solo stop (no rm -f), para conservar configuración y workspace.
+    const openClawContainer = (process.env.NODETERM_OPENCLAW_CONTAINER || 'nodeterm-openclaw').trim();
+    stopTasks.push(execAsync(`docker stop ${openClawContainer}`).catch(() => null));
   } catch (_) {
     // Ignore fallback docker cleanup errors during shutdown.
   }

@@ -587,7 +587,8 @@ const Sidebar = React.memo(({
             anythingllm: parsed.anythingllm === true,
             openwebui: parsed.openwebui === true,
             librechat: parsed.librechat === true,
-            agentzero: parsed.agentzero === true
+            agentzero: parsed.agentzero === true,
+            openclaw: parsed.openclaw === true
           });
         } else {
           // Si no hay configuración, todos desactivados por defecto
@@ -596,7 +597,8 @@ const Sidebar = React.memo(({
             anythingllm: false,
             openwebui: false,
             librechat: false,
-            agentzero: false
+            agentzero: false,
+            openclaw: false
           });
         }
       } catch (error) {
@@ -678,6 +680,19 @@ const Sidebar = React.memo(({
       groupId: null
     };
     window.dispatchEvent(new CustomEvent('create-agentzero-tab', {
+      detail: { tab: newTab }
+    }));
+  };
+
+  const openOpenClawTab = () => {
+    const newTab = {
+      key: `openclaw-${Date.now()}`,
+      label: 'OpenClaw',
+      type: 'openclaw',
+      createdAt: Date.now(),
+      groupId: null
+    };
+    window.dispatchEvent(new CustomEvent('create-openclaw-tab', {
       detail: { tab: newTab }
     }));
   };
@@ -2994,7 +3009,7 @@ const Sidebar = React.memo(({
               </Button>
 
               {/* Separador para clientes de IA */}
-              {(aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat || aiClientsEnabled.agentzero) && (
+              {(aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat || aiClientsEnabled.agentzero || aiClientsEnabled.openclaw) && (
                 <div style={{
                   width: '28px',
                   height: '1px',
@@ -3144,6 +3159,31 @@ const Sidebar = React.memo(({
                     visibility: 'visible !important',
                     opacity: '1 !important',
                     color: '#E91E63'
+                  }}
+                />
+              )}
+
+              {aiClientsEnabled.openclaw && (
+                <Button
+                  icon="pi pi-bolt"
+                  className="p-button-rounded p-button-text sidebar-action-button"
+                  onClick={openOpenClawTab}
+                  tooltip="OpenClaw"
+                  tooltipOptions={{ position: 'right' }}
+                  style={{
+                    margin: 0,
+                    width: 40,
+                    height: 40,
+                    minWidth: 40,
+                    minHeight: 40,
+                    fontSize: 18,
+                    border: 'none',
+                    display: 'flex !important',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    visibility: 'visible !important',
+                    opacity: '1 !important',
+                    color: '#FF6B35'
                   }}
                 />
               )}

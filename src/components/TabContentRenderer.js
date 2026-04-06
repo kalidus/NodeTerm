@@ -19,6 +19,7 @@ import AnythingLLMTab from './AnythingLLMTab';
 import OpenWebUITab from './OpenWebUITab';
 import LibreChatTab from './LibreChatTab';
 import AgentZeroTab from './AgentZeroTab';
+import OpenClawTab from './OpenClawTab';
 import SSHTunnelTab from './SSHTunnelTab';
 import { themes } from '../themes';
 import { TAB_TYPES } from '../utils/constants';
@@ -1669,6 +1670,10 @@ const TabContentRenderer = React.memo(({
 
   if (tab.type === 'agentzero') {
     return <AgentZeroTab />;
+  }
+
+  if (tab.type === 'openclaw') {
+    return <OpenClawTab />;
   }
 
   // Si llegamos aquí y no es SSH, mostrar error

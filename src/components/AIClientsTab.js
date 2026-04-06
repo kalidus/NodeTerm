@@ -19,7 +19,8 @@ const AIClientsTab = ({ themeColors }) => {
     anythingllm: false,
     openwebui: false,
     librechat: false,
-    agentzero: false
+    agentzero: false,
+    openclaw: false
   });
 
   // Estado de carga para verificar servicios Docker
@@ -27,7 +28,8 @@ const AIClientsTab = ({ themeColors }) => {
     anythingllm: { loading: false, running: false, error: null },
     openwebui: { loading: false, running: false, error: null },
     librechat: { loading: false, running: false, error: null },
-    agentzero: { loading: false, running: false, error: null }
+    agentzero: { loading: false, running: false, error: null },
+    openclaw: { loading: false, running: false, error: null }
   });
 
   // Cargar configuración desde localStorage al montar
@@ -57,7 +59,10 @@ const AIClientsTab = ({ themeColors }) => {
     if (clients.agentzero) {
       checkDockerServiceStatus('agentzero');
     }
-  }, [clients.anythingllm, clients.openwebui, clients.librechat, clients.agentzero]);
+    if (clients.openclaw) {
+      checkDockerServiceStatus('openclaw');
+    }
+  }, [clients.anythingllm, clients.openwebui, clients.librechat, clients.agentzero, clients.openclaw]);
 
   // Guardar configuración en localStorage cuando cambia
   const saveClientsConfig = (newClients) => {
@@ -79,7 +84,7 @@ const AIClientsTab = ({ themeColors }) => {
     saveClientsConfig(newClients);
 
     // Si se activa un servicio Docker, verificar su estado
-    if (newClients[clientKey] && (clientKey === 'anythingllm' || clientKey === 'openwebui' || clientKey === 'librechat')) {
+    if (newClients[clientKey] && (clientKey === 'anythingllm' || clientKey === 'openwebui' || clientKey === 'librechat' || clientKey === 'openclaw')) {
       await checkDockerServiceStatus(clientKey);
     }
   };
@@ -97,6 +102,7 @@ const AIClientsTab = ({ themeColors }) => {
       else if (serviceKey === 'openwebui') ipcKey = 'openwebui:get-status';
       else if (serviceKey === 'librechat') ipcKey = 'librechat:get-status';
       else if (serviceKey === 'agentzero') ipcKey = 'agentzero:get-status';
+      else if (serviceKey === 'openclaw') ipcKey = 'openclaw:get-status';
 
       const result = await window.electron.ipcRenderer.invoke(ipcKey);
       
@@ -144,6 +150,7 @@ const AIClientsTab = ({ themeColors }) => {
       else if (serviceKey === 'openwebui') ipcKey = 'openwebui:start';
       else if (serviceKey === 'librechat') ipcKey = 'librechat:start';
       else if (serviceKey === 'agentzero') ipcKey = 'agentzero:start';
+      else if (serviceKey === 'openclaw') ipcKey = 'openclaw:start';
 
       const result = await window.electron.ipcRenderer.invoke(ipcKey);
       
@@ -235,6 +242,20 @@ const AIClientsTab = ({ themeColors }) => {
       requiresDocker: true,
       port: 3081,
       url: 'http://127.0.0.1:3081'
+    },
+    {
+      key: 'openclaw',
+      name: 'OpenClaw',
+      icon: 'pi pi-bolt',
+      color: '#FF6B35',
+      description: 'Gateway de agentes IA con sandboxing Docker, soporte multi-modelo y canales de mensajería (Telegram, Discord, WhatsApp).',
+      features: ['Agentes con sandbox', 'Multi-modelo (OpenAI, Anthropic)', 'Canales de mensajería', 'Control UI integrado'],
+      badges: [
+        { label: 'DOCKER', severity: 'info', icon: 'pi pi-box' }
+      ],
+      requiresDocker: true,
+      port: 18789,
+      url: 'http://127.0.0.1:18789'
     },
     {
       key: 'nodeterm',
