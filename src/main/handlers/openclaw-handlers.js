@@ -1,4 +1,5 @@
 const { ipcMain } = require('electron');
+const fs = require('fs').promises;
 
 function registerOpenClawHandlers({ openClawService }) {
   if (!openClawService) {
@@ -55,6 +56,23 @@ function registerOpenClawHandlers({ openClawService }) {
       return {
         success: false,
         error: error.message || 'No se pudo obtener el directorio de datos'
+      };
+    }
+  });
+
+  ipcMain.handle('openclaw:get-gateway-token', async () => {
+    try {
+      await fs.mkdir(openClawService.getDataDir(), { recursive: true });
+      await openClawService.ensureGatewayToken();
+      await openClawService.ensureOpenClawJsonEmbedded();
+      return {
+        success: true,
+        token: openClawService.getGatewayToken()
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'No se pudo obtener el token del gateway'
       };
     }
   });

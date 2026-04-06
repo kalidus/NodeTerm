@@ -1,4 +1,5 @@
 const { exec } = require('child_process');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -6,6 +7,9 @@ const http = require('http');
 const util = require('util');
 
 const execAsync = util.promisify(exec);
+
+/** Sube este valor si cambia la plantilla embebida de openclaw.json para forzar recreación del contenedor. */
+const OPENCLAW_EMBEDDED_CONFIG_REVISION = 2;
 
 let electronApp = null;
 try {
@@ -40,6 +44,7 @@ class OpenClawService {
     this.lastHealthCheck = null;
     this.lastError = null;
     this._dockerCommand = null;
+    this._gatewayToken = null;
 
     this.status = {
       isRunning: false,
@@ -139,6 +144,12 @@ class OpenClawService {
     // y -p host:contenedor el host no llega al proceso. Hay que usar --bind lan (0.0.0.0).
     // Si el contenedor ya existía sin ese flag, hay que recrearlo.
     let running = await this.isContainerRunning(this.containerName);
+    if (running && this.embeddedConfigRevisionMismatch()) {
+      this.status.phase = 'cleanup';
+      this.status.message = 'Recreando contenedor OpenClaw (config embebida actualizada)';
+      await this.removeContainer(this.containerName);
+      running = false;
+    }
     if (running) {
       const quickOk = await this.checkHealth();
       if (!quickOk) {
@@ -147,8 +158,16 @@ class OpenClawService {
         await this.removeContainer(this.containerName);
         running = false;
       } else {
-        this.status.phase = 'running';
-        this.status.message = 'Contenedor OpenClaw en ejecución';
+        const hasGwEnv = await this.runningContainerHasGatewayTokenEnv();
+        if (!hasGwEnv && this._gatewayToken) {
+          this.status.phase = 'cleanup';
+          this.status.message = 'Recreando contenedor OpenClaw (variable OPENCLAW_GATEWAY_TOKEN)';
+          await this.removeContainer(this.containerName);
+          running = false;
+        } else {
+          this.status.phase = 'running';
+          this.status.message = 'Contenedor OpenClaw en ejecución';
+        }
       }
     }
 
@@ -161,6 +180,8 @@ class OpenClawService {
     }
 
     await this.waitForHealth();
+
+    this.writeEmbeddedConfigRevision();
 
     this.status.isRunning = true;
     this.status.phase = 'ready';
@@ -213,15 +234,76 @@ class OpenClawService {
     this.status.phase = 'volume';
     this.status.message = 'Preparando volúmenes de datos';
     await fs.promises.mkdir(this.dataDir, { recursive: true });
-    await this.ensureControlUiAllowedOrigins();
+    await this.ensureGatewayToken();
+    await this.ensureOpenClawJsonEmbedded();
   }
 
   /**
-   * Con --bind lan el Control UI no es loopback; OpenClaw exige orígenes explícitos.
-   * @see https://docs.openclaw.ai/install/docker (gateway.controlUi.allowedOrigins)
+   * Token compartido para el Control UI (OPENCLAW_GATEWAY_TOKEN).
+   * Se persiste en disco para que el contenedor y el usuario (pegar en ajustes) usen el mismo valor.
    */
-  async ensureControlUiAllowedOrigins() {
+  async ensureGatewayToken() {
+    const envOverride = (process.env.NODETERM_OPENCLAW_GATEWAY_TOKEN || '').trim();
+    const tokenPath = path.join(this.dataDir, '.nodeterm-openclaw-gateway-token');
+    let token = envOverride;
+
+    if (!token) {
+      try {
+        token = (await fs.promises.readFile(tokenPath, 'utf8')).trim();
+      } catch (_) {
+        token = '';
+      }
+    }
+
+    if (!token) {
+      token = crypto.randomBytes(24).toString('hex');
+      await fs.promises.writeFile(tokenPath, token, 'utf8');
+    }
+
+    this._gatewayToken = token;
+    await this.syncGatewayTokenToDotEnv(token);
+  }
+
+  async syncGatewayTokenToDotEnv(token) {
+    const envPath = path.join(this.dataDir, '.env');
+    let lines = [];
+    try {
+      const raw = await fs.promises.readFile(envPath, 'utf8');
+      lines = raw
+        .split('\n')
+        .map((l) => l.trimEnd())
+        .filter((l) => l.trim() !== '' && !/^\s*OPENCLAW_GATEWAY_TOKEN=/.test(l));
+    } catch (_) {
+      lines = [];
+    }
+    lines.push(`OPENCLAW_GATEWAY_TOKEN=${token}`);
+    await fs.promises.writeFile(envPath, `${lines.join('\n')}\n`, 'utf8');
+  }
+
+  getGatewayToken() {
+    return this._gatewayToken || '';
+  }
+
+  /**
+   * Plantilla embebida para NodeTerm + Docker + webview Electron:
+   * - allowedOrigins (obligatorio con bind lan)
+   * - gateway.auth.token alineado con OPENCLAW_GATEWAY_TOKEN
+   * - allowInsecureAuth: HTTP + WebCrypto en webview (docs Control UI)
+   * - dangerouslyDisableDeviceAuth: tráfico vía puerto publicado Docker no cuenta como loopback → pairing 1008;
+   *   desactivar con NODETERM_OPENCLAW_STRICT_DEVICE_AUTH=1 y aprobar dispositivos con docker exec … devices approve
+   *
+   * @see https://docs.openclaw.ai/install/docker
+   * @see https://docs.openclaw.ai/web/control-ui
+   */
+  async ensureOpenClawJsonEmbedded() {
     const configPath = path.join(this.dataDir, 'openclaw.json');
+    const token = this._gatewayToken;
+    if (!token) {
+      throw new Error('Token del gateway no inicializado');
+    }
+
+    const strictDevice = /^(1|true|yes)$/i.test((process.env.NODETERM_OPENCLAW_STRICT_DEVICE_AUTH || '').trim());
+
     const required = [
       `http://127.0.0.1:${this.hostPort}`,
       `http://localhost:${this.hostPort}`
@@ -258,10 +340,57 @@ class OpenClawService {
     const existing = Array.isArray(data.gateway.controlUi.allowedOrigins)
       ? data.gateway.controlUi.allowedOrigins.map(String)
       : [];
-    const merged = [...new Set([...existing, ...required])];
-    data.gateway.controlUi.allowedOrigins = merged;
+    data.gateway.controlUi.allowedOrigins = [...new Set([...existing, ...required])];
+    data.gateway.controlUi.allowInsecureAuth = true;
+    if (!strictDevice) {
+      data.gateway.controlUi.dangerouslyDisableDeviceAuth = true;
+    }
+
+    if (!data.gateway.auth || typeof data.gateway.auth !== 'object') {
+      data.gateway.auth = {};
+    }
+    data.gateway.auth.mode = 'token';
+    data.gateway.auth.token = token;
 
     await fs.promises.writeFile(configPath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+  }
+
+  embeddedConfigRevisionMismatch() {
+    const revPath = path.join(this.dataDir, '.nodeterm-openclaw-embedded-revision');
+    try {
+      const v = parseInt(fs.readFileSync(revPath, 'utf8').trim(), 10);
+      return v !== OPENCLAW_EMBEDDED_CONFIG_REVISION;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  writeEmbeddedConfigRevision() {
+    const revPath = path.join(this.dataDir, '.nodeterm-openclaw-embedded-revision');
+    try {
+      fs.writeFileSync(revPath, `${OPENCLAW_EMBEDDED_CONFIG_REVISION}\n`, 'utf8');
+    } catch (_) {}
+  }
+
+  async runningContainerHasGatewayTokenEnv() {
+    try {
+      const { stdout } = await execAsync(this.buildDockerCommand(`inspect ${this.containerName}`), {
+        timeout: 15_000,
+        maxBuffer: 2 * 1024 * 1024
+      });
+      const parsed = JSON.parse(stdout);
+      const cfg = Array.isArray(parsed) ? parsed[0] : parsed;
+      const env = cfg?.Config?.Env;
+      if (!Array.isArray(env)) return false;
+      return env.some(
+        (e) =>
+          typeof e === 'string' &&
+          e.startsWith('OPENCLAW_GATEWAY_TOKEN=') &&
+          e.length > 'OPENCLAW_GATEWAY_TOKEN='.length + 4
+      );
+    } catch {
+      return true;
+    }
   }
 
   async isContainerRunning(name) {
@@ -316,8 +445,8 @@ class OpenClawService {
     if (process.env.OPENAI_API_KEY) {
       envArgs.push(`-e OPENAI_API_KEY=${process.env.OPENAI_API_KEY}`);
     }
-    if (process.env.NODETERM_OPENCLAW_GATEWAY_TOKEN) {
-      envArgs.push(`-e OPENCLAW_GATEWAY_TOKEN=${process.env.NODETERM_OPENCLAW_GATEWAY_TOKEN}`);
+    if (this._gatewayToken) {
+      envArgs.push(`-e OPENCLAW_GATEWAY_TOKEN=${this._gatewayToken}`);
     }
 
     // Misma entrada que la imagen oficial, pero --bind lan para que el puerto publicado sea alcanzable

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from 'primereact/button';
+import { InputText } from 'primereact/inputtext';
+import { Message } from 'primereact/message';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Toast } from 'primereact/toast';
 import { useTranslation } from '../i18n/hooks/useTranslation';
@@ -21,6 +23,7 @@ const OpenClawTab = () => {
   const [reloadKey, setReloadKey] = useState(0);
   const [webviewState, setWebviewState] = useState('idle');
   const [webviewError, setWebviewError] = useState(null);
+  const [gatewayToken, setGatewayToken] = useState('');
   const webviewRef = useRef(null);
   const mountedRef = useRef(true);
   const toast = useRef(null);
@@ -108,6 +111,44 @@ const OpenClawTab = () => {
 
     checkAndStartIfEnabled();
   }, [startService]);
+
+  useEffect(() => {
+    if (!isReady || !url || !window.electron?.ipcRenderer) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await window.electron.ipcRenderer.invoke('openclaw:get-gateway-token');
+        if (!cancelled && res?.success && res.token) {
+          setGatewayToken(res.token);
+        }
+      } catch (e) {
+        console.warn('[OpenClawTab] No se pudo cargar el token del gateway:', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isReady, url]);
+
+  const copyGatewayToken = useCallback(async () => {
+    if (!gatewayToken) return;
+    try {
+      await navigator.clipboard.writeText(gatewayToken);
+      toast.current?.show({
+        severity: 'success',
+        summary: 'Copiado',
+        detail: 'Pega el token en Ajustes del Control UI de OpenClaw.',
+        life: 3500
+      });
+    } catch (e) {
+      toast.current?.show({
+        severity: 'warn',
+        summary: 'Portapapeles',
+        detail: 'Selecciona el token y cópialo manualmente (Ctrl+C).',
+        life: 4000
+      });
+    }
+  }, [gatewayToken]);
 
   useEffect(() => {
     const view = webviewRef.current;
@@ -260,6 +301,31 @@ const OpenClawTab = () => {
         {status.phase === 'disabled' && renderDisabled()}
         {status.phase !== 'disabled' && error && renderError()}
         {status.phase !== 'disabled' && !error && (!isReady || !url) && renderStatusCard()}
+        {status.phase !== 'disabled' && !error && isReady && url && gatewayToken && (
+          <div
+            className="openclaw-gateway-token-hint"
+            style={{
+              flexShrink: 0,
+              padding: '0.5rem 0.75rem 0.75rem',
+              borderBottom: '1px solid var(--surface-border, rgba(255,255,255,0.12))'
+            }}
+          >
+            <Message
+              severity="info"
+              text="Tras el último arranque, el token ya está en openclaw.json y en el contenedor. Pulsa conectar o recarga la página; si el Control UI sigue pidiendo secreto compartido, pega abajo el mismo token en Ajustes del Control UI."
+              style={{ width: '100%', marginBottom: '0.5rem' }}
+            />
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <InputText
+                readOnly
+                value={gatewayToken}
+                className="font-mono"
+                style={{ flex: '1 1 200px', minWidth: 0, fontFamily: 'ui-monospace, monospace', fontSize: '0.85rem' }}
+              />
+              <Button type="button" label="Copiar token" icon="pi pi-copy" size="small" onClick={copyGatewayToken} />
+            </div>
+          </div>
+        )}
         {status.phase !== 'disabled' && !error && isReady && url && renderWebView()}
       </div>
 
