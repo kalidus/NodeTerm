@@ -63,7 +63,19 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
     // ---- Transfer Progress State ----
     const [activeTransfer, setActiveTransfer] = useState(null);
     // { type, fileName, transferred, total, speed, eta, startTime, active }
-    const [transferLog, setTransferLog] = useState([]);
+    const [transferLog, setTransferLog] = useState(() => {
+        const saved = localStorage.getItem(`ssh_transfer_log_${tabId}`);
+        if (!saved) return [];
+        try {
+            const parsed = JSON.parse(saved);
+            return (Array.isArray(parsed) ? parsed : []).map(entry => ({
+                ...entry,
+                timestamp: entry.timestamp ? new Date(entry.timestamp) : null
+            }));
+        } catch (e) {
+            return [];
+        }
+    });
     // [{ id, type, fileName, size, speed, duration, success, error, timestamp }]
     const [showTransferLog, setShowTransferLog] = useState(false);
     const [transferStationHeight, setTransferStationHeight] = useState(() => {
@@ -76,6 +88,10 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         const saved = localStorage.getItem('ssh_file_explorer_log_height');
         const parsed = saved ? parseInt(saved, 10) : 160;
         return Number.isFinite(parsed) ? Math.max(72, Math.min(parsed, 520)) : 160;
+    });
+    const [showTransferStationManual, setShowTransferStationManual] = useState(() => {
+        const saved = localStorage.getItem('ssh_file_explorer_show_transfer_station');
+        return saved !== 'false';
     });
     const [operationStatus, setOperationStatus] = useState(null);
     const [pausedTransfer, setPausedTransfer] = useState(null);
@@ -136,6 +152,8 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             localPath: transferMeta.localPath || null,
             remotePath: transferMeta.remotePath || null
         });
+        // Auto-show when transfer starts
+        setShowTransferStationManual(true);
         return generatedId;
     }, [tabId]);
 
@@ -155,7 +173,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 status,
                 error: errorMsg,
                 timestamp: new Date()
-            }, ...log].slice(0, 30));
+            }, ...log].slice(0, 50));
         }
         activeTransferMetaRef.current = null;
         transferStartTimeRef.current = null;
@@ -233,6 +251,13 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             setPausedTransfer(null);
         }
     }, [pausedTransfer, startTransfer, tabId, sshConfig, completeTransfer, notify]);
+    
+    // Persistence: Save log to localStorage whenever it changes
+    useEffect(() => {
+        if (tabId && Array.isArray(transferLog)) {
+            localStorage.setItem(`ssh_transfer_log_${tabId}`, JSON.stringify(transferLog));
+        }
+    }, [transferLog, tabId]);
 
     // ---- IPC Progress Listener ----
     useEffect(() => {
@@ -1829,6 +1854,20 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                             <h2>Explorador SSH</h2>
                         </div>
                         <div className="ssh-monitor-header-actions">
+                            <button
+                                className={`ssh-monitor-transfer-toggle ${showTransferStationManual ? 'active' : ''} ${activeTransfer ? 'has-active-transfer' : ''}`}
+                                onClick={() => {
+                                    const next = !showTransferStationManual;
+                                    setShowTransferStationManual(next);
+                                    localStorage.setItem('ssh_file_explorer_show_transfer_station', String(next));
+                                }}
+                                title={showTransferStationManual ? "Ocultar panel de transferencias" : "Mostrar panel de transferencias"}
+                                style={{ marginRight: '4px' }}
+                            >
+                                <i className={`pi ${activeTransfer ? 'pi-spin pi-spinner' : (showTransferStationManual ? 'pi-chevron-down' : 'pi-history')}`} style={{ fontSize: '12px' }} />
+                                {activeTransfer && <span style={{ fontSize: '9px', marginLeft: '6px', fontWeight: 700 }}>{Math.min(99, Math.round((activeTransfer.transferred / (activeTransfer.total || 1)) * 100))}%</span>}
+                            </button>
+
                             <div className="ssh-monitor-opacity-container" ref={opacityMenuRef}>
                                 <button
                                     className={`ssh-monitor-opacity-toggle ${isOpacityMenuOpen ? 'active' : ''}`}
@@ -1924,7 +1963,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 </div>
 
                 {/* ── Transfer Station ─────────────────────────────────────── */}
-                {(activeTransfer !== null || transferLog.length > 0) && (
+                {showTransferStationManual && (
                     <div
                         className="transfer-station"
                         style={transferStationHeight ? { height: `${transferStationHeight}px` } : undefined}
@@ -1934,6 +1973,15 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                         onMouseDown={handleTransferStationResizeDown}
                         title="Arrastra para redimensionar panel de transferencias"
                     />
+
+                    {/* Empty state if nothing is active and no log exists */}
+                    {!activeTransfer && transferLog.length === 0 && (
+                        <div className="transfer-empty-state">
+                            <i className="pi pi-info-circle" style={{ fontSize: '1.2rem', marginBottom: '8px', opacity: 0.5 }} />
+                            <span style={{ fontSize: '0.8rem', opacity: 0.7, fontWeight: 600 }}>No hay transferencias recientes</span>
+                            <span style={{ fontSize: '0.72rem', opacity: 0.4, marginTop: '4px' }}>Las subidas y descargas de esta sesión aparecerán aquí</span>
+                        </div>
+                    )}
 
                     {/* Active transfer progress */}
                     {activeTransfer && (
