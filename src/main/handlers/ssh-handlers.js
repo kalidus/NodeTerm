@@ -389,45 +389,26 @@ function registerSSHHandlers(dependencies = {}) {
           });
         }
 
-        // Transform stream: cuenta bytes mientras pasan hacia el archivo local
-        let transferred = 0;
-        const counter = new Transform({
-          transform(chunk, _enc, cb) {
-            const ctx = activeTransfers.get(currentTransferId);
-            if (ctx?.cancelled) {
-              cb(new Error('Transferencia cancelada por usuario'));
-              return;
-            }
-            transferred += chunk.length;
-            progress(transferred, chunk, knownTotal);
-            cb(null, chunk);
-          }
-        });
-        const writeStream = fs.createWriteStream(safeLocalPath);
-        const ctx = activeTransfers.get(currentTransferId);
-        if (ctx) {
-          ctx.counter = counter;
-          ctx.writeStream = writeStream;
-        }
-
-        // Si cualquiera de los streams falla, romper la transferencia inmediatamente
-        counter.on('error', () => {
-          try { writeStream.destroy(); } catch (_) { }
-        });
-        writeStream.on('error', () => {
-          try { counter.destroy(); } catch (_) { }
-        });
-
-        counter.pipe(writeStream);
         await withTimeout(
-          sftp.get(safeRemotePath, counter),
-          5 * 60 * 1000,
+          sftp.fastGet(safeRemotePath, safeLocalPath, {
+            concurrency: 64,
+            chunkSize: 128 * 1024,
+            step: (totalTransferred, _chunk, total) => {
+              const ctx = activeTransfers.get(currentTransferId);
+              if (ctx?.cancelled) {
+                throw new Error('Transferencia cancelada por usuario');
+              }
+              progress(totalTransferred, null, total || knownTotal);
+            }
+          }),
+          60 * 60 * 1000, // 1h timeout for very large files
           'Timeout al descargar archivo remoto'
         );
+
         await withTimeout(
-          waitForWritableCompletion(writeStream),
-          60 * 1000,
-          'Timeout al cerrar escritura local'
+          sftp.end(),
+          15 * 1000,
+          'Timeout cerrando sesión SFTP'
         );
         await withTimeout(
           sftp.end(),
@@ -460,7 +441,8 @@ function registerSSHHandlers(dependencies = {}) {
           port: sshConfig.port || 22,
           username: sshConfig.username,
           password: sshConfig.password,
-          readyTimeout: 20000,
+          readyTimeout: 30000,
+          keepaliveInterval: 10000
         });
         return { success: true };
       }
@@ -551,33 +533,24 @@ function registerSSHHandlers(dependencies = {}) {
           port: sshConfig.port || 22,
           username: sshConfig.username,
           password: sshConfig.password,
-          readyTimeout: 20000,
+          readyTimeout: 30000,
+          keepaliveInterval: 10000
         };
       }
       await sftp.connect(connectConfig);
 
-      // Transform stream: lee del archivo local, cuenta bytes, y los pasa a SFTP
-      let uploaded = 0;
-      const uploadCounter = new Transform({
-        transform(chunk, _enc, cb) {
+      await sftp.fastPut(safeLocalPath, safeRemotePath, {
+        concurrency: 64,
+        chunkSize: 128 * 1024,
+        step: (totalTransferred, _chunk, total) => {
           const ctx = activeTransfers.get(uploadTransferId);
           if (ctx?.cancelled) {
-            cb(new Error('Transferencia cancelada por usuario'));
-            return;
+            throw new Error('Transferencia cancelada por usuario');
           }
-          uploaded += chunk.length;
-          uploadStep(uploaded, chunk, localSize);
-          cb(null, chunk);
+          uploadStep(totalTransferred, null, total || localSize);
         }
       });
-      const readStream = fs.createReadStream(safeLocalPath);
-      const ctx = activeTransfers.get(uploadTransferId);
-      if (ctx) {
-        ctx.readStream = readStream;
-        ctx.counter = uploadCounter;
-      }
-      readStream.pipe(uploadCounter);
-      await sftp.put(uploadCounter, safeRemotePath);
+
       await sftp.end();
       markTransferDone(uploadTransferId);
       return { success: true };
