@@ -66,12 +66,19 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
     const [transferLog, setTransferLog] = useState([]);
     // [{ id, type, fileName, size, speed, duration, success, error, timestamp }]
     const [showTransferLog, setShowTransferLog] = useState(false);
+    const [transferStationHeight, setTransferStationHeight] = useState(() => {
+        const saved = localStorage.getItem('ssh_file_explorer_transfer_station_height');
+        if (!saved) return null;
+        const parsed = parseInt(saved, 10);
+        return Number.isFinite(parsed) ? Math.max(96, Math.min(parsed, 620)) : null;
+    });
     const [transferLogHeight, setTransferLogHeight] = useState(() => {
         const saved = localStorage.getItem('ssh_file_explorer_log_height');
         const parsed = saved ? parseInt(saved, 10) : 160;
         return Number.isFinite(parsed) ? Math.max(72, Math.min(parsed, 520)) : 160;
     });
     const [operationStatus, setOperationStatus] = useState(null);
+    const [pausedTransfer, setPausedTransfer] = useState(null);
     // { message: string, loading: boolean }
 
     // Refs for speed/timing (avoid stale closures)
@@ -80,6 +87,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
     const lastProgressTimeRef = useRef(null);
     const lastProgressBytesRef = useRef(0);
     const logResizeStateRef = useRef({ active: false, startY: 0, startHeight: 160 });
+    const transferStationResizeStateRef = useRef({ active: false, startY: 0, startHeight: 190 });
 
     const panelLeftRef = useRef(panelLeft);
     const resizeStateRef = useRef({ isResizing: false, startX: 0, startLeftPx: 0, parentWidth: 0 });
@@ -113,19 +121,25 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
     }, []);
 
-    const startTransfer = useCallback((type, fileName, totalSize = 0) => {
+    const startTransfer = useCallback((type, fileName, totalSize = 0, transferMeta = {}) => {
         const now = Date.now();
+        const generatedId = transferMeta.transferId || `${tabId || 'tab'}-${type}-${now}-${Math.floor(Math.random() * 10000)}`;
         transferStartTimeRef.current = now;
         lastProgressTimeRef.current = now;
         lastProgressBytesRef.current = 0;
-        activeTransferMetaRef.current = { type, fileName, total: totalSize, startTime: now };
+        activeTransferMetaRef.current = { type, fileName, total: totalSize, startTime: now, ...transferMeta, transferId: generatedId };
         setActiveTransfer({
             type, fileName, transferred: 0, total: totalSize,
-            speed: 0, eta: 0, startTime: now, active: true
+            speed: 0, eta: 0, startTime: now, active: true,
+            status: 'running',
+            transferId: generatedId,
+            localPath: transferMeta.localPath || null,
+            remotePath: transferMeta.remotePath || null
         });
-    }, []);
+        return generatedId;
+    }, [tabId]);
 
-    const completeTransfer = useCallback((success, errorMsg = null) => {
+    const completeTransfer = useCallback((success, errorMsg = null, status = 'finished') => {
         const meta = activeTransferMetaRef.current;
         if (meta) {
             const duration = (Date.now() - meta.startTime) / 1000;
@@ -138,6 +152,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 speed: avgSpeed,
                 duration,
                 success,
+                status,
                 error: errorMsg,
                 timestamp: new Date()
             }, ...log].slice(0, 30));
@@ -148,6 +163,76 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         lastProgressBytesRef.current = 0;
         setActiveTransfer(null);
     }, []);
+
+    const cancelTransferById = useCallback(async (transferId) => {
+        if (!transferId) return;
+        const invoke = window.electron?.ipcRenderer?.invoke;
+        if (!invoke) return;
+        try {
+            await invoke('ssh:cancel-transfer', { transferId });
+        } catch (_) {
+            // Si falla, igualmente liberamos estado local
+        }
+    }, []);
+
+    const handleCancelActiveTransfer = useCallback(async () => {
+        if (!activeTransfer) return;
+        await cancelTransferById(activeTransfer.transferId);
+        completeTransfer(false, 'Cancelada por usuario', 'cancelled');
+        notify('warn', 'Transferencia cancelada', 'Se canceló la transferencia activa.');
+    }, [activeTransfer, cancelTransferById, completeTransfer, notify]);
+
+    const handlePauseActiveTransfer = useCallback(async () => {
+        if (!activeTransfer) return;
+        setPausedTransfer({ ...activeTransfer });
+        await cancelTransferById(activeTransfer.transferId);
+        completeTransfer(false, 'Pausada por usuario', 'paused');
+        notify('info', 'Transferencia pausada', 'Pulsa reanudar para relanzar la transferencia.');
+    }, [activeTransfer, cancelTransferById, completeTransfer, notify]);
+
+    const handleResumePausedTransfer = useCallback(async () => {
+        if (!pausedTransfer) return;
+        const invoke = window.electron?.ipcRenderer?.invoke;
+        if (!invoke) return;
+        const nextId = startTransfer(
+            pausedTransfer.type,
+            pausedTransfer.fileName,
+            pausedTransfer.total || 0,
+            { localPath: pausedTransfer.localPath, remotePath: pausedTransfer.remotePath }
+        );
+        try {
+            let result;
+            if (pausedTransfer.type === 'upload') {
+                result = await invoke('ssh:upload-file', {
+                    tabId,
+                    localPath: pausedTransfer.localPath,
+                    remotePath: pausedTransfer.remotePath,
+                    sshConfig,
+                    transferId: nextId
+                });
+            } else {
+                result = await invoke('ssh:download-file', {
+                    tabId,
+                    remotePath: pausedTransfer.remotePath,
+                    localPath: pausedTransfer.localPath,
+                    sshConfig,
+                    transferId: nextId
+                });
+            }
+            if (result?.success) {
+                completeTransfer(true);
+                notify('success', 'Transferencia reanudada', 'Finalizada correctamente.');
+            } else {
+                completeTransfer(false, result?.error || 'No se pudo reanudar');
+                notify('error', 'Error al reanudar', result?.error || 'No se pudo relanzar la transferencia');
+            }
+        } catch (error) {
+            completeTransfer(false, error?.message || 'No se pudo reanudar');
+            notify('error', 'Error al reanudar', error?.message || 'No se pudo relanzar la transferencia');
+        } finally {
+            setPausedTransfer(null);
+        }
+    }, [pausedTransfer, startTransfer, tabId, sshConfig, completeTransfer, notify]);
 
     // ---- IPC Progress Listener ----
     useEffect(() => {
@@ -190,7 +275,11 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 speed,
                 eta,
                 startTime: prev?.startTime || now,
-                active: true
+                active: true,
+                status: prev?.status || 'running',
+                transferId: data.transferId || prev?.transferId || null,
+                localPath: prev?.localPath || null,
+                remotePath: prev?.remotePath || null
             }));
         };
 
@@ -623,8 +712,10 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             document.removeEventListener('mouseup', handleMouseUpResizer);
             document.removeEventListener('mousemove', handleTransferLogResizeMove);
             document.removeEventListener('mouseup', handleTransferLogResizeUp);
+            document.removeEventListener('mousemove', handleTransferStationResizeMove);
+            document.removeEventListener('mouseup', handleTransferStationResizeUp);
         };
-    }, [handleMouseMoveResizer, handleMouseUpResizer, handleTransferLogResizeMove, handleTransferLogResizeUp]);
+    }, [handleMouseMoveResizer, handleMouseUpResizer, handleTransferLogResizeMove, handleTransferLogResizeUp, handleTransferStationResizeMove, handleTransferStationResizeUp]);
 
     const handleOpacityChange = (e) => {
         const val = parseFloat(e.target.value);
@@ -661,6 +752,38 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         document.body.style.userSelect = 'none';
         document.body.style.cursor = 'ns-resize';
     }, [handleTransferLogResizeMove, handleTransferLogResizeUp, transferLogHeight]);
+
+    const handleTransferStationResizeMove = useCallback((event) => {
+        if (!transferStationResizeStateRef.current.active) return;
+        const delta = transferStationResizeStateRef.current.startY - event.clientY;
+        const nextHeight = Math.max(96, Math.min(620, transferStationResizeStateRef.current.startHeight + delta));
+        setTransferStationHeight(nextHeight);
+    }, []);
+
+    const handleTransferStationResizeUp = useCallback(() => {
+        if (!transferStationResizeStateRef.current.active) return;
+        transferStationResizeStateRef.current.active = false;
+        localStorage.setItem('ssh_file_explorer_transfer_station_height', String(transferStationHeight));
+        document.removeEventListener('mousemove', handleTransferStationResizeMove);
+        document.removeEventListener('mouseup', handleTransferStationResizeUp);
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+    }, [handleTransferStationResizeMove, transferStationHeight]);
+
+    const handleTransferStationResizeDown = useCallback((event) => {
+        event.preventDefault();
+        const station = event.currentTarget.closest('.transfer-station');
+        const currentHeight = transferStationHeight ?? station?.getBoundingClientRect()?.height ?? 190;
+        transferStationResizeStateRef.current = {
+            active: true,
+            startY: event.clientY,
+            startHeight: currentHeight
+        };
+        document.addEventListener('mousemove', handleTransferStationResizeMove);
+        document.addEventListener('mouseup', handleTransferStationResizeUp);
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'ns-resize';
+    }, [handleTransferStationResizeMove, handleTransferStationResizeUp, transferStationHeight]);
 
     // Auto-close menus on click outside
     useEffect(() => {
@@ -878,12 +1001,16 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             });
             if (result.canceled || !result.filePath) return;
 
-            startTransfer('download', targetNode.label);
+            const transferId = startTransfer('download', targetNode.label, 0, {
+                remotePath: targetNode.data.path,
+                localPath: result.filePath
+            });
             const downloadResult = await invoke('ssh:download-file', {
                 tabId,
                 remotePath: targetNode.data.path,
                 localPath: result.filePath,
-                sshConfig
+                sshConfig,
+                transferId
             });
 
             if (downloadResult && downloadResult.success) {
@@ -936,9 +1063,9 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 const fileName = localPath.split(/[/\\]/).pop();
                 const remotePath = joinPath(baseDir, fileName);
 
-                startTransfer('upload', fileName);
+                const transferId = startTransfer('upload', fileName, 0, { localPath, remotePath });
                 const uploadResult = await invoke('ssh:upload-file', {
-                    tabId, localPath, remotePath, sshConfig
+                    tabId, localPath, remotePath, sshConfig, transferId
                 });
 
                 if (uploadResult && uploadResult.success) {
@@ -1026,15 +1153,15 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             try {
                 if (fromSide === 'local') {
                     const rPath = joinPath(toPath, node.label);
-                    startTransfer('upload', node.label);
-                    const res = await invoke('ssh:upload-file', { tabId, localPath: node.data.path, remotePath: rPath, sshConfig });
+                    const transferId = startTransfer('upload', node.label, 0, { localPath: node.data.path, remotePath: rPath });
+                    const res = await invoke('ssh:upload-file', { tabId, localPath: node.data.path, remotePath: rPath, sshConfig, transferId });
                     if (res?.success) { completeTransfer(true); ok++; }
                     else { completeTransfer(false, res?.error); fail++; }
                 } else {
                     const sep = toPath.includes('\\') ? '\\' : '/';
                     const lPath = toPath.endsWith(sep) ? `${toPath}${node.label}` : `${toPath}${sep}${node.label}`;
-                    startTransfer('download', node.label);
-                    const res = await invoke('ssh:download-file', { tabId, remotePath: node.data.path, localPath: lPath, sshConfig });
+                    const transferId = startTransfer('download', node.label, 0, { remotePath: node.data.path, localPath: lPath });
+                    const res = await invoke('ssh:download-file', { tabId, remotePath: node.data.path, localPath: lPath, sshConfig, transferId });
                     if (res?.success) { completeTransfer(true); ok++; }
                     else { completeTransfer(false, res?.error); fail++; }
                 }
@@ -1141,10 +1268,10 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             // Local -> Remote (Upload)
             if (sourceSide === 'local' && targetSide === 'remote') {
                 const remotePath = joinPath(destBaseDir, fileName);
-                startTransfer('upload', fileName);
+                const transferId = startTransfer('upload', fileName, 0, { localPath: sourcePath, remotePath });
                 try {
                     const res = await invoke('ssh:upload-file', {
-                        tabId, localPath: sourcePath, remotePath, sshConfig
+                        tabId, localPath: sourcePath, remotePath, sshConfig, transferId
                     });
                     if (res?.success) {
                         completeTransfer(true);
@@ -1174,10 +1301,10 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 };
 
                 const localPath = localJoinPath(destBaseDir, fileName);
-                startTransfer('download', fileName);
+                const transferId = startTransfer('download', fileName, 0, { remotePath: sourcePath, localPath });
                 try {
                     const res = await invoke('ssh:download-file', {
-                        tabId, remotePath: sourcePath, localPath, sshConfig
+                        tabId, remotePath: sourcePath, localPath, sshConfig, transferId
                     });
                     if (res?.success) {
                         completeTransfer(true);
@@ -1247,9 +1374,9 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 const fileName = localPath.split(/[/\\]/).pop();
                 const remotePath = joinPath(baseDir, fileName);
 
-                startTransfer('upload', fileName);
+                const transferId = startTransfer('upload', fileName, 0, { localPath, remotePath });
                 const uploadResult = await invoke('ssh:upload-file', {
-                    tabId, localPath, remotePath, sshConfig
+                    tabId, localPath, remotePath, sshConfig, transferId
                 });
 
                 if (uploadResult && uploadResult.success) {
@@ -1795,11 +1922,18 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* ── Transfer Station ─────────────────────────────────────── */}
-            {(activeTransfer !== null || transferLog.length > 0) && (
-                <div className="transfer-station">
+                {/* ── Transfer Station ─────────────────────────────────────── */}
+                {(activeTransfer !== null || transferLog.length > 0) && (
+                    <div
+                        className="transfer-station"
+                        style={transferStationHeight ? { height: `${transferStationHeight}px` } : undefined}
+                    >
+                    <div
+                        className="transfer-station-resizer"
+                        onMouseDown={handleTransferStationResizeDown}
+                        title="Arrastra para redimensionar panel de transferencias"
+                    />
 
                     {/* Active transfer progress */}
                     {activeTransfer && (
@@ -1813,6 +1947,22 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                                     {activeTransfer.fileName}
                                 </span>
                                 <span className="transfer-speed">{formatSpeed(activeTransfer.speed) || '0 B/s'}</span>
+                                <div className="transfer-actions">
+                                    <button
+                                        className="transfer-action-btn"
+                                        onClick={handlePauseActiveTransfer}
+                                        title="Pausar transferencia (reanuda desde cero)"
+                                    >
+                                        <i className="pi pi-pause" />
+                                    </button>
+                                    <button
+                                        className="transfer-action-btn danger"
+                                        onClick={handleCancelActiveTransfer}
+                                        title="Cancelar transferencia"
+                                    >
+                                        <i className="pi pi-stop" />
+                                    </button>
+                                </div>
                             </div>
 
                             {activeTransfer.total > 0 ? (
@@ -1857,6 +2007,43 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                             <span>Historial de transferencias</span>
                             <span className="transfer-log-count">{transferLog.length}</span>
                             <span style={{ flex: 1 }} />
+                            {pausedTransfer && (
+                                <span
+                                    role="button"
+                                    tabIndex={0}
+                                    className="transfer-log-clear-btn"
+                                    onClick={(e) => { e.stopPropagation(); handleResumePausedTransfer(); }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleResumePausedTransfer();
+                                        }
+                                    }}
+                                    title="Reanudar transferencia pausada"
+                                >
+                                    <i className="pi pi-play" style={{ fontSize: '9px' }} />
+                                </span>
+                            )}
+                            <span
+                                role="button"
+                                tabIndex={0}
+                                className="transfer-log-clear-btn"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setTransferLog(log => log.filter(item => item.success));
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setTransferLog(log => log.filter(item => item.success));
+                                    }
+                                }}
+                                title="Eliminar transferencias atascadas/fallidas"
+                            >
+                                <i className="pi pi-filter-slash" style={{ fontSize: '9px' }} />
+                            </span>
                             <span
                                 role="button"
                                 tabIndex={0}
@@ -1910,8 +2097,9 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                         </div>
                         </>
                     )}
-                </div>
-            )}
+                    </div>
+                )}
+            </div>
 
             <Dialog
                 header="Nueva carpeta"

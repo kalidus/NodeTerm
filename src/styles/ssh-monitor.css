@@ -933,6 +933,17 @@
     border-top: 1px solid #21262d;
     display: flex;
     flex-direction: column;
+    min-height: 96px;
+    max-height: 620px;
+    overflow: hidden;
+}
+
+.transfer-station-resizer {
+    height: 8px;
+    cursor: ns-resize;
+    border-bottom: 1px solid #161b22;
+    background: linear-gradient(180deg, rgba(88, 166, 255, 0.14), rgba(88, 166, 255, 0.03));
+    flex-shrink: 0;
 }
 
 /* ---- Active transfer block ---- */
@@ -997,9 +1008,46 @@
     color: #8b949e;
     flex-shrink: 0;
     font-variant-numeric: tabular-nums;
+    min-width: 80px;
+    text-align: right;
     background: rgba(139, 148, 158, 0.1);
     padding: 1px 6px;
     border-radius: 3px;
+}
+
+.transfer-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 2px;
+}
+
+.transfer-action-btn {
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #30363d;
+    background: rgba(139, 148, 158, 0.12);
+    color: #8b949e;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.transfer-action-btn:hover {
+    background: rgba(139, 148, 158, 0.22);
+    color: #c9d1d9;
+}
+
+.transfer-action-btn.danger:hover {
+    background: rgba(248, 81, 73, 0.2);
+    color: #f85149;
+    border-color: rgba(248, 81, 73, 0.35);
+}
+
+.transfer-action-btn i {
+    font-size: 10px;
 }
 
 /* ---- Progress bar overrides ---- */
@@ -1036,15 +1084,19 @@
 .transfer-stats-row {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 10px;
     font-size: 0.68rem;
     color: #6e7681;
     font-variant-numeric: tabular-nums;
+    min-height: 16px;
 }
 
 .transfer-pct {
     font-weight: 700;
     color: #8b949e;
+    min-width: 40px;
+    text-align: right;
 }
 
 /* ---- Log toggle ---- */

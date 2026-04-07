@@ -7,7 +7,6 @@ const SSH2Promise = require('ssh2-promise');
 const SftpClient = require('ssh2-sftp-client');
 const fs = require('fs');
 const { PassThrough, Transform } = require('stream');
-const { once } = require('events');
 const { parseProcessList } = require('../utils/parsing-utils');
 const sshStatsService = require('../services/SSHStatsService');
 
@@ -47,6 +46,40 @@ function parseLsOutput(output) {
   }).filter(Boolean);
 }
 
+function waitForWritableCompletion(stream) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const done = (err) => {
+      if (settled) return;
+      settled = true;
+      stream.removeListener('finish', onFinish);
+      stream.removeListener('close', onClose);
+      stream.removeListener('error', onError);
+      if (err) reject(err);
+      else resolve();
+    };
+    const onFinish = () => done();
+    const onClose = () => done();
+    const onError = (err) => done(err || new Error('Error escribiendo archivo local'));
+    stream.once('finish', onFinish);
+    stream.once('close', onClose);
+    stream.once('error', onError);
+  });
+}
+
+function withTimeout(promise, ms, message) {
+  let timer = null;
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message || `Operación excedió ${ms}ms`)), ms);
+  });
+  return Promise.race([
+    promise.finally(() => {
+      if (timer) clearTimeout(timer);
+    }),
+    timeoutPromise
+  ]);
+}
+
 /**
  * Registra todos los manejadores IPC relacionados con SSH
  * @param {Object} dependencies - Dependencias necesarias para los handlers
@@ -57,6 +90,35 @@ function parseLsOutput(output) {
 
 function registerSSHHandlers(dependencies = {}) {
   const { findSSHConnection, sshConnections } = dependencies || {};
+  const activeTransfers = new Map();
+
+  const markTransferDone = (transferId) => {
+    if (!transferId) return;
+    activeTransfers.delete(transferId);
+  };
+
+  ipcMain.handle('ssh:cancel-transfer', async (_event, { transferId }) => {
+    try {
+      const transfer = activeTransfers.get(transferId);
+      if (!transfer) {
+        return { success: false, error: 'Transferencia no encontrada o ya finalizada' };
+      }
+
+      transfer.cancelled = true;
+      if (transfer.readStream && !transfer.readStream.destroyed) transfer.readStream.destroy(new Error('Transferencia cancelada por usuario'));
+      if (transfer.writeStream && !transfer.writeStream.destroyed) transfer.writeStream.destroy(new Error('Transferencia cancelada por usuario'));
+      if (transfer.counter && !transfer.counter.destroyed) transfer.counter.destroy(new Error('Transferencia cancelada por usuario'));
+
+      try {
+        if (transfer.sftp) await transfer.sftp.end();
+      } catch (_) { }
+
+      activeTransfers.delete(transferId);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error?.message || 'No se pudo cancelar la transferencia' };
+    }
+  });
 
   // SSH: Obtener directorio home
   ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => {
@@ -271,7 +333,8 @@ function registerSSHHandlers(dependencies = {}) {
   });
 
   // SSH: Descargar archivo
-  ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath, sshConfig }) => {
+  ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath, sshConfig, transferId }) => {
+    let currentTransferId = transferId || `${tabId}-dl-${Date.now()}`;
     try {
       // ✅ VALIDACIÓN CRÍTICA: Validar inputs antes de procesar
       if (!remotePath || typeof remotePath !== 'string' || remotePath.trim() === '') {
@@ -289,7 +352,7 @@ function registerSSHHandlers(dependencies = {}) {
       const safeLocalPath = localPath.trim();
 
       const fileName = safeRemotePath.split('/').pop() || safeRemotePath;
-      const transferId = `${tabId}-dl-${Date.now()}`;
+      currentTransferId = transferId || `${tabId}-dl-${Date.now()}`;
 
       const buildProgressStep = (knownTotal = 0) => {
         let lastSentBytes = 0;
@@ -303,7 +366,7 @@ function registerSSHHandlers(dependencies = {}) {
               lastSentBytes = totalTransferred;
               lastSentTime = now;
               event.sender.send('ssh:transfer-progress', {
-                tabId, transferId, type: 'download', fileName,
+                tabId, transferId: currentTransferId, type: 'download', fileName,
                 transferred: totalTransferred, total: total || knownTotal, speed
               });
             }
@@ -313,6 +376,7 @@ function registerSSHHandlers(dependencies = {}) {
 
       const makeDownloadTransfer = async (sftp, connectConfig) => {
         await sftp.connect(connectConfig);
+        activeTransfers.set(currentTransferId, { sftp, cancelled: false, type: 'download', tabId, fileName });
         const remoteStat = await sftp.stat(safeRemotePath).catch(() => null);
         const knownTotal = Number(remoteStat?.size) || 0;
         const progress = buildProgressStep(knownTotal);
@@ -320,7 +384,7 @@ function registerSSHHandlers(dependencies = {}) {
         // Evento inicial con total conocido
         if (event.sender && !event.sender.isDestroyed()) {
           event.sender.send('ssh:transfer-progress', {
-            tabId, transferId, type: 'download', fileName,
+            tabId, transferId: currentTransferId, type: 'download', fileName,
             transferred: 0, total: knownTotal, speed: 0
           });
         }
@@ -329,16 +393,48 @@ function registerSSHHandlers(dependencies = {}) {
         let transferred = 0;
         const counter = new Transform({
           transform(chunk, _enc, cb) {
+            const ctx = activeTransfers.get(currentTransferId);
+            if (ctx?.cancelled) {
+              cb(new Error('Transferencia cancelada por usuario'));
+              return;
+            }
             transferred += chunk.length;
             progress(transferred, chunk, knownTotal);
             cb(null, chunk);
           }
         });
         const writeStream = fs.createWriteStream(safeLocalPath);
+        const ctx = activeTransfers.get(currentTransferId);
+        if (ctx) {
+          ctx.counter = counter;
+          ctx.writeStream = writeStream;
+        }
+
+        // Si cualquiera de los streams falla, romper la transferencia inmediatamente
+        counter.on('error', () => {
+          try { writeStream.destroy(); } catch (_) { }
+        });
+        writeStream.on('error', () => {
+          try { counter.destroy(); } catch (_) { }
+        });
+
         counter.pipe(writeStream);
-        await sftp.get(safeRemotePath, counter);
-        await once(writeStream, 'finish');
-        await sftp.end();
+        await withTimeout(
+          sftp.get(safeRemotePath, counter),
+          5 * 60 * 1000,
+          'Timeout al descargar archivo remoto'
+        );
+        await withTimeout(
+          waitForWritableCompletion(writeStream),
+          60 * 1000,
+          'Timeout al cerrar escritura local'
+        );
+        await withTimeout(
+          sftp.end(),
+          15 * 1000,
+          'Timeout cerrando sesión SFTP'
+        );
+        markTransferDone(currentTransferId);
       };
 
       if (sshConfig.useBastionWallix) {
@@ -369,12 +465,20 @@ function registerSSHHandlers(dependencies = {}) {
         return { success: true };
       }
     } catch (err) {
+      try {
+        const ctx = activeTransfers.get(currentTransferId);
+        if (ctx?.counter && !ctx.counter.destroyed) ctx.counter.destroy(err);
+        if (ctx?.writeStream && !ctx.writeStream.destroyed) ctx.writeStream.destroy(err);
+        if (ctx?.sftp) await Promise.race([ctx.sftp.end(), new Promise((resolve) => setTimeout(resolve, 2000))]);
+      } catch (_) { }
+      markTransferDone(currentTransferId);
       return { success: false, error: err.message || err };
     }
   });
 
   // SSH: Subir archivo
-  ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath, sshConfig }) => {
+  ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath, sshConfig, transferId }) => {
+    let uploadTransferId = transferId || `${tabId}-ul-${Date.now()}`;
     try {
       // ✅ VALIDACIÓN CRÍTICA: Validar inputs antes de procesar
       if (!localPath || typeof localPath !== 'string' || localPath.trim() === '') {
@@ -397,7 +501,7 @@ function registerSSHHandlers(dependencies = {}) {
       }
 
       const uploadFileName = safeLocalPath.split(/[/\\]/).pop() || safeLocalPath;
-      const uploadTransferId = `${tabId}-ul-${Date.now()}`;
+      uploadTransferId = transferId || `${tabId}-ul-${Date.now()}`;
 
       let uploadLastBytes = 0;
       let uploadLastTime = Date.now();
@@ -425,6 +529,7 @@ function registerSSHHandlers(dependencies = {}) {
       }
 
       const sftp = new SftpClient();
+      activeTransfers.set(uploadTransferId, { sftp, cancelled: false, type: 'upload', tabId, fileName: uploadFileName });
       let connectConfig;
       if (sshConfig.useBastionWallix) {
         connectConfig = {
@@ -455,17 +560,29 @@ function registerSSHHandlers(dependencies = {}) {
       let uploaded = 0;
       const uploadCounter = new Transform({
         transform(chunk, _enc, cb) {
+          const ctx = activeTransfers.get(uploadTransferId);
+          if (ctx?.cancelled) {
+            cb(new Error('Transferencia cancelada por usuario'));
+            return;
+          }
           uploaded += chunk.length;
           uploadStep(uploaded, chunk, localSize);
           cb(null, chunk);
         }
       });
       const readStream = fs.createReadStream(safeLocalPath);
+      const ctx = activeTransfers.get(uploadTransferId);
+      if (ctx) {
+        ctx.readStream = readStream;
+        ctx.counter = uploadCounter;
+      }
       readStream.pipe(uploadCounter);
       await sftp.put(uploadCounter, safeRemotePath);
       await sftp.end();
+      markTransferDone(uploadTransferId);
       return { success: true };
     } catch (err) {
+      markTransferDone(uploadTransferId);
       return { success: false, error: err.message || err };
     }
   });
