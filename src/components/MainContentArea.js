@@ -1661,6 +1661,41 @@ const MainContentArea = ({
   const FIXED_EXPANDED_SIZE = 18; // 18% - ancho inicial cuando se abre la app
   // Estado de tamaño actual del sidebar (en %), usado cuando está expandido
   const [sidebarSizePercent, setSidebarSizePercent] = React.useState(FIXED_EXPANDED_SIZE);
+  const splitterDragStateRef = useRef({ isPointerDown: false, hasMoved: false, startX: 0, startY: 0 });
+  const SPLITTER_DRAG_THRESHOLD_PX = 3;
+
+  const markSplitterPointerDown = useCallback((event) => {
+    splitterDragStateRef.current = {
+      isPointerDown: true,
+      hasMoved: false,
+      startX: event.clientX,
+      startY: event.clientY
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleWindowMouseMove = (event) => {
+      const dragState = splitterDragStateRef.current;
+      if (!dragState.isPointerDown || dragState.hasMoved) return;
+
+      const movedX = Math.abs(event.clientX - dragState.startX);
+      const movedY = Math.abs(event.clientY - dragState.startY);
+      if (movedX >= SPLITTER_DRAG_THRESHOLD_PX || movedY >= SPLITTER_DRAG_THRESHOLD_PX) {
+        dragState.hasMoved = true;
+      }
+    };
+
+    const handleWindowMouseUp = () => {
+      splitterDragStateRef.current.isPointerDown = false;
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+    };
+  }, []);
 
   // Listener global para capturar drops de nodos SSH desde la sidebar sobre el área de contenido
   React.useEffect(() => {
@@ -1746,6 +1781,10 @@ const MainContentArea = ({
 
   // Al soltar el mouse: guardar tamaño y replegar/expandir según umbrales
   const handleResizeEndWithAutoCollapse = (e) => {
+    const hasRealDrag = splitterDragStateRef.current.hasMoved;
+    splitterDragStateRef.current.isPointerDown = false;
+    splitterDragStateRef.current.hasMoved = false;
+
     const splitterElement = document.querySelector('.main-splitter');
     if (splitterElement) {
       const splitterWidth = splitterElement.offsetWidth;
@@ -1754,9 +1793,9 @@ const MainContentArea = ({
 
       setSidebarSizePercent(sidebarPercentage);
 
-      if (!sidebarCollapsed && sidebarWidthPx <= SIDEBAR_COLLAPSE_THRESHOLD_PX) {
+      if (!sidebarCollapsed && hasRealDrag && sidebarWidthPx <= SIDEBAR_COLLAPSE_THRESHOLD_PX) {
         requestAnimationFrame(() => setSidebarCollapsed(true));
-      } else if (sidebarCollapsed && sidebarWidthPx > SIDEBAR_EXPAND_THRESHOLD_PX) {
+      } else if (sidebarCollapsed && hasRealDrag && sidebarWidthPx > SIDEBAR_EXPAND_THRESHOLD_PX) {
         requestAnimationFrame(() => {
           setSidebarSizePercent(sidebarPercentage);
           setSidebarCollapsed(false);
@@ -1817,6 +1856,7 @@ const MainContentArea = ({
         className="main-splitter"
         pt={{
           gutter: {
+            onMouseDown: markSplitterPointerDown,
             style: {
               width: '4px',
               background: 'transparent',
