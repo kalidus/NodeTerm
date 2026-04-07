@@ -3009,6 +3009,39 @@ const Sidebar = React.memo(({
                 </span>
               </Button>
 
+              {/* Botón de herramientas */}
+              <Button
+                className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))}
+                tooltip="Herramientas"
+                tooltipOptions={{ position: 'right' }}
+                style={{
+                  margin: 0,
+                  width: 40,
+                  height: 40,
+                  minWidth: 40,
+                  minHeight: 40,
+                  border: 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important',
+                  padding: 0
+                }}
+              >
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: '#06b6d4'
+                }}>
+                  <i className="pi pi-wrench" style={{ fontSize: '1rem' }} />
+                </span>
+              </Button>
+
               {/* Separador para clientes de IA */}
               {(aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat || aiClientsEnabled.agentzero || aiClientsEnabled.openclaw) && (
                 <div style={{
