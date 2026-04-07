@@ -63,8 +63,17 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
     // ---- Transfer Progress State ----
     const [activeTransfer, setActiveTransfer] = useState(null);
     // { type, fileName, transferred, total, speed, eta, startTime, active }
+
+    // Use a stable key based on the host/user to persist history across sessions
+    const storageKey = useMemo(() => {
+        if (sshConfig && sshConfig.host) {
+            return `ssh_transfer_log_${sshConfig.host}_${sshConfig.username || 'root'}`;
+        }
+        return `ssh_transfer_log_${tabId}`;
+    }, [sshConfig, tabId]);
+
     const [transferLog, setTransferLog] = useState(() => {
-        const saved = localStorage.getItem(`ssh_transfer_log_${tabId}`);
+        const saved = localStorage.getItem(storageKey);
         if (!saved) return [];
         try {
             const parsed = JSON.parse(saved);
@@ -254,10 +263,10 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
     
     // Persistence: Save log to localStorage whenever it changes
     useEffect(() => {
-        if (tabId && Array.isArray(transferLog)) {
-            localStorage.setItem(`ssh_transfer_log_${tabId}`, JSON.stringify(transferLog));
+        if (storageKey && Array.isArray(transferLog)) {
+            localStorage.setItem(storageKey, JSON.stringify(transferLog));
         }
-    }, [transferLog, tabId]);
+    }, [transferLog, storageKey]);
 
     // ---- IPC Progress Listener ----
     useEffect(() => {
