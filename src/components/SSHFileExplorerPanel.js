@@ -2130,20 +2130,33 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                             title="Arrastra para redimensionar historial"
                         />
                         <div className="transfer-log-list" style={{ height: `${transferLogHeight}px` }}>
+                            {/* Log Header for better alignment labels */}
+                            <div className="transfer-log-header-row">
+                                <div /> <div />
+                                <span>Archivo</span>
+                                <span style={{ textAlign: 'right' }}>Tamaño</span>
+                                <span style={{ textAlign: 'right' }}>Velocidad</span>
+                                <span style={{ textAlign: 'right' }}>Duración</span>
+                                <span style={{ textAlign: 'right' }}>Hora</span>
+                            </div>
                             {transferLog.map(entry => (
                                 <div key={entry.id} className={`transfer-log-entry ${entry.success ? 'success' : 'error'}`}>
-                                    <i className={`pi ${entry.success ? 'pi-check-circle' : 'pi-times-circle'} transfer-log-status-icon`} />
-                                    <i className={`pi ${entry.type === 'upload' ? 'pi-upload' : 'pi-download'} transfer-log-dir-icon`} />
+                                    <div className="transfer-log-status-icon">
+                                        <i className={`pi ${entry.success ? 'pi-check-circle' : 'pi-times-circle'}`} />
+                                    </div>
+                                    <div className="transfer-log-dir-icon">
+                                        <i className={`pi ${entry.type === 'upload' ? 'pi-upload' : 'pi-download'}`} />
+                                    </div>
                                     <span className="transfer-log-name" title={entry.fileName}>{entry.fileName}</span>
                                     {entry.success ? (
-                                        <div className="transfer-log-meta">
-                                            {entry.size > 0 && <span>{formatFileSize(entry.size)}</span>}
-                                            {entry.speed > 0 && <span>{formatSpeed(entry.speed)}</span>}
-                                            {entry.duration > 0 && <span>{formatDuration(entry.duration)}</span>}
-                                        </div>
+                                        <>
+                                            <span className="transfer-log-meta-item">{entry.size > 0 ? formatFileSize(entry.size) : '--'}</span>
+                                            <span className="transfer-log-meta-item">{entry.speed > 0 ? formatSpeed(entry.speed) : '--'}</span>
+                                            <span className="transfer-log-meta-item">{entry.duration > 0 ? formatDuration(entry.duration) : '--'}</span>
+                                        </>
                                     ) : (
                                         <span className="transfer-log-error" title={entry.error}>
-                                            {entry.error || 'Error desconocido'}
+                                            {entry.error || 'Error'}
                                         </span>
                                     )}
                                     <span className="transfer-log-time">
