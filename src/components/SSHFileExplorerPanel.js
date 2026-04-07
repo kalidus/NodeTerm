@@ -3,10 +3,11 @@ import { Button } from 'primereact/button';
 import { Tree } from 'primereact/tree';
 import { ContextMenu } from 'primereact/contextmenu';
 import { ProgressSpinner } from 'primereact/progressspinner';
+import { ProgressBar } from 'primereact/progressbar';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
-import '../styles/ssh-monitor.css'; // Reuse existing styles for the overlay
+import '../styles/ssh-monitor.css';
 
 const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
     // ---- Remote State ----
@@ -56,8 +57,29 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
 
     const [showHidden, setShowHidden] = useState(() => {
         const saved = localStorage.getItem('ssh_file_explorer_show_hidden');
-        return saved === 'true'; // Default is false for cleaner look like windows explorer
+        return saved === 'true';
     });
+
+    // ---- Transfer Progress State ----
+    const [activeTransfer, setActiveTransfer] = useState(null);
+    // { type, fileName, transferred, total, speed, eta, startTime, active }
+    const [transferLog, setTransferLog] = useState([]);
+    // [{ id, type, fileName, size, speed, duration, success, error, timestamp }]
+    const [showTransferLog, setShowTransferLog] = useState(false);
+    const [transferLogHeight, setTransferLogHeight] = useState(() => {
+        const saved = localStorage.getItem('ssh_file_explorer_log_height');
+        const parsed = saved ? parseInt(saved, 10) : 160;
+        return Number.isFinite(parsed) ? Math.max(72, Math.min(parsed, 520)) : 160;
+    });
+    const [operationStatus, setOperationStatus] = useState(null);
+    // { message: string, loading: boolean }
+
+    // Refs for speed/timing (avoid stale closures)
+    const activeTransferMetaRef = useRef(null);
+    const transferStartTimeRef = useRef(null);
+    const lastProgressTimeRef = useRef(null);
+    const lastProgressBytesRef = useRef(0);
+    const logResizeStateRef = useRef({ active: false, startY: 0, startHeight: 160 });
 
     const panelLeftRef = useRef(panelLeft);
     const resizeStateRef = useRef({ isResizing: false, startX: 0, startLeftPx: 0, parentWidth: 0 });
@@ -69,6 +91,112 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             console[severity === 'error' ? 'error' : 'log']('[SSHFileExplorer]', summary, detailMessage);
         }
     }, []);
+
+    // ---- Transfer helpers ----
+    const formatSpeed = useCallback((bytesPerSec) => {
+        if (!bytesPerSec || bytesPerSec <= 0) return '';
+        if (bytesPerSec < 1024) return `${Math.round(bytesPerSec)} B/s`;
+        if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+        return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
+    }, []);
+
+    const formatETA = useCallback((seconds) => {
+        if (!seconds || seconds <= 0) return '';
+        if (seconds < 60) return `${Math.round(seconds)}s`;
+        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
+        return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+    }, []);
+
+    const formatDuration = useCallback((seconds) => {
+        if (!seconds || seconds <= 0) return '<1s';
+        if (seconds < 60) return `${seconds.toFixed(1)}s`;
+        return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
+    }, []);
+
+    const startTransfer = useCallback((type, fileName, totalSize = 0) => {
+        const now = Date.now();
+        transferStartTimeRef.current = now;
+        lastProgressTimeRef.current = now;
+        lastProgressBytesRef.current = 0;
+        activeTransferMetaRef.current = { type, fileName, total: totalSize, startTime: now };
+        setActiveTransfer({
+            type, fileName, transferred: 0, total: totalSize,
+            speed: 0, eta: 0, startTime: now, active: true
+        });
+    }, []);
+
+    const completeTransfer = useCallback((success, errorMsg = null) => {
+        const meta = activeTransferMetaRef.current;
+        if (meta) {
+            const duration = (Date.now() - meta.startTime) / 1000;
+            const avgSpeed = duration > 0 && meta.total > 0 ? meta.total / duration : 0;
+            setTransferLog(log => [{
+                id: Date.now(),
+                type: meta.type,
+                fileName: meta.fileName,
+                size: meta.total,
+                speed: avgSpeed,
+                duration,
+                success,
+                error: errorMsg,
+                timestamp: new Date()
+            }, ...log].slice(0, 30));
+        }
+        activeTransferMetaRef.current = null;
+        transferStartTimeRef.current = null;
+        lastProgressTimeRef.current = null;
+        lastProgressBytesRef.current = 0;
+        setActiveTransfer(null);
+    }, []);
+
+    // ---- IPC Progress Listener ----
+    useEffect(() => {
+        const ipc = window.electron?.ipcRenderer;
+        if (!ipc?.on) return;
+
+        const handleProgress = (data) => {
+            if (!data) return;
+            // Filtrar por tabId solo si ambos existen y son distintos
+            if (data.tabId != null && tabId != null && String(data.tabId) !== String(tabId)) return;
+
+            const rcvTotal = Number(data.total) || 0;
+            const rcvTransferred = Number(data.transferred) || 0;
+            const rcvSpeed = Number(data.speed) || 0;
+
+            // Actualizar ref de meta con total si mejora
+            if (activeTransferMetaRef.current && rcvTotal > (activeTransferMetaRef.current.total || 0)) {
+                activeTransferMetaRef.current.total = rcvTotal;
+            }
+
+            // Calcular velocidad instantánea en frontend si el backend no la reporta
+            const now = Date.now();
+            let speed = rcvSpeed;
+            if (!speed && lastProgressTimeRef.current) {
+                const dt = (now - lastProgressTimeRef.current) / 1000;
+                const db = rcvTransferred - lastProgressBytesRef.current;
+                if (dt > 0 && db > 0) speed = db / dt;
+            }
+            lastProgressTimeRef.current = now;
+            lastProgressBytesRef.current = rcvTransferred;
+
+            const eta = speed > 0 && rcvTotal > rcvTransferred
+                ? (rcvTotal - rcvTransferred) / speed : 0;
+
+            setActiveTransfer(prev => ({
+                type: data.type || prev?.type || 'upload',
+                fileName: data.fileName || prev?.fileName || '',
+                transferred: rcvTransferred,
+                total: rcvTotal > 0 ? rcvTotal : (prev?.total || 0),
+                speed,
+                eta,
+                startTime: prev?.startTime || now,
+                active: true
+            }));
+        };
+
+        const unsubscribe = ipc.on('ssh:transfer-progress', handleProgress);
+        return typeof unsubscribe === 'function' ? unsubscribe : undefined;
+    }, [tabId]);
 
     const FILE_ICON_MAP = useMemo(() => ({
         pdf: { icon: 'pi pi-file-pdf', color: '#ff6b6b' },
@@ -493,14 +621,46 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         return () => {
             document.removeEventListener('mousemove', handleMouseMoveResizer);
             document.removeEventListener('mouseup', handleMouseUpResizer);
+            document.removeEventListener('mousemove', handleTransferLogResizeMove);
+            document.removeEventListener('mouseup', handleTransferLogResizeUp);
         };
-    }, [handleMouseMoveResizer, handleMouseUpResizer]);
+    }, [handleMouseMoveResizer, handleMouseUpResizer, handleTransferLogResizeMove, handleTransferLogResizeUp]);
 
     const handleOpacityChange = (e) => {
         const val = parseFloat(e.target.value);
         setOpacity(val);
         localStorage.setItem('ssh_file_explorer_opacity', val.toString());
     };
+
+    const handleTransferLogResizeMove = useCallback((event) => {
+        if (!logResizeStateRef.current.active) return;
+        const delta = logResizeStateRef.current.startY - event.clientY;
+        const nextHeight = Math.max(72, Math.min(520, logResizeStateRef.current.startHeight + delta));
+        setTransferLogHeight(nextHeight);
+    }, []);
+
+    const handleTransferLogResizeUp = useCallback(() => {
+        if (!logResizeStateRef.current.active) return;
+        logResizeStateRef.current.active = false;
+        localStorage.setItem('ssh_file_explorer_log_height', String(transferLogHeight));
+        document.removeEventListener('mousemove', handleTransferLogResizeMove);
+        document.removeEventListener('mouseup', handleTransferLogResizeUp);
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+    }, [handleTransferLogResizeMove, transferLogHeight]);
+
+    const handleTransferLogResizeDown = useCallback((event) => {
+        event.preventDefault();
+        logResizeStateRef.current = {
+            active: true,
+            startY: event.clientY,
+            startHeight: transferLogHeight
+        };
+        document.addEventListener('mousemove', handleTransferLogResizeMove);
+        document.addEventListener('mouseup', handleTransferLogResizeUp);
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'ns-resize';
+    }, [handleTransferLogResizeMove, handleTransferLogResizeUp, transferLogHeight]);
 
     // Auto-close menus on click outside
     useEffect(() => {
@@ -718,7 +878,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             });
             if (result.canceled || !result.filePath) return;
 
-            setGlobalLoading(true);
+            startTransfer('download', targetNode.label);
             const downloadResult = await invoke('ssh:download-file', {
                 tabId,
                 remotePath: targetNode.data.path,
@@ -727,16 +887,19 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             });
 
             if (downloadResult && downloadResult.success) {
-                notify('success', 'Descarga completada', `Archivo guardado en: ${result.filePath}`);
+                completeTransfer(true);
+                notify('success', 'Descarga completada', `Guardado en: ${result.filePath}`);
             } else {
-                notify('error', 'Error en la descarga', downloadResult?.error || 'No se pudo descargar el archivo');
+                const errMsg = downloadResult?.error || 'No se pudo descargar el archivo';
+                completeTransfer(false, errMsg);
+                notify('error', 'Error en la descarga', errMsg);
             }
         } catch (error) {
-            notify('error', 'Error en la descarga', error?.message || 'No se pudo descargar el archivo');
-        } finally {
-            setGlobalLoading(false);
+            const errMsg = error?.message || 'No se pudo descargar el archivo';
+            completeTransfer(false, errMsg);
+            notify('error', 'Error en la descarga', errMsg);
         }
-    }, [getActiveContext, localSelectedKey, remoteSelectedKey, notify, sshConfig, tabId]);
+    }, [getActiveContext, localSelectedKey, remoteSelectedKey, notify, sshConfig, tabId, startTransfer, completeTransfer]);
 
     const handleUpload = useCallback(async (node, sideHint = 'remote') => {
         const { node: targetNode, side } = getActiveContext(node, localSelectedKey, remoteSelectedKey, sideHint);
@@ -766,7 +929,6 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             });
             if (result.canceled || !result.filePaths || result.filePaths.length === 0) return;
 
-            setGlobalLoading(true);
             let successCount = 0;
             let failCount = 0;
 
@@ -774,18 +936,18 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 const fileName = localPath.split(/[/\\]/).pop();
                 const remotePath = joinPath(baseDir, fileName);
 
+                startTransfer('upload', fileName);
                 const uploadResult = await invoke('ssh:upload-file', {
-                    tabId,
-                    localPath: localPath,
-                    remotePath: remotePath,
-                    sshConfig
+                    tabId, localPath, remotePath, sshConfig
                 });
 
                 if (uploadResult && uploadResult.success) {
+                    completeTransfer(true);
                     successCount++;
                 } else {
+                    const errMsg = uploadResult?.error || 'Error desconocido';
+                    completeTransfer(false, errMsg);
                     failCount++;
-                    console.error('Error subiendo', fileName, ':', uploadResult?.error);
                 }
             }
 
@@ -794,14 +956,13 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 await loadRemoteDirectory(baseDir, { keepExpanded: true });
             }
             if (failCount > 0) {
-                notify('error', 'Errores en subida', `Falló la subida de ${failCount} archivo(s). revisa la consola.`);
+                notify('error', 'Errores en subida', `Falló la subida de ${failCount} archivo(s).`);
             }
         } catch (error) {
+            completeTransfer(false, error?.message);
             notify('error', 'Error en la subida', error?.message || 'No se pudo subir los archivos');
-        } finally {
-            setGlobalLoading(false);
         }
-    }, [getActiveContext, joinPath, loadRemoteDirectory, localSelectedKey, notify, remoteSelectedKey, sshConfig, tabId]);
+    }, [getActiveContext, joinPath, loadRemoteDirectory, localSelectedKey, notify, remoteSelectedKey, sshConfig, tabId, startTransfer, completeTransfer]);
 
     const handleDragOver = useCallback((e) => {
         e.preventDefault();
@@ -858,7 +1019,6 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         }
         if (!toPath) { notify('warn', 'Sin destino', 'Navega a una carpeta en el panel destino.'); return; }
 
-        setGlobalLoading(true);
         let ok = 0; let fail = 0;
         for (const key of fromKeys) {
             const node = findNodeByKey(fromNodes, key);
@@ -866,15 +1026,19 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             try {
                 if (fromSide === 'local') {
                     const rPath = joinPath(toPath, node.label);
+                    startTransfer('upload', node.label);
                     const res = await invoke('ssh:upload-file', { tabId, localPath: node.data.path, remotePath: rPath, sshConfig });
-                    res?.success ? ok++ : fail++;
+                    if (res?.success) { completeTransfer(true); ok++; }
+                    else { completeTransfer(false, res?.error); fail++; }
                 } else {
                     const sep = toPath.includes('\\') ? '\\' : '/';
                     const lPath = toPath.endsWith(sep) ? `${toPath}${node.label}` : `${toPath}${sep}${node.label}`;
+                    startTransfer('download', node.label);
                     const res = await invoke('ssh:download-file', { tabId, remotePath: node.data.path, localPath: lPath, sshConfig });
-                    res?.success ? ok++ : fail++;
+                    if (res?.success) { completeTransfer(true); ok++; }
+                    else { completeTransfer(false, res?.error); fail++; }
                 }
-            } catch (err) { fail++; }
+            } catch (err) { completeTransfer(false, err?.message); fail++; }
         }
         if (ok > 0) {
             notify('success', 'Copia completada', `${ok} elemento(s) copiado(s).`);
@@ -882,9 +1046,9 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             else await loadLocalDirectory(toPath, { keepExpanded: true });
         }
         if (fail > 0) notify('error', 'Errores en copia', `${fail} elemento(s) fallaron.`);
-        setGlobalLoading(false);
     }, [localSelectedKeys, remoteSelectedKeys, localNodes, remoteNodes, localCurrentPath, remoteCurrentPath,
-        findNodeByKey, joinPath, loadLocalDirectory, loadRemoteDirectory, notify, sshConfig, tabId]);
+        findNodeByKey, joinPath, loadLocalDirectory, loadRemoteDirectory, notify, sshConfig, tabId,
+        startTransfer, completeTransfer]);
 
     // ────────────────────────────────────────────────────────────────
     // Bulk delete
@@ -977,19 +1141,23 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             // Local -> Remote (Upload)
             if (sourceSide === 'local' && targetSide === 'remote') {
                 const remotePath = joinPath(destBaseDir, fileName);
-                setGlobalLoading(true);
+                startTransfer('upload', fileName);
                 try {
                     const res = await invoke('ssh:upload-file', {
                         tabId, localPath: sourcePath, remotePath, sshConfig
                     });
                     if (res?.success) {
+                        completeTransfer(true);
                         notify('success', 'Transferencia completada', `Subido: ${fileName}`);
                         await loadRemoteDirectory(destBaseDir, { keepExpanded: true });
                     } else {
-                        notify('error', 'Error en transferencia', res?.error || 'No se pudo subir');
+                        const errMsg = res?.error || 'No se pudo subir';
+                        completeTransfer(false, errMsg);
+                        notify('error', 'Error en transferencia', errMsg);
                     }
-                } finally {
-                    setGlobalLoading(false);
+                } catch (err) {
+                    completeTransfer(false, err?.message);
+                    notify('error', 'Error en transferencia', err?.message || 'No se pudo subir');
                 }
                 return;
             }
@@ -999,7 +1167,6 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 const localFs = window.electron?.localFs;
                 if (!localFs) return;
 
-                // Helper to mimic Windows path joining
                 const localJoinPath = (base, name) => {
                     const sep = base.includes('\\') ? '\\' : '/';
                     if (base.endsWith(sep)) return `${base}${name}`;
@@ -1007,19 +1174,23 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 };
 
                 const localPath = localJoinPath(destBaseDir, fileName);
-                setGlobalLoading(true);
+                startTransfer('download', fileName);
                 try {
                     const res = await invoke('ssh:download-file', {
                         tabId, remotePath: sourcePath, localPath, sshConfig
                     });
                     if (res?.success) {
+                        completeTransfer(true);
                         notify('success', 'Transferencia completada', `Descargado: ${fileName}`);
                         await loadLocalDirectory(destBaseDir, { keepExpanded: true });
                     } else {
-                        notify('error', 'Error en transferencia', res?.error || 'No se pudo descargar');
+                        const errMsg = res?.error || 'No se pudo descargar';
+                        completeTransfer(false, errMsg);
+                        notify('error', 'Error en transferencia', errMsg);
                     }
-                } finally {
-                    setGlobalLoading(false);
+                } catch (err) {
+                    completeTransfer(false, err?.message);
+                    notify('error', 'Error en transferencia', err?.message || 'No se pudo descargar');
                 }
                 return;
             }
@@ -1065,7 +1236,6 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             return;
         }
 
-        setGlobalLoading(true);
         let successCount = 0;
         let failCount = 0;
 
@@ -1077,18 +1247,18 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 const fileName = localPath.split(/[/\\]/).pop();
                 const remotePath = joinPath(baseDir, fileName);
 
+                startTransfer('upload', fileName);
                 const uploadResult = await invoke('ssh:upload-file', {
-                    tabId,
-                    localPath: localPath,
-                    remotePath: remotePath,
-                    sshConfig
+                    tabId, localPath, remotePath, sshConfig
                 });
 
                 if (uploadResult && uploadResult.success) {
+                    completeTransfer(true);
                     successCount++;
                 } else {
+                    const errMsg = uploadResult?.error || 'Error desconocido';
+                    completeTransfer(false, errMsg);
                     failCount++;
-                    console.error('Error subiendo', fileName, ':', uploadResult?.error);
                 }
             }
 
@@ -1100,11 +1270,11 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 notify('error', 'Errores en subida', `Falló la subida de ${failCount} archivo(s).`);
             }
         } catch (error) {
+            completeTransfer(false, error?.message);
             notify('error', 'Error en la subida', error?.message || 'No se pudo procesar la subida por arrastre');
-        } finally {
-            setGlobalLoading(false);
         }
-    }, [findNodeByKey, joinPath, loadLocalDirectory, loadRemoteDirectory, localNodes, localSelectedKey, notify, remoteNodes, remoteSelectedKey, sshConfig, tabId, pendingBaseDir]);
+    }, [findNodeByKey, joinPath, loadLocalDirectory, loadRemoteDirectory, localNodes, localSelectedKey, notify,
+        remoteNodes, remoteSelectedKey, sshConfig, tabId, pendingBaseDir, startTransfer, completeTransfer]);
 
     const buildContextMenuItems = useCallback((node, sideHint = 'remote') => {
         if (!node) return [];
@@ -1626,6 +1796,122 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                     </div>
                 </div>
             </div>
+
+            {/* ── Transfer Station ─────────────────────────────────────── */}
+            {(activeTransfer !== null || transferLog.length > 0) && (
+                <div className="transfer-station">
+
+                    {/* Active transfer progress */}
+                    {activeTransfer && (
+                        <div className="transfer-active-block">
+                            <div className="transfer-active-header">
+                                <span className={`transfer-direction-badge ${activeTransfer.type}`}>
+                                    <i className={`pi ${activeTransfer.type === 'upload' ? 'pi-upload' : 'pi-download'}`} />
+                                    {activeTransfer.type === 'upload' ? 'SUBIENDO' : 'DESCARGANDO'}
+                                </span>
+                                <span className="transfer-filename" title={activeTransfer.fileName}>
+                                    {activeTransfer.fileName}
+                                </span>
+                                <span className="transfer-speed">{formatSpeed(activeTransfer.speed) || '0 B/s'}</span>
+                            </div>
+
+                            {activeTransfer.total > 0 ? (
+                                <>
+                                    <ProgressBar
+                                        value={Math.min(100, Math.round((activeTransfer.transferred / activeTransfer.total) * 100))}
+                                        className={`transfer-progress-bar ${activeTransfer.type}`}
+                                        showValue={false}
+                                        style={{ height: '5px', borderRadius: '3px' }}
+                                    />
+                                    <div className="transfer-stats-row">
+                                        <span>{formatFileSize(activeTransfer.transferred)} / {formatFileSize(activeTransfer.total)}</span>
+                                        <span className="transfer-pct">
+                                            {Math.min(100, Math.round((activeTransfer.transferred / activeTransfer.total) * 100))}%
+                                        </span>
+                                        {activeTransfer.eta > 1 && (
+                                            <span>ETA: {formatETA(activeTransfer.eta)}</span>
+                                        )}
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <ProgressBar mode="indeterminate" className={`transfer-progress-bar ${activeTransfer.type}`} style={{ height: '5px', borderRadius: '3px' }} />
+                                    <div className="transfer-stats-row">
+                                        {activeTransfer.transferred > 0
+                                            ? <span>{formatFileSize(activeTransfer.transferred)} transferidos...</span>
+                                            : <span>Conectando...</span>
+                                        }
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Log toggle */}
+                    {transferLog.length > 0 && (
+                        <button
+                            className="transfer-log-toggle"
+                            onClick={() => setShowTransferLog(p => !p)}
+                        >
+                            <i className={`pi ${showTransferLog ? 'pi-chevron-down' : 'pi-chevron-right'}`} />
+                            <span>Historial de transferencias</span>
+                            <span className="transfer-log-count">{transferLog.length}</span>
+                            <span style={{ flex: 1 }} />
+                            <span
+                                role="button"
+                                tabIndex={0}
+                                className="transfer-log-clear-btn"
+                                onClick={(e) => { e.stopPropagation(); setTransferLog([]); setShowTransferLog(false); }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setTransferLog([]);
+                                        setShowTransferLog(false);
+                                    }
+                                }}
+                                title="Limpiar historial"
+                            >
+                                <i className="pi pi-trash" style={{ fontSize: '9px' }} />
+                            </span>
+                        </button>
+                    )}
+
+                    {/* Transfer log entries */}
+                    {showTransferLog && transferLog.length > 0 && (
+                        <>
+                        <div
+                            className="transfer-log-resizer"
+                            onMouseDown={handleTransferLogResizeDown}
+                            title="Arrastra para redimensionar historial"
+                        />
+                        <div className="transfer-log-list" style={{ height: `${transferLogHeight}px` }}>
+                            {transferLog.map(entry => (
+                                <div key={entry.id} className={`transfer-log-entry ${entry.success ? 'success' : 'error'}`}>
+                                    <i className={`pi ${entry.success ? 'pi-check-circle' : 'pi-times-circle'} transfer-log-status-icon`} />
+                                    <i className={`pi ${entry.type === 'upload' ? 'pi-upload' : 'pi-download'} transfer-log-dir-icon`} />
+                                    <span className="transfer-log-name" title={entry.fileName}>{entry.fileName}</span>
+                                    {entry.success ? (
+                                        <div className="transfer-log-meta">
+                                            {entry.size > 0 && <span>{formatFileSize(entry.size)}</span>}
+                                            {entry.speed > 0 && <span>{formatSpeed(entry.speed)}</span>}
+                                            {entry.duration > 0 && <span>{formatDuration(entry.duration)}</span>}
+                                        </div>
+                                    ) : (
+                                        <span className="transfer-log-error" title={entry.error}>
+                                            {entry.error || 'Error desconocido'}
+                                        </span>
+                                    )}
+                                    <span className="transfer-log-time">
+                                        {entry.timestamp?.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                        </>
+                    )}
+                </div>
+            )}
 
             <Dialog
                 header="Nueva carpeta"

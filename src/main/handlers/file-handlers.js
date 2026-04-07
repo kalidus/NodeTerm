@@ -7,6 +7,8 @@ const SftpClient = require('ssh2-sftp-client');
 const { Client: FTPClient } = require('basic-ftp');
 const fs = require('fs');
 const path = require('path');
+const { PassThrough } = require('stream');
+const { once } = require('events');
 
 /**
  * Valida y sanitiza paths remotos para prevenir path traversal
@@ -282,7 +284,7 @@ async function checkDirectory(config, dirPath) {
 /**
  * Descarga un archivo
  */
-async function downloadFile(config, remotePath, localPath) {
+async function downloadFile(config, remotePath, localPath, progressCtx = null) {
   const { protocol, host, port, username, password, useBastionWallix, bastionHost, bastionUser } = config;
 
   if (!remotePath || typeof remotePath !== 'string' || remotePath.trim() === '') {
@@ -330,7 +332,40 @@ async function downloadFile(config, remotePath, localPath) {
         };
       }
       await sftp.connect(connectConfig);
-      await sftp.fastGet(safeRemotePath, safeLocalPath);
+      const fileName = safeRemotePath.split('/').pop() || safeRemotePath;
+      const transferId = progressCtx ? `${progressCtx.tabId}-file-dl-${Date.now()}` : null;
+      const remoteStat = await sftp.stat(safeRemotePath).catch(() => null);
+      const knownTotal = Number(remoteStat?.size) || 0;
+      let lastSentBytes = 0;
+      let lastSentTime = Date.now();
+      const sendProgress = (transferred) => {
+        if (!progressCtx?.event?.sender || progressCtx.event.sender.isDestroyed()) return;
+        const now = Date.now();
+        const deltaTime = (now - lastSentTime) / 1000;
+        const speed = deltaTime > 0 ? (transferred - lastSentBytes) / deltaTime : 0;
+        lastSentBytes = transferred;
+        lastSentTime = now;
+        progressCtx.event.sender.send('file:transfer-progress', {
+          tabId: progressCtx.tabId,
+          transferId,
+          type: 'download',
+          fileName,
+          transferred,
+          total: knownTotal,
+          speed
+        });
+      };
+      sendProgress(0);
+      let transferred = 0;
+      const pass = new PassThrough();
+      const writeStream = fs.createWriteStream(safeLocalPath);
+      pass.on('data', (chunk) => {
+        transferred += chunk.length;
+        sendProgress(transferred);
+      });
+      pass.pipe(writeStream);
+      await sftp.get(safeRemotePath, pass);
+      await once(writeStream, 'finish');
       await sftp.end();
       return { success: true };
     } catch (err) {
@@ -363,7 +398,7 @@ async function downloadFile(config, remotePath, localPath) {
 /**
  * Sube un archivo
  */
-async function uploadFile(config, localPath, remotePath) {
+async function uploadFile(config, localPath, remotePath, progressCtx = null) {
   const { protocol, host, port, username, password, useBastionWallix, bastionHost, bastionUser } = config;
 
   if (!localPath || typeof localPath !== 'string' || localPath.trim() === '') {
@@ -409,7 +444,36 @@ async function uploadFile(config, localPath, remotePath) {
         };
       }
       await sftp.connect(connectConfig);
-      await sftp.fastPut(safeLocalPath, safeRemotePath);
+      const fileName = safeLocalPath.split(/[\\/]/).pop() || safeLocalPath;
+      const transferId = progressCtx ? `${progressCtx.tabId}-file-ul-${Date.now()}` : null;
+      const totalSize = Number(fs.statSync(safeLocalPath)?.size) || 0;
+      let lastSentBytes = 0;
+      let lastSentTime = Date.now();
+      const sendProgress = (transferred) => {
+        if (!progressCtx?.event?.sender || progressCtx.event.sender.isDestroyed()) return;
+        const now = Date.now();
+        const deltaTime = (now - lastSentTime) / 1000;
+        const speed = deltaTime > 0 ? (transferred - lastSentBytes) / deltaTime : 0;
+        lastSentBytes = transferred;
+        lastSentTime = now;
+        progressCtx.event.sender.send('file:transfer-progress', {
+          tabId: progressCtx.tabId,
+          transferId,
+          type: 'upload',
+          fileName,
+          transferred,
+          total: totalSize,
+          speed
+        });
+      };
+      sendProgress(0);
+      let transferred = 0;
+      const readStream = fs.createReadStream(safeLocalPath);
+      readStream.on('data', (chunk) => {
+        transferred += chunk.length;
+        sendProgress(transferred);
+      });
+      await sftp.put(readStream, safeRemotePath);
       await sftp.end();
       return { success: true };
     } catch (err) {
@@ -671,12 +735,12 @@ function registerFileHandlers() {
 
   // Descargar archivo
   ipcMain.handle('file:download-file', async (event, { tabId, remotePath, localPath, config }) => {
-    return await downloadFile(config, remotePath, localPath);
+    return await downloadFile(config, remotePath, localPath, { event, tabId });
   });
 
   // Subir archivo
   ipcMain.handle('file:upload-file', async (event, { tabId, localPath, remotePath, config }) => {
-    return await uploadFile(config, localPath, remotePath);
+    return await uploadFile(config, localPath, remotePath, { event, tabId });
   });
 
   // Eliminar archivo/directorio

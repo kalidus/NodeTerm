@@ -8,6 +8,11 @@ contextBridge.exposeInMainWorld('electron', {
   },
   ipcRenderer: {
     invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
+    on: (channel, callback) => {
+      const listener = (_event, ...args) => callback(...args);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
   },
   fileExplorer: {
     listFiles: (tabId, path, config) => {
@@ -186,6 +191,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^ssh-connection-ready$/,
         /^ssh-connection-disconnected$/,
         /^ssh-connection-error$/,
+        /^ssh:transfer-progress$/,
+        /^file:transfer-progress$/,
         /^powershell:.*$/,
         /^wsl:.*$/,
         /^ubuntu:.*$/,

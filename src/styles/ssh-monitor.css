@@ -922,3 +922,302 @@
 .ssh-file-explorer-content::-webkit-scrollbar-thumb:hover {
     background: #484f58;
 }
+
+/* ════════════════════════════════════════════════════════
+   TRANSFER STATION — Panel de progreso de transferencias
+   ════════════════════════════════════════════════════════ */
+
+.transfer-station {
+    flex-shrink: 0;
+    background: #0b0f14;
+    border-top: 1px solid #21262d;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---- Active transfer block ---- */
+.transfer-active-block {
+    padding: 8px 14px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    border-bottom: 1px solid #161b22;
+}
+
+.transfer-active-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+}
+
+.transfer-direction-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.transfer-direction-badge.upload {
+    background: rgba(63, 185, 80, 0.15);
+    color: #3fb950;
+    border: 1px solid rgba(63, 185, 80, 0.3);
+}
+
+.transfer-direction-badge.download {
+    background: rgba(88, 166, 255, 0.15);
+    color: #58a6ff;
+    border: 1px solid rgba(88, 166, 255, 0.3);
+}
+
+.transfer-direction-badge i {
+    font-size: 9px;
+}
+
+.transfer-filename {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.78rem;
+    color: #e6edf3;
+    font-family: 'Consolas', 'monospace';
+    letter-spacing: -0.2px;
+}
+
+.transfer-speed {
+    font-size: 0.72rem;
+    color: #8b949e;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+    background: rgba(139, 148, 158, 0.1);
+    padding: 1px 6px;
+    border-radius: 3px;
+}
+
+/* ---- Progress bar overrides ---- */
+.transfer-progress-bar {
+    background: #21262d !important;
+    border-radius: 3px !important;
+}
+
+.transfer-progress-bar .p-progressbar-value {
+    border-radius: 3px !important;
+    transition: width 0.25s ease !important;
+}
+
+.transfer-progress-bar.upload .p-progressbar-value {
+    background: linear-gradient(90deg, #2ea043, #3fb950) !important;
+    box-shadow: 0 0 8px rgba(63, 185, 80, 0.3);
+}
+
+.transfer-progress-bar.download .p-progressbar-value {
+    background: linear-gradient(90deg, #388bfd, #58a6ff) !important;
+    box-shadow: 0 0 8px rgba(88, 166, 255, 0.3);
+}
+
+/* Indeterminate shimmer for upload */
+.transfer-progress-bar.upload.p-progressbar-indeterminate .p-progressbar-value::before {
+    background: linear-gradient(90deg, transparent, #3fb950, transparent) !important;
+}
+
+/* Indeterminate shimmer for download */
+.transfer-progress-bar.download.p-progressbar-indeterminate .p-progressbar-value::before {
+    background: linear-gradient(90deg, transparent, #58a6ff, transparent) !important;
+}
+
+.transfer-stats-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.68rem;
+    color: #6e7681;
+    font-variant-numeric: tabular-nums;
+}
+
+.transfer-pct {
+    font-weight: 700;
+    color: #8b949e;
+}
+
+/* ---- Log toggle ---- */
+.transfer-log-toggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+    padding: 5px 14px;
+    background: transparent;
+    border: none;
+    color: #6e7681;
+    cursor: pointer;
+    font-size: 0.7rem;
+    text-align: left;
+    transition: background 0.12s, color 0.12s;
+    font-family: inherit;
+}
+
+.transfer-log-toggle:hover {
+    background: rgba(139, 148, 158, 0.07);
+    color: #8b949e;
+}
+
+.transfer-log-toggle i {
+    font-size: 9px;
+    flex-shrink: 0;
+}
+
+.transfer-log-count {
+    background: rgba(139, 148, 158, 0.15);
+    color: #8b949e;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0px 5px;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.transfer-log-clear-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 5px;
+    background: transparent;
+    border: none;
+    color: #6e7681;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background 0.12s, color 0.12s;
+}
+
+.transfer-log-clear-btn:hover {
+    background: rgba(248, 81, 73, 0.12);
+    color: #f85149;
+}
+
+/* ---- Log list ---- */
+.transfer-log-list {
+    min-height: 72px;
+    max-height: 55vh;
+    overflow-y: auto;
+    padding: 2px 0 4px;
+    border-top: 1px solid #161b22;
+}
+
+.transfer-log-resizer {
+    height: 8px;
+    cursor: ns-resize;
+    border-top: 1px solid #21262d;
+    border-bottom: 1px solid #161b22;
+    background: linear-gradient(180deg, rgba(88, 166, 255, 0.18), rgba(88, 166, 255, 0.04));
+    transition: background 0.12s ease;
+}
+
+.transfer-log-resizer:hover {
+    background: linear-gradient(180deg, rgba(88, 166, 255, 0.32), rgba(88, 166, 255, 0.08));
+}
+
+.transfer-log-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.transfer-log-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.transfer-log-list::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 2px;
+}
+
+.transfer-log-entry {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 14px;
+    font-size: 0.7rem;
+    transition: background 0.1s;
+}
+
+.transfer-log-entry:hover {
+    background: rgba(139, 148, 158, 0.05);
+}
+
+.transfer-log-entry.success .transfer-log-status-icon {
+    color: #3fb950;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+.transfer-log-entry.error .transfer-log-status-icon {
+    color: #f85149;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+.transfer-log-dir-icon {
+    color: #484f58;
+    font-size: 9px;
+    flex-shrink: 0;
+}
+
+.transfer-log-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #8b949e;
+    font-family: 'Consolas', monospace;
+    font-size: 0.68rem;
+}
+
+.transfer-log-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    color: #484f58;
+    font-size: 0.65rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.transfer-log-error {
+    color: #f85149;
+    font-size: 0.65rem;
+    flex-shrink: 0;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.transfer-log-time {
+    color: #484f58;
+    font-size: 0.62rem;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---- Operation status (non-transfer ops) ---- */
+.operation-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 14px;
+    background: rgba(139, 148, 158, 0.05);
+    border-top: 1px solid #21262d;
+    font-size: 0.7rem;
+    color: #6e7681;
+}
+
+.operation-status-bar i {
+    font-size: 10px;
+}

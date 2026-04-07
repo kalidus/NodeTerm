@@ -6,6 +6,8 @@ const { ipcMain } = require('electron');
 const SSH2Promise = require('ssh2-promise');
 const SftpClient = require('ssh2-sftp-client');
 const fs = require('fs');
+const { PassThrough, Transform } = require('stream');
+const { once } = require('events');
 const { parseProcessList } = require('../utils/parsing-utils');
 const sshStatsService = require('../services/SSHStatsService');
 
@@ -286,15 +288,65 @@ function registerSSHHandlers(dependencies = {}) {
       const safeRemotePath = remotePath.trim();
       const safeLocalPath = localPath.trim();
 
+      const fileName = safeRemotePath.split('/').pop() || safeRemotePath;
+      const transferId = `${tabId}-dl-${Date.now()}`;
+
+      const buildProgressStep = (knownTotal = 0) => {
+        let lastSentBytes = 0;
+        let lastSentTime = Date.now();
+        return (totalTransferred, chunk, total) => {
+          try {
+            if (event.sender && !event.sender.isDestroyed()) {
+              const now = Date.now();
+              const deltaTime = (now - lastSentTime) / 1000;
+              const speed = deltaTime > 0 ? (totalTransferred - lastSentBytes) / deltaTime : 0;
+              lastSentBytes = totalTransferred;
+              lastSentTime = now;
+              event.sender.send('ssh:transfer-progress', {
+                tabId, transferId, type: 'download', fileName,
+                transferred: totalTransferred, total: total || knownTotal, speed
+              });
+            }
+          } catch (_) { /* webContents destruido */ }
+        };
+      };
+
+      const makeDownloadTransfer = async (sftp, connectConfig) => {
+        await sftp.connect(connectConfig);
+        const remoteStat = await sftp.stat(safeRemotePath).catch(() => null);
+        const knownTotal = Number(remoteStat?.size) || 0;
+        const progress = buildProgressStep(knownTotal);
+
+        // Evento inicial con total conocido
+        if (event.sender && !event.sender.isDestroyed()) {
+          event.sender.send('ssh:transfer-progress', {
+            tabId, transferId, type: 'download', fileName,
+            transferred: 0, total: knownTotal, speed: 0
+          });
+        }
+
+        // Transform stream: cuenta bytes mientras pasan hacia el archivo local
+        let transferred = 0;
+        const counter = new Transform({
+          transform(chunk, _enc, cb) {
+            transferred += chunk.length;
+            progress(transferred, chunk, knownTotal);
+            cb(null, chunk);
+          }
+        });
+        const writeStream = fs.createWriteStream(safeLocalPath);
+        counter.pipe(writeStream);
+        await sftp.get(safeRemotePath, counter);
+        await once(writeStream, 'finish');
+        await sftp.end();
+      };
+
       if (sshConfig.useBastionWallix) {
-        // Construir string de conexión Wallix para SFTP
-        // Formato: <USER>@<BASTION>::<TARGET>@<DEVICE>::<SERVICE>
-        // En la mayoría de los casos, bastionUser ya tiene el formato correcto
         const sftp = new SftpClient();
-        const connectConfig = {
+        await makeDownloadTransfer(sftp, {
           host: sshConfig.bastionHost,
           port: sshConfig.port || 22,
-          username: sshConfig.bastionUser, // Wallix espera el string especial aquí
+          username: sshConfig.bastionUser,
           password: sshConfig.password,
           readyTimeout: 20000,
           algorithms: {
@@ -303,24 +355,17 @@ function registerSSHHandlers(dependencies = {}) {
             serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
             hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
           }
-        };
-        await sftp.connect(connectConfig);
-        await sftp.fastGet(safeRemotePath, safeLocalPath);
-        await sftp.end();
+        });
         return { success: true };
       } else {
-        // SSH directo - usar SftpClient para consistencia
         const sftp = new SftpClient();
-        const connectConfig = {
+        await makeDownloadTransfer(sftp, {
           host: sshConfig.host,
           port: sshConfig.port || 22,
           username: sshConfig.username,
           password: sshConfig.password,
           readyTimeout: 20000,
-        };
-        await sftp.connect(connectConfig);
-        await sftp.fastGet(safeRemotePath, safeLocalPath);
-        await sftp.end();
+        });
         return { success: true };
       }
     } catch (err) {
@@ -351,10 +396,37 @@ function registerSSHHandlers(dependencies = {}) {
         return { success: false, error: 'El archivo local no existe' };
       }
 
+      const uploadFileName = safeLocalPath.split(/[/\\]/).pop() || safeLocalPath;
+      const uploadTransferId = `${tabId}-ul-${Date.now()}`;
+
+      let uploadLastBytes = 0;
+      let uploadLastTime = Date.now();
+      const localSize = Number(fs.statSync(safeLocalPath)?.size) || 0;
+      const uploadStep = (totalTransferred, chunk, total) => {
+        try {
+          if (event.sender && !event.sender.isDestroyed()) {
+            const now = Date.now();
+            const deltaTime = (now - uploadLastTime) / 1000;
+            const speed = deltaTime > 0 ? (totalTransferred - uploadLastBytes) / deltaTime : 0;
+            uploadLastBytes = totalTransferred;
+            uploadLastTime = now;
+            event.sender.send('ssh:transfer-progress', {
+              tabId, transferId: uploadTransferId, type: 'upload', fileName: uploadFileName,
+              transferred: totalTransferred, total: total || localSize, speed
+            });
+          }
+        } catch (_) { /* webContents destruido */ }
+      };
+      if (event.sender && !event.sender.isDestroyed()) {
+        event.sender.send('ssh:transfer-progress', {
+          tabId, transferId: uploadTransferId, type: 'upload', fileName: uploadFileName,
+          transferred: 0, total: localSize, speed: 0
+        });
+      }
+
       const sftp = new SftpClient();
       let connectConfig;
       if (sshConfig.useBastionWallix) {
-        // Bastion: usar string Wallix
         connectConfig = {
           host: sshConfig.bastionHost,
           port: sshConfig.port || 22,
@@ -369,7 +441,6 @@ function registerSSHHandlers(dependencies = {}) {
           }
         };
       } else {
-        // SSH directo
         connectConfig = {
           host: sshConfig.host,
           port: sshConfig.port || 22,
@@ -379,7 +450,19 @@ function registerSSHHandlers(dependencies = {}) {
         };
       }
       await sftp.connect(connectConfig);
-      await sftp.fastPut(safeLocalPath, safeRemotePath);
+
+      // Transform stream: lee del archivo local, cuenta bytes, y los pasa a SFTP
+      let uploaded = 0;
+      const uploadCounter = new Transform({
+        transform(chunk, _enc, cb) {
+          uploaded += chunk.length;
+          uploadStep(uploaded, chunk, localSize);
+          cb(null, chunk);
+        }
+      });
+      const readStream = fs.createReadStream(safeLocalPath);
+      readStream.pipe(uploadCounter);
+      await sftp.put(uploadCounter, safeRemotePath);
       await sftp.end();
       return { success: true };
     } catch (err) {

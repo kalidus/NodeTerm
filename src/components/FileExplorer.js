@@ -54,6 +54,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     const [isDragActive, setIsDragActive] = useState(false);
     const [homeDir, setHomeDir] = useState(null);
     const [pathInput, setPathInput] = useState('');
+    const transferStartRef = React.useRef(0);
 
     const containerRef = React.useRef(null);
     const filesContainerRef = React.useRef(null);
@@ -63,6 +64,35 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     useEffect(() => {
         setSshReady(true);
     }, []);
+
+    useEffect(() => {
+        const ipc = window.electron?.ipcRenderer;
+        if (!ipc?.on || !tabId) return;
+
+        const handleProgressEvent = (data) => {
+            if (data?.tabId != null && String(data.tabId) !== String(tabId)) return;
+            const totalBytes = Number(data?.total) || 0;
+            const transferredBytes = Number(data?.transferred) || 0;
+            const speed = Number(data?.speed) || 0;
+            setTransferProgress(prev => ({
+                type: data?.type || prev?.type || 'upload',
+                fileName: data?.fileName || prev?.fileName || '',
+                current: prev?.current ?? 0,
+                total: prev?.total ?? 1,
+                transferredBytes,
+                totalBytes,
+                speed,
+                startedAt: prev?.startedAt || Date.now()
+            }));
+        };
+
+        const unsubFile = ipc.on('file:transfer-progress', handleProgressEvent);
+        const unsubSsh = ipc.on('ssh:transfer-progress', handleProgressEvent);
+        return () => {
+            if (typeof unsubFile === 'function') unsubFile();
+            if (typeof unsubSsh === 'function') unsubSsh();
+        };
+    }, [tabId]);
 
     useEffect(() => {
         const initializeExplorer = async () => {
@@ -419,7 +449,8 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
             });
 
             if (!result.canceled && result.filePath) {
-                setTransferProgress({ type: 'download', current: 0, total: 1, fileName: file.name });
+                transferStartRef.current = Date.now();
+                setTransferProgress({ type: 'download', current: 0, total: 1, fileName: file.name, transferredBytes: 0, totalBytes: 0, speed: 0, startedAt: Date.now() });
 
                 const remotePath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
                 const downloadResult = await window.electron.fileExplorer.downloadFile(tabId, remotePath, result.filePath, config);
@@ -1189,12 +1220,33 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                                         {transferProgress.type === 'download' && `Descargando ${transferProgress.fileName}...`}
                                         {transferProgress.type === 'delete' && 'Eliminando archivos...'}
                                     </span>
-                                    <span>{transferProgress.current} / {transferProgress.total}</span>
+                                    <span>
+                                        {transferProgress.totalBytes > 0
+                                            ? `${Math.min(100, Math.round((transferProgress.transferredBytes / transferProgress.totalBytes) * 100))}%`
+                                            : `${transferProgress.current} / ${transferProgress.total}`
+                                        }
+                                    </span>
                                 </div>
                                 <ProgressBar
-                                    value={(transferProgress.current / transferProgress.total) * 100}
+                                    value={transferProgress.totalBytes > 0
+                                        ? (transferProgress.transferredBytes / transferProgress.totalBytes) * 100
+                                        : (transferProgress.current / Math.max(1, transferProgress.total)) * 100}
                                     showValue={false}
                                 />
+                                {transferProgress.type !== 'delete' && (
+                                    <div className="transfer-progress-header" style={{ marginTop: 6, opacity: 0.9 }}>
+                                        <span>
+                                            {transferProgress.totalBytes > 0
+                                                ? `${formatFileSize(transferProgress.transferredBytes)} / ${formatFileSize(transferProgress.totalBytes)}`
+                                                : 'Conectando...'}
+                                        </span>
+                                        <span>
+                                            {(transferProgress.speed || 0) > 0
+                                                ? `${(transferProgress.speed / (1024 * 1024)).toFixed(2)} MB/s`
+                                                : '0 B/s'}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </>
