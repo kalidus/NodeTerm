@@ -1,18 +1,18 @@
-# 🚀 NodeTerm v1.6.5 - Release Notes
+# 🚀 NodeTerm v1.6.6 - Release Notes
 
-**Fecha de Release**: 2026-03-21  
-**Tipo de Release**: UI, Presets & Sidebar Release  
-**Versión Anterior**: v1.6.4
-
----
-
-## 🎉 ¡Bienvenido a NodeTerm v1.6.5!
-
-Esta versión refuerza la **personalización visual** con **presets de tema e iconos** y **acciones rápidas en la barra lateral**, mejora el **rendimiento y la estética del sidebar** (incluida la opción **Ocean Pro** para el marco colapsado), afina el **tema del terminal** y el **pipeline de release**. Debajo conservamos las notas de **v1.6.4** y anteriores como referencia.
+**Fecha de Release**: 2026-04-07  
+**Tipo de Release**: En preparación  
+**Versión Anterior**: v1.6.5
 
 ---
 
-## ✨ Características principales (v1.6.5)
+## 🎉 ¡Bienvenido a NodeTerm v1.6.6!
+
+Esta versión está en preparación. Se ha creado la rama de release y actualizado la versión base a **v1.6.6**. En esta sección se irán consolidando los cambios finales antes de la publicación. Debajo conservamos las notas de **v1.6.5** y anteriores como referencia.
+
+---
+
+## ✨ Características principales (v1.6.6)
 
 ### 🎨 Presets y barra lateral
 - **Presets integrados**: Configura combinaciones de tema de árbol e iconos desde la barra lateral, con panel con scroll y mejoras iterativas.
