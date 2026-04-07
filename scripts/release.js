@@ -1,6 +1,7 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const readline = require('readline');
 
 const rl = readline.createInterface({
@@ -9,9 +10,81 @@ const rl = readline.createInterface({
 });
 
 const question = (query) => new Promise((resolve) => rl.question(query, resolve));
+const YES_VALUES = new Set(['s', 'si', 'sí', 'y', 'yes', 'true', '1']);
 
 /** Raíz del repo: electron-builder y npm deben ejecutarse aquí, no en scripts/ */
 const REPO_ROOT = path.resolve(__dirname, '..');
+
+function parseCliArgs(argv) {
+    const args = {
+        yes: false,
+        publish: false,
+        prepare: false,
+        mergeMain: false,
+        changelog: false,
+        commitPrep: false,
+        skipSsl: false,
+        releaseType: 'keep', // keep|patch|minor|major
+        platform: '', // win|mac|linux|all|current|wm|ml|...
+        tagStrategy: 'ask', // ask|move|skip|cancel
+        token: '',
+        help: false
+    };
+
+    for (let i = 0; i < argv.length; i += 1) {
+        const a = argv[i];
+        if (a === '--help' || a === '-h') args.help = true;
+        else if (a === '--yes' || a === '-y') args.yes = true;
+        else if (a === '--publish') args.publish = true;
+        else if (a === '--local') args.publish = false;
+        else if (a === '--prepare') args.prepare = true;
+        else if (a === '--merge-main') args.mergeMain = true;
+        else if (a === '--update-changelog') args.changelog = true;
+        else if (a === '--commit-prep') args.commitPrep = true;
+        else if (a === '--skip-ssl') args.skipSsl = true;
+        else if (a === '--release-type' && argv[i + 1]) args.releaseType = String(argv[++i]).toLowerCase();
+        else if (a === '--platform' && argv[i + 1]) args.platform = String(argv[++i]).toLowerCase();
+        else if (a === '--tag-strategy' && argv[i + 1]) args.tagStrategy = String(argv[++i]).toLowerCase();
+        else if (a === '--token' && argv[i + 1]) args.token = String(argv[++i]);
+    }
+    return args;
+}
+
+function printHelp() {
+    console.log('\nUso: node scripts/release.js [opciones]\n');
+    console.log('Opciones rápidas:');
+    console.log('  --yes, -y                 Modo no interactivo (respuestas por defecto seguras)');
+    console.log('  --publish                 Compilar y publicar en GitHub');
+    console.log('  --local                   Solo compilar local (sin publicar)');
+    console.log('  --platform <valor>        win|mac|linux|all|current|wm|ml|wml');
+    console.log('  --prepare                 Ejecutar preparación de versión');
+    console.log('  --release-type <tipo>     keep|patch|minor|major');
+    console.log('  --merge-main              Hacer merge a main antes de compilar');
+    console.log('  --update-changelog        Actualizar encabezado en CHANGELOG');
+    console.log('  --commit-prep             Commit automático de preparación');
+    console.log('  --tag-strategy <modo>     ask|move|skip|cancel (si tag existe y no apunta a HEAD)');
+    console.log('  --skip-ssl                Fuerza NODE_TLS_REJECT_UNAUTHORIZED=0 para target mac');
+    console.log('  --token <gh_token>        Token para publicar (alternativa a variable GH_TOKEN)');
+    console.log('  --help, -h                Mostrar esta ayuda\n');
+    console.log('Ejemplo: node scripts/release.js --yes --publish --platform win --merge-main --tag-strategy move\n');
+}
+
+function isYes(value) {
+    return YES_VALUES.has(String(value || '').trim().toLowerCase());
+}
+
+function resolvePlatforms(platChoice) {
+    const normalized = (platChoice || '').toLowerCase();
+    let platforms = [];
+    if (normalized.includes('a') || normalized === 'all') platforms = ['--win', '--mac', '--linux'];
+    else if (normalized.includes('c') || normalized === 'current') platforms = [];
+    else {
+        if (normalized.includes('w') || normalized === 'win' || normalized === 'windows') platforms.push('--win');
+        if (normalized.includes('m') || normalized === 'mac' || normalized === 'darwin') platforms.push('--mac');
+        if (normalized.includes('l') || normalized === 'linux') platforms.push('--linux');
+    }
+    return { platforms, isCurrent: normalized.includes('c') || normalized === 'current' };
+}
 
 async function runCommand(command, description) {
     console.log(`\n\x1b[36m[Ejecutando]\x1b[0m ${description}...`);
@@ -36,6 +109,29 @@ function getOutput(command) {
     }
 }
 
+function commandExists(command) {
+    try {
+        execSync(command, { stdio: 'ignore', cwd: REPO_ROOT });
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function getHeadCommit() {
+    return getOutput('git rev-parse HEAD');
+}
+
+function getTagCommit(tagName) {
+    return getOutput(`git rev-list -n 1 ${tagName}`);
+}
+
+function getRemoteTagCommit(tagName) {
+    const output = getOutput(`git ls-remote --tags origin ${tagName}`);
+    if (!output) return '';
+    return output.split(/\s+/)[0] || '';
+}
+
 /** ahead / behind respecto a origin/<branch>; null si no hay remoto o ref inválida */
 function getAheadBehind(branch) {
     const lr = getOutput(`git rev-list --left-right --count ${branch}...origin/${branch}`);
@@ -48,7 +144,8 @@ function getAheadBehind(branch) {
  * Trae refs remotas y, si la rama está detrás de origin, ofrece integrar con rebase
  * para que git push no falle por non-fast-forward.
  */
-async function ensureSyncWithRemote(branch) {
+async function ensureSyncWithRemote(branch, options = {}) {
+    const autoYes = !!options.autoYes;
     if (!await runCommand('git fetch origin', 'Obteniendo estado de origin (fetch)')) {
         return false;
     }
@@ -65,25 +162,16 @@ async function ensureSyncWithRemote(branch) {
             (ab.ahead > 0 ? ` y \x1b[1m${ab.ahead} adelante\x1b[0m\x1b[33m (historial divergente)` : '') +
             '.\x1b[0m'
     );
-    const ans = await question(`¿Integrar con \x1b[36mgit pull --rebase origin ${branch}\x1b[0m antes de subir? (S/n): `);
-    if (ans.toLowerCase() === 'n') {
+    let doRebase = true;
+    if (!autoYes) {
+        const ans = await question(`¿Integrar con \x1b[36mgit pull --rebase origin ${branch}\x1b[0m antes de subir? (S/n): `);
+        doRebase = ans.toLowerCase() !== 'n';
+    }
+    if (!doRebase) {
         console.log('\x1b[33mℹ️  Sin integrar: el push puede fallar si el remoto no acepta fast-forward.\x1b[0m');
         return true;
     }
     return await runCommand(`git pull --rebase origin ${branch}`, 'Integrando cambios remotos (rebase)');
-}
-
-/** Sube la rama; empuja solo el tag v<versión>, no todos los tags (--tags choca con tags ya existentes en GitHub). */
-async function pushBranchAndReleaseTag(branch, version) {
-    const tagName = `v${version}`;
-    if (!await runCommand(`git push origin ${branch}`, `Subiendo rama ${branch}`)) {
-        return false;
-    }
-    const hasTag = getOutput(`git tag -l ${tagName}`);
-    if (!hasTag) {
-        return true;
-    }
-    return await runCommand(`git push origin ${tagName}`, `Subiendo etiqueta ${tagName}`);
 }
 
 function getReleaseNotes(version) {
@@ -109,7 +197,114 @@ function getReleaseNotes(version) {
     return allNotes.length > 0 ? allNotes.join('\n\n---\n\n') : '';
 }
 
+function getReleaseNotesFromReleaseFile(version) {
+    const notesPath = path.join(__dirname, '..', 'RELEASE_NOTES.md');
+    if (!fs.existsSync(notesPath)) return '';
+    const content = fs.readFileSync(notesPath, 'utf8').replace(/\r\n/g, '\n');
+    const escapedVersion = version.replace(/\./g, '\\.');
+    const sectionRegex = new RegExp(`#\\s+.*v${escapedVersion}[\\s\\S]*?(?=\\n#\\s+🚀\\s+NodeTerm\\s+v\\d+\\.\\d+\\.\\d+|$)`, 'i');
+    const match = content.match(sectionRegex);
+    return match ? match[0].trim() : '';
+}
+
+function buildReleaseNotes(version) {
+    const changelogNotes = getReleaseNotes(version);
+    if (changelogNotes) {
+        return `## NodeTerm v${version}\n\n${changelogNotes}`;
+    }
+    const releaseFileNotes = getReleaseNotesFromReleaseFile(version);
+    return releaseFileNotes || '';
+}
+
+async function upsertGithubRelease(tagName, targetBranch, version, notes) {
+    if (!process.env.GH_TOKEN) {
+        console.log('\x1b[33mℹ️  Sin GH_TOKEN: se omite actualización de release notes por API.\x1b[0m');
+        return false;
+    }
+    if (!commandExists('gh --version')) {
+        console.log('\x1b[33mℹ️  GitHub CLI (gh) no disponible: se omite actualización automática de notas.\x1b[0m');
+        return false;
+    }
+    if (!notes || !notes.trim()) {
+        console.log('\x1b[33mℹ️  No se encontraron notas para publicar automáticamente.\x1b[0m');
+        return false;
+    }
+
+    const tmpFile = path.join(os.tmpdir(), `nodeterm-release-notes-${tagName}.md`);
+    fs.writeFileSync(tmpFile, notes, 'utf8');
+    const hasRelease = !!getOutput(`gh release view ${tagName} --json tagName 2>nul`);
+
+    if (hasRelease) {
+        return await runCommand(
+            `gh release edit ${tagName} --title "NodeTerm ${tagName}" --target ${targetBranch} --draft=false --notes-file "${tmpFile}"`,
+            `Actualizando release ${tagName} en GitHub`
+        );
+    }
+
+    return await runCommand(
+        `gh release create ${tagName} --title "NodeTerm ${tagName}" --target ${targetBranch} --notes-file "${tmpFile}"`,
+        `Creando release ${tagName} en GitHub`
+    );
+}
+
+async function ensureTagOnHeadAndPush(tagName, options = {}) {
+    const strategy = options.tagConflictStrategy || 'ask';
+    const headCommit = getHeadCommit();
+    const localTagCommit = getTagCommit(tagName);
+    const remoteTagCommit = getRemoteTagCommit(tagName);
+    const tagExistsLocal = !!localTagCommit;
+    const tagExistsRemote = !!remoteTagCommit;
+    const tagMatchesHead =
+        (!tagExistsLocal || localTagCommit === headCommit) &&
+        (!tagExistsRemote || remoteTagCommit === headCommit);
+
+    if (tagMatchesHead) {
+        if (!tagExistsLocal) {
+            if (!await runCommand(`git tag ${tagName}`, `Creando tag ${tagName}`)) return false;
+        }
+        return await runCommand(`git push origin ${tagName}`, `Subiendo etiqueta ${tagName}`);
+    }
+
+    console.log(`\n\x1b[33m⚠️  La etiqueta ${tagName} ya existe pero no apunta al commit actual.\x1b[0m`);
+    console.log(`   HEAD actual: ${headCommit}`);
+    if (tagExistsLocal) console.log(`   Tag local:   ${localTagCommit}`);
+    if (tagExistsRemote) console.log(`   Tag remoto:  ${remoteTagCommit}`);
+    let action = strategy;
+    if (strategy === 'ask') {
+        action = (await question('¿Qué deseas hacer? [m] Mover tag a HEAD / [s] Saltar / [c] Cancelar: ')).toLowerCase();
+    }
+    if (action === 'skip' || action === 's') {
+        console.log('\x1b[33mℹ️  Se mantiene la etiqueta existente sin cambios.\x1b[0m');
+        return true;
+    }
+    if (!(action === 'move' || action === 'm')) {
+        console.log('\x1b[31m❌ Operación cancelada por el usuario.\x1b[0m');
+        return false;
+    }
+
+    if (tagExistsLocal) {
+        if (!await runCommand(`git tag -d ${tagName}`, `Eliminando tag local ${tagName}`)) return false;
+    }
+    if (!await runCommand(`git tag ${tagName}`, `Recreando tag ${tagName} en HEAD`)) return false;
+
+    if (tagExistsRemote) {
+        if (!await runCommand(`git push origin :refs/tags/${tagName}`, `Eliminando tag remoto ${tagName}`)) return false;
+    }
+    return await runCommand(`git push origin ${tagName}`, `Subiendo etiqueta ${tagName} actualizada`);
+}
+
 async function main() {
+    const cli = parseCliArgs(process.argv.slice(2));
+    if (cli.help) {
+        printHelp();
+        rl.close();
+        return;
+    }
+    if (cli.token && !process.env.GH_TOKEN) {
+        process.env.GH_TOKEN = cli.token;
+    }
+    const nonInteractive = cli.yes;
+
     console.log('\n\x1b[1m\x1b[35m═══════════════════════════════════════════════════\x1b[0m');
     console.log('\x1b[1m\x1b[35m       ASISTENTE DE RELEASE PROFESIONAL (v2.2)     \x1b[0m');
     console.log('\x1b[1m\x1b[35m═══════════════════════════════════════════════════\x1b[0m\n');
@@ -132,7 +327,7 @@ async function main() {
     // =========================================================================
     console.log('\n\x1b[1m\x1b[36m--- ETAPA 1: PREPARACIÓN ---\x1b[0m');
 
-    const startStage1 = await question('\n¿Deseas preparar una nueva versión? (S/n): ');
+    const startStage1 = nonInteractive ? (cli.prepare ? 's' : 'n') : await question('\n¿Deseas preparar una nueva versión? (S/n): ');
     let nextVersion = oldVersion;
 
     if (startStage1.toLowerCase() !== 'n') {
@@ -143,7 +338,8 @@ async function main() {
         console.log(`  2) Minor (v${oldVersion} -> Funcionalidad nueva)`);
         console.log(`  3) Major (v${oldVersion} -> Cambio disruptivo)`);
 
-        const typeChoice = await question('\nSelecciona opción: ');
+        const typeMap = { keep: '0', patch: '1', minor: '2', major: '3' };
+        const typeChoice = nonInteractive ? (typeMap[cli.releaseType] || '0') : await question('\nSelecciona opción: ');
         let npmVersionCmd = '';
         switch (typeChoice) {
             case '0': npmVersionCmd = 'none'; break;
@@ -162,13 +358,16 @@ async function main() {
         // Changelog
         const changelogPath = path.join(__dirname, '..', 'CHANGELOG.md');
         if (fs.existsSync(changelogPath)) {
-            const updateLog = await question(`\n¿Actualizar CHANGELOG.md para la v${nextVersion}? (S/n): `);
+            const updateLog = nonInteractive ? (cli.changelog ? 's' : 'n') : await question(`\n¿Actualizar CHANGELOG.md para la v${nextVersion}? (S/n): `);
             if (updateLog.toLowerCase() !== 'n') {
                 let changelog = fs.readFileSync(changelogPath, 'utf8');
                 const today = new Date().toISOString().split('T')[0];
                 const versionHeader = `## [${nextVersion}] - ${today}`;
 
-                if (changelog.includes('Por definir')) {
+                const anyVersionHeaderRegex = new RegExp(`## \\[${nextVersion.replace(/\./g, '\\.')}\\] - .*`);
+                if (anyVersionHeaderRegex.test(changelog)) {
+                    console.log(`\x1b[33mℹ️  CHANGELOG ya contiene sección para v${nextVersion}; no se añade duplicado.\x1b[0m`);
+                } else if (changelog.includes('Por definir')) {
                     changelog = changelog.replace(/## \[\d+\.\d+\.\d+\] - Por definir/, versionHeader);
                 } else if (!changelog.includes(versionHeader)) {
                     const lines = changelog.split('\n');
@@ -183,7 +382,7 @@ async function main() {
         // Commit de Preparación
         const needsCommit = getOutput('git status --porcelain');
         if (needsCommit) {
-            const doCommit = await question('\n¿Hacer commit de la preparación de release? (S/n): ');
+            const doCommit = nonInteractive ? (cli.commitPrep ? 's' : 'n') : await question('\n¿Hacer commit de la preparación de release? (S/n): ');
             if (doCommit.toLowerCase() !== 'n') {
                 await runCommand('git add .', 'Añadiendo cambios');
                 await runCommand(`git commit -m "release: preparación v${nextVersion}"`, 'Haciendo commit');
@@ -203,8 +402,8 @@ async function main() {
         console.log('  ℹ️ Ya estás en la rama principal.');
     } else {
         console.log('\x1b[33m💡 Si quieres probar solo en esta rama, elige "n".\x1b[0m');
-        const doMerge = await question(`\n¿Mezclar "${currentBranch}" en "main" antes de compilar? (s/N): `);
-        if (doMerge.toLowerCase() === 's') {
+        const doMerge = nonInteractive ? (cli.mergeMain ? 's' : 'n') : await question(`\n¿Mezclar "${currentBranch}" en "main" antes de compilar? (s/N): `);
+        if (isYes(doMerge)) {
             if (await runCommand('git checkout main', 'Cambiando a main')) {
                 if (await runCommand(`git merge ${currentBranch}`, 'Fusionando cambios')) {
                     console.log('\x1b[32m✅ Integración completada.\x1b[0m');
@@ -230,7 +429,7 @@ async function main() {
     console.log('  2) Compilar y Publicar en GitHub');
     console.log('  n) Salir');
 
-    const actionChoice = await question('\nSelecciona opción: ');
+    const actionChoice = nonInteractive ? (cli.publish ? '2' : '1') : await question('\nSelecciona opción: ');
     if (actionChoice.toLowerCase() === 'n') {
         rl.close();
         return;
@@ -246,18 +445,11 @@ async function main() {
     console.log('  a) Todas (W+M+L)');
     console.log('  c) Solo plataforma actual');
 
-    const platChoice = (await question('\nSelecciona plataformas (ej: ml para Mac y Linux): ')).toLowerCase();
+    const platChoice = nonInteractive ? (cli.platform || 'current') : (await question('\nSelecciona plataformas (ej: ml para Mac y Linux): ')).toLowerCase();
+    const platformSelection = resolvePlatforms(platChoice);
+    const platforms = platformSelection.platforms;
 
-    let platforms = [];
-    if (platChoice.includes('a')) platforms = ['--win', '--mac', '--linux'];
-    else if (platChoice.includes('c')) platforms = []; // Default platform
-    else {
-        if (platChoice.includes('w')) platforms.push('--win');
-        if (platChoice.includes('m')) platforms.push('--mac');
-        if (platChoice.includes('l')) platforms.push('--linux');
-    }
-
-    if (platforms.length === 0 && !platChoice.includes('c')) {
+    if (platforms.length === 0 && !platformSelection.isCurrent) {
         console.log('No has seleccionado ninguna plataforma válida.');
         process.exit(1);
     }
@@ -268,8 +460,10 @@ async function main() {
     if (isPublish) {
         if (!process.env.GH_TOKEN) {
             console.log('\n\x1b[33m⚠️  No se detectó GH_TOKEN.\x1b[0m');
-            const token = await question('Pega tu GitHub Personal Access Token (Enter para omitir subida): ');
-            if (token) process.env.GH_TOKEN = token;
+            if (!nonInteractive) {
+                const token = await question('Pega tu GitHub Personal Access Token (Enter para omitir subida): ');
+                if (token) process.env.GH_TOKEN = token;
+            }
         }
 
         if (process.env.GH_TOKEN) {
@@ -289,8 +483,8 @@ async function main() {
     const isMacTarget = platforms.includes('--mac') || (platforms.length === 0 && process.platform === 'darwin');
 
     if (isMacTarget) {
-        const skipSSL = await question('\n¿Tienes problemas de red/SSL detectados en macOS? (¿Omitir validación?) (s/N): ');
-        if (skipSSL.toLowerCase() === 's') {
+        const skipSSL = nonInteractive ? (cli.skipSsl ? 's' : 'n') : await question('\n¿Tienes problemas de red/SSL detectados en macOS? (¿Omitir validación?) (s/N): ');
+        if (isYes(skipSSL)) {
             process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
             console.log('\x1b[33m⚠️  Validación SSL desactivada para esta sesión\x1b[0m');
         }
@@ -305,13 +499,6 @@ async function main() {
     if (await runCommand(ebCommand, isPublish ? 'Generando paquetes y publicando' : 'Generando paquetes locales')) {
         console.log('\n\x1b[32m✅ Compilación finalizada correctamente.\x1b[0m');
 
-        if (isPublish && process.env.GH_TOKEN) {
-            // Lógica de Notas (Opcional, similar a tu script anterior)
-            const notes = getReleaseNotes(nextVersion);
-            if (notes) {
-                console.log('\n\x1b[33mℹ️  Sugerencia: Puedes actualizar las notas en GitHub usando las de CHANGELOG.md\x1b[0m');
-            }
-        }
     }
 
     // =========================================================================
@@ -319,22 +506,16 @@ async function main() {
     // =========================================================================
     if (isPublish) {
         console.log('\n\x1b[1m\x1b[36m--- ETAPA FINAL: ETIQUETADO Y SINCRONIZACIÓN ---\x1b[0m');
-        const tagExists = getOutput(`git tag -l v${nextVersion}`);
+        const tagName = `v${nextVersion}`;
 
-        if (tagExists) {
-            console.log(`\n\x1b[33mℹ️  La etiqueta v${nextVersion} ya existe en local.\x1b[0m`);
-            const doPushTags = await question('¿Subir rama y esa etiqueta a GitHub? (S/n): ');
-            if (doPushTags.toLowerCase() !== 'n') {
-                if (await ensureSyncWithRemote(branchForBuild)) {
-                    await pushBranchAndReleaseTag(branchForBuild, nextVersion);
-                }
-            }
-        } else {
-            const doTag = await question(`\n¿Crear y subir tag v${nextVersion}? (S/n): `);
-            if (doTag.toLowerCase() !== 'n') {
-                if (await runCommand(`git tag v${nextVersion}`, `Creando tag v${nextVersion}`)) {
-                    if (await ensureSyncWithRemote(branchForBuild)) {
-                        await pushBranchAndReleaseTag(branchForBuild, nextVersion);
+        const doTag = nonInteractive ? 's' : await question(`\n¿Asegurar y subir tag ${tagName}, rama y release notes? (S/n): `);
+        if (doTag.toLowerCase() !== 'n') {
+            if (await ensureSyncWithRemote(branchForBuild, { autoYes: nonInteractive })) {
+                if (await runCommand(`git push origin ${branchForBuild}`, `Subiendo rama ${branchForBuild}`)) {
+                    const tagOk = await ensureTagOnHeadAndPush(tagName, { tagConflictStrategy: nonInteractive ? (cli.tagStrategy || 'move') : 'ask' });
+                    if (tagOk) {
+                        const notes = buildReleaseNotes(nextVersion);
+                        await upsertGithubRelease(tagName, branchForBuild, nextVersion, notes);
                     }
                 }
             }
