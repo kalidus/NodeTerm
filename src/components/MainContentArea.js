@@ -933,7 +933,7 @@ const MainContentArea = ({
       gap: 1px;
       flex-shrink: 0;
       margin-left: 4px;
-      -webkit-app-region: ${ (titleBarCollapsed && mainFrameHeaderCollapsed) ? 'no-drag' : 'inherit' };
+      -webkit-app-region: no-drag;
     `;
 
     // Botón +
@@ -955,6 +955,8 @@ const MainContentArea = ({
       cursor: pointer !important;
       transition: all 0.2s ease !important;
       box-sizing: border-box !important;
+      -webkit-app-region: no-drag !important;
+      pointer-events: auto !important;
     `;
 
     plusButton.title = 'Nueva terminal local';
@@ -1012,6 +1014,8 @@ const MainContentArea = ({
       cursor: pointer !important;
       transition: all 0.2s ease !important;
       box-sizing: border-box !important;
+      -webkit-app-region: no-drag !important;
+      pointer-events: auto !important;
     `;
 
     dropdownButton.title = 'Seleccionar tipo de terminal';
