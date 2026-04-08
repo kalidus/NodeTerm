@@ -147,6 +147,7 @@ const ConnectionHistory = ({
 	terminalOpacity = 1.0,
 	onTerminalOpacityChange = () => { },
 	onToggleTerminalVisibility,
+	onOpenHomeOptions = null,
 	onSwitchTerminal,
 	statusBarVisible = true,
 	homeCardVisible = true,
@@ -3022,6 +3023,24 @@ const ConnectionHistory = ({
 						<span className="path-tilde">~</span>{terminalTitle}
 					</div>
 					<div className="recents-header-right" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+						<i
+							className="pi pi-sliders-h"
+							style={{
+								fontSize: '0.9rem',
+								color: terminalTheme.foreground || '#c9d1d9',
+								opacity: 0.6,
+								cursor: 'pointer',
+								padding: '4px',
+								transition: 'all 0.2s'
+							}}
+							title="Opciones de Home"
+							onClick={(e) => {
+								e.stopPropagation();
+								if (onOpenHomeOptions) onOpenHomeOptions(e);
+							}}
+							onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+							onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.6'; }}
+						/>
 						<i
 							className="pi pi-th-large"
 							style={{

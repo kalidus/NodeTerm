@@ -407,6 +407,15 @@ const HomeTab = ({
     };
   }, []);
 
+  // Evita que el panel de opciones quede visible al cambiar de vista/layout.
+  useEffect(() => {
+    try {
+      homeOptionsOverlayRef.current?.hide();
+    } catch {
+      // Ignorar fallos del overlay al desmontar o en cambios rápidos de vista
+    }
+  }, [terminalView, showAIChat, terminalHidden, homeCardVisible, rightColumnVisible]);
+
   const RECENTS_LIMIT = 50;
 
   const loadRecentConnections = React.useCallback(() => {
@@ -1165,32 +1174,6 @@ const HomeTab = ({
         visibility: terminalState === 'maximized' ? 'hidden' : 'visible',
         transition: 'opacity 0.1s ease, visibility 0.1s ease'
       }}>
-        <button
-          type="button"
-          title="Opciones de Home"
-          onClick={(e) => homeOptionsOverlayRef.current?.toggle(e)}
-          style={{
-            position: 'absolute',
-            top: '10px',
-            right: '10px',
-            zIndex: 30,
-            width: '34px',
-            height: '34px',
-            borderRadius: '10px',
-            border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.15)'}`,
-            background: themeColors.cardBackground || 'rgba(16, 20, 28, 0.6)',
-            color: themeColors.textPrimary || '#fff',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backdropFilter: 'blur(8px) saturate(140%)',
-            WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.22)'
-          }}
-        >
-          <i className="pi pi-sliders-h" />
-        </button>
         <OverlayPanel ref={homeOptionsOverlayRef} style={{ width: '260px', background: themeColors.cardBackground || '#1e1e1e' }}>
           <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
@@ -1314,6 +1297,7 @@ const HomeTab = ({
                   setTerminalFrameStyle={setTerminalFrameStyle}
                   terminalOpacity={terminalOpacity}
                   onTerminalOpacityChange={setTerminalOpacity}
+                  onOpenHomeOptions={(e) => homeOptionsOverlayRef.current?.toggle(e)}
                   homeCardVisible={homeCardVisible}
                   statusBarVisible={statusBarVisible}
                   onSwitchTerminal={(type, info) => {
