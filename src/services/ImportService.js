@@ -888,6 +888,223 @@ class ImportService {
     return result;
   }
 
+  /**
+   * Importa sesiones desde la API de Wallix
+   * @param {string} url - URL base de la API de Wallix
+   * @param {string} username - Usuario para autenticación Basic
+   * @param {string} password - Contraseña para autenticación Basic
+   * @returns {Promise<Object>} - Resultado de la importación
+   */
+  static async importFromWallix(url, username, password) {
+    try {
+      const baseUrl = url.replace(/\/$/, '');
+      const headers = { 'Accept': 'application/json' };
+
+      if (username && password) {
+        const authString = btoa(`${username}:${password}`);
+        headers['Authorization'] = `Basic ${authString}`;
+      }
+
+      // 1. Obtener Dispositivos
+      const devicesResponse = await fetch(`${baseUrl}/api/devices?limit=-1`, { headers });
+      if (!devicesResponse.ok) {
+        throw new Error(`Error GET /api/devices: ${devicesResponse.status} ${devicesResponse.statusText}`);
+      }
+      const devicesData = await devicesResponse.json();
+
+      const devicesMap = {};
+      for (const d of devicesData) {
+         devicesMap[d.device_name] = d;
+      }
+
+      // 2. Obtener Grupos (Carpetas y accesos)
+      const groupsResponse = await fetch(`${baseUrl}/api/targetgroups?limit=-1`, { headers });
+      if (!groupsResponse.ok) {
+        throw new Error(`Error GET /api/targetgroups: ${groupsResponse.status} ${groupsResponse.statusText}`);
+      }
+      const groupsData = await groupsResponse.json();
+
+      const groups = {};
+      const flatConnections = [];
+      let connectionCount = 0;
+      let folderCount = 0;
+      
+      const seenCheck = new Set();
+      const mappedDevices = new Set();
+
+      for (const group of groupsData) {
+        const groupName = group.group_name || 'Wallix TargetGroups';
+        
+        let accounts = [];
+        if (group.session) {
+            if (group.session.accounts) accounts = accounts.concat(group.session.accounts);
+            if (group.session.scenario_accounts) accounts = accounts.concat(group.session.scenario_accounts);
+            if (group.session.account_mappings) accounts = accounts.concat(group.session.account_mappings);
+            if (group.session.interactive_logins) accounts = accounts.concat(group.session.interactive_logins);
+        }
+        
+        for (const acc of accounts) {
+            if (!acc.device) continue;
+            
+            const deviceInfo = devicesMap[acc.device];
+            if (!deviceInfo) continue;
+
+            // Evitar duplicados exactos (mismo dispositivo y misma cuenta en el mismo grupo)
+            const accountName = acc.account || '';
+            const dupKey = `${groupName}_${acc.device}_${accountName}`;
+            if (seenCheck.has(dupKey)) continue;
+            seenCheck.add(dupKey);
+            mappedDevices.add(acc.device);
+
+            // Obtener servicio / puerto
+            let serviceInfo = null;
+            if (deviceInfo.services && deviceInfo.services.length > 0) {
+                if (acc.service) { // Match prioritario por nombre de servicio o protocolo
+                    serviceInfo = deviceInfo.services.find(s => s.service_name === acc.service || s.protocol === acc.service);
+                }
+                if (!serviceInfo) serviceInfo = deviceInfo.services[0]; // Fallback al primero
+            }
+
+            const protocol = (serviceInfo?.protocol || 'SSH').toUpperCase();
+            const port = serviceInfo?.port || (protocol === 'RDP' ? 3389 : 22);
+            
+            const nodeName = accountName ? `${acc.device} (${accountName})` : acc.device;
+
+            if (!groups[groupName]) {
+                groups[groupName] = [];
+                folderCount++;
+            }
+
+            const baseKey = this.generateKey('imported_wallix');
+            const baseNode = {
+                key: baseKey,
+                label: nodeName,
+                uid: baseKey,
+                createdAt: new Date().toISOString(),
+                isUserCreated: true,
+                imported: true,
+                importedFrom: 'Wallix',
+                originalProtocol: protocol
+            };
+
+            const connObj = {
+                name: nodeName,
+                hostname: deviceInfo.host || acc.device,
+                port: port,
+                username: accountName,
+                password: '',
+                protocol: protocol,
+                description: `Alias: ${deviceInfo.alias || ''}`
+            };
+
+            let converted;
+            if (this.isSSHProtocol(protocol)) {
+                converted = this.createSSHNode(baseNode, connObj);
+            } else if (protocol === 'RDP') {
+                converted = this.createRDPNode(baseNode, connObj);
+            } else {
+                converted = this.createSSHNodeFromOther(baseNode, connObj);
+            }
+
+            groups[groupName].push(converted);
+            flatConnections.push(converted);
+            connectionCount++;
+        }
+      }
+
+      // 3. Procesar dispositivos huérfanos (que no están en ningún grupo)
+      const orphanGroupName = 'Otros Dispositivos (Sin Grupo)';
+      for (const d of devicesData) {
+          if (!mappedDevices.has(d.device_name)) {
+              if (!groups[orphanGroupName]) {
+                  groups[orphanGroupName] = [];
+                  folderCount++;
+              }
+
+              let serviceInfo = null;
+              if (d.services && d.services.length > 0) serviceInfo = d.services[0];
+              
+              const protocol = (serviceInfo?.protocol || 'SSH').toUpperCase();
+              const port = serviceInfo?.port || (protocol === 'RDP' ? 3389 : 22);
+              
+              const nodeName = d.device_name;
+              const baseKey = this.generateKey('imported_wallix_orphan');
+              
+              const baseNode = {
+                  key: baseKey,
+                  label: nodeName,
+                  uid: baseKey,
+                  createdAt: new Date().toISOString(),
+                  isUserCreated: true,
+                  imported: true,
+                  importedFrom: 'Wallix',
+                  originalProtocol: protocol
+              };
+
+              const connObj = {
+                  name: nodeName,
+                  hostname: d.host || d.device_name,
+                  port: port,
+                  username: '',
+                  password: '',
+                  protocol: protocol,
+                  description: `Alias: ${d.alias || ''}`
+              };
+
+              let converted;
+              if (this.isSSHProtocol(protocol)) {
+                  converted = this.createSSHNode(baseNode, connObj);
+              } else if (protocol === 'RDP') {
+                  converted = this.createRDPNode(baseNode, connObj);
+              } else {
+                  converted = this.createSSHNodeFromOther(baseNode, connObj);
+              }
+
+              groups[orphanGroupName].push(converted);
+              flatConnections.push(converted);
+              connectionCount++;
+          }
+      }
+
+      const nodes = [];
+      for (const [groupName, children] of Object.entries(groups)) {
+        if (children.length === 0) continue;
+        const folderKey = this.generateKey('folder_wallix');
+        nodes.push({
+          key: folderKey,
+          uid: folderKey,
+          label: groupName,
+          droppable: true,
+          createdAt: new Date().toISOString(),
+          isUserCreated: true,
+          imported: true,
+          importedFrom: 'Wallix',
+          data: { type: 'folder', name: groupName },
+          children
+        });
+      }
+
+      return {
+        success: true,
+        structure: {
+          nodes,
+          flatConnections,
+          connectionCount,
+          folderCount
+        },
+        connections: flatConnections,
+        count: connectionCount,
+        metadata: {
+            source: 'Wallix',
+            importDate: new Date().toISOString()
+        }
+      };
+
+    } catch (error) {
+      console.error('Error en ImportService.importFromWallix:', error);
+      throw new Error(`Error al conectar con Wallix: ${error.message}`);
+    }
+  }
 
   /**
    * Agrupa conexiones por carpetas si el XML incluye estructura de carpetas

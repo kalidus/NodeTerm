@@ -109,6 +109,17 @@ const IMPORT_SOURCES = {
         extension: '.json',
         implemented: false,
         defaultFolder: 'Importados/Bitwarden'
+    },
+    // APIs externas
+    wallix: {
+        id: 'wallix',
+        category: 'api',
+        label: 'Wallix API',
+        description: 'Descargar sesiones desde Wallix Bastion',
+        icon: 'pi pi-cloud-download',
+        extension: '',
+        implemented: true,
+        defaultFolder: 'Importados/Wallix'
     }
 };
 
@@ -139,6 +150,10 @@ const ImportWizardDialog = ({
     const [createContainerFolder, setCreateContainerFolder] = useState(true);
     const [containerFolderName, setContainerFolderName] = useState('');
     const [importMode, setImportMode] = useState('merge'); // 'merge' | 'replace'
+
+    // Opciones específicas para Wallix
+    const [wallixUrl, setWallixUrl] = useState('');
+    const [wallixUsername, setWallixUsername] = useState('');
 
     // Opciones específicas para NodeTerm
     const [nodetermOptions, setNodeTermOptions] = useState({
@@ -183,6 +198,8 @@ const ImportWizardDialog = ({
         setCreateContainerFolder(true);
         setContainerFolderName('');
         setImportMode('merge');
+        setWallixUrl('');
+        setWallixUsername('');
         setNodeTermOptions({
             connections: true,
             passwords: true,
@@ -312,6 +329,9 @@ const ImportWizardDialog = ({
             case 0: // Seleccionar fuente
                 return selectedSource !== null;
             case 1: // Configurar
+                if (selectedSource === 'wallix') {
+                    return wallixUrl && wallixUsername && password;
+                }
                 if (!selectedFile) return false;
                 // Para KeePass, necesita contraseña o key file
                 if (selectedSource === 'keepass' && !password && !selectedKeyFile) return false;
@@ -353,7 +373,8 @@ const ImportWizardDialog = ({
 
     // Generar vista previa
     const generatePreview = async () => {
-        if (!selectedFile || !selectedSource) return;
+        if (selectedSource !== 'wallix' && !selectedFile) return;
+        if (!selectedSource) return;
 
         setPreviewLoading(true);
         setPreviewError(null);
@@ -368,6 +389,9 @@ const ImportWizardDialog = ({
                     break;
                 case 'keepass':
                     await generateKeePassPreview();
+                    break;
+                case 'wallix':
+                    await generateWallixPreview();
                     break;
                 default:
                     throw new Error('Fuente no soportada');
@@ -491,6 +515,33 @@ const ImportWizardDialog = ({
         }
     };
 
+    const generateWallixPreview = async () => {
+        try {
+            const result = await ImportService.importFromWallix(wallixUrl, wallixUsername, password);
+
+            if (!result.success) {
+                throw new Error(result.error || 'Error al conectar con la API de Wallix');
+            }
+
+            const treeNodes = convertStructureToTree(result.structure?.nodes || []);
+
+            setPreviewData({
+                type: 'wallix',
+                structure: result.structure,
+                metadata: result.metadata,
+                treeNodes: treeNodes,
+                stats: {
+                    connections: result.structure?.connectionCount || result.count || 0,
+                    folders: result.structure?.folderCount || 0,
+                    sshCount: countByType(result.structure?.nodes, 'ssh'),
+                    rdpCount: countByType(result.structure?.nodes, 'rdp')
+                }
+            });
+        } catch (error) {
+            throw error;
+        }
+    };
+
     // Ejecutar importación
     const handleImport = async () => {
         if (!previewData) return;
@@ -510,6 +561,9 @@ const ImportWizardDialog = ({
                     break;
                 case 'keepass':
                     await importKeePass();
+                    break;
+                case 'wallix':
+                    await importWallix();
                     break;
                 default:
                     throw new Error('Fuente no soportada');
@@ -611,6 +665,44 @@ const ImportWizardDialog = ({
             severity: 'success',
             summary: 'Importación exitosa',
             detail: `Se importaron ${result.structure?.connectionCount || result.count} conexiones`,
+            life: 5000
+        });
+    };
+
+    const importWallix = async () => {
+        setImportStatus('Procesando datos de Wallix...');
+        setImportProgress(30);
+
+        setImportProgress(60);
+        setImportStatus('Creando estructura...');
+
+        if (onImportComplete) {
+            await onImportComplete({
+                ...previewData,
+                createContainerFolder: createContainerFolder,
+                containerFolderName: containerFolderName,
+                overwrite: importMode === 'replace',
+                linkFile: false,
+                targetBaseFolderKey: targetFolder,
+                linkedTargetFolderKey: targetFolder
+            });
+        }
+
+        setImportProgress(100);
+        setImportStatus('Completado');
+
+        setImportResult({
+            success: true,
+            stats: {
+                connections: previewData.stats.connections,
+                folders: previewData.stats.folders
+            }
+        });
+
+        showToastSafe({
+            severity: 'success',
+            summary: 'Importación exitosa',
+            detail: `Se importaron ${previewData.stats.connections} conexiones de Wallix`,
             life: 5000
         });
     };
@@ -865,6 +957,24 @@ const ImportWizardDialog = ({
                     ))}
                 </div>
             </div>
+
+            {/* APIs externas */}
+            <div className="import-wizard-category">
+                <h5 className="import-wizard-category-title">
+                    <i className="pi pi-cloud-download" style={{ color: 'var(--primary-color)' }} />
+                    APIs Externas
+                </h5>
+                <div className="import-wizard-source-grid">
+                    {['wallix'].map(id => (
+                        <SourceCard
+                            key={id}
+                            source={IMPORT_SOURCES[id]}
+                            selected={selectedSource === id}
+                            onSelect={() => handleSourceSelect(id)}
+                        />
+                    ))}
+                </div>
+            </div>
         </div>
     );
 
@@ -881,64 +991,69 @@ const ImportWizardDialog = ({
                 </h4>
 
                 {/* Dropzone */}
-                <div
-                    className={`import-wizard-dropzone ${isDragOver ? 'drag-over' : ''} ${selectedFile ? 'has-file' : ''}`}
-                    onDragOver={handleDragOver}
-                    onDragEnter={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    onClick={!selectedFile ? handleChooseFile : undefined}
-                >
-                    {!selectedFile ? (
-                        <>
-                            <i className="pi pi-cloud-upload import-wizard-dropzone-icon" />
-                            <div className="import-wizard-dropzone-text">
-                                Arrastra tu archivo {source.extension} aquí
-                                <br />
-                                <span className="import-wizard-dropzone-hint">o haz clic para seleccionar</span>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="import-wizard-file-info">
-                            <div className="import-wizard-file-icon">
-                                <i className={source.icon} />
-                            </div>
-                            <div className="import-wizard-file-details">
-                                <div className="import-wizard-file-name">{selectedFile.name}</div>
-                                <div className="import-wizard-file-size">
-                                    {(selectedFile.size / 1024).toFixed(1)} KB
+                {selectedSource !== 'wallix' && (
+                    <>
+                        <div
+                            className={`import-wizard-dropzone ${isDragOver ? 'drag-over' : ''} ${selectedFile ? 'has-file' : ''}`}
+                            onDragOver={handleDragOver}
+                            onDragEnter={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                            onClick={!selectedFile ? handleChooseFile : undefined}
+                        >
+                            {!selectedFile ? (
+                                <>
+                                    <i className="pi pi-cloud-upload import-wizard-dropzone-icon" />
+                                    <div className="import-wizard-dropzone-text">
+                                        Arrastra tu archivo {source.extension} aquí
+                                        <br />
+                                        <span className="import-wizard-dropzone-hint">o haz clic para seleccionar</span>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="import-wizard-file-info">
+                                    <div className="import-wizard-file-icon">
+                                        <i className={source.icon} />
+                                    </div>
+                                    <div className="import-wizard-file-details">
+                                        <div className="import-wizard-file-name">{selectedFile.name}</div>
+                                        <div className="import-wizard-file-size">
+                                            {(selectedFile.size / 1024).toFixed(1)} KB
+                                        </div>
+                                    </div>
+                                    <div className="import-wizard-file-actions">
+                                        <Button
+                                            icon="pi pi-refresh"
+                                            className="p-button-outlined p-button-sm"
+                                            onClick={(e) => { e.stopPropagation(); handleChooseFile(); }}
+                                            tooltip="Cambiar archivo"
+                                        />
+                                        <Button
+                                            icon="pi pi-times"
+                                            className="p-button-outlined p-button-danger p-button-sm"
+                                            onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
+                                            tooltip="Quitar archivo"
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="import-wizard-file-actions">
-                                <Button
-                                    icon="pi pi-refresh"
-                                    className="p-button-outlined p-button-sm"
-                                    onClick={(e) => { e.stopPropagation(); handleChooseFile(); }}
-                                    tooltip="Cambiar archivo"
-                                />
-                                <Button
-                                    icon="pi pi-times"
-                                    className="p-button-outlined p-button-danger p-button-sm"
-                                    onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
-                                    tooltip="Quitar archivo"
-                                />
-                            </div>
+                            )}
                         </div>
-                    )}
-                </div>
 
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept={source.extension}
-                    style={{ display: 'none' }}
-                    onChange={handleFileInputChange}
-                />
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept={source.extension}
+                            style={{ display: 'none' }}
+                            onChange={handleFileInputChange}
+                        />
+                    </>
+                )}
 
                 {/* Campos específicos por fuente */}
                 {selectedSource === 'nodeterm' && renderNodeTermConfig()}
                 {selectedSource === 'mremoteng' && renderMRemoteNGConfig()}
                 {selectedSource === 'keepass' && renderKeePassConfig()}
+                {selectedSource === 'wallix' && renderWallixConfig()}
             </div>
         );
     };
@@ -1107,6 +1222,86 @@ const ImportWizardDialog = ({
                         value={containerFolderName}
                         onChange={(e) => setContainerFolderName(e.target.value)}
                         placeholder="Nombre de la carpeta"
+                        style={{ width: '100%' }}
+                    />
+                </div>
+            )}
+        </div>
+    );
+
+    const renderWallixConfig = () => (
+        <div className="import-wizard-options">
+            <div className="import-wizard-field">
+                <label>
+                    <i className="pi pi-link" />
+                    URL de la API de Wallix
+                </label>
+                <InputText
+                    value={wallixUrl}
+                    onChange={(e) => setWallixUrl(e.target.value)}
+                    placeholder="https://wallix.example.com"
+                    style={{ width: '100%' }}
+                />
+            </div>
+            <div className="import-wizard-field">
+                <label>
+                    <i className="pi pi-user" />
+                    Usuario
+                </label>
+                <InputText
+                    value={wallixUsername}
+                    onChange={(e) => setWallixUsername(e.target.value)}
+                    placeholder="Usuario de API"
+                    style={{ width: '100%' }}
+                />
+            </div>
+            <div className="import-wizard-field">
+                <label>
+                    <i className="pi pi-lock" />
+                    Contraseña
+                </label>
+                <Password
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    toggleMask
+                    feedback={false}
+                    placeholder="Contraseña de API"
+                    inputStyle={{ width: '100%' }}
+                />
+            </div>
+            
+            <div className="import-wizard-field mt-3">
+                <label>
+                    <i className="pi pi-folder" />
+                    Carpeta destino base
+                </label>
+                <Dropdown
+                    value={targetFolder}
+                    options={folderOptions}
+                    onChange={(e) => setTargetFolder(e.value)}
+                    placeholder="Seleccionar carpeta"
+                    style={{ width: '100%' }}
+                />
+            </div>
+
+            <div className="import-wizard-checkbox mt-2">
+                <Checkbox
+                    inputId="wx-create-container"
+                    checked={createContainerFolder}
+                    onChange={(e) => setCreateContainerFolder(e.checked)}
+                />
+                <label htmlFor="wx-create-container">
+                    <i className="pi pi-folder-open" />
+                    Crear carpeta root para los grupos (recomendado)
+                </label>
+            </div>
+
+            {createContainerFolder && (
+                <div className="import-wizard-field" style={{ marginLeft: '28px' }}>
+                    <InputText
+                        value={containerFolderName}
+                        onChange={(e) => setContainerFolderName(e.target.value)}
+                        placeholder="Nombre de la carpeta principal"
                         style={{ width: '100%' }}
                     />
                 </div>
