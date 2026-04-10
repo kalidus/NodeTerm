@@ -898,6 +898,14 @@ class ImportService {
   static async importFromWallix(url, username, password) {
     try {
       const baseUrl = url.replace(/\/$/, '');
+      let bastionHostname = baseUrl;
+      try {
+          bastionHostname = new URL(baseUrl).hostname;
+      } catch (e) {
+          // Si url no incluye protocolo, puede fallar el URL parse, asumimos que es el host directo
+          bastionHostname = baseUrl;
+      }
+      
       const headers = { 'Accept': 'application/json' };
 
       if (username && password) {
@@ -1012,12 +1020,19 @@ class ImportService {
                     originalProtocol: protocol
                 };
 
+                // Construir la cadena de conexión para el Bastión Wallix
+                // root@VMWARE@ESJC-DSNT-VS83P:SSH:rt01119
+                const cleanGroupDef = groupName.replace(/^SERVICIO - |^SISTEMAS - /i, '').trim();
+                const proxyUsername = accountName 
+                    ? `${accountName}@${cleanGroupDef}@${targetName}:${protocol}:${username}`
+                    : `${cleanGroupDef}@${targetName}:${protocol}:${username}`;
+
                 const connObj = {
                     name: nodeName,
-                    hostname: host,
-                    port: port,
-                    username: accountName,
-                    password: '',
+                    hostname: bastionHostname,
+                    port: protocol === 'RDP' ? 3389 : 22,
+                    username: proxyUsername,
+                    password: '', // Prompt al vuelo via NodeTerm
                     protocol: protocol,
                     description: alias
                 };
@@ -1070,11 +1085,14 @@ class ImportService {
                       originalProtocol: protocol
                   };
 
+                  // Huérfanos no tienen group ni account, pasamos el target directo
+                  const proxyUsername = `${d.device_name}:${protocol}:${username}`;
+
                   const connObj = {
                       name: nodeName,
-                      hostname: d.host || d.device_name,
-                      port: port,
-                      username: '',
+                      hostname: bastionHostname,
+                      port: protocol === 'RDP' ? 3389 : 22,
+                      username: proxyUsername,
                       password: '',
                       protocol: protocol,
                       description: `Alias: ${d.alias || ''}`
