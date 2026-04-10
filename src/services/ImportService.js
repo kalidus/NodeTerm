@@ -1025,12 +1025,13 @@ class ImportService {
                 };
 
                 // Construir la cadena de conexión para el Bastión Wallix.
-                // Formato: <account>@<grupo>@<device>:<service>:<wallix_user>
-                // Si la entrada no tiene account explícito (account_mappings), usamos el
-                // propio usuario de login de Wallix como prefijo de cuenta.
-                const cleanGroupDef = groupName.replace(/^SERVICIO - |^SISTEMAS - /i, '').trim();
+                // Formato: <account>@<domain>@<device>:<service>:<wallix_user>
+                // - <domain>  = acc.domain (dominio de credencial: "default", "NETAPP", "STP"…)
+                //               NO el nombre del grupo. Para account_mappings sin dominio → "default".
+                // - <account> = acc.account o, si no existe, el propio usuario de login de Wallix.
+                const accountDomain = acc.domain || 'default';
                 const effectiveAccount = accountName || username;
-                const proxyUsername = `${effectiveAccount}@${cleanGroupDef}@${targetName}:${serviceLabel}:${username}`;
+                const proxyUsername = `${effectiveAccount}@${accountDomain}@${targetName}:${serviceLabel}:${username}`;
 
                 const connObj = {
                     name: nodeName,
