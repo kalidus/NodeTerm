@@ -996,10 +996,14 @@ class ImportService {
             let folderNames = [groupName];
 
             const accountName = acc.account || '';
+            // El servicio de la API (e.g. "SSH", "SSH_TACACS") se usa para el formato del proxy.
+            // Si no hay campo 'service' en la entrada usamos el protocolo resuelto del device.
+            const serviceLabel = (acc.service || protocol).toUpperCase();
             const nodeName = accountName ? `${targetName} (${accountName})` : targetName;
 
-            for (let folder of folderNames) {                // Evitar duplicados exactos dentro de esa carpeta de Global Domain
-                const dupKey = `${folder}_${targetName}_${accountName}_${protocol}`;
+            for (let folder of folderNames) {
+                // Evitar duplicados exactos (mismo grupo, device, cuenta y servicio)
+                const dupKey = `${folder}_${targetName}_${accountName}_${serviceLabel}`;
                 if (seenCheck.has(dupKey)) continue;
                 seenCheck.add(dupKey);
 
@@ -1020,12 +1024,13 @@ class ImportService {
                     originalProtocol: protocol
                 };
 
-                // Construir la cadena de conexión para el Bastión Wallix
-                // root@VMWARE@ESJC-DSNT-VS83P:SSH:rt01119
+                // Construir la cadena de conexión para el Bastión Wallix.
+                // Formato: <account>@<grupo>@<device>:<service>:<wallix_user>
+                // Si la entrada no tiene account explícito (account_mappings), usamos el
+                // propio usuario de login de Wallix como prefijo de cuenta.
                 const cleanGroupDef = groupName.replace(/^SERVICIO - |^SISTEMAS - /i, '').trim();
-                const proxyUsername = accountName 
-                    ? `${accountName}@${cleanGroupDef}@${targetName}:${protocol}:${username}`
-                    : `${cleanGroupDef}@${targetName}:${protocol}:${username}`;
+                const effectiveAccount = accountName || username;
+                const proxyUsername = `${effectiveAccount}@${cleanGroupDef}@${targetName}:${serviceLabel}:${username}`;
 
                 const connObj = {
                     name: nodeName,
