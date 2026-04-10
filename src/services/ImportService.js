@@ -1037,7 +1037,7 @@ class ImportService {
                     hostname: bastionHostname,
                     port: protocol === 'RDP' ? 3389 : 22,
                     username: proxyUsername,
-                    password: '', // Prompt al vuelo via NodeTerm
+                    password: password, // Credencial Wallix del usuario que importa
                     protocol: protocol,
                     description: alias
                 };
@@ -1098,7 +1098,7 @@ class ImportService {
                       hostname: bastionHostname,
                       port: protocol === 'RDP' ? 3389 : 22,
                       username: proxyUsername,
-                      password: '',
+                      password: password, // Credencial Wallix del usuario que importa
                       protocol: protocol,
                       description: `Alias: ${d.alias || ''}`
                   };
