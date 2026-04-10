@@ -942,133 +942,162 @@ class ImportService {
             if (group.session.account_mappings) accounts = accounts.concat(group.session.account_mappings);
             if (group.session.interactive_logins) accounts = accounts.concat(group.session.interactive_logins);
         }
+        // Incorporar también cuentas que solo tengan permisos de extracción de contraseñas
+        if (group.password_retrieval && group.password_retrieval.accounts) {
+            accounts = accounts.concat(group.password_retrieval.accounts);
+        }
         
         for (const acc of accounts) {
-            if (!acc.device) continue;
-            
-            const deviceInfo = devicesMap[acc.device];
-            if (!deviceInfo) continue;
-
-            // Evitar duplicados exactos (mismo dispositivo y misma cuenta en el mismo grupo)
-            const accountName = acc.account || '';
-            const dupKey = `${groupName}_${acc.device}_${accountName}`;
-            if (seenCheck.has(dupKey)) continue;
-            seenCheck.add(dupKey);
-            mappedDevices.add(acc.device);
-
-            // Obtener servicio / puerto
+            let targetName = acc.device;
+            let host = '';
+            let protocol = 'SSH';
+            let port = 22;
+            let alias = '';
+            let deviceInfo = null;
             let serviceInfo = null;
-            if (deviceInfo.services && deviceInfo.services.length > 0) {
-                if (acc.service) { // Match prioritario por nombre de servicio o protocolo
-                    serviceInfo = deviceInfo.services.find(s => s.service_name === acc.service || s.protocol === acc.service);
+
+            if (acc.device) {
+                deviceInfo = devicesMap[acc.device];
+                if (!deviceInfo) continue; // Si es un device pero no está en la lista global, saltar
+                
+                host = deviceInfo.host || acc.device;
+                alias = `Alias: ${deviceInfo.alias || ''}`;
+                mappedDevices.add(acc.device);
+                
+                // Obtener servicio / puerto
+                if (deviceInfo.services && deviceInfo.services.length > 0) {
+                    if (acc.service) {
+                        serviceInfo = deviceInfo.services.find(s => s.service_name === acc.service || s.protocol === acc.service);
+                    }
+                    if (!serviceInfo) serviceInfo = deviceInfo.services[0];
                 }
-                if (!serviceInfo) serviceInfo = deviceInfo.services[0]; // Fallback al primero
-            }
+                protocol = (serviceInfo?.protocol || 'SSH').toUpperCase();
+                port = serviceInfo?.port || (protocol === 'RDP' ? 3389 : 22);
 
-            const protocol = (serviceInfo?.protocol || 'SSH').toUpperCase();
-            const port = serviceInfo?.port || (protocol === 'RDP' ? 3389 : 22);
-            
-            const nodeName = accountName ? `${acc.device} (${accountName})` : acc.device;
-
-            if (!groups[groupName]) {
-                groups[groupName] = [];
-                folderCount++;
-            }
-
-            const baseKey = this.generateKey('imported_wallix');
-            const baseNode = {
-                key: baseKey,
-                label: nodeName,
-                uid: baseKey,
-                createdAt: new Date().toISOString(),
-                isUserCreated: true,
-                imported: true,
-                importedFrom: 'Wallix',
-                originalProtocol: protocol
-            };
-
-            const connObj = {
-                name: nodeName,
-                hostname: deviceInfo.host || acc.device,
-                port: port,
-                username: accountName,
-                password: '',
-                protocol: protocol,
-                description: `Alias: ${deviceInfo.alias || ''}`
-            };
-
-            let converted;
-            if (this.isSSHProtocol(protocol)) {
-                converted = this.createSSHNode(baseNode, connObj);
-            } else if (protocol === 'RDP') {
-                converted = this.createRDPNode(baseNode, connObj);
+            } else if (acc.application) {
+                // Es un target tipo aplicación en Wallix, no un device directo
+                targetName = acc.application;
+                host = acc.application; // Usamos la app como placeholder de host
+                protocol = 'RDP'; // Generalmente se distribuyen por RemoteApp (RDP)
+                port = 3389;
+                alias = 'Wallix Application';
             } else {
-                converted = this.createSSHNodeFromOther(baseNode, connObj);
+                continue; // No es ni device ni application
             }
 
-            groups[groupName].push(converted);
-            flatConnections.push(converted);
-            connectionCount++;
+            let folderNames = [groupName];
+
+            const accountName = acc.account || '';
+            const nodeName = accountName ? `${targetName} (${accountName})` : targetName;
+
+            for (let folder of folderNames) {                // Evitar duplicados exactos dentro de esa carpeta de Global Domain
+                const dupKey = `${folder}_${targetName}_${accountName}_${protocol}`;
+                if (seenCheck.has(dupKey)) continue;
+                seenCheck.add(dupKey);
+
+                if (!groups[folder]) {
+                    groups[folder] = [];
+                    folderCount++;
+                }
+
+                const baseKey = this.generateKey('imported_wallix');
+                const baseNode = {
+                    key: baseKey,
+                    label: nodeName,
+                    uid: baseKey,
+                    createdAt: new Date().toISOString(),
+                    isUserCreated: true,
+                    imported: true,
+                    importedFrom: 'Wallix',
+                    originalProtocol: protocol
+                };
+
+                const connObj = {
+                    name: nodeName,
+                    hostname: host,
+                    port: port,
+                    username: accountName,
+                    password: '',
+                    protocol: protocol,
+                    description: alias
+                };
+
+                let converted;
+                if (this.isSSHProtocol(protocol)) {
+                    converted = this.createSSHNode(baseNode, connObj);
+                } else if (protocol === 'RDP') {
+                    converted = this.createRDPNode(baseNode, connObj);
+                } else {
+                    converted = this.createSSHNodeFromOther(baseNode, connObj);
+                }
+
+                groups[folder].push(converted);
+                flatConnections.push(converted);
+                connectionCount++;
+            }
         }
       }
 
-      // 3. Procesar dispositivos huérfanos (que no están en ningún grupo)
+      // 3. Procesar dispositivos huérfanos (que están en devices pero no tenían accounts en targetgroups)
       const orphanGroupName = 'Otros Dispositivos (Sin Grupo)';
       for (const d of devicesData) {
           if (!mappedDevices.has(d.device_name)) {
-              if (!groups[orphanGroupName]) {
-                  groups[orphanGroupName] = [];
-                  folderCount++;
-              }
-
+              
               let serviceInfo = null;
               if (d.services && d.services.length > 0) serviceInfo = d.services[0];
               
+              let folderNames = [orphanGroupName];
+
               const protocol = (serviceInfo?.protocol || 'SSH').toUpperCase();
               const port = serviceInfo?.port || (protocol === 'RDP' ? 3389 : 22);
-              
               const nodeName = d.device_name;
-              const baseKey = this.generateKey('imported_wallix_orphan');
-              
-              const baseNode = {
-                  key: baseKey,
-                  label: nodeName,
-                  uid: baseKey,
-                  createdAt: new Date().toISOString(),
-                  isUserCreated: true,
-                  imported: true,
-                  importedFrom: 'Wallix',
-                  originalProtocol: protocol
-              };
 
-              const connObj = {
-                  name: nodeName,
-                  hostname: d.host || d.device_name,
-                  port: port,
-                  username: '',
-                  password: '',
-                  protocol: protocol,
-                  description: `Alias: ${d.alias || ''}`
-              };
+              for (let folder of folderNames) {
+                  if (!groups[folder]) {
+                      groups[folder] = [];
+                      folderCount++;
+                  }
 
-              let converted;
-              if (this.isSSHProtocol(protocol)) {
-                  converted = this.createSSHNode(baseNode, connObj);
-              } else if (protocol === 'RDP') {
-                  converted = this.createRDPNode(baseNode, connObj);
-              } else {
-                  converted = this.createSSHNodeFromOther(baseNode, connObj);
+                  const baseKey = this.generateKey('imported_wallix_orphan');
+                  const baseNode = {
+                      key: baseKey,
+                      label: nodeName,
+                      uid: baseKey,
+                      createdAt: new Date().toISOString(),
+                      isUserCreated: true,
+                      imported: true,
+                      importedFrom: 'Wallix',
+                      originalProtocol: protocol
+                  };
+
+                  const connObj = {
+                      name: nodeName,
+                      hostname: d.host || d.device_name,
+                      port: port,
+                      username: '',
+                      password: '',
+                      protocol: protocol,
+                      description: `Alias: ${d.alias || ''}`
+                  };
+
+                  let converted;
+                  if (this.isSSHProtocol(protocol)) {
+                      converted = this.createSSHNode(baseNode, connObj);
+                  } else if (protocol === 'RDP') {
+                      converted = this.createRDPNode(baseNode, connObj);
+                  } else {
+                      converted = this.createSSHNodeFromOther(baseNode, connObj);
+                  }
+
+                  groups[folder].push(converted);
+                  flatConnections.push(converted);
+                  connectionCount++;
               }
-
-              groups[orphanGroupName].push(converted);
-              flatConnections.push(converted);
-              connectionCount++;
           }
       }
 
       const nodes = [];
       for (const [groupName, children] of Object.entries(groups)) {
-        if (children.length === 0) continue;
         const folderKey = this.generateKey('folder_wallix');
         nodes.push({
           key: folderKey,
