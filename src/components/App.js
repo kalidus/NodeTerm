@@ -1044,17 +1044,32 @@ const App = () => {
         const newConnections = result.structure.flatConnections;
         const existingWallixKeys = new Set();
         
+        const normalizeStr = (str) => (str || '').toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+        
+        // SSH guarda el proxy en 'user', RDP en 'username' - esta función unifica la extracción
+        const getWallixProxyKey = (nodeData) => {
+            if (!nodeData) return null;
+            const proxyStr = nodeData.user || nodeData.username || '';
+            return proxyStr ? normalizeStr(proxyStr) : null;
+        };
+        
         const traverseAndCollect = (nodeList) => {
             nodeList.forEach(n => {
-                if (!n.droppable && n.importedFrom === 'Wallix') {
-                    if (n.data && n.data.user && n.data.host) {
-                        existingWallixKeys.add(n.data.host + "::" + n.data.user);
-                    }
+                const proxyStr = (n.data?.user || n.data?.username || '');
+                const isWallixFormat = proxyStr.includes('@') && proxyStr.includes(':');
+                if (!n.droppable && (n.importedFrom === 'Wallix' || isWallixFormat)) {
+                    const key = getWallixProxyKey(n.data);
+                    if (key) existingWallixKeys.add(key);
                 }
                 if (n.children) traverseAndCollect(n.children);
             });
         };
         traverseAndCollect(nodesCopy);
+        
+        console.log(`[Wallix Sync] Encontradas ${existingWallixKeys.size} conexiones existentes en el árbol.`);
+        if (existingWallixKeys.size < 20) {
+            console.log('[Wallix Sync] Muestra de llaves existentes:', Array.from(existingWallixKeys));
+        }
         
         const containerNode = findNodeByKey(nodesCopy, containerNodeKey);
         if (!containerNode) {
@@ -1064,24 +1079,38 @@ const App = () => {
         
         if (!containerNode.children) containerNode.children = [];
         let inserted = 0;
+        let updated = 0;
         
         newConnections.forEach(incomingNode => {
-           const uniqueId = incomingNode.data.host + "::" + incomingNode.data.user;
-           if (existingWallixKeys.has(uniqueId)) {
+           const incomingKey = getWallixProxyKey(incomingNode.data);
+           if (!incomingKey) return; // sin proxy key, saltar
+
+           if (existingWallixKeys.has(incomingKey)) {
                const updateLabel = (list) => {
                    for (let i = 0; i < list.length; i++) {
                        let n = list[i];
-                       if (!n.droppable && n.importedFrom === 'Wallix' && n.data && (n.data.host + "::" + n.data.user) === uniqueId) {
+                       const existingKey = getWallixProxyKey(n.data);
+                       const proxyStr = (n.data?.user || n.data?.username || '');
+                       const isWallixFormat = proxyStr.includes('@') && proxyStr.includes(':');
+                       if (!n.droppable && (n.importedFrom === 'Wallix' || isWallixFormat) && existingKey === incomingKey) {
                            n.label = incomingNode.label;
-                           if (n.data) n.data.name = incomingNode.data.name;
-                           break;
+                           if (n.data) {
+                               n.data.name = incomingNode.data.name;
+                               if (!n.importedFrom) n.importedFrom = 'Wallix';
+                           }
+                           updated++;
+                           return true;
                        }
-                       if (n.children) updateLabel(n.children);
+                       if (n.children && updateLabel(n.children)) return true;
                    }
+                   return false;
                };
                updateLabel(nodesCopy);
-               return; 
+               return;
            }
+           
+           // verdaderamente nuevo
+           console.log(`[Wallix Sync] NUEVO: ${incomingKey}`);
            
            let targetGroupName = "Nuevos (Wallix)";
            const originalGroup = result.structure.nodes.find(g => 
@@ -1114,10 +1143,15 @@ const App = () => {
            inserted++;
         });
 
-        toast.current?.show({ severity: 'success', summary: 'Refresco Wallix', detail: `Agregadas ${inserted} nuevas conexiones.`, life: 5000 });
-        return nodesCopy;
-    });
-  };
+        toast.current?.show({ 
+             severity: 'success', 
+             summary: 'Refresco Wallix', 
+             detail: `Finalizado: ${updated} actualizados, ${inserted} nuevos añadidos.`, 
+             life: 6000 
+         });
+         return nodesCopy;
+     });
+   };
 
   // Usar el hook de gestión de pestañas
   const {
