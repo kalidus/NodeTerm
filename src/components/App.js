@@ -4,6 +4,8 @@ import { useConnectionManagement } from '../hooks/useConnectionManagement';
 import { useSidebarManagement } from '../hooks/useSidebarManagement';
 import { useThemeManagement } from '../hooks/useThemeManagement';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
+import localStorageSyncService from '../services/LocalStorageSyncService';
+
 import { loadSavedTabTheme } from '../utils/tabThemeLoader';
 import i18n from '../i18n';
 import ErrorBoundary from './ErrorBoundary';
@@ -1741,114 +1743,121 @@ const App = () => {
 
 
 
-  // Load initial nodes from localStorage or use default (CON ENCRIPTACIÓN)
-  useEffect(() => {
-    const loadNodes = async () => {
-      try {
-        if (masterKey) {
-          // CON master key: Cargar encriptado
-          const encryptedData = localStorage.getItem('connections_encrypted');
-
-          if (encryptedData) {
-            const decrypted = await secureStorage.decryptData(
-              JSON.parse(encryptedData),
-              masterKey
-            );
+  // Función para cargar nodos (centralizada para permitir recargas externas)
+  const loadNodes = useCallback(async () => {
+    try {
+      if (masterKey) {
+        // MODO ENCRIPTADO: Cargar desde connections_encrypted
+        const encryptedData = localStorage.getItem('connections_encrypted');
+        if (encryptedData) {
+          const decrypted = await secureStorage.decryptData(JSON.parse(encryptedData), masterKey);
+          if (decrypted) {
             setNodes(decrypted);
           } else {
-            // Migración: Si hay datos sin encriptar, encriptarlos
-            const plainData = localStorage.getItem(STORAGE_KEYS.TREE_DATA);
-            if (plainData) {
-              let loadedNodes = JSON.parse(plainData);
-              if (!Array.isArray(loadedNodes)) {
-                loadedNodes = [loadedNodes];
-              }
-
-              const migrateNodes = (nodes) => {
-                return nodes.map(node => {
-                  const migratedNode = { ...node };
-                  if (node.data && node.data.type === 'ssh') {
-                    migratedNode.droppable = false;
-                  }
-                  if (node.children && node.children.length > 0) {
-                    migratedNode.children = migrateNodes(node.children);
-                  }
-                  return migratedNode;
-                });
-              };
-              const migratedNodes = migrateNodes(loadedNodes);
-
-              // Encriptar y guardar
-              const encrypted = await secureStorage.encryptData(migratedNodes, masterKey);
-              localStorage.setItem('connections_encrypted', JSON.stringify(encrypted));
-
-              // Eliminar datos sin encriptar
-              localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
-
-              setNodes(migratedNodes);
-            } else {
-              setNodes(getDefaultNodes());
-            }
+            console.error('[loadNodes] Decryption failed');
           }
         } else {
-          // SIN master key: Funciona como antes
+          // Migración: Si no hay encriptado pero hay datos planos, encriptarlos
           const savedNodes = localStorage.getItem(STORAGE_KEYS.TREE_DATA);
           if (savedNodes) {
-            let loadedNodes = JSON.parse(savedNodes);
-            if (!Array.isArray(loadedNodes)) {
-              loadedNodes = [loadedNodes];
-            }
-            const migrateNodes = (nodes) => {
-              return nodes.map(node => {
-                const migratedNode = { ...node };
-                if (node.data && node.data.type === 'ssh') {
-                  migratedNode.droppable = false;
-                }
-                if (node.children && node.children.length > 0) {
-                  migratedNode.children = migrateNodes(node.children);
-                }
-                return migratedNode;
-              });
-            };
-            const migratedNodes = migrateNodes(loadedNodes);
+            const parsed = JSON.parse(savedNodes);
+            const migratedNodes = Array.isArray(parsed) ? parsed : [parsed];
+            
+            const encrypted = await secureStorage.encryptData(migratedNodes, masterKey);
+            localStorage.setItem('connections_encrypted', JSON.stringify(encrypted));
+            localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
             setNodes(migratedNodes);
           } else {
             setNodes(getDefaultNodes());
           }
         }
-      } catch (error) {
-        console.error('Error loading nodes:', error);
-        setNodes(getDefaultNodes());
+      } else {
+        // MODO NO ENCRIPTADO: Cargar desde TREE_DATA
+        const savedNodes = localStorage.getItem(STORAGE_KEYS.TREE_DATA);
+        if (savedNodes) {
+          let loadedNodes = JSON.parse(savedNodes);
+          if (!Array.isArray(loadedNodes)) loadedNodes = [loadedNodes];
+          
+          const migrateNodes = (nodes) => {
+            return nodes.map(node => {
+              const migratedNode = { ...node };
+              if (node.data && node.data.type === 'ssh') migratedNode.droppable = false;
+              if (node.children && node.children.length > 0) migratedNode.children = migrateNodes(node.children);
+              return migratedNode;
+            });
+          };
+          setNodes(migrateNodes(loadedNodes));
+        } else {
+          setNodes(getDefaultNodes());
+        }
       }
-    };
+    } catch (error) {
+      console.error('Error loading nodes:', error);
+      setNodes(getDefaultNodes());
+    }
+  }, [masterKey, secureStorage, getDefaultNodes]);
 
+  // Carga inicial y cuando cambia la masterKey
+  useEffect(() => {
     loadNodes();
-  }, [masterKey, secureStorage]);
+  }, [loadNodes]);
 
-  // Save nodes to localStorage whenever they change (CON ENCRIPTACIÓN)
+  // Save nodes to localStorage whenever they change (CON ENCRIPTACIÓN Y SYNC)
   useEffect(() => {
     const saveNodes = async () => {
       if (nodes.length === 0) return;
 
+      // Evitar guardar si el cambio viene de una recarga externa (loop prevention)
+      if (isExternalReloadRef.current) {
+        isExternalReloadRef.current = false;
+        return;
+      }
+
       try {
+        const nodesStr = JSON.stringify(nodes);
+        
         if (masterKey) {
           // CON master key: Guardar encriptado
           const encrypted = await secureStorage.encryptData(nodes, masterKey);
-          localStorage.setItem('connections_encrypted', JSON.stringify(encrypted));
-
-          // Limpiar datos sin encriptar
+          const encryptedStr = JSON.stringify(encrypted);
+          localStorage.setItem('connections_encrypted', encryptedStr);
           localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
+
+          // Sincronizar cambios cifrados
+          localStorageSyncService.updateCache('connections_encrypted', encryptedStr);
+          localStorageSyncService.debouncedSync({ 
+            'connections_encrypted': encryptedStr,
+            [STORAGE_KEYS.TREE_DATA]: null 
+          });
         } else {
           // SIN master key: Guardar como antes
-          localStorage.setItem(STORAGE_KEYS.TREE_DATA, JSON.stringify(nodes));
+          localStorage.setItem(STORAGE_KEYS.TREE_DATA, nodesStr);
+          
+          // Sincronizar cambios
+          localStorageSyncService.updateCache(STORAGE_KEYS.TREE_DATA, nodesStr);
+          localStorageSyncService.debouncedSync({ [STORAGE_KEYS.TREE_DATA]: nodesStr });
         }
+
+        // Actualizar el hash en el hook para que el polling ignore este cambio propio
+        if (updateTreeHash) updateTreeHash(nodesStr);
+
       } catch (error) {
         console.error('Error saving nodes:', error);
       }
     };
 
     saveNodes();
-  }, [nodes, masterKey, secureStorage]);
+  }, [nodes, masterKey, secureStorage, updateTreeHash, isExternalReloadRef]);
+
+  // Escuchar eventos de sincronización externa para datos encriptados
+  useEffect(() => {
+    const handleSync = () => {
+        loadNodes();
+    };
+    window.addEventListener('encryption-data-synced', handleSync);
+    return () => window.removeEventListener('encryption-data-synced', handleSync);
+  }, [loadNodes]);
+
 
   // Efecto para manejar cambios en el explorador de archivos
   useEffect(() => {

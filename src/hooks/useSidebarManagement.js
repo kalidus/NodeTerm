@@ -26,6 +26,9 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
   // Ref para comparar contenido y evitar re-renders innecesarios
   const lastContentHashRef = useRef(localStorage.getItem(STORAGE_KEYS.TREE_DATA) || '');
 
+  // Ref para evitar que el polling sobrescriba cambios locales recientes que aún no se han persistido
+  const lastLocalActionTimeRef = useRef(0);
+
   // Función para recargar nodos desde localStorage (para multi-instancia tras sync)
   const reloadNodes = useCallback(() => {
     try {
@@ -51,6 +54,13 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
 
     const interval = setInterval(async () => {
       try {
+        // 1. Evitar polling si acabamos de hacer un cambio local (ventana de 5s para que el sync ocurra)
+        const now = Date.now();
+        if (now - lastLocalActionTimeRef.current < 5000) {
+          // console.log('[Polling] 🛡️ Ignorando polling por acción local reciente');
+          return;
+        }
+
         const mtime = await window.electron.appdata.getLastModified();
 
         // Si el archivo no ha cambiado, no hacer nada
@@ -60,27 +70,47 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         lastKnownMtimeRef.current = mtime;
 
         const allData = await window.electron.appdata.getAll();
-        if (!allData || !allData[STORAGE_KEYS.TREE_DATA]) return;
+        if (!allData) return;
 
+        // Intentar obtener datos (preferir encriptados si existen y estamos en una sesión con master key)
+        // Nota: El descifrado real ocurre en App.js, aquí solo lo bajamos a localStorage
+        const remoteEncrypted = allData['connections_encrypted'];
         const remoteJson = allData[STORAGE_KEYS.TREE_DATA];
 
-        // Evitar loop: si el contenido es idéntico al último conocido, ignorar
-        if (remoteJson === lastContentHashRef.current) {
-          return;
+        if (!remoteEncrypted && !remoteJson) return;
+
+        // Sincronizar connections_encrypted si existe
+        if (remoteEncrypted) {
+            const currentEncrypted = localStorage.getItem('connections_encrypted');
+            if (remoteEncrypted !== currentEncrypted) {
+                // console.log('[Polling] 🔐 Detectados cambios en datos encriptados');
+                localStorage.setItem('connections_encrypted', remoteEncrypted);
+                localStorageSyncService.updateCache('connections_encrypted', remoteEncrypted);
+                
+                // Si hay datos encriptados, esto disparará el useEffect en App.js que los descifrará
+                // No necesitamos llamar a setNodes aquí directament si App.js lo maneja vía localStorage/masterKey
+                // Pero notificamos para que App.js sepa que debe recargar
+                window.dispatchEvent(new CustomEvent('encryption-data-synced'));
+            }
         }
 
-        // console.log('[Polling] 📥 Datos nuevos recibidos. Actualizando sidebar...');
-        lastContentHashRef.current = remoteJson;
+        // Sincronizar tree_data básico (fallback o si no hay encryption)
+        if (remoteJson && remoteJson !== lastContentHashRef.current) {
+            // console.log('[Polling] 📥 Datos nuevos recibidos. Actualizando sidebar...');
+            lastContentHashRef.current = remoteJson;
 
-        // Actualizar localStorage
-        localStorage.setItem(STORAGE_KEYS.TREE_DATA, remoteJson);
+            // Actualizar localStorage
+            localStorage.setItem(STORAGE_KEYS.TREE_DATA, remoteJson);
 
-        // Actualizar caché de memoria para proteger contra lecturas fallidas
-        localStorageSyncService.updateCache(STORAGE_KEYS.TREE_DATA, remoteJson);
+            // Actualizar caché de memoria para proteger contra lecturas fallidas
+            localStorageSyncService.updateCache(STORAGE_KEYS.TREE_DATA, remoteJson);
 
-        // Marcar como externo y actualizar estado
-        isExternalReloadRef.current = true;
-        setNodes(JSON.parse(remoteJson));
+            // Solo actualizar nodes si NO hay datos encriptados (porque los encriptados mandan)
+            if (!remoteEncrypted) {
+                isExternalReloadRef.current = true;
+                setNodes(JSON.parse(remoteJson));
+            }
+        }
 
       } catch (err) {
         console.error('[Polling] ❌ Error en intervalo:', err);
@@ -93,7 +123,9 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
   // Función para actualizar hash localmente (llamada por Sidebar cuando guarda)
   const updateTreeHash = useCallback((jsonStr) => {
     lastContentHashRef.current = jsonStr;
+    lastLocalActionTimeRef.current = Date.now(); // Bloquea polling externo por unos segundos
   }, []);
+
   const [selectedNode, setSelectedNode] = useState(null);
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
   const [isGeneralTreeMenu, setIsGeneralTreeMenu] = useState(false);
