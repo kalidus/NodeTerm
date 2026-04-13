@@ -27,7 +27,8 @@ export const useNodeTemplate = ({
   setShowEditFolderDialog,
   // Funciones
   onNodeContextMenu,
-  onTreeAreaContextMenu
+  onTreeAreaContextMenu,
+  onOpenWallixRefresh
 }) => {
   
   // Función recursiva para obtener todas las carpetas del árbol
@@ -55,8 +56,11 @@ export const useNodeTemplate = ({
 
   // Node template simplificado - acciones movidas al menú contextual
   const nodeTemplate = useCallback((node, options) => {
-    console.log('🎨 Rendering node:', node.label, 'data:', node.data);
     const isFolder = node.droppable;
+    // Debug: loguear carpetas para verificar metadatos
+    if (isFolder) {
+      console.log('📁 Folder node:', node.label, '| importedFrom:', node.importedFrom, '| data:', JSON.stringify(node.data || {}));
+    }
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && node.data.type === 'rdp';
     const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
@@ -298,6 +302,18 @@ export const useNodeTemplate = ({
           ...(hasCustomFolderIcon ? { transform: 'translateY(3px)' } : {})
         }}>{node.label}</span>
         {getConnectionIndicator()}
+        {node.importedFrom === 'Wallix' && node.droppable ? (
+          <span
+            className="pi pi-refresh ml-2 text-color-secondary hover:text-primary"
+            style={{ fontSize: '0.85rem', cursor: 'pointer', marginLeft: '6px' }}
+            title="Refrescar desde Wallix"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onOpenWallixRefresh) onOpenWallixRefresh(node);
+              else console.warn('onOpenWallixRefresh no definido!');
+            }}
+          />
+        ) : null}
       </div>
     );
   }, [
@@ -313,7 +329,10 @@ export const useNodeTemplate = ({
     onOpenVncConnection,
     iconThemes,
     iconThemeSidebar,
-    sidebarFont
+    sidebarFont,
+    onNodeContextMenu,
+    onTreeAreaContextMenu,
+    onOpenWallixRefresh
   ]);
 
   return {

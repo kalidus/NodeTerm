@@ -143,7 +143,8 @@ const Sidebar = React.memo(({
   isExternalReloadRef, // Nuevo prop para control de polling sync
   updateTreeHash,      // Nuevo prop para actualizar hash tras cambios locales
   hasActiveSshSession = false,
-  onOpenFileExplorer
+  onOpenFileExplorer,
+  onOpenWallixRefresh  // callback para refrescar carpetas importadas de Wallix
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
@@ -2268,7 +2269,18 @@ const Sidebar = React.memo(({
           padding: 0,
           ...(hasCustomFolderIcon ? { transform: 'translateY(3px)' } : {})
         }}>{node.label}</span>
-        {/* Estrella de favoritos oculta en la lista lateral por solicitud */}
+        {/* Botón de refresco SOLO para la carpeta raíz importada de Wallix (tiene wallixUrl en data) */}
+        {node.importedFrom === 'Wallix' && node.droppable && node.data && node.data.wallixUrl ? (
+          <span
+            className="pi pi-refresh"
+            style={{ fontSize: '0.8rem', marginLeft: '6px', cursor: 'pointer', opacity: 0.7 }}
+            title="Refrescar conexiones desde Wallix"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onOpenWallixRefresh) onOpenWallixRefresh(node);
+            }}
+          />
+        ) : null}
       </div>
     );
   };

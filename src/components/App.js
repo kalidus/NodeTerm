@@ -32,6 +32,7 @@ import { TabView, TabPanel } from 'primereact/tabview';
 import { ContextMenu } from 'primereact/contextmenu';
 import TerminalComponent from './TerminalComponent';
 // FileExplorer ahora usa lazy loading arriba
+import WallixRefreshDialog from './WallixRefreshDialog';
 import Sidebar from './Sidebar';
 import SplitLayout from './SplitLayout';
 import { themes } from '../themes';
@@ -101,6 +102,8 @@ const App = () => {
   const [showImportDialog, setShowImportDialog] = React.useState(false);
   const [showExportDialog, setShowExportDialog] = React.useState(false);
   const [showImportExportDialog, setShowImportExportDialog] = React.useState(false);
+  const [showWallixRefreshDialog, setShowWallixRefreshDialog] = React.useState(false);
+  const [wallixRefreshNode, setWallixRefreshNode] = React.useState(null);
   const resizeTimeoutRef = useRef(null);
   const [showImportWizard, setShowImportWizard] = React.useState(false);
   const [isAppReady, setIsAppReady] = React.useState(false);
@@ -859,7 +862,11 @@ const App = () => {
           createdAt: new Date().toISOString(),
           isUserCreated: true,
           imported: true,
-          importedFrom: 'mRemoteNG'
+          importedFrom: importResult?.metadata?.source || 'mRemoteNG',
+          data: importResult?.metadata?.source === 'Wallix' ? {
+              wallixUrl: importResult.metadata.wallixUrl,
+              wallixUsername: importResult.metadata.wallixUsername
+          } : {}
         });
 
         if (baseTargetKey === ROOT_VALUE) {
@@ -930,7 +937,51 @@ const App = () => {
           key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random() * 1e6)}`,
           uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random() * 1e6)}`
         }));
-        insertIntoTarget(toAdd);
+
+        // Para importaciones de Wallix: SIEMPRE envolver en un nodo contenedor
+        // para que wallixUrl/wallixUsername queden guardados en el nodo raíz
+        // (el botón de refresco los necesita en node.data)
+        if (importResult?.metadata?.source === 'Wallix') {
+          const wallixContainer = {
+            key: `import_container_${Date.now()}`,
+            uid: `import_container_${Date.now()}_${Math.floor(Math.random() * 1e6)}`,
+            label: finalContainerLabel || `Wallix - ${new Date().toLocaleDateString()}`,
+            droppable: true,
+            children: toAdd,
+            createdAt: new Date().toISOString(),
+            isUserCreated: true,
+            imported: true,
+            importedFrom: 'Wallix',
+            data: {
+              wallixUrl: importResult.metadata.wallixUrl,
+              wallixUsername: importResult.metadata.wallixUsername
+            }
+          };
+          setNodes(prev => {
+            const nodesCopy = JSON.parse(JSON.stringify(prev || []));
+            if (baseTargetKey === ROOT_VALUE) {
+              if (finalOverwrite) {
+                return removeConflictsAndAdd(nodesCopy, [wallixContainer]);
+              }
+              nodesCopy.push(wallixContainer);
+              return nodesCopy;
+            }
+            const targetNode = findNodeByKey(nodesCopy, baseTargetKey);
+            if (!targetNode || !targetNode.droppable) {
+              nodesCopy.push(wallixContainer);
+              return nodesCopy;
+            }
+            const currentChildren = Array.isArray(targetNode.children) ? targetNode.children : [];
+            if (finalOverwrite) {
+              targetNode.children = removeConflictsAndAdd(currentChildren, [wallixContainer]);
+            } else {
+              targetNode.children = [...currentChildren, wallixContainer];
+            }
+            return nodesCopy;
+          });
+        } else {
+          insertIntoTarget(toAdd);
+        }
 
         addedFolders = importResult.structure.folderCount || 0;
         addedConnections = importResult.structure.connectionCount || 0;
@@ -983,6 +1034,90 @@ const App = () => {
     }
   };
 
+
+  // --- REFREZCO INTELIGENTE WALLIX ---
+  const handleRefreshWallixComplete = (result, containerNodeKey) => {
+    if (!result || !result.structure || !result.structure.flatConnections) return;
+    
+    setNodes(prev => {
+        const nodesCopy = JSON.parse(JSON.stringify(prev || []));
+        const newConnections = result.structure.flatConnections;
+        const existingWallixKeys = new Set();
+        
+        const traverseAndCollect = (nodeList) => {
+            nodeList.forEach(n => {
+                if (!n.droppable && n.importedFrom === 'Wallix') {
+                    if (n.data && n.data.user && n.data.host) {
+                        existingWallixKeys.add(n.data.host + "::" + n.data.user);
+                    }
+                }
+                if (n.children) traverseAndCollect(n.children);
+            });
+        };
+        traverseAndCollect(nodesCopy);
+        
+        const containerNode = findNodeByKey(nodesCopy, containerNodeKey);
+        if (!containerNode) {
+            toast.current?.show({ severity: 'error', summary: 'Error', detail: 'La carpeta raíz de Wallix ya no existe', life: 3000 });
+            return prev;
+        }
+        
+        if (!containerNode.children) containerNode.children = [];
+        let inserted = 0;
+        
+        newConnections.forEach(incomingNode => {
+           const uniqueId = incomingNode.data.host + "::" + incomingNode.data.user;
+           if (existingWallixKeys.has(uniqueId)) {
+               const updateLabel = (list) => {
+                   for (let i = 0; i < list.length; i++) {
+                       let n = list[i];
+                       if (!n.droppable && n.importedFrom === 'Wallix' && n.data && (n.data.host + "::" + n.data.user) === uniqueId) {
+                           n.label = incomingNode.label;
+                           if (n.data) n.data.name = incomingNode.data.name;
+                           break;
+                       }
+                       if (n.children) updateLabel(n.children);
+                   }
+               };
+               updateLabel(nodesCopy);
+               return; 
+           }
+           
+           let targetGroupName = "Nuevos (Wallix)";
+           const originalGroup = result.structure.nodes.find(g => 
+               g.children && g.children.some(child => child.data.host === incomingNode.data.host && child.data.user === incomingNode.data.user)
+           );
+           
+           if (originalGroup) {
+               targetGroupName = originalGroup.label;
+           }
+
+           let subFolder = containerNode.children.find(c => c.droppable && c.label === targetGroupName);
+           
+           if (!subFolder) {
+               subFolder = {
+                   key: `wallix_sub_${Date.now()}_${Math.random()}`,
+                   uid: `wallix_sub_${Date.now()}_${Math.random()}`,
+                   label: targetGroupName,
+                   droppable: true,
+                   createdAt: new Date().toISOString(),
+                   isUserCreated: true,
+                   imported: true,
+                   importedFrom: 'Wallix',
+                   children: []
+               };
+               containerNode.children.push(subFolder);
+           }
+           
+           if (!subFolder.children) subFolder.children = [];
+           subFolder.children.push(incomingNode);
+           inserted++;
+        });
+
+        toast.current?.show({ severity: 'success', summary: 'Refresco Wallix', detail: `Agregadas ${inserted} nuevas conexiones.`, life: 5000 });
+        return nodesCopy;
+    });
+  };
 
   // Usar el hook de gestión de pestañas
   const {
@@ -1530,7 +1665,11 @@ const App = () => {
     setEditFolderIcon,
     setShowEditFolderDialog,
     onNodeContextMenu,
-    onTreeAreaContextMenu
+    onTreeAreaContextMenu,
+    onOpenWallixRefresh: (node) => {
+      setWallixRefreshNode(node);
+      setShowWallixRefreshDialog(true);
+    }
   });
 
   // Tab rendering hook
@@ -2620,7 +2759,11 @@ const App = () => {
     onShowImportExportDialog: setShowImportExportDialog,
     onShowImportWizard: setShowImportWizard,
     isExternalReloadRef,
-    updateTreeHash
+    updateTreeHash,
+    onOpenWallixRefresh: (node) => {
+      setWallixRefreshNode(node);
+      setShowWallixRefreshDialog(true);
+    }
   }), [
     nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
@@ -2646,7 +2789,8 @@ const App = () => {
     isAIChatActive, handleToggleLocalTerminalForAIChat,
 
     // Dependencias de diálogos
-    setShowImportDialog, setShowExportDialog, setShowImportExportDialog, setShowImportWizard
+    setShowImportDialog, setShowExportDialog, setShowImportExportDialog, setShowImportWizard,
+    setWallixRefreshNode, setShowWallixRefreshDialog
   ]);
 
   // === PROPS MEMOIZADAS PARA TABHEADER ===
@@ -3309,6 +3453,14 @@ const App = () => {
               return list;
             })()}
             defaultTargetFolderKey={null}
+          />
+
+          <WallixRefreshDialog
+              visible={showWallixRefreshDialog}
+              onHide={() => setShowWallixRefreshDialog(false)}
+              node={wallixRefreshNode}
+              onRefreshComplete={handleRefreshWallixComplete}
+              toast={toast}
           />
         </Suspense>
 

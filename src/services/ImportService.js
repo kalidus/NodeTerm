@@ -1149,7 +1149,9 @@ class ImportService {
         count: connectionCount,
         metadata: {
             source: 'Wallix',
-            importDate: new Date().toISOString()
+            importDate: new Date().toISOString(),
+            wallixUrl: url,
+            wallixUsername: username
         }
       };
 
