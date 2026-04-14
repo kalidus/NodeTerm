@@ -188,6 +188,45 @@ const App = () => {
     };
   }, []);
 
+  // === MODO MINIMALISTA ABSOLUTO ===
+  const [isMinimalMode, setIsMinimalMode] = React.useState(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.MINIMAL_MODE) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  // Persistir y sincronizar clase CSS global
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.MINIMAL_MODE, isMinimalMode.toString());
+    } catch { }
+    // Añadir/quitar clase global para reglas CSS que lo necesiten
+    if (isMinimalMode) {
+      document.body.classList.add('minimalist-terminal-mode');
+    } else {
+      document.body.classList.remove('minimalist-terminal-mode');
+    }
+  }, [isMinimalMode]);
+
+  // Escuchar evento de toggle desde cualquier componente
+  React.useEffect(() => {
+    const handleToggle = () => setIsMinimalMode(prev => !prev);
+    const handleKeyDown = (e) => {
+      // Ctrl + Alt + M para toggle rápido del modo minimalista
+      if (e.ctrlKey && e.altKey && e.code === 'KeyM') {
+        handleToggle();
+      }
+    };
+    window.addEventListener('toggle-minimal-mode', handleToggle);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('toggle-minimal-mode', handleToggle);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   // === SISTEMA DE ENCRIPTACIÓN ===
   const [secureStorage] = useState(() => new SecureStorage());
   const [needsUnlock, setNeedsUnlock] = useState(false);
@@ -2937,7 +2976,7 @@ const App = () => {
         />
 
         {/* TitleBar superior - se puede ocultar */}
-        {!titleBarCollapsed && (
+        {!titleBarCollapsed && !isMinimalMode && (
           <TitleBar
             sidebarFilter={sidebarFilter}
             setSidebarFilter={setSidebarFilter}
@@ -3044,7 +3083,7 @@ const App = () => {
         )}
 
         {/* Línea separadora debajo de la titlebar - Solo en temas futuristas */}
-        {!titleBarCollapsed && FUTURISTIC_UI_KEYS.includes(uiTheme) && (
+        {!titleBarCollapsed && !isMinimalMode && FUTURISTIC_UI_KEYS.includes(uiTheme) && (
           <div style={{
             height: '0.5px',
             background: 'var(--ui-tabgroup-border, #444)',
@@ -3403,6 +3442,7 @@ const App = () => {
           mainFrameHeaderCollapsed={mainFrameHeaderCollapsed}
           setMainFrameHeaderCollapsed={setMainFrameHeaderCollapsed}
           titleBarCollapsed={titleBarCollapsed}
+          isMinimalMode={isMinimalMode}
         />
 
         {/* 🚀 OPTIMIZACIÓN: Lazy loading con Suspense */}

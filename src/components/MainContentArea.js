@@ -129,7 +129,10 @@ const MainContentArea = ({
 
   // Frame header state
   mainFrameHeaderCollapsed,
-  setMainFrameHeaderCollapsed
+  setMainFrameHeaderCollapsed,
+
+  // Minimal mode
+  isMinimalMode
 }) => {
   // Estados para las flechas de navegación de pestañas
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -1870,13 +1873,15 @@ const MainContentArea = ({
         }}
       >
         <SplitterPanel
-          size={sidebarCollapsed ? 4 : 15}
-          minSize={sidebarCollapsed ? 4 : 3}
-          maxSize={sidebarCollapsed ? 4 : 35}
+          size={isMinimalMode ? 0 : (sidebarCollapsed ? 4 : 15)}
+          minSize={isMinimalMode ? 0 : (sidebarCollapsed ? 4 : 3)}
+          maxSize={isMinimalMode ? 0 : (sidebarCollapsed ? 4 : 35)}
           className="terminal-frame-container"
-          style={sidebarCollapsed
-            ? { width: SIDEBAR_COLLAPSED_WIDTH_PX, minWidth: SIDEBAR_COLLAPSED_WIDTH_PX, maxWidth: SIDEBAR_COLLAPSED_WIDTH_PX, padding: '8px 2px 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
-            : { padding: '8px 2px 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
+          style={isMinimalMode
+            ? { display: 'none', width: 0, minWidth: 0, maxWidth: 0, padding: 0, overflow: 'hidden' }
+            : sidebarCollapsed
+              ? { width: SIDEBAR_COLLAPSED_WIDTH_PX, minWidth: SIDEBAR_COLLAPSED_WIDTH_PX, maxWidth: SIDEBAR_COLLAPSED_WIDTH_PX, padding: '8px 2px 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
+              : { padding: '8px 2px 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
           }
         >
           <TerminalFrame
@@ -2071,7 +2076,7 @@ const MainContentArea = ({
         </SplitterPanel>
 
         <SplitterPanel
-          size={sidebarVisible ? 85 : 100}
+          size={(isMinimalMode || !sidebarVisible) ? 100 : 85}
           className="terminal-frame-container"
           style={{
             display: 'flex',
@@ -2079,14 +2084,15 @@ const MainContentArea = ({
             minWidth: 0,
             width: '100%',
             height: '100%',
-            padding: '8px 8px 8px 2px',
+            padding: isMinimalMode ? '0' : '8px 8px 8px 2px',
             background: 'transparent'
           }}
         >
           <TerminalFrame
             className={`main-content-frame ${mainFrameHeaderCollapsed ? 'main-content-frame--header-collapsed' : ''}`}
             contentClassName="main-content-frame-content"
-            isDraggable={titleBarCollapsed}
+            isDraggable={titleBarCollapsed || isMinimalMode}
+            hideHeader={mainFrameHeaderCollapsed || isMinimalMode}
             title={
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontWeight: 'bold', color: 'var(--ui-titlebar-text, #fff)' }}>NodeTerm</span>
@@ -2100,6 +2106,46 @@ const MainContentArea = ({
             }
             headerExtra={
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <i
+                  className={mainFrameHeaderCollapsed ? "pi pi-chevron-down" : "pi pi-chevron-up"}
+                  style={{
+                    fontSize: '0.860rem',
+                    color: 'var(--ui-titlebar-text, #fff)',
+                    opacity: 0.6,
+                    cursor: 'pointer',
+                    padding: 4,
+                    borderRadius: 4,
+                    transition: 'all 0.2s',
+                    display: isMinimalMode ? 'none' : 'block'
+                  }}
+                  title={mainFrameHeaderCollapsed ? "Mostrar marco superior" : "Ocultar marco superior"}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMainFrameHeaderCollapsed(!mainFrameHeaderCollapsed);
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.6'; }}
+                />
+                <i
+                  className={isMinimalMode ? "pi pi-compress" : "pi pi-expand"}
+                  style={{
+                    fontSize: '0.95rem',
+                    color: isMinimalMode ? 'var(--primary-color, #4fc3f7)' : 'var(--ui-titlebar-text, #fff)',
+                    opacity: isMinimalMode ? 1 : 0.7,
+                    cursor: 'pointer',
+                    padding: 4,
+                    borderRadius: 4,
+                    transition: 'all 0.2s',
+                    background: isMinimalMode ? 'rgba(var(--primary-rgb, 79, 195, 247), 0.1)' : 'transparent'
+                  }}
+                  title={isMinimalMode ? "Salir de Modo Minimalista" : "Modo Minimalista Absoluto"}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.dispatchEvent(new CustomEvent('toggle-minimal-mode'));
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = isMinimalMode ? '1' : '0.7'; e.currentTarget.style.transform = 'scale(1)'; }}
+                />
                 <i
                   className="pi pi-cog"
                   style={{
@@ -2440,6 +2486,7 @@ const MainContentArea = ({
                             isActiveTab={isActiveTab}
                             // Props memoizadas
                             {...memoizedContentRendererProps}
+                            isMinimalMode={isMinimalMode}
                             // Terminal props (específicas)
                             sshStatsByTabId={sshStatsByTabId}
                             getAllTabs={getAllTabs}

@@ -169,6 +169,25 @@ const TerminalFrame = ({
                 </div>
             )}
 
+            {headerExtra && hideHeader && (
+                <div className="terminal-frame-header-extra floating" style={{ 
+                    position: 'absolute',
+                    top: 6,
+                    right: 14,
+                    display: 'flex', 
+                    alignItems: 'center',
+                    zIndex: 2000,
+                    opacity: 0,
+                    transition: 'opacity 0.2s ease',
+                    ...(isDraggable ? { WebkitAppRegion: 'no-drag' } : {}) 
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = '0'; }}
+                >
+                    {headerExtra}
+                </div>
+            )}
+
             <div className={`terminal-frame-content ${contentClassName}`}>
                 {children}
             </div>

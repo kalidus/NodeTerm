@@ -97,7 +97,8 @@ const TabContentRenderer = React.memo(({
   onStartRecording,
   onStopRecording,
   isRecordingTab,
-  onToggleBroadcast
+  onToggleBroadcast,
+  isMinimalMode
 }) => {
   // 🚀 OPTIMIZACIÓN: Calcular conteos una sola vez cuando cambian los nodos o pestañas RDP
   const counts = React.useMemo(() => {
@@ -110,6 +111,7 @@ const TabContentRenderer = React.memo(({
       <HomeTab
         isActiveTab={isActiveTab}
         activeIds={activeIds}
+        isMinimalMode={isMinimalMode}
         onCreateSSHConnection={onCreateSSHConnection}
         onOpenSSHTunnel={onOpenSSHTunnel}
         onCreateFolder={() => openFolderDialog(null)}

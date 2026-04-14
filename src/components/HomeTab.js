@@ -42,6 +42,7 @@ const HomeTab = ({
   activeIds = new Set(),
   masterKey = null,
   secureStorage = null,
+  isMinimalMode = false
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal'); // Estado normal para tama\u00F1o correcto
@@ -1232,6 +1233,32 @@ const HomeTab = ({
                 }}
               >
                 {homeCardVisible ? 'Visible' : 'Oculta'}
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem' }}>Modo Minimalista Absoluto</span>
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    window.dispatchEvent(new CustomEvent('toggle-minimal-mode'));
+                  } catch (e) { /* noop */ }
+                }}
+                style={{
+                  border: `1px solid ${isMinimalMode ? (themeColors.primaryColor || '#2196f3') : (themeColors.borderColor || 'rgba(255,255,255,0.2)')}`,
+                  background: isMinimalMode
+                    ? (themeColors.primaryColor || '#2196f3')
+                    : 'rgba(120,120,120,0.25)',
+                  color: '#fff',
+                  borderRadius: '999px',
+                  padding: '0.2rem 0.65rem',
+                  cursor: 'pointer',
+                  fontSize: '0.78rem',
+                  fontWeight: 600
+                }}
+              >
+                {isMinimalMode ? 'Activo' : 'Inactivo'}
               </button>
             </div>
           </div>
