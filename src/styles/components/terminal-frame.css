@@ -707,6 +707,20 @@ body.minimalist-terminal-mode .main-splitter .p-splitter-gutter {
     pointer-events: none !important;
 }
 
+/* Fullscreen puro: eliminar completamente el panel lateral del splitter */
+body.minimalist-terminal-mode .main-splitter .p-splitter-panel:first-child {
+    display: none !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    width: 0 !important;
+    flex: 0 0 0 !important;
+}
+
+body.minimalist-terminal-mode .main-splitter .p-splitter-panel:last-child {
+    width: 100% !important;
+    flex: 1 1 auto !important;
+}
+
 body.minimalist-terminal-mode .p-tabview-nav-container,
 body.minimalist-terminal-mode .p-tabview-nav-content {
     display: none !important;
@@ -717,6 +731,7 @@ body.minimalist-terminal-mode .p-tabview-nav-content {
 body.minimalist-terminal-mode .main-content-frame {
     border-radius: 0 !important;
     border: none !important;
+    box-shadow: none !important;
 }
 
 body.minimalist-terminal-mode .main-content-frame-content {
@@ -725,6 +740,27 @@ body.minimalist-terminal-mode .main-content-frame-content {
 
 body.minimalist-terminal-mode .terminal-frame {
     border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* En modo minimalista no debe verse el fondo del layout, solo el terminal */
+body.minimalist-terminal-mode .app-container,
+body.minimalist-terminal-mode .main-splitter,
+body.minimalist-terminal-mode .main-splitter > .p-splitter-panel,
+body.minimalist-terminal-mode .terminal-frame-container {
+    background: var(--terminal-bg, #0a0f1f) !important;
+}
+
+body.minimalist-terminal-mode .main-splitter .terminal-frame {
+    background: var(--terminal-bg, #0a0f1f) !important;
+}
+
+body.minimalist-terminal-mode .main-splitter > .p-splitter-panel,
+body.minimalist-terminal-mode .terminal-frame-container,
+body.minimalist-terminal-mode .main-content-frame-content {
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 /* Permitir arrastrar la ventana desde cualquier parte del área de contenido del terminal en modo minimalista 
@@ -746,4 +782,58 @@ body.minimalist-terminal-mode .main-content-frame::before {
     background: transparent;
     z-index: 9999;
     cursor: ns-resize;
-}
+}
+
+/*
+ * Terminal integrado en Home (minimalista): solo quitar el margen respecto al borde
+ * de la ventana para que no se vea el escritorio; se mantiene borde, sombra y cabecera.
+ */
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-frame {
+    margin: 0 !important;
+}
+
+/*
+ * Home → vista solo terminal (solo minimalista): .hero-splash-header puede quedar vacío
+ * (tarjeta Home oculta) y el padding del CSS inyectado dejaba franja del escritorio arriba.
+ * Fuera de minimalista no se toca, para conservar el margen superior habitual.
+ */
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .hero-splash-header {
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+}
+
+/*
+ * Minimalista + terminal integrado (Home): barra tipo título para arrastrar la ventana
+ * (titlebar nativo oculto / frameless). Los controles siguen con no-drag.
+ */
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header {
+    -webkit-app-region: drag;
+    app-region: drag;
+}
+
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .traffic-lights,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .traffic-lights *,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .gnome-controls,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .gnome-controls *,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .kde-controls,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .kde-controls *,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .windows-controls,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .windows-controls *,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .orchis-controls,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .orchis-controls *,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .fluent-controls,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .fluent-controls *,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .matcha-controls,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .matcha-controls *,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .futuristic-controls,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .futuristic-controls *,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .modern-controls,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .modern-controls *,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .retro-controls,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .retro-controls *,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .recents-header-right,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .recents-header-right * {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+}
