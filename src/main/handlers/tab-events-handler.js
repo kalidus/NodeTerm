@@ -20,6 +20,7 @@ function registerTabEvents(tabId, dependencies) {
     WSL,
     Cygwin,
     Claude,
+    OpenCode,
     startUbuntuSession,
     handleUbuntuData,
     handleUbuntuResize,
@@ -168,6 +169,28 @@ function registerTabEvents(tabId, dependencies) {
 
   ipcMain.on(`claude:stop:${tabId}`, (event) => {
     Claude.ClaudeHandlers.stop(tabId);
+  });
+
+  // ========== OpenCode Events ==========
+  ipcMain.removeAllListeners(`opencode:start:${tabId}`);
+  ipcMain.removeAllListeners(`opencode:data:${tabId}`);
+  ipcMain.removeAllListeners(`opencode:resize:${tabId}`);
+  ipcMain.removeAllListeners(`opencode:stop:${tabId}`);
+
+  ipcMain.on(`opencode:start:${tabId}`, (event, data) => {
+    OpenCode.OpenCodeHandlers.start(tabId, data || {});
+  });
+
+  ipcMain.on(`opencode:data:${tabId}`, (event, data) => {
+    OpenCode.OpenCodeHandlers.data(tabId, data);
+  });
+
+  ipcMain.on(`opencode:resize:${tabId}`, (event, data) => {
+    OpenCode.OpenCodeHandlers.resize(tabId, data);
+  });
+
+  ipcMain.on(`opencode:stop:${tabId}`, (event) => {
+    OpenCode.OpenCodeHandlers.stop(tabId);
   });
 
   // ========== Docker Events (lazy loading) ==========

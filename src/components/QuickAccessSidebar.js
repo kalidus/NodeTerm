@@ -58,6 +58,7 @@ const QuickAccessSidebar = ({
   const [dockerMenuOpen, setDockerMenuOpen] = useState(false);
   const [dockerMenuPosition, setDockerMenuPosition] = useState({ top: 0, left: 0 });
   const [claudeEnabled, setClaudeEnabled] = useState(false);
+  const [openCodeEnabled, setOpenCodeEnabled] = useState(false);
 
   // Ref para el botón de Docker
   const dockerButtonRef = React.useRef(null);
@@ -265,8 +266,10 @@ const QuickAccessSidebar = ({
       try {
         const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
         setClaudeEnabled(cfg.claude === true);
+        setOpenCodeEnabled(cfg.opencode === true);
       } catch {
         setClaudeEnabled(false);
+        setOpenCodeEnabled(false);
       }
     };
     syncClaudeEnabled();
@@ -299,6 +302,16 @@ const QuickAccessSidebar = ({
           icon: 'pi pi-comments',
           color: '#f59e0b',
           action: () => handleOpenTerminal('claude')
+        });
+      }
+
+      if (openCodeEnabled) {
+        terminals.push({
+          label: 'OpenCode',
+          value: 'opencode',
+          icon: 'pi pi-code',
+          color: '#6366f1',
+          action: () => handleOpenTerminal('opencode')
         });
       }
 
@@ -355,6 +368,15 @@ const QuickAccessSidebar = ({
           action: () => handleOpenTerminal('claude')
         });
       }
+      if (openCodeEnabled) {
+        terminals.push({
+          label: 'OpenCode',
+          value: 'opencode',
+          icon: 'pi pi-code',
+          color: '#6366f1',
+          action: () => handleOpenTerminal('opencode')
+        });
+      }
     } else {
       terminals.push({
         label: 'Terminal',
@@ -372,10 +394,19 @@ const QuickAccessSidebar = ({
           action: () => handleOpenTerminal('claude')
         });
       }
+      if (openCodeEnabled) {
+        terminals.push({
+          label: 'OpenCode',
+          value: 'opencode',
+          icon: 'pi pi-code',
+          color: '#6366f1',
+          action: () => handleOpenTerminal('opencode')
+        });
+      }
     }
 
     setAvailableTerminals(terminals);
-  }, [wslDistributions, cygwinAvailable, dockerContainers, claudeEnabled]);
+  }, [wslDistributions, cygwinAvailable, dockerContainers, claudeEnabled, openCodeEnabled]);
 
   // Configurar acciones principales
   useEffect(() => {

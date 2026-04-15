@@ -86,6 +86,7 @@ const NodeTermStatus = ({
 	const [dockerContainers, setDockerContainers] = useState([]);
 	const [availableTerminals, setAvailableTerminals] = useState([]);
 	const [claudeEnabled, setClaudeEnabled] = useState(false);
+	const [openCodeEnabled, setOpenCodeEnabled] = useState(false);
 	const [dockerMenuOpen, setDockerMenuOpen] = useState(false);
 	const [dockerMenuPosition, setDockerMenuPosition] = useState({ top: 0, left: 0 });
 	const [ubuntuMenuOpen, setUbuntuMenuOpen] = useState(false);
@@ -657,6 +658,11 @@ const NodeTermStatus = ({
 			return <i className="pi pi-comments" style={{ color: terminal.color || '#f59e0b', fontSize: `${claudeIconSize}px`, fontWeight: 'bold' }} />;
 		}
 
+		if (value === 'opencode') {
+			const openCodeIconSize = Math.round(baseIconSizePx * 1.3);
+			return <i className="pi pi-code" style={{ color: terminal.color || '#6366f1', fontSize: `${openCodeIconSize}px`, fontWeight: 'bold' }} />;
+		}
+
 		// Detectar WSL genérico (usar pingüino de Linux) - debe ser exactamente 'wsl' sin distribuciones específicas - aumentar tamaño
 		if (value === 'wsl' && !value.includes('ubuntu') && !value.includes('debian') && !value.includes('kali')) {
 			const wslIconSize = Math.round(baseIconSizePx * 1.3);
@@ -784,8 +790,10 @@ const NodeTermStatus = ({
 			try {
 				const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
 				setClaudeEnabled(cfg.claude === true);
+				setOpenCodeEnabled(cfg.opencode === true);
 			} catch {
 				setClaudeEnabled(false);
+				setOpenCodeEnabled(false);
 			}
 		};
 		syncClaudeEnabled();
@@ -818,6 +826,16 @@ const NodeTermStatus = ({
 					icon: 'pi pi-comments',
 					color: '#f59e0b',
 					action: () => handleOpenTerminal('claude')
+				});
+			}
+
+			if (openCodeEnabled) {
+				terminals.push({
+					label: 'OpenCode',
+					value: 'opencode',
+					icon: 'pi pi-code',
+					color: '#6366f1',
+					action: () => handleOpenTerminal('opencode')
 				});
 			}
 
@@ -891,6 +909,15 @@ const NodeTermStatus = ({
 					action: () => handleOpenTerminal('claude')
 				});
 			}
+			if (openCodeEnabled) {
+				terminals.push({
+					label: 'OpenCode',
+					value: 'opencode',
+					icon: 'pi pi-code',
+					color: '#6366f1',
+					action: () => handleOpenTerminal('opencode')
+				});
+			}
 		} else {
 			terminals.push({
 				label: 'Terminal',
@@ -908,10 +935,19 @@ const NodeTermStatus = ({
 					action: () => handleOpenTerminal('claude')
 				});
 			}
+			if (openCodeEnabled) {
+				terminals.push({
+					label: 'OpenCode',
+					value: 'opencode',
+					icon: 'pi pi-code',
+					color: '#6366f1',
+					action: () => handleOpenTerminal('opencode')
+				});
+			}
 		}
 
 		setAvailableTerminals(terminals);
-	}, [wslDistributions, cygwinAvailable, horizontal, compact, variant, claudeEnabled]);
+	}, [wslDistributions, cygwinAvailable, horizontal, compact, variant, claudeEnabled, openCodeEnabled]);
 
 	const getRelativeTime = (date) => {
 		try {
@@ -1208,6 +1244,7 @@ const NodeTermStatus = ({
 
 							if (t.value === 'powershell') iconElement = <FaWindows style={{ color: t.color || '#0078D4', fontSize: '1.1rem' }} />;
 							else if (t.value === 'claude') iconElement = <i className="pi pi-comments" style={{ color: t.color || '#f59e0b', fontSize: '1.1rem' }} />;
+							else if (t.value === 'opencode') iconElement = <i className="pi pi-code" style={{ color: t.color || '#6366f1', fontSize: '1.1rem' }} />;
 							else if (t.value === 'cygwin') iconElement = <i className="pi pi-code" style={{ color: t.color || '#00FF00', fontSize: '1.1rem' }} />;
 							else if (t.value.startsWith('wsl-') && t.distroInfo) {
 								const cat = t.distroInfo.category;

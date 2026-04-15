@@ -573,6 +573,7 @@ const Sidebar = React.memo(({
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
     nodeterm: true,
     claude: false,
+    opencode: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
@@ -587,8 +588,9 @@ const Sidebar = React.memo(({
         if (config) {
           const parsed = JSON.parse(config);
           setAiClientsEnabled({
-            nodeterm: parsed.nodeterm === true, // Solo activo si está explícitamente configurado
+            nodeterm: parsed.nodeterm === true,
             claude: parsed.claude === true,
+            opencode: parsed.opencode === true,
             anythingllm: parsed.anythingllm === true,
             openwebui: parsed.openwebui === true,
             librechat: parsed.librechat === true,
@@ -601,6 +603,7 @@ const Sidebar = React.memo(({
           setAiClientsEnabled({
             nodeterm: false,
             claude: false,
+            opencode: false,
             anythingllm: false,
             openwebui: false,
             librechat: false,

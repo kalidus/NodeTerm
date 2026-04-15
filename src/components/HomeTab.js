@@ -367,6 +367,7 @@ const HomeTab = ({
           const terminalTitles = {
             'powershell': 'Windows PowerShell',
             'claude': 'Claude Code',
+            'opencode': 'OpenCode',
             'wsl': 'WSL',
             'cygwin': 'Cygwin',
             'linux-terminal': platform === 'darwin' ? 'Terminal macOS' : 'Terminal Linux'

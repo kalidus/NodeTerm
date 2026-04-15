@@ -66,8 +66,9 @@ logTiming('Utils cargados');
 // Nota: Docker se importará después de que se carguen fs y path
 let Docker = null;
 
-const { WSL, PowerShell, Cygwin, Claude } = require('./src/main/services');
+const { WSL, PowerShell, Cygwin, Claude, OpenCode } = require('./src/main/services');
 const { getClaudeConfig } = require('./src/main/handlers/claude-handlers');
+const { getOpenCodeConfig } = require('./src/main/handlers/opencode-handlers');
 logTiming('Servicios WSL/PowerShell/Cygwin/Claude cargados');
 
 // Servicio de estadísticas SSH
@@ -1194,6 +1195,12 @@ function createWindow() {
           getPty,
           isAppQuitting,
           getClaudeConfig
+        });
+        OpenCode.setDependencies({
+          mainWindow,
+          getPty,
+          isAppQuitting,
+          getOpenCodeConfig
         });
         const docker = getDocker();
         if (docker && docker.setMainWindow) {
@@ -2861,6 +2868,7 @@ function registerTabEventsWrapper(tabId) {
     WSL,
     Cygwin,
     Claude,
+    OpenCode,
     startUbuntuSession,
     handleUbuntuData,
     handleUbuntuResize,
@@ -2904,6 +2912,12 @@ app.on('before-quit', (event) => {
     Claude.cleanup();
   } catch (error) {
     console.error('Error cleaning up Claude processes on quit:', error);
+  }
+
+  try {
+    OpenCode.cleanup();
+  } catch (error) {
+    console.error('Error cleaning up OpenCode processes on quit:', error);
   }
 });
 

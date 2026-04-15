@@ -12,6 +12,7 @@ import UbuntuTerminal from './UbuntuTerminal';
 import CygwinTerminal from './CygwinTerminal';
 import DockerTerminal from './DockerTerminal';
 import ClaudeTerminal from './ClaudeTerminal';
+import OpenCodeTerminal from './OpenCodeTerminal';
 import AuditTab from './AuditTab';
 import RecordingPlayerTab from './RecordingPlayerTab';
 import GlobalAuditTab from './GlobalAuditTab';
@@ -1430,6 +1431,19 @@ const TabContentRenderer = React.memo(({
           theme={powerShellTheme}
           onBroadcastData={handleBroadcastData}
           isBroadcastActive={tab.isBroadcastActive}
+        />
+      );
+    }
+
+    if (terminalType === 'opencode') {
+      const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
+      return (
+        <OpenCodeTerminal
+          ref={el => terminalRefs.current[tab.key] = el}
+          tabId={tab.key}
+          fontFamily={localFontFamily}
+          fontSize={localFontSize}
+          theme={powerShellTheme}
         />
       );
     }

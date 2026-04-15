@@ -153,6 +153,18 @@ const SettingsDialog = ({
       return false;
     }
   });
+  const [openCodeConfig, setOpenCodeConfig] = useState({
+    binaryPath: '',
+    extraArgs: ''
+  });
+  const [openCodeClientEnabled, setOpenCodeClientEnabled] = useState(() => {
+    try {
+      const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+      return cfg.opencode === true;
+    } catch {
+      return false;
+    }
+  });
 
   // Hook para redimensionamiento del diálogo
   // storageKey: null para que siempre se abra con el tamaño por defecto
@@ -1077,7 +1089,21 @@ const SettingsDialog = ({
       }
     };
 
+    const loadOpenCodeConfig = async () => {
+      try {
+        const config = await window.electron?.opencode?.getConfig?.();
+        if (!mounted || !config) return;
+        setOpenCodeConfig({
+          binaryPath: config.binaryPath || '',
+          extraArgs: config.extraArgs || ''
+        });
+      } catch (error) {
+        console.error('Error cargando configuración de OpenCode:', error);
+      }
+    };
+
     loadClaudeConfig();
+    loadOpenCodeConfig();
     return () => { mounted = false; };
   }, [visible]);
 
@@ -1091,9 +1117,24 @@ const SettingsDialog = ({
       }
     };
 
-    const onAiClientsConfigChanged = () => syncClaudeClientState();
+    const syncOpenCodeClientState = () => {
+      try {
+        const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+        setOpenCodeClientEnabled(cfg.opencode === true);
+      } catch {
+        setOpenCodeClientEnabled(false);
+      }
+    };
+
+    const onAiClientsConfigChanged = () => {
+      syncClaudeClientState();
+      syncOpenCodeClientState();
+    };
     const onStorage = (e) => {
-      if (e.key === 'ai_clients_enabled') syncClaudeClientState();
+      if (e.key === 'ai_clients_enabled') {
+        syncClaudeClientState();
+        syncOpenCodeClientState();
+      }
     };
 
     window.addEventListener('ai-clients-config-changed', onAiClientsConfigChanged);
@@ -1112,6 +1153,7 @@ const SettingsDialog = ({
       // PowerShell siempre disponible
       options.push({ label: 'PowerShell', value: 'powershell' });
       if (claudeClientEnabled) options.push({ label: 'Claude Code', value: 'claude' });
+      if (openCodeClientEnabled) options.push({ label: 'OpenCode', value: 'opencode' });
 
       // WSL genérico
       options.push({ label: 'WSL', value: 'wsl' });
@@ -1143,19 +1185,21 @@ const SettingsDialog = ({
     } else if (platform === 'linux' || platform === 'darwin') {
       options.push(
         { label: 'Terminal Linux/macOS', value: 'linux-terminal' },
-        ...(claudeClientEnabled ? [{ label: 'Claude Code', value: 'claude' }] : [])
+        ...(claudeClientEnabled ? [{ label: 'Claude Code', value: 'claude' }] : []),
+        ...(openCodeClientEnabled ? [{ label: 'OpenCode', value: 'opencode' }] : [])
       );
     } else {
       // Fallback
       options.push(
         { label: 'PowerShell', value: 'powershell' },
         { label: 'Terminal', value: 'linux-terminal' },
-        ...(claudeClientEnabled ? [{ label: 'Claude Code', value: 'claude' }] : [])
+        ...(claudeClientEnabled ? [{ label: 'Claude Code', value: 'claude' }] : []),
+        ...(openCodeClientEnabled ? [{ label: 'OpenCode', value: 'opencode' }] : [])
       );
     }
 
     return options;
-  }, [platform, wslDistributions, cygwinAvailable, dockerContainers, claudeClientEnabled]);
+  }, [platform, wslDistributions, cygwinAvailable, dockerContainers, claudeClientEnabled, openCodeClientEnabled]);
 
   // Handler para cambiar terminal por defecto
   const handleDefaultTerminalChange = useCallback((terminalType) => {
@@ -1207,6 +1251,45 @@ const SettingsDialog = ({
       });
     }
   }, [claudeConfig]);
+
+  const handleSaveOpenCodeConfig = useCallback(async () => {
+    try {
+      const validation = await window.electron?.opencode?.validateConfig?.(openCodeConfig);
+      if (validation && validation.valid === false) {
+        toastRef.current?.show({
+          severity: 'error',
+          summary: 'Configuración inválida',
+          detail: validation.error || 'Revisa los datos de OpenCode',
+          life: 4000
+        });
+        return;
+      }
+
+      const result = await window.electron?.opencode?.setConfig?.(openCodeConfig);
+      if (result?.success) {
+        toastRef.current?.show({
+          severity: 'success',
+          summary: 'OpenCode',
+          detail: 'Configuración guardada',
+          life: 2500
+        });
+      } else {
+        toastRef.current?.show({
+          severity: 'error',
+          summary: 'OpenCode',
+          detail: result?.error || 'No se pudo guardar la configuración',
+          life: 4000
+        });
+      }
+    } catch (error) {
+      toastRef.current?.show({
+        severity: 'error',
+        summary: 'OpenCode',
+        detail: error.message || 'Error guardando configuración',
+        life: 4000
+      });
+    }
+  }, [openCodeConfig]);
 
   // Persistir configuración del icono interactivo
   useEffect(() => {
@@ -2382,6 +2465,39 @@ const SettingsDialog = ({
                                 label="Guardar Claude"
                                 icon="pi pi-save"
                                 onClick={handleSaveClaudeConfig}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="general-setting-card">
+                          <div className="general-setting-content" style={{ alignItems: 'flex-start' }}>
+                            <div className="general-setting-icon" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}>
+                              <i className="pi pi-code"></i>
+                            </div>
+                            <div className="general-setting-info" style={{ flex: 1 }}>
+                              <label className="general-setting-label">OpenCode (terminal local)</label>
+                              <p className="general-setting-description">
+                                Configura ruta del binario y argumentos extra para nuevas pestañas OpenCode.
+                              </p>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                                <InputText
+                                  value={openCodeConfig.binaryPath}
+                                  onChange={(e) => setOpenCodeConfig(prev => ({ ...prev, binaryPath: e.target.value }))}
+                                  placeholder="Ruta binario (opcional)"
+                                />
+                                <InputText
+                                  value={openCodeConfig.extraArgs}
+                                  onChange={(e) => setOpenCodeConfig(prev => ({ ...prev, extraArgs: e.target.value }))}
+                                  placeholder="Args extra (opcional)"
+                                />
+                              </div>
+                            </div>
+                            <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                label="Guardar OpenCode"
+                                icon="pi pi-save"
+                                style={{ background: '#6366f1', border: '1px solid #6366f1' }}
+                                onClick={handleSaveOpenCodeConfig}
                               />
                             </div>
                           </div>

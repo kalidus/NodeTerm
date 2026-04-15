@@ -17,6 +17,7 @@ const AIClientsTab = ({ themeColors }) => {
   const [clients, setClients] = useState({
     nodeterm: false,
     claude: false,
+    opencode: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
@@ -35,6 +36,14 @@ const AIClientsTab = ({ themeColors }) => {
     opennotebook: { loading: false, running: false, error: null }
   });
   const [claudeCliStatus, setClaudeCliStatus] = useState({
+    loading: false,
+    installed: false,
+    installing: false,
+    version: null,
+    binaryPath: null,
+    error: null
+  });
+  const [openCodeCliStatus, setOpenCodeCliStatus] = useState({
     loading: false,
     installed: false,
     installing: false,
@@ -61,6 +70,10 @@ const AIClientsTab = ({ themeColors }) => {
 
   useEffect(() => {
     checkClaudeCliStatus();
+  }, []);
+
+  useEffect(() => {
+    checkOpenCodeCliStatus();
   }, []);
 
   // Verificar estado de servicios Docker al montar y cuando cambian los toggles
@@ -146,6 +159,56 @@ const AIClientsTab = ({ themeColors }) => {
     }
   };
 
+  const checkOpenCodeCliStatus = async () => {
+    setOpenCodeCliStatus(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const result = await window.electron?.opencode?.getCliStatus?.();
+      if (result?.success) {
+        setOpenCodeCliStatus({
+          loading: false,
+          installed: !!result.installed,
+          installing: false,
+          version: result.version || null,
+          binaryPath: result.binaryPath || null,
+          error: null
+        });
+      } else {
+        setOpenCodeCliStatus(prev => ({
+          ...prev,
+          loading: false,
+          installing: false,
+          error: result?.error || 'No se pudo verificar OpenCode CLI'
+        }));
+      }
+    } catch (error) {
+      setOpenCodeCliStatus(prev => ({
+        ...prev,
+        loading: false,
+        installing: false,
+        error: error.message || 'No se pudo verificar OpenCode CLI'
+      }));
+    }
+  };
+
+  const installOpenCodeCli = async () => {
+    setOpenCodeCliStatus(prev => ({ ...prev, installing: true, error: null }));
+    try {
+      const result = await window.electron?.opencode?.installCli?.();
+      if (!result?.success) {
+        throw new Error(result?.error || 'No se pudo instalar OpenCode CLI');
+      }
+      await checkOpenCodeCliStatus();
+      return true;
+    } catch (error) {
+      setOpenCodeCliStatus(prev => ({
+        ...prev,
+        installing: false,
+        error: error.message || 'No se pudo instalar OpenCode CLI'
+      }));
+      return false;
+    }
+  };
+
   // Handler para cambiar el estado de un cliente
   const handleToggleClient = async (clientKey) => {
     if (clientKey === 'claude') {
@@ -155,6 +218,17 @@ const AIClientsTab = ({ themeColors }) => {
         if (!ok) return;
       }
       const newClients = { ...clients, claude: willEnable };
+      saveClientsConfig(newClients);
+      return;
+    }
+
+    if (clientKey === 'opencode') {
+      const willEnable = !clients.opencode;
+      if (willEnable && !openCodeCliStatus.installed) {
+        const ok = await installOpenCodeCli();
+        if (!ok) return;
+      }
+      const newClients = { ...clients, opencode: willEnable };
       saveClientsConfig(newClients);
       return;
     }
@@ -280,6 +354,20 @@ const AIClientsTab = ({ themeColors }) => {
       features: ['Instalación automática', 'Terminal local dedicada', 'Activar/Desactivar desde Clientes IA', 'Configuración en Settings'],
       badges: [
         { label: 'LOCAL CLI', severity: 'warning', icon: 'pi pi-desktop' }
+      ],
+      requiresDocker: false,
+      isLocalCli: true
+    },
+    {
+      key: 'opencode',
+      name: 'OpenCode (CLI Local)',
+      icon: 'pi pi-code',
+      color: '#6366f1',
+      description: 'Agente de IA open-source para codificación en terminal. Soporta 75+ proveedores de modelos incluyendo Claude, GPT, Gemini y modelos locales.',
+      features: ['Open Source', 'Multi-proveedor (75+ LLMs)', 'Terminal local dedicada', 'Instalación automática'],
+      badges: [
+        { label: 'LOCAL CLI', severity: 'warning', icon: 'pi pi-desktop' },
+        { label: 'FREE', severity: 'success', icon: 'pi pi-star' }
       ],
       requiresDocker: false,
       isLocalCli: true
@@ -594,6 +682,66 @@ const AIClientsTab = ({ themeColors }) => {
                 <div style={{ marginTop: '0.75rem', color: '#ef4444' }}>
                   <i className="pi pi-times-circle" style={{ marginRight: '0.4rem' }} />
                   {claudeCliStatus.error}
+                </div>
+              )}
+            </div>
+          )}
+
+          {client.key === 'opencode' && (
+            <div className="ai-client-note" style={{
+              marginTop: '1rem',
+              padding: '0.75rem',
+              background: 'rgba(99, 102, 241, 0.12)',
+              border: '1px solid #6366f1',
+              borderRadius: '4px',
+              fontSize: '0.85rem'
+            }}>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <i className="pi pi-info-circle" style={{ color: '#6366f1', marginRight: '0.5rem' }} />
+                <strong>Estado CLI:</strong>{' '}
+                {openCodeCliStatus.loading
+                  ? 'verificando...'
+                  : (openCodeCliStatus.installed
+                    ? `instalado${openCodeCliStatus.version ? ` (${openCodeCliStatus.version})` : ''}`
+                    : 'no instalado')}
+              </div>
+              {openCodeCliStatus.binaryPath && (
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <strong>Binario:</strong> <code>{openCodeCliStatus.binaryPath}</code>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {!openCodeCliStatus.installed && (
+                  <Button
+                    label="Instalar OpenCode CLI"
+                    icon="pi pi-download"
+                    className="p-button-sm"
+                    style={{ background: '#6366f1', border: '1px solid #6366f1' }}
+                    onClick={installOpenCodeCli}
+                    loading={openCodeCliStatus.installing}
+                  />
+                )}
+                {openCodeCliStatus.installed && (
+                  <Button
+                    label="Reinstalar CLI"
+                    icon="pi pi-refresh"
+                    className="p-button-secondary p-button-sm"
+                    onClick={installOpenCodeCli}
+                    loading={openCodeCliStatus.installing}
+                  />
+                )}
+                <Button
+                  label="Verificar"
+                  icon="pi pi-search"
+                  className="p-button-secondary p-button-sm"
+                  onClick={checkOpenCodeCliStatus}
+                  loading={openCodeCliStatus.loading}
+                />
+              </div>
+              {openCodeCliStatus.error && (
+                <div style={{ marginTop: '0.75rem', color: '#ef4444' }}>
+                  <i className="pi pi-times-circle" style={{ marginRight: '0.4rem' }} />
+                  {openCodeCliStatus.error}
                 </div>
               )}
             </div>

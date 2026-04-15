@@ -133,6 +133,14 @@ contextBridge.exposeInMainWorld('electron', {
     installCli: () => ipcRenderer.invoke('claude:cli-install'),
     uninstallCli: () => ipcRenderer.invoke('claude:cli-uninstall')
   },
+  opencode: {
+    getConfig: () => ipcRenderer.invoke('opencode:get-config'),
+    setConfig: (config) => ipcRenderer.invoke('opencode:set-config', config),
+    validateConfig: (config) => ipcRenderer.invoke('opencode:validate-config', config),
+    getCliStatus: () => ipcRenderer.invoke('opencode:cli-status'),
+    installCli: () => ipcRenderer.invoke('opencode:cli-install'),
+    uninstallCli: () => ipcRenderer.invoke('opencode:cli-uninstall')
+  },
   ipcRenderer: {
     send: (channel, data) => {
       ipcRenderer.send(channel, data);
@@ -171,6 +179,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^file:.*$/,
         /^local-fs:.*$/,
         /^claude:.*$/,
+        /^opencode:.*$/,
         // 'process-pdf', // DESHABILITADO - pdf-parse eliminado
         // 'process-pdf-buffer', // DESHABILITADO
         // 'create-temp-file', // DESHABILITADO
@@ -210,6 +219,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^cygwin:.*$/,
         /^docker:.*$/,
         /^claude:.*$/,
+        /^opencode:.*$/,
         /^rdp:.*$/,
         /^guacamole:.*$/,
         /^anythingllm:.*$/,
@@ -248,6 +258,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^cygwin:.*$/,
         /^docker:.*$/,
         /^claude:.*$/,
+        /^opencode:.*$/,
         /^rdp:.*$/,
         /^librechat:.*$/,
         /^agentzero:.*$/,
