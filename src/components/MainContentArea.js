@@ -427,6 +427,7 @@ const MainContentArea = ({
   // Estado para controlar la visibilidad de las opciones de clientes de IA
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
     nodeterm: true,
+    claude: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
@@ -450,6 +451,7 @@ const MainContentArea = ({
           const parsed = JSON.parse(config);
           setAiClientsEnabled({
             nodeterm: parsed.nodeterm === true, // Solo activo si está explícitamente configurado
+            claude: parsed.claude === true,
             anythingllm: parsed.anythingllm === true,
             openwebui: parsed.openwebui === true,
             librechat: parsed.librechat === true,
@@ -460,6 +462,7 @@ const MainContentArea = ({
           // Si no hay configuración, todos desactivados por defecto
           setAiClientsEnabled({
             nodeterm: false,
+            claude: false,
             anythingllm: false,
             openwebui: false,
             librechat: false,
@@ -560,6 +563,11 @@ const MainContentArea = ({
       // PowerShell
       if (terminalType === 'powershell') {
         return <FaWindows style={{ fontSize: `${baseIconSize}px`, color: '#0078D4', marginRight: iconMarginRight }} />;
+      }
+
+      // Claude Code
+      if (terminalType === 'claude') {
+        return <i className="pi pi-comments" style={{ fontSize: `${baseIconSize}px`, color: '#f59e0b', marginRight: iconMarginRight }} />;
       }
 
       // WSL genérico (sin distribución específica)
@@ -669,6 +677,19 @@ const MainContentArea = ({
           }
         }
       ];
+
+      if (aiClientsEnabled.claude) {
+        menuItems.splice(1, 0, {
+          label: 'Claude Code',
+          icon: getTerminalMenuIcon('claude'),
+          command: () => {
+            setLastLocalTerminalType('claude');
+            if (createLocalTerminalTabRef.current) {
+              createLocalTerminalTabRef.current('claude');
+            }
+          }
+        });
+      }
 
       // Agregar distribuciones WSL detectadas dinámicamente
       if (wslDistributions && wslDistributions.length > 0) {
@@ -1452,6 +1473,19 @@ const MainContentArea = ({
 
   // Función para crear una nueva pestaña de terminal local independiente
   const createLocalTerminalTab = (terminalType, distroInfo = null) => {
+    if (terminalType === 'claude') {
+      try {
+        const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+        if (cfg.claude !== true) {
+          window.alert('Claude Code está desactivado. Actívalo en Configuración -> Clientes de IA.');
+          return;
+        }
+      } catch {
+        window.alert('Claude Code está desactivado. Actívalo en Configuración -> Clientes de IA.');
+        return;
+      }
+    }
+
     if (activeGroupId !== null) {
       const currentGroupKey = activeGroupId || 'no-group';
       setGroupActiveIndices(prev => ({
@@ -1479,7 +1513,7 @@ const MainContentArea = ({
       let finalDistroInfo = distroInfo;
 
       // Si no vino distroInfo, intentar resolver distribución WSL por nombre/label directo usando ref (estado más fresco)
-      if (!finalDistroInfo && !terminalType.startsWith('docker-')) {
+      if (!finalDistroInfo && terminalType !== 'claude' && !terminalType.startsWith('docker-')) {
         const distros = wslDistributionsRef.current || [];
         const distro = distros.find(d =>
           d.name === terminalType ||
@@ -1513,6 +1547,10 @@ const MainContentArea = ({
         switch (terminalType) {
           case 'powershell':
             label = 'PowerShell';
+            break;
+          case 'claude':
+            label = 'Claude Code';
+            finalTerminalType = 'claude';
             break;
           case 'wsl':
             label = 'WSL';

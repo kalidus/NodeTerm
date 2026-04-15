@@ -6,7 +6,8 @@ const TerminalTypeSelector = ({ value, onChange }) => {
     const terminalLabel = isWindows ? 'PowerShell' : 'Terminal';
 
     const terminalOptions = [
-        { label: terminalLabel, value: 'powershell', icon: 'pi pi-desktop', color: '#4fc3f7' }
+        { label: terminalLabel, value: 'powershell', icon: 'pi pi-desktop', color: '#4fc3f7' },
+        { label: 'Claude Code', value: 'claude', icon: 'pi pi-comments', color: '#f59e0b' }
     ];
 
     return (
@@ -31,7 +32,9 @@ const TerminalTypeSelector = ({ value, onChange }) => {
                             color: value === option.value ? option.color : 'rgba(255, 255, 255, 0.7)',
                             borderColor: value === option.value ? option.color : 'transparent',
                             backgroundColor: value === option.value ?
-                                (option.value === 'wsl' ? 'rgba(138, 226, 52, 0.1)' : 'rgba(79, 195, 247, 0.1)')
+                                (option.value === 'claude'
+                                    ? 'rgba(245, 158, 11, 0.15)'
+                                    : (option.value === 'wsl' ? 'rgba(138, 226, 52, 0.1)' : 'rgba(79, 195, 247, 0.1)'))
                                 : 'transparent',
                             fontSize: '12px',
                             padding: '4px 8px',

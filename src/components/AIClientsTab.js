@@ -16,6 +16,7 @@ const AIClientsTab = ({ themeColors }) => {
   // Estado para cada cliente de IA
   const [clients, setClients] = useState({
     nodeterm: false,
+    claude: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
@@ -31,6 +32,14 @@ const AIClientsTab = ({ themeColors }) => {
     agentzero: { loading: false, running: false, error: null },
     openclaw: { loading: false, running: false, error: null }
   });
+  const [claudeCliStatus, setClaudeCliStatus] = useState({
+    loading: false,
+    installed: false,
+    installing: false,
+    version: null,
+    binaryPath: null,
+    error: null
+  });
 
   // Cargar configuración desde localStorage al montar
   useEffect(() => {
@@ -38,11 +47,18 @@ const AIClientsTab = ({ themeColors }) => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setClients(parsed);
+        setClients(prev => ({
+          ...prev,
+          ...parsed
+        }));
       } catch (error) {
         console.warn('[AIClientsTab] Error al cargar configuración:', error);
       }
     }
+  }, []);
+
+  useEffect(() => {
+    checkClaudeCliStatus();
   }, []);
 
   // Verificar estado de servicios Docker al montar y cuando cambian los toggles
@@ -75,8 +91,69 @@ const AIClientsTab = ({ themeColors }) => {
     }));
   };
 
+  const checkClaudeCliStatus = async () => {
+    setClaudeCliStatus(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const result = await window.electron?.claude?.getCliStatus?.();
+      if (result?.success) {
+        setClaudeCliStatus({
+          loading: false,
+          installed: !!result.installed,
+          installing: false,
+          version: result.version || null,
+          binaryPath: result.binaryPath || null,
+          error: null
+        });
+      } else {
+        setClaudeCliStatus(prev => ({
+          ...prev,
+          loading: false,
+          installing: false,
+          error: result?.error || 'No se pudo verificar Claude CLI'
+        }));
+      }
+    } catch (error) {
+      setClaudeCliStatus(prev => ({
+        ...prev,
+        loading: false,
+        installing: false,
+        error: error.message || 'No se pudo verificar Claude CLI'
+      }));
+    }
+  };
+
+  const installClaudeCli = async () => {
+    setClaudeCliStatus(prev => ({ ...prev, installing: true, error: null }));
+    try {
+      const result = await window.electron?.claude?.installCli?.();
+      if (!result?.success) {
+        throw new Error(result?.error || 'No se pudo instalar Claude CLI');
+      }
+      await checkClaudeCliStatus();
+      return true;
+    } catch (error) {
+      setClaudeCliStatus(prev => ({
+        ...prev,
+        installing: false,
+        error: error.message || 'No se pudo instalar Claude CLI'
+      }));
+      return false;
+    }
+  };
+
   // Handler para cambiar el estado de un cliente
   const handleToggleClient = async (clientKey) => {
+    if (clientKey === 'claude') {
+      const willEnable = !clients.claude;
+      if (willEnable && !claudeCliStatus.installed) {
+        const ok = await installClaudeCli();
+        if (!ok) return;
+      }
+      const newClients = { ...clients, claude: willEnable };
+      saveClientsConfig(newClients);
+      return;
+    }
+
     const newClients = {
       ...clients,
       [clientKey]: !clients[clientKey]
@@ -187,6 +264,19 @@ const AIClientsTab = ({ themeColors }) => {
 
   // Definición de los clientes de IA
   const clientsDefinition = [
+    {
+      key: 'claude',
+      name: 'Claude Code (CLI Local)',
+      icon: 'pi pi-comments',
+      color: '#f59e0b',
+      description: 'Integra Claude Code como terminal local en NodeTerm. Si no está instalado, NodeTerm puede instalar el CLI automáticamente.',
+      features: ['Instalación automática', 'Terminal local dedicada', 'Activar/Desactivar desde Clientes IA', 'Configuración en Settings'],
+      badges: [
+        { label: 'LOCAL CLI', severity: 'warning', icon: 'pi pi-desktop' }
+      ],
+      requiresDocker: false,
+      isLocalCli: true
+    },
     {
       key: 'anythingllm',
       name: 'AnythingLLM',
@@ -426,6 +516,65 @@ const AIClientsTab = ({ themeColors }) => {
             }}>
               <i className="pi pi-info-circle" style={{ color: '#ff9800', marginRight: '0.5rem' }} />
               <strong>Nota:</strong> Este cliente está en fase experimental. Requiere Ollama instalado localmente.
+            </div>
+          )}
+
+          {client.key === 'claude' && (
+            <div className="ai-client-note" style={{
+              marginTop: '1rem',
+              padding: '0.75rem',
+              background: 'rgba(245, 158, 11, 0.12)',
+              border: '1px solid #f59e0b',
+              borderRadius: '4px',
+              fontSize: '0.85rem'
+            }}>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <i className="pi pi-info-circle" style={{ color: '#f59e0b', marginRight: '0.5rem' }} />
+                <strong>Estado CLI:</strong>{' '}
+                {claudeCliStatus.loading
+                  ? 'verificando...'
+                  : (claudeCliStatus.installed
+                    ? `instalado${claudeCliStatus.version ? ` (${claudeCliStatus.version})` : ''}`
+                    : 'no instalado')}
+              </div>
+              {claudeCliStatus.binaryPath && (
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <strong>Binario:</strong> <code>{claudeCliStatus.binaryPath}</code>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {!claudeCliStatus.installed && (
+                  <Button
+                    label="Instalar Claude CLI"
+                    icon="pi pi-download"
+                    className="p-button-warning p-button-sm"
+                    onClick={installClaudeCli}
+                    loading={claudeCliStatus.installing}
+                  />
+                )}
+                {claudeCliStatus.installed && (
+                  <Button
+                    label="Reinstalar CLI"
+                    icon="pi pi-refresh"
+                    className="p-button-secondary p-button-sm"
+                    onClick={installClaudeCli}
+                    loading={claudeCliStatus.installing}
+                  />
+                )}
+                <Button
+                  label="Verificar"
+                  icon="pi pi-search"
+                  className="p-button-secondary p-button-sm"
+                  onClick={checkClaudeCliStatus}
+                  loading={claudeCliStatus.loading}
+                />
+              </div>
+              {claudeCliStatus.error && (
+                <div style={{ marginTop: '0.75rem', color: '#ef4444' }}>
+                  <i className="pi pi-times-circle" style={{ marginRight: '0.4rem' }} />
+                  {claudeCliStatus.error}
+                </div>
+              )}
             </div>
           )}
         </div>

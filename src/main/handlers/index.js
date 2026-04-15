@@ -30,6 +30,7 @@ let _themeHandlers = null;
 let _securityHandlers = null;
 let _appdataHandlers = null;
 let _localFsHandlers = null;
+let _claudeHandlers = null;
 
 function getAppHandlers() {
   if (!_appHandlers) _appHandlers = require('./app-handlers');
@@ -131,6 +132,11 @@ function getLocalFsHandlers() {
   return _localFsHandlers;
 }
 
+function getClaudeHandlers() {
+  if (!_claudeHandlers) _claudeHandlers = require('./claude-handlers');
+  return _claudeHandlers;
+}
+
 /**
  * Registra handlers CRÍTICOS inmediatamente (necesarios para mostrar la UI)
  */
@@ -149,6 +155,9 @@ function registerCriticalHandlers(dependencies) {
 
   // Handlers de datos de aplicación - CRÍTICOS (sincronización localStorage entre instancias)
   getAppDataHandlers().registerAppDataHandlers(dependencies);
+
+  // Handlers de Claude Code (configuración gestionada por app)
+  getClaudeHandlers().registerClaudeHandlers();
 
   // 🚀 CRÍTICO: Registrar handlers de monitoreo INMEDIATAMENTE
   // El REGISTRO es ligero (solo IPC), lo PESADO es la EJECUCIÓN (que es on-demand)
@@ -280,5 +289,6 @@ module.exports = {
   getThemeHandlers,
   getSecurityHandlers,
   getAppDataHandlers,
-  getLocalFsHandlers
+  getLocalFsHandlers,
+  getClaudeHandlers
 };

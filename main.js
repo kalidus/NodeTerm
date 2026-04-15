@@ -66,8 +66,9 @@ logTiming('Utils cargados');
 // Nota: Docker se importará después de que se carguen fs y path
 let Docker = null;
 
-const { WSL, PowerShell, Cygwin } = require('./src/main/services');
-logTiming('Servicios WSL/PowerShell/Cygwin cargados');
+const { WSL, PowerShell, Cygwin, Claude } = require('./src/main/services');
+const { getClaudeConfig } = require('./src/main/handlers/claude-handlers');
+logTiming('Servicios WSL/PowerShell/Cygwin/Claude cargados');
 
 // Servicio de estadísticas SSH
 const sshStatsService = require('./src/main/services/SSHStatsService');
@@ -1178,6 +1179,12 @@ function createWindow() {
         });
 
         Cygwin.setMainWindow(mainWindow);
+        Claude.setDependencies({
+          mainWindow,
+          getPty,
+          isAppQuitting,
+          getClaudeConfig
+        });
         const docker = getDocker();
         if (docker && docker.setMainWindow) {
           docker.setMainWindow(mainWindow);
@@ -2842,6 +2849,7 @@ function registerTabEventsWrapper(tabId) {
     PowerShell,
     WSL,
     Cygwin,
+    Claude,
     startUbuntuSession,
     handleUbuntuData,
     handleUbuntuResize,
@@ -2879,6 +2887,12 @@ app.on('before-quit', (event) => {
     UbuntuProcessManager.cleanup();
   } catch (error) {
     console.error('Error cleaning up Ubuntu processes on quit:', error);
+  }
+
+  try {
+    Claude.cleanup();
+  } catch (error) {
+    console.error('Error cleaning up Claude processes on quit:', error);
   }
 });
 

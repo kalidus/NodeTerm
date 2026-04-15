@@ -139,6 +139,20 @@ const SettingsDialog = ({
   const [platform, setPlatform] = useState(() => {
     return window.electron?.platform || 'unknown';
   });
+  const [claudeConfig, setClaudeConfig] = useState({
+    binaryPath: '',
+    defaultModel: '',
+    extraArgs: '',
+    authToken: ''
+  });
+  const [claudeClientEnabled, setClaudeClientEnabled] = useState(() => {
+    try {
+      const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+      return cfg.claude === true;
+    } catch {
+      return false;
+    }
+  });
 
   // Hook para redimensionamiento del diálogo
   // storageKey: null para que siempre se abra con el tamaño por defecto
@@ -1044,6 +1058,52 @@ const SettingsDialog = ({
     };
   }, []);
 
+  useEffect(() => {
+    if (!visible) return;
+    let mounted = true;
+
+    const loadClaudeConfig = async () => {
+      try {
+        const config = await window.electron?.claude?.getConfig?.();
+        if (!mounted || !config) return;
+        setClaudeConfig({
+          binaryPath: config.binaryPath || '',
+          defaultModel: config.defaultModel || '',
+          extraArgs: config.extraArgs || '',
+          authToken: ''
+        });
+      } catch (error) {
+        console.error('Error cargando configuración de Claude:', error);
+      }
+    };
+
+    loadClaudeConfig();
+    return () => { mounted = false; };
+  }, [visible]);
+
+  useEffect(() => {
+    const syncClaudeClientState = () => {
+      try {
+        const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+        setClaudeClientEnabled(cfg.claude === true);
+      } catch {
+        setClaudeClientEnabled(false);
+      }
+    };
+
+    const onAiClientsConfigChanged = () => syncClaudeClientState();
+    const onStorage = (e) => {
+      if (e.key === 'ai_clients_enabled') syncClaudeClientState();
+    };
+
+    window.addEventListener('ai-clients-config-changed', onAiClientsConfigChanged);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('ai-clients-config-changed', onAiClientsConfigChanged);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
   // Opciones de terminal por defecto basadas en plataforma
   const defaultTerminalOptions = useMemo(() => {
     const options = [];
@@ -1051,6 +1111,7 @@ const SettingsDialog = ({
     if (platform === 'win32') {
       // PowerShell siempre disponible
       options.push({ label: 'PowerShell', value: 'powershell' });
+      if (claudeClientEnabled) options.push({ label: 'Claude Code', value: 'claude' });
 
       // WSL genérico
       options.push({ label: 'WSL', value: 'wsl' });
@@ -1081,18 +1142,20 @@ const SettingsDialog = ({
       }
     } else if (platform === 'linux' || platform === 'darwin') {
       options.push(
-        { label: 'Terminal Linux/macOS', value: 'linux-terminal' }
+        { label: 'Terminal Linux/macOS', value: 'linux-terminal' },
+        ...(claudeClientEnabled ? [{ label: 'Claude Code', value: 'claude' }] : [])
       );
     } else {
       // Fallback
       options.push(
         { label: 'PowerShell', value: 'powershell' },
-        { label: 'Terminal', value: 'linux-terminal' }
+        { label: 'Terminal', value: 'linux-terminal' },
+        ...(claudeClientEnabled ? [{ label: 'Claude Code', value: 'claude' }] : [])
       );
     }
 
     return options;
-  }, [platform, wslDistributions, cygwinAvailable, dockerContainers]);
+  }, [platform, wslDistributions, cygwinAvailable, dockerContainers, claudeClientEnabled]);
 
   // Handler para cambiar terminal por defecto
   const handleDefaultTerminalChange = useCallback((terminalType) => {
@@ -1104,6 +1167,46 @@ const SettingsDialog = ({
       detail: { terminalType }
     }));
   }, []);
+
+  const handleSaveClaudeConfig = useCallback(async () => {
+    try {
+      const validation = await window.electron?.claude?.validateConfig?.(claudeConfig);
+      if (validation && validation.valid === false) {
+        toastRef.current?.show({
+          severity: 'error',
+          summary: 'Configuración inválida',
+          detail: validation.error || 'Revisa los datos de Claude Code',
+          life: 4000
+        });
+        return;
+      }
+
+      const result = await window.electron?.claude?.setConfig?.(claudeConfig);
+      if (result?.success) {
+        setClaudeConfig((prev) => ({ ...prev, authToken: '' }));
+        toastRef.current?.show({
+          severity: 'success',
+          summary: 'Claude Code',
+          detail: 'Configuración guardada',
+          life: 2500
+        });
+      } else {
+        toastRef.current?.show({
+          severity: 'error',
+          summary: 'Claude Code',
+          detail: result?.error || 'No se pudo guardar la configuración',
+          life: 4000
+        });
+      }
+    } catch (error) {
+      toastRef.current?.show({
+        severity: 'error',
+        summary: 'Claude Code',
+        detail: error.message || 'Error guardando configuración',
+        life: 4000
+      });
+    }
+  }, [claudeConfig]);
 
   // Persistir configuración del icono interactivo
   useEffect(() => {
@@ -2239,6 +2342,50 @@ const SettingsDialog = ({
                             </div>
                           </div>
                         )}
+                        <div className="general-setting-card">
+                          <div className="general-setting-content" style={{ alignItems: 'flex-start' }}>
+                            <div className="general-setting-icon">
+                              <i className="pi pi-comments"></i>
+                            </div>
+                            <div className="general-setting-info" style={{ flex: 1 }}>
+                              <label className="general-setting-label">Claude Code (terminal local)</label>
+                              <p className="general-setting-description">
+                                Configura ruta del binario, modelo por defecto y token para nuevas pestañas Claude.
+                              </p>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                                <InputText
+                                  value={claudeConfig.binaryPath}
+                                  onChange={(e) => setClaudeConfig(prev => ({ ...prev, binaryPath: e.target.value }))}
+                                  placeholder="Ruta binario (opcional)"
+                                />
+                                <InputText
+                                  value={claudeConfig.defaultModel}
+                                  onChange={(e) => setClaudeConfig(prev => ({ ...prev, defaultModel: e.target.value }))}
+                                  placeholder="Modelo por defecto (opcional)"
+                                />
+                                <InputText
+                                  value={claudeConfig.extraArgs}
+                                  onChange={(e) => setClaudeConfig(prev => ({ ...prev, extraArgs: e.target.value }))}
+                                  placeholder="Args extra (opcional)"
+                                />
+                                <Password
+                                  value={claudeConfig.authToken}
+                                  onChange={(e) => setClaudeConfig(prev => ({ ...prev, authToken: e.target.value }))}
+                                  feedback={false}
+                                  toggleMask
+                                  placeholder="Auth token (opcional)"
+                                />
+                              </div>
+                            </div>
+                            <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                label="Guardar Claude"
+                                icon="pi pi-save"
+                                onClick={handleSaveClaudeConfig}
+                              />
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
 

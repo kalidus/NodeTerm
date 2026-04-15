@@ -125,6 +125,14 @@ contextBridge.exposeInMainWorld('electron', {
     getSyncKeys: () => ipcRenderer.invoke('appdata:get-sync-keys'),
     getLastModified: () => ipcRenderer.invoke('appdata:get-last-modified')
   },
+  claude: {
+    getConfig: () => ipcRenderer.invoke('claude:get-config'),
+    setConfig: (config) => ipcRenderer.invoke('claude:set-config', config),
+    validateConfig: (config) => ipcRenderer.invoke('claude:validate-config', config),
+    getCliStatus: () => ipcRenderer.invoke('claude:cli-status'),
+    installCli: () => ipcRenderer.invoke('claude:cli-install'),
+    uninstallCli: () => ipcRenderer.invoke('claude:cli-uninstall')
+  },
   ipcRenderer: {
     send: (channel, data) => {
       ipcRenderer.send(channel, data);
@@ -161,6 +169,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^system:.*$/,
         /^file:.*$/,
         /^local-fs:.*$/,
+        /^claude:.*$/,
         // 'process-pdf', // DESHABILITADO - pdf-parse eliminado
         // 'process-pdf-buffer', // DESHABILITADO
         // 'create-temp-file', // DESHABILITADO
@@ -199,6 +208,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^wsl-distro:.*$/,
         /^cygwin:.*$/,
         /^docker:.*$/,
+        /^claude:.*$/,
         /^rdp:.*$/,
         /^guacamole:.*$/,
         /^anythingllm:.*$/,
@@ -235,6 +245,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^wsl-distro:.*$/,
         /^cygwin:.*$/,
         /^docker:.*$/,
+        /^claude:.*$/,
         /^rdp:.*$/,
         /^librechat:.*$/,
         /^agentzero:.*$/,

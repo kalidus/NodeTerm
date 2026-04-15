@@ -57,6 +57,7 @@ const QuickAccessSidebar = ({
   // Estado para controlar el submenú de Docker
   const [dockerMenuOpen, setDockerMenuOpen] = useState(false);
   const [dockerMenuPosition, setDockerMenuPosition] = useState({ top: 0, left: 0 });
+  const [claudeEnabled, setClaudeEnabled] = useState(false);
 
   // Ref para el botón de Docker
   const dockerButtonRef = React.useRef(null);
@@ -259,12 +260,28 @@ const QuickAccessSidebar = ({
 
   // 🚀 OPTIMIZACIÓN: Las detecciones de WSL, Cygwin y Docker ahora usan el hook useSystemDetection
   // que está centralizado y cacheado para evitar llamadas IPC duplicadas
+  useEffect(() => {
+    const syncClaudeEnabled = () => {
+      try {
+        const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+        setClaudeEnabled(cfg.claude === true);
+      } catch {
+        setClaudeEnabled(false);
+      }
+    };
+    syncClaudeEnabled();
+    window.addEventListener('ai-clients-config-changed', syncClaudeEnabled);
+    window.addEventListener('storage', syncClaudeEnabled);
+    return () => {
+      window.removeEventListener('ai-clients-config-changed', syncClaudeEnabled);
+      window.removeEventListener('storage', syncClaudeEnabled);
+    };
+  }, []);
 
   // Generar lista de terminales disponibles
   useEffect(() => {
     const platform = window.electron?.platform || 'unknown';
     const terminals = [];
-
     if (platform === 'win32') {
       // PowerShell siempre disponible en Windows
       terminals.push({
@@ -274,6 +291,16 @@ const QuickAccessSidebar = ({
         color: '#0078D4',
         action: () => handleOpenTerminal('powershell')
       });
+
+      if (claudeEnabled) {
+        terminals.push({
+          label: 'Claude Code',
+          value: 'claude',
+          icon: 'pi pi-comments',
+          color: '#f59e0b',
+          action: () => handleOpenTerminal('claude')
+        });
+      }
 
       // WSL genérico
       terminals.push({
@@ -319,6 +346,15 @@ const QuickAccessSidebar = ({
         color: '#4fc3f7',
         action: () => handleOpenTerminal('linux-terminal')
       });
+      if (claudeEnabled) {
+        terminals.push({
+          label: 'Claude Code',
+          value: 'claude',
+          icon: 'pi pi-comments',
+          color: '#f59e0b',
+          action: () => handleOpenTerminal('claude')
+        });
+      }
     } else {
       terminals.push({
         label: 'Terminal',
@@ -327,10 +363,19 @@ const QuickAccessSidebar = ({
         color: '#4fc3f7',
         action: () => handleOpenTerminal('powershell')
       });
+      if (claudeEnabled) {
+        terminals.push({
+          label: 'Claude Code',
+          value: 'claude',
+          icon: 'pi pi-comments',
+          color: '#f59e0b',
+          action: () => handleOpenTerminal('claude')
+        });
+      }
     }
 
     setAvailableTerminals(terminals);
-  }, [wslDistributions, cygwinAvailable, dockerContainers]);
+  }, [wslDistributions, cygwinAvailable, dockerContainers, claudeEnabled]);
 
   // Configurar acciones principales
   useEffect(() => {

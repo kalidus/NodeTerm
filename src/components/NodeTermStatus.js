@@ -85,6 +85,7 @@ const NodeTermStatus = ({
 	const [cygwinAvailable, setCygwinAvailable] = useState(false);
 	const [dockerContainers, setDockerContainers] = useState([]);
 	const [availableTerminals, setAvailableTerminals] = useState([]);
+	const [claudeEnabled, setClaudeEnabled] = useState(false);
 	const [dockerMenuOpen, setDockerMenuOpen] = useState(false);
 	const [dockerMenuPosition, setDockerMenuPosition] = useState({ top: 0, left: 0 });
 	const [ubuntuMenuOpen, setUbuntuMenuOpen] = useState(false);
@@ -651,6 +652,11 @@ const NodeTermStatus = ({
 			return <i className={terminal.icon} style={{ color: terminal.color, fontSize: `${powershellIconSize}px`, fontWeight: 'bold' }} />;
 		}
 
+		if (value === 'claude') {
+			const claudeIconSize = Math.round(baseIconSizePx * 1.3);
+			return <i className="pi pi-comments" style={{ color: terminal.color || '#f59e0b', fontSize: `${claudeIconSize}px`, fontWeight: 'bold' }} />;
+		}
+
 		// Detectar WSL genérico (usar pingüino de Linux) - debe ser exactamente 'wsl' sin distribuciones específicas - aumentar tamaño
 		if (value === 'wsl' && !value.includes('ubuntu') && !value.includes('debian') && !value.includes('kali')) {
 			const wslIconSize = Math.round(baseIconSizePx * 1.3);
@@ -774,6 +780,24 @@ const NodeTermStatus = ({
 
 	// Generar lista de terminales disponibles
 	useEffect(() => {
+		const syncClaudeEnabled = () => {
+			try {
+				const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+				setClaudeEnabled(cfg.claude === true);
+			} catch {
+				setClaudeEnabled(false);
+			}
+		};
+		syncClaudeEnabled();
+		window.addEventListener('ai-clients-config-changed', syncClaudeEnabled);
+		window.addEventListener('storage', syncClaudeEnabled);
+		return () => {
+			window.removeEventListener('ai-clients-config-changed', syncClaudeEnabled);
+			window.removeEventListener('storage', syncClaudeEnabled);
+		};
+	}, []);
+
+	useEffect(() => {
 		if ((!horizontal || !compact) && variant !== 'rightColumn') return;
 		const platform = window.electron?.platform || 'unknown';
 		const terminals = [];
@@ -786,6 +810,16 @@ const NodeTermStatus = ({
 				color: '#0078D4',
 				action: () => handleOpenTerminal('powershell')
 			});
+
+			if (claudeEnabled) {
+				terminals.push({
+					label: 'Claude Code',
+					value: 'claude',
+					icon: 'pi pi-comments',
+					color: '#f59e0b',
+					action: () => handleOpenTerminal('claude')
+				});
+			}
 
 			if (cygwinAvailable) {
 				terminals.push({
@@ -848,6 +882,15 @@ const NodeTermStatus = ({
 				color: '#4fc3f7',
 				action: () => handleOpenTerminal('linux-terminal')
 			});
+			if (claudeEnabled) {
+				terminals.push({
+					label: 'Claude Code',
+					value: 'claude',
+					icon: 'pi pi-comments',
+					color: '#f59e0b',
+					action: () => handleOpenTerminal('claude')
+				});
+			}
 		} else {
 			terminals.push({
 				label: 'Terminal',
@@ -856,10 +899,19 @@ const NodeTermStatus = ({
 				color: '#4fc3f7',
 				action: () => handleOpenTerminal('powershell')
 			});
+			if (claudeEnabled) {
+				terminals.push({
+					label: 'Claude Code',
+					value: 'claude',
+					icon: 'pi pi-comments',
+					color: '#f59e0b',
+					action: () => handleOpenTerminal('claude')
+				});
+			}
 		}
 
 		setAvailableTerminals(terminals);
-	}, [wslDistributions, cygwinAvailable, horizontal, compact, variant]);
+	}, [wslDistributions, cygwinAvailable, horizontal, compact, variant, claudeEnabled]);
 
 	const getRelativeTime = (date) => {
 		try {
@@ -1155,6 +1207,7 @@ const NodeTermStatus = ({
 							let iconElement = <i className={t.icon || 'pi pi-terminal'} style={{ color: t.color || '#4fc3f7', fontSize: '1.1rem' }} />;
 
 							if (t.value === 'powershell') iconElement = <FaWindows style={{ color: t.color || '#0078D4', fontSize: '1.1rem' }} />;
+							else if (t.value === 'claude') iconElement = <i className="pi pi-comments" style={{ color: t.color || '#f59e0b', fontSize: '1.1rem' }} />;
 							else if (t.value === 'cygwin') iconElement = <i className="pi pi-code" style={{ color: t.color || '#00FF00', fontSize: '1.1rem' }} />;
 							else if (t.value.startsWith('wsl-') && t.distroInfo) {
 								const cat = t.distroInfo.category;

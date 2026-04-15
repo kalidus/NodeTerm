@@ -8,6 +8,7 @@ import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
 import CygwinTerminal from './CygwinTerminal';
 import DockerTerminal from './DockerTerminal';
+import ClaudeTerminal from './ClaudeTerminal';
 import GuacamoleTerminal from './GuacamoleTerminal';
 import { themes } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
@@ -73,6 +74,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 'powershell': 'Windows PowerShell',
                 'wsl': 'WSL',
                 'cygwin': 'Cygwin',
+                'claude': 'Claude Code',
                 'linux-terminal': platform === 'darwin' ? 'Terminal macOS' : 'Terminal Linux'
             };
 
@@ -565,6 +567,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 'wsl': 'WSL',
                 'cygwin': 'Cygwin',
                 'ubuntu': 'Ubuntu',
+                'claude': 'Claude Code',
                 'linux-terminal': isMac ? 'Terminal macOS' : 'Terminal Linux'
             };
 
@@ -721,6 +724,8 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     window.electron.ipcRenderer.send(`${channelPrefix}:data:${tabId}`, finalCommand);
                 } else if (terminalType === 'cygwin') {
                     window.electron.ipcRenderer.send(`cygwin:data:${tabId}`, finalCommand);
+                } else if (terminalType === 'claude') {
+                    window.electron.ipcRenderer.send(`claude:data:${tabId}`, finalCommand);
                 }
                 console.log('✅ Comando enviado al canal IPC');
             } else {
@@ -1713,11 +1718,13 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                         <i
                                             className={tab.type === 'wsl' || tab.type === 'wsl-distro' ? 'pi pi-server' :
                                                 tab.type === 'cygwin' ? 'pi pi-code' :
+                                                    tab.type === 'claude' ? 'pi pi-comments' :
                                                     tab.type === 'docker' ? 'pi pi-box' :
                                                         tab.type === 'rdp-guacamole' ? 'pi pi-desktop' : 'pi pi-circle'}
                                             style={{
                                                 color: (tab.type === 'wsl' || tab.type === 'wsl-distro') ? '#8ae234' :
                                                     tab.type === 'cygwin' ? '#00FF00' :
+                                                        tab.type === 'claude' ? '#f59e0b' :
                                                         tab.type === 'docker' ? '#2496ED' :
                                                             tab.type === 'rdp-guacamole' ? '#ff6b35' : '#e95420',
                                                 fontSize: '12px',
@@ -2157,6 +2164,18 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     fontSize={localFontSize}
                                     theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
                                     hideStatusBar={hideStatusBar}
+                                    isIntegrated={isIntegrated}
+                                />
+                            ) : tab.type === 'claude' ? (
+                                <ClaudeTerminal
+                                    key={`${tab.id}-terminal`}
+                                    ref={(ref) => {
+                                        if (ref) terminalRefs.current[tab.id] = ref;
+                                    }}
+                                    tabId={tab.id}
+                                    fontFamily={localFontFamily}
+                                    fontSize={localFontSize}
+                                    theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
                                     isIntegrated={isIntegrated}
                                 />
                             ) : tab.type === 'rdp-guacamole' ? (

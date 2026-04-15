@@ -572,6 +572,7 @@ const Sidebar = React.memo(({
   // Estado para controlar la visibilidad de los botones de clientes de IA
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
     nodeterm: true,
+    claude: false,
     anythingllm: false,
     openwebui: false,
     librechat: false
@@ -586,6 +587,7 @@ const Sidebar = React.memo(({
           const parsed = JSON.parse(config);
           setAiClientsEnabled({
             nodeterm: parsed.nodeterm === true, // Solo activo si está explícitamente configurado
+            claude: parsed.claude === true,
             anythingllm: parsed.anythingllm === true,
             openwebui: parsed.openwebui === true,
             librechat: parsed.librechat === true,
@@ -596,6 +598,7 @@ const Sidebar = React.memo(({
           // Si no hay configuración, todos desactivados por defecto
           setAiClientsEnabled({
             nodeterm: false,
+            claude: false,
             anythingllm: false,
             openwebui: false,
             librechat: false,

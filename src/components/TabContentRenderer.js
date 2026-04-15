@@ -11,6 +11,7 @@ import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
 import CygwinTerminal from './CygwinTerminal';
 import DockerTerminal from './DockerTerminal';
+import ClaudeTerminal from './ClaudeTerminal';
 import AuditTab from './AuditTab';
 import RecordingPlayerTab from './RecordingPlayerTab';
 import GlobalAuditTab from './GlobalAuditTab';
@@ -1411,6 +1412,21 @@ const TabContentRenderer = React.memo(({
           fontFamily={localFontFamily}
           fontSize={localFontSize}
           theme={linuxTheme}
+          onBroadcastData={handleBroadcastData}
+          isBroadcastActive={tab.isBroadcastActive}
+        />
+      );
+    }
+
+    if (terminalType === 'claude') {
+      const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
+      return (
+        <ClaudeTerminal
+          ref={el => terminalRefs.current[tab.key] = el}
+          tabId={tab.key}
+          fontFamily={localFontFamily}
+          fontSize={localFontSize}
+          theme={powerShellTheme}
           onBroadcastData={handleBroadcastData}
           isBroadcastActive={tab.isBroadcastActive}
         />

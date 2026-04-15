@@ -19,6 +19,7 @@ function registerTabEvents(tabId, dependencies) {
     PowerShell,
     WSL,
     Cygwin,
+    Claude,
     startUbuntuSession,
     handleUbuntuData,
     handleUbuntuResize,
@@ -145,6 +146,28 @@ function registerTabEvents(tabId, dependencies) {
 
   ipcMain.on(`cygwin:stop:${tabId}`, (event) => {
     Cygwin.CygwinHandlers.stop(tabId);
+  });
+
+  // ========== Claude Code Events ==========
+  ipcMain.removeAllListeners(`claude:start:${tabId}`);
+  ipcMain.removeAllListeners(`claude:data:${tabId}`);
+  ipcMain.removeAllListeners(`claude:resize:${tabId}`);
+  ipcMain.removeAllListeners(`claude:stop:${tabId}`);
+
+  ipcMain.on(`claude:start:${tabId}`, (event, data) => {
+    Claude.ClaudeHandlers.start(tabId, data || {});
+  });
+
+  ipcMain.on(`claude:data:${tabId}`, (event, data) => {
+    Claude.ClaudeHandlers.data(tabId, data);
+  });
+
+  ipcMain.on(`claude:resize:${tabId}`, (event, data) => {
+    Claude.ClaudeHandlers.resize(tabId, data);
+  });
+
+  ipcMain.on(`claude:stop:${tabId}`, (event) => {
+    Claude.ClaudeHandlers.stop(tabId);
   });
 
   // ========== Docker Events (lazy loading) ==========
