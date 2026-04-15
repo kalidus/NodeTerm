@@ -575,7 +575,8 @@ const Sidebar = React.memo(({
     claude: false,
     anythingllm: false,
     openwebui: false,
-    librechat: false
+    librechat: false,
+    opennotebook: false
   });
 
   // Cargar configuración de clientes de IA desde localStorage
@@ -592,7 +593,8 @@ const Sidebar = React.memo(({
             openwebui: parsed.openwebui === true,
             librechat: parsed.librechat === true,
             agentzero: parsed.agentzero === true,
-            openclaw: parsed.openclaw === true
+            openclaw: parsed.openclaw === true,
+            opennotebook: parsed.opennotebook === true
           });
         } else {
           // Si no hay configuración, todos desactivados por defecto
@@ -603,7 +605,8 @@ const Sidebar = React.memo(({
             openwebui: false,
             librechat: false,
             agentzero: false,
-            openclaw: false
+            openclaw: false,
+            opennotebook: false
           });
         }
       } catch (error) {
@@ -698,6 +701,19 @@ const Sidebar = React.memo(({
       groupId: null
     };
     window.dispatchEvent(new CustomEvent('create-openclaw-tab', {
+      detail: { tab: newTab }
+    }));
+  };
+
+  const openOpenNotebookTab = () => {
+    const newTab = {
+      key: `open-notebook-${Date.now()}`,
+      label: 'Open Notebook',
+      type: 'open-notebook',
+      createdAt: Date.now(),
+      groupId: null
+    };
+    window.dispatchEvent(new CustomEvent('create-open-notebook-tab', {
       detail: { tab: newTab }
     }));
   };
@@ -3036,7 +3052,7 @@ const Sidebar = React.memo(({
               </Button>
 
               {/* Separador para clientes de IA */}
-              {(aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat || aiClientsEnabled.agentzero || aiClientsEnabled.openclaw) && (
+              {(aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat || aiClientsEnabled.agentzero || aiClientsEnabled.openclaw || aiClientsEnabled.opennotebook) && (
                 <div style={{
                   width: '28px',
                   height: '1px',
@@ -3212,6 +3228,31 @@ const Sidebar = React.memo(({
                   }}
                 >
                   <AIClientBrandIcon tabType="openclaw" size={22} />
+                </Button>
+              )}
+
+              {aiClientsEnabled.opennotebook && (
+                <Button
+                  className="p-button-rounded p-button-text sidebar-action-button"
+                  onClick={openOpenNotebookTab}
+                  tooltip="Open Notebook"
+                  tooltipOptions={{ position: 'right' }}
+                  style={{
+                    margin: 0,
+                    width: 40,
+                    height: 40,
+                    minWidth: 40,
+                    minHeight: 40,
+                    border: 'none',
+                    display: 'flex !important',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    visibility: 'visible !important',
+                    opacity: '1 !important',
+                    padding: 0
+                  }}
+                >
+                  <AIClientBrandIcon tabType="open-notebook" size={22} />
                 </Button>
               )}
             </div>

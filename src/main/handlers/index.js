@@ -20,6 +20,7 @@ let _openWebUIHandlers = null;
 let _libreChatHandlers = null;
 let _agentZeroHandlers = null;
 let _openClawHandlers = null;
+let _openNotebookHandlers = null;
 let _sshHandlers = null;
 let _mcpHandlers = null;
 let _nextcloudHandlers = null;
@@ -80,6 +81,11 @@ function getAgentZeroHandlers() {
 function getOpenClawHandlers() {
   if (!_openClawHandlers) _openClawHandlers = require('./openclaw-handlers');
   return _openClawHandlers;
+}
+
+function getOpenNotebookHandlers() {
+  if (!_openNotebookHandlers) _openNotebookHandlers = require('./opennotebook-handlers');
+  return _openNotebookHandlers;
 }
 
 function getSSHHandlers() {
@@ -208,6 +214,7 @@ function registerSecondaryHandlers(dependencies) {
   getLibreChatHandlers().registerLibreChatHandlers(dependencies);
   getAgentZeroHandlers().registerAgentZeroHandlers(dependencies);
   getOpenClawHandlers().registerOpenClawHandlers(dependencies);
+  getOpenNotebookHandlers().registerOpenNotebookHandlers(dependencies);
 
   // Handlers SSH
   getSSHHandlers()(dependencies);
@@ -280,6 +287,7 @@ module.exports = {
   getLibreChatHandlers,
   getAgentZeroHandlers,
   getOpenClawHandlers,
+  getOpenNotebookHandlers,
   getSSHHandlers,
   getMCPHandlers,
   getNextcloudHandlers,

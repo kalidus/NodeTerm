@@ -21,7 +21,8 @@ const AIClientsTab = ({ themeColors }) => {
     openwebui: false,
     librechat: false,
     agentzero: false,
-    openclaw: false
+    openclaw: false,
+    opennotebook: false
   });
 
   // Estado de carga para verificar servicios Docker
@@ -30,7 +31,8 @@ const AIClientsTab = ({ themeColors }) => {
     openwebui: { loading: false, running: false, error: null },
     librechat: { loading: false, running: false, error: null },
     agentzero: { loading: false, running: false, error: null },
-    openclaw: { loading: false, running: false, error: null }
+    openclaw: { loading: false, running: false, error: null },
+    opennotebook: { loading: false, running: false, error: null }
   });
   const [claudeCliStatus, setClaudeCliStatus] = useState({
     loading: false,
@@ -78,7 +80,10 @@ const AIClientsTab = ({ themeColors }) => {
     if (clients.openclaw) {
       checkDockerServiceStatus('openclaw');
     }
-  }, [clients.anythingllm, clients.openwebui, clients.librechat, clients.agentzero, clients.openclaw]);
+    if (clients.opennotebook) {
+      checkDockerServiceStatus('opennotebook');
+    }
+  }, [clients.anythingllm, clients.openwebui, clients.librechat, clients.agentzero, clients.openclaw, clients.opennotebook]);
 
   // Guardar configuración en localStorage cuando cambia
   const saveClientsConfig = (newClients) => {
@@ -161,7 +166,7 @@ const AIClientsTab = ({ themeColors }) => {
     saveClientsConfig(newClients);
 
     // Si se activa un servicio Docker, verificar su estado
-    if (newClients[clientKey] && (clientKey === 'anythingllm' || clientKey === 'openwebui' || clientKey === 'librechat' || clientKey === 'openclaw')) {
+    if (newClients[clientKey] && (clientKey === 'anythingllm' || clientKey === 'openwebui' || clientKey === 'librechat' || clientKey === 'openclaw' || clientKey === 'opennotebook')) {
       await checkDockerServiceStatus(clientKey);
     }
   };
@@ -180,6 +185,7 @@ const AIClientsTab = ({ themeColors }) => {
       else if (serviceKey === 'librechat') ipcKey = 'librechat:get-status';
       else if (serviceKey === 'agentzero') ipcKey = 'agentzero:get-status';
       else if (serviceKey === 'openclaw') ipcKey = 'openclaw:get-status';
+      else if (serviceKey === 'opennotebook') ipcKey = 'opennotebook:get-status';
 
       const result = await window.electron.ipcRenderer.invoke(ipcKey);
       
@@ -228,6 +234,7 @@ const AIClientsTab = ({ themeColors }) => {
       else if (serviceKey === 'librechat') ipcKey = 'librechat:start';
       else if (serviceKey === 'agentzero') ipcKey = 'agentzero:start';
       else if (serviceKey === 'openclaw') ipcKey = 'openclaw:start';
+      else if (serviceKey === 'opennotebook') ipcKey = 'opennotebook:start';
 
       const result = await window.electron.ipcRenderer.invoke(ipcKey);
       
@@ -346,6 +353,20 @@ const AIClientsTab = ({ themeColors }) => {
       requiresDocker: true,
       port: 18789,
       url: 'http://127.0.0.1:18789'
+    },
+    {
+      key: 'opennotebook',
+      name: 'Open Notebook',
+      icon: 'pi pi-book',
+      color: '#10B981',
+      description: 'Alternativa self-hosted a Google NotebookLM. Organiza documentos, PDFs y webs con IA multi-modelo y privacidad total.',
+      features: ['RAG sobre documentos y PDFs', 'Multi-modelo (OpenAI, Ollama, Anthropic)', 'Podcasts generados con IA', 'Privacidad total'],
+      badges: [
+        { label: 'DOCKER', severity: 'info', icon: 'pi pi-box' }
+      ],
+      requiresDocker: true,
+      port: 8502,
+      url: 'http://127.0.0.1:8502'
     },
     {
       key: 'nodeterm',

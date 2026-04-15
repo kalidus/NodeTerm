@@ -364,6 +364,9 @@ const TabHeader = React.memo(({
       {tab.type === 'openclaw' && (
         <AIClientBrandIcon tabType="openclaw" size={12} style={{ marginRight: '6px' }} />
       )}
+      {tab.type === 'open-notebook' && (
+        <AIClientBrandIcon tabType="open-notebook" size={12} style={{ marginRight: '6px' }} />
+      )}
 
       {/* Mostrar label solo si NO es pestaña de inicio (las pestañas de inicio nunca muestran texto) */}
       {!isHomeTab && (

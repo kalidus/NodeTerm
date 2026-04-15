@@ -254,6 +254,7 @@ let _openWebUIService = null;
 let _libreChatService = null;
 let _agentZeroService = null;
 let _openClawService = null;
+let _openNotebookService = null;
 
 function getGuacdService() {
   if (!_guacdService) {
@@ -301,6 +302,14 @@ function getOpenClawService() {
     _openClawService = new OpenClawService();
   }
   return _openClawService;
+}
+
+function getOpenNotebookService() {
+  if (!_openNotebookService) {
+    const OpenNotebookService = require('./src/services/OpenNotebookService');
+    _openNotebookService = new OpenNotebookService();
+  }
+  return _openNotebookService;
 }
 
 // ============================================================================
@@ -1064,6 +1073,7 @@ function createWindow() {
         libreChatService: getLibreChatService(),
         agentZeroService: getAgentZeroService(),
         openClawService: getOpenClawService(),
+        openNotebookService: getOpenNotebookService(),
         packageJson,
         sshConnections,
         sshConnectionPool,
@@ -1255,6 +1265,7 @@ function createWindow() {
       libreChatService: getLibreChatService(),
       agentZeroService: getAgentZeroService(),
       openClawService: getOpenClawService(),
+      openNotebookService: getOpenNotebookService(),
       packageJson,
       sshConnections,
       sshConnectionPool,

@@ -21,6 +21,7 @@ import OpenWebUITab from './OpenWebUITab';
 import LibreChatTab from './LibreChatTab';
 import AgentZeroTab from './AgentZeroTab';
 import OpenClawTab from './OpenClawTab';
+import OpenNotebookTab from './OpenNotebookTab';
 import SSHTunnelTab from './SSHTunnelTab';
 import { themes } from '../themes';
 import { TAB_TYPES } from '../utils/constants';
@@ -1692,6 +1693,10 @@ const TabContentRenderer = React.memo(({
 
   if (tab.type === 'openclaw') {
     return <OpenClawTab />;
+  }
+
+  if (tab.type === 'open-notebook') {
+    return <OpenNotebookTab />;
   }
 
   // Si llegamos aquí y no es SSH, mostrar error

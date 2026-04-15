@@ -2242,12 +2242,17 @@ const App = () => {
       insertPinnedTab(event.detail?.tab);
     };
 
+    const handleCreateOpenNotebookTab = (event) => {
+      insertPinnedTab(event.detail?.tab);
+    };
+
     window.addEventListener('create-ai-tab', handleCreateAITab);
     window.addEventListener('create-anythingllm-tab', handleCreateAnythingLLMTab);
     window.addEventListener('create-openwebui-tab', handleCreateOpenWebUITab);
     window.addEventListener('create-librechat-tab', handleCreateLibreChatTab);
     window.addEventListener('create-agentzero-tab', handleCreateAgentZeroTab);
     window.addEventListener('create-openclaw-tab', handleCreateOpenClawTab);
+    window.addEventListener('create-open-notebook-tab', handleCreateOpenNotebookTab);
 
     return () => {
       window.removeEventListener('expand-node-path', handleExpandNodePath);
@@ -2259,6 +2264,7 @@ const App = () => {
       window.removeEventListener('create-librechat-tab', handleCreateLibreChatTab);
       window.removeEventListener('create-agentzero-tab', handleCreateAgentZeroTab);
       window.removeEventListener('create-openclaw-tab', handleCreateOpenClawTab);
+      window.removeEventListener('create-open-notebook-tab', handleCreateOpenNotebookTab);
     };
   }, [setExpandedKeys]);
 

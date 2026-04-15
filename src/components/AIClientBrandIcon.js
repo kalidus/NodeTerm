@@ -4,6 +4,7 @@ import anythingLlmPng from '../assets/ai-clients/anything-llm.png';
 import librechatPng from '../assets/ai-clients/librechat.png';
 import openclawPng from '../assets/ai-clients/openclaw.png';
 import agentZeroSvg from '../assets/ai-clients/agent-zero.svg';
+import openNotebookSvg from '../assets/ai-clients/open-notebook.svg';
 
 /** Recursos oficiales de cada proyecto (repos públicos). */
 const BRAND_BY_TAB_TYPE = {
@@ -11,7 +12,8 @@ const BRAND_BY_TAB_TYPE = {
   openwebui: { src: openWebuiPng, alt: 'Open WebUI' },
   librechat: { src: librechatPng, alt: 'LibreChat' },
   agentzero: { src: agentZeroSvg, alt: 'Agent Zero' },
-  openclaw: { src: openclawPng, alt: 'OpenClaw' }
+  openclaw: { src: openclawPng, alt: 'OpenClaw' },
+  'open-notebook': { src: openNotebookSvg, alt: 'Open Notebook' }
 };
 
 /**

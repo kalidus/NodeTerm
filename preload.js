@@ -164,6 +164,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^librechat:.*$/,
         /^agentzero:.*$/,
         /^openclaw:.*$/,
+        /^opennotebook:.*$/,
         /^import:.*$/,
         /^updater:.*$/,
         /^system:.*$/,
@@ -215,6 +216,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^librechat:.*$/,
         /^agentzero:.*$/,
         /^openclaw:.*$/,
+        /^opennotebook:.*$/,
         /^updater-event$/,
         /^network-tools:.*$/,
         /^system:.*$/, // Eventos de suspensión/reanudación del sistema
@@ -250,6 +252,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^librechat:.*$/,
         /^agentzero:.*$/,
         /^openclaw:.*$/,
+        /^opennotebook:.*$/,
         /^updater-event$/,
         /^network-tools:.*$/,
         /^system:.*$/, // Eventos de suspensión/reanudación del sistema
