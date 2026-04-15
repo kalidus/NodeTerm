@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import openWebuiPng from '../assets/ai-clients/open-webui.png';
 import anythingLlmPng from '../assets/ai-clients/anything-llm.png';
 import librechatPng from '../assets/ai-clients/librechat.png';
@@ -27,6 +27,41 @@ const BRAND_BY_TAB_TYPE = {
 const AIClientBrandIcon = ({ tabType, size = 14, className, style }) => {
   const meta = BRAND_BY_TAB_TYPE[tabType];
   if (!meta) return null;
+  const [hasError, setHasError] = useState(false);
+  const fallbackLabel = useMemo(() => {
+    const words = (meta.alt || '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2);
+    return words.map((w) => w[0]).join('').toUpperCase() || 'AI';
+  }, [meta.alt]);
+
+  if (hasError) {
+    return (
+      <span
+        className={className}
+        aria-hidden
+        style={{
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(135deg, #10B981, #059669)',
+          color: '#fff',
+          fontSize: Math.max(8, Math.floor(size * 0.42)),
+          fontWeight: 700,
+          lineHeight: 1,
+          flexShrink: 0,
+          ...style
+        }}
+      >
+        {fallbackLabel}
+      </span>
+    );
+  }
+
   return (
     <img
       src={meta.src}
@@ -35,6 +70,7 @@ const AIClientBrandIcon = ({ tabType, size = 14, className, style }) => {
       aria-hidden
       className={className}
       draggable={false}
+      onError={() => setHasError(true)}
       style={{
         width: size,
         height: size,
