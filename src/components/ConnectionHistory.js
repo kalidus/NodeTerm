@@ -301,6 +301,7 @@ const ConnectionHistory = ({
 
 				if (platform === 'win32') {
 					shells.push({ label: 'PowerShell', value: 'powershell', icon: 'pi-desktop', color: '#4fc3f7' });
+					shells.push({ label: 'Claude Code', value: 'claude', icon: 'pi-comments', color: '#f59e0b' });
 
 					// WSL
 					if (window.electron && window.electron.ipcRenderer) {

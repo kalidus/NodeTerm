@@ -14,14 +14,28 @@ const ClaudeTerminal = forwardRef(({
   const terminalRef = useRef(null);
   const term = useRef(null);
   const fitAddon = useRef(null);
+  const hasStartedRef = useRef(false);
+  const isReadyRef = useRef(false);
+  // Claude Code renderiza mejor con fondo sólido también en modo integrado
+  // para evitar bordes/zonas con colores distintos.
+  const terminalBg = theme?.background || '#111827';
+  const fitAndSyncSize = () => {
+    try {
+      if (!term.current || !fitAddon.current || !terminalRef.current) return;
+      if (terminalRef.current.offsetWidth <= 0 || terminalRef.current.offsetHeight <= 0) return;
+      fitAddon.current.fit();
+      window.electron?.ipcRenderer.send(`claude:resize:${tabId}`, {
+        cols: term.current.cols,
+        rows: term.current.rows
+      });
+    } catch {
+      // noop
+    }
+  };
 
   useImperativeHandle(ref, () => ({
     fit: () => {
-      try {
-        fitAddon.current?.fit();
-      } catch {
-        // noop
-      }
+      fitAndSyncSize();
     },
     focus: () => term.current?.focus(),
     clear: () => term.current?.clear(),
@@ -34,6 +48,9 @@ const ClaudeTerminal = forwardRef(({
   }));
 
   useEffect(() => {
+    hasStartedRef.current = false;
+    isReadyRef.current = false;
+
     term.current = new Terminal({
       cursorBlink: true,
       fontFamily,
@@ -42,7 +59,7 @@ const ClaudeTerminal = forwardRef(({
       scrollback: parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10),
       allowTransparency: isIntegrated,
       theme: {
-        background: isIntegrated ? 'rgba(0,0,0,0)' : (theme?.background || '#111827'),
+        background: terminalBg,
         foreground: theme?.foreground || '#e5e7eb',
         cursor: theme?.cursor || '#60a5fa',
         selection: theme?.selection || 'rgba(96, 165, 250, 0.3)',
@@ -56,7 +73,11 @@ const ClaudeTerminal = forwardRef(({
     term.current.loadAddon(fitAddon.current);
     term.current.loadAddon(new WebLinksAddon());
     term.current.open(terminalRef.current);
-    fitAddon.current.fit();
+    fitAndSyncSize();
+    // Reintentos para asegurar ajuste correcto cuando el contenedor termina de montar
+    setTimeout(fitAndSyncSize, 80);
+    setTimeout(fitAndSyncSize, 180);
+    setTimeout(fitAndSyncSize, 320);
     term.current.focus();
 
     window.electron?.claude?.validateConfig?.().then((result) => {
@@ -65,10 +86,20 @@ const ClaudeTerminal = forwardRef(({
       }
     }).catch(() => {});
 
-    window.electron?.ipcRenderer.send(`claude:start:${tabId}`, {
-      cols: term.current.cols,
-      rows: term.current.rows
-    });
+    const startClaudeSession = () => {
+      if (hasStartedRef.current) return;
+      hasStartedRef.current = true;
+
+      // Asegurar que los eventos IPC del tab existen antes de iniciar Claude.
+      window.electron?.ipcRenderer.send('register-tab-events', tabId);
+      setTimeout(() => {
+        window.electron?.ipcRenderer.send(`claude:start:${tabId}`, {
+          cols: term.current?.cols || 120,
+          rows: term.current?.rows || 30
+        });
+      }, 25);
+    };
+    startClaudeSession();
 
     const dataHandler = term.current.onData((data) => {
       window.electron?.ipcRenderer.send(`claude:data:${tabId}`, data);
@@ -82,19 +113,50 @@ const ClaudeTerminal = forwardRef(({
       term.current?.write(data);
     });
 
+    const onReadyUnsubscribe = window.electron?.ipcRenderer.on(`claude:ready:${tabId}`, () => {
+      isReadyRef.current = true;
+      // Cuando el proceso está realmente listo, volver a sincronizar tamaño varias veces.
+      setTimeout(fitAndSyncSize, 10);
+      setTimeout(fitAndSyncSize, 120);
+      setTimeout(fitAndSyncSize, 280);
+    });
+
     const onErrorUnsubscribe = window.electron?.ipcRenderer.on(`claude:error:${tabId}`, (error) => {
       term.current?.writeln(`\x1b[31mClaude Error: ${error}\x1b[0m`);
     });
 
     const resizeObserver = new ResizeObserver(() => {
-      fitAddon.current?.fit();
+      fitAndSyncSize();
     });
     if (terminalRef.current) resizeObserver.observe(terminalRef.current);
 
+    const handleWindowResize = () => fitAndSyncSize();
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        setTimeout(fitAndSyncSize, 100);
+      }
+    };
+    window.addEventListener('resize', handleWindowResize);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Algunos TUI (como Claude Code) recalculan layout tras arrancar; re-sincronizar durante el arranque.
+    const startupSyncTimers = [400, 700, 1100, 1700, 2600].map(ms => setTimeout(fitAndSyncSize, ms));
+    const startRetryTimers = [900, 1800, 3200].map((ms) => setTimeout(() => {
+      if (!isReadyRef.current) {
+        hasStartedRef.current = false;
+        startClaudeSession();
+      }
+    }, ms));
+
     return () => {
       resizeObserver.disconnect();
+      window.removeEventListener('resize', handleWindowResize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      startupSyncTimers.forEach(clearTimeout);
+      startRetryTimers.forEach(clearTimeout);
       window.electron?.ipcRenderer.send(`claude:stop:${tabId}`);
       if (onDataUnsubscribe) onDataUnsubscribe();
+      if (onReadyUnsubscribe) onReadyUnsubscribe();
       if (onErrorUnsubscribe) onErrorUnsubscribe();
       dataHandler.dispose();
       resizeHandler.dispose();
@@ -104,21 +166,40 @@ const ClaudeTerminal = forwardRef(({
 
   return (
     <div style={{
+      display: 'flex',
+      flexDirection: 'column',
       width: '100%',
       height: '100%',
       minWidth: 0,
       minHeight: 0,
       overflow: 'hidden',
-      background: isIntegrated ? 'transparent' : (theme?.background || '#111827'),
-      padding: '10px'
+      background: terminalBg,
+      padding: '8px 10px 2px 10px',
+      marginBottom: '-1px'
     }}>
+      <style>
+        {`
+          .claude-terminal-shell,
+          .claude-terminal-shell .xterm,
+          .claude-terminal-shell .xterm-viewport,
+          .claude-terminal-shell .xterm-screen,
+          .claude-terminal-shell .xterm-helpers {
+            background: ${terminalBg} !important;
+            background-color: ${terminalBg} !important;
+          }
+        `}
+      </style>
       <div
+        className="claude-terminal-shell"
         ref={terminalRef}
         style={{
+          flex: 1,
           width: '100%',
           height: '100%',
           minWidth: 0,
-          minHeight: 0
+          minHeight: 0,
+          overflow: 'hidden',
+          background: terminalBg
         }}
       />
     </div>
