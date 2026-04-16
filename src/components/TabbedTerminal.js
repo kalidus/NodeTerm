@@ -1730,7 +1730,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                                 tab.type === 'cygwin' ? 'pi pi-code' :
                                                     tab.type === 'claude' ? 'pi pi-comments' :
                                                     tab.type === 'opencode' ? 'pi pi-code' :
-                                                    tab.type === 'geminicli' ? 'pi pi-sparkles' :
+                                                    tab.type === 'geminicli' ? 'pi pi-star' :
                                                     tab.type === 'docker' ? 'pi pi-box' :
                                                         tab.type === 'rdp-guacamole' ? 'pi pi-desktop' : 'pi pi-circle'}
                                             style={{

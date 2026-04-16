@@ -8,7 +8,8 @@ const TerminalTypeSelector = ({ value, onChange }) => {
     const terminalOptions = [
         { label: terminalLabel, value: 'powershell', icon: 'pi pi-desktop', color: '#4fc3f7' },
         { label: 'Claude Code', value: 'claude', icon: 'pi pi-comments', color: '#f59e0b' },
-        { label: 'OpenCode', value: 'opencode', icon: 'pi pi-code', color: '#6366f1' }
+        { label: 'OpenCode', value: 'opencode', icon: 'pi pi-code', color: '#6366f1' },
+        { label: 'Gemini CLI', value: 'geminicli', icon: 'pi pi-star', color: '#1a73e8' }
     ];
 
     return (
@@ -37,6 +38,8 @@ const TerminalTypeSelector = ({ value, onChange }) => {
                                     ? 'rgba(245, 158, 11, 0.15)'
                                     : (option.value === 'opencode'
                                         ? 'rgba(99, 102, 241, 0.15)'
+                                        : (option.value === 'geminicli'
+                                            ? 'rgba(26, 115, 232, 0.15)'
                                         : (option.value === 'wsl' ? 'rgba(138, 226, 52, 0.1)' : 'rgba(79, 195, 247, 0.1)')))
                                 : 'transparent',
                             fontSize: '12px',

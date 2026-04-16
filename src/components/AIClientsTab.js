@@ -449,13 +449,13 @@ const AIClientsTab = ({ themeColors }) => {
     {
       key: 'geminicli',
       name: 'Gemini CLI (CLI Local)',
-      icon: 'pi pi-sparkles',
+      icon: 'pi pi-star',
       color: '#1a73e8',
       description: 'CLI oficial de Google Gemini para desarrollo con IA directamente en el terminal. Accede a los modelos Gemini de Google con soporte para código, análisis y más.',
       features: ['Google Gemini', 'Terminal local dedicada', 'Instalación automática', 'Gratis con cuenta Google'],
       badges: [
         { label: 'LOCAL CLI', severity: 'warning', icon: 'pi pi-desktop' },
-        { label: 'GOOGLE', severity: 'info', icon: 'pi pi-google' }
+        { label: 'GOOGLE', severity: 'info', icon: 'pi pi-globe' }
       ],
       requiresDocker: false,
       isLocalCli: true

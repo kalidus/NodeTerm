@@ -583,7 +583,7 @@ const MainContentArea = ({
 
       // Gemini CLI
       if (terminalType === 'geminicli') {
-        return <i className="pi pi-sparkles" style={{ fontSize: `${baseIconSize}px`, color: '#1a73e8', marginRight: iconMarginRight }} />;
+        return <i className="pi pi-star" style={{ fontSize: `${baseIconSize}px`, color: '#1a73e8', marginRight: iconMarginRight }} />;
       }
 
       // WSL genérico (sin distribución específica)

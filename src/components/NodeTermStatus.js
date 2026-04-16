@@ -666,7 +666,7 @@ const NodeTermStatus = ({
 
 	if (value === 'geminicli') {
 		const geminiIconSize = Math.round(baseIconSizePx * 1.3);
-		return <i className="pi pi-sparkles" style={{ color: terminal.color || '#1a73e8', fontSize: `${geminiIconSize}px`, fontWeight: 'bold' }} />;
+		return <i className="pi pi-star" style={{ color: terminal.color || '#1a73e8', fontSize: `${geminiIconSize}px`, fontWeight: 'bold' }} />;
 	}
 
 		// Detectar WSL genérico (usar pingüino de Linux) - debe ser exactamente 'wsl' sin distribuciones específicas - aumentar tamaño
@@ -851,7 +851,7 @@ const NodeTermStatus = ({
 				terminals.push({
 					label: 'Gemini CLI',
 					value: 'geminicli',
-					icon: 'pi pi-sparkles',
+					icon: 'pi pi-star',
 					color: '#1a73e8',
 					action: () => handleOpenTerminal('geminicli')
 				});
@@ -940,7 +940,7 @@ const NodeTermStatus = ({
 				terminals.push({
 					label: 'Gemini CLI',
 					value: 'geminicli',
-					icon: 'pi pi-sparkles',
+					icon: 'pi pi-star',
 					color: '#1a73e8',
 					action: () => handleOpenTerminal('geminicli')
 				});
@@ -975,7 +975,7 @@ const NodeTermStatus = ({
 				terminals.push({
 					label: 'Gemini CLI',
 					value: 'geminicli',
-					icon: 'pi pi-sparkles',
+					icon: 'pi pi-star',
 					color: '#1a73e8',
 					action: () => handleOpenTerminal('geminicli')
 				});
@@ -1281,7 +1281,7 @@ const NodeTermStatus = ({
 							if (t.value === 'powershell') iconElement = <FaWindows style={{ color: t.color || '#0078D4', fontSize: '1.1rem' }} />;
 							else if (t.value === 'claude') iconElement = <i className="pi pi-comments" style={{ color: t.color || '#f59e0b', fontSize: '1.1rem' }} />;
 							else if (t.value === 'opencode') iconElement = <i className="pi pi-code" style={{ color: t.color || '#6366f1', fontSize: '1.1rem' }} />;
-							else if (t.value === 'geminicli') iconElement = <i className="pi pi-sparkles" style={{ color: t.color || '#1a73e8', fontSize: '1.1rem' }} />;
+							else if (t.value === 'geminicli') iconElement = <i className="pi pi-star" style={{ color: t.color || '#1a73e8', fontSize: '1.1rem' }} />;
 							else if (t.value === 'cygwin') iconElement = <i className="pi pi-code" style={{ color: t.color || '#00FF00', fontSize: '1.1rem' }} />;
 							else if (t.value.startsWith('wsl-') && t.distroInfo) {
 								const cat = t.distroInfo.category;

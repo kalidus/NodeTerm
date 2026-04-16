@@ -322,7 +322,7 @@ const QuickAccessSidebar = ({
         terminals.push({
           label: 'Gemini CLI',
           value: 'geminicli',
-          icon: 'pi pi-sparkles',
+          icon: 'pi pi-star',
           color: '#1a73e8',
           action: () => handleOpenTerminal('geminicli')
         });
@@ -394,7 +394,7 @@ const QuickAccessSidebar = ({
         terminals.push({
           label: 'Gemini CLI',
           value: 'geminicli',
-          icon: 'pi pi-sparkles',
+          icon: 'pi pi-star',
           color: '#1a73e8',
           action: () => handleOpenTerminal('geminicli')
         });
@@ -429,7 +429,7 @@ const QuickAccessSidebar = ({
         terminals.push({
           label: 'Gemini CLI',
           value: 'geminicli',
-          icon: 'pi pi-sparkles',
+          icon: 'pi pi-star',
           color: '#1a73e8',
           action: () => handleOpenTerminal('geminicli')
         });

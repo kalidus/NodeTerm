@@ -2584,7 +2584,7 @@ const SettingsDialog = ({
                         <div className="general-setting-card">
                           <div className="general-setting-content" style={{ alignItems: 'flex-start' }}>
                             <div className="general-setting-icon" style={{ background: 'linear-gradient(135deg, #1a73e8 0%, #4285f4 100%)' }}>
-                              <i className="pi pi-sparkles"></i>
+                              <i className="pi pi-star"></i>
                             </div>
                             <div className="general-setting-info" style={{ flex: 1 }}>
                               <label className="general-setting-label">Gemini CLI (terminal local)</label>

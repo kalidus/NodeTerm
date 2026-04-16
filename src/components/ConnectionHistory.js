@@ -303,6 +303,7 @@ const ConnectionHistory = ({
 					shells.push({ label: 'PowerShell', value: 'powershell', icon: 'pi-desktop', color: '#4fc3f7' });
 					shells.push({ label: 'Claude Code', value: 'claude', icon: 'pi-comments', color: '#f59e0b' });
 					shells.push({ label: 'OpenCode', value: 'opencode', icon: 'pi-code', color: '#6366f1' });
+					shells.push({ label: 'Gemini CLI', value: 'geminicli', icon: 'pi-star', color: '#1a73e8' });
 
 					// WSL
 					if (window.electron && window.electron.ipcRenderer) {
@@ -332,6 +333,7 @@ const ConnectionHistory = ({
 					shells.push({ label: platform === 'darwin' ? 'macOS Terminal' : 'Linux Terminal', value: 'powershell', icon: 'pi-desktop', color: '#4fc3f7' });
 					shells.push({ label: 'Claude Code', value: 'claude', icon: 'pi-comments', color: '#f59e0b' });
 					shells.push({ label: 'OpenCode', value: 'opencode', icon: 'pi-code', color: '#6366f1' });
+					shells.push({ label: 'Gemini CLI', value: 'geminicli', icon: 'pi-star', color: '#1a73e8' });
 				}
 
 				setAvailableTerminals(shells);
