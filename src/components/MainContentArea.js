@@ -429,6 +429,7 @@ const MainContentArea = ({
     nodeterm: true,
     claude: false,
     opencode: false,
+    geminicli: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
@@ -454,6 +455,7 @@ const MainContentArea = ({
             nodeterm: parsed.nodeterm === true,
             claude: parsed.claude === true,
             opencode: parsed.opencode === true,
+            geminicli: parsed.geminicli === true,
             anythingllm: parsed.anythingllm === true,
             openwebui: parsed.openwebui === true,
             librechat: parsed.librechat === true,
@@ -466,6 +468,7 @@ const MainContentArea = ({
             nodeterm: false,
             claude: false,
             opencode: false,
+            geminicli: false,
             anythingllm: false,
             openwebui: false,
             librechat: false,
@@ -576,6 +579,11 @@ const MainContentArea = ({
       // OpenCode
       if (terminalType === 'opencode') {
         return <i className="pi pi-code" style={{ fontSize: `${baseIconSize}px`, color: '#6366f1', marginRight: iconMarginRight }} />;
+      }
+
+      // Gemini CLI
+      if (terminalType === 'geminicli') {
+        return <i className="pi pi-sparkles" style={{ fontSize: `${baseIconSize}px`, color: '#1a73e8', marginRight: iconMarginRight }} />;
       }
 
       // WSL genérico (sin distribución específica)
@@ -707,6 +715,19 @@ const MainContentArea = ({
             setLastLocalTerminalType('opencode');
             if (createLocalTerminalTabRef.current) {
               createLocalTerminalTabRef.current('opencode');
+            }
+          }
+        });
+      }
+
+      if (aiClientsEnabled.geminicli) {
+        menuItems.splice(1, 0, {
+          label: 'Gemini CLI',
+          icon: getTerminalMenuIcon('geminicli'),
+          command: () => {
+            setLastLocalTerminalType('geminicli');
+            if (createLocalTerminalTabRef.current) {
+              createLocalTerminalTabRef.current('geminicli');
             }
           }
         });
@@ -1520,6 +1541,19 @@ const MainContentArea = ({
       }
     }
 
+    if (terminalType === 'geminicli') {
+      try {
+        const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+        if (cfg.geminicli !== true) {
+          window.alert('Gemini CLI está desactivado. Actívalo en Configuración -> Clientes de IA.');
+          return;
+        }
+      } catch {
+        window.alert('Gemini CLI está desactivado. Actívalo en Configuración -> Clientes de IA.');
+        return;
+      }
+    }
+
     if (activeGroupId !== null) {
       const currentGroupKey = activeGroupId || 'no-group';
       setGroupActiveIndices(prev => ({
@@ -1547,7 +1581,7 @@ const MainContentArea = ({
       let finalDistroInfo = distroInfo;
 
       // Si no vino distroInfo, intentar resolver distribución WSL por nombre/label directo usando ref (estado más fresco)
-      if (!finalDistroInfo && terminalType !== 'claude' && terminalType !== 'opencode' && !terminalType.startsWith('docker-')) {
+      if (!finalDistroInfo && terminalType !== 'claude' && terminalType !== 'opencode' && terminalType !== 'geminicli' && !terminalType.startsWith('docker-')) {
         const distros = wslDistributionsRef.current || [];
         const distro = distros.find(d =>
           d.name === terminalType ||
@@ -1589,6 +1623,10 @@ const MainContentArea = ({
           case 'opencode':
             label = 'OpenCode';
             finalTerminalType = 'opencode';
+            break;
+          case 'geminicli':
+            label = 'Gemini CLI';
+            finalTerminalType = 'geminicli';
             break;
           case 'wsl':
             label = 'WSL';

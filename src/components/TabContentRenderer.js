@@ -13,6 +13,7 @@ import CygwinTerminal from './CygwinTerminal';
 import DockerTerminal from './DockerTerminal';
 import ClaudeTerminal from './ClaudeTerminal';
 import OpenCodeTerminal from './OpenCodeTerminal';
+import GeminiCliTerminal from './GeminiCliTerminal';
 import AuditTab from './AuditTab';
 import RecordingPlayerTab from './RecordingPlayerTab';
 import GlobalAuditTab from './GlobalAuditTab';
@@ -1439,6 +1440,19 @@ const TabContentRenderer = React.memo(({
       const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
       return (
         <OpenCodeTerminal
+          ref={el => terminalRefs.current[tab.key] = el}
+          tabId={tab.key}
+          fontFamily={localFontFamily}
+          fontSize={localFontSize}
+          theme={powerShellTheme}
+        />
+      );
+    }
+
+    if (terminalType === 'geminicli') {
+      const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
+      return (
+        <GeminiCliTerminal
           ref={el => terminalRefs.current[tab.key] = el}
           tabId={tab.key}
           fontFamily={localFontFamily}

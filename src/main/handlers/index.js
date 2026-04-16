@@ -33,6 +33,7 @@ let _appdataHandlers = null;
 let _localFsHandlers = null;
 let _claudeHandlers = null;
 let _opencodeHandlers = null;
+let _geminicliHandlers = null;
 
 function getAppHandlers() {
   if (!_appHandlers) _appHandlers = require('./app-handlers');
@@ -149,6 +150,11 @@ function getOpenCodeHandlers() {
   return _opencodeHandlers;
 }
 
+function getGeminiCliHandlers() {
+  if (!_geminicliHandlers) _geminicliHandlers = require('./geminicli-handlers');
+  return _geminicliHandlers;
+}
+
 /**
  * Registra handlers CRÍTICOS inmediatamente (necesarios para mostrar la UI)
  */
@@ -173,6 +179,9 @@ function registerCriticalHandlers(dependencies) {
 
   // Handlers de OpenCode (configuración gestionada por app)
   getOpenCodeHandlers().registerOpenCodeHandlers();
+
+  // Handlers de Gemini CLI (configuración gestionada por app)
+  getGeminiCliHandlers().registerGeminiCliHandlers();
 
   // 🚀 CRÍTICO: Registrar handlers de monitoreo INMEDIATAMENTE
   // El REGISTRO es ligero (solo IPC), lo PESADO es la EJECUCIÓN (que es on-demand)
@@ -308,5 +317,6 @@ module.exports = {
   getAppDataHandlers,
   getLocalFsHandlers,
   getClaudeHandlers,
-  getOpenCodeHandlers
+  getOpenCodeHandlers,
+  getGeminiCliHandlers
 };

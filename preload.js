@@ -141,6 +141,14 @@ contextBridge.exposeInMainWorld('electron', {
     installCli: () => ipcRenderer.invoke('opencode:cli-install'),
     uninstallCli: () => ipcRenderer.invoke('opencode:cli-uninstall')
   },
+  geminicli: {
+    getConfig: () => ipcRenderer.invoke('geminicli:get-config'),
+    setConfig: (config) => ipcRenderer.invoke('geminicli:set-config', config),
+    validateConfig: (config) => ipcRenderer.invoke('geminicli:validate-config', config),
+    getCliStatus: () => ipcRenderer.invoke('geminicli:cli-status'),
+    installCli: () => ipcRenderer.invoke('geminicli:cli-install'),
+    uninstallCli: () => ipcRenderer.invoke('geminicli:cli-uninstall')
+  },
   ipcRenderer: {
     send: (channel, data) => {
       ipcRenderer.send(channel, data);
@@ -180,6 +188,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^local-fs:.*$/,
         /^claude:.*$/,
         /^opencode:.*$/,
+        /^geminicli:.*$/,
         // 'process-pdf', // DESHABILITADO - pdf-parse eliminado
         // 'process-pdf-buffer', // DESHABILITADO
         // 'create-temp-file', // DESHABILITADO
@@ -220,6 +229,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^docker:.*$/,
         /^claude:.*$/,
         /^opencode:.*$/,
+        /^geminicli:.*$/,
         /^rdp:.*$/,
         /^guacamole:.*$/,
         /^anythingllm:.*$/,
@@ -259,6 +269,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^docker:.*$/,
         /^claude:.*$/,
         /^opencode:.*$/,
+        /^geminicli:.*$/,
         /^rdp:.*$/,
         /^librechat:.*$/,
         /^agentzero:.*$/,

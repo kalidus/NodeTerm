@@ -11,6 +11,7 @@ const CygwinService = require('./CygwinService');
 const DockerService = require('./DockerService');
 const ClaudeService = require('./ClaudeService');
 const OpenCodeService = require('./OpenCodeService');
+const GeminiCliService = require('./GeminiCliService');
 
 /**
  * Exporta todos los servicios organizados por categoría
@@ -23,6 +24,7 @@ module.exports = {
   Docker: DockerService,
   Claude: ClaudeService,
   OpenCode: OpenCodeService,
+  GeminiCli: GeminiCliService,
   
   // Exportaciones directas para compatibilidad
   ...WSLService,
@@ -30,5 +32,6 @@ module.exports = {
   ...CygwinService,
   ...DockerService,
   ...ClaudeService,
-  ...OpenCodeService
+  ...OpenCodeService,
+  ...GeminiCliService
 };

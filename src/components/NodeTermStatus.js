@@ -87,6 +87,7 @@ const NodeTermStatus = ({
 	const [availableTerminals, setAvailableTerminals] = useState([]);
 	const [claudeEnabled, setClaudeEnabled] = useState(false);
 	const [openCodeEnabled, setOpenCodeEnabled] = useState(false);
+	const [geminiCliEnabled, setGeminiCliEnabled] = useState(false);
 	const [dockerMenuOpen, setDockerMenuOpen] = useState(false);
 	const [dockerMenuPosition, setDockerMenuPosition] = useState({ top: 0, left: 0 });
 	const [ubuntuMenuOpen, setUbuntuMenuOpen] = useState(false);
@@ -658,10 +659,15 @@ const NodeTermStatus = ({
 			return <i className="pi pi-comments" style={{ color: terminal.color || '#f59e0b', fontSize: `${claudeIconSize}px`, fontWeight: 'bold' }} />;
 		}
 
-		if (value === 'opencode') {
-			const openCodeIconSize = Math.round(baseIconSizePx * 1.3);
-			return <i className="pi pi-code" style={{ color: terminal.color || '#6366f1', fontSize: `${openCodeIconSize}px`, fontWeight: 'bold' }} />;
-		}
+	if (value === 'opencode') {
+		const openCodeIconSize = Math.round(baseIconSizePx * 1.3);
+		return <i className="pi pi-code" style={{ color: terminal.color || '#6366f1', fontSize: `${openCodeIconSize}px`, fontWeight: 'bold' }} />;
+	}
+
+	if (value === 'geminicli') {
+		const geminiIconSize = Math.round(baseIconSizePx * 1.3);
+		return <i className="pi pi-sparkles" style={{ color: terminal.color || '#1a73e8', fontSize: `${geminiIconSize}px`, fontWeight: 'bold' }} />;
+	}
 
 		// Detectar WSL genérico (usar pingüino de Linux) - debe ser exactamente 'wsl' sin distribuciones específicas - aumentar tamaño
 		if (value === 'wsl' && !value.includes('ubuntu') && !value.includes('debian') && !value.includes('kali')) {
@@ -791,9 +797,11 @@ const NodeTermStatus = ({
 				const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
 				setClaudeEnabled(cfg.claude === true);
 				setOpenCodeEnabled(cfg.opencode === true);
+				setGeminiCliEnabled(cfg.geminicli === true);
 			} catch {
 				setClaudeEnabled(false);
 				setOpenCodeEnabled(false);
+				setGeminiCliEnabled(false);
 			}
 		};
 		syncClaudeEnabled();
@@ -836,6 +844,16 @@ const NodeTermStatus = ({
 					icon: 'pi pi-code',
 					color: '#6366f1',
 					action: () => handleOpenTerminal('opencode')
+				});
+			}
+
+			if (geminiCliEnabled) {
+				terminals.push({
+					label: 'Gemini CLI',
+					value: 'geminicli',
+					icon: 'pi pi-sparkles',
+					color: '#1a73e8',
+					action: () => handleOpenTerminal('geminicli')
 				});
 			}
 
@@ -918,6 +936,15 @@ const NodeTermStatus = ({
 					action: () => handleOpenTerminal('opencode')
 				});
 			}
+			if (geminiCliEnabled) {
+				terminals.push({
+					label: 'Gemini CLI',
+					value: 'geminicli',
+					icon: 'pi pi-sparkles',
+					color: '#1a73e8',
+					action: () => handleOpenTerminal('geminicli')
+				});
+			}
 		} else {
 			terminals.push({
 				label: 'Terminal',
@@ -944,10 +971,19 @@ const NodeTermStatus = ({
 					action: () => handleOpenTerminal('opencode')
 				});
 			}
+			if (geminiCliEnabled) {
+				terminals.push({
+					label: 'Gemini CLI',
+					value: 'geminicli',
+					icon: 'pi pi-sparkles',
+					color: '#1a73e8',
+					action: () => handleOpenTerminal('geminicli')
+				});
+			}
 		}
 
 		setAvailableTerminals(terminals);
-	}, [wslDistributions, cygwinAvailable, horizontal, compact, variant, claudeEnabled, openCodeEnabled]);
+	}, [wslDistributions, cygwinAvailable, horizontal, compact, variant, claudeEnabled, openCodeEnabled, geminiCliEnabled]);
 
 	const getRelativeTime = (date) => {
 		try {
@@ -1245,6 +1281,7 @@ const NodeTermStatus = ({
 							if (t.value === 'powershell') iconElement = <FaWindows style={{ color: t.color || '#0078D4', fontSize: '1.1rem' }} />;
 							else if (t.value === 'claude') iconElement = <i className="pi pi-comments" style={{ color: t.color || '#f59e0b', fontSize: '1.1rem' }} />;
 							else if (t.value === 'opencode') iconElement = <i className="pi pi-code" style={{ color: t.color || '#6366f1', fontSize: '1.1rem' }} />;
+							else if (t.value === 'geminicli') iconElement = <i className="pi pi-sparkles" style={{ color: t.color || '#1a73e8', fontSize: '1.1rem' }} />;
 							else if (t.value === 'cygwin') iconElement = <i className="pi pi-code" style={{ color: t.color || '#00FF00', fontSize: '1.1rem' }} />;
 							else if (t.value.startsWith('wsl-') && t.distroInfo) {
 								const cat = t.distroInfo.category;

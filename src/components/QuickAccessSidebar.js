@@ -59,6 +59,7 @@ const QuickAccessSidebar = ({
   const [dockerMenuPosition, setDockerMenuPosition] = useState({ top: 0, left: 0 });
   const [claudeEnabled, setClaudeEnabled] = useState(false);
   const [openCodeEnabled, setOpenCodeEnabled] = useState(false);
+  const [geminiCliEnabled, setGeminiCliEnabled] = useState(false);
 
   // Ref para el botón de Docker
   const dockerButtonRef = React.useRef(null);
@@ -267,9 +268,11 @@ const QuickAccessSidebar = ({
         const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
         setClaudeEnabled(cfg.claude === true);
         setOpenCodeEnabled(cfg.opencode === true);
+        setGeminiCliEnabled(cfg.geminicli === true);
       } catch {
         setClaudeEnabled(false);
         setOpenCodeEnabled(false);
+        setGeminiCliEnabled(false);
       }
     };
     syncClaudeEnabled();
@@ -312,6 +315,16 @@ const QuickAccessSidebar = ({
           icon: 'pi pi-code',
           color: '#6366f1',
           action: () => handleOpenTerminal('opencode')
+        });
+      }
+
+      if (geminiCliEnabled) {
+        terminals.push({
+          label: 'Gemini CLI',
+          value: 'geminicli',
+          icon: 'pi pi-sparkles',
+          color: '#1a73e8',
+          action: () => handleOpenTerminal('geminicli')
         });
       }
 
@@ -377,6 +390,15 @@ const QuickAccessSidebar = ({
           action: () => handleOpenTerminal('opencode')
         });
       }
+      if (geminiCliEnabled) {
+        terminals.push({
+          label: 'Gemini CLI',
+          value: 'geminicli',
+          icon: 'pi pi-sparkles',
+          color: '#1a73e8',
+          action: () => handleOpenTerminal('geminicli')
+        });
+      }
     } else {
       terminals.push({
         label: 'Terminal',
@@ -403,10 +425,19 @@ const QuickAccessSidebar = ({
           action: () => handleOpenTerminal('opencode')
         });
       }
+      if (geminiCliEnabled) {
+        terminals.push({
+          label: 'Gemini CLI',
+          value: 'geminicli',
+          icon: 'pi pi-sparkles',
+          color: '#1a73e8',
+          action: () => handleOpenTerminal('geminicli')
+        });
+      }
     }
 
     setAvailableTerminals(terminals);
-  }, [wslDistributions, cygwinAvailable, dockerContainers, claudeEnabled, openCodeEnabled]);
+  }, [wslDistributions, cygwinAvailable, dockerContainers, claudeEnabled, openCodeEnabled, geminiCliEnabled]);
 
   // Configurar acciones principales
   useEffect(() => {

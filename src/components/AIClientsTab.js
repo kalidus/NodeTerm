@@ -18,6 +18,7 @@ const AIClientsTab = ({ themeColors }) => {
     nodeterm: false,
     claude: false,
     opencode: false,
+    geminicli: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
@@ -51,6 +52,14 @@ const AIClientsTab = ({ themeColors }) => {
     binaryPath: null,
     error: null
   });
+  const [geminiCliStatus, setGeminiCliStatus] = useState({
+    loading: false,
+    installed: false,
+    installing: false,
+    version: null,
+    binaryPath: null,
+    error: null
+  });
 
   // Cargar configuración desde localStorage al montar
   useEffect(() => {
@@ -74,6 +83,10 @@ const AIClientsTab = ({ themeColors }) => {
 
   useEffect(() => {
     checkOpenCodeCliStatus();
+  }, []);
+
+  useEffect(() => {
+    checkGeminiCliStatus();
   }, []);
 
   // Verificar estado de servicios Docker al montar y cuando cambian los toggles
@@ -209,6 +222,56 @@ const AIClientsTab = ({ themeColors }) => {
     }
   };
 
+  const checkGeminiCliStatus = async () => {
+    setGeminiCliStatus(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const result = await window.electron?.geminicli?.getCliStatus?.();
+      if (result?.success) {
+        setGeminiCliStatus({
+          loading: false,
+          installed: !!result.installed,
+          installing: false,
+          version: result.version || null,
+          binaryPath: result.binaryPath || null,
+          error: null
+        });
+      } else {
+        setGeminiCliStatus(prev => ({
+          ...prev,
+          loading: false,
+          installing: false,
+          error: result?.error || 'No se pudo verificar Gemini CLI'
+        }));
+      }
+    } catch (error) {
+      setGeminiCliStatus(prev => ({
+        ...prev,
+        loading: false,
+        installing: false,
+        error: error.message || 'No se pudo verificar Gemini CLI'
+      }));
+    }
+  };
+
+  const installGeminiCli = async () => {
+    setGeminiCliStatus(prev => ({ ...prev, installing: true, error: null }));
+    try {
+      const result = await window.electron?.geminicli?.installCli?.();
+      if (!result?.success) {
+        throw new Error(result?.error || 'No se pudo instalar Gemini CLI');
+      }
+      await checkGeminiCliStatus();
+      return true;
+    } catch (error) {
+      setGeminiCliStatus(prev => ({
+        ...prev,
+        installing: false,
+        error: error.message || 'No se pudo instalar Gemini CLI'
+      }));
+      return false;
+    }
+  };
+
   // Handler para cambiar el estado de un cliente
   const handleToggleClient = async (clientKey) => {
     if (clientKey === 'claude') {
@@ -229,6 +292,17 @@ const AIClientsTab = ({ themeColors }) => {
         if (!ok) return;
       }
       const newClients = { ...clients, opencode: willEnable };
+      saveClientsConfig(newClients);
+      return;
+    }
+
+    if (clientKey === 'geminicli') {
+      const willEnable = !clients.geminicli;
+      if (willEnable && !geminiCliStatus.installed) {
+        const ok = await installGeminiCli();
+        if (!ok) return;
+      }
+      const newClients = { ...clients, geminicli: willEnable };
       saveClientsConfig(newClients);
       return;
     }
@@ -368,6 +442,20 @@ const AIClientsTab = ({ themeColors }) => {
       badges: [
         { label: 'LOCAL CLI', severity: 'warning', icon: 'pi pi-desktop' },
         { label: 'FREE', severity: 'success', icon: 'pi pi-star' }
+      ],
+      requiresDocker: false,
+      isLocalCli: true
+    },
+    {
+      key: 'geminicli',
+      name: 'Gemini CLI (CLI Local)',
+      icon: 'pi pi-sparkles',
+      color: '#1a73e8',
+      description: 'CLI oficial de Google Gemini para desarrollo con IA directamente en el terminal. Accede a los modelos Gemini de Google con soporte para código, análisis y más.',
+      features: ['Google Gemini', 'Terminal local dedicada', 'Instalación automática', 'Gratis con cuenta Google'],
+      badges: [
+        { label: 'LOCAL CLI', severity: 'warning', icon: 'pi pi-desktop' },
+        { label: 'GOOGLE', severity: 'info', icon: 'pi pi-google' }
       ],
       requiresDocker: false,
       isLocalCli: true
@@ -742,6 +830,66 @@ const AIClientsTab = ({ themeColors }) => {
                 <div style={{ marginTop: '0.75rem', color: '#ef4444' }}>
                   <i className="pi pi-times-circle" style={{ marginRight: '0.4rem' }} />
                   {openCodeCliStatus.error}
+                </div>
+              )}
+            </div>
+          )}
+
+          {client.key === 'geminicli' && (
+            <div className="ai-client-note" style={{
+              marginTop: '1rem',
+              padding: '0.75rem',
+              background: 'rgba(26, 115, 232, 0.12)',
+              border: '1px solid #1a73e8',
+              borderRadius: '4px',
+              fontSize: '0.85rem'
+            }}>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <i className="pi pi-info-circle" style={{ color: '#1a73e8', marginRight: '0.5rem' }} />
+                <strong>Estado CLI:</strong>{' '}
+                {geminiCliStatus.loading
+                  ? 'verificando...'
+                  : (geminiCliStatus.installed
+                    ? `instalado${geminiCliStatus.version ? ` (${geminiCliStatus.version})` : ''}`
+                    : 'no instalado')}
+              </div>
+              {geminiCliStatus.binaryPath && (
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <strong>Binario:</strong> <code>{geminiCliStatus.binaryPath}</code>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {!geminiCliStatus.installed && (
+                  <Button
+                    label="Instalar Gemini CLI"
+                    icon="pi pi-download"
+                    className="p-button-sm"
+                    style={{ background: '#1a73e8', border: '1px solid #1a73e8' }}
+                    onClick={installGeminiCli}
+                    loading={geminiCliStatus.installing}
+                  />
+                )}
+                {geminiCliStatus.installed && (
+                  <Button
+                    label="Reinstalar CLI"
+                    icon="pi pi-refresh"
+                    className="p-button-secondary p-button-sm"
+                    onClick={installGeminiCli}
+                    loading={geminiCliStatus.installing}
+                  />
+                )}
+                <Button
+                  label="Verificar"
+                  icon="pi pi-search"
+                  className="p-button-secondary p-button-sm"
+                  onClick={checkGeminiCliStatus}
+                  loading={geminiCliStatus.loading}
+                />
+              </div>
+              {geminiCliStatus.error && (
+                <div style={{ marginTop: '0.75rem', color: '#ef4444' }}>
+                  <i className="pi pi-times-circle" style={{ marginRight: '0.4rem' }} />
+                  {geminiCliStatus.error}
                 </div>
               )}
             </div>

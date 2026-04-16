@@ -165,6 +165,18 @@ const SettingsDialog = ({
       return false;
     }
   });
+  const [geminiCliConfig, setGeminiCliConfig] = useState({
+    binaryPath: '',
+    extraArgs: ''
+  });
+  const [geminiCliClientEnabled, setGeminiCliClientEnabled] = useState(() => {
+    try {
+      const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+      return cfg.geminicli === true;
+    } catch {
+      return false;
+    }
+  });
 
   // Hook para redimensionamiento del diálogo
   // storageKey: null para que siempre se abra con el tamaño por defecto
@@ -1102,8 +1114,22 @@ const SettingsDialog = ({
       }
     };
 
+    const loadGeminiCliConfig = async () => {
+      try {
+        const config = await window.electron?.geminicli?.getConfig?.();
+        if (!mounted || !config) return;
+        setGeminiCliConfig({
+          binaryPath: config.binaryPath || '',
+          extraArgs: config.extraArgs || ''
+        });
+      } catch (error) {
+        console.error('Error cargando configuración de Gemini CLI:', error);
+      }
+    };
+
     loadClaudeConfig();
     loadOpenCodeConfig();
+    loadGeminiCliConfig();
     return () => { mounted = false; };
   }, [visible]);
 
@@ -1126,14 +1152,25 @@ const SettingsDialog = ({
       }
     };
 
+    const syncGeminiCliClientState = () => {
+      try {
+        const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+        setGeminiCliClientEnabled(cfg.geminicli === true);
+      } catch {
+        setGeminiCliClientEnabled(false);
+      }
+    };
+
     const onAiClientsConfigChanged = () => {
       syncClaudeClientState();
       syncOpenCodeClientState();
+      syncGeminiCliClientState();
     };
     const onStorage = (e) => {
       if (e.key === 'ai_clients_enabled') {
         syncClaudeClientState();
         syncOpenCodeClientState();
+        syncGeminiCliClientState();
       }
     };
 
@@ -1154,6 +1191,7 @@ const SettingsDialog = ({
       options.push({ label: 'PowerShell', value: 'powershell' });
       if (claudeClientEnabled) options.push({ label: 'Claude Code', value: 'claude' });
       if (openCodeClientEnabled) options.push({ label: 'OpenCode', value: 'opencode' });
+      if (geminiCliClientEnabled) options.push({ label: 'Gemini CLI', value: 'geminicli' });
 
       // WSL genérico
       options.push({ label: 'WSL', value: 'wsl' });
@@ -1186,7 +1224,8 @@ const SettingsDialog = ({
       options.push(
         { label: 'Terminal Linux/macOS', value: 'linux-terminal' },
         ...(claudeClientEnabled ? [{ label: 'Claude Code', value: 'claude' }] : []),
-        ...(openCodeClientEnabled ? [{ label: 'OpenCode', value: 'opencode' }] : [])
+        ...(openCodeClientEnabled ? [{ label: 'OpenCode', value: 'opencode' }] : []),
+        ...(geminiCliClientEnabled ? [{ label: 'Gemini CLI', value: 'geminicli' }] : [])
       );
     } else {
       // Fallback
@@ -1194,12 +1233,13 @@ const SettingsDialog = ({
         { label: 'PowerShell', value: 'powershell' },
         { label: 'Terminal', value: 'linux-terminal' },
         ...(claudeClientEnabled ? [{ label: 'Claude Code', value: 'claude' }] : []),
-        ...(openCodeClientEnabled ? [{ label: 'OpenCode', value: 'opencode' }] : [])
+        ...(openCodeClientEnabled ? [{ label: 'OpenCode', value: 'opencode' }] : []),
+        ...(geminiCliClientEnabled ? [{ label: 'Gemini CLI', value: 'geminicli' }] : [])
       );
     }
 
     return options;
-  }, [platform, wslDistributions, cygwinAvailable, dockerContainers, claudeClientEnabled, openCodeClientEnabled]);
+  }, [platform, wslDistributions, cygwinAvailable, dockerContainers, claudeClientEnabled, openCodeClientEnabled, geminiCliClientEnabled]);
 
   // Handler para cambiar terminal por defecto
   const handleDefaultTerminalChange = useCallback((terminalType) => {
@@ -1290,6 +1330,45 @@ const SettingsDialog = ({
       });
     }
   }, [openCodeConfig]);
+
+  const handleSaveGeminiCliConfig = useCallback(async () => {
+    try {
+      const validation = await window.electron?.geminicli?.validateConfig?.(geminiCliConfig);
+      if (validation && validation.valid === false) {
+        toastRef.current?.show({
+          severity: 'error',
+          summary: 'Configuración inválida',
+          detail: validation.error || 'Revisa los datos de Gemini CLI',
+          life: 4000
+        });
+        return;
+      }
+
+      const result = await window.electron?.geminicli?.setConfig?.(geminiCliConfig);
+      if (result?.success) {
+        toastRef.current?.show({
+          severity: 'success',
+          summary: 'Gemini CLI',
+          detail: 'Configuración guardada',
+          life: 2500
+        });
+      } else {
+        toastRef.current?.show({
+          severity: 'error',
+          summary: 'Gemini CLI',
+          detail: result?.error || 'No se pudo guardar la configuración',
+          life: 4000
+        });
+      }
+    } catch (error) {
+      toastRef.current?.show({
+        severity: 'error',
+        summary: 'Gemini CLI',
+        detail: error.message || 'Error guardando configuración',
+        life: 4000
+      });
+    }
+  }, [geminiCliConfig]);
 
   // Persistir configuración del icono interactivo
   useEffect(() => {
@@ -2498,6 +2577,39 @@ const SettingsDialog = ({
                                 icon="pi pi-save"
                                 style={{ background: '#6366f1', border: '1px solid #6366f1' }}
                                 onClick={handleSaveOpenCodeConfig}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="general-setting-card">
+                          <div className="general-setting-content" style={{ alignItems: 'flex-start' }}>
+                            <div className="general-setting-icon" style={{ background: 'linear-gradient(135deg, #1a73e8 0%, #4285f4 100%)' }}>
+                              <i className="pi pi-sparkles"></i>
+                            </div>
+                            <div className="general-setting-info" style={{ flex: 1 }}>
+                              <label className="general-setting-label">Gemini CLI (terminal local)</label>
+                              <p className="general-setting-description">
+                                Configura ruta del binario y argumentos extra para nuevas pestañas Gemini CLI.
+                              </p>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                                <InputText
+                                  value={geminiCliConfig.binaryPath}
+                                  onChange={(e) => setGeminiCliConfig(prev => ({ ...prev, binaryPath: e.target.value }))}
+                                  placeholder="Ruta binario (opcional)"
+                                />
+                                <InputText
+                                  value={geminiCliConfig.extraArgs}
+                                  onChange={(e) => setGeminiCliConfig(prev => ({ ...prev, extraArgs: e.target.value }))}
+                                  placeholder="Args extra (opcional)"
+                                />
+                              </div>
+                            </div>
+                            <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                label="Guardar Gemini CLI"
+                                icon="pi pi-save"
+                                style={{ background: '#1a73e8', border: '1px solid #1a73e8' }}
+                                onClick={handleSaveGeminiCliConfig}
                               />
                             </div>
                           </div>
