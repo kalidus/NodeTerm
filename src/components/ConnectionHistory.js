@@ -298,12 +298,24 @@ const ConnectionHistory = ({
 			try {
 				const platform = window.electron?.platform || 'unknown';
 				const shells = [];
+				let aiClientsCfg = {};
+				try {
+					aiClientsCfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+				} catch {
+					aiClientsCfg = {};
+				}
 
 				if (platform === 'win32') {
 					shells.push({ label: 'PowerShell', value: 'powershell', icon: 'pi-desktop', color: '#4fc3f7' });
-					shells.push({ label: 'Claude Code', value: 'claude', icon: 'pi-comments', color: '#f59e0b' });
-					shells.push({ label: 'OpenCode', value: 'opencode', icon: 'pi-code', color: '#6366f1' });
-					shells.push({ label: 'Gemini CLI', value: 'geminicli', icon: 'pi-star', color: '#1a73e8' });
+					if (aiClientsCfg.claude === true) {
+						shells.push({ label: 'Claude Code', value: 'claude', icon: 'pi-comments', color: '#f59e0b' });
+					}
+					if (aiClientsCfg.opencode === true) {
+						shells.push({ label: 'OpenCode', value: 'opencode', icon: 'pi-code', color: '#6366f1' });
+					}
+					if (aiClientsCfg.geminicli === true) {
+						shells.push({ label: 'Gemini CLI', value: 'geminicli', icon: 'pi-star', color: '#1a73e8' });
+					}
 
 					// WSL
 					if (window.electron && window.electron.ipcRenderer) {
@@ -331,9 +343,15 @@ const ConnectionHistory = ({
 					} catch (e) { /* ignore */ }
 				} else {
 					shells.push({ label: platform === 'darwin' ? 'macOS Terminal' : 'Linux Terminal', value: 'powershell', icon: 'pi-desktop', color: '#4fc3f7' });
-					shells.push({ label: 'Claude Code', value: 'claude', icon: 'pi-comments', color: '#f59e0b' });
-					shells.push({ label: 'OpenCode', value: 'opencode', icon: 'pi-code', color: '#6366f1' });
-					shells.push({ label: 'Gemini CLI', value: 'geminicli', icon: 'pi-star', color: '#1a73e8' });
+					if (aiClientsCfg.claude === true) {
+						shells.push({ label: 'Claude Code', value: 'claude', icon: 'pi-comments', color: '#f59e0b' });
+					}
+					if (aiClientsCfg.opencode === true) {
+						shells.push({ label: 'OpenCode', value: 'opencode', icon: 'pi-code', color: '#6366f1' });
+					}
+					if (aiClientsCfg.geminicli === true) {
+						shells.push({ label: 'Gemini CLI', value: 'geminicli', icon: 'pi-star', color: '#1a73e8' });
+					}
 				}
 
 				setAvailableTerminals(shells);
@@ -345,6 +363,12 @@ const ConnectionHistory = ({
 		};
 
 		detectTerminals();
+		window.addEventListener('ai-clients-config-changed', detectTerminals);
+		window.addEventListener('storage', detectTerminals);
+		return () => {
+			window.removeEventListener('ai-clients-config-changed', detectTerminals);
+			window.removeEventListener('storage', detectTerminals);
+		};
 	}, [terminalView]);
 
 	// Funci\u00F3n para encontrar todas las conexiones en el \u00E1rbol

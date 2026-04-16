@@ -1,15 +1,48 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from 'primereact/button';
 
 const TerminalTypeSelector = ({ value, onChange }) => {
     const isWindows = window.electron?.platform === 'win32';
     const terminalLabel = isWindows ? 'PowerShell' : 'Terminal';
+    const [aiClientsEnabled, setAiClientsEnabled] = useState({
+        claude: false,
+        opencode: false,
+        geminicli: false
+    });
+
+    useEffect(() => {
+        const syncAiClients = () => {
+            try {
+                const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+                setAiClientsEnabled({
+                    claude: cfg.claude === true,
+                    opencode: cfg.opencode === true,
+                    geminicli: cfg.geminicli === true
+                });
+            } catch {
+                setAiClientsEnabled({
+                    claude: false,
+                    opencode: false,
+                    geminicli: false
+                });
+            }
+        };
+
+        syncAiClients();
+        window.addEventListener('ai-clients-config-changed', syncAiClients);
+        window.addEventListener('storage', syncAiClients);
+
+        return () => {
+            window.removeEventListener('ai-clients-config-changed', syncAiClients);
+            window.removeEventListener('storage', syncAiClients);
+        };
+    }, []);
 
     const terminalOptions = [
         { label: terminalLabel, value: 'powershell', icon: 'pi pi-desktop', color: '#4fc3f7' },
-        { label: 'Claude Code', value: 'claude', icon: 'pi pi-comments', color: '#f59e0b' },
-        { label: 'OpenCode', value: 'opencode', icon: 'pi pi-code', color: '#6366f1' },
-        { label: 'Gemini CLI', value: 'geminicli', icon: 'pi pi-star', color: '#1a73e8' }
+        ...(aiClientsEnabled.claude ? [{ label: 'Claude Code', value: 'claude', icon: 'pi pi-comments', color: '#f59e0b' }] : []),
+        ...(aiClientsEnabled.opencode ? [{ label: 'OpenCode', value: 'opencode', icon: 'pi pi-code', color: '#6366f1' }] : []),
+        ...(aiClientsEnabled.geminicli ? [{ label: 'Gemini CLI', value: 'geminicli', icon: 'pi pi-star', color: '#1a73e8' }] : [])
     ];
 
     return (

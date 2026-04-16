@@ -98,6 +98,29 @@ const GeminiCliTerminal = forwardRef(({
     };
     startGeminiCliSession();
 
+    const keyHandler = term.current.onKey(({ domEvent }) => {
+      const isMac = window.electron?.platform === 'darwin';
+      const modifierKey = isMac ? domEvent.metaKey : domEvent.ctrlKey;
+
+      if (modifierKey && domEvent.key === 'c') {
+        const selection = term.current?.getSelection();
+        if (selection) {
+          window.electron?.clipboard?.writeText?.(selection);
+          domEvent.preventDefault();
+        }
+      } else if (modifierKey && domEvent.key === 'v') {
+        domEvent.preventDefault();
+        window.electron?.clipboard?.readText?.().then((text) => {
+          if (!text) return;
+          term.current?.focus();
+          setTimeout(() => {
+            window.electron?.ipcRenderer.send(`geminicli:data:${tabId}`, text);
+            term.current?.focus();
+          }, 10);
+        });
+      }
+    });
+
     const dataHandler = term.current.onData((data) => {
       window.electron?.ipcRenderer.send(`geminicli:data:${tabId}`, data);
     });
@@ -135,6 +158,16 @@ const GeminiCliTerminal = forwardRef(({
     window.addEventListener('resize', handleWindowResize);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    const contextMenuHandler = (e) => {
+      e.preventDefault();
+      window.electron?.clipboard?.readText?.().then((text) => {
+        if (text) {
+          window.electron?.ipcRenderer.send(`geminicli:data:${tabId}`, text);
+        }
+      });
+    };
+    terminalRef.current?.addEventListener('contextmenu', contextMenuHandler);
+
     const startupSyncTimers = [400, 700, 1100, 1700, 2600].map(ms => setTimeout(fitAndSyncSize, ms));
     const startRetryTimers = [900, 1800, 3200].map((ms) => setTimeout(() => {
       if (!isReadyRef.current) {
@@ -153,6 +186,8 @@ const GeminiCliTerminal = forwardRef(({
       if (onDataUnsubscribe) onDataUnsubscribe();
       if (onReadyUnsubscribe) onReadyUnsubscribe();
       if (onErrorUnsubscribe) onErrorUnsubscribe();
+      terminalRef.current?.removeEventListener('contextmenu', contextMenuHandler);
+      keyHandler.dispose();
       dataHandler.dispose();
       resizeHandler.dispose();
       term.current?.dispose();

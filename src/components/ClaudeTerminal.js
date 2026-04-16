@@ -101,6 +101,29 @@ const ClaudeTerminal = forwardRef(({
     };
     startClaudeSession();
 
+    const keyHandler = term.current.onKey(({ domEvent }) => {
+      const isMac = window.electron?.platform === 'darwin';
+      const modifierKey = isMac ? domEvent.metaKey : domEvent.ctrlKey;
+
+      if (modifierKey && domEvent.key === 'c') {
+        const selection = term.current?.getSelection();
+        if (selection) {
+          window.electron?.clipboard?.writeText?.(selection);
+          domEvent.preventDefault();
+        }
+      } else if (modifierKey && domEvent.key === 'v') {
+        domEvent.preventDefault();
+        window.electron?.clipboard?.readText?.().then((text) => {
+          if (!text) return;
+          term.current?.focus();
+          setTimeout(() => {
+            window.electron?.ipcRenderer.send(`claude:data:${tabId}`, text);
+            term.current?.focus();
+          }, 10);
+        });
+      }
+    });
+
     const dataHandler = term.current.onData((data) => {
       window.electron?.ipcRenderer.send(`claude:data:${tabId}`, data);
     });
@@ -139,6 +162,16 @@ const ClaudeTerminal = forwardRef(({
     window.addEventListener('resize', handleWindowResize);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    const contextMenuHandler = (e) => {
+      e.preventDefault();
+      window.electron?.clipboard?.readText?.().then((text) => {
+        if (text) {
+          window.electron?.ipcRenderer.send(`claude:data:${tabId}`, text);
+        }
+      });
+    };
+    terminalRef.current?.addEventListener('contextmenu', contextMenuHandler);
+
     // Algunos TUI (como Claude Code) recalculan layout tras arrancar; re-sincronizar durante el arranque.
     const startupSyncTimers = [400, 700, 1100, 1700, 2600].map(ms => setTimeout(fitAndSyncSize, ms));
     const startRetryTimers = [900, 1800, 3200].map((ms) => setTimeout(() => {
@@ -158,6 +191,8 @@ const ClaudeTerminal = forwardRef(({
       if (onDataUnsubscribe) onDataUnsubscribe();
       if (onReadyUnsubscribe) onReadyUnsubscribe();
       if (onErrorUnsubscribe) onErrorUnsubscribe();
+      terminalRef.current?.removeEventListener('contextmenu', contextMenuHandler);
+      keyHandler.dispose();
       dataHandler.dispose();
       resizeHandler.dispose();
       term.current?.dispose();
