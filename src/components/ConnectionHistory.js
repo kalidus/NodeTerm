@@ -316,6 +316,9 @@ const ConnectionHistory = ({
 					if (aiClientsCfg.geminicli === true) {
 						shells.push({ label: 'Gemini CLI', value: 'geminicli', icon: 'pi-star', color: '#1a73e8' });
 					}
+					if (aiClientsCfg.codexcli === true) {
+						shells.push({ label: 'Codex CLI', value: 'codexcli', icon: 'pi-bolt', color: '#10b981' });
+					}
 
 					// WSL
 					if (window.electron && window.electron.ipcRenderer) {
@@ -351,6 +354,9 @@ const ConnectionHistory = ({
 					}
 					if (aiClientsCfg.geminicli === true) {
 						shells.push({ label: 'Gemini CLI', value: 'geminicli', icon: 'pi-star', color: '#1a73e8' });
+					}
+					if (aiClientsCfg.codexcli === true) {
+						shells.push({ label: 'Codex CLI', value: 'codexcli', icon: 'pi-bolt', color: '#10b981' });
 					}
 				}
 

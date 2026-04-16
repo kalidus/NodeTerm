@@ -7,7 +7,8 @@ const TerminalTypeSelector = ({ value, onChange }) => {
     const [aiClientsEnabled, setAiClientsEnabled] = useState({
         claude: false,
         opencode: false,
-        geminicli: false
+        geminicli: false,
+        codexcli: false
     });
 
     useEffect(() => {
@@ -17,13 +18,15 @@ const TerminalTypeSelector = ({ value, onChange }) => {
                 setAiClientsEnabled({
                     claude: cfg.claude === true,
                     opencode: cfg.opencode === true,
-                    geminicli: cfg.geminicli === true
+                    geminicli: cfg.geminicli === true,
+                    codexcli: cfg.codexcli === true
                 });
             } catch {
                 setAiClientsEnabled({
                     claude: false,
                     opencode: false,
-                    geminicli: false
+                    geminicli: false,
+                    codexcli: false
                 });
             }
         };
@@ -42,7 +45,8 @@ const TerminalTypeSelector = ({ value, onChange }) => {
         { label: terminalLabel, value: 'powershell', icon: 'pi pi-desktop', color: '#4fc3f7' },
         ...(aiClientsEnabled.claude ? [{ label: 'Claude Code', value: 'claude', icon: 'pi pi-comments', color: '#f59e0b' }] : []),
         ...(aiClientsEnabled.opencode ? [{ label: 'OpenCode', value: 'opencode', icon: 'pi pi-code', color: '#6366f1' }] : []),
-        ...(aiClientsEnabled.geminicli ? [{ label: 'Gemini CLI', value: 'geminicli', icon: 'pi pi-star', color: '#1a73e8' }] : [])
+        ...(aiClientsEnabled.geminicli ? [{ label: 'Gemini CLI', value: 'geminicli', icon: 'pi pi-star', color: '#1a73e8' }] : []),
+        ...(aiClientsEnabled.codexcli ? [{ label: 'Codex CLI', value: 'codexcli', icon: 'pi pi-bolt', color: '#10b981' }] : [])
     ];
 
     return (
@@ -73,7 +77,9 @@ const TerminalTypeSelector = ({ value, onChange }) => {
                                         ? 'rgba(99, 102, 241, 0.15)'
                                         : (option.value === 'geminicli'
                                             ? 'rgba(26, 115, 232, 0.15)'
-                                        : (option.value === 'wsl' ? 'rgba(138, 226, 52, 0.1)' : 'rgba(79, 195, 247, 0.1)')))
+                                        : (option.value === 'codexcli'
+                                            ? 'rgba(16, 185, 129, 0.15)'
+                                        : (option.value === 'wsl' ? 'rgba(138, 226, 52, 0.1)' : 'rgba(79, 195, 247, 0.1)'))))
                                 : 'transparent',
                             fontSize: '12px',
                             padding: '4px 8px',

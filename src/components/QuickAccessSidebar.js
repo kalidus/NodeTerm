@@ -60,6 +60,7 @@ const QuickAccessSidebar = ({
   const [claudeEnabled, setClaudeEnabled] = useState(false);
   const [openCodeEnabled, setOpenCodeEnabled] = useState(false);
   const [geminiCliEnabled, setGeminiCliEnabled] = useState(false);
+  const [codexCliEnabled, setCodexCliEnabled] = useState(false);
 
   // Ref para el botón de Docker
   const dockerButtonRef = React.useRef(null);
@@ -269,10 +270,12 @@ const QuickAccessSidebar = ({
         setClaudeEnabled(cfg.claude === true);
         setOpenCodeEnabled(cfg.opencode === true);
         setGeminiCliEnabled(cfg.geminicli === true);
+        setCodexCliEnabled(cfg.codexcli === true);
       } catch {
         setClaudeEnabled(false);
         setOpenCodeEnabled(false);
         setGeminiCliEnabled(false);
+        setCodexCliEnabled(false);
       }
     };
     syncClaudeEnabled();
@@ -325,6 +328,16 @@ const QuickAccessSidebar = ({
           icon: 'pi pi-star',
           color: '#1a73e8',
           action: () => handleOpenTerminal('geminicli')
+        });
+      }
+
+      if (codexCliEnabled) {
+        terminals.push({
+          label: 'Codex CLI',
+          value: 'codexcli',
+          icon: 'pi pi-bolt',
+          color: '#10b981',
+          action: () => handleOpenTerminal('codexcli')
         });
       }
 
@@ -399,6 +412,15 @@ const QuickAccessSidebar = ({
           action: () => handleOpenTerminal('geminicli')
         });
       }
+      if (codexCliEnabled) {
+        terminals.push({
+          label: 'Codex CLI',
+          value: 'codexcli',
+          icon: 'pi pi-bolt',
+          color: '#10b981',
+          action: () => handleOpenTerminal('codexcli')
+        });
+      }
     } else {
       terminals.push({
         label: 'Terminal',
@@ -434,10 +456,19 @@ const QuickAccessSidebar = ({
           action: () => handleOpenTerminal('geminicli')
         });
       }
+      if (codexCliEnabled) {
+        terminals.push({
+          label: 'Codex CLI',
+          value: 'codexcli',
+          icon: 'pi pi-bolt',
+          color: '#10b981',
+          action: () => handleOpenTerminal('codexcli')
+        });
+      }
     }
 
     setAvailableTerminals(terminals);
-  }, [wslDistributions, cygwinAvailable, dockerContainers, claudeEnabled, openCodeEnabled, geminiCliEnabled]);
+  }, [wslDistributions, cygwinAvailable, dockerContainers, claudeEnabled, openCodeEnabled, geminiCliEnabled, codexCliEnabled]);
 
   // Configurar acciones principales
   useEffect(() => {

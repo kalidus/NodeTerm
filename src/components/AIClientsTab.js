@@ -4,6 +4,7 @@ import { InputSwitch } from 'primereact/inputswitch';
 import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
 import { Password } from 'primereact/password';
+import { InputText } from 'primereact/inputtext';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import '../styles/components/ai-clients-tab.css';
 
@@ -20,6 +21,7 @@ const AIClientsTab = ({ themeColors }) => {
     claude: false,
     opencode: false,
     geminicli: false,
+    codexcli: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
@@ -63,6 +65,22 @@ const AIClientsTab = ({ themeColors }) => {
   });
   const [geminiApiKeyInput, setGeminiApiKeyInput] = useState('');
   const [geminiApiKeySaved, setGeminiApiKeySaved] = useState(false);
+  const [codexCliStatus, setCodexCliStatus] = useState({
+    loading: false,
+    installed: false,
+    installing: false,
+    version: null,
+    binaryPath: null,
+    error: null
+  });
+  const [codexApiKeyInput, setCodexApiKeyInput] = useState('');
+  const [codexApiKeySaved, setCodexApiKeySaved] = useState(false);
+
+  // Estados para configuración detallada de los CLIs
+  const [claudeConfig, setClaudeConfig] = useState({ binaryPath: '', defaultModel: '', extraArgs: '', authToken: '' });
+  const [openCodeConfig, setOpenCodeConfig] = useState({ binaryPath: '', extraArgs: '' });
+  const [geminiCliConfig, setGeminiCliConfig] = useState({ binaryPath: '', extraArgs: '', apiKey: '' });
+  const [codexCliConfig, setCodexCliConfig] = useState({ binaryPath: '', extraArgs: '', apiKey: '' });
 
   // Cargar configuración desde localStorage al montar
   useEffect(() => {
@@ -90,6 +108,32 @@ const AIClientsTab = ({ themeColors }) => {
 
   useEffect(() => {
     checkGeminiCliStatus();
+  }, []);
+
+  useEffect(() => {
+    checkCodexCliStatus();
+  }, []);
+
+  // Cargar configuraciones detalladas desde el proceso principal
+  useEffect(() => {
+    const loadConfigs = async () => {
+      try {
+        const [claude, opencode, gemini, codex] = await Promise.all([
+          window.electron?.claude?.getConfig?.(),
+          window.electron?.opencode?.getConfig?.(),
+          window.electron?.geminicli?.getConfig?.(),
+          window.electron?.codexcli?.getConfig?.()
+        ]);
+
+        if (claude) setClaudeConfig({ ...claude, authToken: '' });
+        if (opencode) setOpenCodeConfig(opencode);
+        if (gemini) setGeminiCliConfig({ ...gemini, apiKey: '' });
+        if (codex) setCodexCliConfig({ ...codex, apiKey: '' });
+      } catch (error) {
+        console.error('[AIClientsTab] Error al cargar configuraciones detaladas:', error);
+      }
+    };
+    loadConfigs();
   }, []);
 
   // Verificar estado de servicios Docker al montar y cuando cambian los toggles
@@ -305,6 +349,169 @@ const AIClientsTab = ({ themeColors }) => {
     }
   };
 
+  const checkCodexCliStatus = async () => {
+    setCodexCliStatus(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const [result, cfg] = await Promise.all([
+        window.electron?.codexcli?.getCliStatus?.(),
+        window.electron?.codexcli?.getConfig?.()
+      ]);
+      if (result?.success) {
+        setCodexCliStatus({
+          loading: false,
+          installed: !!result.installed,
+          installing: false,
+          version: result.version || null,
+          binaryPath: result.binaryPath || null,
+          error: null
+        });
+        setCodexApiKeySaved(cfg?.apiKey === '********');
+      } else {
+        setCodexCliStatus(prev => ({
+          ...prev,
+          loading: false,
+          installing: false,
+          error: result?.error || 'No se pudo verificar Codex CLI'
+        }));
+      }
+    } catch (error) {
+      setCodexCliStatus(prev => ({
+        ...prev,
+        loading: false,
+        installing: false,
+        error: error.message || 'No se pudo verificar Codex CLI'
+      }));
+    }
+  };
+
+  const installCodexCli = async () => {
+    setCodexCliStatus(prev => ({ ...prev, installing: true, error: null }));
+    try {
+      const result = await window.electron?.codexcli?.installCli?.();
+      if (!result?.success) {
+        throw new Error(result?.error || 'No se pudo instalar Codex CLI');
+      }
+      await checkCodexCliStatus();
+      return true;
+    } catch (error) {
+      setCodexCliStatus(prev => ({
+        ...prev,
+        installing: false,
+        error: error.message || 'No se pudo instalar Codex CLI'
+      }));
+      return false;
+    }
+  };
+
+  const saveCodexApiKey = async () => {
+    try {
+      const current = await window.electron?.codexcli?.getConfig?.();
+      const result = await window.electron?.codexcli?.setConfig?.({
+        binaryPath: current?.binaryPath || '',
+        extraArgs: current?.extraArgs || '',
+        apiKey: codexApiKeyInput || ''
+      });
+
+      if (result?.success) {
+        setCodexApiKeySaved(!!codexApiKeyInput.trim());
+        setCodexApiKeyInput('');
+      } else {
+        setCodexCliStatus(prev => ({
+          ...prev,
+          error: result?.error || 'No se pudo guardar la API key'
+        }));
+      }
+    } catch (error) {
+      setCodexCliStatus(prev => ({
+        ...prev,
+        error: error.message || 'No se pudo guardar la API key'
+      }));
+    }
+  };
+
+  const handleSaveClaudeConfig = async () => {
+    try {
+      const validation = await window.electron?.claude?.validateConfig?.(claudeConfig);
+      if (validation && validation.valid === false) {
+        setClaudeCliStatus(prev => ({ ...prev, error: validation.error || 'Configuración inválida' }));
+        return;
+      }
+
+      const result = await window.electron?.claude?.setConfig?.(claudeConfig);
+      if (result?.success) {
+        setClaudeConfig(prev => ({ ...prev, authToken: '' }));
+        setClaudeCliStatus(prev => ({ ...prev, error: null }));
+        await checkClaudeCliStatus();
+      } else {
+        setClaudeCliStatus(prev => ({ ...prev, error: result?.error || 'Error al guardar' }));
+      }
+    } catch (error) {
+      setClaudeCliStatus(prev => ({ ...prev, error: error.message }));
+    }
+  };
+
+  const handleSaveOpenCodeConfig = async () => {
+    try {
+      const validation = await window.electron?.opencode?.validateConfig?.(openCodeConfig);
+      if (validation && validation.valid === false) {
+        setOpenCodeCliStatus(prev => ({ ...prev, error: validation.error || 'Configuración inválida' }));
+        return;
+      }
+
+      const result = await window.electron?.opencode?.setConfig?.(openCodeConfig);
+      if (result?.success) {
+        setOpenCodeCliStatus(prev => ({ ...prev, error: null }));
+        await checkOpenCodeCliStatus();
+      } else {
+        setOpenCodeCliStatus(prev => ({ ...prev, error: result?.error || 'Error al guardar' }));
+      }
+    } catch (error) {
+      setOpenCodeCliStatus(prev => ({ ...prev, error: error.message }));
+    }
+  };
+
+  const handleSaveGeminiCliConfig = async () => {
+    try {
+      const validation = await window.electron?.geminicli?.validateConfig?.(geminiCliConfig);
+      if (validation && validation.valid === false) {
+        setGeminiCliStatus(prev => ({ ...prev, error: validation.error || 'Configuración inválida' }));
+        return;
+      }
+
+      const result = await window.electron?.geminicli?.setConfig?.(geminiCliConfig);
+      if (result?.success) {
+        setGeminiCliConfig(prev => ({ ...prev, apiKey: '' }));
+        setGeminiCliStatus(prev => ({ ...prev, error: null }));
+        await checkGeminiCliStatus();
+      } else {
+        setGeminiCliStatus(prev => ({ ...prev, error: result?.error || 'Error al guardar' }));
+      }
+    } catch (error) {
+      setGeminiCliStatus(prev => ({ ...prev, error: error.message }));
+    }
+  };
+
+  const handleSaveCodexCliConfig = async () => {
+    try {
+      const validation = await window.electron?.codexcli?.validateConfig?.(codexCliConfig);
+      if (validation && validation.valid === false) {
+        setCodexCliStatus(prev => ({ ...prev, error: validation.error || 'Configuración inválida' }));
+        return;
+      }
+
+      const result = await window.electron?.codexcli?.setConfig?.(codexCliConfig);
+      if (result?.success) {
+        setCodexCliConfig(prev => ({ ...prev, apiKey: '' }));
+        setCodexCliStatus(prev => ({ ...prev, error: null }));
+        await checkCodexCliStatus();
+      } else {
+        setCodexCliStatus(prev => ({ ...prev, error: result?.error || 'Error al guardar' }));
+      }
+    } catch (error) {
+      setCodexCliStatus(prev => ({ ...prev, error: error.message }));
+    }
+  };
+
   // Handler para cambiar el estado de un cliente
   const handleToggleClient = async (clientKey) => {
     if (clientKey === 'claude') {
@@ -336,6 +543,17 @@ const AIClientsTab = ({ themeColors }) => {
         if (!ok) return;
       }
       const newClients = { ...clients, geminicli: willEnable };
+      saveClientsConfig(newClients);
+      return;
+    }
+
+    if (clientKey === 'codexcli') {
+      const willEnable = !clients.codexcli;
+      if (willEnable && !codexCliStatus.installed) {
+        const ok = await installCodexCli();
+        if (!ok) return;
+      }
+      const newClients = { ...clients, codexcli: willEnable };
       saveClientsConfig(newClients);
       return;
     }
@@ -489,6 +707,20 @@ const AIClientsTab = ({ themeColors }) => {
       badges: [
         { label: 'LOCAL CLI', severity: 'warning', icon: 'pi pi-desktop' },
         { label: 'GOOGLE', severity: 'info', icon: 'pi pi-globe' }
+      ],
+      requiresDocker: false,
+      isLocalCli: true
+    },
+    {
+      key: 'codexcli',
+      name: 'Codex CLI (CLI Local)',
+      icon: 'pi pi-bolt',
+      color: '#10b981',
+      description: 'CLI de OpenAI Codex para desarrollo con IA directamente en el terminal. Agente de codificación ligero y open-source que usa modelos de OpenAI con soporte para lectura de archivos, ejecución de comandos y más.',
+      features: ['OpenAI Codex', 'Terminal local dedicada', 'Instalación automática', 'Open Source'],
+      badges: [
+        { label: 'LOCAL CLI', severity: 'warning', icon: 'pi pi-desktop' },
+        { label: 'OPENAI', severity: 'success', icon: 'pi pi-bolt' }
       ],
       requiresDocker: false,
       isLocalCli: true
@@ -799,6 +1031,63 @@ const AIClientsTab = ({ themeColors }) => {
                   loading={claudeCliStatus.loading}
                 />
               </div>
+
+              {/* Configuración avanzada Claude */}
+              <div className="cli-advanced-config" style={{ marginTop: '1rem', borderTop: '1px solid rgba(245, 158, 11, 0.2)', paddingTop: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div className="p-field">
+                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Ruta binario</label>
+                    <InputText
+                      value={claudeConfig.binaryPath}
+                      onChange={(e) => setClaudeConfig(prev => ({ ...prev, binaryPath: e.target.value }))}
+                      placeholder="npx @anthropic-ai/claude-code"
+                      className="p-inputtext-sm"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div className="p-field">
+                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Modelo</label>
+                    <InputText
+                      value={claudeConfig.defaultModel}
+                      onChange={(e) => setClaudeConfig(prev => ({ ...prev, defaultModel: e.target.value }))}
+                      placeholder="claude-3-7-sonnet-latest"
+                      className="p-inputtext-sm"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div className="p-field">
+                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Args extra</label>
+                    <InputText
+                      value={claudeConfig.extraArgs}
+                      onChange={(e) => setClaudeConfig(prev => ({ ...prev, extraArgs: e.target.value }))}
+                      placeholder="--no-interactive"
+                      className="p-inputtext-sm"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div className="p-field">
+                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Auth Token</label>
+                    <Password
+                      value={claudeConfig.authToken}
+                      onChange={(e) => setClaudeConfig(prev => ({ ...prev, authToken: e.target.value }))}
+                      feedback={false}
+                      toggleMask
+                      placeholder="Token opcional"
+                      className="p-inputtext-sm"
+                      style={{ width: '100%' }}
+                      inputStyle={{ width: '100%' }}
+                    />
+                  </div>
+                </div>
+                <Button
+                  label="Guardar Configuración"
+                  icon="pi pi-save"
+                  className="p-button-warning p-button-sm p-button-text"
+                  style={{ marginTop: '0.5rem' }}
+                  onClick={handleSaveClaudeConfig}
+                />
+              </div>
+
               {claudeCliStatus.error && (
                 <div style={{ marginTop: '0.75rem', color: '#ef4444' }}>
                   <i className="pi pi-times-circle" style={{ marginRight: '0.4rem' }} />
@@ -859,10 +1148,162 @@ const AIClientsTab = ({ themeColors }) => {
                   loading={openCodeCliStatus.loading}
                 />
               </div>
+
+              {/* Configuración avanzada OpenCode */}
+              <div className="cli-advanced-config" style={{ marginTop: '1rem', borderTop: '1px solid rgba(99, 102, 241, 0.2)', paddingTop: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div className="p-field">
+                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Ruta binario</label>
+                    <InputText
+                      value={openCodeConfig.binaryPath}
+                      onChange={(e) => setOpenCodeConfig(prev => ({ ...prev, binaryPath: e.target.value }))}
+                      placeholder="opencode"
+                      className="p-inputtext-sm"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div className="p-field">
+                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Args extra</label>
+                    <InputText
+                      value={openCodeConfig.extraArgs}
+                      onChange={(e) => setOpenCodeConfig(prev => ({ ...prev, extraArgs: e.target.value }))}
+                      placeholder="--model gpt-4"
+                      className="p-inputtext-sm"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                </div>
+                <Button
+                  label="Guardar Configuración"
+                  icon="pi pi-save"
+                  className="p-button-sm p-button-text"
+                  style={{ marginTop: '0.5rem', color: '#6366f1' }}
+                  onClick={handleSaveOpenCodeConfig}
+                />
+              </div>
+
               {openCodeCliStatus.error && (
                 <div style={{ marginTop: '0.75rem', color: '#ef4444' }}>
                   <i className="pi pi-times-circle" style={{ marginRight: '0.4rem' }} />
                   {openCodeCliStatus.error}
+                </div>
+              )}
+            </div>
+          )}
+
+          {client.key === 'codexcli' && (
+            <div className="ai-client-note" style={{
+              marginTop: '1rem',
+              padding: '0.75rem',
+              background: 'rgba(16, 185, 129, 0.12)',
+              border: '1px solid #10b981',
+              borderRadius: '4px',
+              fontSize: '0.85rem'
+            }}>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <i className="pi pi-info-circle" style={{ color: '#10b981', marginRight: '0.5rem' }} />
+                <strong>Estado CLI:</strong>{' '}
+                {codexCliStatus.loading
+                  ? 'verificando...'
+                  : (codexCliStatus.installed
+                    ? `instalado${codexCliStatus.version ? ` (${codexCliStatus.version})` : ''}`
+                    : 'no instalado')}
+              </div>
+              {codexCliStatus.binaryPath && (
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <strong>Binario:</strong> <code>{codexCliStatus.binaryPath}</code>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {!codexCliStatus.installed && (
+                  <Button
+                    label="Instalar Codex CLI"
+                    icon="pi pi-download"
+                    className="p-button-sm"
+                    style={{ background: '#10b981', border: '1px solid #10b981' }}
+                    onClick={installCodexCli}
+                    loading={codexCliStatus.installing}
+                  />
+                )}
+                {codexCliStatus.installed && (
+                  <Button
+                    label="Reinstalar CLI"
+                    icon="pi pi-refresh"
+                    className="p-button-secondary p-button-sm"
+                    onClick={installCodexCli}
+                    loading={codexCliStatus.installing}
+                  />
+                )}
+                <Button
+                  label="Verificar"
+                  icon="pi pi-search"
+                  className="p-button-secondary p-button-sm"
+                  onClick={checkCodexCliStatus}
+                  loading={codexCliStatus.loading}
+                />
+              </div>
+
+              {/* Configuración avanzada Codex */}
+              <div className="cli-advanced-config" style={{ marginTop: '1rem', borderTop: '1px solid rgba(16, 185, 129, 0.2)', paddingTop: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div className="p-field">
+                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Ruta binario</label>
+                    <InputText
+                      value={codexCliConfig.binaryPath}
+                      onChange={(e) => setCodexCliConfig(prev => ({ ...prev, binaryPath: e.target.value }))}
+                      placeholder="codex"
+                      className="p-inputtext-sm"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div className="p-field">
+                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Args extra</label>
+                    <InputText
+                      value={codexCliConfig.extraArgs}
+                      onChange={(e) => setCodexCliConfig(prev => ({ ...prev, extraArgs: e.target.value }))}
+                      placeholder="--provider openai"
+                      className="p-inputtext-sm"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                </div>
+                <Button
+                  label="Guardar Configuración"
+                  icon="pi pi-save"
+                  className="p-button-sm p-button-text"
+                  style={{ marginTop: '0.5rem', color: '#10b981' }}
+                  onClick={handleSaveCodexCliConfig}
+                />
+              </div>
+
+              <div style={{ marginTop: '0.75rem' }}>
+                <Password
+                  value={codexApiKeyInput}
+                  onChange={(e) => setCodexApiKeyInput(e.target.value)}
+                  feedback={false}
+                  toggleMask
+                  placeholder={codexApiKeySaved ? 'API key guardada (escribe para reemplazar)' : 'Pegar OPENAI_API_KEY'}
+                  style={{ width: '100%', maxWidth: '420px' }}
+                  inputStyle={{ width: '100%' }}
+                />
+              </div>
+              <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <Button
+                  label={codexApiKeyInput.trim() ? 'Guardar API key' : 'Eliminar API key'}
+                  icon="pi pi-key"
+                  className="p-button-secondary p-button-sm"
+                  onClick={saveCodexApiKey}
+                />
+                {codexApiKeySaved && (
+                  <span style={{ color: '#6ee7b7', fontSize: '0.85rem', alignSelf: 'center' }}>
+                    API key guardada en seguridad local
+                  </span>
+                )}
+              </div>
+              {codexCliStatus.error && (
+                <div style={{ marginTop: '0.75rem', color: '#ef4444' }}>
+                  <i className="pi pi-times-circle" style={{ marginRight: '0.4rem' }} />
+                  {codexCliStatus.error}
                 </div>
               )}
             </div>
@@ -919,6 +1360,40 @@ const AIClientsTab = ({ themeColors }) => {
                   loading={geminiCliStatus.loading}
                 />
               </div>
+
+              {/* Configuración avanzada Gemini */}
+              <div className="cli-advanced-config" style={{ marginTop: '1rem', borderTop: '1px solid rgba(26, 115, 232, 0.2)', paddingTop: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div className="p-field">
+                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Ruta binario</label>
+                    <InputText
+                      value={geminiCliConfig.binaryPath}
+                      onChange={(e) => setGeminiCliConfig(prev => ({ ...prev, binaryPath: e.target.value }))}
+                      placeholder="gemini-cli"
+                      className="p-inputtext-sm"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div className="p-field">
+                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Args extra</label>
+                    <InputText
+                      value={geminiCliConfig.extraArgs}
+                      onChange={(e) => setGeminiCliConfig(prev => ({ ...prev, extraArgs: e.target.value }))}
+                      placeholder="--model gemini-1.5-flash"
+                      className="p-inputtext-sm"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                </div>
+                <Button
+                  label="Guardar Configuración"
+                  icon="pi pi-save"
+                  className="p-button-sm p-button-text"
+                  style={{ marginTop: '0.5rem', color: '#1a73e8' }}
+                  onClick={handleSaveGeminiCliConfig}
+                />
+              </div>
+
               <div style={{ marginTop: '0.75rem' }}>
                 <Password
                   value={geminiApiKeyInput}

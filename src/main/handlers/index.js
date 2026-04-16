@@ -34,6 +34,7 @@ let _localFsHandlers = null;
 let _claudeHandlers = null;
 let _opencodeHandlers = null;
 let _geminicliHandlers = null;
+let _codexcliHandlers = null;
 
 function getAppHandlers() {
   if (!_appHandlers) _appHandlers = require('./app-handlers');
@@ -155,6 +156,11 @@ function getGeminiCliHandlers() {
   return _geminicliHandlers;
 }
 
+function getCodexCliHandlers() {
+  if (!_codexcliHandlers) _codexcliHandlers = require('./codexcli-handlers');
+  return _codexcliHandlers;
+}
+
 /**
  * Registra handlers CRÍTICOS inmediatamente (necesarios para mostrar la UI)
  */
@@ -182,6 +188,9 @@ function registerCriticalHandlers(dependencies) {
 
   // Handlers de Gemini CLI (configuración gestionada por app)
   getGeminiCliHandlers().registerGeminiCliHandlers();
+
+  // Handlers de Codex CLI (configuración gestionada por app)
+  getCodexCliHandlers().registerCodexCliHandlers();
 
   // 🚀 CRÍTICO: Registrar handlers de monitoreo INMEDIATAMENTE
   // El REGISTRO es ligero (solo IPC), lo PESADO es la EJECUCIÓN (que es on-demand)
@@ -318,5 +327,6 @@ module.exports = {
   getLocalFsHandlers,
   getClaudeHandlers,
   getOpenCodeHandlers,
-  getGeminiCliHandlers
+  getGeminiCliHandlers,
+  getCodexCliHandlers
 };

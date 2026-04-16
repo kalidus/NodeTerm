@@ -139,12 +139,7 @@ const SettingsDialog = ({
   const [platform, setPlatform] = useState(() => {
     return window.electron?.platform || 'unknown';
   });
-  const [claudeConfig, setClaudeConfig] = useState({
-    binaryPath: '',
-    defaultModel: '',
-    extraArgs: '',
-    authToken: ''
-  });
+
   const [claudeClientEnabled, setClaudeClientEnabled] = useState(() => {
     try {
       const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
@@ -153,10 +148,7 @@ const SettingsDialog = ({
       return false;
     }
   });
-  const [openCodeConfig, setOpenCodeConfig] = useState({
-    binaryPath: '',
-    extraArgs: ''
-  });
+
   const [openCodeClientEnabled, setOpenCodeClientEnabled] = useState(() => {
     try {
       const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
@@ -165,15 +157,20 @@ const SettingsDialog = ({
       return false;
     }
   });
-  const [geminiCliConfig, setGeminiCliConfig] = useState({
-    binaryPath: '',
-    extraArgs: '',
-    apiKey: ''
-  });
+
   const [geminiCliClientEnabled, setGeminiCliClientEnabled] = useState(() => {
     try {
       const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
       return cfg.geminicli === true;
+    } catch {
+      return false;
+    }
+  });
+
+  const [codexCliClientEnabled, setCodexCliClientEnabled] = useState(() => {
+    try {
+      const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+      return cfg.codexcli === true;
     } catch {
       return false;
     }
@@ -1087,51 +1084,7 @@ const SettingsDialog = ({
     if (!visible) return;
     let mounted = true;
 
-    const loadClaudeConfig = async () => {
-      try {
-        const config = await window.electron?.claude?.getConfig?.();
-        if (!mounted || !config) return;
-        setClaudeConfig({
-          binaryPath: config.binaryPath || '',
-          defaultModel: config.defaultModel || '',
-          extraArgs: config.extraArgs || '',
-          authToken: ''
-        });
-      } catch (error) {
-        console.error('Error cargando configuración de Claude:', error);
-      }
-    };
 
-    const loadOpenCodeConfig = async () => {
-      try {
-        const config = await window.electron?.opencode?.getConfig?.();
-        if (!mounted || !config) return;
-        setOpenCodeConfig({
-          binaryPath: config.binaryPath || '',
-          extraArgs: config.extraArgs || ''
-        });
-      } catch (error) {
-        console.error('Error cargando configuración de OpenCode:', error);
-      }
-    };
-
-    const loadGeminiCliConfig = async () => {
-      try {
-        const config = await window.electron?.geminicli?.getConfig?.();
-        if (!mounted || !config) return;
-        setGeminiCliConfig({
-          binaryPath: config.binaryPath || '',
-          extraArgs: config.extraArgs || '',
-          apiKey: ''
-        });
-      } catch (error) {
-        console.error('Error cargando configuración de Gemini CLI:', error);
-      }
-    };
-
-    loadClaudeConfig();
-    loadOpenCodeConfig();
-    loadGeminiCliConfig();
     return () => { mounted = false; };
   }, [visible]);
 
@@ -1163,16 +1116,27 @@ const SettingsDialog = ({
       }
     };
 
+    const syncCodexCliClientState = () => {
+      try {
+        const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+        setCodexCliClientEnabled(cfg.codexcli === true);
+      } catch {
+        setCodexCliClientEnabled(false);
+      }
+    };
+
     const onAiClientsConfigChanged = () => {
       syncClaudeClientState();
       syncOpenCodeClientState();
       syncGeminiCliClientState();
+      syncCodexCliClientState();
     };
     const onStorage = (e) => {
       if (e.key === 'ai_clients_enabled') {
         syncClaudeClientState();
         syncOpenCodeClientState();
         syncGeminiCliClientState();
+        syncCodexCliClientState();
       }
     };
 
@@ -1194,6 +1158,7 @@ const SettingsDialog = ({
       if (claudeClientEnabled) options.push({ label: 'Claude Code', value: 'claude' });
       if (openCodeClientEnabled) options.push({ label: 'OpenCode', value: 'opencode' });
       if (geminiCliClientEnabled) options.push({ label: 'Gemini CLI', value: 'geminicli' });
+      if (codexCliClientEnabled) options.push({ label: 'Codex CLI', value: 'codexcli' });
 
       // WSL genérico
       options.push({ label: 'WSL', value: 'wsl' });
@@ -1227,7 +1192,8 @@ const SettingsDialog = ({
         { label: 'Terminal Linux/macOS', value: 'linux-terminal' },
         ...(claudeClientEnabled ? [{ label: 'Claude Code', value: 'claude' }] : []),
         ...(openCodeClientEnabled ? [{ label: 'OpenCode', value: 'opencode' }] : []),
-        ...(geminiCliClientEnabled ? [{ label: 'Gemini CLI', value: 'geminicli' }] : [])
+        ...(geminiCliClientEnabled ? [{ label: 'Gemini CLI', value: 'geminicli' }] : []),
+        ...(codexCliClientEnabled ? [{ label: 'Codex CLI', value: 'codexcli' }] : [])
       );
     } else {
       // Fallback
@@ -1236,12 +1202,13 @@ const SettingsDialog = ({
         { label: 'Terminal', value: 'linux-terminal' },
         ...(claudeClientEnabled ? [{ label: 'Claude Code', value: 'claude' }] : []),
         ...(openCodeClientEnabled ? [{ label: 'OpenCode', value: 'opencode' }] : []),
-        ...(geminiCliClientEnabled ? [{ label: 'Gemini CLI', value: 'geminicli' }] : [])
+        ...(geminiCliClientEnabled ? [{ label: 'Gemini CLI', value: 'geminicli' }] : []),
+        ...(codexCliClientEnabled ? [{ label: 'Codex CLI', value: 'codexcli' }] : [])
       );
     }
 
     return options;
-  }, [platform, wslDistributions, cygwinAvailable, dockerContainers, claudeClientEnabled, openCodeClientEnabled, geminiCliClientEnabled]);
+  }, [platform, wslDistributions, cygwinAvailable, dockerContainers, claudeClientEnabled, openCodeClientEnabled, geminiCliClientEnabled, codexCliClientEnabled]);
 
   // Handler para cambiar terminal por defecto
   const handleDefaultTerminalChange = useCallback((terminalType) => {
@@ -1254,124 +1221,7 @@ const SettingsDialog = ({
     }));
   }, []);
 
-  const handleSaveClaudeConfig = useCallback(async () => {
-    try {
-      const validation = await window.electron?.claude?.validateConfig?.(claudeConfig);
-      if (validation && validation.valid === false) {
-        toastRef.current?.show({
-          severity: 'error',
-          summary: 'Configuración inválida',
-          detail: validation.error || 'Revisa los datos de Claude Code',
-          life: 4000
-        });
-        return;
-      }
 
-      const result = await window.electron?.claude?.setConfig?.(claudeConfig);
-      if (result?.success) {
-        setClaudeConfig((prev) => ({ ...prev, authToken: '' }));
-        toastRef.current?.show({
-          severity: 'success',
-          summary: 'Claude Code',
-          detail: 'Configuración guardada',
-          life: 2500
-        });
-      } else {
-        toastRef.current?.show({
-          severity: 'error',
-          summary: 'Claude Code',
-          detail: result?.error || 'No se pudo guardar la configuración',
-          life: 4000
-        });
-      }
-    } catch (error) {
-      toastRef.current?.show({
-        severity: 'error',
-        summary: 'Claude Code',
-        detail: error.message || 'Error guardando configuración',
-        life: 4000
-      });
-    }
-  }, [claudeConfig]);
-
-  const handleSaveOpenCodeConfig = useCallback(async () => {
-    try {
-      const validation = await window.electron?.opencode?.validateConfig?.(openCodeConfig);
-      if (validation && validation.valid === false) {
-        toastRef.current?.show({
-          severity: 'error',
-          summary: 'Configuración inválida',
-          detail: validation.error || 'Revisa los datos de OpenCode',
-          life: 4000
-        });
-        return;
-      }
-
-      const result = await window.electron?.opencode?.setConfig?.(openCodeConfig);
-      if (result?.success) {
-        toastRef.current?.show({
-          severity: 'success',
-          summary: 'OpenCode',
-          detail: 'Configuración guardada',
-          life: 2500
-        });
-      } else {
-        toastRef.current?.show({
-          severity: 'error',
-          summary: 'OpenCode',
-          detail: result?.error || 'No se pudo guardar la configuración',
-          life: 4000
-        });
-      }
-    } catch (error) {
-      toastRef.current?.show({
-        severity: 'error',
-        summary: 'OpenCode',
-        detail: error.message || 'Error guardando configuración',
-        life: 4000
-      });
-    }
-  }, [openCodeConfig]);
-
-  const handleSaveGeminiCliConfig = useCallback(async () => {
-    try {
-      const validation = await window.electron?.geminicli?.validateConfig?.(geminiCliConfig);
-      if (validation && validation.valid === false) {
-        toastRef.current?.show({
-          severity: 'error',
-          summary: 'Configuración inválida',
-          detail: validation.error || 'Revisa los datos de Gemini CLI',
-          life: 4000
-        });
-        return;
-      }
-
-      const result = await window.electron?.geminicli?.setConfig?.(geminiCliConfig);
-      if (result?.success) {
-        setGeminiCliConfig((prev) => ({ ...prev, apiKey: '' }));
-        toastRef.current?.show({
-          severity: 'success',
-          summary: 'Gemini CLI',
-          detail: 'Configuración guardada',
-          life: 2500
-        });
-      } else {
-        toastRef.current?.show({
-          severity: 'error',
-          summary: 'Gemini CLI',
-          detail: result?.error || 'No se pudo guardar la configuración',
-          life: 4000
-        });
-      }
-    } catch (error) {
-      toastRef.current?.show({
-        severity: 'error',
-        summary: 'Gemini CLI',
-        detail: error.message || 'Error guardando configuración',
-        life: 4000
-      });
-    }
-  }, [geminiCliConfig]);
 
   // Persistir configuración del icono interactivo
   useEffect(() => {
@@ -2507,125 +2357,7 @@ const SettingsDialog = ({
                             </div>
                           </div>
                         )}
-                        <div className="general-setting-card">
-                          <div className="general-setting-content" style={{ alignItems: 'flex-start' }}>
-                            <div className="general-setting-icon">
-                              <i className="pi pi-comments"></i>
-                            </div>
-                            <div className="general-setting-info" style={{ flex: 1 }}>
-                              <label className="general-setting-label">Claude Code (terminal local)</label>
-                              <p className="general-setting-description">
-                                Configura ruta del binario, modelo por defecto y token para nuevas pestañas Claude.
-                              </p>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
-                                <InputText
-                                  value={claudeConfig.binaryPath}
-                                  onChange={(e) => setClaudeConfig(prev => ({ ...prev, binaryPath: e.target.value }))}
-                                  placeholder="Ruta binario (opcional)"
-                                />
-                                <InputText
-                                  value={claudeConfig.defaultModel}
-                                  onChange={(e) => setClaudeConfig(prev => ({ ...prev, defaultModel: e.target.value }))}
-                                  placeholder="Modelo por defecto (opcional)"
-                                />
-                                <InputText
-                                  value={claudeConfig.extraArgs}
-                                  onChange={(e) => setClaudeConfig(prev => ({ ...prev, extraArgs: e.target.value }))}
-                                  placeholder="Args extra (opcional)"
-                                />
-                                <Password
-                                  value={claudeConfig.authToken}
-                                  onChange={(e) => setClaudeConfig(prev => ({ ...prev, authToken: e.target.value }))}
-                                  feedback={false}
-                                  toggleMask
-                                  placeholder="Auth token (opcional)"
-                                />
-                              </div>
-                            </div>
-                            <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                              <Button
-                                label="Guardar Claude"
-                                icon="pi pi-save"
-                                onClick={handleSaveClaudeConfig}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        <div className="general-setting-card">
-                          <div className="general-setting-content" style={{ alignItems: 'flex-start' }}>
-                            <div className="general-setting-icon" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}>
-                              <i className="pi pi-code"></i>
-                            </div>
-                            <div className="general-setting-info" style={{ flex: 1 }}>
-                              <label className="general-setting-label">OpenCode (terminal local)</label>
-                              <p className="general-setting-description">
-                                Configura ruta del binario y argumentos extra para nuevas pestañas OpenCode.
-                              </p>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
-                                <InputText
-                                  value={openCodeConfig.binaryPath}
-                                  onChange={(e) => setOpenCodeConfig(prev => ({ ...prev, binaryPath: e.target.value }))}
-                                  placeholder="Ruta binario (opcional)"
-                                />
-                                <InputText
-                                  value={openCodeConfig.extraArgs}
-                                  onChange={(e) => setOpenCodeConfig(prev => ({ ...prev, extraArgs: e.target.value }))}
-                                  placeholder="Args extra (opcional)"
-                                />
-                              </div>
-                            </div>
-                            <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                              <Button
-                                label="Guardar OpenCode"
-                                icon="pi pi-save"
-                                style={{ background: '#6366f1', border: '1px solid #6366f1' }}
-                                onClick={handleSaveOpenCodeConfig}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        <div className="general-setting-card">
-                          <div className="general-setting-content" style={{ alignItems: 'flex-start' }}>
-                            <div className="general-setting-icon" style={{ background: 'linear-gradient(135deg, #1a73e8 0%, #4285f4 100%)' }}>
-                              <i className="pi pi-star"></i>
-                            </div>
-                            <div className="general-setting-info" style={{ flex: 1 }}>
-                              <label className="general-setting-label">Gemini CLI (terminal local)</label>
-                              <p className="general-setting-description">
-                                Configura ruta del binario y argumentos extra para nuevas pestañas Gemini CLI.
-                              </p>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
-                                <InputText
-                                  value={geminiCliConfig.binaryPath}
-                                  onChange={(e) => setGeminiCliConfig(prev => ({ ...prev, binaryPath: e.target.value }))}
-                                  placeholder="Ruta binario (opcional)"
-                                />
-                                <InputText
-                                  value={geminiCliConfig.extraArgs}
-                                  onChange={(e) => setGeminiCliConfig(prev => ({ ...prev, extraArgs: e.target.value }))}
-                                  placeholder="Args extra (opcional)"
-                                />
-                              </div>
-                              <div style={{ marginTop: '10px' }}>
-                                <Password
-                                  value={geminiCliConfig.apiKey}
-                                  onChange={(e) => setGeminiCliConfig(prev => ({ ...prev, apiKey: e.target.value }))}
-                                  feedback={false}
-                                  toggleMask
-                                  placeholder="API Key Gemini (opcional)"
-                                />
-                              </div>
-                            </div>
-                            <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                              <Button
-                                label="Guardar Gemini CLI"
-                                icon="pi pi-save"
-                                style={{ background: '#1a73e8', border: '1px solid #1a73e8' }}
-                                onClick={handleSaveGeminiCliConfig}
-                              />
-                            </div>
-                          </div>
-                        </div>
+
                       </div>
                     </div>
 

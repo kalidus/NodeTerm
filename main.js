@@ -66,10 +66,11 @@ logTiming('Utils cargados');
 // Nota: Docker se importará después de que se carguen fs y path
 let Docker = null;
 
-const { WSL, PowerShell, Cygwin, Claude, OpenCode, GeminiCli } = require('./src/main/services');
+const { WSL, PowerShell, Cygwin, Claude, OpenCode, GeminiCli, CodexCli } = require('./src/main/services');
 const { getClaudeConfig } = require('./src/main/handlers/claude-handlers');
 const { getOpenCodeConfig } = require('./src/main/handlers/opencode-handlers');
 const { getGeminiCliConfig, registerGeminiCliHandlers } = require('./src/main/handlers/geminicli-handlers');
+const { getCodexCliConfig } = require('./src/main/handlers/codexcli-handlers');
 logTiming('Servicios WSL/PowerShell/Cygwin/Claude cargados');
 
 // Servicio de estadísticas SSH
@@ -950,6 +951,14 @@ function createWindow() {
     // Si ya están registrados (hot-reload), el removeHandler en geminicli-handlers.js ya lo gestiona
   }
 
+  // Registro directo de Codex CLI handlers como garantía (por si el lazy loader falla)
+  try {
+    const { registerCodexCliHandlers } = require('./src/main/handlers/codexcli-handlers');
+    registerCodexCliHandlers();
+  } catch (_) {
+    // Si ya están registrados (hot-reload), el removeHandler en codexcli-handlers.js ya lo gestiona
+  }
+
   // 🚀 OPTIMIZACIÓN: Precalentamiento de guacd DIFERIDO hasta después de ready-to-show
   // Se ejecutará en initializeServicesAfterShow() para no bloquear el arranque
 
@@ -1215,6 +1224,12 @@ function createWindow() {
           getPty,
           isAppQuitting,
           getGeminiCliConfig
+        });
+        CodexCli.setDependencies({
+          mainWindow,
+          getPty,
+          isAppQuitting,
+          getCodexCliConfig
         });
         const docker = getDocker();
         if (docker && docker.setMainWindow) {
@@ -2884,6 +2899,7 @@ function registerTabEventsWrapper(tabId) {
     Claude,
     OpenCode,
     GeminiCli,
+    CodexCli,
     startUbuntuSession,
     handleUbuntuData,
     handleUbuntuResize,
@@ -2939,6 +2955,12 @@ app.on('before-quit', (event) => {
     GeminiCli.cleanup();
   } catch (error) {
     console.error('Error cleaning up GeminiCli processes on quit:', error);
+  }
+
+  try {
+    CodexCli.cleanup();
+  } catch (error) {
+    console.error('Error cleaning up CodexCli processes on quit:', error);
   }
 });
 

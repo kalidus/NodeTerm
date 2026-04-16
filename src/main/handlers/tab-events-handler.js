@@ -22,6 +22,7 @@ function registerTabEvents(tabId, dependencies) {
     Claude,
     OpenCode,
     GeminiCli,
+    CodexCli,
     startUbuntuSession,
     handleUbuntuData,
     handleUbuntuResize,
@@ -214,6 +215,28 @@ function registerTabEvents(tabId, dependencies) {
 
   ipcMain.on(`geminicli:stop:${tabId}`, (event) => {
     GeminiCli.GeminiCliHandlers.stop(tabId);
+  });
+
+  // ========== Codex CLI Events ==========
+  ipcMain.removeAllListeners(`codexcli:start:${tabId}`);
+  ipcMain.removeAllListeners(`codexcli:data:${tabId}`);
+  ipcMain.removeAllListeners(`codexcli:resize:${tabId}`);
+  ipcMain.removeAllListeners(`codexcli:stop:${tabId}`);
+
+  ipcMain.on(`codexcli:start:${tabId}`, (event, data) => {
+    CodexCli.CodexCliHandlers.start(tabId, data || {});
+  });
+
+  ipcMain.on(`codexcli:data:${tabId}`, (event, data) => {
+    CodexCli.CodexCliHandlers.data(tabId, data);
+  });
+
+  ipcMain.on(`codexcli:resize:${tabId}`, (event, data) => {
+    CodexCli.CodexCliHandlers.resize(tabId, data);
+  });
+
+  ipcMain.on(`codexcli:stop:${tabId}`, (event) => {
+    CodexCli.CodexCliHandlers.stop(tabId);
   });
 
   // ========== Docker Events (lazy loading) ==========

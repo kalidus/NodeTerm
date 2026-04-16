@@ -430,6 +430,7 @@ const MainContentArea = ({
     claude: false,
     opencode: false,
     geminicli: false,
+    codexcli: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
@@ -456,6 +457,7 @@ const MainContentArea = ({
             claude: parsed.claude === true,
             opencode: parsed.opencode === true,
             geminicli: parsed.geminicli === true,
+            codexcli: parsed.codexcli === true,
             anythingllm: parsed.anythingllm === true,
             openwebui: parsed.openwebui === true,
             librechat: parsed.librechat === true,
@@ -469,6 +471,7 @@ const MainContentArea = ({
             claude: false,
             opencode: false,
             geminicli: false,
+            codexcli: false,
             anythingllm: false,
             openwebui: false,
             librechat: false,
@@ -584,6 +587,11 @@ const MainContentArea = ({
       // Gemini CLI
       if (terminalType === 'geminicli') {
         return <i className="pi pi-star" style={{ fontSize: `${baseIconSize}px`, color: '#1a73e8', marginRight: iconMarginRight }} />;
+      }
+
+      // Codex CLI
+      if (terminalType === 'codexcli') {
+        return <i className="pi pi-bolt" style={{ fontSize: `${baseIconSize}px`, color: '#10b981', marginRight: iconMarginRight }} />;
       }
 
       // WSL genérico (sin distribución específica)
@@ -728,6 +736,19 @@ const MainContentArea = ({
             setLastLocalTerminalType('geminicli');
             if (createLocalTerminalTabRef.current) {
               createLocalTerminalTabRef.current('geminicli');
+            }
+          }
+        });
+      }
+
+      if (aiClientsEnabled.codexcli) {
+        menuItems.splice(1, 0, {
+          label: 'Codex CLI',
+          icon: getTerminalMenuIcon('codexcli'),
+          command: () => {
+            setLastLocalTerminalType('codexcli');
+            if (createLocalTerminalTabRef.current) {
+              createLocalTerminalTabRef.current('codexcli');
             }
           }
         });
@@ -1554,6 +1575,19 @@ const MainContentArea = ({
       }
     }
 
+    if (terminalType === 'codexcli') {
+      try {
+        const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+        if (cfg.codexcli !== true) {
+          window.alert('Codex CLI está desactivado. Actívalo en Configuración -> Clientes de IA.');
+          return;
+        }
+      } catch {
+        window.alert('Codex CLI está desactivado. Actívalo en Configuración -> Clientes de IA.');
+        return;
+      }
+    }
+
     if (activeGroupId !== null) {
       const currentGroupKey = activeGroupId || 'no-group';
       setGroupActiveIndices(prev => ({
@@ -1581,7 +1615,7 @@ const MainContentArea = ({
       let finalDistroInfo = distroInfo;
 
       // Si no vino distroInfo, intentar resolver distribución WSL por nombre/label directo usando ref (estado más fresco)
-      if (!finalDistroInfo && terminalType !== 'claude' && terminalType !== 'opencode' && terminalType !== 'geminicli' && !terminalType.startsWith('docker-')) {
+      if (!finalDistroInfo && terminalType !== 'claude' && terminalType !== 'opencode' && terminalType !== 'geminicli' && terminalType !== 'codexcli' && !terminalType.startsWith('docker-')) {
         const distros = wslDistributionsRef.current || [];
         const distro = distros.find(d =>
           d.name === terminalType ||
@@ -1627,6 +1661,10 @@ const MainContentArea = ({
           case 'geminicli':
             label = 'Gemini CLI';
             finalTerminalType = 'geminicli';
+            break;
+          case 'codexcli':
+            label = 'Codex CLI';
+            finalTerminalType = 'codexcli';
             break;
           case 'wsl':
             label = 'WSL';

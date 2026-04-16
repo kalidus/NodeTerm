@@ -11,6 +11,7 @@ import DockerTerminal from './DockerTerminal';
 import ClaudeTerminal from './ClaudeTerminal';
 import OpenCodeTerminal from './OpenCodeTerminal';
 import GeminiCliTerminal from './GeminiCliTerminal';
+import CodexCliTerminal from './CodexCliTerminal';
 import GuacamoleTerminal from './GuacamoleTerminal';
 import { themes } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
@@ -79,6 +80,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 'claude': 'Claude Code',
                 'opencode': 'OpenCode',
                 'geminicli': 'Gemini CLI',
+                'codexcli': 'Codex CLI',
                 'linux-terminal': platform === 'darwin' ? 'Terminal macOS' : 'Terminal Linux'
             };
 
@@ -574,6 +576,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 'claude': 'Claude Code',
                 'opencode': 'OpenCode',
                 'geminicli': 'Gemini CLI',
+                'codexcli': 'Codex CLI',
                 'linux-terminal': isMac ? 'Terminal macOS' : 'Terminal Linux'
             };
 
@@ -736,6 +739,8 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     window.electron.ipcRenderer.send(`opencode:data:${tabId}`, finalCommand);
                 } else if (terminalType === 'geminicli') {
                     window.electron.ipcRenderer.send(`geminicli:data:${tabId}`, finalCommand);
+                } else if (terminalType === 'codexcli') {
+                    window.electron.ipcRenderer.send(`codexcli:data:${tabId}`, finalCommand);
                 }
                 console.log('✅ Comando enviado al canal IPC');
             } else {
@@ -1731,6 +1736,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                                     tab.type === 'claude' ? 'pi pi-comments' :
                                                     tab.type === 'opencode' ? 'pi pi-code' :
                                                     tab.type === 'geminicli' ? 'pi pi-star' :
+                                                    tab.type === 'codexcli' ? 'pi pi-bolt' :
                                                     tab.type === 'docker' ? 'pi pi-box' :
                                                         tab.type === 'rdp-guacamole' ? 'pi pi-desktop' : 'pi pi-circle'}
                                             style={{
@@ -1739,6 +1745,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                                         tab.type === 'claude' ? '#f59e0b' :
                                                         tab.type === 'opencode' ? '#6366f1' :
                                                         tab.type === 'geminicli' ? '#1a73e8' :
+                                                        tab.type === 'codexcli' ? '#10b981' :
                                                         tab.type === 'docker' ? '#2496ED' :
                                                             tab.type === 'rdp-guacamole' ? '#ff6b35' : '#e95420',
                                                 fontSize: '12px',
@@ -2206,6 +2213,18 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 />
                             ) : tab.type === 'geminicli' ? (
                                 <GeminiCliTerminal
+                                    key={`${tab.id}-terminal`}
+                                    ref={(ref) => {
+                                        if (ref) terminalRefs.current[tab.id] = ref;
+                                    }}
+                                    tabId={tab.id}
+                                    fontFamily={localFontFamily}
+                                    fontSize={localFontSize}
+                                    theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
+                                    isIntegrated={isIntegrated}
+                                />
+                            ) : tab.type === 'codexcli' ? (
+                                <CodexCliTerminal
                                     key={`${tab.id}-terminal`}
                                     ref={(ref) => {
                                         if (ref) terminalRefs.current[tab.id] = ref;
