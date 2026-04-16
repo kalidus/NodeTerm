@@ -6,6 +6,7 @@ const { execFile, exec } = require('child_process');
 
 const CONFIG_DIR = path.join(os.homedir(), '.nodeterm');
 const GEMINICLI_CONFIG_PATH = path.join(CONFIG_DIR, 'geminicli-config.json');
+const SECURITY_CONFIG_PATH = path.join(CONFIG_DIR, 'security.json');
 
 function ensureConfigDir() {
   if (!fs.existsSync(CONFIG_DIR)) {
@@ -29,10 +30,12 @@ function writeJsonFile(filePath, data) {
 
 function getGeminiCliConfig() {
   const geminiCliConfig = readJsonFile(GEMINICLI_CONFIG_PATH);
+  const security = readJsonFile(SECURITY_CONFIG_PATH);
 
   return {
     binaryPath: geminiCliConfig.binaryPath || '',
-    extraArgs: geminiCliConfig.extraArgs || ''
+    extraArgs: geminiCliConfig.extraArgs || '',
+    apiKey: security.geminiApiKey || ''
   };
 }
 
@@ -226,12 +229,17 @@ function registerGeminiCliHandlers() {
   ].forEach(ch => { try { ipcMain.removeHandler(ch); } catch (_) {} });
 
   ipcMain.handle('geminicli:get-config', async () => {
-    return getGeminiCliConfig();
+    const config = getGeminiCliConfig();
+    return {
+      ...config,
+      apiKey: config.apiKey ? '********' : ''
+    };
   });
 
   ipcMain.handle('geminicli:set-config', async (event, payload = {}) => {
     try {
-      const normalized = sanitizeGeminiCliConfig(payload);
+      const { apiKey, ...rest } = payload;
+      const normalized = sanitizeGeminiCliConfig(rest);
       const validation = validateGeminiCliConfig(normalized);
 
       if (!validation.valid) {
@@ -244,6 +252,17 @@ function registerGeminiCliHandlers() {
         ...normalized,
         updatedAt: new Date().toISOString()
       });
+
+      if (typeof apiKey === 'string') {
+        const security = readJsonFile(SECURITY_CONFIG_PATH);
+        if (apiKey.trim()) {
+          security.geminiApiKey = apiKey.trim();
+        } else {
+          delete security.geminiApiKey;
+        }
+        security.updatedAt = new Date().toISOString();
+        writeJsonFile(SECURITY_CONFIG_PATH, security);
+      }
 
       return { success: true };
     } catch (error) {

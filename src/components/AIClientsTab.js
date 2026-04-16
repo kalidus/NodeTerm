@@ -3,6 +3,7 @@ import { Card } from 'primereact/card';
 import { InputSwitch } from 'primereact/inputswitch';
 import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
+import { Password } from 'primereact/password';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import '../styles/components/ai-clients-tab.css';
 
@@ -60,6 +61,8 @@ const AIClientsTab = ({ themeColors }) => {
     binaryPath: null,
     error: null
   });
+  const [geminiApiKeyInput, setGeminiApiKeyInput] = useState('');
+  const [geminiApiKeySaved, setGeminiApiKeySaved] = useState(false);
 
   // Cargar configuración desde localStorage al montar
   useEffect(() => {
@@ -225,7 +228,10 @@ const AIClientsTab = ({ themeColors }) => {
   const checkGeminiCliStatus = async () => {
     setGeminiCliStatus(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const result = await window.electron?.geminicli?.getCliStatus?.();
+      const [result, cfg] = await Promise.all([
+        window.electron?.geminicli?.getCliStatus?.(),
+        window.electron?.geminicli?.getConfig?.()
+      ]);
       if (result?.success) {
         setGeminiCliStatus({
           loading: false,
@@ -235,6 +241,7 @@ const AIClientsTab = ({ themeColors }) => {
           binaryPath: result.binaryPath || null,
           error: null
         });
+        setGeminiApiKeySaved(cfg?.apiKey === '********');
       } else {
         setGeminiCliStatus(prev => ({
           ...prev,
@@ -269,6 +276,32 @@ const AIClientsTab = ({ themeColors }) => {
         error: error.message || 'No se pudo instalar Gemini CLI'
       }));
       return false;
+    }
+  };
+
+  const saveGeminiApiKey = async () => {
+    try {
+      const current = await window.electron?.geminicli?.getConfig?.();
+      const result = await window.electron?.geminicli?.setConfig?.({
+        binaryPath: current?.binaryPath || '',
+        extraArgs: current?.extraArgs || '',
+        apiKey: geminiApiKeyInput || ''
+      });
+
+      if (result?.success) {
+        setGeminiApiKeySaved(!!geminiApiKeyInput.trim());
+        setGeminiApiKeyInput('');
+      } else {
+        setGeminiCliStatus(prev => ({
+          ...prev,
+          error: result?.error || 'No se pudo guardar la API key'
+        }));
+      }
+    } catch (error) {
+      setGeminiCliStatus(prev => ({
+        ...prev,
+        error: error.message || 'No se pudo guardar la API key'
+      }));
     }
   };
 
@@ -885,6 +918,30 @@ const AIClientsTab = ({ themeColors }) => {
                   onClick={checkGeminiCliStatus}
                   loading={geminiCliStatus.loading}
                 />
+              </div>
+              <div style={{ marginTop: '0.75rem' }}>
+                <Password
+                  value={geminiApiKeyInput}
+                  onChange={(e) => setGeminiApiKeyInput(e.target.value)}
+                  feedback={false}
+                  toggleMask
+                  placeholder={geminiApiKeySaved ? 'API key guardada (escribe para reemplazar)' : 'Pegar API key Gemini'}
+                  style={{ width: '100%', maxWidth: '420px' }}
+                  inputStyle={{ width: '100%' }}
+                />
+              </div>
+              <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <Button
+                  label={geminiApiKeyInput.trim() ? 'Guardar API key' : 'Eliminar API key'}
+                  icon="pi pi-key"
+                  className="p-button-secondary p-button-sm"
+                  onClick={saveGeminiApiKey}
+                />
+                {geminiApiKeySaved && (
+                  <span style={{ color: '#93c5fd', fontSize: '0.85rem', alignSelf: 'center' }}>
+                    API key guardada en seguridad local
+                  </span>
+                )}
               </div>
               {geminiCliStatus.error && (
                 <div style={{ marginTop: '0.75rem', color: '#ef4444' }}>

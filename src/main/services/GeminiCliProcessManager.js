@@ -62,6 +62,21 @@ async function startGeminiCliSession(tabId, { cols, rows } = {}) {
       TERM: 'xterm-256color',
       COLORTERM: 'truecolor'
     };
+    if (!env.BROWSER) {
+      if (os.platform() === 'win32') {
+        env.BROWSER = 'explorer.exe';
+      } else if (os.platform() === 'darwin') {
+        env.BROWSER = 'open';
+      } else {
+        env.BROWSER = 'xdg-open';
+      }
+    }
+    const apiKey = String(config.apiKey || '').trim();
+    if (apiKey) {
+      // Compatibilidad con distintas variantes del CLI de Gemini.
+      env.GEMINI_API_KEY = apiKey;
+      env.GOOGLE_API_KEY = apiKey;
+    }
 
     const spawnOptions = {
       name: 'xterm-256color',

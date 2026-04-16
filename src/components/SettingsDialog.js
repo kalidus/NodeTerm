@@ -167,7 +167,8 @@ const SettingsDialog = ({
   });
   const [geminiCliConfig, setGeminiCliConfig] = useState({
     binaryPath: '',
-    extraArgs: ''
+    extraArgs: '',
+    apiKey: ''
   });
   const [geminiCliClientEnabled, setGeminiCliClientEnabled] = useState(() => {
     try {
@@ -1120,7 +1121,8 @@ const SettingsDialog = ({
         if (!mounted || !config) return;
         setGeminiCliConfig({
           binaryPath: config.binaryPath || '',
-          extraArgs: config.extraArgs || ''
+          extraArgs: config.extraArgs || '',
+          apiKey: ''
         });
       } catch (error) {
         console.error('Error cargando configuración de Gemini CLI:', error);
@@ -1346,6 +1348,7 @@ const SettingsDialog = ({
 
       const result = await window.electron?.geminicli?.setConfig?.(geminiCliConfig);
       if (result?.success) {
+        setGeminiCliConfig((prev) => ({ ...prev, apiKey: '' }));
         toastRef.current?.show({
           severity: 'success',
           summary: 'Gemini CLI',
@@ -2601,6 +2604,15 @@ const SettingsDialog = ({
                                   value={geminiCliConfig.extraArgs}
                                   onChange={(e) => setGeminiCliConfig(prev => ({ ...prev, extraArgs: e.target.value }))}
                                   placeholder="Args extra (opcional)"
+                                />
+                              </div>
+                              <div style={{ marginTop: '10px' }}>
+                                <Password
+                                  value={geminiCliConfig.apiKey}
+                                  onChange={(e) => setGeminiCliConfig(prev => ({ ...prev, apiKey: e.target.value }))}
+                                  feedback={false}
+                                  toggleMask
+                                  placeholder="API Key Gemini (opcional)"
                                 />
                               </div>
                             </div>
