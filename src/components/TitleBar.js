@@ -1579,40 +1579,6 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       </div>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, WebkitAppRegion: 'no-drag' }}>
         {/* Botón ocultar titlebar */}
-        {onToggleTitleBar && (
-          <button
-            title="Ocultar barra superior"
-            onClick={onToggleTitleBar}
-            style={{
-              width: 28,
-              height: 28,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'transparent',
-              border: 'none',
-              borderRadius: 6,
-              margin: 0,
-              padding: 0,
-              transition: 'all 0.2s ease',
-              cursor: 'pointer',
-              verticalAlign: 'middle',
-              position: 'relative',
-              top: '1px',
-              opacity: 0.8
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
-              e.currentTarget.style.opacity = '1';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.opacity = '0.8';
-            }}
-          >
-            <i className="pi pi-chevron-up" style={{ color: 'var(--ui-titlebar-text, #fff)', fontSize: '0.9rem' }} />
-          </button>
-        )}
         {/* Botón de menú (3 puntos) */}
         <button
           title="Menú"

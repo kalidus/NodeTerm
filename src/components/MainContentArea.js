@@ -2259,46 +2259,6 @@ const MainContentArea = ({
             headerExtra={
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <i
-                  className={mainFrameHeaderCollapsed ? "pi pi-chevron-down" : "pi pi-chevron-up"}
-                  style={{
-                    fontSize: '0.860rem',
-                    color: 'var(--ui-titlebar-text, #fff)',
-                    opacity: 0.6,
-                    cursor: 'pointer',
-                    padding: 4,
-                    borderRadius: 4,
-                    transition: 'all 0.2s',
-                    display: isMinimalMode ? 'none' : 'block'
-                  }}
-                  title={mainFrameHeaderCollapsed ? "Mostrar marco superior" : "Ocultar marco superior"}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMainFrameHeaderCollapsed(!mainFrameHeaderCollapsed);
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.6'; }}
-                />
-                <i
-                  className={isMinimalMode ? "pi pi-compress" : "pi pi-expand"}
-                  style={{
-                    fontSize: '0.95rem',
-                    color: isMinimalMode ? 'var(--primary-color, #4fc3f7)' : 'var(--ui-titlebar-text, #fff)',
-                    opacity: isMinimalMode ? 1 : 0.7,
-                    cursor: 'pointer',
-                    padding: 4,
-                    borderRadius: 4,
-                    transition: 'all 0.2s',
-                    background: isMinimalMode ? 'rgba(var(--primary-rgb, 79, 195, 247), 0.1)' : 'transparent'
-                  }}
-                  title={isMinimalMode ? "Salir de Modo Minimalista" : "Modo Minimalista Absoluto"}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.dispatchEvent(new CustomEvent('toggle-minimal-mode'));
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.opacity = isMinimalMode ? '1' : '0.7'; e.currentTarget.style.transform = 'scale(1)'; }}
-                />
-                <i
                   className="pi pi-cog"
                   style={{
                     fontSize: '0.9rem',
