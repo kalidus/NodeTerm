@@ -1261,33 +1261,7 @@ const MainContentArea = ({
       `;
       panel.appendChild(title);
 
-      const searchInput = document.createElement('input');
-      searchInput.type = 'text';
-      searchInput.className = 'terminal-launcher-search';
-      searchInput.placeholder = '> buscar...';
-      searchInput.style.cssText = `
-        width: 100%;
-        box-sizing: border-box;
-        margin-bottom: 10px;
-        border-radius: 4px;
-        border: 1px solid rgba(0, 243, 255, 0.35);
-        background: rgba(0, 0, 0, 0.55);
-        color: #7af8ff;
-        padding: 7px 10px;
-        font-size: 12px;
-        outline: none;
-        box-shadow: inset 0 0 12px rgba(0, 243, 255, 0.06);
-      `;
-      searchInput.addEventListener('focus', () => {
-        searchInput.style.borderColor = 'rgba(255, 0, 200, 0.65)';
-        searchInput.style.boxShadow =
-          '0 0 0 1px rgba(0,243,255,0.35), 0 0 18px rgba(255,0,200,0.2), inset 0 0 12px rgba(0,243,255,0.08)';
-      });
-      searchInput.addEventListener('blur', () => {
-        searchInput.style.borderColor = 'rgba(0, 243, 255, 0.35)';
-        searchInput.style.boxShadow = 'inset 0 0 12px rgba(0, 243, 255, 0.06)';
-      });
-      panel.appendChild(searchInput);
+      // searchInput removed
 
       const contentHost = document.createElement('div');
       panel.appendChild(contentHost);
@@ -1542,9 +1516,6 @@ const MainContentArea = ({
       };
 
       renderGroups('');
-      searchInput.addEventListener('input', () => {
-        renderGroups(searchInput.value);
-      });
 
       const handleOutsideClick = (ev) => {
         if (!panel.contains(ev.target) && !dropdownButton.contains(ev.target)) {
