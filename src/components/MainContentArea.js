@@ -12,14 +12,10 @@ import {
   FaRedhat,
   FaCentos,
   FaFedora,
-  FaGlobe,
-  FaCube,
-  FaComments,
-  FaRobot,
-  FaBolt,
   FaBrain
 } from 'react-icons/fa';
-import { SiDebian, SiDocker } from 'react-icons/si';
+import { SiAnthropic, SiDebian, SiDocker, SiGooglegemini, SiOpenai } from 'react-icons/si';
+import AIClientBrandIcon from './AIClientBrandIcon';
 import Sidebar from './Sidebar';
 import TerminalFrame from './TerminalFrame';
 import TabHeader from './TabHeader';
@@ -590,22 +586,22 @@ const MainContentArea = ({
 
       // Claude Code
       if (terminalType === 'claude') {
-        return <i className="pi pi-comments" style={{ fontSize: `${baseIconSize}px`, color: '#f59e0b', marginRight: iconMarginRight }} />;
+        return <SiAnthropic style={{ fontSize: `${baseIconSize}px`, color: '#D97706', marginRight: iconMarginRight }} />;
       }
 
       // OpenCode
       if (terminalType === 'opencode') {
-        return <i className="pi pi-code" style={{ fontSize: `${baseIconSize}px`, color: '#6366f1', marginRight: iconMarginRight }} />;
+        return <AIClientBrandIcon tabType="opencode" size={baseIconSize + 4} style={{ marginRight: iconMarginRight }} />;
       }
 
       // Gemini CLI
       if (terminalType === 'geminicli') {
-        return <i className="pi pi-star" style={{ fontSize: `${baseIconSize}px`, color: '#1a73e8', marginRight: iconMarginRight }} />;
+        return <SiGooglegemini style={{ fontSize: `${baseIconSize}px`, color: '#8E75B2', marginRight: iconMarginRight }} />;
       }
 
       // Codex CLI
       if (terminalType === 'codexcli') {
-        return <i className="pi pi-bolt" style={{ fontSize: `${baseIconSize}px`, color: '#10b981', marginRight: iconMarginRight }} />;
+        return <SiOpenai style={{ fontSize: `${baseIconSize}px`, color: '#10A37F', marginRight: iconMarginRight }} />;
       }
 
       // WSL genérico (sin distribución específica)
@@ -1324,18 +1320,22 @@ const MainContentArea = ({
           return React.cloneElement(item.icon, {
             style: {
               ...prev,
-              color: accent,
+              color: prev.color || accent,
               marginRight: 0,
               display: 'block'
             }
           });
         }
 
-        if (lb.includes('anythingllm')) return <FaCube style={{ fontSize: 18, color: accent }} />;
-        if (lb.includes('open webui')) return <FaGlobe style={{ fontSize: 18, color: accent }} />;
-        if (lb.includes('librechat')) return <FaComments style={{ fontSize: 18, color: accent }} />;
-        if (lb.includes('agent zero')) return <FaRobot style={{ fontSize: 18, color: accent }} />;
-        if (lb.includes('openclaw')) return <FaBolt style={{ fontSize: 18, color: accent }} />;
+        if (lb.includes('anythingllm')) return <AIClientBrandIcon tabType="anything-llm" size={20} />;
+        if (lb.includes('open webui')) return <AIClientBrandIcon tabType="openwebui" size={20} />;
+        if (lb.includes('librechat')) return <AIClientBrandIcon tabType="librechat" size={20} />;
+        if (lb.includes('agent zero')) return <AIClientBrandIcon tabType="agentzero" size={20} />;
+        if (lb.includes('openclaw')) return <AIClientBrandIcon tabType="openclaw" size={20} />;
+        if (lb.includes('codex')) return <SiOpenai style={{ fontSize: 18, color: '#10A37F' }} />;
+        if (lb.includes('gemini')) return <SiGooglegemini style={{ fontSize: 18, color: '#8E75B2' }} />;
+        if (lb.includes('claude')) return <SiAnthropic style={{ fontSize: 18, color: '#D97706' }} />;
+        if (lb.includes('opencode')) return <AIClientBrandIcon tabType="opencode" size={20} />;
         if (lb.includes('ai chat')) return <FaBrain style={{ fontSize: 18, color: accent }} />;
 
         if (gl.includes('container') || lb.includes('docker')) {

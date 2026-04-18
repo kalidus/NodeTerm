@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="OpenCode">
+  <defs>
+    <linearGradient id="opencode-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818CF8" />
+      <stop offset="100%" stop-color="#4F46E5" />
+    </linearGradient>
+    <linearGradient id="opencode-glyph" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#E0E7FF" />
+      <stop offset="100%" stop-color="#C7D2FE" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#opencode-bg)" />
+  <path d="M24 22L14 32L24 42" fill="none" stroke="url(#opencode-glyph)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M40 22L50 32L40 42" fill="none" stroke="url(#opencode-glyph)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M36 18L28 46" fill="none" stroke="#FFFFFF" stroke-opacity="0.92" stroke-width="4" stroke-linecap="round"/>
+</svg>

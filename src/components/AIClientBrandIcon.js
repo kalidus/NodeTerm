@@ -3,6 +3,7 @@ import openWebuiPng from '../assets/ai-clients/open-webui.png';
 import anythingLlmPng from '../assets/ai-clients/anything-llm.png';
 import librechatPng from '../assets/ai-clients/librechat.png';
 import openclawPng from '../assets/ai-clients/openclaw.png';
+import openCodeSvg from '../assets/ai-clients/opencode.svg';
 import agentZeroSvg from '../assets/ai-clients/agent-zero.svg';
 import openNotebookSvg from '../assets/ai-clients/open-notebook.svg';
 
@@ -13,6 +14,7 @@ const BRAND_BY_TAB_TYPE = {
   librechat: { src: librechatPng, alt: 'LibreChat' },
   agentzero: { src: agentZeroSvg, alt: 'Agent Zero' },
   openclaw: { src: openclawPng, alt: 'OpenClaw' },
+  opencode: { src: openCodeSvg, alt: 'OpenCode' },
   'open-notebook': { src: openNotebookSvg, alt: 'Open Notebook' }
 };
 
