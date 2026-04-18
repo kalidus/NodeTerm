@@ -1356,29 +1356,31 @@ const MainContentArea = ({
 
       const renderCard = (item, groupLabel) => {
         const meta = getCardMeta(groupLabel, item.label);
-        const accent = theme.ctxText;
-        const accentMuted = theme.tabActiveText;
+        const accent = '#00f3ff';
+        const accentMuted = 'rgba(0, 243, 255, 0.6)';
         const cardBgIdle = theme.contentBg;
-        const cardBorderIdle = theme.ctxBorder;
+        const cardBorderIdle = 'rgba(0, 243, 255, 0.25)';
+
         const button = document.createElement('button');
         button.type = 'button';
         button.style.cssText = `
           border: 1px solid ${cardBorderIdle};
           background: ${cardBgIdle};
-          border-radius: 6px;
-          color: ${theme.ctxText};
-          min-height: 52px;
-          padding: 7px 9px 7px 8px;
+          color: #e2f8ff;
+          min-height: 38px;
+          padding: 4px 10px 4px 12px;
           text-align: left;
           cursor: pointer;
-          font-size: 12px;
+          font-family: ui-monospace, "Cascadia Code", "Consolas", monospace, sans-serif;
+          font-size: 13px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 8px;
-          transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+          gap: 10px;
+          transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
           position: relative;
           overflow: hidden;
+          border-radius: 0;
         `;
 
         const glow = document.createElement('div');
@@ -1387,7 +1389,7 @@ const MainContentArea = ({
           position: absolute;
           inset: -50% -30% auto -30%;
           height: 85%;
-          background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, ${theme.primary} 12%, transparent) 0%, transparent 58%);
+          background: radial-gradient(ellipse at 50% 0%, rgba(0, 243, 255, 0.15) 0%, transparent 60%);
           opacity: 0.65;
         `;
         button.appendChild(glow);
@@ -1396,53 +1398,69 @@ const MainContentArea = ({
         iconBadge.style.cssText = `
           position: relative;
           z-index: 1;
-          width: 34px;
-          height: 34px;
-          min-width: 34px;
-          border-radius: 6px;
+          width: 26px;
+          height: 26px;
+          min-width: 26px;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: color-mix(in srgb, ${theme.ctxHover} 35%, ${theme.ctxBg});
-          border: 1px solid ${theme.ctxBorder};
+          background: rgba(0, 243, 255, 0.08);
+          border: 1px solid rgba(0, 243, 255, 0.25);
+          border-radius: 0;
+          transition: all 0.2s;
         `;
         const iconRoot = createRoot(iconBadge);
         iconRoot.render(resolveLauncherIconElement(item, groupLabel, accent));
         panel._launcherIconRoots.push(iconRoot);
 
         const left = document.createElement('div');
-        left.style.cssText = 'position:relative;z-index:1;display:flex;align-items:center;gap:8px;min-width:0;flex:1;';
+        left.style.cssText = 'position:relative;z-index:1;display:flex;align-items:center;gap:12px;min-width:0;flex:1;';
 
         const labelWrap = document.createElement('div');
-        labelWrap.style.cssText = 'display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;';
+        labelWrap.style.cssText = 'display:flex;align-items:center;min-width:0;flex:1;';
         const name = document.createElement('div');
         name.textContent = item.label || 'Terminal';
-        name.style.cssText = `font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;letter-spacing:0.01em;color:${theme.ctxText};`;
-        const sub = document.createElement('div');
-        sub.textContent = meta.subtitle;
-        sub.style.cssText = `font-size:9px;opacity:0.82;line-height:1.2;color:${accentMuted};letter-spacing:0.08em;font-weight:600;`;
+        name.style.cssText = `
+          font-weight: 700;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          font-size: 11px;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          color: #00f3ff;
+          text-shadow: 0 0 5px rgba(0, 243, 255, 0.4);
+        `;
         labelWrap.appendChild(name);
-        labelWrap.appendChild(sub);
 
         const arrow = document.createElement('i');
-        arrow.className = 'pi pi-arrow-up-right';
-        arrow.style.cssText = `position:relative;z-index:1;font-size:10px;opacity:0.5;flex-shrink:0;color:${theme.primary};`;
+        arrow.className = 'pi pi-angle-right';
+        arrow.style.cssText = 'position:relative;z-index:1;font-size:12px;opacity:0.7;flex-shrink:0;color:#00f3ff;transition:all 0.2s;text-shadow:0 0 5px currentColor;';
 
         left.appendChild(iconBadge);
         left.appendChild(labelWrap);
         button.appendChild(left);
         button.appendChild(arrow);
+        
         button.addEventListener('mouseenter', () => {
-          button.style.background = theme.ctxHover;
-          button.style.borderColor = `color-mix(in srgb, ${theme.primary} 28%, ${theme.ctxBorder})`;
-          button.style.transform = 'translateY(-1px)';
-          button.style.boxShadow = `0 6px 18px ${theme.ctxShadow}`;
+          button.style.background = 'rgba(0, 243, 255, 0.12)';
+          button.style.borderColor = 'rgba(0, 243, 255, 0.8)';
+          button.style.transform = 'scale(1.02)';
+          button.style.boxShadow = '0 0 15px rgba(0, 243, 255, 0.25)';
+          iconBadge.style.background = 'rgba(255, 0, 170, 0.15)';
+          iconBadge.style.borderColor = 'rgba(255, 0, 170, 0.4)';
+          arrow.style.color = '#ff00aa';
+          arrow.style.transform = 'translateX(2px)';
         });
         button.addEventListener('mouseleave', () => {
           button.style.background = cardBgIdle;
           button.style.borderColor = cardBorderIdle;
-          button.style.transform = 'translateY(0)';
+          button.style.transform = 'scale(1)';
           button.style.boxShadow = 'none';
+          iconBadge.style.background = 'rgba(0, 243, 255, 0.08)';
+          iconBadge.style.borderColor = 'rgba(0, 243, 255, 0.25)';
+          arrow.style.color = '#00f3ff';
+          arrow.style.transform = 'translateX(0)';
         });
         button.addEventListener('click', (ev) => {
           ev.stopPropagation();
@@ -1504,7 +1522,7 @@ const MainContentArea = ({
           const grid = document.createElement('div');
           grid.style.cssText = `
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
             gap: 6px;
           `;
           filteredItems.forEach((item) => {
