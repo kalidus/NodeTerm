@@ -6,7 +6,6 @@
  */
 
 const { ipcMain, BrowserWindow, app } = require('electron');
-const { cleanupTunnels } = require('./ssh-tunnel-handlers');
 
 /**
  * Registra todos los handlers de aplicación
@@ -22,9 +21,7 @@ function registerAppHandlers(dependencies) {
   const {
     mainWindow,
     disconnectAllGuacamoleConnections,
-    packageJson,
-    sshConnections,
-    cleanupOrphanedConnections
+    packageJson
   } = dependencies;
 
   // Asegurar que isAppQuitting sea un objeto válido con propiedad value
@@ -110,43 +107,10 @@ function registerAppHandlers(dependencies) {
   });
 
   // Permite cerrar la app desde el renderer (React) usando ipcRenderer
-  ipcMain.on('app-quit', async () => {
+  ipcMain.on('app-quit', () => {
     isAppQuitting.value = true;
-
-    // Close all SSH connections and clear timeouts before quitting
-    Object.values(sshConnections).forEach(conn => {
-      if (conn.statsTimeout) {
-        clearTimeout(conn.statsTimeout);
-      }
-      if (conn.connection) {
-        try {
-          conn.connection.end();
-        } catch (e) {
-          // Ignore errors when closing connections
-        }
-      }
-    });
-
-    // Clear SSH connections
-    Object.keys(sshConnections).forEach(key => {
-      delete sshConnections[key];
-    });
-
-    // Cleanup orphaned connections
-    cleanupOrphanedConnections(sshConnections, sshConnections);
-
-    // Disconnect all Guacamole connections
-    disconnectAllGuacamoleConnections();
-
-    // Cerrar todos los túneles SSH activos
-    try {
-      await cleanupTunnels();
-    } catch (err) {
-      console.error('[app-quit] Error cerrando túneles SSH:', err);
-    }
-
-    // Quit the app
-    app.quit();
+    // Salida inmediata solicitada por UX: no esperar cleanup async.
+    app.exit(0);
   });
 }
 
