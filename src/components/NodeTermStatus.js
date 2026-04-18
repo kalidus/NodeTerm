@@ -12,6 +12,9 @@ import { getActionBarIcon, actionBarIconColors } from '../themes/action-bar-icon
 import { STORAGE_KEYS } from '../utils/constants';
 import { actionBarThemes } from '../themes/action-bar-themes';
 
+/** CLI de IA en la columna derecha de HomeTab (un solo grupo desplegable) */
+const RIGHT_COLUMN_AI_CLI_VALUES = new Set(['claude', 'opencode', 'geminicli', 'codexcli']);
+
 const NodeTermStatus = ({
 	sshConnectionsCount = 0,
 	foldersCount = 0,
@@ -98,12 +101,16 @@ const NodeTermStatus = ({
 	const [rightColumnDockerPopoverOpen, setRightColumnDockerPopoverOpen] = useState(false);
 	const [rightColumnDockerPopoverPos, setRightColumnDockerPopoverPos] = useState({ top: 0, left: 0 });
 	const [rightColumnDockerListExpanded, setRightColumnDockerListExpanded] = useState(false);
+	const [rightColumnAiCliPopoverOpen, setRightColumnAiCliPopoverOpen] = useState(false);
+	const [rightColumnAiCliPopoverPos, setRightColumnAiCliPopoverPos] = useState({ top: 0, left: 0 });
+	const [rightColumnAiCliListExpanded, setRightColumnAiCliListExpanded] = useState(false);
 	const syncManagerRef = useRef(null);
 	const secureStorageRef = useRef(null);
 	const [scaleFactor, setScaleFactor] = useState(1); // Factor de escala para reducir iconos
 	const barContainerRef = useRef(null);
 	const dockerButtonRef = useRef(null);
 	const rightColumnDockerBtnRef = useRef(null);
+	const rightColumnAiCliBtnRef = useRef(null);
 	const ubuntuButtonRef = useRef(null);
 
 	// 🚀 CACHÉ PERSISTENTE: Usar sessionStorage para que persista entre montajes/desmontajes
@@ -619,6 +626,29 @@ const NodeTermStatus = ({
 			window.removeEventListener('click', handleClickOutside, true);
 		};
 	}, [rightColumnDockerPopoverOpen]);
+
+	// Cerrar popover IA CLI de la columna derecha (HomeTab colapsada)
+	useEffect(() => {
+		if (!rightColumnAiCliPopoverOpen) return;
+
+		const handleClickOutside = (event) => {
+			const target = event.target;
+			const menu = target.closest('[data-rc-aicli-menu]');
+			const btn = target.closest('[data-rc-aicli-btn]');
+			if (!menu && !btn) {
+				setRightColumnAiCliPopoverOpen(false);
+			}
+		};
+
+		const timeoutId = setTimeout(() => {
+			window.addEventListener('click', handleClickOutside, true);
+		}, 100);
+
+		return () => {
+			clearTimeout(timeoutId);
+			window.removeEventListener('click', handleClickOutside, true);
+		};
+	}, [rightColumnAiCliPopoverOpen]);
 
 	// Cerrar menú Ubuntu al hacer clic fuera
 	useEffect(() => {
@@ -1338,35 +1368,247 @@ const NodeTermStatus = ({
 
 					{/* TERMINALES LOCALES (Solo Iconos) */}
 					<div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
-						{availableTerminals.map((t, idx) => {
-							// Simplificación de lógica de iconos para modo colapsado
-							let iconElement = <i className={t.icon || 'pi pi-terminal'} style={{ color: t.color || '#4fc3f7', fontSize: '1.1rem' }} />;
-
-							if (t.value === 'powershell') iconElement = <FaWindows style={{ color: t.color || '#0078D4', fontSize: '1.1rem' }} />;
-							else if (t.value === 'claude') iconElement = <i className="pi pi-comments" style={{ color: t.color || '#f59e0b', fontSize: '1.1rem' }} />;
-							else if (t.value === 'opencode') iconElement = <i className="pi pi-code" style={{ color: t.color || '#6366f1', fontSize: '1.1rem' }} />;
-						else if (t.value === 'geminicli') iconElement = <i className="pi pi-star" style={{ color: t.color || '#1a73e8', fontSize: '1.1rem' }} />;
-						else if (t.value === 'codexcli') iconElement = <i className="pi pi-bolt" style={{ color: t.color || '#10b981', fontSize: '1.1rem' }} />;
-						else if (t.value === 'cygwin') iconElement = <i className="pi pi-code" style={{ color: t.color || '#00FF00', fontSize: '1.1rem' }} />;
-							else if (t.value.startsWith('wsl-') && t.distroInfo) {
-								const cat = t.distroInfo.category;
-								const lowerName = (t.distroInfo.name || '').toLowerCase();
-								if (cat === 'ubuntu' || lowerName.includes('ubuntu')) iconElement = <FaUbuntu style={{ color: t.color || '#E95420', fontSize: '1.1rem' }} />;
-								else if (cat === 'debian' || lowerName.includes('debian')) iconElement = <SiDebian style={{ color: t.color, fontSize: '1.1rem' }} />;
-								else iconElement = <FaLinux style={{ color: t.color, fontSize: '1.1rem' }} />;
-							} else if (t.value === 'linux-terminal') iconElement = <i className="pi pi-desktop" style={{ color: t.color, fontSize: '1.1rem' }} />;
-
-							// Manejar acción
-							const handleClick = t.action ? t.action : () => {
-								window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: t.value, distroInfo: t.distroInfo } }));
+						{(() => {
+							const rcAiCliList = (availableTerminals || []).filter((t) => RIGHT_COLUMN_AI_CLI_VALUES.has(t.value));
+							let rcAiCliGroupRendered = false;
+							const runAiCliTerminal = (t) => {
+								if (t.action) t.action();
+								else {
+									window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: t.value, distroInfo: t.distroInfo } }));
+								}
 							};
-
-							return (
-								<button key={`term-${idx}`} title={t.label} onClick={handleClick} style={{ background: 'transparent', border: 'none', borderRadius: activeActionBarTheme.iconBox.borderRadius || '4px', cursor: 'pointer', padding: '4px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-									{iconElement}
-								</button>
+							const aiCliIconFor = (t, fontSize = '1rem') => {
+								if (t.value === 'claude') return <i className="pi pi-comments" style={{ color: t.color || '#f59e0b', fontSize }} />;
+								if (t.value === 'opencode') return <i className="pi pi-code" style={{ color: t.color || '#6366f1', fontSize }} />;
+								if (t.value === 'geminicli') return <i className="pi pi-star" style={{ color: t.color || '#1a73e8', fontSize }} />;
+								if (t.value === 'codexcli') return <i className="pi pi-bolt" style={{ color: t.color || '#10b981', fontSize }} />;
+								return <i className={t.icon || 'pi pi-terminal'} style={{ color: t.color || '#8b5cf6', fontSize }} />;
+							};
+							/** pi-sparkles no está en PrimeIcons 6.x (dependencia del proyecto) */
+							const aiCliGroupIcon = (size = '1.1rem') => (
+								<i className="pi pi-chart-line" style={{ color: '#c4b5fd', fontSize: size, display: 'block' }} title="IA CLI" />
 							);
-						})}
+							return (availableTerminals || []).map((t, idx) => {
+								if (RIGHT_COLUMN_AI_CLI_VALUES.has(t.value)) {
+									if (rcAiCliGroupRendered) return null;
+									rcAiCliGroupRendered = true;
+									if (rcAiCliList.length === 0) return null;
+									return (
+										<div
+											key="rc-ai-cli-group"
+											style={{
+												display: 'flex',
+												flexDirection: 'column',
+												alignItems: 'center',
+												position: 'relative',
+												zIndex: rightColumnAiCliPopoverOpen ? 10001 : 'auto'
+											}}
+										>
+											<button
+												ref={rightColumnAiCliBtnRef}
+												data-rc-aicli-btn
+												type="button"
+												title={
+													rcAiCliList.length === 1
+														? rcAiCliList[0].label
+														: `IA CLI — ${rcAiCliList.length} herramientas`
+												}
+												onClick={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													setRightColumnDockerPopoverOpen(false);
+													if (rcAiCliList.length === 1) {
+														runAiCliTerminal(rcAiCliList[0]);
+														return;
+													}
+													if (rightColumnAiCliBtnRef.current) {
+														const rect = rightColumnAiCliBtnRef.current.getBoundingClientRect();
+														setRightColumnAiCliPopoverPos({
+															top: rect.top + rect.height / 2,
+															left: rect.left - 10
+														});
+													}
+													setRightColumnAiCliPopoverOpen((open) => !open);
+												}}
+												style={{
+													background: rightColumnAiCliPopoverOpen ? (activeActionBarTheme.buttonHover?.background || 'rgba(255,255,255,0.08)') : 'transparent',
+													border: 'none',
+													borderRadius: activeActionBarTheme.iconBox.borderRadius || '4px',
+													cursor: 'pointer',
+													padding: '4px',
+													transition: 'all 0.2s'
+												}}
+												onMouseEnter={(e) => {
+													if (!rightColumnAiCliPopoverOpen) {
+														e.currentTarget.style.background = activeActionBarTheme.buttonHover.background;
+													}
+												}}
+												onMouseLeave={(e) => {
+													if (!rightColumnAiCliPopoverOpen) {
+														e.currentTarget.style.background = 'transparent';
+													}
+												}}
+											>
+												<div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+													{rcAiCliList.length === 1 ? aiCliIconFor(rcAiCliList[0], '1.1rem') : aiCliGroupIcon('1.1rem')}
+													{rcAiCliList.length > 1 && (
+														<span
+															style={{
+																position: 'absolute',
+																top: '-5px',
+																right: '-5px',
+																minWidth: '14px',
+																height: '14px',
+																padding: '0 3px',
+																background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
+																color: '#fff',
+																borderRadius: '8px',
+																fontSize: '0.55rem',
+																fontWeight: 700,
+																display: 'flex',
+																alignItems: 'center',
+																justifyContent: 'center',
+																border: '1px solid rgba(255,255,255,0.35)',
+																boxShadow: '0 1px 4px rgba(0,0,0,0.35)'
+															}}
+														>
+															{rcAiCliList.length > 9 ? '9+' : rcAiCliList.length}
+														</span>
+													)}
+												</div>
+											</button>
+											{rightColumnAiCliPopoverOpen && rcAiCliList.length > 1 && typeof document !== 'undefined' && document.body && createPortal(
+												<>
+													<div
+														style={{
+															position: 'fixed',
+															inset: 0,
+															zIndex: 9998,
+															background: 'rgba(0,0,0,0.12)'
+														}}
+														onClick={() => setRightColumnAiCliPopoverOpen(false)}
+													/>
+													<div
+														data-rc-aicli-menu
+														style={{
+															position: 'fixed',
+															top: `${rightColumnAiCliPopoverPos.top}px`,
+															left: `${rightColumnAiCliPopoverPos.left}px`,
+															transform: 'translate(-100%, -50%)',
+															background: 'linear-gradient(145deg, rgba(22, 18, 34, 0.98) 0%, rgba(14, 12, 24, 0.99) 100%)',
+															backdropFilter: 'blur(14px) saturate(150%)',
+															WebkitBackdropFilter: 'blur(14px) saturate(150%)',
+															border: '1px solid rgba(139, 92, 246, 0.45)',
+															borderRadius: '12px',
+															boxShadow: '0 12px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06) inset',
+															padding: '0.55rem 0.65rem',
+															minWidth: '200px',
+															maxWidth: 'min(280px, calc(100vw - 24px))',
+															maxHeight: 'min(380px, 72vh)',
+															overflowY: 'auto',
+															zIndex: 10000,
+															display: 'flex',
+															flexDirection: 'column',
+															gap: '0.4rem'
+														}}
+														onClick={(ev) => ev.stopPropagation()}
+														onMouseDown={(ev) => ev.stopPropagation()}
+													>
+														<div
+															style={{
+																display: 'flex',
+																alignItems: 'center',
+																gap: '0.45rem',
+																paddingBottom: '0.45rem',
+																marginBottom: '0.15rem',
+																borderBottom: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`
+															}}
+														>
+															<i className="pi pi-chart-line" style={{ color: '#c4b5fd', fontSize: '1rem', flexShrink: 0 }} />
+															<span style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em', color: themeColors.textPrimary || '#fff' }}>
+																IA CLI
+															</span>
+															<span
+																style={{
+																	marginLeft: 'auto',
+																	fontSize: '0.6rem',
+																	fontWeight: 600,
+																	color: 'rgba(255,255,255,0.55)',
+																	background: 'rgba(255,255,255,0.06)',
+																	padding: '2px 6px',
+																	borderRadius: '6px'
+																}}
+															>
+																{rcAiCliList.length}
+															</span>
+														</div>
+														{rcAiCliList.map((term, j) => (
+															<button
+																key={term.value || j}
+																type="button"
+																onClick={() => {
+																	runAiCliTerminal(term);
+																	setRightColumnAiCliPopoverOpen(false);
+																}}
+																style={{
+																	padding: '0.45rem 0.55rem',
+																	borderRadius: '8px',
+																	background: 'rgba(255,255,255,0.04)',
+																	border: '1px solid transparent',
+																	color: themeColors.textPrimary || '#fff',
+																	fontSize: '0.72rem',
+																	textAlign: 'left',
+																	cursor: 'pointer',
+																	transition: 'background 0.15s ease, border-color 0.15s ease',
+																	display: 'flex',
+																	alignItems: 'center',
+																	gap: '0.5rem',
+																	width: '100%'
+																}}
+																onMouseEnter={(ev) => {
+																	ev.currentTarget.style.background = 'rgba(139, 92, 246, 0.2)';
+																	ev.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+																}}
+																onMouseLeave={(ev) => {
+																	ev.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+																	ev.currentTarget.style.borderColor = 'transparent';
+																}}
+															>
+																{aiCliIconFor(term)}
+																<span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{term.label}</span>
+															</button>
+														))}
+													</div>
+												</>,
+												document.body
+											)}
+										</div>
+									);
+								}
+								// Simplificación de lógica de iconos para modo colapsado
+								let iconElement = <i className={t.icon || 'pi pi-terminal'} style={{ color: t.color || '#4fc3f7', fontSize: '1.1rem' }} />;
+
+								if (t.value === 'powershell') iconElement = <FaWindows style={{ color: t.color || '#0078D4', fontSize: '1.1rem' }} />;
+								else if (t.value === 'cygwin') iconElement = <i className="pi pi-code" style={{ color: t.color || '#00FF00', fontSize: '1.1rem' }} />;
+								else if (t.value.startsWith('wsl-') && t.distroInfo) {
+									const cat = t.distroInfo.category;
+									const lowerName = (t.distroInfo.name || '').toLowerCase();
+									if (cat === 'ubuntu' || lowerName.includes('ubuntu')) iconElement = <FaUbuntu style={{ color: t.color || '#E95420', fontSize: '1.1rem' }} />;
+									else if (cat === 'debian' || lowerName.includes('debian')) iconElement = <SiDebian style={{ color: t.color, fontSize: '1.1rem' }} />;
+									else iconElement = <FaLinux style={{ color: t.color, fontSize: '1.1rem' }} />;
+								} else if (t.value === 'linux-terminal') iconElement = <i className="pi pi-desktop" style={{ color: t.color, fontSize: '1.1rem' }} />;
+
+								const handleClick = t.action ? t.action : () => {
+									window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: t.value, distroInfo: t.distroInfo } }));
+								};
+
+								return (
+									<button key={`term-${t.value}-${idx}`} title={t.label} onClick={handleClick} style={{ background: 'transparent', border: 'none', borderRadius: activeActionBarTheme.iconBox.borderRadius || '4px', cursor: 'pointer', padding: '4px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+										{iconElement}
+									</button>
+								);
+							});
+						})()}
 						{/* Ubuntus adicionales */}
 						{(ubuntuDistributions || []).map((d, idx) => (
 							<button key={`ubuntu-${idx}`} title={d.label} onClick={() => handleOpenTerminal('ubuntu', d.distroInfo || d)} style={{ background: 'transparent', border: 'none', borderRadius: activeActionBarTheme.iconBox.borderRadius || '4px', cursor: 'pointer', padding: '4px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
@@ -1396,6 +1638,7 @@ const NodeTermStatus = ({
 									onClick={(e) => {
 										e.preventDefault();
 										e.stopPropagation();
+										setRightColumnAiCliPopoverOpen(false);
 										const list = dockerContainers || [];
 										if (list.length === 1) {
 											const c = list[0];
@@ -1854,10 +2097,22 @@ const NodeTermStatus = ({
 					{!sc.terminales && (() => {
 						const items = [];
 						const dockerItems = [];
+						const aiCliItems = [];
 						const otherDistroItems = [];
 
 						// 1) De availableTerminals: PowerShell, WSL, Cygwin, otras distros (Kali etc.)
 						availableTerminals.forEach(t => {
+							if (RIGHT_COLUMN_AI_CLI_VALUES.has(t.value)) {
+								aiCliItems.push({
+									label: t.label,
+									terminalType: t.value,
+									distroInfo: t.distroInfo || null,
+									icon: t.icon,
+									color: t.color || '#4fc3f7',
+									isDocker: false
+								});
+								return;
+							}
 							let terminalType = t.value;
 							let distroInfo = t.distroInfo || null;
 							if (t.value === 'linux-terminal') { terminalType = 'linux-terminal'; distroInfo = null; }
@@ -1905,6 +2160,10 @@ const NodeTermStatus = ({
 						};
 						const TermIcon = ({ it }) => {
 							if (it.icon === 'docker' || it.isDocker) return <SiDocker style={{ color: it.color, fontSize: '1rem' }} />;
+							if (it.terminalType === 'claude') return <i className="pi pi-comments" style={{ color: it.color, fontSize: '1rem' }} />;
+							if (it.terminalType === 'opencode') return <i className="pi pi-code" style={{ color: it.color, fontSize: '1rem' }} />;
+							if (it.terminalType === 'geminicli') return <i className="pi pi-star" style={{ color: it.color, fontSize: '1rem' }} />;
+							if (it.terminalType === 'codexcli') return <i className="pi pi-bolt" style={{ color: it.color, fontSize: '1rem' }} />;
 							if (it.terminalType === 'powershell') return <FaWindows style={{ color: it.color, fontSize: '1rem' }} />;
 							if (it.terminalType === 'ubuntu' || (it.distroInfo && (it.distroInfo.category === 'ubuntu' || (it.distroInfo.name || '').toLowerCase().includes('ubuntu')))) return <FaUbuntu style={{ color: it.color, fontSize: '1rem' }} />;
 							if (it.terminalType === 'debian' || (it.distroInfo && (it.distroInfo.category === 'debian' || (it.distroInfo.name || '').toLowerCase().includes('debian')))) return <SiDebian style={{ color: it.color, fontSize: '1rem' }} />;
@@ -1915,7 +2174,7 @@ const NodeTermStatus = ({
 						};
 						return (
 							<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-								{items.length === 0 && dockerItems.length === 0 ? (
+								{items.length === 0 && dockerItems.length === 0 && aiCliItems.length === 0 ? (
 									<div style={{ fontSize: '0.75rem', color: themeColors.textSecondary, fontStyle: 'italic', padding: '0.25rem 0' }}>No hay terminales detectados</div>
 								) : (
 									<>
@@ -1924,6 +2183,84 @@ const NodeTermStatus = ({
 												<TermIcon it={it} /><span>{it.label}</span>
 											</button>
 										))}
+										{aiCliItems.length > 0 && (
+											<div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+												<button
+													type="button"
+													style={{
+														...btnStyle(),
+														border: `1px solid rgba(139, 92, 246, ${rightColumnAiCliListExpanded ? 0.4 : 0.22})`
+													}}
+													onClick={() => setRightColumnAiCliListExpanded((v) => !v)}
+													onMouseEnter={e => {
+														e.currentTarget.style.background = activeActionBarTheme.buttonHover.background;
+														e.currentTarget.style.border = activeActionBarTheme.buttonHover.border;
+														e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow;
+													}}
+													onMouseLeave={e => {
+														e.currentTarget.style.background = activeActionBarTheme.button.background;
+														e.currentTarget.style.border = activeActionBarTheme.button.border;
+														e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow;
+													}}
+												>
+													<i className="pi pi-chart-line" style={{ color: '#c4b5fd', fontSize: '1rem' }} />
+													<span style={{ flex: 1, textAlign: 'left' }}>IA CLI</span>
+													<span
+														style={{
+															fontSize: '0.62rem',
+															fontWeight: 700,
+															color: '#fff',
+															background: 'rgba(139, 92, 246, 0.35)',
+															padding: '2px 7px',
+															borderRadius: '8px',
+															marginRight: '0.25rem'
+														}}
+													>
+														{aiCliItems.length}
+													</span>
+													<i className={rightColumnAiCliListExpanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down'} style={{ fontSize: '0.65rem', opacity: 0.75 }} />
+												</button>
+												{rightColumnAiCliListExpanded && (
+													<div
+														style={{
+															display: 'flex',
+															flexDirection: 'column',
+															gap: '0.35rem',
+															paddingLeft: '0.45rem',
+															marginTop: '-0.1rem',
+															borderLeft: '2px solid rgba(139, 92, 246, 0.4)',
+															marginLeft: '0.35rem'
+														}}
+													>
+														{aiCliItems.map((it, idx) => (
+															<button
+																key={`aicli-${it.terminalType}-${idx}`}
+																type="button"
+																style={{
+																	...btnStyle(),
+																	fontSize: homeTabFontSize ? `${homeTabFontSize * 0.65}px` : '0.75rem',
+																	padding: '0.42rem 0.6rem'
+																}}
+																onClick={() => dispatch(it.terminalType, it.distroInfo)}
+																onMouseEnter={e => {
+																	e.currentTarget.style.background = activeActionBarTheme.buttonHover.background;
+																	e.currentTarget.style.border = activeActionBarTheme.buttonHover.border;
+																	e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow;
+																}}
+																onMouseLeave={e => {
+																	e.currentTarget.style.background = activeActionBarTheme.button.background;
+																	e.currentTarget.style.border = activeActionBarTheme.button.border;
+																	e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow;
+																}}
+															>
+																<TermIcon it={it} />
+																<span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</span>
+															</button>
+														))}
+													</div>
+												)}
+											</div>
+										)}
 										{dockerItems.length > 0 && (
 											<div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
 												<button
