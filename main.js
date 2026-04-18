@@ -928,6 +928,12 @@ function createWindow() {
   });
   logTiming('BrowserWindow creado');
 
+  // Cierre instantaneo al usar la X de la ventana.
+  mainWindow.on('close', () => {
+    isAppQuitting.value = true;
+    app.exit(0);
+  });
+
   // 🔒 CRÍTICO: Registrar handlers de seguridad ANTES de que la ventana cargue
   // Esto asegura que security:get-master-key esté disponible cuando el renderer arranque
   try {
