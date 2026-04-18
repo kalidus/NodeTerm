@@ -1,10 +1,24 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { createRoot } from 'react-dom/client';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Card } from 'primereact/card';
 import { ContextMenu } from 'primereact/contextmenu';
 import { Button } from 'primereact/button';
-import { FaWindows, FaUbuntu, FaLinux, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
+import {
+  FaWindows,
+  FaUbuntu,
+  FaLinux,
+  FaRedhat,
+  FaCentos,
+  FaFedora,
+  FaGlobe,
+  FaCube,
+  FaComments,
+  FaRobot,
+  FaBolt,
+  FaBrain
+} from 'react-icons/fa';
 import { SiDebian, SiDocker } from 'react-icons/si';
 import Sidebar from './Sidebar';
 import TerminalFrame from './TerminalFrame';
@@ -1146,27 +1160,91 @@ const MainContentArea = ({
 
       const existingPanel = document.getElementById('terminal-grid-launcher-panel');
       if (existingPanel) {
+        const roots = existingPanel._launcherIconRoots;
+        if (Array.isArray(roots)) {
+          roots.forEach((r) => {
+            try {
+              r.unmount();
+            } catch {
+              /* noop */
+            }
+          });
+        }
+        if (existingPanel._launcherStyleEl?.parentNode) {
+          existingPanel._launcherStyleEl.parentNode.removeChild(existingPanel._launcherStyleEl);
+        }
         existingPanel.remove();
         return;
       }
 
       const panel = document.createElement('div');
       panel.id = 'terminal-grid-launcher-panel';
+      /** Tokens del tema activo (mismo criterio que menús / themeManager) */
+      const theme = {
+        ctxBg: 'var(--ui-context-bg)',
+        ctxBorder: 'var(--ui-context-border)',
+        ctxText: 'var(--ui-context-text)',
+        ctxHover: 'var(--ui-context-hover)',
+        ctxShadow: 'var(--ui-context-shadow, rgba(0, 0, 0, 0.35))',
+        contentBg: 'var(--ui-content-bg)',
+        primary: 'var(--ui-button-primary)',
+        tabActiveText: 'var(--ui-tab-active-text, var(--ui-context-text))'
+      };
+      panel._launcherIconRoots = [];
+      const unmountLauncherIconRoots = () => {
+        if (!Array.isArray(panel._launcherIconRoots)) return;
+        panel._launcherIconRoots.forEach((r) => {
+          try {
+            r.unmount();
+          } catch {
+            /* noop */
+          }
+        });
+        panel._launcherIconRoots = [];
+      };
+      const disposePanel = () => {
+        unmountLauncherIconRoots();
+        document.removeEventListener('click', handleOutsideClick);
+        if (panel._launcherStyleEl?.parentNode) {
+          panel._launcherStyleEl.parentNode.removeChild(panel._launcherStyleEl);
+        }
+        if (panel.parentNode) panel.parentNode.removeChild(panel);
+      };
+
+      const launcherStyleEl = document.createElement('style');
+      launcherStyleEl.textContent = `
+        #terminal-grid-launcher-panel input.terminal-launcher-search::placeholder {
+          color: rgba(122, 248, 255, 0.42);
+        }
+      `;
+      document.head.appendChild(launcherStyleEl);
+      panel._launcherStyleEl = launcherStyleEl;
+
       panel.style.cssText = `
         position: fixed;
         z-index: 10020;
-        width: min(720px, calc(100vw - 24px));
-        max-height: min(72vh, 780px);
+        width: min(820px, calc(100vw - 20px));
+        max-height: min(78vh, 860px);
         overflow: auto;
-        background: var(--ui-context-bg, #171a20);
-        border: 1px solid var(--ui-context-border, rgba(255,255,255,0.12));
-        border-radius: 12px;
-        box-shadow: 0 18px 45px rgba(0,0,0,0.45);
-        padding: 14px;
+        font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+        color: #e2f8ff;
+        background:
+          linear-gradient(180deg, rgba(6, 8, 18, 0.97) 0%, rgba(4, 6, 14, 0.99) 100%),
+          repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 255, 200, 0.03) 2px, rgba(0, 255, 200, 0.03) 3px);
+        backdrop-filter: blur(14px) saturate(160%);
+        -webkit-backdrop-filter: blur(14px) saturate(160%);
+        border: 1px solid rgba(0, 243, 255, 0.45);
+        border-radius: 8px;
+        box-shadow:
+          0 0 0 1px rgba(255, 0, 200, 0.12),
+          0 0 40px rgba(0, 243, 255, 0.12),
+          0 0 60px rgba(255, 0, 200, 0.06),
+          inset 0 0 40px rgba(0, 243, 255, 0.04);
+        padding: 12px 12px 10px 12px;
       `;
 
       const rect = dropdownButton.getBoundingClientRect();
-      const width = Math.min(720, window.innerWidth - 24);
+      const width = Math.min(760, window.innerWidth - 24);
       let left = rect.left;
       let top = rect.bottom + 8;
       if (left + width > window.innerWidth - 12) left = window.innerWidth - width - 12;
@@ -1175,135 +1253,201 @@ const MainContentArea = ({
       panel.style.top = `${top}px`;
 
       const title = document.createElement('div');
-      title.textContent = 'Launcher profesional';
+      title.textContent = '// LAUNCHER';
       title.style.cssText = `
-        font-size: 12px;
+        font-size: 10px;
         font-weight: 800;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.22em;
         text-transform: uppercase;
-        color: var(--ui-context-text, #e5e7eb);
-        opacity: 0.9;
         margin-bottom: 10px;
+        color: #00f3ff;
+        text-shadow: 0 0 12px rgba(0, 243, 255, 0.85), 2px 0 0 rgba(255, 0, 200, 0.35);
       `;
       panel.appendChild(title);
 
       const searchInput = document.createElement('input');
       searchInput.type = 'text';
-      searchInput.placeholder = 'Buscar terminal o app...';
+      searchInput.className = 'terminal-launcher-search';
+      searchInput.placeholder = '> buscar...';
       searchInput.style.cssText = `
         width: 100%;
         box-sizing: border-box;
-        margin-bottom: 12px;
-        border-radius: 10px;
-        border: 1px solid rgba(255,255,255,0.14);
-        background: rgba(0,0,0,0.22);
-        color: var(--ui-context-text, #f1f5f9);
-        padding: 10px 12px;
-        font-size: 13px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 243, 255, 0.35);
+        background: rgba(0, 0, 0, 0.55);
+        color: #7af8ff;
+        padding: 7px 10px;
+        font-size: 12px;
         outline: none;
+        box-shadow: inset 0 0 12px rgba(0, 243, 255, 0.06);
       `;
+      searchInput.addEventListener('focus', () => {
+        searchInput.style.borderColor = 'rgba(255, 0, 200, 0.65)';
+        searchInput.style.boxShadow =
+          '0 0 0 1px rgba(0,243,255,0.35), 0 0 18px rgba(255,0,200,0.2), inset 0 0 12px rgba(0,243,255,0.08)';
+      });
+      searchInput.addEventListener('blur', () => {
+        searchInput.style.borderColor = 'rgba(0, 243, 255, 0.35)';
+        searchInput.style.boxShadow = 'inset 0 0 12px rgba(0, 243, 255, 0.06)';
+      });
       panel.appendChild(searchInput);
 
       const contentHost = document.createElement('div');
       panel.appendChild(contentHost);
 
-      const getCardPreset = (groupLabel, itemLabel) => {
+      const getCardMeta = (groupLabel, itemLabel) => {
         const g = (groupLabel || '').toLowerCase();
         const i = (itemLabel || '').toLowerCase();
-        if (i.includes('powershell')) return { icon: 'pi pi-microsoft', accent: '#0078D4', subtitle: 'Terminal local' };
-        if (i.includes('wsl') || i.includes('ubuntu') || i.includes('debian') || i.includes('kali') || g.includes('linux')) return { icon: 'pi pi-server', accent: '#22c55e', subtitle: 'Distro local' };
-        if (i.includes('cygwin')) return { icon: 'pi pi-code', accent: '#9acd32', subtitle: 'Terminal local' };
-        if (g.includes('ai') || i.includes('codex') || i.includes('gemini') || i.includes('claude') || i.includes('opencode')) return { icon: 'pi pi-sparkles', accent: '#a855f7', subtitle: 'AI CLI' };
-        if (g.includes('container') || i.includes('docker')) return { icon: 'pi pi-box', accent: '#2496ED', subtitle: 'Contenedor' };
-        if (i.includes('anythingllm')) return { icon: 'pi pi-box', accent: '#06b6d4', subtitle: 'Aplicacion integrada' };
-        if (i.includes('open webui')) return { icon: 'pi pi-globe', accent: '#0ea5e9', subtitle: 'Aplicacion integrada' };
-        if (i.includes('librechat')) return { icon: 'pi pi-comment', accent: '#14b8a6', subtitle: 'Aplicacion integrada' };
-        if (i.includes('agent zero')) return { icon: 'pi pi-android', accent: '#84cc16', subtitle: 'Aplicacion integrada' };
-        if (i.includes('openclaw')) return { icon: 'pi pi-bolt', accent: '#f59e0b', subtitle: 'Aplicacion integrada' };
-        if (i.includes('ai chat')) return { icon: 'pi pi-comments', accent: '#8b5cf6', subtitle: 'Aplicacion integrada' };
-        if (g.includes('apps')) return { icon: 'pi pi-th-large', accent: '#06b6d4', subtitle: 'Aplicacion integrada' };
-        return { icon: 'pi pi-desktop', accent: '#4fc3f7', subtitle: 'Perfil local' };
+        if (i.includes('powershell')) return { subtitle: 'SHELL · WIN' };
+        if (i.includes('cygwin')) return { subtitle: 'SHELL · POSIX' };
+        if (i.includes('ubuntu') || i.includes('debian') || i.includes('kali')) return { subtitle: 'WSL · DISTRO' };
+        if (g.includes('shell')) return { subtitle: 'LOCAL' };
+        if (g.includes('ai') || i.includes('codex') || i.includes('gemini') || i.includes('claude') || i.includes('opencode')) return { subtitle: 'AI · CLI' };
+        if (g.includes('container') || i.includes('docker')) return { subtitle: 'DOCKER' };
+        if (i.includes('anythingllm')) return { subtitle: 'NET · APP' };
+        if (i.includes('open webui')) return { subtitle: 'NET · APP' };
+        if (i.includes('librechat')) return { subtitle: 'NET · APP' };
+        if (i.includes('agent zero')) return { subtitle: 'NET · APP' };
+        if (i.includes('openclaw')) return { subtitle: 'NET · APP' };
+        if (i.includes('ai chat')) return { subtitle: 'NET · APP' };
+        if (g.includes('apps')) return { subtitle: 'NET · APP' };
+        return { subtitle: 'PROFILE' };
+      };
+
+      const resolveLauncherIconElement = (item, groupLabel, accent) => {
+        const gl = (groupLabel || '').toLowerCase();
+        const lb = (item.label || '').toLowerCase();
+
+        if (React.isValidElement(item.icon)) {
+          const prev = item.icon.props?.style || {};
+          return React.cloneElement(item.icon, {
+            style: {
+              ...prev,
+              color: accent,
+              marginRight: 0,
+              display: 'block'
+            }
+          });
+        }
+
+        if (lb.includes('anythingllm')) return <FaCube style={{ fontSize: 18, color: accent }} />;
+        if (lb.includes('open webui')) return <FaGlobe style={{ fontSize: 18, color: accent }} />;
+        if (lb.includes('librechat')) return <FaComments style={{ fontSize: 18, color: accent }} />;
+        if (lb.includes('agent zero')) return <FaRobot style={{ fontSize: 18, color: accent }} />;
+        if (lb.includes('openclaw')) return <FaBolt style={{ fontSize: 18, color: accent }} />;
+        if (lb.includes('ai chat')) return <FaBrain style={{ fontSize: 18, color: accent }} />;
+
+        if (gl.includes('container') || lb.includes('docker')) {
+          return <SiDocker style={{ fontSize: 20, color: accent }} />;
+        }
+        if (lb.includes('powershell')) return <FaWindows style={{ fontSize: 18, color: accent }} />;
+        if (lb.includes('cygwin')) return <FaLinux style={{ fontSize: 17, color: accent }} />;
+        if (lb.includes('ubuntu')) return <FaUbuntu style={{ fontSize: 19, color: accent }} />;
+        if (lb.includes('debian')) return <SiDebian style={{ fontSize: 18, color: accent }} />;
+        if (lb.includes('kali')) return <FaLinux style={{ fontSize: 18, color: accent }} />;
+
+        if (typeof item.icon === 'string' && item.icon.trim()) {
+          return <i className={item.icon} style={{ fontSize: '1rem', color: accent }} />;
+        }
+
+        return <i className="pi pi-desktop" style={{ fontSize: '1rem', color: accent }} />;
       };
 
       const renderCard = (item, groupLabel) => {
-        const preset = getCardPreset(groupLabel, item.label);
+        const meta = getCardMeta(groupLabel, item.label);
+        const accent = theme.ctxText;
+        const accentMuted = theme.tabActiveText;
+        const cardBgIdle = theme.contentBg;
+        const cardBorderIdle = theme.ctxBorder;
         const button = document.createElement('button');
         button.type = 'button';
         button.style.cssText = `
-          border: 1px solid rgba(255,255,255,0.10);
-          background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025));
-          border-radius: 12px;
-          color: var(--ui-context-text, #f8fafc);
-          min-height: 72px;
-          padding: 12px;
+          border: 1px solid ${cardBorderIdle};
+          background: ${cardBgIdle};
+          border-radius: 6px;
+          color: ${theme.ctxText};
+          min-height: 52px;
+          padding: 7px 9px 7px 8px;
           text-align: left;
           cursor: pointer;
-          font-size: 13px;
+          font-size: 12px;
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           justify-content: space-between;
-          gap: 12px;
-          transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+          gap: 8px;
+          transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
           position: relative;
           overflow: hidden;
         `;
 
+        const glow = document.createElement('div');
+        glow.style.cssText = `
+          pointer-events: none;
+          position: absolute;
+          inset: -50% -30% auto -30%;
+          height: 85%;
+          background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, ${theme.primary} 12%, transparent) 0%, transparent 58%);
+          opacity: 0.65;
+        `;
+        button.appendChild(glow);
+
         const iconBadge = document.createElement('div');
         iconBadge.style.cssText = `
-          width: 30px;
-          height: 30px;
-          min-width: 30px;
-          border-radius: 9px;
+          position: relative;
+          z-index: 1;
+          width: 34px;
+          height: 34px;
+          min-width: 34px;
+          border-radius: 6px;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: ${preset.accent}22;
-          border: 1px solid ${preset.accent}55;
-          color: ${preset.accent};
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+          background: color-mix(in srgb, ${theme.ctxHover} 35%, ${theme.ctxBg});
+          border: 1px solid ${theme.ctxBorder};
         `;
-        const icon = document.createElement('i');
-        icon.className = preset.icon;
-        icon.style.cssText = 'font-size: 0.86rem;';
-        iconBadge.appendChild(icon);
+        const iconRoot = createRoot(iconBadge);
+        iconRoot.render(resolveLauncherIconElement(item, groupLabel, accent));
+        panel._launcherIconRoots.push(iconRoot);
 
         const left = document.createElement('div');
-        left.style.cssText = 'display:flex;align-items:flex-start;gap:10px;min-width:0;flex:1;';
+        left.style.cssText = 'position:relative;z-index:1;display:flex;align-items:center;gap:8px;min-width:0;flex:1;';
 
         const labelWrap = document.createElement('div');
-        labelWrap.style.cssText = 'display:flex;flex-direction:column;gap:4px;min-width:0;flex:1;';
+        labelWrap.style.cssText = 'display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;';
         const name = document.createElement('div');
         name.textContent = item.label || 'Terminal';
-        name.style.cssText = 'font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;';
-        const meta = document.createElement('div');
-        meta.textContent = preset.subtitle;
-        meta.style.cssText = 'font-size:11px;opacity:0.72;';
+        name.style.cssText = `font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;letter-spacing:0.01em;color:${theme.ctxText};`;
+        const sub = document.createElement('div');
+        sub.textContent = meta.subtitle;
+        sub.style.cssText = `font-size:9px;opacity:0.82;line-height:1.2;color:${accentMuted};letter-spacing:0.08em;font-weight:600;`;
         labelWrap.appendChild(name);
-        labelWrap.appendChild(meta);
+        labelWrap.appendChild(sub);
 
         const arrow = document.createElement('i');
         arrow.className = 'pi pi-arrow-up-right';
-        arrow.style.cssText = 'font-size:11px;opacity:0.55;flex-shrink:0;margin-top:2px;';
+        arrow.style.cssText = `position:relative;z-index:1;font-size:10px;opacity:0.5;flex-shrink:0;color:${theme.primary};`;
 
         left.appendChild(iconBadge);
         left.appendChild(labelWrap);
         button.appendChild(left);
         button.appendChild(arrow);
         button.addEventListener('mouseenter', () => {
-          button.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045))';
-          button.style.borderColor = `${preset.accent}66`;
-          button.style.transform = 'translateY(-2px)';
+          button.style.background = theme.ctxHover;
+          button.style.borderColor = `color-mix(in srgb, ${theme.primary} 28%, ${theme.ctxBorder})`;
+          button.style.transform = 'translateY(-1px)';
+          button.style.boxShadow = `0 6px 18px ${theme.ctxShadow}`;
         });
         button.addEventListener('mouseleave', () => {
-          button.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025))';
-          button.style.borderColor = 'rgba(255,255,255,0.10)';
+          button.style.background = cardBgIdle;
+          button.style.borderColor = cardBorderIdle;
           button.style.transform = 'translateY(0)';
+          button.style.boxShadow = 'none';
         });
         button.addEventListener('click', (ev) => {
           ev.stopPropagation();
           if (typeof item.command === 'function') item.command();
-          panel.remove();
-          document.removeEventListener('click', handleOutsideClick);
+          disposePanel();
         });
         return button;
       };
@@ -1312,13 +1456,14 @@ const MainContentArea = ({
 
       const renderGroups = (query = '') => {
         const normalized = (query || '').trim().toLowerCase();
+        unmountLauncherIconRoots();
         contentHost.innerHTML = '';
 
         const hasItems = groups.some((group) => Array.isArray(group.items) && group.items.length > 0);
         if (!hasItems) {
           const empty = document.createElement('div');
           empty.textContent = 'Cargando perfiles... vuelve a abrir en un instante.';
-          empty.style.cssText = 'font-size:13px;opacity:0.75;padding:10px 4px;color:var(--ui-context-text, #cbd5e1);';
+          empty.style.cssText = 'font-size:13px;opacity:0.8;padding:10px 4px;color:rgba(200, 235, 255, 0.82);';
           contentHost.appendChild(empty);
           return;
         }
@@ -1332,24 +1477,24 @@ const MainContentArea = ({
           if (!filteredItems.length) return;
 
           const section = document.createElement('div');
-          section.style.cssText = 'margin-bottom: 15px;';
+          section.style.cssText = 'margin-bottom: 10px;';
 
           const sectionTitle = document.createElement('div');
           sectionTitle.style.cssText = `
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 11px;
+            font-size: 9px;
             font-weight: 800;
-            letter-spacing: 0.05em;
-            color: var(--ui-context-text, #cbd5e1);
-            opacity: 0.8;
-            margin: 0 0 8px 2px;
+            letter-spacing: 0.14em;
+            color: #ff00ea;
+            text-shadow: 0 0 10px rgba(255, 0, 200, 0.45);
+            margin: 0 0 6px 2px;
             text-transform: uppercase;
           `;
           const sectionIcon = document.createElement('i');
           sectionIcon.className = group.icon || 'pi pi-folder';
-          sectionIcon.style.cssText = 'font-size: 11px; opacity: 0.9;';
+          sectionIcon.style.cssText = 'font-size: 10px; color: #00f3ff; opacity: 0.95;';
           const sectionText = document.createElement('span');
           sectionText.textContent = `${group.label || 'Grupo'} (${filteredItems.length})`;
           sectionTitle.appendChild(sectionIcon);
@@ -1359,8 +1504,8 @@ const MainContentArea = ({
           const grid = document.createElement('div');
           grid.style.cssText = `
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+            gap: 6px;
           `;
           filteredItems.forEach((item) => {
             renderedCount += 1;
@@ -1373,7 +1518,7 @@ const MainContentArea = ({
         if (renderedCount === 0) {
           const noResults = document.createElement('div');
           noResults.textContent = 'Sin resultados para tu busqueda.';
-          noResults.style.cssText = 'font-size:13px;opacity:0.75;padding:10px 4px;color:var(--ui-context-text, #cbd5e1);';
+          noResults.style.cssText = 'font-size:13px;opacity:0.8;padding:10px 4px;color:rgba(200, 235, 255, 0.82);';
           contentHost.appendChild(noResults);
         }
       };
@@ -1385,8 +1530,7 @@ const MainContentArea = ({
 
       const handleOutsideClick = (ev) => {
         if (!panel.contains(ev.target) && !dropdownButton.contains(ev.target)) {
-          panel.remove();
-          document.removeEventListener('click', handleOutsideClick);
+          disposePanel();
         }
       };
 
