@@ -261,6 +261,23 @@
   opacity: 1;
 }
 
+/* Submenús del selector de perfil (agrupación tipo tiered) */
+.context-menu-themed.p-contextmenu .p-submenu-list {
+  background: var(--ui-context-bg) !important;
+  border: 1px solid var(--ui-context-border) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 28px var(--ui-context-shadow, rgba(0, 0, 0, 0.35)) !important;
+  padding: 6px 0 !important;
+  min-width: 220px !important;
+  max-height: min(70vh, 480px) !important;
+  overflow-y: auto !important;
+}
+
+.context-menu-themed.p-contextmenu .terminal-profile-menu-group > .p-menuitem-link .p-menuitem-text {
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
 /* Custom Terminal Context Menu */
 .terminal-context-menu {
   background: var(--ui-context-bg, #1a1b1e) !important;

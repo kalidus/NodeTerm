@@ -678,8 +678,18 @@ const MainContentArea = ({
 
     const platform = window.electron?.platform || 'unknown';
 
+    const pushProfileGroup = (out, label, iconClass, items) => {
+      if (!items || items.length === 0) return;
+      out.push({
+        label,
+        icon: iconClass,
+        className: 'terminal-profile-menu-group',
+        items
+      });
+    };
+
     if (platform === 'win32') {
-      const menuItems = [
+      const shells = [
         {
           label: 'PowerShell',
           icon: getTerminalMenuIcon('powershell'),
@@ -702,8 +712,45 @@ const MainContentArea = ({
         }
       ];
 
+      const aiClis = [];
+      if (aiClientsEnabled.codexcli) {
+        aiClis.push({
+          label: 'Codex CLI',
+          icon: getTerminalMenuIcon('codexcli'),
+          command: () => {
+            setLastLocalTerminalType('codexcli');
+            if (createLocalTerminalTabRef.current) {
+              createLocalTerminalTabRef.current('codexcli');
+            }
+          }
+        });
+      }
+      if (aiClientsEnabled.geminicli) {
+        aiClis.push({
+          label: 'Gemini CLI',
+          icon: getTerminalMenuIcon('geminicli'),
+          command: () => {
+            setLastLocalTerminalType('geminicli');
+            if (createLocalTerminalTabRef.current) {
+              createLocalTerminalTabRef.current('geminicli');
+            }
+          }
+        });
+      }
+      if (aiClientsEnabled.opencode) {
+        aiClis.push({
+          label: 'OpenCode',
+          icon: getTerminalMenuIcon('opencode'),
+          command: () => {
+            setLastLocalTerminalType('opencode');
+            if (createLocalTerminalTabRef.current) {
+              createLocalTerminalTabRef.current('opencode');
+            }
+          }
+        });
+      }
       if (aiClientsEnabled.claude) {
-        menuItems.splice(1, 0, {
+        aiClis.push({
           label: 'Claude Code',
           icon: getTerminalMenuIcon('claude'),
           command: () => {
@@ -715,50 +762,11 @@ const MainContentArea = ({
         });
       }
 
-      if (aiClientsEnabled.opencode) {
-        menuItems.splice(1, 0, {
-          label: 'OpenCode',
-          icon: getTerminalMenuIcon('opencode'),
-          command: () => {
-            setLastLocalTerminalType('opencode');
-            if (createLocalTerminalTabRef.current) {
-              createLocalTerminalTabRef.current('opencode');
-            }
-          }
-        });
-      }
-
-      if (aiClientsEnabled.geminicli) {
-        menuItems.splice(1, 0, {
-          label: 'Gemini CLI',
-          icon: getTerminalMenuIcon('geminicli'),
-          command: () => {
-            setLastLocalTerminalType('geminicli');
-            if (createLocalTerminalTabRef.current) {
-              createLocalTerminalTabRef.current('geminicli');
-            }
-          }
-        });
-      }
-
-      if (aiClientsEnabled.codexcli) {
-        menuItems.splice(1, 0, {
-          label: 'Codex CLI',
-          icon: getTerminalMenuIcon('codexcli'),
-          command: () => {
-            setLastLocalTerminalType('codexcli');
-            if (createLocalTerminalTabRef.current) {
-              createLocalTerminalTabRef.current('codexcli');
-            }
-          }
-        });
-      }
-
-      // Agregar distribuciones WSL detectadas dinámicamente
+      const distros = [];
       if (wslDistributions && wslDistributions.length > 0) {
-        wslDistributions.forEach(distro => {
+        wslDistributions.forEach((distro) => {
           const terminalType = distro.category === 'ubuntu' ? 'ubuntu' : (distro.category ? `wsl-${distro.category}` : 'wsl');
-          menuItems.push({
+          distros.push({
             label: distro.label,
             icon: getTerminalMenuIcon(terminalType, distro, distro.label),
             command: () => {
@@ -771,33 +779,50 @@ const MainContentArea = ({
         });
       }
 
-      // Agregar contenedores Docker si están disponibles como submenu
-      if (dockerContainers && dockerContainers.length > 0) {
-        const dockerSubItems = dockerContainers.map(container => ({
-          label: container.name,
-          icon: getTerminalMenuIcon('docker', null, container.name),
+      // Fallback para mostrar distros locales frecuentes aunque la detección no haya terminado.
+      const fallbackDistros = [
+        { label: 'Ubuntu 24.04', terminalType: 'wsl-ubuntu', iconType: 'ubuntu' },
+        { label: 'Ubuntu', terminalType: 'wsl-ubuntu-old', iconType: 'ubuntu' },
+        { label: 'Debian', terminalType: 'wsl-debian', iconType: 'debian' },
+        { label: 'Kali Linux', terminalType: 'wsl-kali', iconType: 'wsl-kali' }
+      ];
+      fallbackDistros.forEach((fallback) => {
+        const exists = distros.some((d) => d.label?.toLowerCase?.() === fallback.label.toLowerCase());
+        if (exists) return;
+        distros.push({
+          label: fallback.label,
+          icon: getTerminalMenuIcon(fallback.iconType, null, fallback.label),
           command: () => {
-            setLastLocalTerminalType(`docker-${container.name}`);
+            setLastLocalTerminalType(fallback.terminalType);
             if (createLocalTerminalTabRef.current) {
-              createLocalTerminalTabRef.current(`docker-${container.name}`, { dockerContainer: container });
+              createLocalTerminalTabRef.current(fallback.terminalType);
             }
           }
-        }));
+        });
+      });
 
-        menuItems.push({
-          label: '🐳 Docker',
-          icon: getTerminalMenuIcon('docker'),
-          items: dockerSubItems
+      const containers = [];
+      if (dockerContainers && dockerContainers.length > 0) {
+        dockerContainers.forEach((container) => {
+          containers.push({
+            label: container.name,
+            icon: getTerminalMenuIcon('docker', null, container.name),
+            command: () => {
+              setLastLocalTerminalType(`docker-${container.name}`);
+              if (createLocalTerminalTabRef.current) {
+                createLocalTerminalTabRef.current(`docker-${container.name}`, { dockerContainer: container });
+              }
+            }
+          });
         });
       }
 
-      // Agregar AI Chat al final - Solo si está activado
+      const apps = [];
       if (aiClientsEnabled.nodeterm) {
-        menuItems.push({
+        apps.push({
           label: 'AI Chat',
           icon: 'pi pi-comments',
           command: () => {
-            // Crear nueva pestaña de IA
             const tabId = `ai-chat-${Date.now()}`;
             const newAITab = {
               key: tabId,
@@ -806,17 +831,14 @@ const MainContentArea = ({
               createdAt: Date.now(),
               groupId: null
             };
-
-            // Disparar evento para crear la pestaña
             window.dispatchEvent(new CustomEvent('create-ai-tab', {
               detail: { tab: newAITab }
             }));
           }
         });
       }
-      // AnythingLLM - Solo si está activado
       if (aiClientsEnabled.anythingllm) {
-        menuItems.push({
+        apps.push({
           label: 'AnythingLLM',
           icon: 'pi pi-box',
           command: () => {
@@ -824,9 +846,8 @@ const MainContentArea = ({
           }
         });
       }
-      // OpenWebUI - Solo si está activado
       if (aiClientsEnabled.openwebui) {
-        menuItems.push({
+        apps.push({
           label: 'Open WebUI',
           icon: 'pi pi-globe',
           command: () => {
@@ -834,10 +855,8 @@ const MainContentArea = ({
           }
         });
       }
-
-      // LibreChat - Solo si está activado
       if (aiClientsEnabled.librechat) {
-        menuItems.push({
+        apps.push({
           label: 'LibreChat',
           icon: 'pi pi-comment',
           command: () => {
@@ -845,10 +864,8 @@ const MainContentArea = ({
           }
         });
       }
-
-      // Agent Zero - Solo si está activado
       if (aiClientsEnabled.agentzero) {
-        menuItems.push({
+        apps.push({
           label: 'Agent Zero',
           icon: 'pi pi-android',
           command: () => {
@@ -856,10 +873,8 @@ const MainContentArea = ({
           }
         });
       }
-
-      // OpenClaw - Solo si está activado
       if (aiClientsEnabled.openclaw) {
-        menuItems.push({
+        apps.push({
           label: 'OpenClaw',
           icon: 'pi pi-bolt',
           command: () => {
@@ -868,9 +883,18 @@ const MainContentArea = ({
         });
       }
 
+      const menuItems = [];
+      if (distros.length > 0) {
+        shells.push(...distros);
+      }
+      pushProfileGroup(menuItems, 'Shells', 'pi pi-fw pi-desktop', shells);
+      pushProfileGroup(menuItems, 'AI CLIs', 'pi pi-fw pi-bolt', aiClis);
+      pushProfileGroup(menuItems, 'Containers', 'pi pi-fw pi-box', containers);
+      pushProfileGroup(menuItems, 'Apps', 'pi pi-fw pi-th-large', apps);
+
       setTerminalMenuItems(menuItems);
     } else {
-      const linuxMenuItems = [
+      const shells = [
         {
           label: 'Terminal',
           icon: getTerminalMenuIcon('linux-terminal'),
@@ -883,13 +907,28 @@ const MainContentArea = ({
         }
       ];
 
-      // Agregar AI Chat al final - Solo si está activado
+      const containers = [];
+      if (dockerContainers && dockerContainers.length > 0) {
+        dockerContainers.forEach((container) => {
+          containers.push({
+            label: container.name,
+            icon: getTerminalMenuIcon('docker', null, container.name),
+            command: () => {
+              setLastLocalTerminalType(`docker-${container.name}`);
+              if (createLocalTerminalTabRef.current) {
+                createLocalTerminalTabRef.current(`docker-${container.name}`, { dockerContainer: container });
+              }
+            }
+          });
+        });
+      }
+
+      const apps = [];
       if (aiClientsEnabled.nodeterm) {
-        linuxMenuItems.push({
+        apps.push({
           label: 'AI Chat',
           icon: 'pi pi-comments',
           command: () => {
-            // Crear nueva pestaña de IA
             const tabId = `ai-chat-${Date.now()}`;
             const newAITab = {
               key: tabId,
@@ -898,17 +937,14 @@ const MainContentArea = ({
               createdAt: Date.now(),
               groupId: null
             };
-
-            // Disparar evento para crear la pestaña
             window.dispatchEvent(new CustomEvent('create-ai-tab', {
               detail: { tab: newAITab }
             }));
           }
         });
       }
-      // AnythingLLM - Solo si está activado
       if (aiClientsEnabled.anythingllm) {
-        linuxMenuItems.push({
+        apps.push({
           label: 'AnythingLLM',
           icon: 'pi pi-box',
           command: () => {
@@ -916,9 +952,8 @@ const MainContentArea = ({
           }
         });
       }
-      // OpenWebUI - Solo si está activado
       if (aiClientsEnabled.openwebui) {
-        linuxMenuItems.push({
+        apps.push({
           label: 'Open WebUI',
           icon: 'pi pi-globe',
           command: () => {
@@ -926,10 +961,8 @@ const MainContentArea = ({
           }
         });
       }
-
-      // LibreChat - Solo si está activado
       if (aiClientsEnabled.librechat) {
-        linuxMenuItems.push({
+        apps.push({
           label: 'LibreChat',
           icon: 'pi pi-comment',
           command: () => {
@@ -937,10 +970,8 @@ const MainContentArea = ({
           }
         });
       }
-
-      // Agent Zero - Solo si está activado
       if (aiClientsEnabled.agentzero) {
-        linuxMenuItems.push({
+        apps.push({
           label: 'Agent Zero',
           icon: 'pi pi-android',
           command: () => {
@@ -948,10 +979,8 @@ const MainContentArea = ({
           }
         });
       }
-
-      // OpenClaw - Solo si está activado
       if (aiClientsEnabled.openclaw) {
-        linuxMenuItems.push({
+        apps.push({
           label: 'OpenClaw',
           icon: 'pi pi-bolt',
           command: () => {
@@ -959,6 +988,11 @@ const MainContentArea = ({
           }
         });
       }
+
+      const linuxMenuItems = [];
+      pushProfileGroup(linuxMenuItems, 'Shells', 'pi pi-fw pi-desktop', shells);
+      pushProfileGroup(linuxMenuItems, 'Containers', 'pi pi-fw pi-box', containers);
+      pushProfileGroup(linuxMenuItems, 'Apps', 'pi pi-fw pi-th-large', apps);
 
       setTerminalMenuItems(linuxMenuItems);
     }
@@ -1107,7 +1141,257 @@ const MainContentArea = ({
 
     dropdownButton.title = 'Seleccionar tipo de terminal';
     dropdownButton.addEventListener('click', (e) => {
-      terminalSelectorMenuRef.current?.show(e);
+      e.preventDefault();
+      e.stopPropagation();
+
+      const existingPanel = document.getElementById('terminal-grid-launcher-panel');
+      if (existingPanel) {
+        existingPanel.remove();
+        return;
+      }
+
+      const panel = document.createElement('div');
+      panel.id = 'terminal-grid-launcher-panel';
+      panel.style.cssText = `
+        position: fixed;
+        z-index: 10020;
+        width: min(720px, calc(100vw - 24px));
+        max-height: min(72vh, 780px);
+        overflow: auto;
+        background: var(--ui-context-bg, #171a20);
+        border: 1px solid var(--ui-context-border, rgba(255,255,255,0.12));
+        border-radius: 12px;
+        box-shadow: 0 18px 45px rgba(0,0,0,0.45);
+        padding: 14px;
+      `;
+
+      const rect = dropdownButton.getBoundingClientRect();
+      const width = Math.min(720, window.innerWidth - 24);
+      let left = rect.left;
+      let top = rect.bottom + 8;
+      if (left + width > window.innerWidth - 12) left = window.innerWidth - width - 12;
+      if (top + 420 > window.innerHeight - 12) top = Math.max(12, rect.top - 420);
+      panel.style.left = `${left}px`;
+      panel.style.top = `${top}px`;
+
+      const title = document.createElement('div');
+      title.textContent = 'Launcher profesional';
+      title.style.cssText = `
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ui-context-text, #e5e7eb);
+        opacity: 0.9;
+        margin-bottom: 10px;
+      `;
+      panel.appendChild(title);
+
+      const searchInput = document.createElement('input');
+      searchInput.type = 'text';
+      searchInput.placeholder = 'Buscar terminal o app...';
+      searchInput.style.cssText = `
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.14);
+        background: rgba(0,0,0,0.22);
+        color: var(--ui-context-text, #f1f5f9);
+        padding: 10px 12px;
+        font-size: 13px;
+        outline: none;
+      `;
+      panel.appendChild(searchInput);
+
+      const contentHost = document.createElement('div');
+      panel.appendChild(contentHost);
+
+      const getCardPreset = (groupLabel, itemLabel) => {
+        const g = (groupLabel || '').toLowerCase();
+        const i = (itemLabel || '').toLowerCase();
+        if (i.includes('powershell')) return { icon: 'pi pi-microsoft', accent: '#0078D4', subtitle: 'Terminal local' };
+        if (i.includes('wsl') || i.includes('ubuntu') || i.includes('debian') || i.includes('kali') || g.includes('linux')) return { icon: 'pi pi-server', accent: '#22c55e', subtitle: 'Distro local' };
+        if (i.includes('cygwin')) return { icon: 'pi pi-code', accent: '#9acd32', subtitle: 'Terminal local' };
+        if (g.includes('ai') || i.includes('codex') || i.includes('gemini') || i.includes('claude') || i.includes('opencode')) return { icon: 'pi pi-sparkles', accent: '#a855f7', subtitle: 'AI CLI' };
+        if (g.includes('container') || i.includes('docker')) return { icon: 'pi pi-box', accent: '#2496ED', subtitle: 'Contenedor' };
+        if (i.includes('anythingllm')) return { icon: 'pi pi-box', accent: '#06b6d4', subtitle: 'Aplicacion integrada' };
+        if (i.includes('open webui')) return { icon: 'pi pi-globe', accent: '#0ea5e9', subtitle: 'Aplicacion integrada' };
+        if (i.includes('librechat')) return { icon: 'pi pi-comment', accent: '#14b8a6', subtitle: 'Aplicacion integrada' };
+        if (i.includes('agent zero')) return { icon: 'pi pi-android', accent: '#84cc16', subtitle: 'Aplicacion integrada' };
+        if (i.includes('openclaw')) return { icon: 'pi pi-bolt', accent: '#f59e0b', subtitle: 'Aplicacion integrada' };
+        if (i.includes('ai chat')) return { icon: 'pi pi-comments', accent: '#8b5cf6', subtitle: 'Aplicacion integrada' };
+        if (g.includes('apps')) return { icon: 'pi pi-th-large', accent: '#06b6d4', subtitle: 'Aplicacion integrada' };
+        return { icon: 'pi pi-desktop', accent: '#4fc3f7', subtitle: 'Perfil local' };
+      };
+
+      const renderCard = (item, groupLabel) => {
+        const preset = getCardPreset(groupLabel, item.label);
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.style.cssText = `
+          border: 1px solid rgba(255,255,255,0.10);
+          background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025));
+          border-radius: 12px;
+          color: var(--ui-context-text, #f8fafc);
+          min-height: 72px;
+          padding: 12px;
+          text-align: left;
+          cursor: pointer;
+          font-size: 13px;
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+          transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+          position: relative;
+          overflow: hidden;
+        `;
+
+        const iconBadge = document.createElement('div');
+        iconBadge.style.cssText = `
+          width: 30px;
+          height: 30px;
+          min-width: 30px;
+          border-radius: 9px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: ${preset.accent}22;
+          border: 1px solid ${preset.accent}55;
+          color: ${preset.accent};
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+        `;
+        const icon = document.createElement('i');
+        icon.className = preset.icon;
+        icon.style.cssText = 'font-size: 0.86rem;';
+        iconBadge.appendChild(icon);
+
+        const left = document.createElement('div');
+        left.style.cssText = 'display:flex;align-items:flex-start;gap:10px;min-width:0;flex:1;';
+
+        const labelWrap = document.createElement('div');
+        labelWrap.style.cssText = 'display:flex;flex-direction:column;gap:4px;min-width:0;flex:1;';
+        const name = document.createElement('div');
+        name.textContent = item.label || 'Terminal';
+        name.style.cssText = 'font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;';
+        const meta = document.createElement('div');
+        meta.textContent = preset.subtitle;
+        meta.style.cssText = 'font-size:11px;opacity:0.72;';
+        labelWrap.appendChild(name);
+        labelWrap.appendChild(meta);
+
+        const arrow = document.createElement('i');
+        arrow.className = 'pi pi-arrow-up-right';
+        arrow.style.cssText = 'font-size:11px;opacity:0.55;flex-shrink:0;margin-top:2px;';
+
+        left.appendChild(iconBadge);
+        left.appendChild(labelWrap);
+        button.appendChild(left);
+        button.appendChild(arrow);
+        button.addEventListener('mouseenter', () => {
+          button.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045))';
+          button.style.borderColor = `${preset.accent}66`;
+          button.style.transform = 'translateY(-2px)';
+        });
+        button.addEventListener('mouseleave', () => {
+          button.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025))';
+          button.style.borderColor = 'rgba(255,255,255,0.10)';
+          button.style.transform = 'translateY(0)';
+        });
+        button.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          if (typeof item.command === 'function') item.command();
+          panel.remove();
+          document.removeEventListener('click', handleOutsideClick);
+        });
+        return button;
+      };
+
+      const groups = Array.isArray(terminalMenuItems) ? terminalMenuItems : [];
+
+      const renderGroups = (query = '') => {
+        const normalized = (query || '').trim().toLowerCase();
+        contentHost.innerHTML = '';
+
+        const hasItems = groups.some((group) => Array.isArray(group.items) && group.items.length > 0);
+        if (!hasItems) {
+          const empty = document.createElement('div');
+          empty.textContent = 'Cargando perfiles... vuelve a abrir en un instante.';
+          empty.style.cssText = 'font-size:13px;opacity:0.75;padding:10px 4px;color:var(--ui-context-text, #cbd5e1);';
+          contentHost.appendChild(empty);
+          return;
+        }
+
+        let renderedCount = 0;
+        groups.forEach((group) => {
+          const allItems = Array.isArray(group.items) ? group.items : [];
+          const filteredItems = normalized
+            ? allItems.filter((item) => (item.label || '').toLowerCase().includes(normalized))
+            : allItems;
+          if (!filteredItems.length) return;
+
+          const section = document.createElement('div');
+          section.style.cssText = 'margin-bottom: 15px;';
+
+          const sectionTitle = document.createElement('div');
+          sectionTitle.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            color: var(--ui-context-text, #cbd5e1);
+            opacity: 0.8;
+            margin: 0 0 8px 2px;
+            text-transform: uppercase;
+          `;
+          const sectionIcon = document.createElement('i');
+          sectionIcon.className = group.icon || 'pi pi-folder';
+          sectionIcon.style.cssText = 'font-size: 11px; opacity: 0.9;';
+          const sectionText = document.createElement('span');
+          sectionText.textContent = `${group.label || 'Grupo'} (${filteredItems.length})`;
+          sectionTitle.appendChild(sectionIcon);
+          sectionTitle.appendChild(sectionText);
+          section.appendChild(sectionTitle);
+
+          const grid = document.createElement('div');
+          grid.style.cssText = `
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
+            gap: 10px;
+          `;
+          filteredItems.forEach((item) => {
+            renderedCount += 1;
+            grid.appendChild(renderCard(item, group.label));
+          });
+          section.appendChild(grid);
+          contentHost.appendChild(section);
+        });
+
+        if (renderedCount === 0) {
+          const noResults = document.createElement('div');
+          noResults.textContent = 'Sin resultados para tu busqueda.';
+          noResults.style.cssText = 'font-size:13px;opacity:0.75;padding:10px 4px;color:var(--ui-context-text, #cbd5e1);';
+          contentHost.appendChild(noResults);
+        }
+      };
+
+      renderGroups('');
+      searchInput.addEventListener('input', () => {
+        renderGroups(searchInput.value);
+      });
+
+      const handleOutsideClick = (ev) => {
+        if (!panel.contains(ev.target) && !dropdownButton.contains(ev.target)) {
+          panel.remove();
+          document.removeEventListener('click', handleOutsideClick);
+        }
+      };
+
+      document.body.appendChild(panel);
+      setTimeout(() => document.addEventListener('click', handleOutsideClick), 0);
     });
 
     // Botón unificado: Tema + Layout de pestañas (un solo botón, panel con dos secciones)
@@ -1532,7 +1816,7 @@ const MainContentArea = ({
     buttonsContainer.appendChild(dropdownButton);
     navList.appendChild(buttonsContainer);
     navList.appendChild(appearanceButtonWrapper);
-  }, [filteredTabs, activeTabIndex, wslDistributions, mainFrameHeaderCollapsed, titleBarCollapsed]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filteredTabs, activeTabIndex, wslDistributions, mainFrameHeaderCollapsed, titleBarCollapsed, terminalMenuItems]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Función para crear una nueva pestaña de terminal local independiente
   const createLocalTerminalTab = (terminalType, distroInfo = null) => {
