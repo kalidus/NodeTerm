@@ -1487,8 +1487,8 @@ const MainContentArea = ({
             font-size: 9px;
             font-weight: 800;
             letter-spacing: 0.14em;
-            color: #ff00ea;
-            text-shadow: 0 0 10px rgba(255, 0, 200, 0.45);
+            color: #00f3ff;
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.45);
             margin: 0 0 6px 2px;
             text-transform: uppercase;
           `;
