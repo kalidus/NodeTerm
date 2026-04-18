@@ -94,11 +94,16 @@ const NodeTermStatus = ({
 	const [ubuntuMenuOpen, setUbuntuMenuOpen] = useState(false);
 	const [ubuntuMenuPosition, setUbuntuMenuPosition] = useState({ top: 0, left: 0 });
 	const [ubuntuDistributions, setUbuntuDistributions] = useState([]);
+	/** Popover Docker en columna derecha HomeTab (modo iconos); independiente del menú de la barra compacta */
+	const [rightColumnDockerPopoverOpen, setRightColumnDockerPopoverOpen] = useState(false);
+	const [rightColumnDockerPopoverPos, setRightColumnDockerPopoverPos] = useState({ top: 0, left: 0 });
+	const [rightColumnDockerListExpanded, setRightColumnDockerListExpanded] = useState(false);
 	const syncManagerRef = useRef(null);
 	const secureStorageRef = useRef(null);
 	const [scaleFactor, setScaleFactor] = useState(1); // Factor de escala para reducir iconos
 	const barContainerRef = useRef(null);
 	const dockerButtonRef = useRef(null);
+	const rightColumnDockerBtnRef = useRef(null);
 	const ubuntuButtonRef = useRef(null);
 
 	// 🚀 CACHÉ PERSISTENTE: Usar sessionStorage para que persista entre montajes/desmontajes
@@ -591,6 +596,29 @@ const NodeTermStatus = ({
 			window.removeEventListener('click', handleClickOutside, true);
 		};
 	}, [dockerMenuOpen]);
+
+	// Cerrar popover Docker de la columna derecha (HomeTab colapsada)
+	useEffect(() => {
+		if (!rightColumnDockerPopoverOpen) return;
+
+		const handleClickOutside = (event) => {
+			const target = event.target;
+			const menu = target.closest('[data-rc-docker-menu]');
+			const btn = target.closest('[data-rc-docker-btn]');
+			if (!menu && !btn) {
+				setRightColumnDockerPopoverOpen(false);
+			}
+		};
+
+		const timeoutId = setTimeout(() => {
+			window.addEventListener('click', handleClickOutside, true);
+		}, 100);
+
+		return () => {
+			clearTimeout(timeoutId);
+			window.removeEventListener('click', handleClickOutside, true);
+		};
+	}, [rightColumnDockerPopoverOpen]);
 
 	// Cerrar menú Ubuntu al hacer clic fuera
 	useEffect(() => {
@@ -1345,12 +1373,208 @@ const NodeTermStatus = ({
 								<FaUbuntu style={{ color: d.color || '#E95420', fontSize: '1.1rem' }} />
 							</button>
 						))}
-						{/* Docker containers */}
-						{(dockerContainers || []).map((c, idx) => (
-							<button key={`docker-${idx}`} title={`🐳 ${c.name}`} onClick={() => window.dispatchEvent(new CustomEvent('home-tab-add-terminal', { detail: { terminalType: 'docker', distroInfo: { containerName: c.name, containerId: c.id, shortId: c.shortId } } }))} style={{ background: 'transparent', border: 'none', borderRadius: activeActionBarTheme.iconBox.borderRadius || '4px', cursor: 'pointer', padding: '4px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-								<SiDocker style={{ color: '#2496ed', fontSize: '1.1rem' }} />
-							</button>
-						))}
+						{/* Docker: un solo control con menú flotante (varios contenedores) */}
+						{(dockerContainers || []).length > 0 && (
+							<div
+								style={{
+									display: 'flex',
+									flexDirection: 'column',
+									alignItems: 'center',
+									position: 'relative',
+									zIndex: rightColumnDockerPopoverOpen ? 10001 : 'auto'
+								}}
+							>
+								<button
+									ref={rightColumnDockerBtnRef}
+									data-rc-docker-btn
+									type="button"
+									title={
+										dockerContainers.length === 1
+											? `🐳 ${dockerContainers[0].name}`
+											: `Docker — ${dockerContainers.length} contenedores`
+									}
+									onClick={(e) => {
+										e.preventDefault();
+										e.stopPropagation();
+										const list = dockerContainers || [];
+										if (list.length === 1) {
+											const c = list[0];
+											window.dispatchEvent(new CustomEvent('home-tab-add-terminal', {
+												detail: {
+													terminalType: 'docker',
+													distroInfo: { containerName: c.name, containerId: c.id, shortId: c.shortId }
+												}
+											}));
+											return;
+										}
+										if (rightColumnDockerBtnRef.current) {
+											const rect = rightColumnDockerBtnRef.current.getBoundingClientRect();
+											setRightColumnDockerPopoverPos({
+												top: rect.top + rect.height / 2,
+												left: rect.left - 10
+											});
+										}
+										setRightColumnDockerPopoverOpen((open) => !open);
+									}}
+									style={{
+										background: rightColumnDockerPopoverOpen ? (activeActionBarTheme.buttonHover?.background || 'rgba(255,255,255,0.08)') : 'transparent',
+										border: 'none',
+										borderRadius: activeActionBarTheme.iconBox.borderRadius || '4px',
+										cursor: 'pointer',
+										padding: '4px',
+										transition: 'all 0.2s'
+									}}
+									onMouseEnter={(e) => {
+										if (!rightColumnDockerPopoverOpen) {
+											e.currentTarget.style.background = activeActionBarTheme.buttonHover.background;
+										}
+									}}
+									onMouseLeave={(e) => {
+										if (!rightColumnDockerPopoverOpen) {
+											e.currentTarget.style.background = 'transparent';
+										}
+									}}
+								>
+									<div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+										<SiDocker style={{ color: '#2496ed', fontSize: '1.1rem', display: 'block' }} />
+										{dockerContainers.length > 1 && (
+											<span
+												style={{
+													position: 'absolute',
+													top: '-5px',
+													right: '-5px',
+													minWidth: '14px',
+													height: '14px',
+													padding: '0 3px',
+													background: 'linear-gradient(135deg, #2496ed 0%, #1a6fc4 100%)',
+													color: '#fff',
+													borderRadius: '8px',
+													fontSize: '0.55rem',
+													fontWeight: 700,
+													display: 'flex',
+													alignItems: 'center',
+													justifyContent: 'center',
+													border: '1px solid rgba(255,255,255,0.35)',
+													boxShadow: '0 1px 4px rgba(0,0,0,0.35)'
+												}}
+											>
+												{dockerContainers.length > 9 ? '9+' : dockerContainers.length}
+											</span>
+										)}
+									</div>
+								</button>
+								{rightColumnDockerPopoverOpen && dockerContainers.length > 1 && typeof document !== 'undefined' && document.body && createPortal(
+									<>
+										<div
+											style={{
+												position: 'fixed',
+												inset: 0,
+												zIndex: 9998,
+												background: 'rgba(0,0,0,0.12)'
+											}}
+											onClick={() => setRightColumnDockerPopoverOpen(false)}
+										/>
+										<div
+											data-rc-docker-menu
+											style={{
+												position: 'fixed',
+												top: `${rightColumnDockerPopoverPos.top}px`,
+												left: `${rightColumnDockerPopoverPos.left}px`,
+												transform: 'translate(-100%, -50%)',
+												background: 'linear-gradient(145deg, rgba(18, 22, 32, 0.98) 0%, rgba(12, 16, 24, 0.99) 100%)',
+												backdropFilter: 'blur(14px) saturate(150%)',
+												WebkitBackdropFilter: 'blur(14px) saturate(150%)',
+												border: '1px solid rgba(36, 150, 237, 0.45)',
+												borderRadius: '12px',
+												boxShadow: '0 12px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06) inset',
+												padding: '0.55rem 0.65rem',
+												minWidth: '210px',
+												maxWidth: 'min(280px, calc(100vw - 24px))',
+												maxHeight: 'min(380px, 72vh)',
+												overflowY: 'auto',
+												zIndex: 10000,
+												display: 'flex',
+												flexDirection: 'column',
+												gap: '0.4rem'
+											}}
+											onClick={(ev) => ev.stopPropagation()}
+											onMouseDown={(ev) => ev.stopPropagation()}
+										>
+											<div
+												style={{
+													display: 'flex',
+													alignItems: 'center',
+													gap: '0.45rem',
+													paddingBottom: '0.45rem',
+													marginBottom: '0.15rem',
+													borderBottom: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`
+												}}
+											>
+												<SiDocker style={{ color: '#2496ed', fontSize: '1rem', flexShrink: 0 }} />
+												<span style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em', color: themeColors.textPrimary || '#fff' }}>
+													Docker
+												</span>
+												<span
+													style={{
+														marginLeft: 'auto',
+														fontSize: '0.6rem',
+														fontWeight: 600,
+														color: 'rgba(255,255,255,0.55)',
+														background: 'rgba(255,255,255,0.06)',
+														padding: '2px 6px',
+														borderRadius: '6px'
+													}}
+												>
+													{dockerContainers.length}
+												</span>
+											</div>
+											{dockerContainers.map((c, idx) => (
+												<button
+													key={c.id || c.name || idx}
+													type="button"
+													onClick={() => {
+														window.dispatchEvent(new CustomEvent('home-tab-add-terminal', {
+															detail: {
+																terminalType: 'docker',
+																distroInfo: { containerName: c.name, containerId: c.id, shortId: c.shortId }
+															}
+														}));
+														setRightColumnDockerPopoverOpen(false);
+													}}
+													style={{
+														padding: '0.45rem 0.55rem',
+														borderRadius: '8px',
+														background: 'rgba(255,255,255,0.04)',
+														border: '1px solid transparent',
+														color: themeColors.textPrimary || '#fff',
+														fontSize: '0.72rem',
+														textAlign: 'left',
+														cursor: 'pointer',
+														transition: 'background 0.15s ease, border-color 0.15s ease',
+														display: 'flex',
+														alignItems: 'center',
+														gap: '0.5rem',
+														width: '100%'
+													}}
+													onMouseEnter={(ev) => {
+														ev.currentTarget.style.background = 'rgba(36, 150, 237, 0.18)';
+														ev.currentTarget.style.borderColor = 'rgba(36, 150, 237, 0.35)';
+													}}
+													onMouseLeave={(ev) => {
+														ev.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+														ev.currentTarget.style.borderColor = 'transparent';
+													}}
+												>
+													<SiDocker style={{ color: '#2496ed', fontSize: '0.95rem', flexShrink: 0 }} />
+													<span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+												</button>
+											))}
+										</div>
+									</>,
+									document.body
+								)}
+							</div>
+						)}
 					</div>
 
 					{/* Separador */}
@@ -1629,6 +1853,7 @@ const NodeTermStatus = ({
 					<SectionHeader id="terminales" label="TERMINALES LOCALES" onRefresh={refreshTerminalsCache} />
 					{!sc.terminales && (() => {
 						const items = [];
+						const dockerItems = [];
 						const otherDistroItems = [];
 
 						// 1) De availableTerminals: PowerShell, WSL, Cygwin, otras distros (Kali etc.)
@@ -1663,9 +1888,9 @@ const NodeTermStatus = ({
 						// 3) Agregar el resto de distribuciones (Debian, etc.) de availableTerminals
 						items.push(...otherDistroItems);
 
-						// 4) Contenedores Docker
+						// 4) Contenedores Docker (sección agrupada aparte)
 						(dockerContainers || []).forEach(c => {
-							items.push({ label: `🐳 ${c.name}`, terminalType: 'docker', distroInfo: { containerName: c.name, containerId: c.id, shortId: c.shortId }, icon: 'docker', color: '#2496ed', isDocker: true });
+							dockerItems.push({ label: `🐳 ${c.name}`, terminalType: 'docker', distroInfo: { containerName: c.name, containerId: c.id, shortId: c.shortId }, icon: 'docker', color: '#2496ed', isDocker: true });
 						});
 						const dispatch = (terminalType, distroInfo) => {
 							// Determine if it's Ubuntu to open as a global app tab instead of home-tab local terminal
@@ -1690,14 +1915,94 @@ const NodeTermStatus = ({
 						};
 						return (
 							<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-								{items.length === 0 ? (
+								{items.length === 0 && dockerItems.length === 0 ? (
 									<div style={{ fontSize: '0.75rem', color: themeColors.textSecondary, fontStyle: 'italic', padding: '0.25rem 0' }}>No hay terminales detectados</div>
 								) : (
-									items.map((it, idx) => (
-										<button key={idx} style={btnStyle()} onClick={() => dispatch(it.terminalType, it.distroInfo)} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
-											<TermIcon it={it} /><span>{it.label}</span>
-										</button>
-									))
+									<>
+										{items.map((it, idx) => (
+											<button key={idx} style={btnStyle()} onClick={() => dispatch(it.terminalType, it.distroInfo)} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
+												<TermIcon it={it} /><span>{it.label}</span>
+											</button>
+										))}
+										{dockerItems.length > 0 && (
+											<div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+												<button
+													type="button"
+													style={{
+														...btnStyle(),
+														border: `1px solid rgba(36, 150, 237, ${rightColumnDockerListExpanded ? 0.35 : 0.2})`
+													}}
+													onClick={() => setRightColumnDockerListExpanded((v) => !v)}
+													onMouseEnter={e => {
+														e.currentTarget.style.background = activeActionBarTheme.buttonHover.background;
+														e.currentTarget.style.border = activeActionBarTheme.buttonHover.border;
+														e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow;
+													}}
+													onMouseLeave={e => {
+														e.currentTarget.style.background = activeActionBarTheme.button.background;
+														e.currentTarget.style.border = activeActionBarTheme.button.border;
+														e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow;
+													}}
+												>
+													<SiDocker style={{ color: '#2496ed', fontSize: '1rem' }} />
+													<span style={{ flex: 1, textAlign: 'left' }}>Docker</span>
+													<span
+														style={{
+															fontSize: '0.62rem',
+															fontWeight: 700,
+															color: '#fff',
+															background: 'rgba(36, 150, 237, 0.35)',
+															padding: '2px 7px',
+															borderRadius: '8px',
+															marginRight: '0.25rem'
+														}}
+													>
+														{dockerItems.length}
+													</span>
+													<i className={rightColumnDockerListExpanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down'} style={{ fontSize: '0.65rem', opacity: 0.75 }} />
+												</button>
+												{rightColumnDockerListExpanded && (
+													<div
+														style={{
+															display: 'flex',
+															flexDirection: 'column',
+															gap: '0.35rem',
+															paddingLeft: '0.45rem',
+															marginTop: '-0.1rem',
+															borderLeft: '2px solid rgba(36, 150, 237, 0.35)',
+															marginLeft: '0.35rem'
+														}}
+													>
+														{dockerItems.map((it, idx) => (
+															<button
+																key={`dk-${idx}`}
+																type="button"
+																style={{
+																	...btnStyle(),
+																	fontSize: homeTabFontSize ? `${homeTabFontSize * 0.65}px` : '0.75rem',
+																	padding: '0.42rem 0.6rem'
+																}}
+																onClick={() => dispatch(it.terminalType, it.distroInfo)}
+																onMouseEnter={e => {
+																	e.currentTarget.style.background = activeActionBarTheme.buttonHover.background;
+																	e.currentTarget.style.border = activeActionBarTheme.buttonHover.border;
+																	e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow;
+																}}
+																onMouseLeave={e => {
+																	e.currentTarget.style.background = activeActionBarTheme.button.background;
+																	e.currentTarget.style.border = activeActionBarTheme.button.border;
+																	e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow;
+																}}
+															>
+																<TermIcon it={it} />
+																<span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label.replace(/^🐳\s*/, '')}</span>
+															</button>
+														))}
+													</div>
+												)}
+											</div>
+										)}
+									</>
 								)}
 							</div>
 						);
