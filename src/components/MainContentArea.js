@@ -450,7 +450,7 @@ const MainContentArea = ({
 
   // Estado para controlar la visibilidad de las opciones de clientes de IA
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
-    nodeterm: true,
+    nodeterm: false,
     claude: false,
     opencode: false,
     geminicli: false,
@@ -477,34 +477,10 @@ const MainContentArea = ({
         const config = localStorage.getItem('ai_clients_enabled');
         if (config) {
           const parsed = JSON.parse(config);
-          setAiClientsEnabled({
-            nodeterm: parsed.nodeterm === true,
-            claude: parsed.claude === true,
-            opencode: parsed.opencode === true,
-            geminicli: parsed.geminicli === true,
-            codexcli: parsed.codexcli === true,
-            anythingllm: parsed.anythingllm === true,
-            openwebui: parsed.openwebui === true,
-            librechat: parsed.librechat === true,
-            agentzero: parsed.agentzero === true,
-            openclaw: parsed.openclaw === true,
-            opennotebook: parsed.opennotebook === true
-          });
-        } else {
-          // Si no hay configuración, todos desactivados por defecto
-          setAiClientsEnabled({
-            nodeterm: false,
-            claude: false,
-            opencode: false,
-            geminicli: false,
-            codexcli: false,
-            anythingllm: false,
-            openwebui: false,
-            librechat: false,
-            agentzero: false,
-            openclaw: false,
-            opennotebook: false
-          });
+          setAiClientsEnabled(prev => ({
+            ...prev,
+            ...parsed
+          }));
         }
       } catch (error) {
         console.error('[MainContentArea] Error al cargar configuración de clientes IA:', error);
@@ -519,9 +495,24 @@ const MainContentArea = ({
       loadAIClientsConfig();
     };
     window.addEventListener('ai-clients-config-changed', handleConfigChange);
+    
+    const handleSettingsUpdated = () => {
+      loadAIClientsConfig();
+    };
+    window.addEventListener('settings-updated', handleSettingsUpdated);
+    
+    // Escuchar cambios de storage (otro window/proceso si comparten DB)
+    const handleStorageChange = (e) => {
+      if (e.key === 'ai_clients_enabled') {
+        loadAIClientsConfig();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
 
     return () => {
       window.removeEventListener('ai-clients-config-changed', handleConfigChange);
+      window.removeEventListener('settings-updated', handleSettingsUpdated);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
@@ -1254,21 +1245,21 @@ const MainContentArea = ({
         max-height: min(78vh, 860px);
         overflow: auto;
         font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
-        color: #e2f8ff;
-        background:
-          linear-gradient(180deg, rgba(6, 8, 18, 0.97) 0%, rgba(4, 6, 14, 0.99) 100%),
-          repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 255, 200, 0.03) 2px, rgba(0, 255, 200, 0.03) 3px);
+        color: ${theme.ctxText || '#e2f8ff'};
+        background: ${theme.ctxBg || 'rgba(6, 8, 18, 0.97)'};
         backdrop-filter: blur(14px) saturate(160%);
         -webkit-backdrop-filter: blur(14px) saturate(160%);
-        border: 1px solid rgba(0, 243, 255, 0.45);
+        border: 1px solid ${theme.ctxBorder || 'rgba(0, 243, 255, 0.45)'};
         border-radius: 8px;
-        box-shadow:
-          0 0 0 1px rgba(255, 0, 200, 0.12),
-          0 0 40px rgba(0, 243, 255, 0.12),
-          0 0 60px rgba(255, 0, 200, 0.06),
-          inset 0 0 40px rgba(0, 243, 255, 0.04);
+        box-shadow: ${theme.ctxShadow || '0 0 40px rgba(0, 243, 255, 0.12)'};
         padding: 12px 12px 10px 12px;
       `;
+
+      // Añadir scanlines sutiles solo si el fondo es oscuro
+      const isDark = !theme.contentBg || theme.contentBg.includes('#1') || theme.contentBg.includes('#2') || theme.contentBg.includes('rgb(0') || theme.contentBg.includes('black');
+      if (isDark) {
+        panel.style.backgroundImage = 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 255, 200, 0.03) 2px, rgba(0, 255, 200, 0.03) 3px)';
+      }
 
       const rect = dropdownButton.getBoundingClientRect();
       const width = Math.min(760, window.innerWidth - 24);
@@ -1287,8 +1278,8 @@ const MainContentArea = ({
         letter-spacing: 0.22em;
         text-transform: uppercase;
         margin-bottom: 10px;
-        color: #00f3ff;
-        text-shadow: 0 0 12px rgba(0, 243, 255, 0.85), 2px 0 0 rgba(255, 0, 200, 0.35);
+        color: ${theme.primary || '#00f3ff'};
+        text-shadow: 0 0 12px rgba(0, 243, 255, 0.45);
       `;
       panel.appendChild(title);
 
@@ -1348,11 +1339,11 @@ const MainContentArea = ({
         if (gl.includes('container') || lb.includes('docker')) {
           return <SiDocker style={{ fontSize: 20, color: accent }} />;
         }
-        if (lb.includes('powershell')) return <FaWindows style={{ fontSize: 18, color: accent }} />;
-        if (lb.includes('cygwin')) return <FaLinux style={{ fontSize: 17, color: accent }} />;
-        if (lb.includes('ubuntu')) return <FaUbuntu style={{ fontSize: 19, color: accent }} />;
-        if (lb.includes('debian')) return <SiDebian style={{ fontSize: 18, color: accent }} />;
-        if (lb.includes('kali')) return <FaLinux style={{ fontSize: 18, color: accent }} />;
+        if (lb.includes('powershell')) return <FaWindows style={{ fontSize: 18, color: '#0078D4' }} />;
+        if (lb.includes('cygwin')) return <FaLinux style={{ fontSize: 17, color: '#FCC624' }} />;
+        if (lb.includes('ubuntu')) return <FaUbuntu style={{ fontSize: 19, color: '#E95420' }} />;
+        if (lb.includes('debian')) return <SiDebian style={{ fontSize: 18, color: '#D70A53' }} />;
+        if (lb.includes('kali')) return <FaLinux style={{ fontSize: 18, color: '#2196F3' }} />;
 
         if (typeof item.icon === 'string' && item.icon.trim()) {
           return <i className={item.icon} style={{ fontSize: '1rem', color: accent }} />;
@@ -1363,17 +1354,17 @@ const MainContentArea = ({
 
       const renderCard = (item, groupLabel) => {
         const meta = getCardMeta(groupLabel, item.label);
-        const accent = '#00f3ff';
-        const accentMuted = 'rgba(0, 243, 255, 0.6)';
+        const accent = isDark ? 'var(--primary-color, #00f3ff)' : (theme.primary || '#007acc');
+        const accentMuted = isDark ? 'rgba(0, 243, 255, 0.6)' : 'rgba(0, 0, 0, 0.4)';
         const cardBgIdle = theme.contentBg;
-        const cardBorderIdle = 'rgba(0, 243, 255, 0.25)';
+        const cardBorderIdle = theme.ctxBorder || 'rgba(0, 243, 255, 0.25)';
 
         const button = document.createElement('button');
         button.type = 'button';
         button.style.cssText = `
           border: 1px solid ${cardBorderIdle};
           background: ${cardBgIdle};
-          color: #e2f8ff;
+          color: ${theme.ctxText || (isDark ? '#e2f8ff' : '#333')};
           min-height: 38px;
           padding: 4px 10px 4px 12px;
           text-align: left;
@@ -1435,14 +1426,14 @@ const MainContentArea = ({
           font-size: 11px;
           letter-spacing: 0.05em;
           text-transform: uppercase;
-          color: #00f3ff;
-          text-shadow: 0 0 5px rgba(0, 243, 255, 0.4);
+          color: ${theme.ctxText || (isDark ? '#00f3ff' : '#333')};
+          text-shadow: ${isDark ? '0 0 5px rgba(0, 243, 255, 0.2)' : 'none'};
         `;
         labelWrap.appendChild(name);
 
         const arrow = document.createElement('i');
         arrow.className = 'pi pi-angle-right';
-        arrow.style.cssText = 'position:relative;z-index:1;font-size:12px;opacity:0.7;flex-shrink:0;color:#00f3ff;transition:all 0.2s;text-shadow:0 0 5px currentColor;';
+        arrow.style.cssText = `position:relative;z-index:1;font-size:12px;opacity:0.7;flex-shrink:0;color:${isDark ? '#00f3ff' : 'var(--primary-color, #007acc)'};transition:all 0.2s;text-shadow:${isDark ? '0 0 5px currentColor' : 'none'};`;
 
         left.appendChild(iconBadge);
         left.appendChild(labelWrap);
@@ -1450,13 +1441,13 @@ const MainContentArea = ({
         button.appendChild(arrow);
         
         button.addEventListener('mouseenter', () => {
-          button.style.background = 'rgba(0, 243, 255, 0.12)';
-          button.style.borderColor = 'rgba(0, 243, 255, 0.8)';
+          button.style.background = isDark ? 'rgba(0, 243, 255, 0.12)' : 'rgba(0, 0, 0, 0.05)';
+          button.style.borderColor = isDark ? 'rgba(0, 243, 255, 0.8)' : 'var(--primary-color)';
           button.style.transform = 'scale(1.02)';
-          button.style.boxShadow = '0 0 15px rgba(0, 243, 255, 0.25)';
-          iconBadge.style.background = 'rgba(255, 0, 170, 0.15)';
-          iconBadge.style.borderColor = 'rgba(255, 0, 170, 0.4)';
-          arrow.style.color = '#ff00aa';
+          button.style.boxShadow = isDark ? '0 0 15px rgba(0, 243, 255, 0.25)' : '0 2px 8px rgba(0, 0, 0, 0.1)';
+          iconBadge.style.background = isDark ? 'rgba(255, 0, 170, 0.15)' : 'rgba(0, 0, 0, 0.08)';
+          iconBadge.style.borderColor = isDark ? 'rgba(255, 0, 170, 0.4)' : 'var(--primary-color)';
+          arrow.style.color = isDark ? '#ff00aa' : 'var(--primary-color)';
           arrow.style.transform = 'translateX(2px)';
         });
         button.addEventListener('mouseleave', () => {
@@ -1464,9 +1455,9 @@ const MainContentArea = ({
           button.style.borderColor = cardBorderIdle;
           button.style.transform = 'scale(1)';
           button.style.boxShadow = 'none';
-          iconBadge.style.background = 'rgba(0, 243, 255, 0.08)';
-          iconBadge.style.borderColor = 'rgba(0, 243, 255, 0.25)';
-          arrow.style.color = '#00f3ff';
+          iconBadge.style.background = isDark ? 'rgba(0, 243, 255, 0.08)' : 'rgba(0, 0, 0, 0.03)';
+          iconBadge.style.borderColor = isDark ? 'rgba(0, 243, 255, 0.25)' : 'rgba(0, 0, 0, 0.1)';
+          arrow.style.color = isDark ? '#00f3ff' : 'var(--primary-color, #007acc)';
           arrow.style.transform = 'translateX(0)';
         });
         button.addEventListener('click', (ev) => {

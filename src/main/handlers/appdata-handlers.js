@@ -105,7 +105,10 @@ const SYNC_KEYS = [
     'homeTab_statusBarVisible',
     'homeTabFont',
     'homeTabFontSize',
-    'actionBarIconTheme'
+    'actionBarIconTheme',
+    
+    // AI Clients configuration
+    'ai_clients_enabled'
 ];
 
 /**

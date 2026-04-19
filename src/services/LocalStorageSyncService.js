@@ -120,7 +120,8 @@ const SYNC_KEYS = [
     'aichat_history',
     'aichat_model_config',
 
-    'nodeterm_remember_password'
+    'nodeterm_remember_password',
+    'ai_clients_enabled'
 ];
 
 class LocalStorageSyncService {
