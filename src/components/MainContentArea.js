@@ -299,6 +299,20 @@ const MainContentArea = ({
     }));
   }, []);
 
+  const dispatchOpenNotebookTab = useCallback(() => {
+    const tabId = `opennotebook-${Date.now()}`;
+    const newTab = {
+      key: tabId,
+      label: 'Open Notebook',
+      type: 'open-notebook',
+      createdAt: Date.now(),
+      groupId: null
+    };
+    window.dispatchEvent(new CustomEvent('create-opennotebook-tab', {
+      detail: { tab: newTab }
+    }));
+  }, []);
+
   // Manejador para abrir el explorador desde el botón de la sidebar
   const handleSidebarOpenFileExplorer = useCallback(() => {
     // 1. Intentar con la pestaña activa si es SSH
@@ -445,7 +459,8 @@ const MainContentArea = ({
     openwebui: false,
     librechat: false,
     agentzero: false,
-    openclaw: false
+    openclaw: false,
+    opennotebook: false
   });
   const aiPrewarmInFlightRef = useRef({
     anythingllm: false,
@@ -472,7 +487,8 @@ const MainContentArea = ({
             openwebui: parsed.openwebui === true,
             librechat: parsed.librechat === true,
             agentzero: parsed.agentzero === true,
-            openclaw: parsed.openclaw === true
+            openclaw: parsed.openclaw === true,
+            opennotebook: parsed.opennotebook === true
           });
         } else {
           // Si no hay configuración, todos desactivados por defecto
@@ -486,7 +502,8 @@ const MainContentArea = ({
             openwebui: false,
             librechat: false,
             agentzero: false,
-            openclaw: false
+            openclaw: false,
+            opennotebook: false
           });
         }
       } catch (error) {
@@ -892,6 +909,20 @@ const MainContentArea = ({
           }
         });
       }
+      if (aiClientsEnabled.opennotebook) {
+        apps.push({
+          label: 'Open Notebook',
+          icon: 'pi pi-book',
+          command: () => {
+             // Assuming there's a dispatch function for this, checking common patterns
+             if (typeof dispatchOpenNotebookTab === 'function') {
+               dispatchOpenNotebookTab();
+             } else {
+               window.dispatchEvent(new CustomEvent('open-opennotebook-tab'));
+             }
+          }
+        });
+      }
 
       const menuItems = [];
       if (distros.length > 0) {
@@ -1280,6 +1311,7 @@ const MainContentArea = ({
         if (i.includes('librechat')) return { subtitle: 'NET · APP' };
         if (i.includes('agent zero')) return { subtitle: 'NET · APP' };
         if (i.includes('openclaw')) return { subtitle: 'NET · APP' };
+        if (i.includes('open notebook')) return { subtitle: 'NET · APP' };
         if (i.includes('ai chat')) return { subtitle: 'NET · APP' };
         if (g.includes('apps')) return { subtitle: 'NET · APP' };
         return { subtitle: 'PROFILE' };
@@ -1306,6 +1338,7 @@ const MainContentArea = ({
         if (lb.includes('librechat')) return <AIClientBrandIcon tabType="librechat" size={20} />;
         if (lb.includes('agent zero')) return <AIClientBrandIcon tabType="agentzero" size={20} />;
         if (lb.includes('openclaw')) return <AIClientBrandIcon tabType="openclaw" size={20} />;
+        if (lb.includes('open notebook')) return <AIClientBrandIcon tabType="open-notebook" size={20} />;
         if (lb.includes('codex')) return <SiOpenai style={{ fontSize: 18, color: '#10A37F' }} />;
         if (lb.includes('gemini')) return <SiGooglegemini style={{ fontSize: 18, color: '#8E75B2' }} />;
         if (lb.includes('claude')) return <SiAnthropic style={{ fontSize: 18, color: '#D97706' }} />;

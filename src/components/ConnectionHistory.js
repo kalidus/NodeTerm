@@ -319,6 +319,25 @@ const ConnectionHistory = ({
 					if (aiClientsCfg.codexcli === true) {
 						shells.push({ label: 'Codex CLI', value: 'codexcli', icon: 'pi-bolt', color: '#10b981' });
 					}
+					// Docker AI Apps
+					if (aiClientsCfg.anythingllm === true) {
+						shells.push({ label: 'AnythingLLM', value: 'anythingllm', icon: 'pi-box', color: '#3b82f6' });
+					}
+					if (aiClientsCfg.openwebui === true) {
+						shells.push({ label: 'Open WebUI', value: 'openwebui', icon: 'pi-link', color: '#10b981' });
+					}
+					if (aiClientsCfg.librechat === true) {
+						shells.push({ label: 'LibreChat', value: 'librechat', icon: 'pi-comments', color: '#6366f1' });
+					}
+					if (aiClientsCfg.agentzero === true) {
+						shells.push({ label: 'Agent Zero', value: 'agentzero', icon: 'pi-android', color: '#f59e0b' });
+					}
+					if (aiClientsCfg.openclaw === true) {
+						shells.push({ label: 'OpenClaw', value: 'openclaw', icon: 'pi-bolt', color: '#ff4081' });
+					}
+					if (aiClientsCfg.opennotebook === true) {
+						shells.push({ label: 'Open Notebook', value: 'open-notebook', icon: 'pi-book', color: '#2196f3' });
+					}
 
 					// WSL
 					if (window.electron && window.electron.ipcRenderer) {
