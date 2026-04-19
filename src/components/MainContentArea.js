@@ -740,18 +740,6 @@ const MainContentArea = ({
       ];
 
       const aiClis = [];
-      if (aiClientsEnabled.codexcli) {
-        aiClis.push({
-          label: 'Codex CLI',
-          icon: getTerminalMenuIcon('codexcli'),
-          command: () => {
-            setLastLocalTerminalType('codexcli');
-            if (createLocalTerminalTabRef.current) {
-              createLocalTerminalTabRef.current('codexcli');
-            }
-          }
-        });
-      }
       if (aiClientsEnabled.geminicli) {
         aiClis.push({
           label: 'Gemini CLI',
@@ -760,6 +748,18 @@ const MainContentArea = ({
             setLastLocalTerminalType('geminicli');
             if (createLocalTerminalTabRef.current) {
               createLocalTerminalTabRef.current('geminicli');
+            }
+          }
+        });
+      }
+      if (aiClientsEnabled.codexcli) {
+        aiClis.push({
+          label: 'Codex CLI',
+          icon: getTerminalMenuIcon('codexcli'),
+          command: () => {
+            setLastLocalTerminalType('codexcli');
+            if (createLocalTerminalTabRef.current) {
+              createLocalTerminalTabRef.current('codexcli');
             }
           }
         });

@@ -307,14 +307,14 @@ const ConnectionHistory = ({
 
 				if (platform === 'win32') {
 					shells.push({ label: 'PowerShell', value: 'powershell', icon: 'pi-desktop', color: '#4fc3f7' });
+					if (aiClientsCfg.geminicli === true) {
+						shells.push({ label: 'Gemini CLI', value: 'geminicli', icon: 'pi-star', color: '#1a73e8' });
+					}
 					if (aiClientsCfg.claude === true) {
 						shells.push({ label: 'Claude Code', value: 'claude', icon: 'pi-comments', color: '#f59e0b' });
 					}
 					if (aiClientsCfg.opencode === true) {
 						shells.push({ label: 'OpenCode', value: 'opencode', icon: 'pi-code', color: '#6366f1' });
-					}
-					if (aiClientsCfg.geminicli === true) {
-						shells.push({ label: 'Gemini CLI', value: 'geminicli', icon: 'pi-star', color: '#1a73e8' });
 					}
 					if (aiClientsCfg.codexcli === true) {
 						shells.push({ label: 'Codex CLI', value: 'codexcli', icon: 'pi-bolt', color: '#10b981' });
