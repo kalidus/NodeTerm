@@ -192,6 +192,14 @@ function registerCriticalHandlers(dependencies) {
   // Handlers de Codex CLI (configuración gestionada por app)
   getCodexCliHandlers().registerCodexCliHandlers();
 
+  // 🚀 CRÍTICO: Handlers de servicios de IA secundarios (para precalentamiento inmediato)
+  getAnythingLLMHandlers().registerAnythingLLMHandlers(dependencies);
+  getOpenWebUIHandlers().registerOpenWebUIHandlers(dependencies);
+  getLibreChatHandlers().registerLibreChatHandlers(dependencies);
+  getAgentZeroHandlers().registerAgentZeroHandlers(dependencies);
+  getOpenClawHandlers().registerOpenClawHandlers(dependencies);
+  getOpenNotebookHandlers().registerOpenNotebookHandlers(dependencies);
+
   // 🚀 CRÍTICO: Registrar handlers de monitoreo INMEDIATAMENTE
   // El REGISTRO es ligero (solo IPC), lo PESADO es la EJECUCIÓN (que es on-demand)
   // Esto evita errores de "No handler registered" cuando el frontend los llama
@@ -236,12 +244,6 @@ function registerSecondaryHandlers(dependencies) {
 
   // Handlers de Guacamole
   getGuacamoleHandlers().registerGuacamoleHandlers(dependencies);
-  getAnythingLLMHandlers().registerAnythingLLMHandlers(dependencies);
-  getOpenWebUIHandlers().registerOpenWebUIHandlers(dependencies);
-  getLibreChatHandlers().registerLibreChatHandlers(dependencies);
-  getAgentZeroHandlers().registerAgentZeroHandlers(dependencies);
-  getOpenClawHandlers().registerOpenClawHandlers(dependencies);
-  getOpenNotebookHandlers().registerOpenNotebookHandlers(dependencies);
 
   // Handlers SSH
   getSSHHandlers()(dependencies);

@@ -156,19 +156,27 @@ function registerAppDataHandlers(dependencies) {
                 _syncedAt: new Date().toISOString()
             };
 
-            // ESCRITURA ATÓMICA: Escribir a un archivo temporal único y luego renombrar
-            // Usamos un ID único para evitar colisiones entre múltiples procesos (ENOENT race condition)
+            // ESCRITURA ATÓMICA CON RETINTENTOS:
+            // En Windows, renameSync puede fallar si otro proceso tiene abierto el archivo
             const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             const tempPath = path.join(path.dirname(APP_DATA_PATH), `app-data.${uniqueId}.tmp`);
 
             fs.writeFileSync(tempPath, JSON.stringify(dataWithMeta, null, 2), 'utf8');
 
-            try {
-                fs.renameSync(tempPath, APP_DATA_PATH);
-            } catch (err) {
-                // Intentar limpiar el archivo temporal si falla el renombrado
-                try { fs.unlinkSync(tempPath); } catch (e) { /* ignorar error de limpieza */ }
-                throw err;
+            let renameRetries = 5;
+            let success = false;
+            while (renameRetries > 0 && !success) {
+                try {
+                    fs.renameSync(tempPath, APP_DATA_PATH);
+                    success = true;
+                } catch (err) {
+                    renameRetries--;
+                    if (renameRetries === 0) {
+                        try { fs.unlinkSync(tempPath); } catch (e) {}
+                        throw err;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
             }
 
             return { success: true };

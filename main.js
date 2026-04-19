@@ -944,7 +944,13 @@ function createWindow() {
       disconnectAllGuacamoleConnections,
       sshConnections,
       cleanupOrphanedConnections,
-      isAppQuitting
+      isAppQuitting,
+      anythingLLMService: getAnythingLLMService(),
+      openWebUIService: getOpenWebUIService(),
+      libreChatService: getLibreChatService(),
+      agentZeroService: getAgentZeroService(),
+      openClawService: getOpenClawService(),
+      openNotebookService: getOpenNotebookService()
     });
   } catch (err) {
     console.error('❌ Error registrando handlers críticos:', err);
