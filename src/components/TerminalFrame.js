@@ -6,6 +6,7 @@ const TerminalFrame = ({
     children,
     title = '',
     headerExtra = null,
+    showFloatingHeaderExtra = true,
     showControls = true,
     hideHeader = false,
     className = '',
@@ -169,7 +170,7 @@ const TerminalFrame = ({
                 </div>
             )}
 
-            {headerExtra && hideHeader && (
+            {headerExtra && hideHeader && showFloatingHeaderExtra && (
                 <div className="terminal-frame-header-extra floating" style={{ 
                     position: 'absolute',
                     top: 6,

@@ -2686,6 +2686,7 @@ const MainContentArea = ({
             contentClassName="main-content-frame-content"
             isDraggable={titleBarCollapsed || isMinimalMode}
             hideHeader={mainFrameHeaderCollapsed || isMinimalMode}
+            showFloatingHeaderExtra={false}
             title={
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontWeight: 'bold', color: 'var(--ui-titlebar-text, #fff)' }}>NodeTerm</span>
