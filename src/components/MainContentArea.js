@@ -470,20 +470,38 @@ const MainContentArea = ({
     openclaw: false
   });
 
+  const defaultAiClientsEnabled = React.useMemo(() => ({
+    nodeterm: false,
+    claude: false,
+    opencode: false,
+    geminicli: false,
+    codexcli: false,
+    anythingllm: false,
+    openwebui: false,
+    librechat: false,
+    agentzero: false,
+    openclaw: false,
+    opennotebook: false
+  }), []);
+
   // Cargar configuración de clientes de IA desde localStorage
   React.useEffect(() => {
     const loadAIClientsConfig = () => {
       try {
         const config = localStorage.getItem('ai_clients_enabled');
-        if (config) {
-          const parsed = JSON.parse(config);
-          setAiClientsEnabled(prev => ({
-            ...prev,
-            ...parsed
-          }));
+        if (!config) {
+          setAiClientsEnabled(defaultAiClientsEnabled);
+          return;
         }
+        const parsed = JSON.parse(config);
+        const normalized = Object.keys(defaultAiClientsEnabled).reduce((acc, key) => {
+          acc[key] = parsed?.[key] === true;
+          return acc;
+        }, {});
+        setAiClientsEnabled(normalized);
       } catch (error) {
         console.error('[MainContentArea] Error al cargar configuración de clientes IA:', error);
+        setAiClientsEnabled(defaultAiClientsEnabled);
       }
     };
 
@@ -514,7 +532,7 @@ const MainContentArea = ({
       window.removeEventListener('settings-updated', handleSettingsUpdated);
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, []);
+  }, [defaultAiClientsEnabled]);
 
   // Precalentamiento en segundo plano: reduce el "cold start" al abrir las pestañas.
   React.useEffect(() => {
