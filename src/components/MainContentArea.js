@@ -1932,8 +1932,12 @@ const MainContentArea = ({
       const titleBarLabel = titleBarCollapsedRef.current
         ? 'Mostrar barra de titulo'
         : 'Ocultar barra de titulo';
+      const minimalModeLabel = document.body.classList.contains('minimalist-terminal-mode')
+        ? 'Desactivar modo minimalista'
+        : 'Activar modo minimalista';
       menu.appendChild(createMenuAction(frameLabel, () => setMainFrameHeaderCollapsed(prev => !prev)));
       menu.appendChild(createMenuAction(titleBarLabel, () => window.dispatchEvent(new CustomEvent('toggle-titlebar'))));
+      menu.appendChild(createMenuAction(minimalModeLabel, () => window.dispatchEvent(new CustomEvent('toggle-minimal-mode'))));
 
       document.body.appendChild(menu);
       const rect = frameToggleButton.getBoundingClientRect();
