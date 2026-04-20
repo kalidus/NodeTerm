@@ -1,6 +1,9 @@
 /* --- Component: TerminalFrame --- */
 
 .terminal-frame {
+    /* Ancla el headerExtra flotante (tema) al marco; sin esto, position:absolute usa el viewport
+       y el icono puede quedar encima de los botones reales de la titlebar (p. ej. segunda instancia). */
+    position: relative;
     display: flex;
     flex-direction: column;
     background: var(--ui-sidebar-bg, #1a1b26);
