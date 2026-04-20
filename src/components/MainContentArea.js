@@ -484,37 +484,47 @@ const MainContentArea = ({
     opennotebook: false
   }), []);
 
-  // Cargar configuración de clientes de IA desde localStorage
-  React.useEffect(() => {
-    const loadAIClientsConfig = () => {
-      try {
-        const config = localStorage.getItem('ai_clients_enabled');
-        if (!config) {
-          setAiClientsEnabled(defaultAiClientsEnabled);
-          return;
-        }
-        const parsed = JSON.parse(config);
-        const normalized = Object.keys(defaultAiClientsEnabled).reduce((acc, key) => {
-          acc[key] = parsed?.[key] === true;
-          return acc;
-        }, {});
-        setAiClientsEnabled(normalized);
-      } catch (error) {
-        console.error('[MainContentArea] Error al cargar configuración de clientes IA:', error);
+  // Cargar configuración de clientes de IA desde localStorage - Moved to useCallback for stability
+  const loadAIClientsConfig = React.useCallback(() => {
+    try {
+      const config = localStorage.getItem('ai_clients_enabled');
+      console.log('[MainContentArea] loading AI clients config from localStorage:', config);
+      if (!config) {
         setAiClientsEnabled(defaultAiClientsEnabled);
+        return;
       }
-    };
+      const parsed = JSON.parse(config);
+      const normalized = Object.keys(defaultAiClientsEnabled).reduce((acc, key) => {
+        acc[key] = parsed?.[key] === true;
+        return acc;
+      }, {});
+      console.log('[MainContentArea] setting aiClientsEnabled state:', normalized);
+      setAiClientsEnabled(normalized);
+    } catch (error) {
+      console.error('[MainContentArea] Error al cargar configuración de clientes IA:', error);
+      setAiClientsEnabled(defaultAiClientsEnabled);
+    }
+  }, [defaultAiClientsEnabled]);
 
+  // Mantener ref sincronizada para el launcher grid
+  const terminalMenuItemsRef = React.useRef([]);
+  React.useEffect(() => {
+    terminalMenuItemsRef.current = terminalMenuItems;
+  }, [terminalMenuItems]);
+
+  React.useEffect(() => {
     // Cargar al montar
     loadAIClientsConfig();
 
     // Escuchar cambios
-    const handleConfigChange = () => {
+    const handleConfigChange = (e) => {
+      console.log('[MainContentArea] Received ai-clients-config-changed event', e.detail);
       loadAIClientsConfig();
     };
     window.addEventListener('ai-clients-config-changed', handleConfigChange);
     
     const handleSettingsUpdated = () => {
+      console.log('[MainContentArea] Received settings-updated event');
       loadAIClientsConfig();
     };
     window.addEventListener('settings-updated', handleSettingsUpdated);
@@ -522,6 +532,7 @@ const MainContentArea = ({
     // Escuchar cambios de storage (otro window/proceso si comparten DB)
     const handleStorageChange = (e) => {
       if (e.key === 'ai_clients_enabled') {
+        console.log('[MainContentArea] Received storage event for ai_clients_enabled');
         loadAIClientsConfig();
       }
     };
@@ -532,7 +543,7 @@ const MainContentArea = ({
       window.removeEventListener('settings-updated', handleSettingsUpdated);
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [defaultAiClientsEnabled]);
+  }, [loadAIClientsConfig]);
 
   // Precalentamiento en segundo plano: reduce el "cold start" al abrir las pestañas.
   React.useEffect(() => {
@@ -1046,8 +1057,9 @@ const MainContentArea = ({
 
       setTerminalMenuItems(linuxMenuItems);
     }
+    console.log('[MainContentArea] Re-generating terminalMenuItems. aiClientsEnabled:', aiClientsEnabled);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wslDistributions, dockerContainers, dispatchAnythingLLMTab, dispatchOpenWebUITab, dispatchLibreChatTab, dispatchAgentZeroTab, dispatchOpenClawTab, aiClientsEnabled]);
+  }, [wslDistributions, dockerContainers, dispatchAnythingLLMTab, dispatchOpenWebUITab, dispatchLibreChatTab, dispatchAgentZeroTab, dispatchOpenClawTab, dispatchOpenNotebookTab, aiClientsEnabled]);
 
   // 🚀 OPTIMIZACIÓN: Detectar distribuciones WSL DIFERIDO
   useEffect(() => {
@@ -1076,6 +1088,11 @@ const MainContentArea = ({
 
   // Efecto para añadir botones fijos a la derecha del nav container (fuera del área scrollable)
   useEffect(() => {
+    // Log de dependencias para depuración
+    console.log('[MainContentArea] Effect 1078 (Tab Bar) re-running.', {
+      terminalMenuItemsCount: terminalMenuItems.length,
+      aiClientsEnabled: JSON.stringify(aiClientsEnabled)
+    });
     const navContainer = tabsContainerRef.current;
     if (!navContainer) return;
 
@@ -1486,7 +1503,8 @@ const MainContentArea = ({
         return button;
       };
 
-      const groups = Array.isArray(terminalMenuItems) ? terminalMenuItems : [];
+      const groups = Array.isArray(terminalMenuItemsRef.current) ? terminalMenuItemsRef.current : [];
+      console.log('[MainContentArea] Grid Launcher opened. Item count:', groups.flatMap(g => g.items || []).length);
 
       const renderGroups = (query = '') => {
         const normalized = (query || '').trim().toLowerCase();
@@ -1995,7 +2013,15 @@ const MainContentArea = ({
     buttonsContainer.appendChild(dropdownButton);
     navList.appendChild(buttonsContainer);
     navList.appendChild(appearanceButtonWrapper);
-  }, [filteredTabs, activeTabIndex, wslDistributions, mainFrameHeaderCollapsed, titleBarCollapsed, terminalMenuItems]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    filteredTabs, 
+    activeTabIndex, 
+    wslDistributions, 
+    mainFrameHeaderCollapsed, 
+    titleBarCollapsed, 
+    terminalMenuItems,
+    aiClientsEnabled
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Función para crear una nueva pestaña de terminal local independiente
   const createLocalTerminalTab = (terminalType, distroInfo = null) => {
