@@ -1520,50 +1520,105 @@ const MainContentArea = ({
           return;
         }
 
+        // Reordenar grupos: Contenedores siempre al final
+        const sortedGroups = [...groups].sort((a, b) => {
+          const aLabel = (a.label || '').toLowerCase();
+          const bLabel = (b.label || '').toLowerCase();
+          if (aLabel.includes('container') || aLabel.includes('docker')) return 1;
+          if (bLabel.includes('container') || bLabel.includes('docker')) return -1;
+          return 0;
+        });
+
         let renderedCount = 0;
-        groups.forEach((group) => {
+        sortedGroups.forEach((group) => {
           const allItems = Array.isArray(group.items) ? group.items : [];
           const filteredItems = normalized
             ? allItems.filter((item) => (item.label || '').toLowerCase().includes(normalized))
             : allItems;
           if (!filteredItems.length) return;
 
+          const sectionId = `launcher-section-${(group.label || 'group').replace(/\s+/g, '-').toLowerCase()}`;
+          const isContainers = (group.label || '').toLowerCase().includes('container') || (group.label || '').toLowerCase().includes('docker');
+          
+          // Recuperar estado de persistencia si existe, o usar default (Containers colapsados por defecto)
+          const isCollapsed = isContainers;
+
           const section = document.createElement('div');
-          section.style.cssText = 'margin-bottom: 10px;';
+          section.style.cssText = 'margin-bottom: 8px; padding-bottom: 4px;';
 
           const sectionTitle = document.createElement('div');
           sectionTitle.style.cssText = `
             display: flex;
             align-items: center;
-            gap: 6px;
+            justify-content: space-between;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            transition: all 0.2s;
+            user-select: none;
+          `;
+          
+          const titleLeft = document.createElement('div');
+          titleLeft.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 8px;
             font-size: 9px;
             font-weight: 800;
             letter-spacing: 0.14em;
-            color: #00f3ff;
-            text-shadow: 0 0 10px rgba(0, 243, 255, 0.45);
-            margin: 0 0 6px 2px;
+            color: ${isContainers ? 'rgba(0, 243, 255, 0.65)' : '#00f3ff'};
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.25);
             text-transform: uppercase;
           `;
+
           const sectionIcon = document.createElement('i');
           sectionIcon.className = group.icon || 'pi pi-folder';
-          sectionIcon.style.cssText = 'font-size: 10px; color: #00f3ff; opacity: 0.95;';
+          sectionIcon.style.cssText = 'font-size: 10px;';
+          
           const sectionText = document.createElement('span');
           sectionText.textContent = `${group.label || 'Grupo'} (${filteredItems.length})`;
-          sectionTitle.appendChild(sectionIcon);
-          sectionTitle.appendChild(sectionText);
+          
+          titleLeft.appendChild(sectionIcon);
+          titleLeft.appendChild(sectionText);
+
+          const chevron = document.createElement('i');
+          chevron.className = isCollapsed ? 'pi pi-chevron-down' : 'pi pi-chevron-up';
+          chevron.style.cssText = 'font-size: 8px; opacity: 0.6; transition: transform 0.3s;';
+
+          sectionTitle.appendChild(titleLeft);
+          sectionTitle.appendChild(chevron);
           section.appendChild(sectionTitle);
 
           const grid = document.createElement('div');
           grid.style.cssText = `
-            display: grid;
+            display: ${isCollapsed ? 'none' : 'grid'};
             grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
             gap: 6px;
+            padding: 4px 2px 10px 2px;
+            transition: all 0.3s;
           `;
+          
           filteredItems.forEach((item) => {
             renderedCount += 1;
             grid.appendChild(renderCard(item, group.label));
           });
           section.appendChild(grid);
+
+          sectionTitle.addEventListener('click', () => {
+            const currentlyCollapsed = grid.style.display === 'none';
+            grid.style.display = currentlyCollapsed ? 'grid' : 'none';
+            chevron.className = currentlyCollapsed ? 'pi pi-chevron-up' : 'pi pi-chevron-down';
+            sectionTitle.style.background = currentlyCollapsed ? 'rgba(0, 243, 255, 0.03)' : 'transparent';
+          });
+
+          sectionTitle.addEventListener('mouseenter', () => {
+            sectionTitle.style.background = 'rgba(0, 243, 255, 0.05)';
+          });
+          sectionTitle.addEventListener('mouseleave', () => {
+            sectionTitle.style.background = grid.style.display === 'none' ? 'transparent' : 'rgba(0, 243, 255, 0.02)';
+          });
+
           contentHost.appendChild(section);
         });
 
