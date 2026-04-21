@@ -86,6 +86,14 @@ const HomeTab = ({
     }
   }); // Estado para mostrar/ocultar status bar
   const [terminalTitle, setTerminalTitle] = useState('Terminal Local');
+  const [showLocalTerminalTabs, setShowLocalTerminalTabs] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_TABS_VISIBLE);
+      return saved !== null ? saved === 'true' : false;
+    } catch {
+      return false;
+    }
+  });
 
   const [rightColumnCollapsed, setRightColumnCollapsed] = useState(() => {
     try {
@@ -183,6 +191,20 @@ const HomeTab = ({
   // Estado para el terminal embebido como vista integrada (por defecto visible)
   const [terminalView, setTerminalView] = useState(true);
   const [embeddedTerminalHeight, setEmbeddedTerminalHeight] = useState(360);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_TABS_VISIBLE,
+        showLocalTerminalTabs.toString()
+      );
+      window.dispatchEvent(new CustomEvent('home-tab-local-terminal-tabs-visibility-changed', {
+        detail: { visible: showLocalTerminalTabs }
+      }));
+    } catch {
+      // Ignorar errores de persistencia
+    }
+  }, [showLocalTerminalTabs]);
 
   // Auto-inicializar terminal embebido al montar el componente si est\u00E1 visible por defecto
   useEffect(() => {
@@ -1195,6 +1217,28 @@ const HomeTab = ({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem' }}>Pestañas</span>
+              <button
+                type="button"
+                onClick={() => setShowLocalTerminalTabs(prev => !prev)}
+                style={{
+                  border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.2)'}`,
+                  background: showLocalTerminalTabs
+                    ? (themeColors.primaryColor || '#2196f3')
+                    : 'rgba(120,120,120,0.25)',
+                  color: '#fff',
+                  borderRadius: '999px',
+                  padding: '0.2rem 0.65rem',
+                  cursor: 'pointer',
+                  fontSize: '0.78rem',
+                  fontWeight: 600
+                }}
+              >
+                {showLocalTerminalTabs ? 'Visible' : 'Oculta'}
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
               <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem' }}>Barra derecha (accesos rápidos)</span>
               <button
                 type="button"
@@ -1330,8 +1374,10 @@ const HomeTab = ({
                   homeCardVisible={homeCardVisible}
                   statusBarVisible={statusBarVisible}
                   onSwitchTerminal={(type, info) => {
-                    if (embeddedTabbedTerminalRef.current?.addTerminalTab) {
+                    if (showLocalTerminalTabs && embeddedTabbedTerminalRef.current?.addTerminalTab) {
                       embeddedTabbedTerminalRef.current.addTerminalTab(type, info);
+                    } else if (embeddedTabbedTerminalRef.current?.replaceActiveTabWithTerminal) {
+                      embeddedTabbedTerminalRef.current.replaceActiveTabWithTerminal(type, info);
                     }
                   }}
                 >
@@ -1345,8 +1391,9 @@ const HomeTab = ({
                       localPowerShellTheme={localPowerShellTheme}
                       localLinuxTerminalTheme={localLinuxTerminalTheme}
                       hideStatusBar={true}
-                      hideTabs={true}
+                      hideTabs={!showLocalTerminalTabs}
                       isIntegrated={true}
+                      persistenceKey={STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_WORKSPACE}
                       onTabChange={(tab) => setTerminalTitle(tab.title)}
                     />
                   </div>

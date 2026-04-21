@@ -30,7 +30,7 @@ function adjustColorBrightness(hex, percent) {
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
-const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localPowerShellTheme, localLinuxTerminalTheme, hideStatusBar = false, hideTabs = false, isIntegrated = false, onTabChange }, ref) => {
+const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localPowerShellTheme, localLinuxTerminalTheme, hideStatusBar = false, hideTabs = false, isIntegrated = false, onTabChange, persistenceKey = null }, ref) => {
     // Referencias para control de scroll de pestañas
     const tabsContainerRef = useRef(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -167,8 +167,45 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         };
     };
 
-    const [tabs, setTabs] = useState([getInitialTab(false, [])]);
-    const [nextTabId, setNextTabId] = useState(2);
+    const getInitialWorkspace = () => {
+        const fallbackTabs = [getInitialTab(false, [])];
+        if (!persistenceKey) {
+            return { tabs: fallbackTabs, nextTabId: 2 };
+        }
+
+        try {
+            const raw = localStorage.getItem(persistenceKey);
+            if (!raw) {
+                return { tabs: fallbackTabs, nextTabId: 2 };
+            }
+
+            const parsed = JSON.parse(raw);
+            const parsedTabs = Array.isArray(parsed?.tabs) ? parsed.tabs : [];
+            if (!parsedTabs.length) {
+                return { tabs: fallbackTabs, nextTabId: 2 };
+            }
+
+            const normalizedTabs = parsedTabs.map((tab, index) => ({
+                ...tab,
+                active: Boolean(tab?.active) && index >= 0
+            }));
+            if (!normalizedTabs.some(tab => tab.active)) {
+                normalizedTabs[0].active = true;
+            }
+
+            return {
+                tabs: normalizedTabs,
+                nextTabId: Number.isFinite(parsed?.nextTabId) ? parsed.nextTabId : (normalizedTabs.length + 1)
+            };
+        } catch (error) {
+            console.warn('[TabbedTerminal] No se pudo restaurar workspace:', error);
+            return { tabs: fallbackTabs, nextTabId: 2 };
+        }
+    };
+
+    const initialWorkspace = getInitialWorkspace();
+    const [tabs, setTabs] = useState(initialWorkspace.tabs);
+    const [nextTabId, setNextTabId] = useState(initialWorkspace.nextTabId);
 
     // Actualizar la pestaña inicial cuando se carguen las distribuciones WSL
     useEffect(() => {
@@ -480,6 +517,22 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     const fitRafIdRef = useRef(null);
     const fitTimeoutIdsRef = useRef([]);
 
+    useEffect(() => {
+        if (!persistenceKey) return;
+        try {
+            localStorage.setItem(
+                persistenceKey,
+                JSON.stringify({
+                    tabs,
+                    nextTabId,
+                    selectedTerminalType
+                })
+            );
+        } catch (error) {
+            console.warn('[TabbedTerminal] No se pudo persistir workspace:', error);
+        }
+    }, [tabs, nextTabId, selectedTerminalType, persistenceKey]);
+
     const cancelScheduledFit = useCallback(() => {
         if (fitRafIdRef.current) {
             cancelAnimationFrame(fitRafIdRef.current);
@@ -760,6 +813,18 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 override = terminalType === 'debian' ? 'wsl-debian' : 'wsl';
             }
             createNewTabRef.current?.(override, distroInfo);
+        },
+        replaceActiveTabWithTerminal: (terminalType, distroInfo = null) => {
+            tabs.forEach(tab => closeTab(tab.id));
+            setTimeout(() => {
+                let override = terminalType;
+                if (terminalType === 'docker' && distroInfo?.containerName) {
+                    override = 'docker-' + distroInfo.containerName;
+                } else if ((terminalType === 'ubuntu' || terminalType === 'wsl' || terminalType === 'debian') && distroInfo?.name) {
+                    override = distroInfo.name.startsWith('wsl-') ? distroInfo.name : 'wsl-' + distroInfo.name;
+                }
+                createNewTabRef.current?.(override, distroInfo);
+            }, 10);
         }
     }), [tabs, selectedTerminalType]); // Agregar tabs y selectedTerminalType como dependencias
 
@@ -1178,6 +1243,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             // En Windows: mostrar PowerShell, WSL, Cygwin y cada distribución WSL detectada
             const options = [
                 { label: 'PowerShell', value: 'powershell', icon: 'pi pi-desktop' },
+                { label: 'Claude Code', value: 'claude', icon: 'pi pi-comments', color: '#f59e0b' },
+                { label: 'OpenCode', value: 'opencode', icon: 'pi pi-code', color: '#6366f1' },
+                { label: 'Gemini CLI', value: 'geminicli', icon: 'pi pi-star', color: '#1a73e8' },
+                { label: 'Codex CLI', value: 'codexcli', icon: 'pi pi-bolt', color: '#10b981' },
                 // Cygwin siempre visible en Windows (se instalará bajo demanda si no existe)
                 {
                     label: cygwinAvailable ? 'Cygwin' : 'Cygwin (instalar)',
@@ -1213,7 +1282,11 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         } else if (platform === 'linux' || platform === 'darwin') {
             // En Linux/macOS: mostrar terminal nativo y Docker si disponible
             const options = [
-                { label: 'Terminal', value: 'linux-terminal', icon: 'pi pi-desktop' }
+                { label: 'Terminal', value: 'linux-terminal', icon: 'pi pi-desktop' },
+                { label: 'Claude Code', value: 'claude', icon: 'pi pi-comments', color: '#f59e0b' },
+                { label: 'OpenCode', value: 'opencode', icon: 'pi pi-code', color: '#6366f1' },
+                { label: 'Gemini CLI', value: 'geminicli', icon: 'pi pi-star', color: '#1a73e8' },
+                { label: 'Codex CLI', value: 'codexcli', icon: 'pi pi-bolt', color: '#10b981' }
             ];
 
             // Agregar contenedores Docker si están disponibles
@@ -1595,20 +1668,20 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     borderBottom: 'none',
                     display: 'flex',
                     alignItems: 'center',
-                    minHeight: '40px',
+                    minHeight: '32px',
                     overflow: 'hidden'
                 }}>
                     {/* Indicador circular estilo macOS usando el color del tema */}
                     <div
                         style={{
-                            width: 12,
-                            height: 12,
+                            width: 9,
+                            height: 9,
                             borderRadius: '50%',
                             background: tabAccentCircle,
-                            boxShadow: `0 0 0 4px ${tabAccent}33`,
+                            boxShadow: `0 0 0 3px ${tabAccent}33`,
                             border: `1px solid ${tabAccentBorder}`,
-                            marginLeft: 10,
-                            marginRight: 14,
+                            marginLeft: 8,
+                            marginRight: 10,
                             flexShrink: 0
                         }}
                     />
@@ -1627,14 +1700,15 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 className="p-button-text p-button-sm"
                                 style={{
                                     color: 'rgba(255, 255, 255, 0.8)',
-                                    padding: '4px 6px',
-                                    minWidth: '24px',
-                                    height: '24px',
-                                    fontSize: '10px',
+                                    padding: '2px 4px',
+                                    minWidth: '18px',
+                                    width: '18px',
+                                    height: '18px',
+                                    fontSize: '8px',
                                     background: 'rgba(255, 255, 255, 0.1)',
                                     border: '1px solid rgba(255, 255, 255, 0.2)',
                                     borderRadius: '3px',
-                                    marginRight: '4px'
+                                    marginRight: '3px'
                                 }}
                                 onClick={() => scrollTabs('left')}
                                 aria-label="Desplazar pestañas a la izquierda"
@@ -1655,7 +1729,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 flex: '0 1 auto', // Ajustar al contenido
                                 minWidth: 0, // Permite que se contraiga
                                 maxWidth: 'calc(100% - 150px)', // Dejar espacio para los botones
-                                height: '40px'
+                                height: '32px'
                             }}
                             className="hide-scrollbar"
                             onScroll={checkScrollButtons}
@@ -1675,11 +1749,11 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                         borderLeftColor: dragOverTabIndex === index ? 'var(--primary-color)' : (tab.active ? 'rgba(255,255,255,0.1)' : 'transparent'),
                                         borderLeftWidth: dragOverTabIndex === index ? '3px' : '1px',
                                         borderLeftStyle: 'solid',
-                                        padding: '6px 12px',
+                                        padding: '4px 9px',
                                         cursor: draggedTabIndex === index ? 'grabbing' : 'grab',
                                         position: 'relative',
-                                        minWidth: '150px',
-                                        maxWidth: '220px',
+                                        minWidth: '130px',
+                                        maxWidth: '200px',
                                         flexShrink: 0, // Evita que las pestañas se contraigan
                                         borderTopLeftRadius: '4px',
                                         borderTopRightRadius: '4px',
@@ -1714,20 +1788,20 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     {tab.type === 'powershell' ? (
                                         <FaWindows style={{
                                             color: '#4fc3f7',
-                                            fontSize: '12px',
-                                            marginRight: '6px'
+                                            fontSize: '11px',
+                                            marginRight: '5px'
                                         }} />
                                     ) : tab.type === 'ubuntu' ? (
                                         <FaUbuntu style={{
                                             color: '#E95420',
-                                            fontSize: '12px',
-                                            marginRight: '6px'
+                                            fontSize: '11px',
+                                            marginRight: '5px'
                                         }} />
                                     ) : tab.type === 'debian' ? (
                                         <SiDebian style={{
                                             color: '#D70A53',
-                                            fontSize: '12px',
-                                            marginRight: '6px'
+                                            fontSize: '11px',
+                                            marginRight: '5px'
                                         }} />
                                     ) : (
                                         <i
@@ -1748,14 +1822,14 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                                         tab.type === 'codexcli' ? '#10b981' :
                                                         tab.type === 'docker' ? '#2496ED' :
                                                             tab.type === 'rdp-guacamole' ? '#ff6b35' : '#e95420',
-                                                fontSize: '12px',
-                                                marginRight: '6px'
+                                                fontSize: '11px',
+                                                marginRight: '5px'
                                             }}
                                         />
                                     )}
                                     <span style={{
                                         color: tab.active ? tabActiveText : tabText,
-                                        fontSize: '12px',
+                                        fontSize: '11px',
                                         fontWeight: tab.active ? '600' : '400',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
@@ -1770,11 +1844,11 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                             className="p-button-text p-button-sm"
                                             style={{
                                                 color: 'rgba(255, 255, 255, 0.7)',
-                                                padding: '2px',
-                                                minWidth: '16px',
-                                                width: '16px',
-                                                height: '16px',
-                                                marginLeft: '4px'
+                                                padding: '1px',
+                                                minWidth: '14px',
+                                                width: '14px',
+                                                height: '14px',
+                                                marginLeft: '3px'
                                             }}
                                             onClick={(e) => {
                                                 e.stopPropagation();
@@ -1793,15 +1867,16 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 className="p-button-text p-button-sm"
                                 style={{
                                     color: 'rgba(255, 255, 255, 0.8)',
-                                    padding: '4px 6px',
-                                    minWidth: '24px',
-                                    height: '24px',
-                                    fontSize: '10px',
+                                    padding: '2px 4px',
+                                    minWidth: '18px',
+                                    width: '18px',
+                                    height: '18px',
+                                    fontSize: '8px',
                                     background: 'rgba(255, 255, 255, 0.1)',
                                     border: '1px solid rgba(255, 255, 255, 0.2)',
                                     borderRadius: '3px',
-                                    marginLeft: '4px',
-                                    marginRight: '4px'
+                                    marginLeft: '3px',
+                                    marginRight: '3px'
                                 }}
                                 onClick={() => scrollTabs('right')}
                                 aria-label="Desplazar pestañas a la derecha"
@@ -1810,7 +1885,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                         )}
 
                         {/* Botones estilo PowerShell al lado de las pestañas */}
-                        <div style={{ display: 'flex', alignItems: 'center', marginLeft: '6px', gap: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', marginLeft: '4px', gap: '3px' }}>
                             {/* Botón para nueva pestaña */}
                             <Button
                                 icon="pi pi-plus"

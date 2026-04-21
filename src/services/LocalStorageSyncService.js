@@ -99,6 +99,8 @@ const SYNC_KEYS = [
 
     // Configuración HomeTab
     'homeTab_localTerminalVisible',
+    'homeTab_localTerminalTabsVisible',
+    'homeTab_localTerminalWorkspace',
     'homeTab_statusBarVisible',
     'homeTabFont',
     'homeTabFontSize',
