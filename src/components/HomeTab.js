@@ -184,6 +184,7 @@ const HomeTab = ({
 
 
   const homeOptionsOverlayRef = useRef(null);
+  const localThemeOverlayRef = useRef(null);
   const [containerHeight, setContainerHeight] = useState(window.innerHeight - 100);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth - 100);
   const [hasUserMovedTerminal, setHasUserMovedTerminal] = useState(false);
@@ -436,6 +437,7 @@ const HomeTab = ({
   useEffect(() => {
     try {
       homeOptionsOverlayRef.current?.hide();
+      localThemeOverlayRef.current?.hide();
     } catch {
       // Ignorar fallos del overlay al desmontar o en cambios rápidos de vista
     }
@@ -1313,28 +1315,45 @@ const HomeTab = ({
                   }}
                 />
               </div>
-              <select
-                value={localLinuxTerminalTheme}
-                onChange={(e) => setLocalLinuxTerminalTheme?.(e.target.value)}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  localThemeOverlayRef.current?.toggle(e);
+                }}
                 style={{
                   width: '100%',
-                  height: '32px',
+                  height: '34px',
                   borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: `1px solid ${(themes[localLinuxTerminalTheme]?.theme?.cursor || themeColors.primaryColor || '#2196f3')}55`,
+                  background: `linear-gradient(90deg, ${(themes[localLinuxTerminalTheme]?.theme?.background || '#111')}cc 0%, rgba(255,255,255,0.08) 100%)`,
                   color: themeColors.textPrimary || '#fff',
                   padding: '0 10px',
-                  fontSize: '0.83rem',
-                  outline: 'none'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '10px',
+                  cursor: 'pointer'
                 }}
                 title="Tema (Linux/WSL)"
               >
-                {Object.keys(themes).map((themeKey) => (
-                  <option key={themeKey} value={themeKey} style={{ color: '#111' }}>
-                    {themeKey}
-                  </option>
-                ))}
-              </select>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                  <span
+                    style={{
+                      width: '14px',
+                      height: '14px',
+                      borderRadius: '4px',
+                      flexShrink: 0,
+                      background: `linear-gradient(135deg, ${themes[localLinuxTerminalTheme]?.theme?.background || '#111'} 0%, ${themes[localLinuxTerminalTheme]?.theme?.background || '#111'} 50%, ${themes[localLinuxTerminalTheme]?.theme?.cursor || themes[localLinuxTerminalTheme]?.theme?.green || themes[localLinuxTerminalTheme]?.theme?.blue || themes[localLinuxTerminalTheme]?.theme?.foreground || '#fff'} 100%)`,
+                      border: `1px solid ${themes[localLinuxTerminalTheme]?.theme?.cursor || themes[localLinuxTerminalTheme]?.theme?.foreground || 'rgba(255,255,255,0.2)'}`
+                    }}
+                  />
+                  <span style={{ fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {localLinuxTerminalTheme}
+                  </span>
+                </span>
+                <i className="pi pi-chevron-down" style={{ fontSize: '0.7rem', opacity: 0.8, flexShrink: 0 }} />
+              </button>
             </div>
 
             <div className="menu-item-row" onClick={() => setShowLocalTerminalTabs(prev => !prev)}>
@@ -1404,6 +1423,78 @@ const HomeTab = ({
                 <span className="premium-slider"></span>
               </label>
             </div>
+          </div>
+        </OverlayPanel>
+        <OverlayPanel
+          ref={localThemeOverlayRef}
+          className="premium-overlay"
+          style={{ width: '290px' }}
+          appendTo={document.body}
+        >
+          <div style={{ maxHeight: '220px', overflowY: 'auto', padding: '8px' }}>
+            {Object.keys(themes).map((themeKey) => {
+              const preview = themes[themeKey]?.theme || {};
+              const isSelected = themeKey === localLinuxTerminalTheme;
+              return (
+                <div
+                  key={themeKey}
+                  onClick={() => {
+                    setLocalLinuxTerminalTheme?.(themeKey);
+                    localThemeOverlayRef.current?.hide();
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 9px',
+                    cursor: 'pointer',
+                    borderRadius: '8px',
+                    marginBottom: '2px',
+                    transition: 'all 0.2s ease',
+                    background: isSelected
+                      ? `linear-gradient(90deg, ${(preview.background || '#111')}cc 0%, rgba(255,255,255,0.08) 100%)`
+                      : 'transparent',
+                    border: isSelected
+                      ? `1px solid ${preview.cursor || preview.foreground || themeColors.primaryColor || '#2196f3'}66`
+                      : '1px solid transparent'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '5px',
+                      background: `linear-gradient(135deg, ${preview.background || '#111'} 0%, ${preview.background || '#111'} 50%, ${preview.cursor || preview.green || preview.blue || preview.foreground || '#fff'} 100%)`,
+                      border: `1px solid ${preview.cursor || preview.foreground || 'rgba(255,255,255,0.2)'}`,
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.35)'
+                    }}
+                  />
+                  <span
+                    style={{
+                      color: themeColors.textPrimary || '#fff',
+                      fontSize: '0.82rem',
+                      fontWeight: isSelected ? 600 : 500,
+                      flex: 1,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                  >
+                    {themeKey}
+                  </span>
+                  {isSelected && (
+                    <i
+                      className="pi pi-check"
+                      style={{
+                        fontSize: '0.68rem',
+                        color: preview.cursor || preview.foreground || themeColors.primaryColor || '#2196f3',
+                        opacity: 0.95
+                      }}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </OverlayPanel>
         <div className="home-page-scroll" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
