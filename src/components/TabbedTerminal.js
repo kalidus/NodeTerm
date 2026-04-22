@@ -1697,7 +1697,6 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     
                     <div className="tabs-scroll-viewport" style={{
                         display: 'flex',
-                        alignItems: 'center',
                         flex: 1,
                         overflow: 'hidden',
                         minWidth: 0,
@@ -1727,7 +1726,6 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             className="hide-scrollbar"
                             style={{
                                 display: 'flex',
-                                alignItems: 'center',
                                 overflowX: 'auto',
                                 overflowY: 'hidden',
                                 flex: '1 1 auto',
@@ -1817,7 +1815,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     </div>
 
                     {/* Botones de acción */}
-                    <div className="local-terminal-buttons" style={{ marginLeft: 'auto', display: 'flex', gap: '4px', paddingRight: '8px' }}>
+                    <div className="local-terminal-buttons" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px', paddingRight: '8px' }}>
                         <Button
                             icon="pi pi-plus"
                             className="tab-action-button"

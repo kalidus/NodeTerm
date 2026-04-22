@@ -863,9 +863,8 @@ button[aria-label="Seleccionar tipo de terminal"]:focus i {
 /* --- Cyberpunk Integrated Terminal Tabs --- */
 .cyber-terminal-tabs-container {
     display: flex;
-    align-items: center;
-    height: 32px;
-    min-height: 32px;
+    height: 28px;
+    min-height: 28px;
     background: var(--terminal-tab-bar-bg, rgba(0, 0, 0, 0.2));
     border-bottom: 1px solid var(--terminal-tab-border, rgba(255, 255, 255, 0.05));
     padding: 0 4px;
@@ -882,8 +881,9 @@ button[aria-label="Seleccionar tipo de terminal"]:focus i {
     padding: 0 14px;
     cursor: pointer;
     position: relative;
-    min-width: 130px;
-    max-width: 210px;
+    flex: 1;
+    min-width: 100px;
+    max-width: 400px;
     height: 100%;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     color: var(--terminal-tab-text, rgba(255, 255, 255, 0.6));
@@ -966,6 +966,7 @@ button[aria-label="Seleccionar tipo de terminal"]:focus i {
     margin-left: 10px;
     margin-right: 12px;
     flex-shrink: 0;
+    align-self: center;
     position: relative;
     box-shadow: 0 0 12px var(--terminal-tab-accent-glow, rgba(0, 242, 255, 0.4));
     background: var(--terminal-tab-accent, #00f2ff);
